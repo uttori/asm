@@ -301,6 +301,8 @@ export const liveDebugConfiguration = (
   backend: binding.backend,
   program: artifacts.outputPath,
   debugMap: artifacts.debugMapPath,
+  ...(artifacts.outputSha256 ? { outputSha256: artifacts.outputSha256 } : {}),
+  ...(artifacts.debugMapFingerprint ? { debugMapFingerprint: artifacts.debugMapFingerprint } : {}),
   sourceRoot: folder?.uri.fsPath ?? path.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
@@ -923,6 +925,7 @@ const debugSessionTerminated = (session: DebugSession): void => {
  * @param {WorkspaceFolder | undefined} folder Workspace used to resolve relative runtime paths.
  * @param {string} extensionRoot Installed extension root containing bundled sidecars.
  * @param {string} program Absolute ROM filename to load.
+ * @param {string} romSha256 Verified headerless build identity, also used for native capture matching.
  * @param {Function} log Destination for sidecar stderr messages.
  * @returns {DebugBackend} Lazy live backend owned by the inline adapter.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.isTrusted
@@ -932,6 +935,7 @@ const createLiveBackend = (
   folder: WorkspaceFolder | undefined,
   extensionRoot: string,
   program: string,
+  romSha256: string,
   log: (message: string) => void,
 ): DebugBackend => {
   if (!workspace.isTrusted) {
@@ -972,6 +976,8 @@ const createLiveBackend = (
         emulator,
         "--rom",
         program,
+        "--rom-sha256",
+        romSha256,
         "--runtime-dir",
         runtimeDirectory,
       ];
@@ -1024,14 +1030,31 @@ const loadConfiguration = (
   const mapFile = resolvedPath(configuration.debugMap, folder);
   const output = new Uint8Array(fs.readFileSync(program));
   const map = JSON.parse(fs.readFileSync(mapFile, "utf8")) as DebugMap;
-  const issues = validateDebugMap(map, output);
+  const issues = [...validateDebugMap(map, output)];
+  // Reject even a mutually valid ROM/map pair when it is not the successful build selected for launch.
+  if (configuration.outputSha256 && configuration.outputSha256 !== map.output.sha256) {
+    issues.push("ROM differs from the selected build.");
+  }
+  if (
+    configuration.debugMapFingerprint &&
+    configuration.debugMapFingerprint !== map.fingerprint.value
+  ) {
+    issues.push("Debug map differs from the selected build.");
+  }
   if (issues.length) {
     throw new Error(issues.join(" "));
   }
   const kind = configuration.backend ?? "replay";
   const backend = (() => {
     if (kind !== "replay") {
-      return createLiveBackend(configuration, folder, extensionRoot, program, log);
+      return createLiveBackend(
+        configuration,
+        folder,
+        extensionRoot,
+        program,
+        map.output.sha256,
+        log,
+      );
     }
     const script: ReplayScript = configuration.replay
       ? (JSON.parse(

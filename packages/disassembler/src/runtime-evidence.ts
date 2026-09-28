@@ -1,3 +1,4 @@
+import { manuallyOwnedMetadata } from "./metadata-edit.js";
 import { canonicalJson } from "./project-store.js";
 import {
   type AnalysisProjectShards,
@@ -309,6 +310,9 @@ export const mergeRuntimeEvidence = (
     }
     traceProfiles.set(report.sourceSha256, report.indexProfile);
   }
+  // Manual corrections and removals pin stable imported IDs. Import receipts/evidence still merge,
+  // while the original record remains inspectable in the saved metadata edit receipt.
+  const owned = manuallyOwnedMetadata(shards);
   const added = emptyCounts();
   const updated = emptyCounts();
   const existing = emptyCounts();
@@ -316,7 +320,7 @@ export const mergeRuntimeEvidence = (
     analysis: mergeRecords(
       "analysis",
       shards.analysis,
-      batch.analysis ?? [],
+      (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)),
       added,
       updated,
       existing,
@@ -324,16 +328,23 @@ export const mergeRuntimeEvidence = (
     annotations: mergeRecords(
       "annotations",
       shards.annotations,
-      batch.annotations ?? [],
+      (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)),
       added,
       updated,
       existing,
     ),
-    labels: mergeRecords("labels", shards.labels, batch.labels ?? [], added, updated, existing),
+    labels: mergeRecords(
+      "labels",
+      shards.labels,
+      (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)),
+      added,
+      updated,
+      existing,
+    ),
     comments: mergeRecords(
       "comments",
       shards.comments,
-      batch.comments ?? [],
+      (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)),
       added,
       updated,
       existing,

@@ -71,6 +71,8 @@ export interface SourceExportManifest {
     readonly checksumPolicy: "preserve";
     /** User-owned inputs whose drift makes generated source stale without blocking regeneration. */
     readonly inputs?: readonly SourceExportInput[];
+    /** Optional export-time source/entity map, owned and hashed in files. No build is required to use it. */
+    readonly ownershipFile?: string;
     readonly files: readonly SourceExportFile[];
     readonly spans: readonly SourceExportSpan[];
 }

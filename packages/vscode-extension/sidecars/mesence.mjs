@@ -24431,9 +24431,65 @@ var init_project_initializer = __esm({
   }
 });
 
+// packages/plugin-snes/src/disassembler/modification-assets.ts
+var init_modification_assets = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-assets.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/modification-project.ts
+var init_modification_project = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-project.ts"() {
+    "use strict";
+  }
+});
+
 // packages/plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
   "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/modification-operations.ts
+var init_modification_operations = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-operations.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/modification-rebase.ts
+var init_modification_rebase = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-rebase.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/source-reconciliation.ts
+var init_source_reconciliation = __esm({
+  async "packages/plugin-snes/src/disassembler/source-reconciliation.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/modification-editor.ts
+var init_modification_editor = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-editor.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/metadata-migration.ts
+var init_metadata_migration = __esm({
+  async "packages/plugin-snes/src/disassembler/metadata-migration.ts"() {
+    "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/modification-retention.ts
+var init_modification_retention = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-retention.ts"() {
     "use strict";
   }
 });
@@ -24460,6 +24516,7 @@ var init_src3 = __esm({
     init_spc700_upload();
     init_processor_source_export();
     init_project_initializer();
+    init_modification_project();
     init_ram_map();
     init_superfx_address_space();
     init_superfx_analysis();
@@ -24478,6 +24535,13 @@ var init_src3 = __esm({
     init_instruction_catalog2();
     init_function_heuristics();
     init_runtime_code();
+    init_modification_assets();
+    init_modification_operations();
+    init_modification_rebase();
+    init_source_reconciliation();
+    init_modification_editor();
+    init_metadata_migration();
+    init_modification_retention();
   }
 });
 
@@ -26930,13 +26994,14 @@ var usage = `Usage: uttori-asm-debug-sidecar-mesence [options]
 Required:
   --manifest path       Versioned MesenCE runtime manifest JSON
   --mesen path          Separately installed patched MesenCE executable
-  --rom path            SNES ROM whose SHA-256 matches the manifest
+  --rom path            SNES ROM matching the selected build or manifest SHA-256
   --runtime-dir path    Portable runtime directory containing the executable
 
 Optional:
+  --rom-sha256 hash     Expected ROM SHA-256 from a verified build (64 hex digits)
   --help                Show this help
 `;
-var optionNames = /* @__PURE__ */ new Set(["--manifest", "--mesen", "--rom", "--runtime-dir"]);
+var optionNames = /* @__PURE__ */ new Set(["--manifest", "--mesen", "--rom", "--rom-sha256", "--runtime-dir"]);
 var parseMesenSidecarArguments = (arguments_) => {
   const values = /* @__PURE__ */ new Map();
   for (let index = 0; index < arguments_.length; index++) {
@@ -26963,7 +27028,12 @@ var parseMesenSidecarArguments = (arguments_) => {
     }
     return path2.resolve(value);
   };
+  const romSha256 = values.get("--rom-sha256");
+  if (romSha256 !== void 0 && !/^[\da-f]{64}$/i.test(romSha256)) {
+    throw new Error("--rom-sha256 requires a 64-digit SHA-256 from the selected build.");
+  }
   return {
+    ...romSha256 ? { romSha256: romSha256.toLowerCase() } : {},
     manifest: required("--manifest"),
     executable: required("--mesen"),
     rom: required("--rom"),
@@ -26983,9 +27053,10 @@ var runMesenSidecar = async (arguments_, environment = process.env) => {
   const options = parseMesenSidecarArguments(arguments_);
   const session = environment[DEBUG_SIDECAR_SESSION_ENV];
   assertDebugSidecarSessionToken(session);
-  const manifest = parseMesenRuntimeManifest(
+  const runtimeManifest = parseMesenRuntimeManifest(
     JSON.parse(await readFile(options.manifest, "utf8"))
   );
+  const manifest = { ...runtimeManifest, romSha256: options.romSha256 ?? runtimeManifest.romSha256 };
   const host = new MesenProcessHost({
     executable: options.executable,
     rom: options.rom,

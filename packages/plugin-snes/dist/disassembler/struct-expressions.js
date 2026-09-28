@@ -1,14 +1,18 @@
 import { getStructMetadata, parseExpressionNode } from "@uttori/asm-core";
 /**
  * Resolve a bounded subset of native assembly expressions, caching repeated expressions per map.
- * No defines, arbitrary calls, file reads or record contents participate in instruction identity.
+ * Only this map's constants/layouts/bindings participate; external defines, arbitrary calls,
+ * file reads and record contents cannot affect instruction identity.
  */
 export class SnesStructExpressionResolver {
     layouts;
     bindings;
     fields;
     cache = new Map();
-    constructor(layouts, bindings) {
+    constants;
+    /** Keep resolution local to one validated map; omitted constants preserve older map behavior. */
+    constructor(layouts, bindings, constants = []) {
+        this.constants = new Map(constants.map((constant) => [constant.name, constant.value]));
         this.layouts = new Map(layouts.map((layout) => [layout.id, layout]));
         this.bindings = new Map(bindings.map((binding) => [binding.name, binding]));
         this.fields = new Map(layouts.map((layout) => [
@@ -66,6 +70,11 @@ export class SnesStructExpressionResolver {
             }
             if (root.type !== "identifier") {
                 throw new Error("Unsupported struct reference.");
+            }
+            const constant = this.constants.get(root.name);
+            if (constant !== undefined && fieldName === undefined && index === undefined) {
+                references++;
+                return checked(constant, root.name);
             }
             const binding = this.bindings.get(root.name);
             const layout = binding?.structure ?? this.layouts.get(root.name);
@@ -141,6 +150,9 @@ export class SnesStructExpressionResolver {
                     reference(arg);
                     const binding = this.bindings.get(arg.name);
                     const layout = binding?.structure ?? this.layouts.get(arg.name);
+                    if (!layout) {
+                        throw new Error("Struct reflection requires a layout or binding, not a scalar constant.");
+                    }
                     const definition = {
                         base: binding ? binding.address - binding.firstIndex * layout.size : 0,
                         size: layout.size,
@@ -223,7 +235,7 @@ export class SnesStructExpressionResolver {
         };
         const resolved = visit(parseExpressionNode(input));
         if (!references) {
-            throw new Error("Struct expressions must reference a layout or binding.");
+            throw new Error("Struct expressions must reference a layout or binding or declared constant.");
         }
         const result = { ...resolved, bindings: [...owners] };
         this.cache.set(input, result);

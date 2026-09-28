@@ -11,6 +11,7 @@ import {
   applyStateEntryPointEdit,
   applyTargetResolutionEdit,
   canonicalJson,
+  findManagedSourceFile,
   commitAnalysisProjectSelectedEdit,
   openAnalysisProjectStore,
   analysisProjectRevision,
@@ -43,6 +44,9 @@ import type {
   AnnotationSaveResult,
 } from "../disassembly/annotation-data.js";
 import { openDisassemblyAnnotationForm } from "../disassembly/annotation-form.js";
+import { owningProject } from "../disassembly/ownership-data.js";
+import { readOwnershipProjects } from "../disassembly/ownership-projects.js";
+import { informationHex } from "../editor-info/format.js";
 import {
   findAnalysisProjectDirectories,
   type AnalysisCoverageEditTarget,
@@ -225,14 +229,6 @@ const parseAddress = (input: string): number | undefined => {
 };
 
 /**
- * Format editor address prompts as uppercase assembly hexadecimal with at least six digits.
- * @param {number} value Numeric value in the native address/state domain.
- * @returns {string} $-prefixed uppercase hex with at least 6 digits.
- */
-const hexadecimal = (value: number): string =>
-  `$${value.toString(16).toUpperCase().padStart(6, "0")}`;
-
-/**
  * Require the project directory to belong to a file-backed workspace before permitting local
  * filesystem edits.
  * @param {string} directory Native project directory to edit.
@@ -405,11 +401,11 @@ export class AnalysisProjectEditor {
       const startInput = await window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "Start address (inclusive, use $ or 0x for hexadecimal, otherwise decimal)",
-        value: hexadecimal(suggestedStart),
+        value: informationHex(suggestedStart, 6),
         validateInput: (value) => {
           const parsed = parseAddress(value);
           return parsed === undefined || parsed < 0 || parsed >= maximum
-            ? `Enter an address from 0 through ${hexadecimal(maximum - 1)}.`
+            ? `Enter an address from 0 through ${informationHex(maximum - 1, 6)}.`
             : undefined;
         },
       });
@@ -421,11 +417,11 @@ export class AnalysisProjectEditor {
       const endInput = await window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "End address (exclusive, use $ or 0x for hexadecimal, otherwise decimal)",
-        value: hexadecimal(suggestedEnd),
+        value: informationHex(suggestedEnd, 6),
         validateInput: (value) => {
           const parsed = parseAddress(value);
           return parsed === undefined || parsed <= start || parsed > maximum
-            ? `Enter an address greater than ${hexadecimal(start)} and no greater than ${hexadecimal(maximum)}.`
+            ? `Enter an address greater than ${informationHex(start, 6)} and no greater than ${informationHex(maximum, 6)}.`
             : undefined;
         },
       });
@@ -513,7 +509,7 @@ export class AnalysisProjectEditor {
       this.#refresh();
       const conflictCount = applied.inverse.conflicts.length;
       await window.showInformationMessage(
-        `Classified [${hexadecimal(start)}, ${hexadecimal(end)}) as ${classification}.${
+        `Classified [${informationHex(start, 6)}, ${informationHex(end, 6)}) as ${classification}.${
           conflictCount === 0
             ? ""
             : ` Preserved ${conflictCount} contradictory overlap${conflictCount === 1 ? "" : "s"} as conflict records.`
@@ -560,7 +556,7 @@ export class AnalysisProjectEditor {
       const selected = await window.showQuickPick(
         candidates.map((annotation) => ({
           label: annotation.id,
-          description: `${annotation.addressSpace} [${hexadecimal(annotation.start)}, ${hexadecimal(annotation.end)}) · ${annotation.classification} · ${annotation.architecture}`,
+          description: `${annotation.addressSpace} [${informationHex(annotation.start, 6)}, ${informationHex(annotation.end, 6)}) · ${annotation.classification} · ${annotation.architecture}`,
           annotation,
         })),
         {
@@ -670,7 +666,7 @@ export class AnalysisProjectEditor {
         site.descriptions.push(
           record.kind === "unresolved"
             ? `${record.flowKind}: ${record.reason}`
-            : `existing targets: ${record.targets.map(hexadecimal).join(", ")}`,
+            : `existing targets: ${record.targets.map((value) => informationHex(value, 6)).join(", ")}`,
         );
         sites.set(key, site);
       }
@@ -687,7 +683,7 @@ export class AnalysisProjectEditor {
               left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address,
           )
           .map((site) => ({
-            label: `${site.addressSpace} ${hexadecimal(site.address)}`,
+            label: `${site.addressSpace} ${informationHex(site.address, 6)}`,
             description: site.descriptions.join(" · "),
             site,
           })),
@@ -719,12 +715,15 @@ export class AnalysisProjectEditor {
       const targetInput = await window.showInputBox({
         title: "Resolve Indirect Target",
         prompt: `Comma-separated targets in '${selected.site.addressSpace}' (use $ or 0x for hexadecimal)`,
-        value: prior?.kind === "target-override" ? prior.targets.map(hexadecimal).join(", ") : "",
+        value:
+          prior?.kind === "target-override"
+            ? prior.targets.map((value) => informationHex(value, 6)).join(", ")
+            : "",
         validateInput: (value) => {
           try {
             const values = parseTargetList(value);
             return values.some((address) => address < 0 || address >= maximum)
-              ? `Every target must be between 0 and ${hexadecimal(maximum - 1)}.`
+              ? `Every target must be between 0 and ${informationHex(maximum - 1, 6)}.`
               : undefined;
           } catch (error) {
             return error instanceof Error ? error.message : String(error);
@@ -764,7 +763,7 @@ export class AnalysisProjectEditor {
       await this.updateContexts();
       this.#refresh();
       await window.showInformationMessage(
-        `Resolved ${selected.label} to ${applied.inverse.after.targets.map(hexadecimal).join(", ")}. Prior targets and evidence were retained.`,
+        `Resolved ${selected.label} to ${applied.inverse.after.targets.map((value) => informationHex(value, 6)).join(", ")}. Prior targets and evidence were retained.`,
       );
     } catch (error) {
       await this.showFailure("Could not resolve the indirect target", error);
@@ -778,7 +777,11 @@ export class AnalysisProjectEditor {
     this.#annotationPanels.clear();
   }
 
-  async editAnnotation(): Promise<void> {
+  /**
+   * Open the persistent annotation form, preferring ownership inferred from the selected source.
+   * @param {string} [preferredProject] Directory already resolved by a semantic ownership action.
+   */
+  async editAnnotation(preferredProject?: string): Promise<void> {
     let form: ReturnType<typeof openDisassemblyAnnotationForm> | undefined;
     try {
       if (!workspace.isTrusted) {
@@ -810,7 +813,12 @@ export class AnalysisProjectEditor {
       const { panel } = form;
       this.#annotationPanels.add(panel);
       panel.onDidDispose(() => this.#annotationPanels.delete(panel));
-      const projectDirectory = await this.chooseProject(undefined, "Edit Disassembly Annotation");
+      const managed = source && findManagedSourceFile(source.file);
+      const inferred = managed && owningProject(managed, await readOwnershipProjects()).project;
+      const projectDirectory = await this.chooseProject(
+        preferredProject ?? inferred?.directory,
+        "Edit Disassembly Annotation",
+      );
       if (!projectDirectory) {
         panel.dispose();
         return;
@@ -822,7 +830,13 @@ export class AnalysisProjectEditor {
         projectDirectory,
         "annotationLookup",
         {
-          annotationLookup: { maps: source ? await discoverAnalysisDebugMapFiles() : [], source },
+          annotationLookup: {
+            maps:
+              source && !managed?.manifest.ownershipFile
+                ? await discoverAnalysisDebugMapFiles()
+                : [],
+            source,
+          },
         },
       );
       if (form.disposed) {
@@ -834,8 +848,8 @@ export class AnalysisProjectEditor {
           : (
               await window.showQuickPick(
                 resolved.choices.map((choice) => ({
-                  label: choice.location.name ?? hexadecimal(choice.location.address),
-                  description: `${choice.location.addressSpace} ${hexadecimal(choice.location.address)}`,
+                  label: choice.location.name ?? informationHex(choice.location.address, 6),
+                  description: `${choice.location.addressSpace} ${informationHex(choice.location.address, 6)}`,
                   choice,
                 })),
                 {
@@ -882,7 +896,7 @@ export class AnalysisProjectEditor {
       let annotationRefresh: AnnotationRefresh = { after: resolved.revision.manifestSha256 };
       form.initialize(
         {
-          location: `${path.basename(projectDirectory)} · ${location.addressSpace} ${hexadecimal(location.address)}`,
+          location: `${path.basename(projectDirectory)} · ${location.addressSpace} ${informationHex(location.address, 6)}`,
           fields: initialFields,
           hasInstruction: hasInstruction || Boolean(inline),
         },
@@ -942,7 +956,7 @@ export class AnalysisProjectEditor {
           await this.updateContexts();
           this.#refresh();
           void window.showInformationMessage(
-            `Saved annotation at ${location.addressSpace} ${hexadecimal(location.address)}. Regenerate disassembly to apply it to source.`,
+            `Saved annotation at ${location.addressSpace} ${informationHex(location.address, 6)}. Regenerate disassembly to apply it to source.`,
           );
         },
         async () => {
@@ -992,7 +1006,7 @@ export class AnalysisProjectEditor {
           )
           .map((label) => ({
             label: label.name,
-            description: `${label.addressSpace} ${hexadecimal(label.address)} · ${label.id}`,
+            description: `${label.addressSpace} ${informationHex(label.address, 6)} · ${label.id}`,
             projectLabel: label,
           })),
         { title: "Rename Analysis Label", placeHolder: "Choose a stable native label record" },
@@ -1257,15 +1271,15 @@ export class AnalysisProjectEditor {
   private editDescription(entry: AnalysisEditHistoryEntry): string {
     switch (entry.kind) {
       case "range":
-        return `classification [${hexadecimal(entry.request.start)}, ${hexadecimal(entry.request.end)})`;
+        return `classification [${informationHex(entry.request.start, 6)}, ${informationHex(entry.request.end, 6)})`;
       case "state-entry":
         return `state/entry-point overlay on '${entry.request.baseAnnotationId}'`;
       case "target":
-        return `target resolution at ${hexadecimal(entry.request.address)}`;
+        return `target resolution at ${informationHex(entry.request.address, 6)}`;
       case "label":
         return `label rename to '${entry.request.name}'`;
       case "annotation":
-        return `annotation at ${entry.request.addressSpace} ${hexadecimal(entry.request.address)}`;
+        return `annotation at ${entry.request.addressSpace} ${informationHex(entry.request.address, 6)}`;
     }
     throw new Error("Unknown analysis edit history entry.");
   }

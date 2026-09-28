@@ -16,6 +16,8 @@ import type {
   RuntimeEvidenceRecord,
 } from "./project-types.js";
 
+export * from "./metadata-edit.js";
+
 /** Classifications accepted by a manual range edit. */
 export const RANGE_CLASSIFICATIONS = [
   "unreached",

@@ -36,6 +36,17 @@ interface Artifact {
   readonly instructions: ReadonlyMap<string, readonly DebugMapInstruction[]>;
 }
 
+/** Rejection evidence belongs to the same immutable generation as the loaded artifacts. */
+interface ArtifactSnapshot {
+  readonly artifacts: readonly Artifact[];
+  readonly rejected: readonly {
+    file: string;
+    /** Candidate source paths associate a failed dependency with every editor in that build. */
+    sources: ReadonlySet<string>;
+    reasons: readonly string[];
+  }[];
+}
+
 /** One-based inclusive viewport ranges. */
 export interface InformationLineRange {
   readonly start: number;
@@ -50,7 +61,7 @@ const rangeKey = (range: DebugMapRange): string => JSON.stringify(range);
  * indexes and bounded facts survive viewport/presentation changes, but never source invalidation.
  */
 export class EditorInformationProvider {
-  #artifacts?: Promise<readonly Artifact[]>;
+  #artifacts?: Promise<ArtifactSnapshot>;
   #projects?: ReturnType<EditorInformationHost["projects"]>;
   #epoch = 0;
   /** After settings change, each artifact must be rebuilt before its old interpretation is usable. */
@@ -122,7 +133,7 @@ export class EditorInformationProvider {
     }
   }
 
-  async #loadArtifacts(dirtyFiles: ReadonlySet<string>): Promise<readonly Artifact[]> {
+  async #loadArtifacts(dirtyFiles: ReadonlySet<string>): Promise<ArtifactSnapshot> {
     const discovered = await this.host.discoverMaps();
     const candidates = new Map(
       discovered.map((entry) => [path.resolve(entry.file), entry.sourceRoots]),
@@ -131,16 +142,29 @@ export class EditorInformationProvider {
       candidates.set(file, roots);
     }
     const artifacts: Artifact[] = [];
+    const rejected: ArtifactSnapshot["rejected"][number][] = [];
     const seen = new Set<string>();
     // Bound concurrent reads: a project may contain thousands of dependency files.
     for (const [file, roots] of candidates) {
+      const sourceFiles = new Set<string>();
+      const reasons: string[] = [];
+      const reject = (reason: string): void => {
+        reasons.push(reason);
+      };
       if (this.#currentConfigurationMaps && !this.#currentConfigurationMaps.has(file)) {
+        rejected.push({
+          file,
+          sources: sourceFiles,
+          reasons: ["Build settings changed. Run Build Binary to refresh this map."],
+        });
         continue;
       }
       try {
         this.#trackedFiles.add(file);
         const map = JSON.parse(await readFile(file, "utf8")) as DebugMap;
-        if (validateDebugMap(map).length) {
+        const errors = validateDebugMap(map);
+        if (errors.length) {
+          reject(`Invalid debug map: ${errors.join("; ")}`);
           continue;
         }
         // Prefer the map's own ancestors before other workspace roots. Identical relative paths
@@ -151,12 +175,24 @@ export class EditorInformationProvider {
               Number(file.startsWith(path.resolve(a) + path.sep)) || b.length - a.length,
         );
         const sources = new Map<number, string>();
+        // Record every dependency before validation: a failure early in the source list must
+        // still explain why other source editors in this build have no annotations.
+        for (const source of map.sources) {
+          const paths = path.isAbsolute(source.path)
+            ? [source.path]
+            : resolutionRoots.map((root) => path.resolve(root, source.path));
+          for (const candidate of paths) {
+            sourceFiles.add(candidate);
+            this.#trackedFiles.add(candidate);
+          }
+        }
         let current = true;
         for (const source of map.sources) {
           const paths = path.isAbsolute(source.path)
             ? [source.path]
             : [...new Set(resolutionRoots.map((root) => path.resolve(root, source.path)))];
           let resolved: string | undefined;
+          let failure = `Source missing or unreadable: ${source.path}. Searched: ${paths.join(", ")}.`;
           for (const candidate of paths) {
             this.#trackedFiles.add(candidate);
             try {
@@ -166,13 +202,20 @@ export class EditorInformationProvider {
               }
               // The first existing path belongs to this map's root. A stale or dirty source must
               // not fall through to a same-named file with matching bytes in another workspace.
-              if (dirtyFiles.has(candidate) || metadata.size !== source.size) {
+              if (dirtyFiles.has(candidate)) {
+                failure = `Unsaved dependency: ${candidate}. Save it and run Build Binary.`;
                 break;
               }
-              if (hash(await readFile(candidate)) === source.sha256) {
+              if (metadata.size !== source.size) {
+                failure = `Source differs from build: ${candidate} (${metadata.size} bytes; expected ${source.size}). Run Build Binary after saving source.`;
+                break;
+              }
+              const actualHash = hash(await readFile(candidate));
+              if (actualHash === source.sha256) {
                 resolved = candidate;
                 break;
               }
+              failure = `Source differs from build: ${candidate} (SHA-256 ${actualHash}; expected ${source.sha256}). Run Build Binary after saving source.`;
               break;
             } catch {
               /* Missing candidates may resolve against another recorded root. */
@@ -180,7 +223,8 @@ export class EditorInformationProvider {
           }
           if (!resolved) {
             current = false;
-            break;
+            reject(failure);
+            continue;
           }
           sources.set(source.id, resolved);
         }
@@ -200,6 +244,9 @@ export class EditorInformationProvider {
             if (bytes.length === map.output.size && hash(bytes) === map.output.sha256) {
               output = bytes;
             } else {
+              reject(
+                `Output differs from build map: ${outputFile}. Run Build Binary to publish a matching output and map.`,
+              );
               continue;
             }
           } catch {
@@ -233,11 +280,67 @@ export class EditorInformationProvider {
         }
         artifacts.push({ file, map, output, sources, lines, instructions });
         seen.add(sourceIdentity);
-      } catch {
+      } catch (error) {
         /* Malformed or partially published maps are retried after filesystem invalidation. */
+        reject(`Cannot load build map: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        if (reasons.length) {
+          rejected.push({ file, sources: sourceFiles, reasons });
+        }
       }
     }
-    return artifacts;
+    return { artifacts, rejected };
+  }
+
+  /**
+   * Explain snapshot rejection for one editor, including failures in another build dependency.
+   * Reuses asynchronous validation; it never builds or changes source files.
+   * @param {string} file Absolute source filename.
+   * @param {ReadonlySet<string>} dirtyFiles Current unsaved dependencies.
+   * @returns {Promise<readonly string[]>} Actionable reasons, or an empty list for a current map.
+   */
+  async diagnostics(file: string, dirtyFiles: ReadonlySet<string>): Promise<readonly string[]> {
+    if (this.#currentConfigurationMaps?.size === 0) {
+      return ["Build settings changed. Run Build Binary to refresh inline source information."];
+    }
+    const snapshot = await (this.#artifacts ??= this.#loadArtifacts(dirtyFiles));
+    const source = path.resolve(file);
+    const matching = snapshot.artifacts.filter((artifact) =>
+      [...artifact.sources.values()].includes(source),
+    );
+    const dirty = matching.flatMap((artifact) =>
+      [...artifact.sources.values()].filter((name) => dirtyFiles.has(name)),
+    );
+    if (dirty.length) {
+      return [...new Set(dirty)].map(
+        (name) => `Unsaved dependency: ${name}. Save it and run Build Binary.`,
+      );
+    }
+    if (matching.length) {
+      if (matching.every((artifact) => !artifact.output)) {
+        const projects = await (this.#projects ??= this.host.projects());
+        const validated = matching.some((artifact) =>
+          projects.some(
+            ({ manifest }) =>
+              manifest.target === artifact.map.target &&
+              manifest.rom.contentSha256 === artifact.map.output.sha256 &&
+              manifest.rom.contentSize === artifact.map.output.size,
+          ),
+        );
+        if (!validated) {
+          return [
+            "Build output is missing and no analysis project matches the map's ROM identity. Run Build Binary.",
+          ];
+        }
+      }
+      return [];
+    }
+    const relevant = snapshot.rejected.filter((entry) => entry.sources.has(source));
+    const rejected = relevant.length ? relevant : snapshot.rejected;
+    return [
+      "No current build map covers this file. Run Build Binary; a changed dependency suppresses information for the entire build.",
+      ...rejected.flatMap((entry) => entry.reasons.map((reason) => `${entry.file}: ${reason}`)),
+    ];
   }
 
   /**
@@ -259,7 +362,7 @@ export class EditorInformationProvider {
       return new Map();
     }
     const epoch = this.#epoch;
-    const artifacts = await (this.#artifacts ??= this.#loadArtifacts(dirtyFiles));
+    const { artifacts } = await (this.#artifacts ??= this.#loadArtifacts(dirtyFiles));
     const result = new Map<number, LineInformation[]>();
     if (epoch !== this.#epoch) {
       return result;

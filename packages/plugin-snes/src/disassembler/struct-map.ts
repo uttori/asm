@@ -52,11 +52,20 @@ export interface SnesStructBinding {
 
 /** Validated source metadata, retaining exact input bytes for drift detection. */
 export interface LoadedSnesStructMap {
+  /** Reviewed scalar values usable in guarded operands; never inferred from matching literals. */
+  readonly constants?: readonly SnesStructConstant[];
   readonly structures: readonly SnesStructLayout[];
   readonly bindings: readonly SnesStructBinding[];
   /** Optional, explicitly justified operands and capture references at guarded instruction sites. */
   readonly instructionUses?: readonly SnesStructInstructionUse[];
   readonly sourceBytes: Uint8Array;
+}
+
+/** An exact assembly value with its units or semantic contract documented at the declaration. */
+export interface SnesStructConstant {
+  readonly name: string;
+  readonly value: number;
+  readonly description: string;
 }
 
 /** One physical ROM field, including opaque gaps, ready for byte-preserving emission. */
@@ -292,12 +301,33 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
       );
     }
   }
+  if (file.constants !== undefined && !Array.isArray(file.constants)) {
+    throw new Error("Struct-map constants must be an array.");
+  }
+  // Share the layout/binding namespace so assembly cannot silently resolve a different owner.
+  const constants = ((file.constants ?? []) as unknown[]).map((input): SnesStructConstant => {
+    const entry = object(input);
+    if (typeof entry.description !== "string" || !entry.description.trim()) {
+      throw new Error("Struct-map constants require a description.");
+    }
+    return {
+      name: uniqueName(entry.name),
+      value: integer(entry.value),
+      description: comment(entry.description),
+    };
+  });
   const instructionUses = validateSnesStructInstructionUses(
     file.instructionUses,
     structures,
     bindings,
+    constants,
   );
-  return { structures, bindings, ...(instructionUses.length ? { instructionUses } : {}) };
+  return {
+    structures,
+    bindings,
+    ...(constants.length ? { constants } : {}),
+    ...(instructionUses.length ? { instructionUses } : {}),
+  };
 };
 
 /**
@@ -347,6 +377,9 @@ export const renderSnesStructDefines = (map: LoadedSnesStructMap): string => {
     "; Layouts have base zero. Bindings use CPU addresses. Indexed fields use sizeof(struct).",
     "",
   ];
+  for (const constant of map.constants ?? []) {
+    lines.push(`; ${constant.description}`, `${constant.name} = ${hex(constant.value)}`, "");
+  }
   const render = (
     name: string,
     base: number,
@@ -499,19 +532,20 @@ export const planSnesStructRomFields = (
 };
 
 /**
- * Encode every named field (including opaque gaps) from immutable ROM bytes.
+ * Encode every named field (including opaque gaps) from immutable ROM bytes. Field descriptions
+ * stay on the authoritative declarations in structs.asm so every data row does not repeat them.
  * @param {SnesStructRomRecord} record Complete, mapped record ownership.
  * @param {Uint8Array} bytes Exactly the original record bytes.
- * @returns {string} Named literal suitable for dataStruct or a dataStructs row.
+ * @returns {readonly {assignment: string}[]} Named initializer assignments, including opaque gaps.
  */
-export const renderSnesStructInitializer = (
+export const renderSnesStructInitializerFields = (
   record: SnesStructRomRecord,
   bytes: Uint8Array,
-): string => {
+): readonly { assignment: string }[] => {
   if (bytes.length !== record.end - record.start) {
     throw new Error("Struct initializer requires a complete record.");
   }
-  const assignments = completeFields(record.binding.structure).map((field) => {
+  return completeFields(record.binding.structure).map((field) => {
     const type = fieldType(field);
     const width = widths[type.slice(0, 2)];
     const values: string[] = [];
@@ -527,10 +561,25 @@ export const renderSnesStructInitializer = (
           .padStart(width * 2, "0")}`,
       );
     }
-    return `${field.name} = ${type.includes("[") ? `[${values.join(", ")}]` : values[0]}`;
+    return {
+      assignment: `${field.name} = ${type.includes("[") ? `[${values.join(", ")}]` : values[0]}`,
+    };
   });
-  return `{ ${assignments.join(", ")} }`;
 };
+
+/**
+ * Render one complete record as a compact native initializer without field documentation.
+ * @param {SnesStructRomRecord} record Complete mapped record ownership.
+ * @param {Uint8Array} bytes Exact record bytes from the ROM.
+ * @returns {string} Single-line brace initializer for callers that manage source layout.
+ */
+export const renderSnesStructInitializer = (
+  record: SnesStructRomRecord,
+  bytes: Uint8Array,
+): string =>
+  `{ ${renderSnesStructInitializerFields(record, bytes)
+    .map((field) => field.assignment)
+    .join(", ")} }`;
 
 /**
  * Emit a complete field or a metadata-split fragment without changing any original byte.

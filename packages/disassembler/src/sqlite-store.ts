@@ -981,7 +981,9 @@ export class SqliteAnalysisStore {
     };
     const ids = JSON.stringify((batch.analysis ?? []).map((record) => record.id));
     const analysis = this.#database
-      .prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))")
+      .prepare(
+        "SELECT payload FROM analysis WHERE kind='metadata-edit' OR id IN (SELECT value FROM json_each(?))",
+      )
       .all(ids)
       .map((row) => parseRecord<AnalysisRecord>(row.payload));
     const before = { ...base, analysis };

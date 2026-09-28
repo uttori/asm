@@ -820,6 +820,15 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
+// packages/disassembler/src/project-labels.ts
+var validateSourceLabelName = (name) => {
+  if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
+    throw new Error(
+      "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+    );
+  }
+};
+
 // packages/disassembler/src/project-store.ts
 var fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
@@ -831,6 +840,113 @@ var import_node_crypto = require("node:crypto");
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
+
+// packages/disassembler/src/metadata-validation.ts
+var validateEditableMetadataRecord = (shard, record) => {
+  if (!record || typeof record.id !== "string" || !/^\w[\w./:-]*$/.test(record.id) || !Array.isArray(record.evidence) || record.evidence.some((id) => typeof id !== "string")) {
+    throw new Error("Metadata needs a stable record ID and evidence list.");
+  }
+  if ("address" in record && (!Number.isSafeInteger(record.address) || record.address < 0)) {
+    throw new Error("Metadata needs a nonnegative integer address.");
+  }
+  if (typeof record.addressSpace !== "string") {
+    throw new Error("Metadata needs a named address space.");
+  }
+  if (shard === "labels") {
+    if (!("name" in record) || typeof record.name !== "string" || !record.name || !("address" in record) || "kind" in record) {
+      throw new Error("Invalid label metadata.");
+    }
+    const label = record;
+    if (label.sourceName !== void 0) {
+      validateSourceLabelName(label.sourceName);
+    }
+    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+      throw new Error("Invalid label suppression flag.");
+    }
+    for (const value of [label.comment, label.inlineComment]) {
+      if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
+        throw new Error("Invalid label comment.");
+      }
+    }
+  } else if (shard === "comments") {
+    if (!("text" in record) || typeof record.text !== "string" || !record.text.trim() || record.text.includes("\0") || !("address" in record) || "kind" in record) {
+      throw new Error("A standalone comment needs nonempty text.");
+    }
+  } else if (shard === "annotations") {
+    if (!("classification" in record) || ![
+      "unreached",
+      "opcode",
+      "operand",
+      "data8",
+      "data16",
+      "data24",
+      "data32",
+      "pointer16",
+      "pointer24",
+      "pointer32",
+      "graphics",
+      "music",
+      "compressed",
+      "asset",
+      "empty",
+      "text"
+    ].includes(record.classification) || typeof record.architecture !== "string" || !record.architecture) {
+      throw new Error("Invalid classification metadata.");
+    }
+    if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
+      throw new Error("Classification bounds must describe a nonempty half-open interval.");
+    }
+    for (const [field, value] of Object.entries(record.state ?? {})) {
+      if (["e", "m", "x", "carry"].includes(field)) {
+        if (typeof value !== "boolean") {
+          throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
+        }
+      } else {
+        const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
+        if (!["programBank", "dataBank", "directPage", "stackPointer"].includes(field) || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+          throw new Error(`Invalid state field '${field}'.`);
+        }
+      }
+    }
+    if (record.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
+      throw new Error("Invalid entry-point metadata.");
+    }
+  } else if (shard === "analysis") {
+    if (!("kind" in record) || !["target-override", "target-set"].includes(record.kind) || !Array.isArray(record.targets) || record.targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+      throw new Error("Only target overrides and target sets are editable analysis records.");
+    }
+    if (record.kind === "target-set" && (typeof record.name !== "string" || !record.name.trim())) {
+      throw new Error("A target set needs a name.");
+    }
+    if (record.kind === "target-override" && !Number.isSafeInteger(record.address)) {
+      throw new Error("A target override needs an instruction anchor.");
+    }
+  } else {
+    throw new Error("This collection is not editable metadata.");
+  }
+};
+var validateMetadataReceipt = (receipt) => {
+  if (!Number.isSafeInteger(receipt.sequence) || receipt.sequence < 1 || typeof receipt.description !== "string" || !Array.isArray(receipt.changes) || !receipt.changes.length || receipt.changes.length > 1e3) {
+    throw new Error("Invalid metadata edit receipt.");
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const change of receipt.changes) {
+    const key3 = `${change.shard}:${change.id}`;
+    if (seen.has(key3) || !change.before && !change.after) {
+      throw new Error("Invalid repeated or empty metadata change.");
+    }
+    seen.add(key3);
+    for (const record of [change.before, change.after]) {
+      if (!record) {
+        continue;
+      }
+      validateEditableMetadataRecord(change.shard, record);
+      if (record.id !== change.id || record.evidence.some((id) => !receipt.evidence.includes(id))) {
+        throw new Error("Receipt record identity or retained evidence is inconsistent.");
+      }
+    }
+  }
+};
 
 // packages/disassembler/src/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
@@ -1133,8 +1249,7 @@ var isStableId = (id) => {
   if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
     return false;
   }
-  for (let index = 0; index < id.length; index++) {
-    const character = id[index];
+  for (const character of id) {
     if (!isAlphaNumeric(character) && !"._:/-".includes(character)) {
       return false;
     }
@@ -1423,7 +1538,15 @@ var validateLoadedShards = (shards, project) => {
       throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
     }
   }
+  for (const receipt of shards.analysis) {
+    if (receipt.kind === "metadata-edit") {
+      validateMetadataReceipt(receipt);
+    }
+  }
   for (const label of shards.labels) {
+    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+      throw new Error(`Analysis label '${label.id}' has an invalid suppression flag.`);
+    }
     if (label.sourceName !== void 0 && (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName))) {
       throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
     }
@@ -2023,6 +2146,11 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
+// packages/disassembler/src/metadata-edit.ts
+var manuallyOwnedMetadata = (shards) => new Set(
+  shards.analysis.filter((record) => record.kind === "metadata-edit").flatMap((receipt) => receipt.changes.map((change) => `${change.shard}:${change.id}`))
+);
+
 // packages/disassembler/src/project-edit.ts
 var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
 var evidenceReferences = (shards, evidenceId) => [
@@ -2243,6 +2371,7 @@ var mergeRuntimeEvidence = (shards, batch) => {
     }
     traceProfiles.set(report.sourceSha256, report.indexProfile);
   }
+  const owned = manuallyOwnedMetadata(shards);
   const added = emptyCounts();
   const updated = emptyCounts();
   const existing = emptyCounts();
@@ -2250,7 +2379,7 @@ var mergeRuntimeEvidence = (shards, batch) => {
     analysis: mergeRecords(
       "analysis",
       shards.analysis,
-      batch.analysis ?? [],
+      (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)),
       added,
       updated,
       existing
@@ -2258,16 +2387,23 @@ var mergeRuntimeEvidence = (shards, batch) => {
     annotations: mergeRecords(
       "annotations",
       shards.annotations,
-      batch.annotations ?? [],
+      (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)),
       added,
       updated,
       existing
     ),
-    labels: mergeRecords("labels", shards.labels, batch.labels ?? [], added, updated, existing),
+    labels: mergeRecords(
+      "labels",
+      shards.labels,
+      (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)),
+      added,
+      updated,
+      existing
+    ),
     comments: mergeRecords(
       "comments",
       shards.comments,
-      batch.comments ?? [],
+      (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)),
       added,
       updated,
       existing
@@ -5083,7 +5219,9 @@ var SqliteAnalysisStore = class {
       runtime: []
     };
     const ids = JSON.stringify((batch.analysis ?? []).map((record) => record.id));
-    const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => parseRecord(row.payload));
+    const analysis = this.#database.prepare(
+      "SELECT payload FROM analysis WHERE kind='metadata-edit' OR id IN (SELECT value FROM json_each(?))"
+    ).all(ids).map((row) => parseRecord(row.payload));
     const before = { ...base, analysis };
     const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
     this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });

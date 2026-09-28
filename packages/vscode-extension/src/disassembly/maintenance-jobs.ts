@@ -9,6 +9,9 @@ import {
   validateSourceExportInputs,
   openAnalysisProjectStore,
   analysisProjectRevision,
+  acquireFileLease,
+  recoverSourceGeneration,
+  readSourcePublication,
   type RuntimeTraceIndexMode,
   type AnalysisStoragePolicy,
   type RuntimeTraceProjectImportResult,
@@ -16,8 +19,29 @@ import {
 import { NodePluginLoader } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, {
   analyzeSnesProject,
-  exportSnesProject,
   verifySnesProjectRoundTrip,
+  createRomModificationProject,
+  buildModifiedRom,
+  deriveModifiedRomProject,
+  addRomReplacement,
+  extractRomAsset,
+  importRomAsset,
+  applyRomPlacement,
+  previewRomEditor,
+  reviewMetadataMigration,
+  reviewModificationRetention,
+  pinModificationRetention,
+  pruneModificationRetention,
+  applyMetadataMigration,
+  saveRomEditor,
+  removeRomReplacement,
+  retainRomModificationBaseline,
+  reviewRomRebase,
+  acceptRomRebase,
+  refreshRomRebaseReview,
+  detachRomSource,
+  reviewSourceEdit,
+  restoreReviewedSource,
   SNES_CPU_ADDRESS_SPACE,
   type AnalyzeSnesProjectResult,
   type ExportSnesProjectResult,
@@ -28,6 +52,7 @@ import snesPlugin, {
 import { createEditorRuntimeBusSource } from "../runtime/bus-source.js";
 import { createEditorRuntimeTraceSource } from "../runtime/trace-source.js";
 import type { AnnotationRefresh } from "./annotation-data.js";
+import { acquireEditLease } from "./edit-coordinator.js";
 import {
   normalizedSeeds,
   type CoverageSnapshot,
@@ -35,6 +60,12 @@ import {
   type ResolvedProjectSource,
   type ResolvedTarget,
 } from "./maintenance-data.js";
+import { importReviewedSource } from "./source-import.js";
+import {
+  canRefreshMetadata,
+  publishVerifiedSource,
+  type PublishedSource,
+} from "./source-publisher.js";
 import type { MaintenanceStageTiming } from "./timings.js";
 
 /**
@@ -56,6 +87,72 @@ export interface TraceImportSummary {
  * carry paths and selectors instead of loaded shards.
  */
 export interface MaintenanceJobs {
+  retentionReview: {
+    input: Parameters<typeof reviewModificationRetention>[0];
+    output: ReturnType<typeof reviewModificationRetention>;
+  };
+  retentionPin: { input: Parameters<typeof pinModificationRetention>[0]; output: void };
+  retentionPrune: {
+    input: Parameters<typeof pruneModificationRetention>[0];
+    output: ReturnType<typeof pruneModificationRetention>;
+  };
+  metadataMigrationReview: {
+    input: Parameters<typeof reviewMetadataMigration>[0];
+    output: ReturnType<typeof reviewMetadataMigration>;
+  };
+  metadataMigrationApply: {
+    input: Parameters<typeof applyMetadataMigration>[0];
+    output: Awaited<ReturnType<typeof applyMetadataMigration>>;
+  };
+  editorPreview: {
+    input: Parameters<typeof previewRomEditor>[0];
+    output: Awaited<ReturnType<typeof previewRomEditor>>;
+  };
+  editorSave: { input: Parameters<typeof saveRomEditor>[0]; output: string };
+  rebaseRefresh: { input: Parameters<typeof refreshRomRebaseReview>[0]; output: string };
+  sourceRestore: {
+    input: Parameters<typeof restoreReviewedSource>[0];
+    output: Awaited<ReturnType<typeof restoreReviewedSource>>;
+  };
+  baselineRetain: { input: { manifestFile: string }; output: string };
+  assetExtract: { input: Parameters<typeof extractRomAsset>[0]; output: string };
+  assetImport: { input: Parameters<typeof importRomAsset>[0]; output: string };
+  placementApply: { input: Parameters<typeof applyRomPlacement>[0]; output: string };
+  replacementRemove: { input: Parameters<typeof removeRomReplacement>[0]; output: void };
+  rebaseReview: { input: Parameters<typeof reviewRomRebase>[0]; output: string };
+  rebaseAccept: {
+    input: Parameters<typeof acceptRomRebase>[0];
+    output: Awaited<ReturnType<typeof acceptRomRebase>>;
+  };
+  sourceDetach: { input: Parameters<typeof detachRomSource>[0]; output: string };
+  sourceReview: { input: Parameters<typeof reviewSourceEdit>[0]; output: string };
+  sourceImport: { input: Parameters<typeof importReviewedSource>[0]; output: string };
+  modificationCreate: {
+    input: { sourceDirectory: string; romFile: string; directory: string };
+    output: string;
+  };
+  modificationBuild: {
+    input: { manifestFile: string };
+    output: Awaited<ReturnType<typeof buildModifiedRom>>;
+  };
+  modificationAdd: {
+    input: Parameters<typeof addRomReplacement>[0];
+    output: string;
+  };
+  modificationDerive: {
+    input: { manifestFile: string; outputDirectory: string };
+    output: Awaited<ReturnType<typeof deriveModifiedRomProject>>;
+  };
+  publish: { input: ResolvedTarget; output: PublishedSource };
+  refreshEligible: { input: ResolvedTarget; output: boolean };
+  publicationStatus: {
+    input: { sourceDirectory: string };
+    output: ReturnType<typeof readSourcePublication>;
+  };
+  recover: {
+    input: { sourceDirectory: string; projectDirectory: string };
+    output: ReturnType<typeof recoverSourceGeneration>;
+  };
   prepare: {
     input: { target: ResolvedTarget; seeds?: readonly DisassemblyEntrySeed[] };
     output: { before: CoverageSnapshot; entryPoints: readonly Snes65816EntryPoint[] };
@@ -208,6 +305,113 @@ const executeMaintenanceJob = async (
 ): Promise<unknown> => {
   signal.throwIfAborted();
   switch (job.operation) {
+    case "retentionReview":
+      return reviewModificationRetention(job.input);
+    case "retentionPin":
+      return pinModificationRetention(job.input);
+    case "retentionPrune":
+      return pruneModificationRetention(job.input);
+    case "metadataMigrationReview":
+      return reviewMetadataMigration(job.input);
+    case "editorSave":
+      return saveRomEditor(job.input);
+    case "placementApply":
+      return applyRomPlacement(job.input);
+    case "replacementRemove":
+      return removeRomReplacement(job.input);
+    case "sourceReview":
+      return reviewSourceEdit(job.input);
+    case "modificationAdd":
+      return addRomReplacement(job.input);
+    case "metadataMigrationApply":
+    case "editorPreview":
+    case "baselineRetain":
+    case "assetExtract":
+    case "assetImport":
+    case "rebaseReview":
+    case "rebaseRefresh":
+    case "rebaseAccept":
+    case "sourceDetach":
+    case "sourceRestore":
+    case "sourceImport":
+    case "modificationCreate":
+    case "modificationBuild":
+    case "modificationDerive": {
+      const loader = new NodePluginLoader();
+      const options = {
+        signal,
+        onProgress: (message: string) => progress({ message }),
+        loadEnvironment: (configFile: string) =>
+          loader.loadProjectEnvironment({
+            cwd: path.dirname(configFile),
+            configFile,
+            bundledPlugins: new Map([["@uttori/asm-plugin-snes", snesPlugin]]),
+          }),
+      };
+      try {
+        if (job.operation === "metadataMigrationApply") {
+          return await applyMetadataMigration({ ...job.input, ...options });
+        }
+        if (job.operation === "editorPreview") {
+          return await previewRomEditor({ ...job.input, ...options });
+        }
+        if (job.operation === "baselineRetain") {
+          return await retainRomModificationBaseline({ ...job.input, ...options });
+        }
+        if (job.operation === "assetExtract") {
+          return await extractRomAsset({ ...job.input, ...options });
+        }
+        if (job.operation === "assetImport") {
+          return await importRomAsset({ ...job.input, ...options });
+        }
+        if (job.operation === "rebaseReview") {
+          return await reviewRomRebase({ ...job.input, ...options });
+        }
+        if (job.operation === "rebaseRefresh") {
+          return await refreshRomRebaseReview({ ...job.input, ...options });
+        }
+        if (job.operation === "rebaseAccept") {
+          return await acceptRomRebase({ ...job.input, ...options });
+        }
+        if (job.operation === "sourceDetach") {
+          return await detachRomSource({ ...job.input, ...options });
+        }
+        if (job.operation === "sourceRestore") {
+          return await restoreReviewedSource({ ...job.input, ...options });
+        }
+        if (job.operation === "sourceImport") {
+          return await importReviewedSource({ ...job.input, ...options });
+        }
+        if (job.operation === "modificationCreate") {
+          return await createRomModificationProject({ ...job.input, ...options });
+        }
+        if (job.operation === "modificationDerive") {
+          return await deriveModifiedRomProject({ ...job.input, ...options });
+        }
+        return await buildModifiedRom({ ...job.input, ...options });
+      } finally {
+        await loader.dispose();
+      }
+    }
+    case "publish":
+      return publishVerifiedSource(job.input, signal, (message) => progress({ message }));
+    case "refreshEligible":
+      return canRefreshMetadata(job.input);
+    case "publicationStatus":
+      return readSourcePublication(job.input.sourceDirectory);
+    case "recover": {
+      const lease = acquireEditLease(job.input.projectDirectory);
+      let sourceLease: ReturnType<typeof acquireFileLease> | undefined;
+      try {
+        sourceLease = acquireFileLease(
+          path.join(job.input.sourceDirectory, ".uttori-publication.lock"),
+        );
+        return recoverSourceGeneration(job.input.sourceDirectory);
+      } finally {
+        sourceLease?.release();
+        lease.release();
+      }
+    }
     case "prepare": {
       progress({ message: "Reading analysis counts and validating generated source…" });
       const { target, seeds } = job.input;
@@ -231,11 +435,8 @@ const executeMaintenanceJob = async (
           progress({ message, processedObservations }),
       });
     case "export":
-      return exportSnesProject({
-        ...job.input,
-        signal,
-        onProgress: ({ message }) => progress({ message }),
-      });
+      return (await publishVerifiedSource(job.input, signal, (message) => progress({ message })))
+        .exported;
     case "refresh": {
       const { target, receipt } = job.input;
       const store = openAnalysisProjectStore(target.projectDirectory);
@@ -260,7 +461,14 @@ const executeMaintenanceJob = async (
         return undefined;
       }
       progress({ message: "Refreshing annotation source using existing analysis…" });
-      return exportSnesProject({ ...target, expectedRevision: receipt.after, signal });
+      return (
+        await publishVerifiedSource(
+          target,
+          signal,
+          (message) => progress({ message }),
+          receipt.after,
+        )
+      ).exported;
     }
     case "revision": {
       const store = openAnalysisProjectStore(job.input.projectDirectory);

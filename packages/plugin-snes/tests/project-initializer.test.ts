@@ -72,14 +72,21 @@ test("shared initializer commits a verified workspace with analysis and editor f
     t.regex(defines, /^M7HOFS = \$210D ; Mode 7 horizontal scroll/m);
     t.regex(defines, /^JOYOUT = \$4016 ; Joypad latch output/m);
     t.regex(defines, /^A1T0L = \$4302 ; DMA\/HDMA channel 0:/m);
-    t.regex(defines, /^A1TL0 = \$4302 ; Legacy alias for A1T0L/m);
+    t.regex(defines, /^; Legacy alias for A1T0L[^\n]*\nA1TL0 = \$4302$/m);
     t.regex(defines, /^NLTR7 = \$437A ; DMA\/HDMA channel 7:/m);
     t.regex(defines, /^UNUSED7_MIRROR = \$437F ; DMA\/HDMA channel 7:/m);
     t.regex(defines, /^JOY_START = \$1000 ; Controller Start-button bit\.$/m);
     const assignments = defines.split("\n").filter((line) => /^[A-Z][\dA-Z_]+ = \$/.test(line));
     t.true(assignments.length > snesHardwareDefineRecords().length);
     t.true(
-      assignments.every((line) => / ; \S/.test(line)),
+      defines
+        .split("\n")
+        .every(
+          (line, index, lines) =>
+            !/^[A-Z][\dA-Z_]+ = \$/.test(line) ||
+            / ; \S/.test(line) ||
+            /^; \S/.test(lines[index - 1] ?? ""),
+        ),
       "every generated register and mask has its own hover comment",
     );
     const config = JSON.parse(
@@ -155,7 +162,7 @@ test("incomplete reanalysis preserves known code and the saved project", async (
   t.deepEqual(after.revision, before.revision);
   t.deepEqual(after.shards, before.shards);
   t.notThrows(() => validateSourceExportFiles(outputDirectory));
-  const retry = analyzeSnesProject({ projectDirectory, romFile, maxWorkItems: 100_000 });
+  const retry = analyzeSnesProject({ projectDirectory, romFile, maxWorkItems: 1_000_000 });
   t.is(retry.status, "complete");
   t.true(
     exportSnesProject({ projectDirectory, romFile, sourceDirectory: outputDirectory }).codeBytes >
@@ -511,7 +518,7 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
     const withSources = await fs.readFile(path.join(outputDirectory, "ram-defines.asm"), "utf8");
     t.regex(
       withSources,
-      /^RAM_RING_MENU_MODE = \$7E1847 ; Menu — Selects the active ring-menu mode\. menu\.txt:L12\. Menu capture frame 42\.$/m,
+      /^; Menu — Selects the active ring-menu mode\. menu\.txt:L12\. Menu capture frame 42\.\nRAM_RING_MENU_MODE = \$7E1847$/m,
     );
     t.true(
       (await verifySnesProjectRoundTrip({ sourceDirectory: outputDirectory, romFile })).comparison

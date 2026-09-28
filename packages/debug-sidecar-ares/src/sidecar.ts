@@ -14,6 +14,8 @@ export interface AresSidecarArguments {
   readonly manifest: string;
   readonly executable: string;
   readonly rom: string;
+  /** Explicit verified build identity; omitted retains the runtime manifest's original ROM pin. */
+  readonly romSha256?: string;
   readonly runtimeDirectory: string;
   readonly system?: string;
   readonly fastBoot: boolean;
@@ -24,16 +26,17 @@ const usage = `Usage: uttori-asm-debug-sidecar-ares [options]
 Required:
   --manifest path       Versioned ares runtime manifest JSON
   --ares path           Separately installed ares executable (manifest selects frontend)
-  --rom path            SNES ROM whose SHA-256 matches the manifest
+  --rom path            SNES ROM matching the selected build or manifest SHA-256
   --runtime-dir path    Portable root containing bin, resources, settings, and saves
 
 Optional:
+  --rom-sha256 hash     Expected ROM SHA-256 from a verified build (64 hex digits)
   --system name         Ares system name (default: Super Famicom)
   --no-fast-boot        Disable the ares fast-boot setting
   --help                Show this help
 `;
 
-const optionNames = new Set(["--manifest", "--ares", "--rom", "--runtime-dir", "--system"]);
+const optionNames = new Set(["--manifest", "--ares", "--rom", "--rom-sha256", "--runtime-dir", "--system"]);
 
 /**
  * Strict shell-independent parser for the production sidecar executable.
@@ -63,7 +66,12 @@ export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSi
     return path.resolve(value);
   };
   const system = values.get("--system");
+  const romSha256 = values.get("--rom-sha256");
+  if (romSha256 !== undefined && !/^[\da-f]{64}$/i.test(romSha256)) {
+    throw new Error("--rom-sha256 requires a 64-digit SHA-256 from the selected build.");
+  }
   return {
+    ...(romSha256 ? { romSha256: romSha256.toLowerCase() } : {}),
     manifest: required("--manifest"),
     executable: required("--ares"),
     rom: required("--rom"),
@@ -94,9 +102,12 @@ export const runAresSidecar = async (
   const options = parseAresSidecarArguments(arguments_);
   const session = environment[DEBUG_SIDECAR_SESSION_ENV];
   assertDebugSidecarSessionToken(session);
-  const manifest = parseAresRuntimeManifest(
+  const runtimeManifest = parseAresRuntimeManifest(
     JSON.parse(await readFile(options.manifest, "utf8")) as unknown,
   );
+  // A modification selects a new ROM identity for this session only. Executable and
+  // resource pins still come from the installed runtime; its saved manifest is unchanged.
+  const manifest = { ...runtimeManifest, romSha256: options.romSha256 ?? runtimeManifest.romSha256 };
   const host = new AresProcessHost({
     executable: options.executable,
     rom: options.rom,

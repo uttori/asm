@@ -31,6 +31,9 @@ SNES analysis workflow:
 npx uttori-asm disassemble game.sfc game.analysis --mapper lorom
 npx uttori-asm analyze game.analysis --rom game.sfc
 npx uttori-asm export game.analysis source --rom game.sfc
+# Optional preferred width for generated dataStruct declarations and table rows (default 100).
+npx uttori-asm export game.analysis source --rom game.sfc --struct-line-width 80 --comment-line-width 80
+npx uttori-asm export game.analysis source --rom game.sfc --no-wrap-comments
 npx uttori-asm verify-roundtrip source --rom game.sfc
 ```
 

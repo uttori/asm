@@ -18,9 +18,15 @@ import {
   verifiedBrrFromWave,
 } from "../../assets/plugins/secret-of-mana/som-asset-plugin.mjs";
 import {
-  encodeFrameAtlas,
+  encodeInspectedFrameSegment,
+  inspectFrameAtlas,
   readFrameLayout,
 } from "../../assets/plugins/secret-of-mana/som-frame-atlas.mjs";
+import {
+  convertRoomAsset,
+  parseRoomAsset,
+  renderRoomAsset,
+} from "../../assets/plugins/secret-of-mana/som-room-assets.mjs";
 import {
   parseSpritePaletteCatalog,
   readSpritePaletteCatalog,
@@ -116,6 +122,7 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
   if (typeof segment !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
+  const inspected = inspectFrameAtlas(input.source, layout, catalog, { segmentName: segment });
   let encodedBytes: number;
   let output: string;
   if (input.format === "som.boss.graphics") {
@@ -125,13 +132,13 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
-    encodedBytes = encodeFrameAtlas(input.source, layout, segment, catalog).length;
+    encodedBytes = encodeInspectedFrameSegment(inspected, segment).length;
     output = "tiles";
   }
   if (input.output !== undefined && input.output !== output) {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const image = pngImporter.import(input.source).value as IndexedImage;
+  const image = inspected.image as IndexedImage;
   if (image.kind !== "indexed-image") {
     throw new Error("Frame atlas preview requires an indexed PNG.");
   }
@@ -207,6 +214,53 @@ function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult 
 }
 
 /**
+ * Render current room placements after checking every encoded section.
+ * @param {AssetPreviewInput} input Editable room JSON, selected section and captured preview-resource dependency.
+ * @returns {AssetPreviewResult} Native-scale image preview with the selected section's encoded byte count.
+ */
+function convertSomRoomPreview(input: AssetPreviewInput): AssetPreviewResult {
+  const converted = convertRoomAsset(input.source, input.options);
+  const output = input.output ?? converted.primaryOutput;
+  if (!Object.hasOwn(converted.outputs, output)) {
+    throw new Error(`Unknown room output '${output}'.`);
+  }
+  const resourcePath = input.options.preview;
+  if (typeof resourcePath !== "string" || !input.resources[resourcePath]) {
+    throw new Error("Room preview requires its shared preview JSON resource.");
+  }
+  const resource = input.resources[resourcePath];
+  if (resource.mediaType !== "application/json") {
+    throw new Error("Room preview resource must be JSON.");
+  }
+  const room = parseRoomAsset(input.source) as { id: number; name?: string };
+  const preview = renderRoomAsset(room, JSON.parse(new TextDecoder().decode(resource.bytes)), {
+    layer: input.options.layer,
+  });
+  return {
+    kind: "image",
+    sourceBytes: input.source.bytes.length,
+    encodedBytes: converted.outputs[output].bytes.length,
+    format: input.format,
+    output,
+    metadata: {
+      room: room.id,
+      name: room.name,
+      width: preview.width,
+      height: preview.height,
+      activePieces: preview.activePieces,
+      tileset: preview.tileset,
+      limitation: preview.limitation,
+    },
+    thumbnailPngBase64: Buffer.from(
+      rgbaPreviewPng(preview.rgba, preview.width, preview.height, 192),
+    ).toString("base64"),
+    composedPngBase64: Buffer.from(
+      rgbaPreviewPng(preview.rgba, preview.width, preview.height),
+    ).toString("base64"),
+  };
+}
+
+/**
  * Preview the playable source and verified native BRR stream used by the SoM plugin.
  * Segment playback uses the complete stream because a bank split can cut through a BRR block.
  * @param {AssetPreviewInput} input Authored WAVE and literal segment options, when present.
@@ -245,6 +299,9 @@ function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
  * @returns {AssetPreviewResult} Display metadata and bounded PNG/WAVE media.
  */
 export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResult {
+  if (input.format === "som.room") {
+    return convertSomRoomPreview(input);
+  }
   if (input.format === "som.brr.pcm" || input.format === "som.brr.segment") {
     return convertSomBrrPreview(input);
   }

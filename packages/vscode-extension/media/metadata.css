@@ -1,0 +1,92 @@
+body {
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-foreground);
+  padding: 18px;
+  max-width: 1100px;
+}
+h1 {
+  font-size: 1.5rem;
+}
+p {
+  line-height: 1.5;
+}
+label {
+  display: block;
+  margin: 10px 0;
+}
+input:not([type="checkbox"]),
+select,
+textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 5px;
+  padding: 7px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+}
+textarea {
+  font-family: var(--vscode-editor-font-family);
+  resize: vertical;
+}
+button {
+  padding: 7px 12px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: 0;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.toolbar label {
+  flex: 1;
+  min-width: 200px;
+}
+fieldset {
+  border: 1px solid var(--vscode-panel-border);
+  margin: 15px 0;
+  padding: 12px;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 450px;
+  overflow: auto;
+  background: var(--vscode-textCodeBlock-background);
+  padding: 12px;
+}
+#fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+#fields .wide {
+  grid-column: 1/-1;
+}
+#status {
+  padding: 10px;
+  border-left: 3px solid var(--vscode-focusBorder);
+}
+.error {
+  color: var(--vscode-errorForeground);
+}
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+[hidden] {
+  display: none !important;
+}

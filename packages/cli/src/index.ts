@@ -21,10 +21,15 @@ import {
   openAnalysisProjectStore,
   loadAnalysisProjectView,
   loadSourceExportManifest,
+  findManagedSourceFile,
+  sourceGenerationIdentity,
+  assertSourceGeneration,
   mergeRuntimeEvidence,
   validateSourceExportFiles,
   validateSourceExportInputs,
   compactAnalysisProject,
+  DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH,
+  DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS,
   type AnalysisStoragePolicy,
   commitRuntimeEvidenceBatch,
   analysisProjectRevision,
@@ -103,9 +108,15 @@ export interface CliArguments {
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
   /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
   readonly entryPoints: readonly number[];
-  /** Positive work-item limit. Undefined delegates to the analyzer's 100,000 default. */
+  /** Positive work-item limit. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS}. */
   readonly maxWorkItems?: number;
-  /** Nonnegative call-context depth. Undefined delegates to the analyzer's default of 8. */
+  /** Preferred exported dataStruct width in columns; integer >= 40, defaults to 100. */
+  readonly structLineWidth?: number;
+  /** Optional export-only comment wrapping override; omitted uses the enabled default. */
+  readonly wrapComments?: boolean;
+  /** Preferred comment columns including indentation and semicolon. */
+  readonly commentLineWidth?: number;
+  /** Nonnegative call-context depth. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}. */
   readonly maxCallDepth?: number;
   readonly verbose: boolean;
   readonly force: boolean;
@@ -130,7 +141,14 @@ const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   ],
   disassemble: ["--mapper", "--header-size", "--dizraw"],
   analyze: ["--rom", "--entry", "--max-work-items", "--max-call-depth"],
-  export: ["--rom", "--force", "--allow-code-regression"],
+  export: [
+    "--rom",
+    "--force",
+    "--allow-code-regression",
+    "--struct-line-width",
+    "--comment-line-width",
+    "--no-wrap-comments",
+  ],
   "verify-roundtrip": ["--rom"],
   "project-validate": ["--rom"],
   "project-compact": [],
@@ -157,6 +175,7 @@ const booleanOptions = new Set([
   "--force",
   "--allow-code-regression",
   "--debug",
+  "--no-wrap-comments",
 ]);
 const commandsWithOutput = new Set<CliCommand>([
   "assemble",
@@ -200,10 +219,13 @@ Evidence options (evidence-import):
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
-  --max-work-items <count>     Positive work limit (default 100000)
-  --max-call-depth <count>     Nonnegative call-context depth (default 8)
+  --max-work-items <count>     Positive work limit (default ${DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS})
+  --max-call-depth <count>     Nonnegative call-context depth (default ${DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH})
 
 Export options (export):
+  --struct-line-width <count> Preferred dataStruct width, at least 40 (default 100)
+  --comment-line-width <count> Preferred comment width, at least 20 (default 100)
+  --no-wrap-comments          Disable generated assembly comment wrapping
   --force                     Replace modified generated files
   --allow-code-regression      Allow previously exported code to become raw bytes
   Default destination: <project stem>.source
@@ -268,6 +290,9 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let traceIndex: "full" | "65816-disassembly" | "65816-analysis" | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
+  let structLineWidth: number | undefined;
+  let commentLineWidth: number | undefined;
+  let wrapComments: boolean | undefined;
   let maxCallDepth: number | undefined;
   let verbose = false;
   let force = false;
@@ -326,6 +351,10 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     }
     if (flag === "--allow-code-regression") {
       allowCodeRegression = true;
+      continue;
+    }
+    if (flag === "--no-wrap-comments") {
+      wrapComments = false;
       continue;
     }
     if (flag === "--debug") {
@@ -430,6 +459,18 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         entryPoints.push(address);
         break;
       }
+      case "--comment-line-width":
+        commentLineWidth = Number(value);
+        if (!Number.isSafeInteger(commentLineWidth) || commentLineWidth < 20) {
+          throw new Error("--comment-line-width must be an integer of at least 20 columns.");
+        }
+        break;
+      case "--struct-line-width":
+        structLineWidth = Number(value);
+        if (!Number.isSafeInteger(structLineWidth) || structLineWidth < 40) {
+          throw new Error("--struct-line-width must be an integer of at least 40 columns.");
+        }
+        break;
       case "--max-work-items":
         maxWorkItems = Number(value);
         if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
@@ -504,6 +545,9 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
+    structLineWidth,
+    commentLineWidth,
+    wrapComments,
     maxCallDepth,
     verbose,
     force,
@@ -963,6 +1007,9 @@ const exportProjectSource = (parsed: CliArguments, cwd: string): number => {
       sourceDirectory: outputDirectory,
       force: parsed.force,
       allowCodeRegression: parsed.allowCodeRegression,
+      structLineWidth: parsed.structLineWidth,
+      commentLineWidth: parsed.commentLineWidth,
+      wrapComments: parsed.wrapComments,
     });
     console.log(
       `Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s). ${result.codeBytes} byte(s) emitted as native 65816 source.`,
@@ -1056,8 +1103,15 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
       console.log(`Architecture: ${loaded.architecture}`);
     }
 
+    const managedGeneration = findManagedSourceFile(inputFile);
+    const generationIdentity = managedGeneration
+      ? sourceGenerationIdentity(managedGeneration.directory)
+      : undefined;
     const source = fileProvider.readTextFile(inputFile);
     assembler.assembleProgram(assembler.buildProgramModel(source, inputFile, 0));
+    if (managedGeneration && generationIdentity) {
+      assertSourceGeneration(managedGeneration.directory, generationIdentity);
+    }
     const extension = loaded.environment.getTarget(loaded.target)!.defaultOutputExtension;
     const outputFile = parsed.output
       ? path.resolve(cwd, parsed.output)
@@ -1093,6 +1147,9 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
       });
       outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
     }
+    if (managedGeneration && generationIdentity) {
+      assertSourceGeneration(managedGeneration.directory, generationIdentity);
+    }
     publishOutputFiles(outputs, [inputFile, loaded.configuration.configFile ?? explicitConfig]);
     console.log(`Success: Output written to '${outputFile}'.`);
     if (debugMapFile) {
@@ -1125,6 +1182,7 @@ const verifyRoundTrip = async (parsed: CliArguments, cwd: string): Promise<numbe
     return 1;
   }
   try {
+    const generationIdentity = sourceGenerationIdentity(directory);
     const manifest = loadSourceExportManifest(directory);
     validateSourceExportFiles(directory, manifest);
     validateSourceExportInputs(directory, manifest);
@@ -1189,6 +1247,8 @@ const verifyRoundTrip = async (parsed: CliArguments, cwd: string): Promise<numbe
       );
       return 1;
     }
+    assertSourceGeneration(directory, generationIdentity);
+    validateSourceExportFiles(directory, manifest);
     // Keep a previously verified image intact when rebuilding or comparison fails.
     publishOutputFiles([{ file: finalOutput, contents: final }], [path.resolve(cwd, parsed.rom)]);
     console.log(

@@ -1,5 +1,12 @@
 import type { DebugMapInstruction, DebugMapRange } from "@uttori/asm-core/debug-map";
-import type { InstructionAnalysisAnnotation } from "@uttori/asm-disassembler";
+import type {
+  InstructionAnalysisAnnotation,
+  InstructionEffectiveAddressAnnotation,
+  InstructionMemoryAccessAnnotation,
+  InstructionStateObservationAnnotation,
+  InstructionStateTransitionAnnotation,
+} from "@uttori/asm-disassembler";
+import { canonicalValue } from "@uttori/asm-disassembler/canonical-json";
 
 /** Qualified location; an absent count means observations were not requested or unavailable. */
 export interface EditorLocation {
@@ -124,6 +131,12 @@ export const informationHex = (value: number, digits = 4): string => {
   return `${sign}$${Math.abs(value).toString(16).toUpperCase().padStart(digits, "0")}`;
 };
 
+/**
+ * Reserve the final character for an ellipsis when a complete surface exceeds its budget.
+ * @param {string} value Fully joined text.
+ * @param {number} maximum Positive character budget including the ellipsis.
+ * @returns {string} Text bounded once after composition.
+ */
 const clip = (value: string, maximum: number): string =>
   value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 
@@ -149,27 +162,45 @@ const locationLabel = (location: EditorLocation, locations: readonly EditorLocat
 };
 
 /**
- * One state field can have alternatives. Keep source attribution and unknown/absent distinct.
- * @param {unknown} value Raw project/runtime value or a known/unknown wrapper.
- * @returns {string | undefined} Human-readable value, or undefined for unavailable structures.
+ * Render analysis values for overlays, preserving the distinction between absent (∅) and unknown
+ * (?) state.
+ * Compact fields omit structured values; detailed evidence can retain canonical JSON capped at 60 characters.
+ * @param {unknown} value State value or canonicalizable fallback data.
+ * @param {boolean} [present] Whether the field exists; defaults to true.
+ * @param {boolean} [includeStructures] Retain structured fallback data for detailed evidence; defaults to false.
+ * @returns {string | undefined} Present scalar text, or an optional bounded structured value.
  */
-const stateValue = (value: unknown): string | undefined => {
-  if (typeof value === "number") {
-    return informationHex(value);
+const stateValue = (
+  value: unknown,
+  present = true,
+  includeStructures = false,
+): string | undefined => {
+  if (!present) {
+    return "∅";
   }
-  if (typeof value === "boolean" || typeof value === "string") {
-    return String(value);
-  }
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Readonly<Record<string, unknown>>;
+    if (record.kind === "known" && "value" in record) {
+      return stateValue(record.value, true, includeStructures);
+    }
     if (record.kind === "unknown") {
       return "?";
     }
-    if (record.kind === "known") {
-      return stateValue(record.value);
-    }
   }
-  return undefined;
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? informationHex(value) : String(value);
+  }
+  if (typeof value === "boolean") {
+    return String(value);
+  }
+  if (!includeStructures) {
+    return undefined;
+  }
+  const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
+  return serialized.length > 60 ? `${serialized.slice(0, 57)}…` : serialized;
 };
 
 /**
@@ -299,18 +330,274 @@ export const renderInformation = (
   separator: string,
   maximum: number,
 ): string =>
-  clip(
-    infos
-      .flatMap((info) => {
-        const parts = templates
-          .map((template) => renderTemplate(template, info))
-          .filter((part): part is string => part !== undefined);
-        if (!parts.length) {
-          return [];
-        }
-        const prefix = infos.length > 1 ? `${info.label}: ` : "";
-        return [`${prefix}${parts.join(separator)}`];
-      })
-      .join(" | "),
+  joinInformation(
+    infos.flatMap((info) => {
+      const parts = templates
+        .map((template) => renderTemplate(template, info))
+        .filter((part): part is string => part !== undefined);
+      if (!parts.length) {
+        return [];
+      }
+      const prefix = infos.length > 1 ? `${info.label}: ` : "";
+      return [`${prefix}${parts.join(separator)}`];
+    }),
+    " | ",
     maximum,
   );
+
+/**
+ * Join surviving fragments and bound the whole surface, including multi-record debugger results.
+ * @param {readonly string[]} parts Already formatted fragments; empty entries are omitted.
+ * @param {string} separator Delimiter between nonempty fragments.
+ * @param {number} maximum Positive total character budget, including an ellipsis.
+ * @returns {string} Bounded display text, or empty text when no fragments survive.
+ */
+export const joinInformation = (
+  parts: readonly string[],
+  separator: string,
+  maximum: number,
+): string => clip(parts.filter(Boolean).join(separator), maximum);
+
+/**
+ * Describe an operand address with its symbol, unresolved base, and volatility so a base is
+ * never presented as a resolved access.
+ * @param {InstructionEffectiveAddressAnnotation} address Persisted operand address and resolution evidence.
+ * @returns {string} Operand identity with base/volatile qualifiers when applicable.
+ */
+const effectiveAddressText = (address: InstructionEffectiveAddressAnnotation): string => {
+  const resolved = address.address ?? address.baseAddress;
+  const identity = [address.symbol, resolved === undefined ? undefined : informationHex(resolved)]
+    .filter((value): value is string => value !== undefined)
+    .join("@");
+  return `EA${address.operandIndex} ${identity || "?"}${address.address === undefined && address.baseAddress !== undefined ? " base" : ""}${address.volatile ? " volatile" : ""}`;
+};
+
+/**
+ * Format a state change with separate absent-value markers for missing before/after fields.
+ * @param {InstructionStateTransitionAnnotation} transition Before/after state evidence for one processor field.
+ * @returns {string} Field transition with explicit missing-value markers.
+ */
+const transitionText = (transition: InstructionStateTransitionAnnotation): string =>
+  `Δ${transition.field} ${stateValue(transition.before, "before" in transition, true)}→${stateValue(transition.after, "after" in transition, true)}`;
+
+/**
+ * Render an observed state in stable field order with its evidence source and optional
+ * observation count.
+ * @param {InstructionStateObservationAnnotation} observation State fields, evidence source, and optional occurrence count.
+ * @returns {string} Stable field listing with provenance and count.
+ */
+const stateText = (observation: InstructionStateObservationAnnotation): string => {
+  const fields = Object.entries(observation.state)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, value]) => `${name}=${stateValue(value, true, true)}`)
+    .join(",");
+  return `${observation.source} state ${fields || "∅"}${observation.count === undefined ? "" : ` ×${observation.count}`}`;
+};
+
+/**
+ * Describe a memory access with actor/channel, qualified address, byte width, and count; unknown
+ * access modes remain visible as ?.
+ * @param {InstructionMemoryAccessAnnotation} access Qualified access evidence with byte width and observation count.
+ * @returns {string} Compact actor, access mode, address, value, width, and count.
+ */
+const accessText = (access: InstructionMemoryAccessAnnotation): string => {
+  let mode = "?";
+  if (access.access === "read") {
+    mode = "R";
+  } else if (access.access === "write") {
+    mode = "W";
+  } else if (access.access === "read-write") {
+    mode = "RW";
+  }
+  let actor = "";
+  if (access.actor) {
+    actor = access.actor;
+    if (access.channel !== undefined) {
+      actor += ` channel ${access.channel}`;
+    }
+    actor += " ";
+  }
+  const value = access.value === undefined ? "" : `=${informationHex(access.value)}`;
+  return `${actor}${mode} ${access.accessedAddressSpace}:${informationHex(access.accessedAddress)}${value} ${access.width}B ×${access.count}`;
+};
+
+/**
+ * Fixed debugger/navigation evidence presentation, independent of resource-scoped editor templates.
+ * Empty means the instruction has no user-facing evidence; full details remain available to the inspector.
+ * @param {InstructionAnalysisAnnotation} annotation Projected instruction analysis.
+ * @param {number} maximumLength Maximum returned character count.
+ * @returns {string} Compact target-neutral annotation text.
+ */
+export const formatInstructionAnnotationSummary = (
+  annotation: InstructionAnalysisAnnotation,
+  maximumLength = 220,
+): string => {
+  const parts: string[] = [];
+  parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text }) => text));
+  if (annotation.executionCount > 0) {
+    parts.push(`▶ ${annotation.executionCount}×`);
+  }
+  if (annotation.detailsLimited) {
+    parts.push("details limited");
+  }
+  const coverage = annotation.runtimeCoverage.map(({ coverage }) => coverage);
+  if (coverage.length > 0) {
+    parts.push(`coverage ${coverage.join("/")}`);
+  }
+  parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
+  parts.push(...annotation.memoryAccesses.slice(0, 2).map(accessText));
+  parts.push(...annotation.stateTransitions.slice(0, 3).map(transitionText));
+  if (annotation.stateTransitions.length === 0 && annotation.stateObservations.length > 0) {
+    parts.push(stateText(annotation.stateObservations[0]));
+  }
+  return joinInformation(parts, " · ", Math.max(24, maximumLength));
+};
+
+/**
+ * Plain-text inspector detail retaining supplied identities and provenance, including preview limits.
+ * @param {InstructionAnalysisAnnotation} annotation Projected instruction analysis.
+ * @returns {string} Multiline target-neutral annotation detail.
+ */
+export const formatInstructionAnnotationDetails = (
+  annotation: InstructionAnalysisAnnotation,
+): string => {
+  const lines = [
+    `${annotation.addressSpace}:${informationHex(annotation.address)}`,
+    annotation.outputOffsets.length > 0
+      ? `Output offsets: ${annotation.outputOffsets.map((offset) => informationHex(offset)).join(", ")}`
+      : "Output offsets: none persisted",
+    `Architectures: ${annotation.architectures.join(", ") || "none persisted"}`,
+    `Execution observations: ${annotation.executionCount}`,
+    ...(annotation.detailsLimited
+      ? [
+          "Some detail records are omitted from this preview. Execution totals include all observations.",
+        ]
+      : []),
+    ...(annotation.comments ?? []).map(
+      ({ text, evidence }) => `Comment: ${text}\nEvidence: ${evidence.join(", ")}`,
+    ),
+  ];
+  // Retain all supplied preview observations, unlike the clipped summary. Append one line at a time
+  // because a single hot instruction can have more observations than V8 allows call arguments.
+  if (annotation.runtimeCoverage.length > 0) {
+    lines.push("Runtime coverage:");
+    for (const { coverage, count, recordIds } of annotation.runtimeCoverage) {
+      lines.push(`  ${coverage} ×${count} (${recordIds.join(", ")})`);
+    }
+  }
+  if (annotation.effectiveAddresses.length > 0) {
+    lines.push("Effective addresses:");
+    for (const address of annotation.effectiveAddresses) {
+      lines.push(`  ${effectiveAddressText(address)} — ${address.explanation}`);
+    }
+  }
+  if (annotation.memoryAccesses.length > 0) {
+    lines.push("Runtime memory:");
+    for (const access of annotation.memoryAccesses) {
+      lines.push(`  ${accessText(access)}`);
+    }
+  }
+  if (annotation.stateTransitions.length > 0) {
+    lines.push("Static state transitions:");
+    for (const transition of annotation.stateTransitions) {
+      lines.push(`  ${transitionText(transition)}`);
+    }
+  }
+  if (annotation.stateObservations.length > 0) {
+    lines.push("Known/observed state:");
+    for (const observation of annotation.stateObservations) {
+      lines.push(`  ${stateText(observation)}`);
+    }
+  }
+  if (annotation.nodeIds.length > 0) {
+    lines.push(`CFG nodes: ${annotation.nodeIds.join(", ")}`);
+  }
+  if (annotation.evidence.length > 0) {
+    lines.push(`Evidence: ${annotation.evidence.join(", ")}`);
+  }
+  return lines.join("\n");
+};
+
+/** Inspector choices share the formatter's section contract; only Summary avoids detail queries. */
+export const INFORMATION_SECTIONS = [
+  "Summary",
+  "Project state",
+  "Runtime state",
+  "State transitions",
+  "Memory and effective addresses",
+  "Evidence and control flow",
+] as const;
+
+/** One lazily requested inspector section, never an arbitrary template or executable expression. */
+export type InformationSection = (typeof INFORMATION_SECTIONS)[number];
+
+/**
+ * Render one inspector section without mutating its cached facts or exposing unrelated histories.
+ * @param {LineInformation} info One qualified artifact/project context.
+ * @param {InformationSection} section Selected detail category; Summary uses only shallow fields.
+ * @returns {string} Plain text ready for the controller's pagination and document display.
+ */
+export const renderInformationSection = (
+  info: LineInformation,
+  section: InformationSection,
+): string => {
+  const lines = [info.label, ""];
+  if (section === "Summary") {
+    for (const field of Object.keys(INFORMATION_FIELDS)) {
+      const value = informationField(field, info);
+      if (value !== undefined) {
+        lines.push(`${field}: ${value}`);
+      }
+    }
+    return lines.join("\n");
+  }
+  for (const annotation of info.annotations ?? []) {
+    // The common identity/count header stays visible; histories belong only to their chosen section.
+    const selected: InstructionAnalysisAnnotation = {
+      ...annotation,
+      stateObservations: [],
+      stateTransitions: [],
+      memoryAccesses: [],
+      effectiveAddresses: [],
+      nodeIds: [],
+      evidence: [],
+      runtimeCoverage: [],
+      comments: [],
+    };
+    let detail = selected;
+    switch (section) {
+      case "Project state":
+      case "Runtime state": {
+        const source = section === "Project state" ? "project" : "runtime";
+        detail = {
+          ...selected,
+          stateObservations: annotation.stateObservations.filter(
+            (value) => value.source === source,
+          ),
+        };
+        break;
+      }
+      case "State transitions":
+        detail = { ...selected, stateTransitions: annotation.stateTransitions };
+        break;
+      case "Memory and effective addresses":
+        detail = {
+          ...selected,
+          memoryAccesses: annotation.memoryAccesses,
+          effectiveAddresses: annotation.effectiveAddresses,
+        };
+        break;
+      case "Evidence and control flow":
+        detail = {
+          ...selected,
+          nodeIds: annotation.nodeIds,
+          evidence: annotation.evidence,
+          runtimeCoverage: annotation.runtimeCoverage,
+          comments: annotation.comments,
+        };
+        break;
+    }
+    lines.push(formatInstructionAnnotationDetails(detail), "");
+  }
+  return lines.join("\n");
+};

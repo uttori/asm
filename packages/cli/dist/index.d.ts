@@ -36,9 +36,15 @@ export interface CliArguments {
     readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
     /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
     readonly entryPoints: readonly number[];
-    /** Positive work-item limit. Undefined delegates to the analyzer's 100,000 default. */
+    /** Positive work-item limit. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS}. */
     readonly maxWorkItems?: number;
-    /** Nonnegative call-context depth. Undefined delegates to the analyzer's default of 8. */
+    /** Preferred exported dataStruct width in columns; integer >= 40, defaults to 100. */
+    readonly structLineWidth?: number;
+    /** Optional export-only comment wrapping override; omitted uses the enabled default. */
+    readonly wrapComments?: boolean;
+    /** Preferred comment columns including indentation and semicolon. */
+    readonly commentLineWidth?: number;
+    /** Nonnegative call-context depth. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}. */
     readonly maxCallDepth?: number;
     readonly verbose: boolean;
     readonly force: boolean;

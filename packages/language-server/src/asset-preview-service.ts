@@ -25,6 +25,7 @@ export function supportsPortableAssetPreview(id: string): boolean {
     id === "som.sprite.frames" ||
     id === "som.boss.graphics" ||
     id === "som.palette.bgr555" ||
+    id === "som.room" ||
     id === "som.brr.pcm" ||
     id === "som.brr.segment"
   );

@@ -120,9 +120,16 @@ export interface StaticTargetOverride {
   readonly evidence: readonly string[];
 }
 
+/** Default work-item budget when `analyzeStaticControlFlow` omits `maxWorkItems`. */
+export const DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1_000_000;
+
+/** Default call-context depth when `analyzeStaticControlFlow` omits `maxCallDepth`. */
+export const DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
+
 /**
  * Deterministic worklist caps.
- * Defaults inside `analyzeStaticControlFlow` are 100_000 items and call depth 8.
+ * Omitted limits use {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS} and
+ * {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}.
  */
 export interface StaticAnalysisLimits {
   /** Positive safe integer work budget. Reaching it returns an incomplete result with a reason. */
@@ -439,8 +446,8 @@ export const analyzeStaticControlFlow = <State>(
     readonly targetOverrides?: readonly StaticTargetOverride[];
   } = {},
 ): StaticAnalysisResult<State> => {
-  const maxWorkItems = options.maxWorkItems ?? 100_000;
-  const maxCallDepth = options.maxCallDepth ?? 8;
+  const maxWorkItems = options.maxWorkItems ?? DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS;
+  const maxCallDepth = options.maxCallDepth ?? DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH;
   if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
     throw new Error("maxWorkItems must be a positive safe integer.");
   }

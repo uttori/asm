@@ -218,8 +218,7 @@ try {
   // Stage installed third-party dependencies too. No workspace link, cached unpublished package,
   // or network fetch can rescue this installation. Set iteration includes discovered transitives.
   const stagedDependencies = new Set<string>();
-  for (let index = 0; index < externalDependencies.length; index++) {
-    const { dependency, from } = externalDependencies[index];
+  for (const { dependency, from } of externalDependencies) {
     const manifestPath = dependencyManifest(dependency, from);
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
     const identity = `${manifest.name}@${manifest.version}`;

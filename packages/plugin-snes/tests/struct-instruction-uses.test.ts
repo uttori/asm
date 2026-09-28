@@ -32,6 +32,26 @@ import {
 } from "../src/disassembler/struct-instruction-uses.js";
 import { renderSnesStructDefines, validateSnesStructMap } from "../src/disassembler/struct-map.js";
 
+/**
+ * Join adjacent full-line comments while preserving instruction boundaries.
+ * @param {string} source Generated assembly with potentially wrapped annotations.
+ * @returns {string} Assembly whose annotation content can be compared independently of wrapping.
+ */
+function unfoldComments(source: string): string {
+  const lines: string[] = [];
+  let previousIndent: string | undefined;
+  for (const line of source.split("\n")) {
+    const comment = /^([\t ]*);(.*)$/.exec(line);
+    if (comment && comment[1] === previousIndent) {
+      lines[lines.length - 1] += ` ${comment[2].trimStart()}`;
+    } else {
+      lines.push(line);
+    }
+    previousIndent = comment?.[1];
+  }
+  return lines.join("\n");
+}
+
 /** Native A16/X8 entry followed by an indirect read, a record stride and a terminating STP. */
 const code = [0x18, 0xfb, 0xc2, 0x20, 0xe2, 0x10, 0xa0, 2, 0xb7, 0xd1, 0x69, 4, 0, 0xdb];
 const fixtureRom = (): RomImage => {
@@ -332,7 +352,27 @@ test("symbolic immediate operands retain bytes and indirect consumers retain add
   }
 });
 
-test("observations retain alternatives and provenance without injecting source lines", (t) => {
+test("display comments can omit redundant rationale while keeping the evidence contract", (t) => {
+  const input = inputMap();
+  const entry = input.instructionUses[0];
+  const suppressed = validateSnesStructMap({
+    ...input,
+    instructionUses: [{ ...entry, comment: "" }],
+  }).instructionUses![0];
+  t.deepEqual(renderSnesStructUseComments(suppressed), []);
+  t.is(suppressed.reason, entry.reason);
+  const replacement = validateSnesStructMap({
+    ...input,
+    instructionUses: [{ ...entry, comment: "Retain carry. research/captures/scene.md" }],
+  }).instructionUses![0];
+  t.deepEqual(renderSnesStructUseComments(replacement), ["Retain carry."]);
+  t.throws(
+    () => validateSnesStructMap({ ...input, instructionUses: [{ ...entry, comment: false }] }),
+    { message: /comment must be a string/ },
+  );
+});
+
+test("comments emit observed evidence while retaining derived alternatives in metadata", (t) => {
   const input = inputMap();
   input.instructionUses[1].reason = "Shared\nhandler";
   input.instructionUses[1].observations!.push({
@@ -346,14 +386,14 @@ test("observations retain alternatives and provenance without injecting source l
   const comments = renderSnesStructUseComments(use);
   t.is(comments.length, 2);
   t.true(comments.every((comment) => !comment.includes("\n")));
-  t.regex(comments[1], /\[struct observations] trace-derived read: 1, observed read: 1/);
-  t.regex(comments[1], /1 binding\(s\), 2 capture\(s\)/);
+  t.regex(comments[1], /\[observed read] Commands\.target/);
+  t.false(comments[1].includes("trace-derived"));
   t.regex(comments[1], /struct-map\.json instructionUses address=8421384 \(\$808008\)/);
   t.is(use.observations[1].source, "capture STP");
   t.is(use.observations[1].detail, "Bus read org $0");
 });
 
-test("large capture histories produce two bounded comments without discarding any evidence", (t) => {
+test("large derived capture histories stay in metadata without generated evidence comments", (t) => {
   const input = inputMap();
   const template = observation();
   input.instructionUses[1].reason = "Shared consumer. ".repeat(100);
@@ -366,19 +406,16 @@ test("large capture histories produce two bounded comments without discarding an
   const use = validateSnesStructMap(input).instructionUses![1];
   const before = structuredClone(use);
   const comments = renderSnesStructUseComments(use);
-  t.is(comments.length, 2);
+  t.is(comments.length, 1);
   t.true(comments.every((comment) => comment.length <= 240 && !/\r|\n/.test(comment)));
-  t.regex(comments[0], /\.{3}$/);
-  t.regex(comments[1], /\[trace-derived read] 1470 observations; 1 binding\(s\), 8 capture\(s\)/);
-  t.regex(comments[1], /Example: Commands\[0]\.target/);
   t.true(
-    comments[1].endsWith("Details: struct-map.json instructionUses address=8421384 ($808008)."),
+    comments[0].endsWith("Details: struct-map.json instructionUses address=8421384 ($808008)."),
   );
   t.deepEqual(use, before, "Summarizing must preserve every target, source and detailed locator.");
   t.deepEqual(renderSnesStructUseComments(use), comments, "Repeated exports are deterministic.");
 });
 
-test("summaries keep observed and derived read/write evidence distinct", (t) => {
+test("summaries keep observed access kinds and omit derived access details", (t) => {
   const input = inputMap();
   const template = observation();
   input.instructionUses[1].observations = ["observed", "trace-derived"].flatMap((provenance) =>
@@ -387,15 +424,17 @@ test("summaries keep observed and derived read/write evidence distinct", (t) => 
   const comments = renderSnesStructUseComments(validateSnesStructMap(input).instructionUses![1]);
   t.is(comments.length, 2);
   t.true(comments[1].startsWith("[struct observations]"));
-  for (const observation of input.instructionUses[1].observations) {
-    t.true(comments[1].includes(`${observation.provenance} ${observation.access}: 1`));
+  for (const access of ["read", "write", "read-write"]) {
+    t.true(comments[1].includes(`observed ${access}: 1`));
   }
+  t.false(comments[1].includes("trace-derived"));
   t.true(comments[1].length <= 240);
 });
 
 test("oversized individual notes retain a complete metadata locator", (t) => {
   const input = inputMap();
   input.instructionUses[0].reason = "Long rationale. ".repeat(100);
+  input.instructionUses[1].observations![0].provenance = "observed";
   input.instructionUses[1].observations![0].detail = "Long observation. ".repeat(100);
   const uses = validateSnesStructMap(input).instructionUses!;
   const operandComments = renderSnesStructUseComments(uses[0]);
@@ -405,7 +444,7 @@ test("oversized individual notes retain a complete metadata locator", (t) => {
     /\.\.\. Details: struct-map\.json instructionUses address=8421382 \(\$808006\)\.$/,
   );
   const comments = renderSnesStructUseComments(uses[1]);
-  t.regex(comments[1], /trace-derived read.*Commands\[1]\.target.*captures\/ceremony.act2/);
+  t.regex(comments[1], /observed read.*Commands\[1]\.target.*captures\/ceremony.act2/);
   t.regex(
     comments[1],
     /\.\.\. Details: struct-map\.json instructionUses address=8421384 \(\$808008\)\.$/,
@@ -421,6 +460,12 @@ test("curated memory overlays preserve encoded widths and indexing without chang
     [[0xb9, 2, 0xe1], "($E100 + Tint.target)", ",y"],
     [[0x9d, 2, 0xe1], "($E100 + Tint.target)", ",x"],
     [[0xbf, 2, 0xe1, 0x7e], "($7EE100 + Tint.target)", ",x"],
+    [[0xb2, 2], "Tint.target", ")"],
+    [[0xa1, 2], "Tint.target", ",x)"],
+    [[0xb1, 2], "Tint.target", "),y"],
+    [[0xa7, 2], "Tint.target", "]"],
+    [[0xb7, 2], "Tint.target", "],y"],
+    [[0x91, 2], "Tint.target", "),y"],
   ] as const) {
     const input = {
       ...inputMap(),
@@ -470,12 +515,13 @@ test("curated memory overlays preserve encoded widths and indexing without chang
   }
 });
 
-test("memory overlays reject control-flow, indirect addressing and incompatible immediate metadata", (t) => {
+test("memory overlays reject control-flow, stack addressing and incompatible immediate metadata", (t) => {
   for (const bytes of [
     [0x20, 2, 0],
     [0xfc, 2, 0],
     [0x6c, 2, 0],
-    [0xb7, 2],
+    [0xb3, 2],
+    [0xdc, 2, 0],
     [0xa9, 2, 0],
   ]) {
     const input = {
@@ -484,7 +530,7 @@ test("memory overlays reject control-flow, indirect addressing and incompatible 
         {
           address: 0x808000,
           expectedBytes: bytes,
-          reason: "Must not reinterpret a call or indirect pointer as a direct address.",
+          reason: "Must not reinterpret control-flow or stack operands as data-address locals.",
           memoryOperand: "Tint.target",
         },
       ],
@@ -586,10 +632,8 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
   const bank = fs.readFileSync(bankFile, "utf8");
   t.regex(bank, /LDY\.b #Tint.target/);
   t.regex(bank, /ADC\.w #sizeof\(Tint\)/);
-  t.regex(
-    bank,
-    /trace-derived read.*Commands\[1]\.target.*captures\/ceremony.act2.*\n  LDA \[\$D1],y/,
-  );
+  t.regex(unfoldComments(bank), /Shared script consumer\.\n  LDA \[\$D1],y/);
+  t.false(bank.includes("trace-derived read"));
   t.true(
     (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
       .equal,
@@ -777,6 +821,7 @@ test("rejects unsafe, unknown, ambiguous and imprecise expressions", (t) => {
 test("observations cover adjacent fields, records and opaque gaps without inventing types", (t) => {
   const input = inputMap();
   const observed = input.instructionUses[1].observations![0];
+  observed.provenance = "observed";
   observed.target = "Commands.opcode";
   let use = validateSnesStructMap(input).instructionUses![1];
   t.deepEqual(
@@ -841,6 +886,7 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
   input.instructionUses[0].operand = "sizeof(Tint) / countof(Commands)";
   input.instructionUses[2].operand = "bytesof(Commands) - sizeof(Tint)";
   input.instructionUses[1].observations![0].target = "Commands.opcode";
+  input.instructionUses[1].observations![0].provenance = "observed";
   const mapPath = path.join(outputDirectory, "struct-map.json");
   fs.writeFileSync(mapPath, JSON.stringify(input));
   const project = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
@@ -867,7 +913,7 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
     store.close();
   }
   const generated = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
-  t.regex(generated, /Covers: Commands\[0]\.opcode.*Commands\[0]\.scope/);
+  t.regex(unfoldComments(generated), /Covers: Commands\[0]\.opcode.*Commands\[0]\.scope/);
   t.regex(generated, /ADC.w #\(bytesof\(Commands\) - sizeof\(Tint\)\)/);
   input.instructionUses[2].operand = "sizeof(Tint) - 1";
   fs.writeFileSync(mapPath, JSON.stringify(input));

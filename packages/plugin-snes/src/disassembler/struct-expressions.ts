@@ -1,6 +1,11 @@
 import { getStructMetadata, parseExpressionNode, type ExpressionNode } from "@uttori/asm-core";
 
-import type { SnesStructBinding, SnesStructField, SnesStructLayout } from "./struct-map.js";
+import type {
+  SnesStructBinding,
+  SnesStructConstant,
+  SnesStructField,
+  SnesStructLayout,
+} from "./struct-map.js";
 
 /** A closed expression over this map. Binding identities are retained for span ownership checks. */
 export interface SnesStructExpression {
@@ -19,15 +24,23 @@ export interface SnesStructAccessPart {
 
 /**
  * Resolve a bounded subset of native assembly expressions, caching repeated expressions per map.
- * No defines, arbitrary calls, file reads or record contents participate in instruction identity.
+ * Only this map's constants/layouts/bindings participate; external defines, arbitrary calls,
+ * file reads and record contents cannot affect instruction identity.
  */
 export class SnesStructExpressionResolver {
   private readonly layouts: ReadonlyMap<string, SnesStructLayout>;
   private readonly bindings: ReadonlyMap<string, SnesStructBinding>;
   private readonly fields: ReadonlyMap<string, ReadonlyMap<string, SnesStructField>>;
   private readonly cache = new Map<string, SnesStructExpression>();
+  private readonly constants: ReadonlyMap<string, number>;
 
-  constructor(layouts: readonly SnesStructLayout[], bindings: readonly SnesStructBinding[]) {
+  /** Keep resolution local to one validated map; omitted constants preserve older map behavior. */
+  constructor(
+    layouts: readonly SnesStructLayout[],
+    bindings: readonly SnesStructBinding[],
+    constants: readonly SnesStructConstant[] = [],
+  ) {
+    this.constants = new Map(constants.map((constant) => [constant.name, constant.value]));
     this.layouts = new Map(layouts.map((layout) => [layout.id, layout]));
     this.bindings = new Map(bindings.map((binding) => [binding.name, binding]));
     this.fields = new Map(
@@ -90,6 +103,11 @@ export class SnesStructExpressionResolver {
       }
       if (root.type !== "identifier") {
         throw new Error("Unsupported struct reference.");
+      }
+      const constant = this.constants.get(root.name);
+      if (constant !== undefined && fieldName === undefined && index === undefined) {
+        references++;
+        return checked(constant, root.name);
       }
       const binding = this.bindings.get(root.name);
       const layout = binding?.structure ?? this.layouts.get(root.name);
@@ -168,7 +186,12 @@ export class SnesStructExpressionResolver {
           }
           reference(arg);
           const binding = this.bindings.get(arg.name);
-          const layout = binding?.structure ?? this.layouts.get(arg.name)!;
+          const layout = binding?.structure ?? this.layouts.get(arg.name);
+          if (!layout) {
+            throw new Error(
+              "Struct reflection requires a layout or binding, not a scalar constant.",
+            );
+          }
           const definition = {
             base: binding ? binding.address - binding.firstIndex * layout.size : 0,
             size: layout.size,
@@ -251,7 +274,9 @@ export class SnesStructExpressionResolver {
     };
     const resolved = visit(parseExpressionNode(input));
     if (!references) {
-      throw new Error("Struct expressions must reference a layout or binding.");
+      throw new Error(
+        "Struct expressions must reference a layout or binding or declared constant.",
+      );
     }
     const result = { ...resolved, bindings: [...owners] };
     this.cache.set(input, result);

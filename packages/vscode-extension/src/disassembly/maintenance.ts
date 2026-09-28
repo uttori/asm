@@ -5,6 +5,7 @@ import {
   ANALYSIS_PROJECT_MANIFEST,
   RomImage,
   SOURCE_EXPORT_MANIFEST,
+  sourceExportSha256,
   describeSourceExportFileIssue,
   inspectSourceExportFiles,
   loadSourceExportManifest,
@@ -17,7 +18,6 @@ import {
 import {
   SNES_RAM_MAP_SOURCE,
   loadSnesRamMap,
-  type ExportSnesProjectResult,
   type SnesFunctionRole,
 } from "@uttori/asm-plugin-snes";
 import {
@@ -31,6 +31,8 @@ import {
   type LogOutputChannel,
 } from "vscode";
 
+import { analysisWorker } from "../analysis/worker-client.js";
+import { informationHex } from "../editor-info/format.js";
 import { DisassemblyMaintenanceClient, type MaintenanceRunOptions } from "./maintenance-client.js";
 import {
   fileChanges,
@@ -48,7 +50,6 @@ export type {
 } from "./maintenance-data.js";
 
 import { findAnalysisProjectDirectories } from "../analysis/coverage-tree.js";
-import { analysisWorker } from "../analysis/worker-client.js";
 import { rememberedSnesRom, rememberSnesRom } from "../project/snes-rom-bindings.js";
 import { createEditorRuntimeBusSource } from "../runtime/bus-source.js";
 import { renderBusTraceReport } from "../runtime/bus-trace-report.js";
@@ -111,14 +112,6 @@ const percent = (part: number, total: number): string =>
   total === 0 ? "0.00%" : `${((part / total) * 100).toFixed(2)}%`;
 
 /**
- * Format CPU addresses as uppercase assembly hexadecimal with at least six digits.
- * @param {number} address CPU address from analysis or capture evidence.
- * @returns {string} $-prefixed uppercase address with at least six digits.
- */
-const hexAddress = (address: number): string =>
-  `$${address.toString(16).toUpperCase().padStart(6, "0")}`;
-
-/**
  * Escape pipe delimiters and flatten newlines so project text cannot split a Markdown table cell
  * or row.
  * @param {string} value Unescaped path, label, or explanation.
@@ -150,13 +143,21 @@ export const renderDisassemblyRegenerationReport = (
     "",
     "## Result",
     "",
-    `- Runtime code seeds used: ${summary.analysis.runtimeSeeds} (${summary.entrySeeds} explicitly selected in this operation. ${summary.analysis.omittedRuntimeSeeds} omitted by the safety bound)`,
-    `- Captured instruction variants: ${summary.analysis.capturedInstructions}. Observed PCs without decoded code: ${summary.analysis.runtimePcsWithoutCode}. Heuristic findings: ${summary.analysis.heuristicRoles}`,
+    ...(summary.analysis
+      ? [
+          `- Runtime code seeds used: ${summary.analysis.runtimeSeeds} (${summary.entrySeeds} explicitly selected; ${summary.analysis.omittedRuntimeSeeds} omitted by the safety bound)`,
+          `- Captured instruction variants: ${summary.analysis.capturedInstructions}. Observed PCs without decoded code: ${summary.analysis.runtimePcsWithoutCode}. Heuristic findings: ${summary.analysis.heuristicRoles}`,
+        ]
+      : ["- Refresh mode: saved analysis reused for all pending presentation edits"]),
     `- RAM variables mapped: ${summary.ramVariables}`,
     `- Static instruction nodes: ${summary.before.instructions} → ${summary.after.instructions} (${signed(instructionDelta)})`,
     `- Source emitted as code: ${formatBytes(summary.before.codeBytes)} → ${formatBytes(summary.after.codeBytes)} (${signed(codeDelta)} bytes)`,
     `- Code coverage: ${percent(summary.before.codeBytes, summary.before.contentBytes)} → ${percent(summary.after.codeBytes, summary.after.contentBytes)}`,
-    `- Analysis status: ${summary.analysis.status}. ${summary.analysis.conflicts} conflict(s), ${summary.analysis.unresolved} unresolved flow(s)`,
+    ...(summary.analysis
+      ? [
+          `- Analysis status: ${summary.analysis.status}. ${summary.analysis.conflicts} conflict(s), ${summary.analysis.unresolved} unresolved flow(s)`,
+        ]
+      : []),
     `- Runtime execution facts retained: ${summary.after.runtimeRecords} address(es), ${summary.after.runtimeEvents} event(s)`,
     `- Exact round trip: yes (${summary.roundTripSha256})`,
     "",
@@ -492,7 +493,7 @@ const resolveProjectSource = async (
  * @param {string} [expectedRom] Optional required headerless ROM SHA-256.
  * @returns {Promise<ResolvedTarget | undefined>} Project/source/ROM selection, or undefined when selection cannot complete.
  */
-const resolveTarget = async (
+export const resolveTarget = async (
   context: ExtensionContext,
   target: DisassemblyMaintenanceTarget = {},
   expectedRom?: string,
@@ -545,6 +546,33 @@ const configuredTraceIndex = (directory: string) => {
 
 /** Stable report labels for process operations. Elapsed time includes the entire child lifetime. */
 const maintenanceStepNames: Record<keyof MaintenanceJobs, string> = {
+  retentionReview: "Review retained storage",
+  retentionPin: "Pin retained artifact",
+  retentionPrune: "Clean up reviewed history",
+  metadataMigrationReview: "Review metadata migration",
+  metadataMigrationApply: "Create verified workspace with migrated metadata",
+  editorPreview: "Validate visual editor draft",
+  editorSave: "Save reviewed visual edit",
+  baselineRetain: "Retain verified baseline for recovery and rebase",
+  assetExtract: "Extract editable native asset",
+  assetImport: "Validate and import owned asset",
+  placementApply: "Apply explicit allocation and pointers",
+  replacementRemove: "Remove ROM replacement ownership",
+  rebaseReview: "Prepare three-way baseline rebase",
+  rebaseRefresh: "Review manually reconciled candidate inputs",
+  rebaseAccept: "Verify and accept reviewed rebase",
+  sourceDetach: "Create manually owned source project",
+  sourceReview: "Preserve and review external source edit",
+  sourceRestore: "Restore reviewed generated source and verify baseline",
+  sourceImport: "Import reviewed source edit and verify generation",
+  modificationCreate: "Verify baseline and create owned modification project",
+  modificationAdd: "Create bounded ROM replacement",
+  modificationBuild: "Verify and build modified ROM",
+  modificationDerive: "Create analysis workspace for modified ROM",
+  publish: "Stage, verify and publish a recoverable source generation",
+  refreshEligible: "Select refresh or reanalysis for pending edits",
+  publicationStatus: "Read durable publication outcome",
+  recover: "Recover interrupted source publication",
   prepare: "Read baseline counts and validate generated files",
   coverage: "Read updated SQL counts",
   analyze: "Analyze code and publish SQLite changes",
@@ -604,7 +632,7 @@ const regenerate = async (
 ): Promise<DisassemblyRegenerationSummary> => {
   const maxWorkItems = workspace
     .getConfiguration("asm", Uri.file(resolved.sourceDirectory))
-    .get<number>("analysis.maxWorkItems", 100_000);
+    .get<number>("analysis.maxWorkItems", 1_000_000);
   if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems < 1) {
     throw new Error("asm.analysis.maxWorkItems must be a positive safe integer.");
   }
@@ -618,25 +646,33 @@ const regenerate = async (
         { target: resolved, seeds },
         options,
       );
-      options.onProgress?.({
-        message: `Analyzing from ${entryPoints.length} runtime code seed(s)…`,
-      });
-      const analysis = await runTimedJob(
+      const metadataOnly =
+        !seeds?.length &&
+        (await runTimedJob(timings, client, "refreshEligible", resolved, options));
+      let analysis: DisassemblyRegenerationSummary["analysis"];
+      if (!metadataOnly) {
+        options.onProgress?.({
+          message: `Analyzing from ${entryPoints.length} runtime code seed(s)…`,
+        });
+        analysis = await runTimedJob(
+          timings,
+          client,
+          "analyze",
+          { target: resolved, entryPoints, maxWorkItems },
+          options,
+        );
+      } else {
+        options.onProgress?.({
+          message: "Refreshing all pending metadata edits using saved analysis…",
+        });
+      }
+      const { exported, verified: roundTrip } = await runTimedJob(
         timings,
         client,
-        "analyze",
-        { target: resolved, entryPoints, maxWorkItems },
+        "publish",
+        resolved,
         options,
       );
-      options.onProgress?.({ message: "Writing generated source…" });
-      const exported = await runTimedJob(timings, client, "export", resolved, options);
-      options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
-      const roundTrip = await runTimedJob(timings, client, "verify", resolved, options);
-      if (!roundTrip.comparison.equal) {
-        throw new Error(
-          `Generated source differed at ROM offset ${roundTrip.comparison.firstDifference}.`,
-        );
-      }
       options.onProgress?.({ message: "Summarizing updated analysis…" });
       const after = await runTimedJob(
         timings,
@@ -691,6 +727,12 @@ const statusReport = async (
     (options) => client.run("coverage", resolved, options),
     resolved.sourceDirectory,
   );
+  const publication = await withMaintenanceProgress(
+    "Assembly: reading publication outcome",
+    (options) =>
+      client.run("publicationStatus", { sourceDirectory: resolved.sourceDirectory }, options),
+    resolved.sourceDirectory,
+  );
   const generatedIssues = inspectSourceExportFiles(
     resolved.sourceDirectory,
     resolved.sourceManifest,
@@ -736,6 +778,13 @@ const statusReport = async (
     `- Source status: ${current ? "current" : `STALE — ${staleReasons.join(". ")}`}`,
     `- Generated-file integrity: ${integrity}`,
     `- Source-input integrity: ${inputIntegrity}`,
+    `- Publication verification: ${publication?.phase === "published" && publication.revision === resolved.sourceManifest.sourceProjectSha256 && publication.after === sourceExportSha256(fs.readFileSync(path.join(resolved.sourceDirectory, SOURCE_EXPORT_MANIFEST))) ? `verified ${publication.romSha256} at ${publication.verifiedAt}` : "no matching durable verification receipt"}`,
+    ...(publication
+      ? [
+          `- Last publication: ${publication.id} (${publication.phase})`,
+          `- Retained previous generation: ${publication.previous}`,
+        ]
+      : []),
     `- RAM-map variables: ${resolved.sourceManifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0}`,
     `- Static instruction nodes: ${coverage.instructions}`,
     `- Source emitted as code: ${formatBytes(coverage.codeBytes)} / ${formatBytes(coverage.contentBytes)} (${percent(coverage.codeBytes, coverage.contentBytes)})`,
@@ -887,9 +936,12 @@ export const registerDisassemblyMaintenance = (
     path.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs"),
     outputChannel,
   );
-  let busy = false;
-  const run = async (operation: () => Promise<void>): Promise<void> => {
-    if (busy) {
+  const activeProjects = new Set<string>();
+  const run = async (
+    operation: () => Promise<void>,
+    project = "selected-project",
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (activeProjects.has(project)) {
       void window
         .showInformationMessage(
           "A disassembly maintenance operation is already running.",
@@ -900,12 +952,14 @@ export const registerDisassemblyMaintenance = (
             outputChannel?.show(true);
           }
         });
-      return;
+      return { ok: false, error: "A maintenance operation is already running." };
     }
-    busy = true;
+    activeProjects.add(project);
+    let failure: string | undefined;
     await operation()
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
+        failure = message;
         const details = error instanceof Error ? (error.stack ?? message) : message;
         outputChannel?.error(`Disassembly maintenance failed: ${details}`);
         void window
@@ -917,12 +971,43 @@ export const registerDisassemblyMaintenance = (
           });
       })
       .finally(() => {
-        busy = false;
+        activeProjects.delete(project);
       });
+    return { ok: failure === undefined, error: failure };
   };
   return [
     client,
     commands.registerCommand("asm.analysis.showOutput", () => outputChannel?.show(true)),
+    commands.registerCommand(
+      "asm.disassembly.recoverPublication",
+      (target?: DisassemblyMaintenanceTarget) =>
+        run(async () => {
+          if (!workspace.isTrusted) {
+            throw new Error("Publication recovery requires a trusted workspace.");
+          }
+          const selected = await chooseProject(target?.projectDirectory);
+          if (!selected) {
+            throw new Error("Choose a native analysis project to recover.");
+          }
+          const sourceDirectory = target?.sourceDirectory ?? path.dirname(selected.directory);
+          const result = await withMaintenanceProgress(
+            "Assembly: recovering source publication",
+            (options) =>
+              client.run(
+                "recover",
+                { projectDirectory: selected.directory, sourceDirectory },
+                options,
+              ),
+            sourceDirectory,
+          );
+          refresh();
+          void window.showInformationMessage(
+            result
+              ? `Publication ${result.id}: ${result.phase}. Retained source: ${result.previous}`
+              : "No interrupted source publication was found.",
+          );
+        }),
+    ),
     commands.registerCommand(
       REGENERATE_DISASSEMBLY_COMMAND,
       (target?: DisassemblyMaintenanceTarget) =>
@@ -932,62 +1017,9 @@ export const registerDisassemblyMaintenance = (
           }
           const resolved = await resolveTarget(context, target);
           if (!resolved) {
-            return;
+            throw new Error("No disassembly project selected.");
           }
           const timings = new DisassemblyTimings();
-          if (target?.annotationRefresh && !target.entrySeeds?.length) {
-            const receipt = target.annotationRefresh;
-            const refreshed = await withMaintenanceProgress(
-              "Assembly: refreshing disassembly annotation",
-              async (options) => {
-                options.signal?.throwIfAborted();
-                options.onProgress?.({ message: "Updating source using saved analysis…" });
-                const exported = await timings.measure(
-                  "Refresh annotation source from saved analysis",
-                  () =>
-                    analysisWorker().request<ExportSnesProjectResult | undefined>(
-                      resolved.projectDirectory,
-                      "annotationRefresh",
-                      {
-                        annotationRefresh: { target: resolved, receipt },
-                      },
-                    ),
-                );
-                options.signal?.throwIfAborted();
-                if (!exported) {
-                  return false;
-                }
-                options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
-                const verified = await runTimedJob(timings, client, "verify", resolved, options);
-                const revision = await runTimedJob(timings, client, "revision", resolved, options);
-                if (
-                  !verified.comparison.equal ||
-                  revision !== receipt.after ||
-                  exported.manifest.sourceProjectSha256 !== revision
-                ) {
-                  throw new Error(
-                    "Analysis changed during source refresh. Run regeneration again.",
-                  );
-                }
-                refresh();
-                const changes = await timings.measure("Compare generated file manifests", () =>
-                  fileChanges(resolved.sourceManifest, exported.manifest),
-                );
-                outputChannel?.info(
-                  `Annotation source refreshed using existing analysis. ${changes.changedFiles.length} file(s) changed. Exact ROM round trip verified (${verified.comparison.actualSha256}).`,
-                );
-                outputChannel?.info(renderMaintenanceTimings(timings.snapshot()));
-                void window.showInformationMessage(
-                  "Assembly: annotation source updated using existing analysis. Exact round trip verified.",
-                );
-                return true;
-              },
-              resolved.sourceDirectory,
-            );
-            if (refreshed) {
-              return;
-            }
-          }
           const summary = await regenerate(client, resolved, target?.entrySeeds, timings);
           refresh();
           outputChannel?.info(
@@ -997,7 +1029,7 @@ export const registerDisassemblyMaintenance = (
           void window.showInformationMessage(
             `Assembly: disassembly is current. ${formatBytes(summary.after.codeBytes)} code (${signed(summary.after.codeBytes - summary.before.codeBytes)} bytes), exact round trip verified.`,
           );
-        }),
+        }, target?.projectDirectory ?? target?.sourceDirectory),
     ),
     commands.registerCommand(
       CONFIGURE_HEURISTICS_COMMAND,
@@ -1080,7 +1112,7 @@ export const registerDisassemblyMaintenance = (
             "| --- | --- | --- | --- |",
             ...result.roles.map(
               (role) =>
-                `| ${role.addressSpace} ${hexAddress(role.address)} | ${markdownCell(role.role)}${role.relationship === "delegated" ? " (via call)" : ""} | ${role.confidence} | ${markdownCell(role.explanation)} |`,
+                `| ${role.addressSpace} ${informationHex(role.address, 6)} | ${markdownCell(role.role)}${role.relationship === "delegated" ? " (via call)" : ""} | ${role.confidence} | ${markdownCell(role.explanation)} |`,
             ),
             ...(result.total > result.roles.length
               ? [

@@ -9,6 +9,7 @@ import {
   Hover,
   MarkdownString,
   Range,
+  StatusBarAlignment,
   ThemeColor,
   window,
   workspace,
@@ -18,6 +19,7 @@ import {
   type TextDocument,
   type TextEditor,
   type TextEditorDecorationType,
+  type StatusBarItem,
   type Uri,
 } from "vscode";
 
@@ -28,14 +30,13 @@ import {
 } from "../editor-info/configuration.js";
 import {
   INFORMATION_FIELDS,
-  compileTemplate,
   renderInformation,
-  renderTemplate,
+  INFORMATION_SECTIONS,
+  renderInformationSection,
   templateRequirements,
 } from "../editor-info/format.js";
+import { informationOverlayGap } from "../editor-info/layout.js";
 import { EditorInformationProvider } from "../editor-info/provider.js";
-import { formatInstructionAnnotationDetails } from "./annotation-format.js";
-import { annotationOverlayColumn, annotationSourceColumns } from "./annotation-layout.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import { discoverAnalysisDebugMapFiles } from "./debug-maps.js";
 import { analysisWorker } from "./worker-client.js";
@@ -60,6 +61,9 @@ export class AnalysisAnnotationController implements Disposable {
   readonly #timers = new Map<TextEditor, ReturnType<typeof setTimeout>>();
   readonly #generations = new WeakMap<TextEditor, number>();
   readonly #reportedIssues = new Set<string>();
+  readonly #status: StatusBarItem;
+  /** Per-editor explanations prevent a background split's result from replacing active status. */
+  readonly #explanations = new WeakMap<TextEditor, string>();
   #disposed = false;
 
   constructor(
@@ -89,7 +93,12 @@ export class AnalysisAnnotationController implements Disposable {
     this.#decoration = window.createTextEditorDecorationType({
       rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
+    this.#status = window.createStatusBarItem(StatusBarAlignment.Right, 40);
+    this.#status.name = "Inline Source Information";
+    this.#status.command = "asm.editorInfo.showStatus";
     this.#disposables.push(
+      this.#status,
+      commands.registerCommand("asm.editorInfo.showStatus", () => this.showStatus()),
       commands.registerCommand("asm.editorInfo.choosePreset", () => this.choosePreset()),
       commands.registerCommand("asm.editorInfo.configureInline", () => this.configureInline()),
       commands.registerCommand("asm.editorInfo.inspectLine", () => this.inspectLine()),
@@ -127,6 +136,50 @@ export class AnalysisAnnotationController implements Disposable {
     );
   }
 
+  /**
+   * Publish status only for the active assembly editor; retain reasons for explicit inspection.
+   * @param {TextEditor} editor Editor owning this generation's result.
+   * @param {string} label Brief state shown in the status bar.
+   * @param {string} explanation Full diagnostic retained for the status report.
+   */
+  #setStatus(editor: TextEditor, label: string, explanation: string): void {
+    this.#explanations.set(editor, explanation);
+    if (editor !== window.activeTextEditor || this.#disposed) {
+      return;
+    }
+    this.#status.text = `$(info) Inline: ${label}`;
+    this.#status.tooltip = `${explanation.slice(0, 1600)}\n\nClick for source information diagnostics.`;
+    this.#status.show();
+  }
+
+  /** Show the latest display outcome plus exact map/dependency rejection evidence on demand. */
+  async showStatus(): Promise<void> {
+    const editor = window.activeTextEditor;
+    if (!editor) {
+      return;
+    }
+    const config = this.#configuration(editor.document.uri);
+    let reasons: readonly string[];
+    try {
+      reasons = await this.provider.diagnostics(editor.document.uri.fsPath, this.#dirtyFiles());
+    } catch (error) {
+      reasons = [error instanceof Error ? error.message : String(error)];
+    }
+    const document = await workspace.openTextDocument({
+      language: "plaintext",
+      content: [
+        `Inline source information: ${editor.document.uri.fsPath}`,
+        `Enabled: ${config.inlineEnabled}; placement: ${config.placement}; column: ${config.column}`,
+        `Language: ${editor.document.languageId}; unsaved: ${editor.document.isDirty}`,
+        this.#explanations.get(editor) ?? "No display result yet.",
+        "",
+        ...reasons,
+        ...(!reasons.length ? ["Build map and saved source dependencies match."] : []),
+      ].join("\n"),
+    });
+    await window.showTextDocument(document, { preview: true, viewColumn: editor.viewColumn });
+  }
+
   /** Invalidate data only when inputs change; display-only refreshes reuse the same cached facts. */
   invalidate(): void {
     this.provider.invalidate();
@@ -161,6 +214,12 @@ export class AnalysisAnnotationController implements Disposable {
     if (this.#disposed) {
       return;
     }
+    if (
+      !window.activeTextEditor ||
+      !["uttori-snes", "uttori-65xx"].includes(window.activeTextEditor.document.languageId)
+    ) {
+      this.#status.hide();
+    }
     const editors = editor ? [editor] : window.visibleTextEditors;
     for (const current of editors) {
       const generation = (this.#generations.get(current) ?? 0) + 1;
@@ -183,15 +242,43 @@ export class AnalysisAnnotationController implements Disposable {
         !["uttori-snes", "uttori-65xx"].includes(current.document.languageId)
       ) {
         current.setDecorations(this.#decoration, []);
+        if (["uttori-snes", "uttori-65xx"].includes(current.document.languageId)) {
+          let reason = "Inline source information requires a saved local file.";
+          let label = "Unavailable";
+          if (!config.inlineEnabled) {
+            label = "Off";
+            reason =
+              "Inline information is disabled. Use the eye button to enable it; hover is independent.";
+          } else if (!config.parts.length) {
+            label = "No fields";
+            reason =
+              "No inline fields are selected. Use Assembly: Configure Inline Fields or choose a preset.";
+          } else if (current.document.isDirty) {
+            label = "Unsaved";
+            reason =
+              "This file has unsaved changes. Save it and run Build Binary to refresh source information.";
+          }
+          this.#setStatus(current, label, reason);
+        }
         continue;
       }
+      this.#setStatus(
+        current,
+        "Loading",
+        "Validating build maps and loading information for visible source lines.",
+      );
       this.#timers.set(
         current,
         setTimeout(() => {
           this.#timers.delete(current);
-          void this.#decorate(current, generation, config).catch(() => {
+          void this.#decorate(current, generation, config).catch((error: unknown) => {
             if (this.#generations.get(current) === generation) {
               current.setDecorations(this.#decoration, []);
+              this.#setStatus(
+                current,
+                "Error",
+                `Source information failed: ${error instanceof Error ? error.message : String(error)}`,
+              );
             }
           });
         }, 75),
@@ -210,7 +297,18 @@ export class AnalysisAnnotationController implements Disposable {
         editor.setDecorations(this.#decoration, []);
       }
     }
-    await config.update("editorInfo.inline.enabled", !enabled, configurationTarget(resource));
+    const target = configurationTarget(resource);
+    await config.update("editorInfo.inline.enabled", !enabled, target);
+    // A deliberate toggle replaces the legacy value at this scope. Inherited values remain
+    // untouched so other workspace folders keep their own visibility preferences.
+    const legacy = config.inspect<boolean>("analysis.showAnnotations");
+    if (
+      (target === ConfigurationTarget.Global && legacy?.globalValue !== undefined) ||
+      (target === ConfigurationTarget.WorkspaceFolder &&
+        (legacy?.workspaceFolderValue !== undefined || legacy?.workspaceValue !== undefined))
+    ) {
+      await config.update("analysis.showAnnotations", undefined, target);
+    }
     this.refresh();
   }
 
@@ -249,11 +347,6 @@ export class AnalysisAnnotationController implements Disposable {
     }
     const rows = [...facts].filter(([line]) => line >= 1 && line <= editor.document.lineCount);
     const tabSize = typeof editor.options.tabSize === "number" ? editor.options.tabSize : 4;
-    const column = annotationOverlayColumn(
-      rows.map(([line]) => editor.document.lineAt(line - 1).text),
-      tabSize,
-      config.column,
-    );
     // Instance options preserve folder-specific colors while sharing one native decoration type.
     const color = config.color.startsWith("#") ? config.color : new ThemeColor(config.color);
     const decorations = rows.flatMap(([line, infos]) => {
@@ -263,7 +356,7 @@ export class AnalysisAnnotationController implements Disposable {
       }
       const source = editor.document.lineAt(line - 1).text;
       const gap =
-        config.placement === "aligned" ? column - annotationSourceColumns(source, tabSize) : 3;
+        config.placement === "aligned" ? informationOverlayGap(source, tabSize, config.column) : 3;
       return [
         {
           range: new Range(line - 1, source.length, line - 1, source.length),
@@ -273,6 +366,34 @@ export class AnalysisAnnotationController implements Disposable {
     });
     // The suffix owns no hover payload; the client hover middleware formats only the requested line.
     editor.setDecorations(this.#decoration, decorations);
+    if (decorations.length) {
+      this.#setStatus(
+        editor,
+        `${decorations.length} lines`,
+        `${decorations.length} visible source lines have inline information. Long lines keep their own suffixes after the source; they do not move other lines' annotations.`,
+      );
+    } else {
+      const reasons = await this.provider.diagnostics(
+        editor.document.uri.fsPath,
+        this.#dirtyFiles(),
+      );
+      // Diagnostics can involve asynchronous discovery too; disabled or newer editors win.
+      if (this.#generations.get(editor) !== generation || this.#disposed) {
+        return;
+      }
+      let reason =
+        "No mapped source lines in this viewport. Scroll to an instruction or emitted data.";
+      let label = "No mapped lines";
+      if (reasons.length) {
+        label = "Unavailable";
+        reason = reasons.join("\n");
+      } else if (rows.length) {
+        label = "No field values";
+        reason =
+          "The selected inline fields have no values on these lines. Choose the compact or authoring preset; runtime fields require matching analysis evidence.";
+      }
+      this.#setStatus(editor, label, reason);
+    }
   }
 
   /**
@@ -394,18 +515,14 @@ export class AnalysisAnnotationController implements Disposable {
       return;
     }
     const line = editor.selection.active.line + 1;
-    const sections = [
-      "Summary",
-      "Project state",
-      "Runtime state",
-      "State transitions",
-      "Memory and effective addresses",
-      "Evidence and control flow",
-    ];
-    const section = await window.showQuickPick(sections, { title: "Inspect Line Information" });
-    if (!section) {
+    const choice = await window.showQuickPick(
+      INFORMATION_SECTIONS.map((section) => ({ label: section, section })),
+      { title: "Inspect Line Information" },
+    );
+    if (!choice) {
       return;
     }
+    const section = choice.section;
     // Cancelling the picker does no I/O; summary inspection does not load evidence/state previews.
     const facts = await this.provider.lines(
       editor.document.uri.fsPath,
@@ -415,69 +532,13 @@ export class AnalysisAnnotationController implements Disposable {
     );
     const infos = facts.get(line) ?? [];
     if (!infos.length) {
-      void window.showInformationMessage(
-        "No current build map matches this line. Build the project to refresh its information.",
-      );
+      await this.showStatus();
       return;
     }
-    const lines: string[] = [];
-    for (const info of infos) {
-      lines.push(info.label, "");
-      if (section === "Summary") {
-        for (const field of Object.keys(INFORMATION_FIELDS)) {
-          const value = renderTemplate(compileTemplate(`${field}: \${${field}}`), info);
-          if (value) {
-            lines.push(value);
-          }
-        }
-      } else {
-        for (const annotation of info.annotations ?? []) {
-          const selected = {
-            ...annotation,
-            stateObservations: [],
-            stateTransitions: [],
-            memoryAccesses: [],
-            effectiveAddresses: [],
-            nodeIds: [],
-            evidence: [],
-            runtimeCoverage: [],
-            comments: [],
-          } as typeof annotation;
-          let detail = selected;
-          if (section === "Project state") {
-            detail = {
-              ...selected,
-              stateObservations: annotation.stateObservations.filter(
-                (value) => value.source === "project",
-              ),
-            };
-          }
-          if (section === "Runtime state") {
-            detail = {
-              ...selected,
-              stateObservations: annotation.stateObservations.filter(
-                (value) => value.source === "runtime",
-              ),
-            };
-          }
-          if (section === "State transitions") {
-            detail = { ...selected, stateTransitions: annotation.stateTransitions };
-          }
-          if (section === "Memory and effective addresses") {
-            detail = {
-              ...selected,
-              memoryAccesses: annotation.memoryAccesses,
-              effectiveAddresses: annotation.effectiveAddresses,
-            };
-          }
-          if (section === "Evidence and control flow") {
-            detail = { ...selected, nodeIds: annotation.nodeIds, evidence: annotation.evidence };
-          }
-          lines.push(formatInstructionAnnotationDetails(detail), "");
-        }
-      }
-    }
-    const content = lines.join("\n").split("\n");
+    const content = infos
+      .map((info) => renderInformationSection(info, section))
+      .join("\n")
+      .split("\n");
     let start = 0;
     if (content.length > 120) {
       const pages = Array.from({ length: Math.ceil(content.length / 120) }, (_, index) => ({

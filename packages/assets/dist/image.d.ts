@@ -1,4 +1,8 @@
 export { pngImporter } from "./png.js";
+export { rewriteIndexedPng, createIndexedPng } from "./png-edit.js";
+export type { IndexedPngEdit } from "./png-edit.js";
+export { expandIndexedGrid, extractIndexedRegion, renderIndexedPlacements, validateIndexedPixels, } from "./indexed-edit.js";
+export type { IndexedGridCell, IndexedGridBlock, IndexedPixels, PixelBounds, IndexedRegion, IndexedPlacement, } from "./indexed-edit.js";
 export { withImageEncoders, encodeBgScreenMap, decodeBgScreenMap, encodeMode7MapLayout, } from "./image-conversion.js";
 /** Indexed pixels retain their original palette order and duplicate entries. */
 export interface IndexedImage {

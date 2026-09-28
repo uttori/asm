@@ -8,14 +8,20 @@ export interface GdbRspTransport {
 }
 /** Parsed stop notification from an RSP `S` or `T` packet. */
 export interface GdbRspStop {
+    /** The signal number that caused the stop. */
     readonly signal: number;
+    /** The payload of the stop notification. */
     readonly payload: string;
 }
 /** Bounds and deadlines for one RSP client. */
 export interface GdbRspClientOptions {
+    /** The transport to use for the RSP client. */
     readonly transport: GdbRspTransport;
+    /** The timeout for RSP requests. */
     readonly requestTimeoutMs?: number;
+    /** The maximum size of an RSP packet. */
     readonly maxPacketBytes?: number;
+    /** The maximum size of the RSP receive buffer. */
     readonly maxBufferedBytes?: number;
 }
 /** Strict, single-flight RSP client for the private ares control channel. */

@@ -301,7 +301,7 @@ test("entry comments use logical indexes and normalize prose without accepting a
   );
 });
 
-test("named data stays outside code and guide labels while short comments stay inline", async (t) => {
+test("named data stays outside code and guide labels with configurable comment wrapping", async (t) => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-struct-layout-"));
   t.teardown(() => fs.rmSync(temporary, { recursive: true, force: true }));
   const romFile = path.join(temporary, "fixture.sfc");
@@ -347,7 +347,13 @@ test("named data stays outside code and guide labels while short comments stay i
   const input = {
     format: "uttori-asm-snes-struct-map",
     schemaVersion: 1,
-    structures: [{ id: "Word", size: 2, fields: [{ name: "value", offset: 0, size: 2 }] }],
+    structures: [
+      {
+        id: "Word",
+        size: 2,
+        fields: [{ name: "value", offset: 0, size: 2, description: "Stored word value." }],
+      },
+    ],
     bindings: [
       {
         name: "Handlers",
@@ -383,19 +389,50 @@ test("named data stays outside code and guide labels while short comments stay i
     });
   const first = exportSource();
   const bank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
+  const structs = fs.readFileSync(path.join(outputDirectory, "structs.asm"), "utf8");
+  t.true(structs.includes("Stored word value."));
+  t.false(bank.includes("Stored word value."));
   t.regex(
     bank,
-    /  RTS\n\ndataStructs Handlers\n  \[0] = { value = \$EAEA } ; First handler\n  \[1] = { value = \$EAEA }\nendDataStructs\n\n/,
+    /  RTS\n\ndataStructs Handlers\n  ; First handler\n  \[0] = {\n    value = \$EAEA\n  }\n  \[1] = {\n    value = \$EAEA\n  }\nendDataStructs\n\n/,
   );
   t.regex(bank, /L_OldTableGuide:\n; Imported guide\.\ndataStructs GuidedTable\n  \[0] =/);
-  t.regex(bank, /L_OldScalarGuide:\ndataStruct Scalar, { value = \$EAEA } ; Short description\n/);
-  t.regex(bank, /\n; A long description\.[^\n]+\ndataStruct LongNote, { value = \$EAEA }\n/);
+  t.regex(
+    bank,
+    /L_OldScalarGuide:\n; Short description\ndataStruct Scalar, {\n  value = \$EAEA\n}\n/,
+  );
+  t.regex(
+    bank,
+    /\n; A long description\.[^\n]+\n(?:; [^\n]+\n)+dataStruct LongNote, {\n  value = \$EAEA\n}\n/,
+  );
   t.notRegex(bank, /^[\t ]+(?:dataStructs? |endDataStructs)/m);
   t.true(
     (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
       .equal,
   );
   t.deepEqual(exportSource(), first, "Formatting remains deterministic across regeneration.");
+  for (const commentLineWidth of [60, 100]) {
+    exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+      sourceProjectSha256: "0".repeat(64),
+      commentLineWidth,
+    });
+    const wrapped = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
+    t.true(
+      wrapped
+        .split("\n")
+        .filter((line) => line.trimStart().startsWith(";"))
+        .every((line) => line.length <= commentLineWidth),
+    );
+  }
+  exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+    sourceProjectSha256: "0".repeat(64),
+    wrapComments: false,
+  });
+  t.true(
+    fs
+      .readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8")
+      .includes(`; ${input.bindings[3].entryComments?.[0]}\n`),
+  );
 });
 
 test("normal export includes structs, owns typed bytes, retains interior metadata, and detects drift", async (t) => {
@@ -462,7 +499,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   t.regex(bank, /\n; Cup of Wishes\ndataStruct Table\[1], [^\n;]+\n/);
   t.regex(
     bank,
-    /dataStruct Table\[1], { byte = \$EA, word = \$EAEA, pointer = \$EAEAEA, __gap_6 = \[\$EA], dword = \$EAEAEAEA, __gap_b = \[\$EA] }/,
+    /dataStruct Table\[1], {\n  byte = \$EA,\n  word = \$EAEA,\n  pointer = \$EAEAEA,\n  __gap_6 = \[\$EA],\n  dword = \$EAEAEAEA,\n  __gap_b = \[\$EA]\n}/,
   );
   t.is(
     first.spans
@@ -520,7 +557,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   const groupedBank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
   t.regex(
     groupedBank,
-    /\ndataStructs Table\n  \[1] = .* ; Candy\n  ; Cup of Wishes\n  \[2] = .*\nendDataStructs\n\n; Fourth record\.\ndataStructs Table\n  \[3] = .*\n  ; Named after a gap\n  \[4] = .*\nendDataStructs/,
+    /\ndataStructs Table\n  ; Candy\n  \[1] = {\n[^}]+\n  }\n  ; Cup of Wishes\n  \[2] = {\n[^}]+\n  }\nendDataStructs\n\n; Fourth record\.\ndataStructs Table\n  \[3] = {\n[^}]+\n  }\n  ; Named after a gap\n  \[4] = {\n[^}]+\n  }\nendDataStructs/,
   );
   t.notRegex(groupedBank, /\[\d+] = .* ; (?:Cup of Wishes|Named after a gap)/);
   t.is(

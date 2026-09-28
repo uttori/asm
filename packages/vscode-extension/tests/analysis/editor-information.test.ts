@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { createDebugMap, validateDebugMap } from "@uttori/asm-core/debug-map";
+import {
+  canonicalDebugMapJson,
+  createDebugMap,
+  validateDebugMap,
+} from "@uttori/asm-core/debug-map";
 import type { WorkspaceConfiguration } from "vscode";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -246,4 +251,101 @@ test("identical source and map fingerprints in different roots retain their own 
   t.is(first.get(4)?.length, 1);
   t.is(second.get(4)?.length, 1);
   t.not(first.get(4)![0].identity, second.get(4)![0].identity);
+});
+
+test("diagnostics identify a changed dependency for every editor in its build and clear after recovery", async (t) => {
+  const { directory, file, mapFile, map } = fixture(t);
+  const dependency = path.join(directory, "other.asm");
+  fs.writeFileSync(dependency, "; one\n");
+  const bytes = fs.readFileSync(dependency);
+  const { fingerprint: _fingerprint, ...payload } = map;
+  const updated = {
+    ...payload,
+    sources: [
+      ...map.sources,
+      {
+        id: 100,
+        path: "other.asm",
+        size: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      },
+    ],
+  };
+  fs.writeFileSync(
+    mapFile,
+    JSON.stringify({
+      ...updated,
+      fingerprint: {
+        algorithm: "sha256",
+        value: createHash("sha256").update(canonicalDebugMapJson(updated)).digest("hex"),
+      },
+    }),
+  );
+  const provider = new EditorInformationProvider({
+    discoverMaps: async () => [{ file: mapFile, sourceRoots: [directory] }],
+    projects: async () => [],
+    request: async () => {
+      throw new Error("Unexpected request");
+    },
+  });
+  t.deepEqual(await provider.diagnostics(file, new Set()), []);
+  t.regex(
+    (await provider.diagnostics(file, new Set([dependency]))).join("\n"),
+    /Unsaved dependency:.*other\.asm/,
+  );
+  fs.writeFileSync(dependency, "; two\n");
+  provider.invalidate();
+  t.is(
+    (
+      await provider.lines(
+        file,
+        [{ start: 4, end: 5 }],
+        { counts: false, bytes: false, state: false },
+        new Set(),
+      )
+    ).size,
+    0,
+  );
+  const changed = (await provider.diagnostics(file, new Set())).join("\n");
+  t.regex(changed, /Source differs from build:.*other\.asm.*SHA-256/);
+  t.regex(changed, /Build Binary/);
+  fs.writeFileSync(dependency, bytes);
+  provider.invalidate();
+  t.deepEqual(await provider.diagnostics(file, new Set()), []);
+  fs.unlinkSync(dependency);
+  provider.invalidate();
+  t.regex(
+    (await provider.diagnostics(file, new Set())).join("\n"),
+    /Source missing or unreadable: other\.asm/,
+  );
+  provider.configurationChanged();
+  t.regex((await provider.diagnostics(file, new Set())).join("\n"), /Build settings changed/);
+});
+
+test("diagnostics explain invalid maps, missing maps and mismatched binary output", async (t) => {
+  const { directory, file, mapFile, map } = fixture(t);
+  const provider = new EditorInformationProvider({
+    discoverMaps: async () => [{ file: mapFile, sourceRoots: [directory] }],
+    projects: async () => [],
+    request: async () => {
+      throw new Error("Unexpected request");
+    },
+  });
+  fs.writeFileSync(mapFile, "{");
+  t.regex((await provider.diagnostics(file, new Set())).join("\n"), /Cannot load build map/);
+  fs.writeFileSync(mapFile, JSON.stringify({ ...map, target: "" }));
+  provider.invalidate();
+  t.regex((await provider.diagnostics(file, new Set())).join("\n"), /Invalid debug map/);
+  fs.writeFileSync(mapFile, JSON.stringify(map));
+  fs.writeFileSync(mapFile.replace(/\.debug\.json$/, ""), "stale");
+  provider.invalidate();
+  t.regex(
+    (await provider.diagnostics(file, new Set())).join("\n"),
+    /Output differs from build map/,
+  );
+  fs.unlinkSync(mapFile.replace(/\.debug\.json$/, ""));
+  provider.invalidate();
+  t.regex((await provider.diagnostics(file, new Set())).join("\n"), /Build output is missing/);
+  const missing = new EditorInformationProvider({ ...provider.host, discoverMaps: async () => [] });
+  t.regex((await missing.diagnostics(file, new Set())).join("\n"), /No current build map/);
 });

@@ -12129,6 +12129,85 @@ var pngImporter = Object.freeze({
   }
 });
 
+// packages/assets/src/indexed-edit.ts
+function validateIndexedPixels(image) {
+  integer(image.width, "Indexed width", 1, 1 << 20);
+  integer(image.height, "Indexed height", 1, 1 << 20);
+  if (image.width * image.height > 1 << 20 || !(image.indexes instanceof Uint8Array) || image.indexes.length !== image.width * image.height) {
+    throw new RangeError("Indexed pixels are missing or exceed the one-megapixel limit.");
+  }
+}
+function validateBounds(bounds) {
+  integer(bounds.x, "Rectangle x", -(1 << 20), 1 << 20);
+  integer(bounds.y, "Rectangle y", -(1 << 20), 1 << 20);
+  integer(bounds.width, "Rectangle width", 1, 1 << 20);
+  integer(bounds.height, "Rectangle height", 1, 1 << 20);
+  if (bounds.width * bounds.height > 1 << 20) {
+    throw new RangeError("Rectangle exceeds pixel limit.");
+  }
+}
+function validateOrientation(value) {
+  for (const flag of [value.flipX, value.flipY]) {
+    if (flag !== void 0 && typeof flag !== "boolean") {
+      throw new TypeError("Flip must be boolean.");
+    }
+  }
+}
+function mappedIndex(index, map) {
+  if (!map) {
+    return index;
+  }
+  const value = map[index];
+  if (value === void 0 || value === null) {
+    throw new RangeError(`Unmapped palette index ${index}.`);
+  }
+  return integer(value, "Mapped palette index", 0, 255);
+}
+function extractIndexedRegion(image, region) {
+  validateIndexedPixels(image);
+  validateBounds(region);
+  validateOrientation(region);
+  if (region.x < 0 || region.y < 0 || region.x + region.width > image.width || region.y + region.height > image.height) {
+    throw new RangeError("Source rectangle exceeds image.");
+  }
+  const indexes = new Uint8Array(region.width * region.height);
+  for (let y = 0; y < region.height; y++) {
+    for (let x = 0; x < region.width; x++) {
+      const sx = region.x + (region.flipX ? region.width - x - 1 : x);
+      const sy = region.y + (region.flipY ? region.height - y - 1 : y);
+      indexes[y * region.width + x] = mappedIndex(
+        image.indexes[sy * image.width + sx],
+        region.indexMap
+      );
+    }
+  }
+  return { width: region.width, height: region.height, indexes };
+}
+function expandIndexedGrid(block) {
+  integer(block.columns, "Grid columns", 1, 65536);
+  integer(block.cellWidth, "Grid cell width", 1, 1 << 20);
+  integer(block.cellHeight, "Grid cell height", 1, 1 << 20);
+  integer(block.x, "Grid x", -(1 << 20), 1 << 20);
+  integer(block.y, "Grid y", -(1 << 20), 1 << 20);
+  validateOrientation(block);
+  if (typeof block.id !== "string" || !block.id || block.cells.length < 1 || block.cells.length > 65536 || block.cells.length % block.columns !== 0) {
+    throw new Error("Grid requires an identity and complete bounded rows.");
+  }
+  const rows = block.cells.length / block.columns;
+  return block.cells.map((cell, index) => {
+    const column = index % block.columns;
+    const row = Math.floor(index / block.columns);
+    return {
+      ...cell,
+      id: JSON.stringify([block.id, index]),
+      x: block.x + (block.flipX ? block.columns - column - 1 : column) * block.cellWidth,
+      y: block.y + (block.flipY ? rows - row - 1 : row) * block.cellHeight,
+      flipX: block.flipX ?? false,
+      flipY: block.flipY ?? false
+    };
+  });
+}
+
 // packages/assets/src/image-conversion.ts
 var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 var readInteger = (value, label, minimum, maximum) => {
@@ -12658,8 +12737,8 @@ function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
   integer(width, "Preview width", 1, 4096);
   integer(height, "Preview height", 1, 4096);
   integer(maxEdge, "Preview edge", 1, 1024);
-  if (width * height > 1024 * 1024 || rgba.length !== width * height * 4) {
-    throw new Error("Preview pixels are missing or exceed the one-megapixel limit.");
+  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+    throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
   }
   const scale = Math.min(1, maxEdge / Math.max(width, height));
   const outputWidth = Math.max(1, Math.floor(width * scale));
@@ -12713,11 +12792,19 @@ function definePlugin(plugin2) {
 
 // packages/assets/plugins/secret-of-mana/som-lz.mjs
 import assert from "node:assert/strict";
+var LZ_HEADER_BYTES = 4;
+var LZ_COPY_FLAG = 128;
+var LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
+var LZ_MIN_COPY_BYTES = 3;
+var LZ_MAX_LITERAL_BYTES = LZ_COPY_FLAG;
+var LZ_DISTANCE_LOW_VALUES = 256;
+var LZ_MAX_OUTPUT_BYTES = 65535;
+var MATCH_CANDIDATE_LIMIT = 128;
 var DISTANCE_MASKS = [31, 15, 7, 3, 1, 0];
-function decompressSomLz(source, offset = 0, maxOutputBytes = 65535) {
+function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTES) {
   assert(source instanceof Uint8Array, "Expected byte input.");
   assert(
-    Number.isSafeInteger(offset) && offset >= 0 && offset + 4 <= source.length,
+    Number.isSafeInteger(offset) && offset >= 0 && offset + LZ_HEADER_BYTES <= source.length,
     "Truncated LZ header."
   );
   assert(Number.isSafeInteger(maxOutputBytes) && maxOutputBytes >= 0, "Invalid LZ output limit.");
@@ -12727,14 +12814,14 @@ function decompressSomLz(source, offset = 0, maxOutputBytes = 65535) {
   const size = source[offset + 2] << 8 | source[offset + 3];
   assert(size <= maxOutputBytes, "LZ decoded size exceeds output limit.");
   const data = new Uint8Array(size);
-  let cursor = offset + 4;
+  let cursor = offset + LZ_HEADER_BYTES;
   let written = 0;
   let literalRuns = 0;
   let copyRuns = 0;
   while (written < size) {
     assert(cursor < source.length, "Truncated LZ token.");
     const token = source[cursor++];
-    if (token < 128) {
+    if (token < LZ_COPY_FLAG) {
       const length = token + 1;
       assert(cursor + length <= source.length, "Truncated LZ literal.");
       assert(written + length <= size, "LZ literal exceeds declared output size.");
@@ -12745,7 +12832,7 @@ function decompressSomLz(source, offset = 0, maxOutputBytes = 65535) {
     } else {
       assert(cursor < source.length, "Truncated LZ distance.");
       const distance = ((token & mask) << 8) + source[cursor++] + 1;
-      const length = Math.floor((token & 127) / (mask + 1)) + 3;
+      const length = Math.floor((token & LZ_TOKEN_PAYLOAD_MASK) / (mask + 1)) + LZ_MIN_COPY_BYTES;
       assert(distance <= written, "LZ reference precedes output.");
       assert(written + length <= size, "LZ copy exceeds declared output size.");
       for (let i = 0; i < length; i++) {
@@ -12767,7 +12854,7 @@ function decompressSomLz(source, offset = 0, maxOutputBytes = 65535) {
 }
 function compressSomLz(source, options = {}) {
   assert(source instanceof Uint8Array, "Expected byte input.");
-  assert(source.length <= 65535, "LZ decoded size exceeds 16-bit header.");
+  assert(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
   assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
   assert(
     Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)),
@@ -12793,8 +12880,8 @@ function compressSomLz(source, options = {}) {
 }
 function encodeMode(source, mode, unusedHeaderByte) {
   const mask = DISTANCE_MASKS[mode];
-  const maxDistance = (mask + 1) * 256;
-  const maxLength = Math.floor(127 / (mask + 1)) + 3;
+  const maxDistance = (mask + 1) * LZ_DISTANCE_LOW_VALUES;
+  const maxLength = Math.floor(LZ_TOKEN_PAYLOAD_MASK / (mask + 1)) + LZ_MIN_COPY_BYTES;
   const seen = /* @__PURE__ */ new Map();
   const matches = Array.from({ length: source.length }, () => new Uint16Array(maxLength + 1));
   const add = (position) => {
@@ -12802,7 +12889,7 @@ function encodeMode(source, mode, unusedHeaderByte) {
     const key = source[position] << 16 | source[position + 1] << 8 | source[position + 2];
     const positions = seen.get(key) ?? [];
     positions.push(position);
-    while (positions.length > 128 || positions.length && position - positions[0] >= maxDistance)
+    while (positions.length > MATCH_CANDIDATE_LIMIT || positions.length && position - positions[0] >= maxDistance)
       positions.shift();
     seen.set(key, positions);
   };
@@ -12813,10 +12900,10 @@ function encodeMode(source, mode, unusedHeaderByte) {
       for (let index = positions.length - 1; index >= 0; index--) {
         const candidateDistance = cursor - positions[index];
         if (candidateDistance > maxDistance) break;
-        let candidateLength = 3;
+        let candidateLength = LZ_MIN_COPY_BYTES;
         while (candidateLength < maxLength && cursor + candidateLength < source.length && source[cursor + candidateLength] === source[cursor + candidateLength - candidateDistance])
           candidateLength++;
-        for (let length = 3; length <= candidateLength; length++) {
+        for (let length = LZ_MIN_COPY_BYTES; length <= candidateLength; length++) {
           if (matches[cursor][length] === 0 || candidateDistance < matches[cursor][length]) {
             matches[cursor][length] = candidateDistance;
           }
@@ -12831,14 +12918,14 @@ function encodeMode(source, mode, unusedHeaderByte) {
   for (let cursor = source.length - 1; cursor >= 0; cursor--) {
     let bestCost = Number.MAX_SAFE_INTEGER;
     let bestChoice = 0;
-    for (let length = 1; length <= 128 && cursor + length <= source.length; length++) {
+    for (let length = 1; length <= LZ_MAX_LITERAL_BYTES && cursor + length <= source.length; length++) {
       const candidate = 1 + length + cost[cursor + length];
       if (candidate < bestCost || candidate === bestCost && length > bestChoice) {
         bestCost = candidate;
         bestChoice = length;
       }
     }
-    for (let length = 3; length <= maxLength && cursor + length <= source.length; length++) {
+    for (let length = LZ_MIN_COPY_BYTES; length <= maxLength && cursor + length <= source.length; length++) {
       const matchDistance = matches[cursor][length];
       if (!matchDistance) continue;
       const candidate = 2 + cost[cursor + length];
@@ -12861,7 +12948,7 @@ function encodeMode(source, mode, unusedHeaderByte) {
       const runLength = -length;
       const encodedDistance = distance[cursor] - 1;
       output.push(
-        128 | (runLength - 3) * (mask + 1) | encodedDistance >>> 8,
+        LZ_COPY_FLAG | (runLength - LZ_MIN_COPY_BYTES) * (mask + 1) | encodedDistance >>> 8,
         encodedDistance & 255
       );
       cursor += runLength;
@@ -12915,6 +13002,189 @@ function encodeBossGraphics(data) {
     throw new Error("Boss graphics mask inverse failed.");
   }
   return encoded;
+}
+
+// packages/assets/plugins/secret-of-mana/som-body-frame.mjs
+function decodeBodyFrame(input) {
+  if (!Array.isArray(input) && !(input instanceof Uint8Array) || input.length < 2 || input.length > 157 || [...input].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
+    throw new Error("Invalid bounded body frame bytes.");
+  }
+  const bytes = Uint8Array.from(input);
+  const groups = bytes[0] & 15 || 1;
+  const tileOffsets = [];
+  let offset = 1;
+  while (tileOffsets.length < groups * 4) {
+    if (offset + 2 > bytes.length) {
+      throw new Error("Truncated sprite tile word.");
+    }
+    const word = bytes[offset] | bytes[offset + 1] << 8;
+    offset += 2;
+    const count = word & 32768 ? (word & 15) + 1 : 1;
+    for (let i = 0; i < count && tileOffsets.length < groups * 4; i++) {
+      const increment = (word & 49152) === 49152 ? i : 0;
+      tileOffsets.push((word & 16368) * 2 + increment * 32 & 65535);
+    }
+  }
+  if (offset + groups * 2 > bytes.length) {
+    throw new Error("Missing sprite block offsets.");
+  }
+  const signed7 = (byte) => (byte & 63) - (byte & 64);
+  const coordinateOffsets = Array.from({ length: groups }, (_, i) => ({
+    y: offset + i * 2,
+    x: offset + i * 2 + 1
+  }));
+  const blocks = coordinateOffsets.map(({ x, y }) => ({
+    x: signed7(bytes[x]),
+    y: signed7(bytes[y]),
+    flipX: !!(bytes[x] & 128),
+    priority: !!(bytes[y] & 128)
+  }));
+  offset += groups * 2;
+  const boxes = Number(!!(bytes[0] & 32)) + Number(!!(bytes[0] & 64));
+  if (bytes.length - offset !== boxes * (bytes[0] & 16 ? 3 : 2)) {
+    throw new Error("Frame tail disagrees with header and pointer bound.");
+  }
+  return {
+    header: bytes[0],
+    groups,
+    tileOffsets,
+    blocks,
+    coordinateOffsets,
+    collisionBytes: bytes.slice(offset)
+  };
+}
+
+// packages/assets/plugins/secret-of-mana/som-frame-composition.mjs
+function placementValue(p) {
+  return [
+    p.id,
+    p.block,
+    p.quadrant,
+    p.x,
+    p.y,
+    p.flipX,
+    p.flipY,
+    p.segment ?? null,
+    p.tile ?? null,
+    p.external?.romAddress ?? null,
+    p.external?.indexes ?? null
+  ];
+}
+function deriveFramePlacements(layout, frame) {
+  if (!Array.isArray(frame.blocks) || !frame.blocks.length) {
+    throw new Error(`Missing native blocks: ${frame.id}.`);
+  }
+  const external = /* @__PURE__ */ new Map();
+  for (const p of frame.placements ?? []) {
+    if (!p.external) {
+      continue;
+    }
+    const e = p.external;
+    if (!/^[0-9A-F]{6}$/.test(e.romAddress) || !Array.isArray(e.indexes) || e.indexes.length !== 64 || e.indexes.some((v) => v !== 0)) {
+      throw new Error(`Invalid external blank reference: ${frame.id}.`);
+    }
+    external.set(e.romAddress, e);
+  }
+  const resolve = (ref) => {
+    if (Array.isArray(ref)) {
+      if (ref.length !== 2 || typeof ref[0] !== "string" || !Number.isSafeInteger(ref[1]) || ref[1] < 0 || ref[1] >= (layout.segments[ref[0]]?.tiles.length ?? 0)) {
+        throw new Error(`Invalid expanded graphics reference: ${frame.id}.`);
+      }
+      return { segment: ref[0], tile: ref[1] };
+    }
+    if (!Number.isSafeInteger(ref) || ref < 0 || ref > 16777215) {
+      throw new Error(`Invalid ROM tile reference: ${frame.id}.`);
+    }
+    const matches = Object.entries(layout.segments).flatMap(([segment, value]) => {
+      const delta = ref - Number.parseInt(value.romAddress, 16);
+      return delta >= 0 && delta % 32 === 0 && delta / 32 < value.tiles.length ? [{ segment, tile: delta / 32 }] : [];
+    });
+    if (matches.length > 1) {
+      throw new Error(`Ambiguous ROM tile ownership: ${ref.toString(16)}.`);
+    }
+    if (matches.length) {
+      return matches[0];
+    }
+    const e = external.get(ref.toString(16).toUpperCase().padStart(6, "0"));
+    if (!e) {
+      throw new Error(`Unresolved ROM tile reference: ${ref.toString(16)}.`);
+    }
+    return { external: structuredClone(e) };
+  };
+  const ids = /* @__PURE__ */ new Set();
+  return frame.blocks.flatMap((block) => {
+    if (typeof block.id !== "string" || !block.id || ids.has(block.id) || ![8, 16, 32, 64].includes(block.size) || !Array.isArray(block.tiles) || block.tiles.length !== (block.size / 8) ** 2 || typeof block.flipX !== "boolean" || typeof block.flipY !== "boolean") {
+      throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
+    }
+    ids.add(block.id);
+    const references = block.tiles.map(resolve);
+    return expandIndexedGrid({
+      ...block,
+      columns: block.size / 8,
+      cellWidth: 8,
+      cellHeight: 8,
+      cells: references.map((_, index) => ({ source: String(index) }))
+    }).map((p, index) => ({
+      id: `${block.id}:tile-${index}`,
+      block: block.id,
+      quadrant: index,
+      x: p.x,
+      y: p.y,
+      flipX: p.flipX,
+      flipY: p.flipY,
+      ...references[index]
+    }));
+  });
+}
+function validateNativeFrame(frame) {
+  const native = frame.nativeFrame;
+  if (!native || Object.keys(native).length === 0) {
+    return;
+  }
+  if (!Number.isSafeInteger(native.address) || native.address < 0 || native.address > 16777215 || !Number.isSafeInteger(native.end) || native.end - native.address !== native.bytes?.length) {
+    throw new Error(`Invalid native frame extent: ${frame.id}.`);
+  }
+  const decoded = decodeBodyFrame(native.bytes);
+  if (decoded.groups !== frame.blocks.length) {
+    throw new Error(`Native block count differs: ${frame.id}.`);
+  }
+  let graphicsBase;
+  for (const [index, block] of frame.blocks.entries()) {
+    const expected = decoded.blocks[index];
+    if (block.size !== 16 || block.flipY || block.x !== expected.x || block.y !== expected.y || block.flipX !== expected.flipX || block.priority !== expected.priority) {
+      throw new Error(`Native frame and block disagree: ${frame.id}/${block.id}.`);
+    }
+    for (const [quadrant, address] of block.tiles.entries()) {
+      if (!Number.isSafeInteger(address)) {
+        throw new Error(`Body tiles require ROM addresses: ${frame.id}.`);
+      }
+      const relative = decoded.tileOffsets[index * 4 + quadrant];
+      const base = address & 16711680 | address - relative & 65535;
+      if (graphicsBase === void 0) {
+        graphicsBase = base;
+      }
+      if (base !== graphicsBase) {
+        throw new Error(`Native tile references disagree: ${frame.id}/${block.id}.`);
+      }
+    }
+  }
+}
+function validateFrameComposition(layout, frame) {
+  const retained = frame.blocks !== void 0 || frame.placements !== void 0 || frame.nativeFrame !== void 0 || frame.origin !== void 0;
+  if (!retained) {
+    return;
+  }
+  if (!Array.isArray(frame.origin) || frame.origin.length !== 2 || frame.origin.some((v) => !Number.isSafeInteger(v)) || !Array.isArray(frame.placements)) {
+    throw new Error(`Incomplete retained composition: ${frame.id}.`);
+  }
+  const expected = deriveFramePlacements(layout, frame);
+  validateNativeFrame(frame);
+  if (frame.placements.length !== expected.length || expected.some(
+    (p, i) => JSON.stringify(placementValue(p)) !== JSON.stringify(placementValue(frame.placements[i]))
+  )) {
+    throw new Error(`Derived placements disagree with native blocks: ${frame.id}.`);
+  }
+  return expected;
 }
 
 // packages/assets/plugins/secret-of-mana/som-sprite-palettes.mjs
@@ -13017,29 +13287,139 @@ function readSpritePaletteCatalog(options, resources) {
 }
 
 // packages/assets/plugins/secret-of-mana/som-frame-atlas.mjs
-function encodeFrameAtlas(source, layout, segmentName, catalog) {
+function rectangle(bounds, width, height, label) {
+  if (!Array.isArray(bounds) || bounds.length !== 4 || bounds.some((v) => !Number.isSafeInteger(v)) || bounds[0] < 0 || bounds[1] < 0 || bounds[2] < 1 || bounds[3] < 1 || bounds[0] + bounds[2] > width || bounds[1] + bounds[3] > height) {
+    throw new Error(`Invalid ${label} bounds.`);
+  }
+}
+function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
   if (layout?.version !== 1 || !layout.segments || !Number.isInteger(layout.width) || !Number.isInteger(layout.height)) {
     throw new Error("Frame atlas requires a version 1 layout with dimensions and segments.");
-  }
-  const segment = layout.segments[segmentName];
-  if (!segment || !Array.isArray(segment.tiles) || segment.tiles.length === 0) {
-    throw new Error(`Unknown or empty frame atlas segment: ${segmentName}.`);
-  }
-  const image = pngImporter.import(source).value;
-  if (image.kind !== "indexed-image" || image.width !== layout.width || image.height !== layout.height) {
-    throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
   if (!Array.isArray(layout.paletteRefs) || layout.paletteRefs.length < 1 || layout.paletteRefs.length > 15) {
     throw new Error("Frame atlas layout must reference one to fifteen ROM palettes.");
   }
-  const colors = layout.paletteRefs.flatMap((id) => spritePaletteColors(catalog, id));
-  if (layout.guideIndex !== colors.length || !image.palette[layout.guideIndex]) {
+  if (layout.guideIndex !== layout.paletteRefs.length * 16) {
     throw new Error("Frame atlas guide index must follow the source palette groups.");
   }
   for (const variant of layout.paletteVariants ?? []) {
     if (!Number.isInteger(variant.group) || variant.group < 0 || variant.group >= layout.paletteRefs.length) {
       throw new Error("Frame atlas palette variant refers to an invalid source group.");
     }
+  }
+  if (layout.tileSources !== void 0 && layout.tileSources !== "native-strip") {
+    throw new Error("Unknown atlas tile source mode.");
+  }
+  const names = whole ? Object.keys(layout.segments) : [segmentName];
+  for (const name of names) {
+    const segment = layout.segments[name];
+    if (!segment || !Array.isArray(segment.tiles) || segment.tiles.length === 0) {
+      throw new Error(`Unknown or empty frame atlas segment: ${name}.`);
+    }
+    if (!Number.isInteger(segment.palette) || segment.palette < 0 || segment.palette >= layout.paletteRefs.length) {
+      throw new Error(`Frame atlas segment ${name} has no source palette.`);
+    }
+    if (layout.tileSources === "native-strip" && !segment.tileAtlas) {
+      throw new Error(`Missing stable tile storage: ${name}.`);
+    }
+    if (layout.tileSources === "native-strip") {
+      rectangle(segment.tileAtlas.bounds, layout.width, layout.height, `${name} stable storage`);
+    }
+    for (const [index, tile] of segment.tiles.entries()) {
+      if (layout.tileSources === "native-strip") {
+        const strip = segment.tileAtlas;
+        if (tile.x !== strip.bounds[0] + index % strip.columns * strip.step || tile.y !== strip.bounds[1] + Math.floor(index / strip.columns) * strip.step || tile.flipX || tile.flipY) {
+          throw new Error(`Stable tile source moved into pose geometry: ${name}/${index}.`);
+        }
+      }
+      rectangle(
+        [tile.x, tile.y, 8, 8],
+        layout.width,
+        layout.height,
+        `source rectangle for ${name} tile ${index}`
+      );
+      if (tile.flipX !== void 0 && typeof tile.flipX !== "boolean" || tile.flipY !== void 0 && typeof tile.flipY !== "boolean") {
+        throw new Error(`Invalid source rectangle flips for ${name} tile ${index}.`);
+      }
+    }
+    if ((whole || layout.tileSources === "native-strip") && segment.tileAtlas) {
+      const strip = segment.tileAtlas;
+      rectangle(strip.bounds, layout.width, layout.height, `${name} tile atlas`);
+      if (!Number.isSafeInteger(strip.columns) || strip.columns < 1 || !Number.isSafeInteger(strip.step) || strip.step < 8 || !Array.isArray(strip.sourceOnly) || new Set(strip.sourceOnly).size !== strip.sourceOnly.length) {
+        throw new Error(`Invalid tile atlas for ${name}.`);
+      }
+      for (const i of strip.sourceOnly) {
+        if (!Number.isSafeInteger(i) || i < 0 || i >= segment.tiles.length) {
+          throw new Error(`Invalid source-only tile ${name}:${i}.`);
+        }
+        const source = segment.tiles[i];
+        if (source.x !== strip.bounds[0] + i % strip.columns * strip.step || source.y !== strip.bounds[1] + Math.floor(i / strip.columns) * strip.step || source.flipX || source.flipY) {
+          throw new Error(`Source-only tile ${name}:${i} must use its native-order rectangle.`);
+        }
+      }
+      if (Math.min(segment.tiles.length, strip.columns) * strip.step > strip.bounds[2] || Math.ceil(segment.tiles.length / strip.columns) * strip.step > strip.bounds[3]) {
+        throw new Error(`Tile atlas ${name} is too small.`);
+      }
+    }
+  }
+  if (whole) {
+    if (!Array.isArray(layout.frames)) {
+      throw new Error("Frame atlas frames must be an array.");
+    }
+    const ids = /* @__PURE__ */ new Set();
+    const nativeRecords = /* @__PURE__ */ new Map();
+    for (const frame of layout.frames) {
+      const validId = typeof frame.id === "string" && frame.id.length > 0 || Number.isSafeInteger(frame.id);
+      if (!validId || ids.has(frame.id)) {
+        throw new Error(`Duplicate/empty frame ${frame.id}.`);
+      }
+      ids.add(frame.id);
+      rectangle(frame.bounds, layout.width, layout.height, `frame ${frame.id}`);
+      validateFrameComposition(layout, frame);
+      const record = frame.nativeFrame;
+      if (record?.bytes) {
+        const previous = nativeRecords.get(record.address);
+        if (previous && JSON.stringify(previous) !== JSON.stringify(record)) {
+          throw new Error(`Shared native frame records disagree: ${frame.id}.`);
+        }
+        nativeRecords.set(record.address, record);
+      }
+    }
+    const ordered = [...nativeRecords.values()].sort((a, b) => a.address - b.address);
+    for (let i = 1; i < ordered.length; i++) {
+      if (ordered[i].address < ordered[i - 1].end) {
+        throw new Error("Overlapping native frame records.");
+      }
+    }
+    if (layout.tileSources === "native-strip") {
+      const strips = Object.entries(layout.segments).map(([name, segment]) => ({
+        id: name,
+        bounds: segment.tileAtlas.bounds
+      }));
+      for (const [index, strip] of strips.entries()) {
+        const [x, y, width, height] = strip.bounds;
+        for (const other of [...layout.frames, ...strips.slice(index + 1)]) {
+          const [ox, oy, ow, oh] = other.bounds;
+          if (x < ox + ow && ox < x + width && y < oy + oh && oy < y + height) {
+            throw new Error(`Stable storage overlaps ${other.id}: ${strip.id}.`);
+          }
+        }
+      }
+    }
+  }
+  return layout;
+}
+function inspectFrameAtlas(source, layout, catalog, options = {}) {
+  validateFrameLayout(layout, options);
+  const image = pngImporter.import(source).value;
+  if (image.kind !== "indexed-image" || image.width !== layout.width || image.height !== layout.height) {
+    throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
+  }
+  const colors = layout.paletteRefs.flatMap((id) => spritePaletteColors(catalog, id));
+  if (!image.palette[layout.guideIndex]) {
+    throw new Error("Frame atlas is missing its guide index.");
+  }
+  for (const variant of layout.paletteVariants ?? []) {
     spritePaletteColors(catalog, variant.palette);
   }
   for (let index = 0; index < colors.length; index++) {
@@ -13047,38 +13427,55 @@ function encodeFrameAtlas(source, layout, segmentName, catalog) {
       throw new Error(`Frame atlas palette color ${index} no longer matches its layout.`);
     }
   }
-  if (!Number.isInteger(segment.palette) || segment.palette < 0 || segment.palette >= layout.paletteRefs.length) {
-    throw new Error(`Frame atlas segment ${segmentName} has no source palette.`);
-  }
-  const baseColor = segment.palette * 16;
-  const guideColor = colors.length;
-  const tiles = segment.tiles.map((placement, tileIndex) => {
-    const { x, y, flipX = false, flipY = false } = placement;
-    if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x + 8 > image.width || y + 8 > image.height || typeof flipX !== "boolean" || typeof flipY !== "boolean") {
-      throw new Error(`Invalid source rectangle for ${segmentName} tile ${tileIndex}.`);
+  const tiles = /* @__PURE__ */ new Map();
+  const names = options.whole ? Object.keys(layout.segments) : [options.segmentName];
+  for (const name of names) {
+    const segment = layout.segments[name];
+    const indexMap = Array(256).fill(null);
+    for (let i = 0; i < 16; i++) {
+      indexMap[segment.palette * 16 + i] = i;
     }
-    return Array.from(
-      { length: 8 },
-      (_, row) => Array.from({ length: 8 }, (_2, column) => {
-        const sourceX = x + (flipX ? 7 - column : column);
-        const sourceY = y + (flipY ? 7 - row : row);
-        const index = image.indexes[sourceY * image.width + sourceX];
-        if (index === 0 || index === guideColor) return 0;
-        if (index < baseColor || index >= baseColor + 16) {
-          throw new Error(`Frame atlas ${segmentName} tile ${tileIndex} uses another palette's color ${index}.`);
+    indexMap[0] = 0;
+    indexMap[layout.guideIndex] = 0;
+    tiles.set(
+      name,
+      segment.tiles.map((placement, index) => {
+        try {
+          return extractIndexedRegion(image, { ...placement, width: 8, height: 8, indexMap });
+        } catch (cause) {
+          throw new Error(`Frame atlas ${name} tile ${index}: ${cause.message}`, { cause });
         }
-        return index - baseColor;
       })
     );
-  });
-  return encodePlanarTiles(tiles, 4);
+  }
+  return { image, layout, tiles };
+}
+function encodeInspectedFrameSegment(inspected, segmentName) {
+  const tiles = inspected.tiles.get(segmentName);
+  if (!tiles) {
+    throw new Error(`Segment ${segmentName} was not inspected.`);
+  }
+  return encodePlanarTiles(
+    tiles.map(
+      (tile) => Array.from({ length: 8 }, (_, y) => Array.from(tile.indexes.subarray(y * 8, y * 8 + 8)))
+    ),
+    4
+  );
+}
+function encodeFrameAtlas(source, layout, segmentName, catalog) {
+  return encodeInspectedFrameSegment(
+    inspectFrameAtlas(source, layout, catalog, { segmentName }),
+    segmentName
+  );
 }
 function readFrameLayout(options, resources) {
   if (typeof options.layout !== "string" || !options.layout.endsWith(".json")) {
     throw new Error("Frame atlas layout must name a JSON sidecar.");
   }
   const resource = resources[options.layout];
-  if (!resource) throw new Error(`Missing frame atlas layout: ${options.layout}.`);
+  if (!resource) {
+    throw new Error(`Missing frame atlas layout: ${options.layout}.`);
+  }
   let layout;
   try {
     layout = JSON.parse(new TextDecoder().decode(resource.bytes));
@@ -13086,6 +13483,256 @@ function readFrameLayout(options, resources) {
     throw new Error(`Invalid frame atlas layout: ${options.layout}.`, { cause: error });
   }
   return layout;
+}
+
+// packages/assets/plugins/secret-of-mana/som-room-assets.mjs
+import assert2 from "node:assert/strict";
+function integer2(value, maximum, name) {
+  assert2(
+    Number.isInteger(value) && value >= 0 && value <= maximum,
+    `${name} must be 0..${maximum}.`
+  );
+  return value;
+}
+function parseRoomAsset(source) {
+  assert2.equal(source.mediaType, "application/json", "Room source must be JSON.");
+  const room = JSON.parse(new TextDecoder().decode(source.bytes));
+  assert2.equal(room.format, "som.room");
+  assert2.equal(room.version, 1);
+  integer2(room.id, 510, "room id");
+  assert2(
+    Array.isArray(room.header) && room.header.length === 8,
+    "Room header requires eight bytes."
+  );
+  for (const byte of room.header) integer2(byte, 255, "header byte");
+  for (const key of ["entities", "pieces", "triggers"])
+    assert2(Array.isArray(room[key]), `Missing room ${key}.`);
+  return room;
+}
+function condition(record) {
+  const variable = integer2(record.variable, 255, "story variable");
+  const minimum = integer2(record.minimum, 15, "story minimum"), maximum = integer2(record.maximum, 15, "story maximum");
+  assert2(minimum <= maximum, "Story range is reversed.");
+  return [variable, minimum << 4 | maximum];
+}
+function encodeRoomSection(room, section) {
+  assert2(
+    ["objects", "assembly", "triggers"].includes(section),
+    "Room section must be objects, assembly or triggers."
+  );
+  const bytes = [];
+  if (section === "objects") {
+    bytes.push(...room.header);
+    for (const entity of room.entities) {
+      const flags = integer2(entity.flags, 255, "entity flags");
+      assert2.equal(flags & 63, 0, "Only packed entity flags 40/80 are defined.");
+      const event = integer2(entity.event, 4095, "entity event");
+      bytes.push(
+        ...condition(entity),
+        integer2(entity.x, 127, "entity x") | (flags & 64) << 1,
+        integer2(entity.y, 127, "entity y") | flags & 128,
+        integer2(entity.orientationAndLayer, 255, "orientation/layer byte"),
+        integer2(entity.entity, 255, "entity id"),
+        event & 255,
+        integer2(entity.interaction, 15, "interaction flags") << 4 | event >>> 8
+      );
+    }
+  } else if (section === "assembly") {
+    let layer = 1;
+    for (const piece of room.pieces) {
+      if (piece.marker !== void 0) {
+        assert2(piece.marker === 254 || piece.marker === 255, "Layer marker must be FE or FF.");
+        bytes.push(piece.marker);
+        layer = piece.marker - 253;
+      }
+      assert2.equal(piece.layer, layer, "A layer change requires an explicit marker.");
+      const predicate = condition(piece);
+      assert2(predicate[0] < 254, "FE/FF are layer markers, not piece story indexes.");
+      const layout = integer2(piece.layout, 1023, "layout id");
+      assert2(layout > 0, "Native layout IDs are one-based.");
+      bytes.push(
+        ...predicate,
+        layout & 255,
+        integer2(piece.x, 127, "piece x") << 1 | layout >>> 8 & 1,
+        integer2(piece.y, 127, "piece y") << 1 | layout >>> 9 & 1
+      );
+    }
+  } else {
+    for (const trigger of room.triggers) {
+      integer2(trigger, 65535, "packed trigger word");
+      bytes.push(trigger & 255, trigger >>> 8);
+    }
+  }
+  const owner = room.sections?.[section];
+  assert2(
+    owner && Number.isInteger(owner.address) && Number.isInteger(owner.bytes),
+    "Missing fixed section ownership."
+  );
+  assert2.equal(
+    bytes.length,
+    owner.bytes,
+    "Room edit changes its fixed ROM extent; relocation is required."
+  );
+  return Uint8Array.from(bytes);
+}
+function convertRoomAsset(source, options) {
+  const room = parseRoomAsset(source);
+  const outputs = {};
+  for (const section of ["objects", "assembly", "triggers"])
+    outputs[section] = { bytes: encodeRoomSection(room, section) };
+  assert2(
+    typeof options.section === "string" && Object.hasOwn(outputs, options.section),
+    "Select a room section."
+  );
+  return { primaryOutput: options.section, outputs };
+}
+function renderRoomAsset(room, preview, { layer, story } = {}) {
+  assert2.equal(preview.format, "som.room.preview");
+  assert2.equal(preview.version, 1);
+  assert2(layer === void 0 || layer === 1 || layer === 2, "Preview layer must be 1 or 2.");
+  const key = `${room.header[0] & 63}:${room.header[2]}:${room.header[1] & 127}`;
+  const assets = preview.tilesets[key];
+  assert2(assets, `Preview resources do not contain tileset ${key}.`);
+  const states = { ...room.previewStory, ...story };
+  const pieces = room.pieces.filter((piece) => {
+    const value = states[piece.variable];
+    integer2(value, 255, `preview story ${piece.variable}`);
+    return value >= piece.minimum && value <= piece.maximum;
+  });
+  assert2(pieces.length, "No active room pieces in this preview state.");
+  let width = 0, height = 0;
+  for (const piece of pieces) {
+    integer2(piece.x, 127, "piece x");
+    integer2(piece.y, 127, "piece y");
+    assert2(piece.layer === 1 || piece.layer === 2, "Piece layer must be 1 or 2.");
+    const layout = preview.layouts[piece.layout];
+    assert2(
+      layout && layout.tiles.length === layout.width * layout.height,
+      "Missing or incomplete layout preview."
+    );
+    integer2(layout.width, 128, "layout width");
+    integer2(layout.height, 128, "layout height");
+    assert2(layout.width && layout.height, "Layout dimensions must be positive.");
+    width = Math.max(width, piece.x + layout.width);
+    height = Math.max(height, piece.y + layout.height);
+  }
+  assert2(width <= 128 && height <= 128, "Room pieces exceed the native 128-tile layer bounds.");
+  const maps = [/* @__PURE__ */ new Map(), /* @__PURE__ */ new Map()];
+  for (const piece of pieces) {
+    const layout = preview.layouts[piece.layout];
+    for (let y = 0; y < layout.height; y++)
+      for (let x = 0; x < layout.width; x++) {
+        maps[piece.layer - 1].set(
+          (piece.y + y) * width + piece.x + x,
+          layout.tiles[y * layout.width + x]
+        );
+      }
+  }
+  const pixelWidth = width * 16, pixelHeight = height * 16;
+  const rgba = new Uint8Array(pixelWidth * pixelHeight * 4);
+  for (let i = 0; i < rgba.length; i += 4) rgba.set([10, 14, 22, 255], i);
+  assert2(/^(?:[\da-f]{2})+$/i.test(assets.graphics), "Invalid planar graphics.");
+  const graphics = Uint8Array.from(assets.graphics.match(/../g), (byte) => parseInt(byte, 16));
+  assert2(
+    typeof assets.graphicsKnown === "string" && /^(?:00|01)+$/.test(assets.graphicsKnown) && assets.graphicsKnown.length === assets.graphics.length,
+    "Preview graphics require a matching physical-coverage mask."
+  );
+  const graphicsKnown = Uint8Array.from(
+    assets.graphicsKnown.match(/../g),
+    (byte) => parseInt(byte, 16)
+  );
+  assert2(
+    assets.colors.length === 128 && assets.layerWords.length === 2,
+    "Incomplete palette/metatile preview."
+  );
+  const passes = layer ? [
+    [layer - 1, 0],
+    [layer - 1, 1]
+  ] : [
+    [1, 0],
+    [0, 0],
+    [1, 1],
+    [0, 1]
+  ];
+  for (const [plane, priority] of passes)
+    for (const [position, tile] of maps[plane]) {
+      integer2(tile, 191, "static metatile id");
+      const words = assets.layerWords[plane];
+      assert2.equal(words.length, 768);
+      const mapX = position % width, mapY = Math.floor(position / width);
+      for (let part = 0; part < 4; part++) {
+        const word = integer2(words[tile * 4 + part], 65535, "metatile word");
+        if ((word >>> 13 & 1) !== priority) continue;
+        const offset = (word & 1023) * 32;
+        assert2(offset + 32 <= graphics.length, "Preview references uncaptured graphics.");
+        assert2(
+          graphicsKnown.subarray(offset, offset + 32).every((byte) => byte === 1),
+          "Preview references unknown physical graphics bytes."
+        );
+        for (let y = 0; y < 8; y++)
+          for (let x = 0; x < 8; x++) {
+            const sx = word & 16384 ? 7 - x : x, sy = word & 32768 ? 7 - y : y;
+            let color = 0;
+            for (let bit = 0; bit < 4; bit++)
+              color |= (graphics[offset + (bit >>> 1) * 16 + sy * 2 + bit % 2] >>> 7 - sx & 1) << bit;
+            if (!color) continue;
+            const bgr = integer2(
+              assets.colors[(word >>> 10 & 7) * 16 + color],
+              65535,
+              "palette word"
+            );
+            const at = ((mapY * 16 + (part >>> 1) * 8 + y) * pixelWidth + mapX * 16 + part % 2 * 8 + x) * 4;
+            rgba.set(
+              [0, 5, 10].map((shift) => Math.floor((bgr >>> shift & 31) * 255 / 31)),
+              at
+            );
+          }
+      }
+    }
+  return {
+    rgba,
+    width: pixelWidth,
+    height: pixelHeight,
+    tileset: key,
+    activePieces: pieces.map((piece) => piece.layout),
+    limitation: "Background geometry only; omits actors, BG3, camera, mutable clones and color math."
+  };
+}
+
+// packages/assets/plugins/secret-of-mana/som-world-rle.mjs
+function decodeWorldRow(bytes, size = 512) {
+  if (!Number.isSafeInteger(size) || size < 1 || size > 65536)
+    throw new Error("World row size must be 1..65536 tiles.");
+  const data = new Uint8Array(size);
+  let input = 0, output = 0;
+  while (output < size) {
+    if (input >= bytes.length) throw new Error("Truncated world row token.");
+    const token = bytes[input++];
+    let count = 1, tile = token;
+    if (token >= 192) {
+      count = (token & 63) + 1;
+      if (input >= bytes.length) throw new Error("Truncated world row run.");
+      tile = bytes[input++];
+    }
+    if (output + count > size) throw new Error("World row run crosses its output boundary.");
+    data.fill(tile, output, output + count);
+    output += count;
+  }
+  return { data, consumed: input };
+}
+function encodeWorldRow(bytes) {
+  if (bytes.length < 1 || bytes.length > 65536)
+    throw new Error("World row size must be 1..65536 tiles.");
+  const output = [];
+  for (let index = 0; index < bytes.length; ) {
+    const tile = bytes[index];
+    let count = 1;
+    while (count < 64 && index + count < bytes.length && bytes[index + count] === tile) count++;
+    if (count >= 3 || tile >= 192) output.push(191 + count, tile);
+    else for (let i = 0; i < count; i++) output.push(tile);
+    index += count;
+  }
+  return Uint8Array.from(output);
 }
 
 // packages/assets/plugins/secret-of-mana/som-asset-plugin.mjs
@@ -13291,6 +13938,13 @@ var plugin = definePlugin({
   },
   activate(context) {
     context.registerAssetFormat({
+      id: "som.room",
+      version: "1.0.0",
+      targets: ["snes.sfc"],
+      resourcePaths: (options) => typeof options.preview === "string" ? [options.preview] : [],
+      convert: convertRoomAsset
+    });
+    context.registerAssetFormat({
       id: "som.palette.bgr555",
       version: "1.0.0",
       targets: ["snes.sfc"],
@@ -13379,6 +14033,23 @@ var plugin = definePlugin({
       }
     });
     context.registerAssetTransform({
+      id: "som.world.rle",
+      version: "1.0.0",
+      targets: ["snes.sfc"],
+      optionSchema: { size: { type: "integer", minimum: 1, maximum: 65536 } },
+      encode: (bytes, options) => {
+        if (bytes.length !== (options.size ?? 512)) throw new Error("World row size mismatch.");
+        return encodeWorldRow(bytes);
+      },
+      decode: (bytes, options, maxOutputBytes) => {
+        const size = options.size ?? 512;
+        if (size > maxOutputBytes) throw new Error("World row exceeds output limit.");
+        const result = decodeWorldRow(bytes, size);
+        if (result.consumed !== bytes.length) throw new Error("Trailing bytes after world row.");
+        return result.data;
+      }
+    });
+    context.registerAssetTransform({
       id: "som.lz",
       version: "1.0.0",
       targets: ["snes.sfc"],
@@ -13429,6 +14100,7 @@ function convertSomFramePreview(input) {
   if (typeof segment !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
+  const inspected = inspectFrameAtlas(input.source, layout, catalog, { segmentName: segment });
   let encodedBytes;
   let output;
   if (input.format === "som.boss.graphics") {
@@ -13436,13 +14108,13 @@ function convertSomFramePreview(input) {
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
-    encodedBytes = encodeFrameAtlas(input.source, layout, segment, catalog).length;
+    encodedBytes = encodeInspectedFrameSegment(inspected, segment).length;
     output = "tiles";
   }
   if (input.output !== void 0 && input.output !== output) {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const image = pngImporter.import(input.source).value;
+  const image = inspected.image;
   if (image.kind !== "indexed-image") {
     throw new Error("Frame atlas preview requires an indexed PNG.");
   }
@@ -13507,6 +14179,47 @@ function convertSomPalettePreview(input) {
     composedPngBase64: png.toString("base64")
   };
 }
+function convertSomRoomPreview(input) {
+  const converted = convertRoomAsset(input.source, input.options);
+  const output = input.output ?? converted.primaryOutput;
+  if (!Object.hasOwn(converted.outputs, output)) {
+    throw new Error(`Unknown room output '${output}'.`);
+  }
+  const resourcePath = input.options.preview;
+  if (typeof resourcePath !== "string" || !input.resources[resourcePath]) {
+    throw new Error("Room preview requires its shared preview JSON resource.");
+  }
+  const resource = input.resources[resourcePath];
+  if (resource.mediaType !== "application/json") {
+    throw new Error("Room preview resource must be JSON.");
+  }
+  const room = parseRoomAsset(input.source);
+  const preview = renderRoomAsset(room, JSON.parse(new TextDecoder().decode(resource.bytes)), {
+    layer: input.options.layer
+  });
+  return {
+    kind: "image",
+    sourceBytes: input.source.bytes.length,
+    encodedBytes: converted.outputs[output].bytes.length,
+    format: input.format,
+    output,
+    metadata: {
+      room: room.id,
+      name: room.name,
+      width: preview.width,
+      height: preview.height,
+      activePieces: preview.activePieces,
+      tileset: preview.tileset,
+      limitation: preview.limitation
+    },
+    thumbnailPngBase64: Buffer.from(
+      rgbaPreviewPng(preview.rgba, preview.width, preview.height, 192)
+    ).toString("base64"),
+    composedPngBase64: Buffer.from(
+      rgbaPreviewPng(preview.rgba, preview.width, preview.height)
+    ).toString("base64")
+  };
+}
 function convertSomBrrPreview(input) {
   if (input.output !== void 0 && input.output !== "brr") {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
@@ -13535,6 +14248,9 @@ function convertSomBrrPreview(input) {
   };
 }
 function convertAssetPreview(input) {
+  if (input.format === "som.room") {
+    return convertSomRoomPreview(input);
+  }
   if (input.format === "som.brr.pcm" || input.format === "som.brr.segment") {
     return convertSomBrrPreview(input);
   }

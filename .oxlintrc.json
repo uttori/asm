@@ -120,6 +120,7 @@
         "caughtErrors": "none"
       }
     ],
+    "no-useless-constructor": "error",
 
     "import/namespace": "error",
     "import/default": "error",
@@ -191,13 +192,17 @@
     "typescript/no-wrapper-object-types": "error",
     "typescript/only-throw-error": "error",
     "typescript/prefer-as-const": "error",
+    "typescript/prefer-for-of": "error",
+    "typescript/prefer-function-type": "error",
+    "typescript/prefer-literal-enum-member": "error",
     "typescript/prefer-namespace-keyword": "error",
     "typescript/prefer-promise-reject-errors": "error",
     "typescript/require-await": "error",
     "typescript/restrict-plus-operands": "error",
     "typescript/restrict-template-expressions": "error",
     "typescript/triple-slash-reference": "error",
-    "typescript/unbound-method": "error"
+    "typescript/unbound-method": "error",
+    "typescript/unified-signatures": "error"
   },
   "overrides": [
     {

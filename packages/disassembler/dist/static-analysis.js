@@ -1,3 +1,7 @@
+/** Default work-item budget when `analyzeStaticControlFlow` omits `maxWorkItems`. */
+export const DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1_000_000;
+/** Default call-context depth when `analyzeStaticControlFlow` omits `maxCallDepth`. */
+export const DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
 const hexAddress = (address) => address.toString(16).padStart(6, "0");
 const contextKey = (context) => context
     .map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`)
@@ -120,8 +124,8 @@ const overriddenTargetKind = (flow) => {
  * @returns {StaticAnalysisResult<State>} Accepted CFG plus conflicts, unresolved flow, coverage, and completion status.
  */
 export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
-    const maxWorkItems = options.maxWorkItems ?? 100_000;
-    const maxCallDepth = options.maxCallDepth ?? 8;
+    const maxWorkItems = options.maxWorkItems ?? DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS;
+    const maxCallDepth = options.maxCallDepth ?? DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH;
     if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
         throw new Error("maxWorkItems must be a positive safe integer.");
     }

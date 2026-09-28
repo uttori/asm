@@ -1,3 +1,4 @@
+import { validateMetadataReceipt } from "./metadata-validation.js";
 import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -109,8 +110,7 @@ const isStableId = (id: string): boolean => {
   if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1)!)) {
     return false;
   }
-  for (let index = 0; index < id.length; index++) {
-    const character = id[index];
+  for (const character of id) {
     if (!isAlphaNumeric(character) && !"._:/-".includes(character)) {
       return false;
     }
@@ -525,7 +525,15 @@ export const validateLoadedShards = (
       throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
     }
   }
+  for (const receipt of shards.analysis) {
+    if (receipt.kind === "metadata-edit") {
+      validateMetadataReceipt(receipt);
+    }
+  }
   for (const label of shards.labels) {
+    if (label.suppressed !== undefined && typeof label.suppressed !== "boolean") {
+      throw new Error(`Analysis label '${label.id}' has an invalid suppression flag.`);
+    }
     if (
       label.sourceName !== undefined &&
       (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName))

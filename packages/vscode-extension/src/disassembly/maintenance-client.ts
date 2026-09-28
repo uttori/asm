@@ -54,7 +54,12 @@ export class DisassemblyMaintenanceClient {
         stdio: ["ignore", "ignore", "pipe", "ipc"],
       });
       this.#children.add(child);
-      const project = "target" in input ? input.target.projectDirectory : input.projectDirectory;
+      let project = "source publication";
+      if ("target" in input) {
+        project = input.target.projectDirectory;
+      } else if ("projectDirectory" in input) {
+        project = input.projectDirectory;
+      }
       const trace = "traceFile" in input ? `. Capture=${input.traceFile}` : "";
       const log = this.output
         ? new MaintenanceLog(
@@ -103,7 +108,10 @@ export class DisassemblyMaintenanceClient {
         });
         if (child.connected) {
           child.send({ type: "cancel" }, (error) => {
-            if (error) {
+            // A fast job can close IPC after queuing its result but before this cancellation
+            // arrives. Let exit/result handling settle it as cancelled, preserving the outcome.
+            const code = error && "code" in error ? error.code : undefined;
+            if (error && code !== "EPIPE" && code !== "ERR_IPC_CHANNEL_CLOSED") {
               finish(error);
             }
           });

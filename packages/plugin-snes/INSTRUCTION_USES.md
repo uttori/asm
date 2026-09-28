@@ -24,8 +24,11 @@ decoded 8-bit or 16-bit immediate in every accepted decode context. Mapper alias
 but two entries cannot refer to the same physical instruction.
 
 For direct memory operands, use `memoryOperand`, for example `"Actors.hp & $FFFF"`. It must equal
-the encoded address before indexing, data-bank, or direct-page addition. Indirect operands, calls,
-jumps, and stack operands are unsupported. `operand` and `memoryOperand` cannot coexist.
+the encoded address before indexing, data-bank, or direct-page addition. Direct-page data pointers
+also support scoped locals: `"MapCodecWork.history_row"` can emit `LDA.b (MapCodecWork.history_row),y`.
+The exporter preserves `(dp)`, `(dp,x)`, `(dp),y`, `[dp]` and `[dp],y` syntax; the expression names
+the encoded pointer offset, never its runtime pointee. Calls, jumps and stack operands remain
+unsupported. `operand` and `memoryOperand` cannot coexist.
 Both preserve the original instruction width and addressing mode.
 
 Expressions accept declared layouts, bindings, fields, bounded indexes, integer arithmetic and
@@ -51,9 +54,15 @@ Explicit indexes must be in bounds. Gaps stay unnamed in the generated explanati
 checks bytes, mapping, ROM identity, and span bounds, but cannot independently verify a research
 claim. Observations describe CPU memory operands, not DMA, stack traffic, or instruction fetches.
 
-Regeneration adds `[struct use]`, `[observed read]`, or `[trace-derived read]` comments above the
-instruction while preserving existing project comments. It never turns an indirect access into a
-fixed-address load or adds a permanent control-flow edge.
+Regeneration adds the explanation and directly observed access summaries above the instruction
+while preserving existing project comments. Trace-derived observations remain available in
+`struct-map.json` and audits without producing assembly comments. Rendering never turns an
+indirect access into a fixed-address load or adds a permanent control-flow edge.
+
+`reason` retains the required research rationale. An optional `comment` overrides its displayed
+explanation; `"comment": ""` omits redundant prose while keeping the rationale and observations.
+Generated assembly omits local `research/` citations and the old `[struct use]` prefix. Complete
+provenance remains in the metadata; observed and trace-derived evidence stay distinct.
 
 ## Regenerate safely
 

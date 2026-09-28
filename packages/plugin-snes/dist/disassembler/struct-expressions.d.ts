@@ -1,4 +1,4 @@
-import type { SnesStructBinding, SnesStructLayout } from "./struct-map.js";
+import type { SnesStructBinding, SnesStructConstant, SnesStructLayout } from "./struct-map.js";
 /** A closed expression over this map. Binding identities are retained for span ownership checks. */
 export interface SnesStructExpression {
     readonly expression: string;
@@ -14,14 +14,17 @@ export interface SnesStructAccessPart {
 }
 /**
  * Resolve a bounded subset of native assembly expressions, caching repeated expressions per map.
- * No defines, arbitrary calls, file reads or record contents participate in instruction identity.
+ * Only this map's constants/layouts/bindings participate; external defines, arbitrary calls,
+ * file reads and record contents cannot affect instruction identity.
  */
 export declare class SnesStructExpressionResolver {
     private readonly layouts;
     private readonly bindings;
     private readonly fields;
     private readonly cache;
-    constructor(layouts: readonly SnesStructLayout[], bindings: readonly SnesStructBinding[]);
+    private readonly constants;
+    /** Keep resolution local to one validated map; omitted constants preserve older map behavior. */
+    constructor(layouts: readonly SnesStructLayout[], bindings: readonly SnesStructBinding[], constants?: readonly SnesStructConstant[]);
     /**
      * Check every intermediate value and preserve explicit grouping in the generated assembly.
      * @param {unknown} input Single-line expression, at most 1,024 characters and 128 AST nodes.

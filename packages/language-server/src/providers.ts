@@ -19,6 +19,7 @@ import type {
   ParsedAssetCall,
   AssetValueNode,
 } from "@uttori/asm-core";
+import { findManagedSourceFile } from "@uttori/asm-disassembler";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -1458,6 +1459,10 @@ export function prepareRenameFor(
   file: string,
   position: Position,
 ): Range | null {
+  const target = renameTargetAt(index, file, position);
+  if (target) {
+    assertRenameIsUserOwned(index, file, target);
+  }
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference && isRenameableReference(reference)) {
@@ -1490,6 +1495,7 @@ export function renameEditsFor(
   if (!target) {
     return null;
   }
+  assertRenameIsUserOwned(index, file, target);
 
   const kind = target.symbol?.kind ?? target.reference?.kind;
   const effectiveName = kind === "define" && newName.startsWith("!") ? newName.slice(1) : newName;
@@ -1521,6 +1527,35 @@ export function renameEditsFor(
     return null;
   }
   return { changes: Object.fromEntries(editsByUri) };
+}
+
+/**
+ * Generated definitions and references must be renamed through their persistent owner. Check the
+ * entire edit footprint, including a generated definition reached from a user-owned patch file.
+ * This guard also runs without prepareRename, since not every LSP client calls it first.
+ * @param {WorkspaceIndex} index Indexed source symbols and references.
+ * @param {string} file Source file where rename was requested.
+ * @param {RenameTarget} target Semantic symbol selected by the language service.
+ */
+function assertRenameIsUserOwned(index: WorkspaceIndex, file: string, target: RenameTarget): void {
+  const files = new Set([file]);
+  for (const symbol of index.getAllSymbols()) {
+    if (symbolMatchesRenameTarget(symbol, target)) {
+      files.add(symbol.location.file);
+    }
+  }
+  for (const reference of index.getAllReferences()) {
+    if (referenceMatchesRenameTarget(reference, target)) {
+      files.add(reference.location.file);
+    }
+  }
+  for (const candidate of files) {
+    if (findManagedSourceFile(candidate)) {
+      throw new Error(
+        "This symbol belongs to generated disassembly. Use Assembly: Inspect Disassembly Ownership, then Edit Owned Annotation or Open Owning Input. Text-only Rename Symbol would be lost during regeneration.",
+      );
+    }
+  }
 }
 
 /**

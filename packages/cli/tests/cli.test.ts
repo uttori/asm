@@ -1454,3 +1454,30 @@ test("E2E: runCli export retains encoded widths for bank-local calls, jumps, and
   t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
   t.deepEqual(await fs.readFile(path.join(source, "build/rebuilt.sfc")), Buffer.from(bytes));
 });
+
+test("export struct width accepts whole columns and rejects unsupported values or commands", (t) => {
+  t.is(
+    parseCliArguments(["export", "game.analysis", "--struct-line-width", "80"]).structLineWidth,
+    80,
+  );
+  for (const width of ["39", "0", "-1", "80.5", "NaN", "Infinity"]) {
+    t.throws(() => parseCliArguments(["export", "game.analysis", "--struct-line-width", width]), {
+      message: /at least 40/,
+    });
+  }
+  t.throws(() => parseCliArguments(["assemble", "main.asm", "--struct-line-width", "80"]));
+});
+test("export comment wrapping can be disabled or assigned a validated width", (t) => {
+  t.is(parseCliArguments(["export", "game.analysis"]).wrapComments, undefined);
+  t.is(parseCliArguments(["export", "game.analysis", "--no-wrap-comments"]).wrapComments, false);
+  t.is(
+    parseCliArguments(["export", "game.analysis", "--comment-line-width", "72"]).commentLineWidth,
+    72,
+  );
+  for (const width of ["0", "19", "1.5", "Infinity", "NaN"]) {
+    t.throws(() => parseCliArguments(["export", "game.analysis", "--comment-line-width", width]));
+  }
+  t.throws(() => parseCliArguments(["export", "game.analysis", "--no-wrap-comments=false"]));
+  t.throws(() => parseCliArguments(["assemble", "main.asm", "--no-wrap-comments"]));
+  t.throws(() => parseCliArguments(["assemble", "main.asm", "--comment-line-width", "72"]));
+});

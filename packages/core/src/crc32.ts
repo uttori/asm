@@ -28,6 +28,7 @@ export class CRC32 {
    */
   public static compute(data: number[] | Uint8Array): number {
     let crc = 0xffffffff;
+    // oxlint-disable-next-line typescript/prefer-for-of
     for (let i = 0; i < data.length; i++) {
       crc = CRC32.table[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
     }

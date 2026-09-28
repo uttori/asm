@@ -5,7 +5,7 @@ import {
   type RuntimeInstructionRecord,
 } from "@uttori/asm-disassembler";
 
-import { formatInstructionAnnotationSummary } from "./annotation-format.js";
+import { formatInstructionAnnotationSummary } from "../editor-info/format.js";
 import type { AnalysisGraphNavigationTarget } from "./graph-tree.js";
 
 /**

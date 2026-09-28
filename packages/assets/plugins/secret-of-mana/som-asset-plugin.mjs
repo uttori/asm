@@ -9,6 +9,8 @@ import { compressSomLz, decompressSomLz } from "./som-lz.mjs";
 import { encodeBossGraphics, expandBossGraphics } from "./som-boss-graphics.mjs";
 import { encodeFrameAtlas, readFrameLayout } from "./som-frame-atlas.mjs";
 import { parseSpritePaletteCatalog, readSpritePaletteCatalog, spritePaletteBytes } from "./som-sprite-palettes.mjs";
+import { convertRoomAsset } from "./som-room-assets.mjs";
+import { decodeWorldRow, encodeWorldRow } from "./som-world-rle.mjs";
 
 const registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) registry.registerEncoder(encoder);
@@ -264,6 +266,13 @@ const plugin = definePlugin({
   },
   activate(context) {
     context.registerAssetFormat({
+      id: "som.room",
+      version: "1.0.0",
+      targets: ["snes.sfc"],
+      resourcePaths: (options) => typeof options.preview === "string" ? [options.preview] : [],
+      convert: convertRoomAsset,
+    });
+    context.registerAssetFormat({
       id: "som.palette.bgr555",
       version: "1.0.0",
       targets: ["snes.sfc"],
@@ -358,6 +367,23 @@ const plugin = definePlugin({
           primaryOutput: "brr",
           outputs: { brr: { bytes: sliceBrrSegment(brr, options) } },
         };
+      },
+    });
+    context.registerAssetTransform({
+      id: "som.world.rle",
+      version: "1.0.0",
+      targets: ["snes.sfc"],
+      optionSchema: { size: { type: "integer", minimum: 1, maximum: 65536 } },
+      encode: (bytes, options) => {
+        if (bytes.length !== (options.size ?? 512)) throw new Error("World row size mismatch.");
+        return encodeWorldRow(bytes);
+      },
+      decode: (bytes, options, maxOutputBytes) => {
+        const size = options.size ?? 512;
+        if (size > maxOutputBytes) throw new Error("World row exceeds output limit.");
+        const result = decodeWorldRow(bytes, size);
+        if (result.consumed !== bytes.length) throw new Error("Trailing bytes after world row.");
+        return result.data;
       },
     });
     context.registerAssetTransform({

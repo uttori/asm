@@ -2,7 +2,7 @@
 
 Portable, synchronous asset conversion primitives. The package accepts supplied bytes and
 does not read a ROM, create files, run an assembler, or load SQLite. `./node` is the only
-entry point that reads the filesystem.
+entry point that reads or writes the filesystem.
 
 The package provides native SNES tile, palette, tilemap and BRR **block** algorithms,
 raw and JSON model importers, structured data, exact byte transforms, PNG-to-native
@@ -81,6 +81,60 @@ CRC and bounds and reconstructs indexed/Adam7 scanlines exactly. Supported input
 indexed 1/2/4/8-bit, grayscale 1/2/4/8-bit, RGB8, grayscale-alpha8, and RGBA8.
 Sixteen-bit PNG is explicitly rejected. Conversion is synchronous and browser safe.
 
+## Indexed authoring helpers
+
+The browser-safe `./image` helpers operate on palette **indexes**, without inferring
+identity from matching colors or pixels:
+
+- `extractIndexedRegion(image, region)` copies any rectangular region, reverses display
+  flips and optionally maps indexes. Missing/null map entries reject an encountered color.
+- `renderIndexedPlacements(sources, placements, viewport, background?)` composes named
+  sources in array order (back to front), with signed origins, flips and per-placement
+  mappings. Source transparency defaults to index zero, accepts another index, or `null`
+  for fully opaque placement. Out-of-bounds placements fail; backgrounds are copied.
+- `expandIndexedGrid(block)` derives placements from arbitrary rectangular cells, explicit
+  columns, block origin and flips. Whole-block flips reverse cell order and cell pixels
+  together; repeated sources retain independent placement identities.
+- `rewriteIndexedPng(bytes, edit)` changes pixels and/or same-length RGBA
+  palettes without remapping slots, even when colors are identical. Palette-only edits
+  preserve compressed IDAT bytes and Adam7 encoding. Pixel edits retain bit depth and
+  emit unfiltered, noninterlaced packed rows. Explicit `dimensions` changes require a
+  complete replacement index plane. No-op edits preserve every byte.
+
+These helpers do not assume 8×8 tiles, 16-color banks, BGR555, native frame records,
+ROM addresses or a particular game. Indexed extraction/rendering is bounded to one
+megapixel, 65,536 placements and 64 million processed placement pixels. PNG edits
+use the existing importer's bounds. PNG safe-to-copy ancillary chunks survive edits;
+unsafe ancillary chunks survive only when named in `preserveChunks` after the caller
+validates their format-specific meaning.
+
+`applyAssetFileChanges(changes)` from `./node` accepts existing file paths and exact
+`before`/`after` bytes. It checks stale snapshots and duplicate/non-regular paths,
+stages every replacement, then publishes via same-filesystem renames. A later failure
+rolls back earlier writes without overwriting an intervening edit. Failed recovery
+retains backups and reports their paths. This is **not crash-atomic**, and readers
+can see intermediate files. Creation, deletion, schema migrations and ROM allocation
+remain host responsibilities. Game-specific tools must also validate all read
+dependencies and generated-file ownership before calling it.
+
+`createAssetSourceBaseline(identity, sources)` and `assertAssetSourceBaseline(root,
+baseline, expectedIdentity)` persist relative paths, sizes and SHA-256 fingerprints
+across editing sessions. The host supplies a project/codec identity and validates the
+complete dependency set; fingerprints do not discover missing dependencies themselves.
+Paths cannot escape the source root or traverse symlinks.
+
+For changes that add sources or regenerate an export, `createAssetSourceStage(root,
+identity, excludedDirectories?)` copies a bounded (one GiB) source tree to a sibling
+stage, including empty directories. External analysis/capture directories must be
+explicitly excluded by the host. `publishAssetSourceStage(root, stage, identity,
+validate)` requires a validation callback, checks the live baseline and file inventory,
+publishes the staged generation and retains the previous generation for recovery.
+Excluded directories move with their current contents; a stage cannot shadow them.
+This requires offline publication: directory renames are neither crash-atomic nor
+atomic to concurrent readers. Failed recovery reports retained source paths. Exporter
+regeneration, manifest integrity, assembly and approved ROM differences remain host
+policy; the generic helper does not assume a game or a generated-file format.
+
 ## WAVE-to-BRR conversion
 
 Register `waveImporter` and `withAudioEncoder(snesNativeEncoders)` from `./audio`.
@@ -116,5 +170,5 @@ codec wrappers or silently migrate persisted project records.
 
 `@uttori/asm-assets` contains registry contracts. `./snes`, `./data`, `./compression`,
 `./preview`, `./image`, and `./audio` are browser-safe. `./node` provides optional file
-reads. `./image` exports the PNG importer, layout helpers, and normalized image models;
+reads and coordinated file replacement. `./image` exports the PNG importer, layout helpers, and normalized image models;
 `./audio` exports the WAVE importer, BRR PCM codec, WAVE preview writer, and audio model.

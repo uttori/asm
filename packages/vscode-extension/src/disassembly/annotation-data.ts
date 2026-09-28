@@ -13,6 +13,9 @@ import {
   RomImage,
   validateProjectRom,
   validateSourceExportInputs,
+  findManagedSourceFile,
+  loadSourceOwnership,
+  sourceOwnersAt,
   type AnalysisProjectSnapshot,
   type InstructionExportRecord,
   type AnalysisProjectRevision,
@@ -267,7 +270,74 @@ export const lookupDisassemblyAnnotation = (
   let sourceDirectory: string | undefined;
   if (input.source) {
     const found: DisassemblyAnnotationLocation[] = [];
-    for (const candidate of input.maps) {
+    const managed = findManagedSourceFile(input.source.file);
+    const ownership = managed && loadSourceOwnership(managed);
+    if (managed && ownership) {
+      // Export-time owners cover data without CFG nodes; source and ROM guards still apply before
+      // trusting their locations. The legacy debug-map path below serves exports without this map.
+      const current = fs.readFileSync(input.source.file, "utf8");
+      const recorded = managed.manifest.files.find((file) => file.path === managed.relative)!;
+      if (
+        managed.manifest.rom.contentSha256 !== snapshot.manifest.rom.contentSha256 ||
+        managed.manifest.target !== snapshot.manifest.target ||
+        managed.manifest.mapper !== snapshot.manifest.mapping.mapper ||
+        hash(current) !== recorded.sha256 ||
+        input.source.sha256 !== recorded.sha256
+      ) {
+        throw new Error(
+          "Generated source or ROM identity changed. Inspect Disassembly Ownership before editing.",
+        );
+      }
+      sourceHash = recorded.sha256;
+      sourceDirectory = managed.directory;
+      for (const owner of sourceOwnersAt(
+        ownership,
+        managed.relative,
+        current,
+        input.source.line,
+        input.source.column,
+      )) {
+        if (
+          !["label", "function", "instruction", "data"].includes(owner.kind) ||
+          owner.address === undefined ||
+          !owner.addressSpace
+        ) {
+          continue;
+        }
+        if (owner.kind === "label") {
+          // A saved rename may change spelling while old source is visible. Match the native ID
+          // and location so the form cannot accidentally select another record with the old name.
+          const label = snapshot.shards.labels.find((record) => record.id === owner.id);
+          if (
+            !label ||
+            label.address !== owner.address ||
+            label.addressSpace !== owner.addressSpace
+          ) {
+            throw new Error(
+              "The owning label changed after generation. Regenerate source before editing this location.",
+            );
+          }
+          found.push({
+            labelId: label.id,
+            addressSpace: label.addressSpace,
+            address: label.address,
+            name: label.sourceName ?? owner.symbol,
+          });
+        } else {
+          found.push({
+            addressSpace: owner.addressSpace,
+            address: owner.address,
+            name: owner.symbol,
+          });
+        }
+      }
+      if (!found.length) {
+        throw new Error(
+          "This item is owned by a map, asset, or standalone comment. Use Inspect Disassembly Ownership to open its owner.",
+        );
+      }
+    }
+    for (const candidate of ownership ? [] : input.maps) {
       let map: DebugMap;
       try {
         map = readMap(candidate.file);

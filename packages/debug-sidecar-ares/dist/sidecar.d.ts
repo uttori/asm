@@ -2,6 +2,8 @@ export interface AresSidecarArguments {
     readonly manifest: string;
     readonly executable: string;
     readonly rom: string;
+    /** Explicit verified build identity; omitted retains the runtime manifest's original ROM pin. */
+    readonly romSha256?: string;
     readonly runtimeDirectory: string;
     readonly system?: string;
     readonly fastBoot: boolean;

@@ -1,12 +1,13 @@
 import type { DecodedInstruction } from "@uttori/asm-core";
 import type { RomImage } from "@uttori/asm-disassembler";
 
+import { omitResearchReferences } from "./source-layout.js";
 import {
   describeSnesStructAccess,
   SnesStructExpressionResolver,
   type SnesStructAccessPart,
 } from "./struct-expressions.js";
-import type { SnesStructBinding, SnesStructLayout } from "./struct-map.js";
+import type { SnesStructBinding, SnesStructConstant, SnesStructLayout } from "./struct-map.js";
 
 /** A curated capture reference, separate from static operand identity and CPU control flow. */
 export interface SnesStructAccessObservation {
@@ -35,6 +36,8 @@ export interface SnesStructInstructionUse {
   /** Complete instruction encoding, including opcode. Stale metadata aborts export before writes. */
   readonly expectedBytes: readonly number[];
   readonly reason: string;
+  /** Optional display explanation; empty suppresses redundant prose without deleting its research reason. */
+  readonly comment?: string;
   /** Immediate value expression. Mutually exclusive with memoryOperand and access observations. */
   readonly operand?: { readonly expression: string; readonly value: number };
   /** Encoded direct memory address, before indexing/DB/D. Never a resolved runtime effective address. */
@@ -73,12 +76,14 @@ const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
  * @param {unknown} value Optional instructionUses array from JSON.
  * @param {readonly SnesStructLayout[]} structures Validated zero-based layouts.
  * @param {readonly SnesStructBinding[]} bindings Validated physical record bindings.
+ * @param {readonly SnesStructConstant[]} constants Optional declared scalar values, without storage ownership.
  * @returns {readonly SnesStructInstructionUse[]} Resolved uses in CPU-address order.
  */
 export const validateSnesStructInstructionUses = (
   value: unknown,
   structures: readonly SnesStructLayout[],
   bindings: readonly SnesStructBinding[],
+  constants: readonly SnesStructConstant[] = [],
 ): readonly SnesStructInstructionUse[] => {
   if (value === undefined) {
     return [];
@@ -89,7 +94,7 @@ export const validateSnesStructInstructionUses = (
   if (value.length === 0) {
     return [];
   }
-  const resolver = new SnesStructExpressionResolver(structures, bindings);
+  const resolver = new SnesStructExpressionResolver(structures, bindings, constants);
   const addresses = new Set<number>();
   return value
     .map((input): SnesStructInstructionUse => {
@@ -107,6 +112,9 @@ export const validateSnesStructInstructionUses = (
         throw new Error("Struct instruction uses require 1–4 complete expectedBytes.");
       }
       const expectedBytes = entry.expectedBytes.map((byte) => integer(byte, 0, 0xff));
+      if (entry.comment !== undefined && typeof entry.comment !== "string") {
+        throw new Error("Struct instruction-use comment must be a string, or omitted.");
+      }
       let operand: SnesStructInstructionUse["operand"];
       if (entry.operand !== undefined) {
         const resolved = resolver.resolve(entry.operand);
@@ -175,6 +183,9 @@ export const validateSnesStructInstructionUses = (
         address,
         expectedBytes,
         reason: text(entry.reason),
+        ...(entry.comment === undefined
+          ? {}
+          : { comment: entry.comment.replaceAll(/\s+/g, " ").trim() }),
         ...(operand ? { operand } : {}),
         ...(memoryOperand ? { memoryOperand } : {}),
         observations,
@@ -225,7 +236,7 @@ export const indexSnesStructInstructionUses = (
 };
 
 /**
- * Replace a proven immediate or direct memory operand, preserving its encoded width and indexing.
+ * Replace a proven immediate, direct address or direct-page data pointer without changing its mode.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
  * @param {DecodedInstruction} instruction One accepted decode context.
  * @param {string} source Existing formatted source, including any conservative numeric fallback.
@@ -254,18 +265,23 @@ export const applySnesStructInstructionOperand = (
     throw new Error(`Struct observations at ${hex(use.address)} require a memory operand.`);
   }
   if (use.memoryOperand) {
-    // A curated overlay names the encoded address, not a captured post-index address. Restrict
-    // replacement to direct memory modes so calls, indirect pointers and stack syntax cannot
-    // accidentally be reformatted as ordinary loads/stores.
-    const modes: Record<string, readonly [number, string]> = {
-      direct: [1, ""],
-      directIndexedX: [1, ",x"],
-      directIndexedY: [1, ",y"],
-      absolute: [2, ""],
-      absoluteIndexedX: [2, ",x"],
-      absoluteIndexedY: [2, ",y"],
-      absoluteLong: [3, ""],
-      absoluteLongIndexedX: [3, ",x"],
+    // The expression names encoded operand bytes, never the dereferenced or indexed address.
+    // Preserve pointer delimiters for scoped direct-page locals. The whitelist excludes
+    // indirect control flow and stack modes, which have different operand contracts.
+    const modes: Record<string, readonly [number, string, string]> = {
+      direct: [1, "", ""],
+      directIndexedX: [1, "", ",x"],
+      directIndexedY: [1, "", ",y"],
+      directIndirect: [1, "(", ")"],
+      directIndexedXIndirect: [1, "(", ",x)"],
+      directIndirectIndexedY: [1, "(", "),y"],
+      directIndirectLong: [1, "[", "]"],
+      directIndirectLongIndexedY: [1, "[", "],y"],
+      absolute: [2, "", ""],
+      absoluteIndexedX: [2, "", ",x"],
+      absoluteIndexedY: [2, "", ",y"],
+      absoluteLong: [3, "", ""],
+      absoluteLongIndexedX: [3, "", ",x"],
     };
     const mode = modes[instruction.mode];
     const operand = instruction.operands[0];
@@ -275,21 +291,25 @@ export const applySnesStructInstructionOperand = (
       operand?.kind !== "address" ||
       operand.width !== mode[0] ||
       operand.value !== use.memoryOperand.value ||
-      !instruction.references.some(({ kind }) => kind === "data")
+      !instruction.references.some(({ kind }) => kind === "data" || kind === "pointer")
     ) {
       throw new Error(
         `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex(use.address)}.`,
       );
     }
     const width = ["", "b", "w", "l"][mode[0]];
-    return `${instruction.mnemonic}.${width} ${use.memoryOperand.expression}${mode[1]}`;
+    return `${instruction.mnemonic}.${width} ${mode[1]}${use.memoryOperand.expression}${mode[2]}`;
   }
   if (!use.operand) {
     return source;
   }
   const operand = instruction.operands[0];
+  // REP/SEP have fixed byte status masks, represented as signature operands by the decoder.
+  // Do not broaden this to BRK/COP/WDM signatures, which are not ordinary immediate values.
+  const statusMask =
+    instruction.mode === "signature" && ["REP", "SEP"].includes(instruction.mnemonic);
   if (
-    instruction.mode !== "immediate" ||
+    (instruction.mode !== "immediate" && !statusMask) ||
     instruction.operands.length !== 1 ||
     (operand?.width !== 1 && operand?.width !== 2) ||
     operand.value !== use.operand.value ||
@@ -298,6 +318,9 @@ export const applySnesStructInstructionOperand = (
     throw new Error(
       `Struct operand '${use.operand.expression}' does not match the encoded immediate at ${hex(use.address)}.`,
     );
+  }
+  if (statusMask) {
+    return `${instruction.mnemonic} #${use.operand.expression}`;
   }
   return `${instruction.mnemonic}.${operand.width === 1 ? "b" : "w"} #${use.operand.expression}`;
 };
@@ -334,39 +357,45 @@ const describeObservation = (observation: SnesStructAccessObservation): string =
 };
 
 /**
- * Render at most two bounded comments per instruction: its reason and an evidence summary.
- * All alternatives and provenance remain in struct-map.json; rendering never mutates them
- * or substitutes a captured effective address into a CPU operand.
+ * Render at most two bounded comments per instruction: its reason and a directly observed
+ * evidence summary. Trace-derived observations remain in struct-map.json for verification,
+ * but their reconstruction details are too noisy for generated assembly.
  * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
  * @returns {readonly string[]} Comment bodies, each at most 240 characters, without semicolons.
  */
 export const renderSnesStructUseComments = (use: SnesStructInstructionUse): readonly string[] => {
   // Include the decimal address used in JSON so the complete evidence is directly searchable.
   const locator = ` Details: struct-map.json instructionUses address=${use.address} (${hex(use.address)}).`;
-  const reason = `[struct use] ${use.reason}`;
-  if (use.observations.length === 0) {
-    return [compactStructUseComment(reason, reason.length > structUseCommentLimit ? locator : "")];
+  const reason = omitResearchReferences(use.comment ?? use.reason);
+  const observations = use.observations.filter(
+    (observation) => observation.provenance === "observed",
+  );
+  const reasonLocator =
+    observations.length === 0 && reason.length > structUseCommentLimit ? locator : "";
+  const explanation = reason ? [compactStructUseComment(reason, reasonLocator)] : [];
+  if (observations.length === 0) {
+    return explanation;
   }
-  const first = use.observations[0];
+  const first = observations[0];
   let summary: string;
-  if (use.observations.length === 1) {
+  if (observations.length === 1) {
     summary = `[${first.provenance} ${first.access}] ${describeObservation(first)}. ${first.source}: ${first.detail}`;
   } else {
     const kinds = new Map<string, number>();
     const bindings = new Set<string>();
     const sources = new Set<string>();
-    for (const observation of use.observations) {
+    for (const observation of observations) {
       const kind = `${observation.provenance} ${observation.access}`;
       kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
       bindings.add(observation.binding);
       sources.add(observation.source);
     }
     // Do not present the first capture's provenance/access as applying to every alternative.
-    let heading = `[${first.provenance} ${first.access}] ${use.observations.length} observations`;
+    let heading = `[${first.provenance} ${first.access}] ${observations.length} observations`;
     if (kinds.size > 1) {
       heading = `[struct observations] ${[...kinds].map(([kind, count]) => `${kind}: ${count}`).join(", ")}`;
     }
     summary = `${heading}; ${bindings.size} binding(s), ${sources.size} capture(s). Example: ${describeObservation(first)}.`;
   }
-  return [compactStructUseComment(reason), compactStructUseComment(summary, locator)];
+  return [...explanation, compactStructUseComment(omitResearchReferences(summary), locator)];
 };

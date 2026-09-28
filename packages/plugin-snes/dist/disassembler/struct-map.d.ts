@@ -40,11 +40,19 @@ export interface SnesStructBinding {
 }
 /** Validated source metadata, retaining exact input bytes for drift detection. */
 export interface LoadedSnesStructMap {
+    /** Reviewed scalar values usable in guarded operands; never inferred from matching literals. */
+    readonly constants?: readonly SnesStructConstant[];
     readonly structures: readonly SnesStructLayout[];
     readonly bindings: readonly SnesStructBinding[];
     /** Optional, explicitly justified operands and capture references at guarded instruction sites. */
     readonly instructionUses?: readonly SnesStructInstructionUse[];
     readonly sourceBytes: Uint8Array;
+}
+/** An exact assembly value with its units or semantic contract documented at the declaration. */
+export interface SnesStructConstant {
+    readonly name: string;
+    readonly value: number;
+    readonly description: string;
 }
 /** One physical ROM field, including opaque gaps, ready for byte-preserving emission. */
 export interface SnesStructRomField {
@@ -95,10 +103,20 @@ export declare const indexSnesStructFields: (map: LoadedSnesStructMap | undefine
  */
 export declare const planSnesStructRomFields: (map: LoadedSnesStructMap | undefined, romSize: number, cpuAddress: (offset: number) => number) => readonly SnesStructRomField[];
 /**
- * Encode every named field (including opaque gaps) from immutable ROM bytes.
+ * Encode every named field (including opaque gaps) from immutable ROM bytes. Field descriptions
+ * stay on the authoritative declarations in structs.asm so every data row does not repeat them.
  * @param {SnesStructRomRecord} record Complete, mapped record ownership.
  * @param {Uint8Array} bytes Exactly the original record bytes.
- * @returns {string} Named literal suitable for dataStruct or a dataStructs row.
+ * @returns {readonly {assignment: string}[]} Named initializer assignments, including opaque gaps.
+ */
+export declare const renderSnesStructInitializerFields: (record: SnesStructRomRecord, bytes: Uint8Array) => readonly {
+    assignment: string;
+}[];
+/**
+ * Render one complete record as a compact native initializer without field documentation.
+ * @param {SnesStructRomRecord} record Complete mapped record ownership.
+ * @param {Uint8Array} bytes Exact record bytes from the ROM.
+ * @returns {string} Single-line brace initializer for callers that manage source layout.
  */
 export declare const renderSnesStructInitializer: (record: SnesStructRomRecord, bytes: Uint8Array) => string;
 /**

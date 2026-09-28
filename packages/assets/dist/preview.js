@@ -28,8 +28,10 @@ export function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
     integer(width, "Preview width", 1, 4096);
     integer(height, "Preview height", 1, 4096);
     integer(maxEdge, "Preview edge", 1, 1024);
-    if (width * height > 1024 * 1024 || rgba.length !== width * height * 4) {
-        throw new Error("Preview pixels are missing or exceed the one-megapixel limit.");
+    // A native SoM room can fill 128 × 128 sixteen-pixel cells. Bound the input
+    // separately from the 1024-pixel display edge so complete maps can be downscaled.
+    if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+        throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
     }
     const scale = Math.min(1, maxEdge / Math.max(width, height));
     const outputWidth = Math.max(1, Math.floor(width * scale));

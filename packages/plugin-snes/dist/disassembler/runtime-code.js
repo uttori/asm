@@ -202,8 +202,7 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
     for (const entry of entries) {
         const queue = [[entry]];
         const visited = new Set();
-        for (let index = 0; index < queue.length; index++) {
-            const trail = queue[index];
+        for (const trail of queue) {
             const id = trail.at(-1);
             if (visited.has(id)) {
                 continue;

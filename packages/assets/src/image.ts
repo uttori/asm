@@ -1,4 +1,20 @@
 export { pngImporter } from "./png.js";
+export { rewriteIndexedPng, createIndexedPng } from "./png-edit.js";
+export type { IndexedPngEdit } from "./png-edit.js";
+export {
+  expandIndexedGrid,
+  extractIndexedRegion,
+  renderIndexedPlacements,
+  validateIndexedPixels,
+} from "./indexed-edit.js";
+export type {
+  IndexedGridCell,
+  IndexedGridBlock,
+  IndexedPixels,
+  PixelBounds,
+  IndexedRegion,
+  IndexedPlacement,
+} from "./indexed-edit.js";
 export {
   withImageEncoders,
   encodeBgScreenMap,

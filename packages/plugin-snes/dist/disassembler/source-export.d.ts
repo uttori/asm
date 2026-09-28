@@ -4,6 +4,12 @@ import { type SnesRamMapVariable } from "./ram-map.js";
 import { type SnesMapper } from "./rom-header.js";
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
 export interface SnesSourceExportOptions {
+    /** Preferred dataStruct/row width, including indentation. Integer >= 40; defaults to 100. */
+    readonly structLineWidth?: number;
+    /** Wrap generated assembly comments at word boundaries; defaults to true. */
+    readonly wrapComments?: boolean;
+    /** Preferred comment columns including indentation and semicolon, integer >= 20; default 100. */
+    readonly commentLineWidth?: number;
     /**
      * Overwrite an existing export directory. Without this, a populated directory
      * that is not a previous export, or a previous export whose files drifted, is rejected.
@@ -32,7 +38,7 @@ export declare const formatSnes65816SourceInstruction: (instruction: DecodedInst
  * @param {AnalysisProjectShards} shards Validated native project metadata.
  * @param {SnesMapper} mapper Selected ROM mapping.
  * @param {number} romSize Headerless ROM size.
- * @param {readonly string[]} ramNames Symbols in the editable RAM map.
+ * @param {readonly string[]} ramNames Global symbols from RAM, layouts, bindings, and constants.
  * @returns {ReadonlyMap<string, string>} Unique assembly names keyed by native label id.
  */
 export declare const snesSourceLabelNames: (shards: AnalysisProjectShards, mapper: SnesMapper, romSize: number, ramNames?: readonly string[]) => ReadonlyMap<string, string>;

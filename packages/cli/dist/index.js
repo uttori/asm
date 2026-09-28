@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, NodeAssemblyFileProvider, PluginError, canonicalDebugMapJson, createDebugMap, } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, mergeRuntimeEvidence, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, findManagedSourceFile, sourceGenerationIdentity, assertSourceGeneration, mergeRuntimeEvidence, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, exportMesenLabels, identifySnesFileOffset, importMesen65816Trace, importMesenLabels, importMesenSnesCdl, } from "@uttori/asm-plugin-snes";
 import { publishOutputFiles } from "./output-files.js";
@@ -21,7 +21,14 @@ const commandOptions = {
     ],
     disassemble: ["--mapper", "--header-size", "--dizraw"],
     analyze: ["--rom", "--entry", "--max-work-items", "--max-call-depth"],
-    export: ["--rom", "--force", "--allow-code-regression"],
+    export: [
+        "--rom",
+        "--force",
+        "--allow-code-regression",
+        "--struct-line-width",
+        "--comment-line-width",
+        "--no-wrap-comments",
+    ],
     "verify-roundtrip": ["--rom"],
     "project-validate": ["--rom"],
     "project-compact": [],
@@ -48,6 +55,7 @@ const booleanOptions = new Set([
     "--force",
     "--allow-code-regression",
     "--debug",
+    "--no-wrap-comments",
 ]);
 const commandsWithOutput = new Set([
     "assemble",
@@ -90,10 +98,13 @@ Evidence options (evidence-import):
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
-  --max-work-items <count>     Positive work limit (default 100000)
-  --max-call-depth <count>     Nonnegative call-context depth (default 8)
+  --max-work-items <count>     Positive work limit (default ${DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS})
+  --max-call-depth <count>     Nonnegative call-context depth (default ${DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH})
 
 Export options (export):
+  --struct-line-width <count> Preferred dataStruct width, at least 40 (default 100)
+  --comment-line-width <count> Preferred comment width, at least 20 (default 100)
+  --no-wrap-comments          Disable generated assembly comment wrapping
   --force                     Replace modified generated files
   --allow-code-regression      Allow previously exported code to become raw bytes
   Default destination: <project stem>.source
@@ -157,6 +168,9 @@ export const parseCliArguments = (argv) => {
     let traceIndex;
     const entryPoints = [];
     let maxWorkItems;
+    let structLineWidth;
+    let commentLineWidth;
+    let wrapComments;
     let maxCallDepth;
     let verbose = false;
     let force = false;
@@ -207,6 +221,10 @@ export const parseCliArguments = (argv) => {
         }
         if (flag === "--allow-code-regression") {
             allowCodeRegression = true;
+            continue;
+        }
+        if (flag === "--no-wrap-comments") {
+            wrapComments = false;
             continue;
         }
         if (flag === "--debug") {
@@ -307,6 +325,18 @@ export const parseCliArguments = (argv) => {
                 entryPoints.push(address);
                 break;
             }
+            case "--comment-line-width":
+                commentLineWidth = Number(value);
+                if (!Number.isSafeInteger(commentLineWidth) || commentLineWidth < 20) {
+                    throw new Error("--comment-line-width must be an integer of at least 20 columns.");
+                }
+                break;
+            case "--struct-line-width":
+                structLineWidth = Number(value);
+                if (!Number.isSafeInteger(structLineWidth) || structLineWidth < 40) {
+                    throw new Error("--struct-line-width must be an integer of at least 40 columns.");
+                }
+                break;
             case "--max-work-items":
                 maxWorkItems = Number(value);
                 if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
@@ -382,6 +412,9 @@ export const parseCliArguments = (argv) => {
         ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
         entryPoints: Object.freeze(entryPoints),
         maxWorkItems,
+        structLineWidth,
+        commentLineWidth,
+        wrapComments,
         maxCallDepth,
         verbose,
         force,
@@ -770,6 +803,9 @@ const exportProjectSource = (parsed, cwd) => {
             sourceDirectory: outputDirectory,
             force: parsed.force,
             allowCodeRegression: parsed.allowCodeRegression,
+            structLineWidth: parsed.structLineWidth,
+            commentLineWidth: parsed.commentLineWidth,
+            wrapComments: parsed.wrapComments,
         });
         console.log(`Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s). ${result.codeBytes} byte(s) emitted as native 65816 source.`);
         console.log(`RAM map: ${result.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0} variable(s) applied from '${path.join(outputDirectory, "ram-map.json")}'.`);
@@ -854,8 +890,15 @@ const assemble = async (parsed, cwd) => {
             console.log(`Target: ${loaded.target}`);
             console.log(`Architecture: ${loaded.architecture}`);
         }
+        const managedGeneration = findManagedSourceFile(inputFile);
+        const generationIdentity = managedGeneration
+            ? sourceGenerationIdentity(managedGeneration.directory)
+            : undefined;
         const source = fileProvider.readTextFile(inputFile);
         assembler.assembleProgram(assembler.buildProgramModel(source, inputFile, 0));
+        if (managedGeneration && generationIdentity) {
+            assertSourceGeneration(managedGeneration.directory, generationIdentity);
+        }
         const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
         const outputFile = parsed.output
             ? path.resolve(cwd, parsed.output)
@@ -892,6 +935,9 @@ const assemble = async (parsed, cwd) => {
             });
             outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
         }
+        if (managedGeneration && generationIdentity) {
+            assertSourceGeneration(managedGeneration.directory, generationIdentity);
+        }
         publishOutputFiles(outputs, [inputFile, loaded.configuration.configFile ?? explicitConfig]);
         console.log(`Success: Output written to '${outputFile}'.`);
         if (debugMapFile) {
@@ -926,6 +972,7 @@ const verifyRoundTrip = async (parsed, cwd) => {
         return 1;
     }
     try {
+        const generationIdentity = sourceGenerationIdentity(directory);
         const manifest = loadSourceExportManifest(directory);
         validateSourceExportFiles(directory, manifest);
         validateSourceExportInputs(directory, manifest);
@@ -973,6 +1020,8 @@ const verifyRoundTrip = async (parsed, cwd) => {
             console.error(`Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}. First difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`);
             return 1;
         }
+        assertSourceGeneration(directory, generationIdentity);
+        validateSourceExportFiles(directory, manifest);
         // Keep a previously verified image intact when rebuilding or comparison fails.
         publishOutputFiles([{ file: finalOutput, contents: final }], [path.resolve(cwd, parsed.rom)]);
         console.log(`Success: Round trip is byte-identical (${comparison.actualLength} byte(s), SHA-256 ${comparison.actualSha256}).`);

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, compareByteImages, openAnalysisProjectStore, analysisProjectRevision, assertAnalysisProjectRevision, commitAnalysisProjectViewUpdate, loadSourceExportManifest, validateAnalysisProject, validateProjectRom, validateSourceExportFiles, validateSourceExportInputs, writeAnalysisProject, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, compareByteImages, openAnalysisProjectStore, analysisProjectRevision, assertAnalysisProjectRevision, commitAnalysisProjectViewUpdate, loadSourceExportManifest, sourceGenerationIdentity, assertSourceGeneration, validateAnalysisProject, validateProjectRom, validateSourceExportFiles, validateSourceExportInputs, writeAnalysisProject, } from "@uttori/asm-disassembler";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { analyzeSnes65816 } from "./65816-analysis.js";
 import { createSnesAddressContext, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, } from "./address-identities.js";
@@ -17,7 +17,7 @@ import { SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR } from "./superfx-address-space.js
 /** Stable target id written to native SNES analysis projects. */
 const TARGET_ID = "snes.sfc";
 const ARCHITECTURE_ID = "snes.65816";
-const MAX_PERSISTED_RUNTIME_ENTRY_POINTS = 100_000;
+const MAX_PERSISTED_RUNTIME_ENTRY_POINTS = 1_000_000;
 /** Thrown when a project operation observes an aborted signal. */
 export class SnesProjectInitializationCancelledError extends Error {
     constructor() {
@@ -294,7 +294,7 @@ export const analyzeSnesProject = (options) => {
                     regions: store.loadTable("regions"),
                     evidence: store.loadTable("evidence"),
                     imports: [],
-                    analysis: store.analysisByKinds(["target-override", "target-set"]),
+                    analysis: store.analysisByKinds(["target-override", "target-set", "metadata-edit"]),
                     runtime: [
                         ...store.runtimeExecutionSeeds(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE),
                         ...store.runtimeMemoryAtAddresses(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, addresses),
@@ -414,6 +414,7 @@ export const analyzeSnesProject = (options) => {
     const romBytes = rom.bytes();
     const analysisRecords = [
         ...editableRecords,
+        ...loaded.view.analysis.filter((record) => record.kind === "metadata-edit"),
         ...result.records.map((record) => record.kind === "cfg-node" && record.fileOffset !== undefined
             ? {
                 ...record,
@@ -512,6 +513,9 @@ export const exportSnesProject = (options) => {
             }
             report(options, "export", "Generating native source, binary assets and file manifests.");
             const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
+                structLineWidth: options.structLineWidth,
+                wrapComments: options.wrapComments,
+                commentLineWidth: options.commentLineWidth,
                 force: options.force,
                 allowCodeRegression: options.allowCodeRegression,
                 sourceProjectSha256: revision.manifestSha256,
@@ -540,9 +544,12 @@ export const verifySnesProjectRoundTrip = async (options) => {
     throwIfCancelled(options.signal);
     report(options, "verify", "Validating generated files, inputs and ROM identity.");
     const sourceDirectory = path.resolve(options.sourceDirectory);
+    const generation = sourceGenerationIdentity(sourceDirectory);
     const manifest = loadSourceExportManifest(sourceDirectory);
     validateSourceExportFiles(sourceDirectory, manifest);
-    validateSourceExportInputs(sourceDirectory, manifest);
+    if (!options.retainedGeneration) {
+        validateSourceExportInputs(sourceDirectory, manifest);
+    }
     const rom = RomImage.load(path.resolve(options.romFile), {
         headerSize: manifest.rom.headerSize,
     });
@@ -581,6 +588,8 @@ export const verifySnesProjectRoundTrip = async (options) => {
         report(options, "verify", "Assembling the ROM.");
         assembler.assembleProgram(program);
         throwIfCancelled(options.signal);
+        assertSourceGeneration(sourceDirectory, generation);
+        validateSourceExportFiles(sourceDirectory, manifest);
         report(options, "verify", "Writing build outputs and comparing ROM bytes.");
         const content = Buffer.from(assembler.getBinaryOutput());
         const contentOutput = path.join(sourceDirectory, manifest.contentOutput);
@@ -610,11 +619,46 @@ export const verifySnesProjectRoundTrip = async (options) => {
                 sourceRoot: sourceDirectory,
             })));
         }
+        let interfaceFile;
+        if (options.emitInterface) {
+            interfaceFile = path.join(path.dirname(contentOutput), "baseline-interface.asm");
+            const definitions = ["defines.asm", "ram-defines.asm", "structs.asm"]
+                .filter((file) => manifest.files.some((entry) => entry.path === file))
+                .map((file) => fs.readFileSync(path.join(sourceDirectory, file), "utf8"));
+            // Export actual resolved top-level ROM labels, never guessed addresses from comments.
+            // Local/macro symbols remain private; layouts and field bindings come from structs.asm.
+            const names = new Set(assembler.symbolDefinitions
+                .filter((entry) => entry.kind === "label" &&
+                path.dirname(entry.location.file) === path.join(sourceDirectory, "banks") &&
+                /^[A-Z_a-z]\w*$/.test(entry.name))
+                .map((entry) => entry.name));
+            const labels = [...names].sort().map((name) => {
+                const value = assembler.labelTable.get(name)?.value;
+                if (!Number.isSafeInteger(value)) {
+                    throw new Error(`Unresolved interface label ${name}.`);
+                }
+                return `${name} = $${value.toString(16)}`;
+            });
+            // Interface includes are read after assembly. Recheck their generation before
+            // publishing them so an external source edit cannot pin mixed symbol definitions.
+            assertSourceGeneration(sourceDirectory, generation);
+            validateSourceExportFiles(sourceDirectory, manifest);
+            if (!options.retainedGeneration) {
+                validateSourceExportInputs(sourceDirectory, manifest);
+            }
+            fs.writeFileSync(interfaceFile, [
+                "; Verified baseline interface. Regenerate through the modification workflow.",
+                ...definitions,
+                ...labels,
+                "",
+            ].join("\n"));
+        }
         return {
             sourceDirectory,
             contentOutput,
             finalOutput,
             ...(debugMap ? { debugMap } : {}),
+            ...(interfaceFile ? { interfaceFile } : {}),
             comparison,
         };
     }

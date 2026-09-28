@@ -22,6 +22,7 @@ export * from "./runtime-evidence.js";
 export * from "./runtime-trace.js";
 export * from "./runtime-trace-file.js";
 export * from "./source-export.js";
+export * from "./source-ownership.js";
 export * from "./static-analysis.js";
 export * from "./trace-detail.js";
 export * from "./analysis-sources.js";
@@ -35,4 +36,7 @@ export * from "./runtime-bus-project.js";
 export * from "./runtime-transfer.js";
 export * from "./runtime-graphics.js";
 export type { RuntimePPUEffect, RuntimePPUSummary } from "./runtime-ppu.js";
+export * from "./durable-files.js";
+export * from "./source-generation.js";
+export * from "./source-publication.js";
 //# sourceMappingURL=index.d.ts.map

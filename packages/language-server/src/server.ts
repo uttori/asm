@@ -9,6 +9,11 @@ import path from "node:path";
 import { CRC32 } from "@uttori/asm-core";
 import { canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core/debug-map";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
+import {
+  findManagedSourceFile,
+  sourceGenerationIdentity,
+  assertSourceGeneration,
+} from "@uttori/asm-disassembler";
 import plugin65xx from "@uttori/asm-plugin-65xx";
 import {
   discoverProjectConfigurationPath,
@@ -661,6 +666,10 @@ function buildBinary(
       log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
       assembler.setIncludePaths(includePaths);
       assembler.setCurrentFile(file);
+      const managedGeneration = findManagedSourceFile(file);
+      const generationIdentity = managedGeneration
+        ? sourceGenerationIdentity(managedGeneration.directory)
+        : undefined;
       const source = provider.readTextFile(file);
       log.info(
         `  source: ${source.length} chars from ${provider.overlay.has(file) ? "editor buffer" : "disk"}`,
@@ -671,6 +680,9 @@ function buildBinary(
       const assembleStarted = Date.now();
       assembler.assembleProgram(program);
       log.info(`  assembleProgram finished (${formatElapsed(assembleStarted)})`);
+      if (managedGeneration && generationIdentity) {
+        assertSourceGeneration(managedGeneration.directory, generationIdentity);
+      }
       const bytes = assembler.getBinaryOutput();
       log.info(`  emitted ${bytes.length} bytes (output buffer ${assembler.outputBytes.length})`);
       if (bytes.length === 0) {
@@ -711,6 +723,9 @@ function buildBinary(
         mapping: assembler.addressToLineMapping,
         sourceRoot: workspaceRoot(),
       });
+      if (managedGeneration && generationIdentity) {
+        assertSourceGeneration(managedGeneration.directory, generationIdentity);
+      }
       const committed = commitBuildArtifactPair(outputPath, bytes, canonicalDebugMapJson(debugMap));
       log.info(`  writing ${bytes.length} bytes → ${committed.outputPath}`);
       log.info(`  debug map → ${committed.debugMapPath}`);

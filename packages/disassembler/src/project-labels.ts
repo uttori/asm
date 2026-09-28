@@ -33,7 +33,9 @@ export const projectSourceLabelNames = (
 ): ReadonlyMap<string, string> => {
   const names = new Map<string, string>();
   const used = new Set([...reserved].map((name) => name.toLowerCase()));
-  const sorted = [...labels].sort((a, b) => a.id.localeCompare(b.id));
+  const sorted = labels
+    .filter((label) => !label.suppressed)
+    .sort((a, b) => a.id.localeCompare(b.id));
   for (const label of sorted.filter((label) => label.sourceName === undefined)) {
     const base = legacySourceLabelName(label.name);
     let name = base;

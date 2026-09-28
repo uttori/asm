@@ -38,7 +38,7 @@ const readTemplate = (file: Uri): string => {
  * Load editable, packaged HTML with CSP-scoped URLs for its external assets.
  * @param {Webview} webview Hosted webview.
  * @param {Uri} extensionUri Installed extension root.
- * @param {"annotation" | "panel" | "disassembly"} name Packaged template basename.
+ * @param {"annotation" | "panel" | "disassembly" | "metadata" | "rom-editor"} name Packaged template basename.
  * @returns {string} Complete HTML with escaped resource URLs.
  * @see https://code.visualstudio.com/api/references/vscode-api#Webview.asWebviewUri
  * @see https://code.visualstudio.com/api/references/vscode-api#Webview.cspSource
@@ -47,7 +47,7 @@ const readTemplate = (file: Uri): string => {
 export const renderWebviewTemplate = (
   webview: Webview,
   extensionUri: Uri,
-  name: "annotation" | "panel" | "disassembly",
+  name: "annotation" | "panel" | "disassembly" | "metadata" | "rom-editor",
 ): string => {
   const asset = (file: string): Uri => Uri.joinPath(extensionUri, "media", file);
   const values: Record<string, string> = {

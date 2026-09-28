@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}'" />
+    <link rel="stylesheet" href="{{styleUri}}" />
+    <title>Disassembly Metadata</title>
+  </head>
+  <body>
+    <h1>Disassembly metadata</h1>
+    <p>
+      Edit persistent names, comments, interpretations, and map inputs. Saving leaves source
+      regeneration pending.
+    </p>
+    <p id="status" role="status" aria-live="polite">Loading metadata…</p>
+    <details id="recovery">
+      <summary>Recover draft / operation history</summary>
+      <select id="drafts" aria-label="Retained drafts"></select
+      ><button id="recover-draft">Recover selected draft</button>
+      <button id="operation-history">Show saved operation outcomes</button>
+      <pre id="operation-outcomes"></pre>
+      <p>
+        Recovery retains raw text and the original revision. Reload saved data to compare with
+        current records, then review again. Retrying an uncertain save uses its original operation
+        ID.
+      </p>
+    </details>
+    <div class="toolbar">
+      <label
+        >Collection
+        <select id="collection">
+          <option value="labels">Labels</option>
+          <option value="comments">Standalone comments</option>
+          <option value="annotations">Classification / CPU state / entry points</option>
+          <option value="analysis">Indirect targets / target sets</option>
+          <option value="ram-map.json">RAM map</option>
+          <option value="struct-map.json">Structures / bindings / fields / constants</option>
+        </select></label
+      ><button id="reload">Reload saved data</button>
+    </div>
+    <div id="native">
+      <div class="toolbar">
+        <label
+          >Find records
+          <input
+            id="query"
+            type="search"
+            placeholder="Name, ID, address, or classification" /></label
+        ><button id="search">Search</button><button id="previous">Previous 100</button
+        ><button id="next">Next 100</button><span id="count"></span>
+      </div>
+      <label
+        >Saved records
+        <select id="records" size="6"></select
+      ></label>
+      <div class="toolbar">
+        <button id="new">New record at selection</button><button id="remove">Review removal</button
+        ><button id="reset">Review reset name</button
+        ><label id="split-control"
+          >Split at <input id="split-at" placeholder="$hex address" /><button id="split">
+            Review split
+          </button></label
+        >
+      </div>
+      <form id="fields"></form>
+      <fieldset id="removal">
+        <legend>When removing a label name</legend>
+        <label
+          ><input id="keep-comments" type="checkbox" checked /> Preserve above-label and inline
+          comments</label
+        ><label
+          ><input id="keep-seed" type="checkbox" checked /> Preserve its analysis entry point</label
+        >
+        <p>
+          Suppression applies to this native record and its generated function-name fallback.
+          Reimport of the same record will keep your decision.
+        </p>
+      </fieldset>
+      <details>
+        <summary id="history-title">Undo / redo saved edit receipts (most recent 100)</summary>
+        <label
+          >Receipt
+          <select id="history" size="5"></select></label
+        ><button id="restore">Review restoration</button>
+        <p>
+          Restoration checks exact current records. It preserves the earlier receipt and creates a
+          new one.
+        </p>
+      </details>
+    </div>
+    <div id="map" hidden>
+      <div class="toolbar">
+        <label
+          >Map collection
+          <select id="map-collection"></select></label
+        ><label
+          >Entry
+          <select id="map-entries"></select></label
+        ><button id="map-new">New entry</button
+        ><button id="map-remove">Remove entry from draft</button>
+      </div>
+      <div id="map-fields"></div>
+      <details>
+        <summary>Advanced entry JSON</summary>
+        <label
+          >Selected entry JSON (fields remain part of their layout)<textarea
+            id="map-entry"
+            rows="12"
+            spellcheck="false"></textarea>
+        </label>
+      </details>
+      <button id="map-apply">Apply entry to map draft</button>
+      <p>
+        Apply entry changes below before previewing. All dependent bindings and expressions are
+        validated together.
+      </p>
+      <details>
+        <summary>Advanced complete map JSON</summary>
+        <label
+          >Map input JSON <textarea id="map-text" rows="24" spellcheck="false"></textarea>
+        </label>
+        <p>
+          Layouts, fields, bindings, constants, and RAM variables are validated together with the
+          source symbol namespace. Exact file versions are retained before publication.
+        </p>
+      </details>
+      <button id="map-history">Show map receipts</button>
+      <select id="map-receipts" size="5"></select
+      ><button id="map-restore">Review map restoration</button>
+    </div>
+    <div class="toolbar">
+      <button id="preview">Preview changes</button
+      ><button id="save" disabled>Save reviewed change</button
+      ><button id="regenerate">Regenerate source</button>
+    </div>
+    <details open>
+      <summary>Change review</summary>
+      <pre id="review">
+Preview an operation to see its before/after records and preserved evidence.</pre>
+    </details>
+    <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
+  </body>
+</html>

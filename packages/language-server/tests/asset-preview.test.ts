@@ -196,3 +196,36 @@ test("SoM background palette preview preserves its 15-column, 105-word grid", (t
   t.is(png.readUInt32BE(16), 136);
   t.is(png.readUInt32BE(20), 64);
 });
+
+test("SoM room preview validates section output and responds to edited room placement", (t) => {
+  const base = path.resolve("secret-of-mana/disassembly/assets/rooms");
+  const bytes = fs.readFileSync(path.join(base, "room-001e.json"));
+  const previewPath = "room-001e.preview.json";
+  const resources = {
+    [previewPath]: {
+      bytes: fs.readFileSync(path.join(base, previewPath)),
+      mediaType: "application/json",
+    },
+  };
+  const input = {
+    source: { bytes, mediaType: "application/json" },
+    resources,
+    format: "som.room",
+    options: { section: "assembly", preview: previewPath },
+  };
+  t.true(supportsPortableAssetPreview("som.room"));
+  const original = convertAssetPreview(input);
+  t.is(original.kind, "image");
+  t.is(original.output, "assembly");
+  t.is(original.encodedBytes, 27);
+  const edited = JSON.parse(bytes.toString());
+  edited.previewStory[95] = 3;
+  const next = convertAssetPreview({
+    ...input,
+    source: { ...input.source, bytes: Buffer.from(JSON.stringify(edited)) },
+  });
+  t.not(original.composedPngBase64, next.composedPngBase64);
+  t.throws(() => convertAssetPreview({ ...input, output: "missing" }), {
+    message: /Unknown room output/,
+  });
+});

@@ -87,3 +87,23 @@ are not generating inputs and will be lost when that source is replaced.
 
 [Report an issue](https://github.com/uttori/asm/issues). Licensed under
 [MIT](https://github.com/uttori/asm/blob/master/LICENSE).
+
+Generated `dataStruct` declarations and `dataStructs` rows place each field value on its own line. Field descriptions stay on the authoritative declarations in `structs.asm`, where editor hover can surface them without repeating the prose for every ROM record. Binding-specific entry descriptions stay above their declaration or table row. Long numeric arrays wrap at 100 columns by default. Set `structLineWidth` on `exportSnesProject` or `exportSnes65816Source`, or pass `--struct-line-width` to CLI export, to choose a different width (integer, at least 40).
+
+Generated assembly comments wrap at whitespace by default, at **100 columns including indentation and `; `**. Set `commentLineWidth` (integer, at least 20) or CLI `--comment-line-width 80` to change the width; set `wrapComments: false` or CLI `--no-wrap-comments` to disable comment wrapping. Oversized inline comments move above their code. Existing paragraph boundaries, quoted semicolons, and complete words/URLs are preserved; indivisible tokens can exceed the preferred width. Formatting changes source layout and debug-map line numbers without changing emitted ROM bytes.
+
+Reviewed scalar constants can be declared in `struct-map.json` alongside layouts:
+
+```json
+"constants": [
+  { "name": "LZ_COPY_TOKEN_FLAG", "value": 128,
+    "description": "Token bit 7 selects a backward reference." }
+]
+```
+
+Values are exact unsigned 24-bit integers; names share the layout/binding namespace.
+`structs.asm` emits each declaration with its description. An `instructionUses` entry
+can select the constant through `operand` or combine it with layout expressions.
+Substitution remains instruction-specific and byte/value guarded; equal literals at
+other instructions are unaffected. `REP`/`SEP` status masks are supported; other
+signature opcodes are not. Constants have no size, fields, or storage ownership.

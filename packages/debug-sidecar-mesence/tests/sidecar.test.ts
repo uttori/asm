@@ -57,3 +57,11 @@ testSidecarLifecycle({
   executableOption: "--mesen",
   entryPoint: "packages/debug-sidecar-mesence/src/sidecar.ts",
 });
+
+
+test("selected build ROM hash is explicit, normalized and validated", (t) => {
+  const args = ["--manifest", "manifest.json", "--mesen", "emulator", "--rom", "modified.sfc", "--runtime-dir", "runtime"];
+  t.is(parseMesenSidecarArguments([...args, "--rom-sha256", "A".repeat(64)]).romSha256, "a".repeat(64));
+  t.throws(() => parseMesenSidecarArguments([...args, "--rom-sha256", "not-a-hash"]), { message: /64-digit SHA-256/ });
+  t.is(parseMesenSidecarArguments(args).romSha256, undefined);
+});

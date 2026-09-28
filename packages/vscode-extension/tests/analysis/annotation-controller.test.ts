@@ -15,6 +15,13 @@ const host = {
   invalidations: 0,
   requests: 0,
   hold: undefined as Promise<void> | undefined,
+  status: { text: "", tooltip: "", visible: false } as any,
+  failure: undefined as Error | undefined,
+  noFacts: false,
+  reasons: [] as string[],
+  documents: [] as any[],
+  section: undefined as string | undefined,
+  requirements: [] as unknown[],
 };
 (globalThis as any).__informationHost = host;
 registerHooks({
@@ -49,6 +56,7 @@ registerHooks({
       const host = globalThis.__informationHost;
       const disposable = () => ({ dispose() {} });
       export const ConfigurationTarget = { WorkspaceFolder: 3, Global: 1 };
+      export const StatusBarAlignment = { Right: 2 };
       export const DecorationRangeBehavior = { ClosedClosed: 1 };
       export class Range { constructor(line) { this.start = { line }; } }
       export class ThemeColor { constructor(id) { this.id = id; } }
@@ -66,9 +74,13 @@ registerHooks({
         get activeTextEditor() { return host.editor; },
         get visibleTextEditors() { return host.editor ? [host.editor] : []; },
         createTextEditorDecorationType: disposable, showWarningMessage() {},
+        createStatusBarItem: () => Object.assign(host.status, { show() { this.visible = true; }, hide() { this.visible = false; }, dispose() {} }),
+        showTextDocument: async () => {},
+        showQuickPick: async (items) => items.find((item) => item.label === host.section),
       };
       export const workspace = {
         get textDocuments() { return host.editor ? [host.editor.document] : []; },
+        openTextDocument: async (options) => { host.documents.push(options); return options; },
         getWorkspaceFolder: () => ({ name: "project" }),
         createFileSystemWatcher: () => ({ dispose() {}, onDidChange: disposable, onDidCreate: disposable, onDidDelete: disposable }),
         getConfiguration: () => ({
@@ -100,6 +112,13 @@ const setup = (sourceLines = ["RTS"]) => {
   host.invalidations = 0;
   host.writes = [];
   host.hold = undefined;
+  host.failure = undefined;
+  host.noFacts = false;
+  host.reasons = [];
+  host.documents = [];
+  host.section = undefined;
+  host.requirements = [];
+  host.status = { text: "", tooltip: "", visible: false };
   host.editor = {
     document: {
       uri: { scheme: "file", fsPath: "/project/main.asm" },
@@ -109,20 +128,29 @@ const setup = (sourceLines = ["RTS"]) => {
       lineCount: sourceLines.length,
       lineAt: (line: number) => ({ text: sourceLines[line], range: {} }),
     },
+    selection: { active: { line: 0 } },
     visibleRanges: [{ start: { line: 0 }, end: { line: sourceLines.length - 1 } }],
     options: { tabSize: 4 },
     setDecorations: (_type: unknown, values: any[]) => host.calls.push(values),
   };
   const provider = {
-    lines: async () => {
+    lines: async (_file: string, _ranges: unknown, requirements: unknown) => {
+      host.requirements.push(requirements);
       host.requests++;
       await host.hold;
+      if (host.failure) {
+        throw host.failure;
+      }
+      if (host.noFacts) {
+        return new Map();
+      }
       return new Map(sourceLines.map((_, index) => [index + 1, [facts]]));
     },
     invalidate: () => {
       host.invalidations++;
     },
     tracks: () => true,
+    diagnostics: async () => host.reasons,
   } as unknown as EditorInformationProvider;
   return new AnalysisAnnotationController(provider);
 };
@@ -202,8 +230,8 @@ test.serial(
     await settle();
     t.deepEqual(
       host.calls.at(-1)!.map((entry) => entry.renderOptions.after.margin),
-      ["0 0 0 38ch", "0 0 0 3ch"],
-      "a long line moves the shared column so overlays stay aligned without covering source",
+      ["0 0 0 13ch", "0 0 0 3ch"],
+      "long lines keep their own gap without shifting the short instruction",
     );
     host.settings["editorInfo.inline.placement"] = "afterLine";
     host.settings["editorInfo.inline.color"] = "editorWarning.foreground";
@@ -229,5 +257,69 @@ test.serial(
     host.settings["editorInfo.hover.enabled"] = false;
     release();
     t.is(await pending, undefined);
+  },
+);
+
+test.serial(
+  "source status exposes dependency failures and provider errors without stale updates",
+  async (t) => {
+    const controller = setup();
+    t.teardown(() => controller.dispose());
+    host.noFacts = true;
+    host.reasons = [
+      "Source differs from build: /project/other.asm (SHA-256 mismatch). Run Build Binary.",
+    ];
+    controller.refresh();
+    await settle();
+    t.regex(host.status.text, /Unavailable/);
+    t.regex(host.status.tooltip, /other\.asm/);
+    await controller.showStatus();
+    t.regex(host.documents.at(-1).content, /other\.asm/);
+    host.failure = new Error("Analysis annotationSummary process exceeded 60 seconds.");
+    controller.refresh();
+    await settle();
+    t.regex(host.status.text, /Error/);
+    t.regex(host.status.tooltip, /exceeded 60 seconds/);
+    host.editor.document.isDirty = true;
+    controller.refresh();
+    t.regex(host.status.text, /Unsaved/);
+    await controller.toggle();
+    t.regex(host.status.text, /Off/);
+  },
+);
+
+test.serial(
+  "long data declarations do not move other annotations offscreen and toggle migrates local legacy visibility",
+  async (t) => {
+    const controller = setup(["RTS", `dataStruct Example, { bytes = [${"$FF, ".repeat(500)}] }`]);
+    t.teardown(() => controller.dispose());
+    host.settings["analysis.showAnnotations"] = true;
+    controller.refresh();
+    await settle();
+    const annotations = host.calls.at(-1)!;
+    t.is(annotations[0].renderOptions.after.margin, "0 0 0 77ch");
+    t.is(annotations[1].renderOptions.after.margin, "0 0 0 3ch");
+    t.regex(host.status.text, /2 lines/);
+    await controller.toggle();
+    t.false(host.settings["editorInfo.inline.enabled"] as boolean);
+    t.is(host.settings["analysis.showAnnotations"], undefined);
+    t.deepEqual(host.writes, ["editorInfo.inline.enabled", "analysis.showAnnotations"]);
+  },
+);
+
+test.serial(
+  "inspector cancellation does no I/O and summary selection stays on shallow fields",
+  async (t) => {
+    const controller = setup();
+    t.teardown(() => controller.dispose());
+    await controller.inspectLine();
+    t.is(host.requests, 0);
+    host.section = "Summary";
+    await controller.inspectLine();
+    t.deepEqual(host.requirements, [{ counts: true, bytes: true, state: false }]);
+    t.regex(host.documents.at(-1).content, /execution_counts: 0 \/ 19/);
+    host.section = "Evidence and control flow";
+    await controller.inspectLine();
+    t.deepEqual(host.requirements.at(-1), { counts: true, bytes: false, state: true });
   },
 );

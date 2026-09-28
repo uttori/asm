@@ -228,8 +228,7 @@ export const analyzeSnesRuntimeCode = (
   for (const entry of entries) {
     const queue: string[][] = [[entry]];
     const visited = new Set<string>();
-    for (let index = 0; index < queue.length; index++) {
-      const trail = queue[index];
+    for (const trail of queue) {
       const id = trail.at(-1)!;
       if (visited.has(id)) {
         continue;

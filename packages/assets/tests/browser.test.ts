@@ -15,11 +15,11 @@ import { snesNativeEncoders } from "@uttori/asm-assets/snes";
 import { rawImporter, rawEncoder } from "@uttori/asm-assets/data";
 import { transformBytes } from "@uttori/asm-assets/compression";
 import { tileRgba } from "@uttori/asm-assets/preview";
-import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
+import { pngImporter, withImageEncoders, expandIndexedGrid, extractIndexedRegion, renderIndexedPlacements, rewriteIndexedPng } from "@uttori/asm-assets/image";
 import { waveImporter, withAudioEncoder, decodeBrrPcm } from "@uttori/asm-assets/audio";
 const registry = new AssetRegistry().registerImporter(rawImporter).registerEncoder(rawEncoder);
 export const result = convertAsset(registry, { source: { bytes: new Uint8Array([1]), mediaType: "application/octet-stream" }, format: "uttori.data.raw" });
-export { snesNativeEncoders, pngImporter, waveImporter, withImageEncoders, withAudioEncoder, decodeBrrPcm, transformBytes, tileRgba };`,
+export { snesNativeEncoders, pngImporter, waveImporter, withImageEncoders, withAudioEncoder, decodeBrrPcm, transformBytes, tileRgba, expandIndexedGrid, extractIndexedRegion, renderIndexedPlacements, rewriteIndexedPng };`,
       resolveDir: process.cwd(),
       sourcefile: "assets-browser-smoke.ts",
       loader: "ts",
@@ -39,13 +39,20 @@ test("PNG and WAVE conversion execute in a browser-like worker without Node glob
   const result = await build({
     stdin: {
       contents: `import { AssetRegistry, convertAsset } from "@uttori/asm-assets";
-import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
+import { pngImporter, withImageEncoders, expandIndexedGrid, extractIndexedRegion, renderIndexedPlacements, rewriteIndexedPng } from "@uttori/asm-assets/image";
 import { waveImporter, withAudioEncoder } from "@uttori/asm-assets/audio";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
 export function run(png, wave) {
   const registry = new AssetRegistry().registerImporter(pngImporter).registerImporter(waveImporter);
   for (const encoder of withAudioEncoder(withImageEncoders(snesNativeEncoders))) registry.registerEncoder(encoder);
-  const image = convertAsset(registry, { source: { bytes: png, mediaType: "image/png" }, format: "snes.tile.4bpp" });
+  const original = pngImporter.import({ bytes: png, mediaType: "image/png" }).value;
+  if (expandIndexedGrid({id:"block",x:0,y:0,columns:1,cellWidth:3,cellHeight:2,cells:[{source:"tile"}]}).length !== 1) throw new Error("Grid expansion failed");
+  const tile = extractIndexedRegion(original, { x: 0, y: 0, width: 3, height: 2, flipX: true });
+  const composed = renderIndexedPlacements(new Map([["tile", tile]]), [{ id: "one", source: "tile", x: -1, y: -2, transparentIndex: null }], { x: -1, y: -2, width: 3, height: 2 });
+  if (composed.indexes.some((v, i) => v !== tile.indexes[i])) throw new Error("Browser placement differs");
+  const indexes = original.indexes.slice(); indexes[0] = (indexes[0] + 1) % original.palette.length;
+  const rewritten = rewriteIndexedPng(png, { indexes });
+  const image = convertAsset(registry, { source: { bytes: rewritten, mediaType: "image/png" }, format: "snes.tile.4bpp" });
   const audio = convertAsset(registry, { source: { bytes: wave, mediaType: "audio/wav" }, format: "snes.brr" });
   return [image.outputs.tiles.bytes.length, audio.outputs.brr.bytes.length];
 }`,

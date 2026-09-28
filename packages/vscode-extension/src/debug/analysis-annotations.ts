@@ -5,6 +5,7 @@ import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
 
 import { findAnalysisProjectDirectories } from "../analysis/coverage-tree.js";
 import { analysisWorker } from "../analysis/worker-client.js";
+import { joinInformation } from "../editor-info/format.js";
 
 /**
  * Compact DAP display text retaining architecture, address-space, and explicit output-offset
@@ -129,7 +130,8 @@ export const createDebugInstructionAnnotation = async (
               .filter(Boolean),
           ),
         ];
-        resolve(summaries.length ? summaries.join(" | ") : undefined);
+        // Bound the complete result: aliases and matching projects must not multiply the DAP budget.
+        resolve(joinInformation(summaries, " | ", 220) || undefined);
       }
     }
   };

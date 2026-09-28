@@ -1,5 +1,22 @@
 import assert from "node:assert/strict";
 
+/** Mode, reserved byte and big-endian decoded-size word precede every stream. */
+export const LZ_HEADER_BYTES = 4;
+/** High token bit selects a two-byte backward reference. */
+export const LZ_COPY_FLAG = 0x80;
+/** Remaining token bits share the length and distance-high fields. */
+export const LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
+/** Copy lengths store length minus three; MVN receives length minus one. */
+export const LZ_MIN_COPY_BYTES = 3;
+/** A literal token encodes one through 128 following bytes. */
+export const LZ_MAX_LITERAL_BYTES = LZ_COPY_FLAG;
+/** Each mask bit extends the backward distance above its eight-bit low byte. */
+export const LZ_DISTANCE_LOW_VALUES = 0x100;
+/** Maximum byte count representable by the header, independent of destination bank bounds. */
+export const LZ_MAX_OUTPUT_BYTES = 0xffff;
+/** Encoder search budget per three-byte prefix; this is a speed/ratio choice, not a format limit. */
+const MATCH_CANDIDATE_LIMIT = 128;
+
 /** Mode-dependent distance masks read by the game's $C14C30 decoder from $C14C00. */
 export const DISTANCE_MASKS = [0x1f, 0x0f, 0x07, 0x03, 0x01, 0x00];
 
@@ -9,10 +26,10 @@ export const DISTANCE_MASKS = [0x1f, 0x0f, 0x07, 0x03, 0x01, 0x00];
  * Returns the exact encoded extent, excluding the game's speculative next-token read at completion.
  * Throws on truncated input, references before output, or runs exceeding the declared size.
  */
-export function decompressSomLz(source, offset = 0, maxOutputBytes = 0xffff) {
+export function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTES) {
   assert(source instanceof Uint8Array, "Expected byte input.");
   assert(
-    Number.isSafeInteger(offset) && offset >= 0 && offset + 4 <= source.length,
+    Number.isSafeInteger(offset) && offset >= 0 && offset + LZ_HEADER_BYTES <= source.length,
     "Truncated LZ header.",
   );
   assert(Number.isSafeInteger(maxOutputBytes) && maxOutputBytes >= 0, "Invalid LZ output limit.");
@@ -22,14 +39,14 @@ export function decompressSomLz(source, offset = 0, maxOutputBytes = 0xffff) {
   const size = (source[offset + 2] << 8) | source[offset + 3];
   assert(size <= maxOutputBytes, "LZ decoded size exceeds output limit.");
   const data = new Uint8Array(size);
-  let cursor = offset + 4;
+  let cursor = offset + LZ_HEADER_BYTES;
   let written = 0;
   let literalRuns = 0;
   let copyRuns = 0;
   while (written < size) {
     assert(cursor < source.length, "Truncated LZ token.");
     const token = source[cursor++];
-    if (token < 0x80) {
+    if (token < LZ_COPY_FLAG) {
       const length = token + 1;
       assert(cursor + length <= source.length, "Truncated LZ literal.");
       assert(written + length <= size, "LZ literal exceeds declared output size.");
@@ -40,7 +57,7 @@ export function decompressSomLz(source, offset = 0, maxOutputBytes = 0xffff) {
     } else {
       assert(cursor < source.length, "Truncated LZ distance.");
       const distance = ((token & mask) << 8) + source[cursor++] + 1;
-      const length = Math.floor((token & 0x7f) / (mask + 1)) + 3;
+      const length = Math.floor((token & LZ_TOKEN_PAYLOAD_MASK) / (mask + 1)) + LZ_MIN_COPY_BYTES;
       assert(distance <= written, "LZ reference precedes output.");
       assert(written + length <= size, "LZ copy exceeds declared output size.");
       // Forward copying deliberately permits overlap: distance 1 repeats the last byte.
@@ -71,7 +88,7 @@ export function decompressSomLz(source, offset = 0, maxOutputBytes = 0xffff) {
  */
 export function compressSomLz(source, options = {}) {
   assert(source instanceof Uint8Array, "Expected byte input.");
-  assert(source.length <= 0xffff, "LZ decoded size exceeds 16-bit header.");
+  assert(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
   assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
   assert(
     Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)),
@@ -99,8 +116,8 @@ export function compressSomLz(source, options = {}) {
 /** Index previous triples, then choose the cheapest token sequence for this mode. */
 function encodeMode(source, mode, unusedHeaderByte) {
   const mask = DISTANCE_MASKS[mode];
-  const maxDistance = (mask + 1) * 256;
-  const maxLength = Math.floor(0x7f / (mask + 1)) + 3;
+  const maxDistance = (mask + 1) * LZ_DISTANCE_LOW_VALUES;
+  const maxLength = Math.floor(LZ_TOKEN_PAYLOAD_MASK / (mask + 1)) + LZ_MIN_COPY_BYTES;
   const seen = new Map();
   const matches = Array.from({ length: source.length }, () => new Uint16Array(maxLength + 1));
   const add = (position) => {
@@ -109,7 +126,7 @@ function encodeMode(source, mode, unusedHeaderByte) {
     const positions = seen.get(key) ?? [];
     positions.push(position);
     // Older candidates cannot become useful again; keep search work bounded.
-    while (positions.length > 128 || (positions.length && position - positions[0] >= maxDistance))
+    while (positions.length > MATCH_CANDIDATE_LIMIT || (positions.length && position - positions[0] >= maxDistance))
       positions.shift();
     seen.set(key, positions);
   };
@@ -120,14 +137,14 @@ function encodeMode(source, mode, unusedHeaderByte) {
       for (let index = positions.length - 1; index >= 0; index--) {
         const candidateDistance = cursor - positions[index];
         if (candidateDistance > maxDistance) break;
-        let candidateLength = 3;
+        let candidateLength = LZ_MIN_COPY_BYTES;
         while (
           candidateLength < maxLength &&
           cursor + candidateLength < source.length &&
           source[cursor + candidateLength] === source[cursor + candidateLength - candidateDistance]
         )
           candidateLength++;
-        for (let length = 3; length <= candidateLength; length++) {
+        for (let length = LZ_MIN_COPY_BYTES; length <= candidateLength; length++) {
           if (matches[cursor][length] === 0 || candidateDistance < matches[cursor][length]) {
             matches[cursor][length] = candidateDistance;
           }
@@ -142,14 +159,14 @@ function encodeMode(source, mode, unusedHeaderByte) {
   for (let cursor = source.length - 1; cursor >= 0; cursor--) {
     let bestCost = Number.MAX_SAFE_INTEGER;
     let bestChoice = 0;
-    for (let length = 1; length <= 128 && cursor + length <= source.length; length++) {
+    for (let length = 1; length <= LZ_MAX_LITERAL_BYTES && cursor + length <= source.length; length++) {
       const candidate = 1 + length + cost[cursor + length];
       if (candidate < bestCost || (candidate === bestCost && length > bestChoice)) {
         bestCost = candidate;
         bestChoice = length;
       }
     }
-    for (let length = 3; length <= maxLength && cursor + length <= source.length; length++) {
+    for (let length = LZ_MIN_COPY_BYTES; length <= maxLength && cursor + length <= source.length; length++) {
       const matchDistance = matches[cursor][length];
       if (!matchDistance) continue;
       const candidate = 2 + cost[cursor + length];
@@ -172,7 +189,7 @@ function encodeMode(source, mode, unusedHeaderByte) {
       const runLength = -length;
       const encodedDistance = distance[cursor] - 1;
       output.push(
-        0x80 | ((runLength - 3) * (mask + 1)) | (encodedDistance >>> 8),
+        LZ_COPY_FLAG | ((runLength - LZ_MIN_COPY_BYTES) * (mask + 1)) | (encodedDistance >>> 8),
         encodedDistance & 255,
       );
       cursor += runLength;

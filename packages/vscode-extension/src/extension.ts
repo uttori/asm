@@ -49,6 +49,9 @@ import {
   type BuiltDebugArtifacts,
 } from "./debug/session.js";
 import { registerDisassemblyMaintenance } from "./disassembly/maintenance.js";
+import { DisassemblyMetadataController } from "./disassembly/metadata-controller.js";
+import { ModificationController } from "./disassembly/modification-controller.js";
+import { DisassemblyOwnershipController } from "./disassembly/ownership-controller.js";
 import { DisassemblyPanelProvider } from "./disassembly/panel.js";
 import { ProjectOutlineProvider } from "./project/outline-tree.js";
 import { ProjectPanelProvider } from "./project/panel.js";
@@ -96,6 +99,10 @@ let outputChannel: LogOutputChannel | undefined;
 let extensionContext: ExtensionContext | undefined;
 
 /** Whether build-on-save watch mode is currently enabled. */
+let modificationController: ModificationController | undefined;
+/** Watch epochs discard obsolete results after source saves or target changes. */
+let watchEpoch = 0;
+let watchBuildRunning = false;
 let watchEnabled = false;
 /** Whether watch mode only builds or also performs a deterministic emulator reload. */
 let watchMode: "build" | "emulator" = "build";
@@ -293,10 +300,37 @@ export function activate(context: ExtensionContext): void {
     context.extensionUri,
   );
   context.subscriptions.push(analysisProjectEditor);
+  const metadataEditor = new DisassemblyMetadataController(context.extensionUri);
+  context.subscriptions.push(metadataEditor);
+  context.subscriptions.push(
+    new DisassemblyOwnershipController((directory) =>
+      metadataEditor.open({ projectDirectory: directory }),
+    ),
+  );
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
 
   const analysisOutputChannel = window.createOutputChannel("Uttori Analysis", { log: true });
+  modificationController = new ModificationController(
+    context,
+    outputChannel,
+    () => {
+      stopWatch();
+      editorInformationController?.configurationChanged();
+    },
+    (result) => {
+      if (result.debugMapPath) {
+        // Restrict editor facts to this build target; do not merge baseline execution counts into modified code.
+        editorInformationController?.configurationChanged();
+        editorInformationController?.buildCompleted(
+          result.debugMapPath,
+          path.dirname(result.outputPath!),
+        );
+      }
+    },
+    scheduleWatchBuild,
+  );
+  context.subscriptions.push(modificationController);
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath),
     ...registerProjectWizards(context, outputChannel),
@@ -395,26 +429,48 @@ export function activate(context: ExtensionContext): void {
         void navigateToAnalysisLocation(target);
       }
     }),
-    commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) =>
-      analysisProjectEditor.classifyRange(coverageProvider.editTarget(element)),
-    ),
-    commands.registerCommand("asm.coverage.setStateEntryPoint", (element?: unknown) =>
-      analysisProjectEditor.setStateEntryPoint(coverageProvider.editTarget(element)),
-    ),
-    commands.registerCommand("asm.coverage.resolveTarget", (element?: unknown) =>
-      analysisProjectEditor.resolveTarget(coverageProvider.editTarget(element)),
-    ),
-    commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) =>
-      analysisProjectEditor.renameLabel(coverageProvider.editTarget(element)),
-    ),
-    commands.registerCommand("asm.disassembly.editAnnotation", () =>
-      analysisProjectEditor.editAnnotation(),
-    ),
+    commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) => {
+      const target = coverageProvider.editTarget(element);
+      return metadataEditor.open({
+        projectDirectory: target?.projectDirectory,
+        shard: "annotations",
+        range: target ? { start: target.start, end: target.end } : undefined,
+        selectedId: target?.annotationIds[0],
+      });
+    }),
+    commands.registerCommand("asm.coverage.setStateEntryPoint", (element?: unknown) => {
+      const target = coverageProvider.editTarget(element);
+      return metadataEditor.open({
+        projectDirectory: target?.projectDirectory,
+        shard: "annotations",
+        range: target ? { start: target.start, end: target.end } : undefined,
+        selectedId: target?.annotationIds[0],
+      });
+    }),
+    commands.registerCommand("asm.coverage.resolveTarget", (element?: unknown) => {
+      const target = coverageProvider.editTarget(element);
+      return metadataEditor.open({
+        projectDirectory: target?.projectDirectory,
+        shard: "analysis",
+        range: target ? { start: target.start, end: target.end } : undefined,
+        selectedId: undefined,
+      });
+    }),
+    commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) => {
+      const target = coverageProvider.editTarget(element);
+      return metadataEditor.open({
+        projectDirectory: target?.projectDirectory,
+        shard: "labels",
+        range: target ? { start: target.start, end: target.end } : undefined,
+        selectedId: undefined,
+      });
+    }),
+    commands.registerCommand("asm.disassembly.editAnnotation", () => metadataEditor.open()),
     commands.registerCommand("asm.coverage.explainEvidence", (element?: unknown) =>
       analysisProjectEditor.explainEvidence(coverageProvider.editTarget(element)),
     ),
-    commands.registerCommand("asm.coverage.undo", () => analysisProjectEditor.undo()),
-    commands.registerCommand("asm.coverage.redo", () => analysisProjectEditor.redo()),
+    commands.registerCommand("asm.coverage.undo", () => metadataEditor.open({ history: true })),
+    commands.registerCommand("asm.coverage.redo", () => metadataEditor.open({ history: true })),
     workspace.onDidGrantWorkspaceTrust(() => {
       void panelProvider.refresh();
       disassemblyPanelProvider.refresh();
@@ -520,6 +576,7 @@ function toggleWatch(): void {
  * status bar without stopping an already running emulator.
  */
 function stopWatch(): void {
+  ++watchEpoch;
   watchEnabled = false;
   watchMode = "build";
   saveListener?.dispose();
@@ -600,8 +657,9 @@ async function launchLiveBuild(
  * @returns {Promise<void>} Completion after the build and any successful-build launch attempt.
  */
 async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Promise<void> {
+  const epoch = watchEpoch;
   const result = await runBuild(resolveBuildEntryUri());
-  if (!result?.ok) {
+  if (epoch !== watchEpoch || !result?.ok) {
     return;
   }
   await launchLiveBuild(context, result, noDebug, false);
@@ -631,7 +689,21 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
   watchEntryUri = entry;
   saveListener = workspace.onDidSaveTextDocument(onDocumentSaved);
   updateStatusItem();
-  const result = await runBuild(entry);
+  const epoch = watchEpoch;
+  watchBuildRunning = true;
+  let result: BuildResult | undefined;
+  try {
+    result = await runBuild(entry);
+  } finally {
+    watchBuildRunning = false;
+  }
+  if (!watchEnabled) {
+    return;
+  }
+  if (epoch !== watchEpoch) {
+    scheduleWatchBuild();
+    return;
+  }
   if (!result?.ok) {
     void window.showWarningMessage(
       "Assembly: Run and Watch is active. Fix the build error and save to launch the emulator.",
@@ -655,6 +727,9 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.joinPath
  */
 function resolveBuildEntryUri(): string | undefined {
+  if (modificationController?.target === "modified" && modificationController.configuredManifest) {
+    return Uri.file(modificationController.configuredManifest).toString();
+  }
   const activeUri = window.activeTextEditor?.document.uri;
   const entryPoints = workspace.getConfiguration("asm", activeUri).get<string[]>("entryPoints", []);
   const folder = activeUri
@@ -684,27 +759,53 @@ function resolveBuildEntryUri(): string | undefined {
  * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument
  */
 function onDocumentSaved(document: TextDocument): void {
-  if (!watchEnabled || !watchEntryUri || !isAssemblyDocument(document)) {
+  const relevant =
+    modificationController?.target === "modified"
+      ? modificationController.watches(document.uri.fsPath)
+      : isAssemblyDocument(document);
+  if (relevant) {
+    scheduleWatchBuild();
+  }
+}
+
+/** Serialize watch builds and suppress launches from an obsolete source snapshot or stopped target. */
+function scheduleWatchBuild(): void {
+  if (!watchEnabled || !watchEntryUri) {
     return;
   }
-  if (watchTimer) {
-    clearTimeout(watchTimer);
-  }
+  ++watchEpoch;
+  clearTimeout(watchTimer);
   watchTimer = setTimeout(() => {
     watchTimer = undefined;
-    const entry = watchEntryUri;
-    void runBuild(entry, true).then(async (result) => {
-      if (!result?.ok || watchMode !== "emulator") {
-        return;
+    if (watchBuildRunning) {
+      return;
+    }
+    watchBuildRunning = true;
+    void (async () => {
+      try {
+        while (watchEnabled && watchEntryUri) {
+          const epoch = watchEpoch;
+          const result = await runBuild(watchEntryUri, true);
+          if (!watchEnabled) {
+            return;
+          }
+          if (epoch !== watchEpoch) {
+            continue;
+          }
+          if (
+            result?.ok &&
+            watchMode === "emulator" &&
+            !(result.outputChanged === false && result.debugMapChanged === false) &&
+            extensionContext
+          ) {
+            await launchLiveBuild(extensionContext, result, false, true);
+          }
+          return;
+        }
+      } finally {
+        watchBuildRunning = false;
       }
-      if (result.outputChanged === false && result.debugMapChanged === false) {
-        return;
-      }
-      const context = extensionContext;
-      if (context) {
-        await launchLiveBuild(context, result, false, true);
-      }
-    });
+    })();
   }, 250);
 }
 
@@ -824,6 +925,9 @@ async function runBuild(
 ): Promise<BuildResult | undefined> {
   outputChannel?.show(true);
   outputChannel?.info(transient ? "Watch rebuild requested" : "Build Binary requested");
+  if (modificationController && modificationController.target !== "configured") {
+    return modificationController.build();
+  }
   if (!client) {
     const message = "Language server is not running.";
     outputChannel?.error(message);

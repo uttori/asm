@@ -18,6 +18,7 @@ export * from "./disassembler/spc700-state.js";
 export * from "./disassembler/spc700-upload.js";
 export * from "./disassembler/processor-source-export.js";
 export * from "./disassembler/project-initializer.js";
+export * from "./disassembler/modification-project.js";
 export * from "./disassembler/ram-map.js";
 export * from "./disassembler/superfx-address-space.js";
 export * from "./disassembler/superfx-analysis.js";
@@ -41,3 +42,20 @@ export * from "./tooling/instruction-catalog.js";
 
 export * from "./disassembler/function-heuristics.js";
 export * from "./disassembler/runtime-code.js";
+
+export {
+  loadSnesStructMap,
+  validateSnesStructMap,
+  planSnesStructRomFields,
+} from "./disassembler/struct-map.js";
+
+export * from "./disassembler/modification-assets.js";
+export * from "./disassembler/modification-operations.js";
+
+export * from "./disassembler/modification-rebase.js";
+
+export * from "./disassembler/source-reconciliation.js";
+
+export * from "./disassembler/modification-editor.js";
+export * from "./disassembler/metadata-migration.js";
+export * from "./disassembler/modification-retention.js";

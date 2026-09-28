@@ -12,7 +12,7 @@ import type { MaintenanceTimingSummary } from "./timings.js";
  * Maximum distinct observed CPU addresses accepted as regeneration seeds, bounding analysis
  * setup for broad captures.
  */
-const MAX_RUNTIME_ENTRY_SEEDS = 100_000;
+const MAX_RUNTIME_ENTRY_SEEDS = 1_000_000;
 
 /**
  * Observed 24-bit CPU address with optional native evidence IDs; normalization discards IDs
@@ -84,7 +84,7 @@ export interface DisassemblyRegenerationSummary {
   readonly sourceDirectory: string;
   readonly before: CoverageSnapshot;
   readonly after: CoverageSnapshot;
-  readonly analysis: AnalyzeSnesProjectResult;
+  readonly analysis?: AnalyzeSnesProjectResult;
   readonly entrySeeds: number;
   readonly ramVariables: number;
   readonly addedFiles: readonly string[];

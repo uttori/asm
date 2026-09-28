@@ -34,9 +34,9 @@ var __commonJS = (cb, mod) => function __require2() {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    for (let key2 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key2) && key2 !== except)
+        __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
   }
   return to;
 };
@@ -116,12 +116,12 @@ var init_addressToLine = __esm({
     init_crc32();
     sourceIdentity = (filename, supplied) => {
       try {
-        const fs5 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+        const fs8 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
         const crypto = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:crypto");
-        if (!fs5 || !crypto) {
+        if (!fs8 || !crypto) {
           return { crc: 0, size: 0, sha256: "" };
         }
-        const data = supplied ?? fs5.readFileSync(filename);
+        const data = supplied ?? fs8.readFileSync(filename);
         return {
           crc: CRC32.compute(data),
           size: data.length,
@@ -1272,8 +1272,7 @@ var init_include_source = __esm({
     };
     assertIncbinMathParensBalanced = (text) => {
       let depth = 0;
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
+      for (const char of text) {
         if (char === "(") {
           depth += 1;
           continue;
@@ -1419,8 +1418,8 @@ var init_include_source = __esm({
         }
         session.setWritePosition(targetAddress);
       }
-      for (let i = 0; i < incbinData.length; i++) {
-        session.write1(incbinData[i]);
+      for (const byte of incbinData) {
+        session.write1(byte);
       }
       if (targetLocation !== void 0) {
         runtime.handlePullPC();
@@ -2416,13 +2415,13 @@ var init_file_provider = __esm({
        * @returns {string | undefined} First existing file identity, or undefined.
        */
       resolvePath(filename, options = {}) {
-        const fs5 = requireNodeFs();
+        const fs8 = requireNodeFs();
         if (!filename) {
           return void 0;
         }
         const normalized = stripWrappingQuotes(filename);
         if (path.isAbsolute(normalized)) {
-          return fs5.existsSync(normalized) ? normalized : void 0;
+          return fs8.existsSync(normalized) ? normalized : void 0;
         }
         const candidates = /* @__PURE__ */ new Set();
         const baseDirectories = [
@@ -2435,36 +2434,36 @@ var init_file_provider = __esm({
           candidates.add(path.resolve(baseDirectory, normalized));
         }
         for (const candidate of candidates) {
-          if (fs5.existsSync(candidate)) {
+          if (fs8.existsSync(candidate)) {
             return candidate;
           }
         }
         return void 0;
       }
       stat(filePath) {
-        const fs5 = requireNodeFs();
+        const fs8 = requireNodeFs();
         let st;
         try {
-          st = fs5.statSync(filePath);
+          st = fs8.statSync(filePath);
         } catch {
           return { exists: false, readable: false };
         }
         try {
-          fs5.accessSync(filePath, fs5.constants.R_OK);
+          fs8.accessSync(filePath, fs8.constants.R_OK);
           return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
         } catch {
           return { exists: true, readable: false, mtimeMs: st.mtimeMs };
         }
       }
       readFile(filePath) {
-        const fs5 = requireNodeFs();
+        const fs8 = requireNodeFs();
         this.readFiles.add(filePath);
-        return new Uint8Array(fs5.readFileSync(filePath));
+        return new Uint8Array(fs8.readFileSync(filePath));
       }
       readTextFile(filePath, encoding = "utf8") {
-        const fs5 = requireNodeFs();
+        const fs8 = requireNodeFs();
         this.readFiles.add(filePath);
-        return fs5.readFileSync(filePath, encoding);
+        return fs8.readFileSync(filePath, encoding);
       }
     };
   }
@@ -2598,25 +2597,25 @@ function parseAssetCall(command, line) {
       const entries3 = {};
       skip();
       while (command[at] !== "}") {
-        let key;
+        let key2;
         if (command[at] === '"' || command[at] === "'") {
-          key = string().value;
+          key2 = string().value;
         } else {
           const match = /^[A-Z_a-z][\w-]*/.exec(command.slice(at));
           if (!match) {
             return fail("expected object key");
           }
-          key = match[0];
-          at += key.length;
+          key2 = match[0];
+          at += key2.length;
         }
         skip();
         if (command[at++] !== ":") {
           fail("expected ':' after object key");
         }
-        if (Object.hasOwn(entries3, key)) {
-          fail(`duplicate object key '${key}'`);
+        if (Object.hasOwn(entries3, key2)) {
+          fail(`duplicate object key '${key2}'`);
         }
-        entries3[key] = value();
+        entries3[key2] = value();
         skip();
         if (command[at] === "}") {
           break;
@@ -4983,8 +4982,8 @@ var init_environment = __esm({
         const targetAliases = /* @__PURE__ */ new Map();
         for (const target of contributions.targets) {
           for (const alias of [target.contributionId, ...target.value.aliases ?? []]) {
-            const key = canonical(alias);
-            const previous = targetAliases.get(key);
+            const key2 = canonical(alias);
+            const previous = targetAliases.get(key2);
             if (previous && previous !== target.contributionId) {
               const previousOwner = this.#targets.get(canonical(previous))?.pluginId;
               throw new PluginError(
@@ -4997,7 +4996,7 @@ var init_environment = __esm({
                 }
               );
             }
-            targetAliases.set(key, target.contributionId);
+            targetAliases.set(key2, target.contributionId);
           }
         }
         this.#targetAliases = targetAliases;
@@ -5018,8 +5017,8 @@ var init_environment = __esm({
                 continue;
               }
               for (const alias of record.value.aliases ?? []) {
-                const key = canonical(alias);
-                const previous = aliases3.get(key);
+                const key2 = canonical(alias);
+                const previous = aliases3.get(key2);
                 if (previous && previous !== record.contributionId) {
                   throw new PluginError(
                     `Asset alias '${alias}' is ambiguous on '${target.contributionId}'.`,
@@ -5031,7 +5030,7 @@ var init_environment = __esm({
                     }
                   );
                 }
-                aliases3.set(key, record.contributionId);
+                aliases3.set(key2, record.contributionId);
               }
             }
             byTarget.set(target.contributionId, aliases3);
@@ -5121,8 +5120,8 @@ var init_environment = __esm({
             targetInvalid(targetRecord, `missing architecture contribution '${architectureId}'.`);
           }
           for (const alias of [record.value.id, ...record.value.aliases ?? []]) {
-            const key = canonical(alias);
-            const previous = aliases3.get(key);
+            const key2 = canonical(alias);
+            const previous = aliases3.get(key2);
             if (previous && previous !== architectureId) {
               const previousOwner = this.#architectures.get(previous)?.pluginId;
               throw new PluginError(
@@ -5135,7 +5134,7 @@ var init_environment = __esm({
                 }
               );
             }
-            aliases3.set(key, architectureId);
+            aliases3.set(key2, architectureId);
           }
         }
         const defaultArchitecture = aliases3.get(canonical(target.defaultArchitecture));
@@ -5153,15 +5152,15 @@ var init_environment = __esm({
           }
           for (const directive3 of set.value.directives) {
             for (const keyword of directive3.keywords) {
-              const key = canonical(keyword);
-              const previous = directiveKeywords.get(key);
+              const key2 = canonical(keyword);
+              const previous = directiveKeywords.get(key2);
               if (previous) {
                 targetInvalid(
                   targetRecord,
                   `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive3.id}' (${set.pluginId}).`
                 );
               }
-              directiveKeywords.set(key, { id: directive3.id, pluginId: set.pluginId });
+              directiveKeywords.set(key2, { id: directive3.id, pluginId: set.pluginId });
             }
           }
         }
@@ -5173,15 +5172,15 @@ var init_environment = __esm({
           }
           for (const expression of set.value.functions) {
             for (const name of [expression.name, ...expression.aliases ?? []]) {
-              const key = canonical(name);
-              const previous = expressionNames.get(key);
+              const key2 = canonical(name);
+              const previous = expressionNames.get(key2);
               if (previous) {
                 targetInvalid(
                   targetRecord,
                   `expression function '${name}' is supplied by '${previous.name}' (${previous.pluginId}) and '${expression.name}' (${set.pluginId}).`
                 );
               }
-              expressionNames.set(key, { name: expression.name, pluginId: set.pluginId });
+              expressionNames.set(key2, { name: expression.name, pluginId: set.pluginId });
             }
           }
         }
@@ -5290,8 +5289,8 @@ var init_environment = __esm({
        * @returns {string | undefined} Owning plugin id, or `undefined` if unknown.
        */
       getContributionOwner(id) {
-        const key = canonical(id);
-        return this.#architectures.get(key)?.pluginId ?? this.#addressSpaces.get(key)?.pluginId ?? this.#outputFormats.get(key)?.pluginId ?? this.#directiveSets.get(key)?.pluginId ?? this.#expressionSets.get(key)?.pluginId ?? this.#lifecycles.get(key)?.pluginId ?? this.#targets.get(key)?.pluginId;
+        const key2 = canonical(id);
+        return this.#architectures.get(key2)?.pluginId ?? this.#addressSpaces.get(key2)?.pluginId ?? this.#outputFormats.get(key2)?.pluginId ?? this.#directiveSets.get(key2)?.pluginId ?? this.#expressionSets.get(key2)?.pluginId ?? this.#lifecycles.get(key2)?.pluginId ?? this.#targets.get(key2)?.pluginId;
       }
       /**
        * Lifecycle contributions wired to a target, sorted by registration order.
@@ -6239,27 +6238,27 @@ var require_lrucache = __commonJS({
         this.max = 1e3;
         this.map = /* @__PURE__ */ new Map();
       }
-      get(key) {
-        const value = this.map.get(key);
+      get(key2) {
+        const value = this.map.get(key2);
         if (value === void 0) {
           return void 0;
         } else {
-          this.map.delete(key);
-          this.map.set(key, value);
+          this.map.delete(key2);
+          this.map.set(key2, value);
           return value;
         }
       }
-      delete(key) {
-        return this.map.delete(key);
+      delete(key2) {
+        return this.map.delete(key2);
       }
-      set(key, value) {
-        const deleted = this.delete(key);
+      set(key2, value) {
+        const deleted = this.delete(key2);
         if (!deleted && value !== void 0) {
           if (this.map.size >= this.max) {
             const firstKey = this.map.keys().next().value;
             this.delete(firstKey);
           }
-          this.map.set(key, value);
+          this.map.set(key2, value);
         }
         return this;
       }
@@ -8634,8 +8633,8 @@ var init_asset_assembly_service = __esm({
        * @param {string} path Provider identity.
        * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
        */
-      snapshot(path13) {
-        return this.#files.get(path13)?.slice();
+      snapshot(path16) {
+        return this.#files.get(path16)?.slice();
       }
       /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
        * @param {AssetValueNode} node Typed source value.
@@ -8653,7 +8652,7 @@ var init_asset_assembly_service = __esm({
         }
         if (node.kind === "object") {
           return Object.fromEntries(
-            Object.entries(node.entries).map(([key, item]) => [key, this.#value(item)])
+            Object.entries(node.entries).map(([key2, item]) => [key2, this.#value(item)])
           );
         }
         let expanded = node.expression;
@@ -8683,13 +8682,13 @@ var init_asset_assembly_service = __esm({
        * @param {string} path Source-relative path.
        * @returns {string} Stable provider identity.
        */
-      #resolve(path13) {
+      #resolve(path16) {
         const resolved = this.session.fileProvider.resolvePath(
-          path13,
+          path16,
           this.session.includeSource.resolutionOptions
         );
         if (!resolved) {
-          throw new Error(`includeAsset cannot find '${path13}'.`);
+          throw new Error(`includeAsset cannot find '${path16}'.`);
         }
         return resolved;
       }
@@ -8698,22 +8697,22 @@ var init_asset_assembly_service = __esm({
        * @param {"binary" | "resource"} kind Dependency role.
        * @returns {Uint8Array} Build-owned bytes.
        */
-      #read(path13, kind) {
-        const cached = this.#files.get(path13);
+      #read(path16, kind) {
+        const cached = this.#files.get(path16);
         if (cached) {
           return cached;
         }
-        const bytes = this.session.fileProvider.readFile(path13).slice();
-        this.#files.set(path13, bytes);
-        this.dependencies.set(path13, kind);
+        const bytes = this.session.fileProvider.readFile(path16).slice();
+        this.#files.set(path16, bytes);
+        this.dependencies.set(path16, kind);
         return bytes;
       }
       /** Media type is inferred only from a declared, supported input extension.
        * @param {string} path Provider identity.
        * @returns {string} Portable media type.
        */
-      #mediaType(path13) {
-        const extension = path13.toLowerCase().split(".").pop();
+      #mediaType(path16) {
+        const extension = path16.toLowerCase().split(".").pop();
         if (extension === "png") {
           return "image/png";
         }
@@ -8734,7 +8733,7 @@ var init_asset_assembly_service = __esm({
           return `[${value.map((item) => this.#stable(item)).join(",")}]`;
         }
         if (value && typeof value === "object") {
-          return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${this.#stable(item)}`).join(",")}}`;
+          return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key2, item]) => `${JSON.stringify(key2)}:${this.#stable(item)}`).join(",")}}`;
         }
         return JSON.stringify(value);
       }
@@ -8748,17 +8747,17 @@ var init_asset_assembly_service = __esm({
         if (!schema) {
           return [];
         }
-        for (const key of Object.keys(options)) {
-          if (!Object.hasOwn(schema, key)) {
-            throw new Error(`Asset transform '${provider.id}' has unknown option '${key}'.`);
+        for (const key2 of Object.keys(options)) {
+          if (!Object.hasOwn(schema, key2)) {
+            throw new Error(`Asset transform '${provider.id}' has unknown option '${key2}'.`);
           }
         }
         const resources = [];
-        for (const [key, field] of Object.entries(schema)) {
-          const value = options[key];
+        for (const [key2, field] of Object.entries(schema)) {
+          const value = options[key2];
           if (value === void 0) {
             if (field.required) {
-              throw new Error(`Asset transform '${provider.id}' requires option '${key}'.`);
+              throw new Error(`Asset transform '${provider.id}' requires option '${key2}'.`);
             }
             continue;
           }
@@ -8773,11 +8772,11 @@ var init_asset_assembly_service = __esm({
           const matchesEnum = !field.enum || field.enum.some((item) => item === value);
           const withinRange = typeof value !== "number" || (field.minimum === void 0 || value >= field.minimum) && (field.maximum === void 0 || value <= field.maximum);
           if (!validType || !matchesEnum || !withinRange) {
-            throw new Error(`Asset transform '${provider.id}' has invalid option '${key}'.`);
+            throw new Error(`Asset transform '${provider.id}' has invalid option '${key2}'.`);
           }
           if (field.resource) {
             if (typeof value !== "string" || !value) {
-              throw new Error(`Asset transform '${provider.id}' requires a resource path in '${key}'.`);
+              throw new Error(`Asset transform '${provider.id}' requires a resource path in '${key2}'.`);
             }
             resources.push(value);
           }
@@ -8789,7 +8788,7 @@ var init_asset_assembly_service = __esm({
        */
       discoverDependencies(call) {
         const options = Object.fromEntries(
-          Object.entries(call.options).map(([key, node]) => [key, this.#value(node)])
+          Object.entries(call.options).map(([key2, node]) => [key2, this.#value(node)])
         );
         const sourcePath = this.#resolve(this.#value(call.path));
         const formatName = this.#value(call.format);
@@ -8842,7 +8841,7 @@ var init_asset_assembly_service = __esm({
        */
       materialize(call) {
         const options = Object.fromEntries(
-          Object.entries(call.options).map(([key, node]) => [key, this.#value(node)])
+          Object.entries(call.options).map(([key2, node]) => [key2, this.#value(node)])
         );
         const sourcePath = this.#resolve(this.#value(call.path));
         const formatName = this.#value(call.format);
@@ -8869,7 +8868,7 @@ var init_asset_assembly_service = __esm({
         const resources = {};
         const resourceIdentities = [];
         const declaredResources = format.resourcePaths?.(options) ?? [];
-        if (!Array.isArray(declaredResources) || declaredResources.some((path13) => typeof path13 !== "string" || !path13)) {
+        if (!Array.isArray(declaredResources) || declaredResources.some((path16) => typeof path16 !== "string" || !path16)) {
           throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
         }
         for (const resourceName of declaredResources) {
@@ -8963,12 +8962,12 @@ var init_asset_assembly_service = __esm({
           }
           const names = [.../* @__PURE__ */ new Set([...schemaResources, ...resourcePaths])];
           for (const name of names) {
-            const path13 = this.#resolve(name);
+            const path16 = this.#resolve(name);
             transformResources[name] = {
-              bytes: this.#read(path13, "resource"),
-              mediaType: this.#mediaType(path13)
+              bytes: this.#read(path16, "resource"),
+              mediaType: this.#mediaType(path16)
             };
-            transformResourceIdentities.push(`${name}\0${path13}`);
+            transformResourceIdentities.push(`${name}\0${path16}`);
           }
           transforms.push({
             provider: transform,
@@ -10182,20 +10181,20 @@ var init_include_source_service = __esm({
        */
       resolvePath(filePath) {
         const options = this.resolutionOptions;
-        const key = [
+        const key2 = [
           options.currentFile,
           options.macroSourceFile ?? "",
           options.includePaths.join("\0"),
           filePath
         ].join("");
-        const cached = this.resolvedPathCache.get(key);
+        const cached = this.resolvedPathCache.get(key2);
         if (cached !== void 0) {
           incrementInternalCounter("includeResolutionCacheHits");
           return cached;
         }
         const resolved = this.host.fileProvider.resolvePath(filePath, options);
         if (resolved !== void 0) {
-          this.resolvedPathCache.set(key, resolved);
+          this.resolvedPathCache.set(key2, resolved);
         }
         return resolved;
       }
@@ -10206,8 +10205,8 @@ var init_include_source_service = __esm({
        * @returns {string} The cached or newly read text.
        */
       readTextFile(resolvedPath, encoding) {
-        const key = `${encoding}\0${resolvedPath}`;
-        const cached = this.textCache.get(key);
+        const key2 = `${encoding}\0${resolvedPath}`;
+        const cached = this.textCache.get(key2);
         if (cached !== void 0) {
           incrementInternalCounter("includeTextCacheHits");
           return cached;
@@ -10218,7 +10217,7 @@ var init_include_source_service = __esm({
           () => this.host.fileProvider.readTextFile(resolvedPath, encoding)
         );
         incrementInternalCounter("includeBytesRead", content.length);
-        this.textCache.set(key, content);
+        this.textCache.set(key2, content);
         return content;
       }
     };
@@ -10447,8 +10446,8 @@ var init_macro_engine = __esm({
             const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
             let nextAddr = null;
             if (!modifiedCommand.trim().startsWith("?+:")) {
-              for (const [key, info] of this.host.labelTable.entries()) {
-                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}+` || key.endsWith("_+") || key === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
+              for (const [key2, info] of this.host.labelTable.entries()) {
+                if (key2.startsWith(macroLabelPrefix) && (key2 === `${macroLabelPrefix}+` || key2.endsWith("_+") || key2 === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
                   if (nextAddr === null || info.value < nextAddr) {
                     nextAddr = info.value;
                   }
@@ -10465,8 +10464,8 @@ var init_macro_engine = __esm({
             const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
             let prevAddr = null;
             if (!modifiedCommand.trim().startsWith("?-:")) {
-              for (const [key, info] of this.host.labelTable.entries()) {
-                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}-` || key.endsWith("_-") || key === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
+              for (const [key2, info] of this.host.labelTable.entries()) {
+                if (key2.startsWith(macroLabelPrefix) && (key2 === `${macroLabelPrefix}-` || key2.endsWith("_-") || key2 === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
                   if (prevAddr === null || info.value > prevAddr) {
                     prevAddr = info.value;
                   }
@@ -11950,9 +11949,9 @@ var init_symbol_scope_service = __esm({
           if (prefix === "?") {
             if (labelName.startsWith(".")) {
               let recentMainLabel = "";
-              for (const [key, entry] of this.host.labelTable.entries()) {
-                if (entry.isMacroLabel && key.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key.includes("_SubLabel_")) {
-                  const labelPart = key.substring(`:macro_${this.host.macroLabelInstance}_`.length);
+              for (const [key2, entry] of this.host.labelTable.entries()) {
+                if (entry.isMacroLabel && key2.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key2.includes("_SubLabel_")) {
+                  const labelPart = key2.substring(`:macro_${this.host.macroLabelInstance}_`.length);
                   if (!labelPart.startsWith(".")) {
                     recentMainLabel = labelPart;
                   }
@@ -15203,7 +15202,7 @@ var init_assembler = __esm({
           cursor: { ...cursorSeed },
           symbols: {
             labelTable: new Map(
-              Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])
+              Array.from(symbolSeed.labelTable.entries()).map(([key2, value]) => [key2, { ...value }])
             ),
             forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
             backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
@@ -15698,7 +15697,7 @@ var init_debug_map = __esm({
       }
       if (value !== null && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalValue(entry)])
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue(entry)])
         );
       }
       return value;
@@ -16543,11 +16542,11 @@ var init_workspace_index = __esm({
             continue;
           }
           for (const edge of result.includeEdges) {
-            const key = `${edge.fromFile}\0${edge.toFile}`;
-            if (seenEdges.has(key)) {
+            const key2 = `${edge.fromFile}\0${edge.toFile}`;
+            if (seenEdges.has(key2)) {
               continue;
             }
-            seenEdges.add(key);
+            seenEdges.add(key2);
             this.includeEdges.push(edge);
           }
           if (coveredByFullPass.has(root)) {
@@ -17032,6 +17031,717 @@ var init_src = __esm({
     init_lsp();
     init_plugin();
     init_plugin();
+  }
+});
+
+// packages/disassembler/src/analysis-graph.ts
+var init_analysis_graph = __esm({
+  "packages/disassembler/src/analysis-graph.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/coverage-map.ts
+var init_coverage_map = __esm({
+  "packages/disassembler/src/coverage-map.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/instruction-annotations.ts
+var init_instruction_annotations = __esm({
+  "packages/disassembler/src/instruction-annotations.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/interval-index.ts
+var init_interval_index = __esm({
+  "packages/disassembler/src/interval-index.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/analysis-sources.ts
+var init_analysis_sources = __esm({
+  "packages/disassembler/src/analysis-sources.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/project-labels.ts
+var init_project_labels = __esm({
+  "packages/disassembler/src/project-labels.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/project-types.ts
+var init_project_types = __esm({
+  "packages/disassembler/src/project-types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-bus-types.ts
+var init_runtime_bus_types = __esm({
+  "packages/disassembler/src/runtime-bus-types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/trace-detail.ts
+var init_trace_detail = __esm({
+  "packages/disassembler/src/trace-detail.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/project-transaction.ts
+var init_project_transaction = __esm({
+  "packages/disassembler/src/project-transaction.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/project-store.ts
+var init_project_store = __esm({
+  "packages/disassembler/src/project-store.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/metadata-edit.ts
+var init_metadata_edit = __esm({
+  "packages/disassembler/src/metadata-edit.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/project-edit.ts
+var init_project_edit = __esm({
+  "packages/disassembler/src/project-edit.ts"() {
+    "use strict";
+    init_metadata_edit();
+  }
+});
+
+// packages/disassembler/src/runtime-evidence.ts
+var init_runtime_evidence = __esm({
+  "packages/disassembler/src/runtime-evidence.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/sqlite-runtime-facts.ts
+var RUNTIME_DESCRIPTOR_COLUMNS, runtimeIdentityKey, columns, inserted, key, descriptorInsert, descriptorId, RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA;
+var init_sqlite_runtime_facts = __esm({
+  "packages/disassembler/src/sqlite-runtime-facts.ts"() {
+    "use strict";
+    RUNTIME_DESCRIPTOR_COLUMNS = [
+      "kind",
+      "architecture",
+      "address_space",
+      "address",
+      "start",
+      "end",
+      "from_address_space",
+      "from_address",
+      "to_address_space",
+      "to_address",
+      "instruction_address_space",
+      "instruction_address",
+      "accessed_address_space",
+      "accessed_address",
+      "coverage"
+    ];
+    runtimeIdentityKey = (column) => `CASE WHEN typeof(${column})='blob' THEN substr(${column},1,8) ELSE ${column} END`;
+    columns = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",");
+    inserted = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `NEW."${column}"`).join(",");
+    key = `json_array(${inserted})`;
+    descriptorInsert = `INSERT OR IGNORE INTO runtime_descriptors(key,${columns}) VALUES(${key},${inserted});`;
+    descriptorId = `(SELECT did FROM runtime_descriptors WHERE key=${key})`;
+    RUNTIME_FACT_SCHEMA = `
+CREATE TABLE runtime_descriptors (
+  did INTEGER PRIMARY KEY, key TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL, architecture TEXT NOT NULL,
+  address_space TEXT, address INTEGER, start INTEGER, "end" INTEGER,
+  from_address_space TEXT, from_address INTEGER, to_address_space TEXT, to_address INTEGER,
+  instruction_address_space TEXT, instruction_address INTEGER,
+  accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT
+);
+CREATE INDEX runtime_lookup ON runtime_descriptors(kind,address_space,address,start);
+CREATE INDEX runtime_memory ON runtime_descriptors(instruction_address_space,instruction_address) WHERE kind='runtime-memory-access';
+CREATE TABLE runtime_fact_rows (
+  fid INTEGER PRIMARY KEY, fingerprint BLOB,
+  descriptor_id INTEGER NOT NULL REFERENCES runtime_descriptors(did),
+  payload BLOB, history_id INTEGER REFERENCES runtime_history(id), history_slot INTEGER,
+  CHECK ((history_id IS NULL AND history_slot IS NULL) OR
+    (history_id IS NOT NULL AND history_slot>=0 AND payload IS NULL))
+);
+CREATE INDEX runtime_fact_fingerprint ON runtime_fact_rows(substr(fingerprint,1,8));
+CREATE INDEX runtime_fact_descriptor ON runtime_fact_rows(descriptor_id);
+CREATE INDEX runtime_history_pending ON runtime_fact_rows(fid) WHERE history_id IS NULL;
+CREATE TRIGGER runtime_fact_unique_insert BEFORE INSERT ON runtime_fact_rows
+WHEN NEW.fingerprint IS NOT NULL AND EXISTS(
+  SELECT 1 FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8) AND fingerprint=NEW.fingerprint AND fid IS NOT NEW.fid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime fact fingerprint'); END;
+CREATE TRIGGER runtime_fact_unique_update BEFORE UPDATE OF fingerprint ON runtime_fact_rows
+WHEN NEW.fingerprint IS NOT NULL AND EXISTS(
+  SELECT 1 FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8)
+    AND fingerprint=NEW.fingerprint AND fid!=OLD.fid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime fact fingerprint'); END;
+CREATE VIEW runtime_fact_locations AS SELECT f.fid,
+  ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `d."${column}"`).join(",")}
+FROM runtime_fact_rows f LEFT JOIN runtime_descriptors d ON d.did=f.descriptor_id;
+CREATE VIEW runtime_facts AS SELECT f.fid,f.fingerprint,
+  ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `d."${column}"`).join(",")},
+  CASE WHEN f.history_id IS NULL THEN f.payload
+    ELSE analysis_history_payload(f.history_id,f.history_slot) END AS payload
+FROM runtime_fact_rows f LEFT JOIN runtime_descriptors d ON d.did=f.descriptor_id;
+CREATE TRIGGER runtime_fact_insert INSTEAD OF INSERT ON runtime_facts BEGIN
+  ${descriptorInsert}
+  INSERT INTO runtime_fact_rows(fid,fingerprint,descriptor_id,payload)
+    VALUES(NEW.fid,NEW.fingerprint,${descriptorId},NEW.payload);
+END;
+CREATE TRIGGER runtime_fact_update INSTEAD OF UPDATE ON runtime_facts BEGIN
+  ${descriptorInsert}
+  UPDATE runtime_fact_rows SET fid=NEW.fid,fingerprint=NEW.fingerprint,
+    descriptor_id=${descriptorId},payload=NEW.payload,history_id=NULL,history_slot=NULL WHERE fid=OLD.fid;
+END;
+CREATE TRIGGER runtime_fact_delete INSTEAD OF DELETE ON runtime_facts BEGIN
+  DELETE FROM runtime_fact_rows WHERE fid=OLD.fid;
+END;
+`;
+    RUNTIME_IDENTITY_SCHEMA = `
+CREATE TABLE runtime_identities(iid INTEGER PRIMARY KEY,value BLOB NOT NULL);
+CREATE INDEX runtime_identity_key ON runtime_identities(${runtimeIdentityKey("value")});
+CREATE TRIGGER runtime_identity_unique_insert BEFORE INSERT ON runtime_identities
+WHEN EXISTS(SELECT 1 FROM runtime_identities
+  WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND value=NEW.value)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
+CREATE TRIGGER runtime_identity_unique_update BEFORE UPDATE OF value ON runtime_identities
+WHEN EXISTS(SELECT 1 FROM runtime_identities
+  WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND value=NEW.value AND iid!=OLD.iid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
+`;
+  }
+});
+
+// packages/disassembler/src/sqlite-runtime-history.ts
+import { TextDecoder as TextDecoder2, types } from "node:util";
+var MAGIC, MAX_BYTES, TARGET_BYTES, CACHE_BYTES, utf8, RUNTIME_HISTORY_SCHEMA;
+var init_sqlite_runtime_history = __esm({
+  "packages/disassembler/src/sqlite-runtime-history.ts"() {
+    "use strict";
+    MAGIC = Buffer.from([85, 72, 66, 1]);
+    MAX_BYTES = 32 * 1024 * 1024;
+    TARGET_BYTES = 256 * 1024;
+    CACHE_BYTES = 4 * 1024 * 1024;
+    utf8 = new TextDecoder2("utf-8", { fatal: true });
+    RUNTIME_HISTORY_SCHEMA = `CREATE TABLE runtime_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, first_fid INTEGER NOT NULL, last_fid INTEGER NOT NULL,
+  payload BLOB NOT NULL
+);
+CREATE TRIGGER runtime_history_immutable BEFORE UPDATE ON runtime_history BEGIN
+  SELECT RAISE(ABORT,'Runtime history blocks are immutable');
+END;`;
+  }
+});
+
+// packages/disassembler/src/sqlite-runtime-storage.ts
+var RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA;
+var init_sqlite_runtime_storage = __esm({
+  "packages/disassembler/src/sqlite-runtime-storage.ts"() {
+    "use strict";
+    init_sqlite_runtime_facts();
+    init_sqlite_runtime_history();
+    RUNTIME_RECORD_STREAM_SQL = [true, false].map(
+      (paired) => `
+  SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
+    ${paired ? "'runtime-cpu-state'" : "f.kind"} AS kind,f.architecture,
+    f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
+    f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
+    f.accessed_address_space,f.accessed_address,f.coverage,
+    CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
+  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+  LEFT JOIN runtime_identities i ON i.iid=o.identity_id
+  LEFT JOIN runtime_prefixes p ON p.id=o.${paired ? "state_prefix_id" : "prefix_id"}
+  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id
+  ${paired ? "WHERE o.state_prefix_id IS NOT NULL" : ""}
+  ORDER BY o.oid ${paired ? "DESC" : "ASC"}`
+    );
+    RUNTIME_STORAGE_SCHEMA = `
+${RUNTIME_HISTORY_SCHEMA}
+${RUNTIME_FACT_SCHEMA}
+${RUNTIME_IDENTITY_SCHEMA}
+CREATE TABLE runtime_observations (
+  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_fact_rows(fid),
+  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
+  identity_id INTEGER NOT NULL REFERENCES runtime_identities(iid),
+  evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id), count INTEGER NOT NULL,
+  state_prefix_id INTEGER REFERENCES runtime_prefixes(id),
+  query_file_offset INTEGER, query_size INTEGER, query_data BLOB, query_ready INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(prefix_id,identity_id), UNIQUE(state_prefix_id,identity_id)
+);
+CREATE INDEX runtime_observation_fact ON runtime_observations(fact_id);
+-- Native fact and identity IDs commonly coincide. The fact index already covers that case;
+-- index only exceptions, and check both cases before collecting an identity below.
+CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id) WHERE identity_id!=fact_id;
+CREATE VIEW runtime AS
+ SELECT o.oid AS rowid,o.prefix_id,i.value AS id,f.kind,f.architecture,o.count,
+ f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
+ f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
+ f.accessed_address_space,f.accessed_address,f.coverage,o.evidence_id,
+ CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,
+ o.query_file_offset,o.query_size,o.query_data,o.query_ready
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+ LEFT JOIN runtime_identities i ON i.iid=o.identity_id
+ UNION ALL
+ SELECT -o.oid,o.state_prefix_id,i.value,'runtime-cpu-state',f.architecture,o.count,
+ f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
+ f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
+ f.accessed_address_space,f.accessed_address,f.coverage,o.evidence_id,
+ CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END,NULL,NULL,NULL,1
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+ LEFT JOIN runtime_identities i ON i.iid=o.identity_id WHERE o.state_prefix_id IS NOT NULL;
+CREATE TRIGGER runtime_collect_fact AFTER DELETE ON runtime_observations BEGIN
+ -- Reclaim the physical owner directly: deleting a fact does not require decoding its payload.
+ DELETE FROM runtime_fact_rows WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
+ DELETE FROM runtime_identities WHERE iid=OLD.identity_id
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.identity_id AND identity_id=OLD.identity_id)
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id AND identity_id!=fact_id);
+END;
+CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query_size,query_data,query_ready ON runtime BEGIN
+ UPDATE runtime_observations SET query_file_offset=NEW.query_file_offset,query_size=NEW.query_size,
+ query_data=NEW.query_data,query_ready=NEW.query_ready WHERE oid=OLD.rowid;
+END;
+-- Compatibility mutations detach one logical record. They must never change another capture's shared fact.
+CREATE TRIGGER runtime_insert INSTEAD OF INSERT ON runtime BEGIN
+ INSERT INTO runtime_identities(value) SELECT NEW.id WHERE NOT EXISTS(SELECT 1 FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id);
+ INSERT INTO runtime_facts(kind,architecture,address_space,address,start,"end",from_address_space,from_address,
+ to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,payload)
+ VALUES(NEW.kind,NEW.architecture,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
+ NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,
+ CASE WHEN json_valid(NEW.payload) THEN jsonb(NEW.payload) ELSE NEW.payload END);
+ -- Nested view inserts restore last_insert_rowid(). The single writer owns the new maximum fid.
+ INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
+ VALUES((SELECT MAX(fid) FROM runtime_fact_rows),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
+ CASE WHEN NEW.kind='runtime-execution' THEN 0 ELSE 1 END);
+END;
+CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
+ -- Deleting just the instruction preserves its independent logical state record.
+ INSERT INTO runtime_facts(kind,architecture,address_space,address,payload)
+ SELECT 'runtime-cpu-state',f.architecture,f.address_space,f.address,f.payload
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_prefix_id IS NOT NULL;
+ INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_ready)
+ SELECT (SELECT MAX(fid) FROM runtime_fact_rows),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
+ UPDATE runtime_observations SET state_prefix_id=NULL WHERE oid=-OLD.rowid;
+ -- A preceding instruction deletion may have detached this virtual state; stable identity still finds it.
+ DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("OLD.id")}) AND value=OLD.id);
+END;
+CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,architecture,count,address_space,address,start,"end",
+ from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
+ accessed_address_space,accessed_address,coverage,evidence_id,payload ON runtime BEGIN
+ DELETE FROM runtime WHERE prefix_id=OLD.prefix_id AND id=OLD.id;
+ INSERT INTO runtime(prefix_id,id,kind,architecture,count,address_space,address,start,"end",from_address_space,from_address,
+ to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,evidence_id,payload)
+ VALUES(NEW.prefix_id,NEW.id,NEW.kind,NEW.architecture,NEW.count,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
+ NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,NEW.evidence_id,NEW.payload);
+END;
+`;
+  }
+});
+
+// packages/disassembler/src/sqlite-storage-policy.ts
+var DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA;
+var init_sqlite_storage_policy = __esm({
+  "packages/disassembler/src/sqlite-storage-policy.ts"() {
+    "use strict";
+    DEFAULT_ANALYSIS_STORAGE_POLICY = {
+      cacheMaxBytes: 256 * 1024 ** 2,
+      databaseMaxBytes: 0
+    };
+    CAPTURE_CATALOG_SCHEMA = `CREATE TABLE capture_catalog (
+  sha256 TEXT PRIMARY KEY, profile TEXT NOT NULL, source_name TEXT NOT NULL,
+  imported_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL,
+  observed_events INTEGER NOT NULL, dropped_events INTEGER NOT NULL DEFAULT 0
+) WITHOUT ROWID;`;
+  }
+});
+
+// packages/disassembler/src/sqlite-store.ts
+import { DatabaseSync } from "node:sqlite";
+var SCHEMA, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL;
+var init_sqlite_store = __esm({
+  "packages/disassembler/src/sqlite-store.ts"() {
+    "use strict";
+    init_sqlite_runtime_facts();
+    init_sqlite_runtime_storage();
+    init_sqlite_storage_policy();
+    SCHEMA = `
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA foreign_keys=ON;
+PRAGMA busy_timeout=5000;
+CREATE TABLE IF NOT EXISTS meta (
+  k TEXT PRIMARY KEY,
+  v TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS evidence (
+  id TEXT NOT NULL PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS labels (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS regions (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS annotations (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  classification TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS analysis (
+  id TEXT NOT NULL PRIMARY KEY,
+  kind TEXT NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS imports (
+  id TEXT NOT NULL PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS runtime_prefixes (
+  id INTEGER PRIMARY KEY,
+  value TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS runtime_evidence (
+  id INTEGER PRIMARY KEY,
+  value TEXT NOT NULL UNIQUE
+);
+${RUNTIME_STORAGE_SCHEMA}
+${CAPTURE_CATALOG_SCHEMA}
+PRAGMA user_version=4;
+`;
+    RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
+  FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
+  LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+    RUNTIME_RECORD_LOOKUP_SQL = `${RUNTIME_SELECT} WHERE r.rowid IN (
+  SELECT oid FROM runtime_observations
+  WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+  UNION ALL
+  SELECT -oid FROM runtime_observations
+  WHERE state_prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+)`;
+  }
+});
+
+// packages/disassembler/src/project-asset-ids.ts
+var init_project_asset_ids = __esm({
+  "packages/disassembler/src/project-asset-ids.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/rom-image.ts
+var init_rom_image = __esm({
+  "packages/disassembler/src/rom-image.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-trace.ts
+var init_runtime_trace = __esm({
+  "packages/disassembler/src/runtime-trace.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-trace-file.ts
+var DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS;
+var init_runtime_trace_file = __esm({
+  "packages/disassembler/src/runtime-trace-file.ts"() {
+    "use strict";
+    DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+    MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
+  }
+});
+
+// packages/disassembler/src/source-generation.ts
+import { createHash as createHash3 } from "node:crypto";
+import fs from "node:fs";
+import path6 from "node:path";
+function readSourcePublication(directory) {
+  const file = path6.join(directory, SOURCE_PUBLICATION_STATE);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : void 0;
+}
+function sourceGenerationIdentity(directory) {
+  const state = readSourcePublication(directory);
+  if (state?.phase === "publishing" || state?.phase === "blocked") {
+    throw new Error(
+      `Source publication ${state.id} requires recovery. Run Assembly: Recover Disassembly Publication. Previous verified source: ${state.previous}`
+    );
+  }
+  const identity = createHash3("sha256").update(fs.readFileSync(path6.join(directory, "generated-files.json"))).digest("hex");
+  return `${identity}:${state?.id ?? "legacy"}:${state?.phase ?? "untracked"}`;
+}
+function assertSourceGeneration(directory, expected) {
+  if (sourceGenerationIdentity(directory) !== expected) {
+    throw new Error(
+      "Source generation changed during this operation. Retry against the current generation."
+    );
+  }
+}
+var SOURCE_PUBLICATION_STATE;
+var init_source_generation = __esm({
+  "packages/disassembler/src/source-generation.ts"() {
+    "use strict";
+    SOURCE_PUBLICATION_STATE = ".uttori-publication.json";
+  }
+});
+
+// packages/disassembler/src/source-export.ts
+import * as fs2 from "node:fs";
+import path7 from "node:path";
+var SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, assertSafePath, loadSourceExportManifest;
+var init_source_export = __esm({
+  "packages/disassembler/src/source-export.ts"() {
+    "use strict";
+    init_source_generation();
+    SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
+    SOURCE_EXPORT_SCHEMA_VERSION = 1;
+    SOURCE_EXPORT_MANIFEST = "generated-files.json";
+    assertSafePath = (relative2) => {
+      if (relative2 === "" || path7.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
+        throw new Error(`Unsafe generated-file path '${relative2}'.`);
+      }
+    };
+    loadSourceExportManifest = (directory) => {
+      const generation = sourceGenerationIdentity(directory);
+      const manifest = JSON.parse(
+        fs2.readFileSync(path7.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
+      );
+      if (manifest.format !== SOURCE_EXPORT_FORMAT) {
+        throw new Error("Invalid source-export format.");
+      }
+      if (manifest.schemaVersion !== SOURCE_EXPORT_SCHEMA_VERSION) {
+        throw new Error(`Unsupported source-export schema ${String(manifest.schemaVersion)}.`);
+      }
+      const paths = /* @__PURE__ */ new Set();
+      for (const file of manifest.files) {
+        assertSafePath(file.path);
+        if (paths.has(file.path)) {
+          throw new Error(`Duplicate generated-file path '${file.path}'.`);
+        }
+        paths.add(file.path);
+      }
+      const inputPaths = /* @__PURE__ */ new Set();
+      if (manifest.ownershipFile !== void 0) {
+        assertSafePath(manifest.ownershipFile);
+        if (!paths.has(manifest.ownershipFile)) {
+          throw new Error("Source ownership map is not a generated file.");
+        }
+      }
+      for (const input of manifest.inputs ?? []) {
+        assertSafePath(input.path);
+        if (paths.has(input.path) || inputPaths.has(input.path)) {
+          throw new Error(`Duplicate source-export input path '${input.path}'.`);
+        }
+        inputPaths.add(input.path);
+      }
+      for (const span of manifest.spans) {
+        if (span.end <= span.start) {
+          throw new Error(`Invalid source span '${span.id}'.`);
+        }
+        if (!paths.has(span.file)) {
+          throw new Error(`Source span '${span.id}' names an unknown file.`);
+        }
+      }
+      const contentSpans = manifest.spans.filter((span) => span.role !== "copier-header").sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+      let cursor = 0;
+      for (const span of contentSpans) {
+        if (span.start !== cursor) {
+          throw new Error(
+            `Source spans do not own every content byte exactly once at offset ${cursor}.`
+          );
+        }
+        cursor = span.end;
+      }
+      if (cursor !== manifest.rom.contentSize) {
+        throw new Error(
+          `Source spans cover ${cursor} content bytes, expected ${manifest.rom.contentSize}.`
+        );
+      }
+      const copierSpans = manifest.spans.filter((span) => span.role === "copier-header");
+      if (manifest.rom.headerSize === 0 && copierSpans.length !== 0 || manifest.rom.headerSize === 512 && (copierSpans.length !== 1 || copierSpans[0].start !== 0 || copierSpans[0].end !== 512)) {
+        throw new Error("Source-export copier-header ownership does not match the ROM identity.");
+      }
+      assertSourceGeneration(directory, generation);
+      return manifest;
+    };
+  }
+});
+
+// packages/disassembler/src/source-ownership.ts
+import fs3 from "node:fs";
+import path8 from "node:path";
+var manifestCache, signature, findManagedSourceFile;
+var init_source_ownership = __esm({
+  "packages/disassembler/src/source-ownership.ts"() {
+    "use strict";
+    init_source_export();
+    init_source_generation();
+    manifestCache = /* @__PURE__ */ new Map();
+    signature = (file) => {
+      const stat = fs3.statSync(file, { bigint: true });
+      return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+    };
+    findManagedSourceFile = (file) => {
+      const absolute = path8.resolve(file);
+      for (let directory = path8.dirname(absolute); ; directory = path8.dirname(directory)) {
+        if (fs3.existsSync(path8.join(directory, "generated-files.json"))) {
+          const generation = sourceGenerationIdentity(directory);
+          const identity = signature(path8.join(directory, "generated-files.json"));
+          let cached = manifestCache.get(directory);
+          if (!cached || cached.signature !== identity) {
+            const manifest2 = loadSourceExportManifest(directory);
+            if (identity !== signature(path8.join(directory, "generated-files.json"))) {
+              throw new Error("Source generation changed during ownership lookup. Retry inspection.");
+            }
+            cached = { signature: identity, manifest: manifest2 };
+            if (manifestCache.size >= 16) {
+              manifestCache.clear();
+            }
+            manifestCache.set(directory, cached);
+          }
+          const { manifest } = cached;
+          const relative2 = path8.relative(directory, absolute).split(path8.sep).join("/");
+          if (manifest.files.some((entry) => entry.path === relative2)) {
+            assertSourceGeneration(directory, generation);
+            return { directory, relative: relative2, manifest };
+          }
+        }
+        if (directory === path8.dirname(directory)) {
+          return void 0;
+        }
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/static-analysis.ts
+var init_static_analysis = __esm({
+  "packages/disassembler/src/static-analysis.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-trace-project.ts
+var init_runtime_trace_project = __esm({
+  "packages/disassembler/src/runtime-trace-project.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-graphics.ts
+var init_runtime_graphics = __esm({
+  "packages/disassembler/src/runtime-graphics.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-transfer.ts
+var init_runtime_transfer = __esm({
+  "packages/disassembler/src/runtime-transfer.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-bus-trace.ts
+var init_runtime_bus_trace = __esm({
+  "packages/disassembler/src/runtime-bus-trace.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-bus-project.ts
+var init_runtime_bus_project = __esm({
+  "packages/disassembler/src/runtime-bus-project.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/durable-files.ts
+var init_durable_files = __esm({
+  "packages/disassembler/src/durable-files.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/source-publication.ts
+var init_source_publication = __esm({
+  "packages/disassembler/src/source-publication.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/index.ts
+var init_src2 = __esm({
+  "packages/disassembler/src/index.ts"() {
+    "use strict";
+    init_analysis_graph();
+    init_coverage_map();
+    init_instruction_annotations();
+    init_interval_index();
+    init_sqlite_store();
+    init_project_store();
+    init_project_transaction();
+    init_project_edit();
+    init_project_asset_ids();
+    init_project_labels();
+    init_project_types();
+    init_rom_image();
+    init_runtime_evidence();
+    init_runtime_trace();
+    init_runtime_trace_file();
+    init_source_export();
+    init_source_ownership();
+    init_static_analysis();
+    init_trace_detail();
+    init_analysis_sources();
+    init_runtime_trace_project();
+    init_runtime_bus_types();
+    init_runtime_bus_trace();
+    init_runtime_bus_project();
+    init_runtime_transfer();
+    init_runtime_graphics();
+    init_durable_files();
+    init_source_generation();
+    init_source_publication();
   }
 });
 
@@ -21111,7 +21821,7 @@ var init_spc700 = __esm({
       const lowered = resolver.lowerOperand(operand);
       return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
     };
-    hasOwn = (obj, key) => Object.hasOwn(obj, key);
+    hasOwn = (obj, key2) => Object.hasOwn(obj, key2);
     IMPLIED_SPC_OPCODES = {
       NOP: true,
       BRK: true,
@@ -22258,16 +22968,16 @@ var init_spc700 = __esm({
           Y: 238
         };
         if (opcode.toUpperCase() === "PUSH") {
-          const key = (loweredOperand?.registerName ?? operand).toUpperCase();
-          if (hasOwn(pushMap, key)) {
-            this.assembler.write1(pushMap[key]);
+          const key2 = (loweredOperand?.registerName ?? operand).toUpperCase();
+          if (hasOwn(pushMap, key2)) {
+            this.assembler.write1(pushMap[key2]);
             return true;
           }
         }
         if (opcode.toUpperCase() === "POP") {
-          const key = (loweredOperand?.registerName ?? operand).toUpperCase();
-          if (hasOwn(popMap, key)) {
-            this.assembler.write1(popMap[key]);
+          const key2 = (loweredOperand?.registerName ?? operand).toUpperCase();
+          if (hasOwn(popMap, key2)) {
+            this.assembler.write1(popMap[key2]);
             return true;
           }
         }
@@ -22485,24 +23195,24 @@ var init_spc700 = __esm({
           "$,X": { byte: 216, word: 201 },
           "$,Y": { byte: 203, word: 204 }
         };
-        let key = null;
+        let key2 = null;
         if (/^\$[\da-f]+$/i.test(left)) {
-          key = `$,${right.toUpperCase()}`;
+          key2 = `$,${right.toUpperCase()}`;
         } else if (/^\$[\da-f]+\+x$/i.test(left)) {
-          key = `$+X,${right.toUpperCase()}`;
+          key2 = `$+X,${right.toUpperCase()}`;
         } else if (/^\$[\da-f]+$/i.test(right)) {
-          key = `${left.toUpperCase()},$`;
+          key2 = `${left.toUpperCase()},$`;
         } else if (/^\$[\da-f]+\+x$/i.test(right)) {
-          key = `${left.toUpperCase()},$+X`;
+          key2 = `${left.toUpperCase()},$+X`;
         }
-        if (key && hasOwn(memoryMoves, key)) {
+        if (key2 && hasOwn(memoryMoves, key2)) {
           const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
           const match = /\$([^+]+)/.exec(operandWithAddr);
           if (!match) {
             return false;
           }
           const val = parseInt(match[1], 16);
-          const mode3 = memoryMoves[key];
+          const mode3 = memoryMoves[key2];
           const inferredLength = getAddressSize(`$${match[1]}`);
           const selectedLength = explicitlen ? forcedLen : inferredLength;
           const opcode = selectedLength === 1 ? mode3.byte : mode3.word;
@@ -23395,7 +24105,7 @@ var init_superfx = __esm({
       const lowered = resolver.lowerOperand(operand);
       return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
     };
-    hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
+    hasOwn2 = (obj, key2) => Object.hasOwn(obj, key2);
     ALT1 = 61;
     ALT2 = 62;
     ALT3 = 63;
@@ -24282,7 +24992,7 @@ var init_registry2 = __esm({
 });
 
 // packages/assets/src/index.ts
-var init_src2 = __esm({
+var init_src3 = __esm({
   "packages/assets/src/index.ts"() {
     "use strict";
     init_registry2();
@@ -27438,8 +28148,8 @@ var require_common = __commonJS({
       createDebug.enabled = enabled;
       createDebug.humanize = require_ms();
       createDebug.destroy = destroy;
-      Object.keys(env).forEach((key) => {
-        createDebug[key] = env[key];
+      Object.keys(env).forEach((key2) => {
+        createDebug[key2] = env[key2];
       });
       createDebug.names = [];
       createDebug.skips = [];
@@ -27989,13 +28699,13 @@ var require_node = __commonJS({
       }
     } catch (error) {
     }
-    exports.inspectOpts = Object.keys(process.env).filter((key) => {
-      return /^debug_/i.test(key);
-    }).reduce((obj, key) => {
-      const prop = key.substring(6).toLowerCase().replace(/_([a-z])/g, (_, k) => {
+    exports.inspectOpts = Object.keys(process.env).filter((key2) => {
+      return /^debug_/i.test(key2);
+    }).reduce((obj, key2) => {
+      const prop = key2.substring(6).toLowerCase().replace(/_([a-z])/g, (_, k) => {
         return k.toUpperCase();
       });
-      let val = process.env[key];
+      let val = process.env[key2];
       if (/^(yes|on|true|enabled)$/i.test(val)) {
         val = true;
       } else if (/^(no|off|false|disabled)$/i.test(val)) {
@@ -31054,7 +31764,7 @@ var init_snes = __esm({
       const rightRecord = right;
       const keys = Object.keys(leftRecord);
       return keys.length === Object.keys(rightRecord).length && keys.every(
-        (key) => Object.hasOwn(rightRecord, key) && sameModelValue(leftRecord[key], rightRecord[key])
+        (key2) => Object.hasOwn(rightRecord, key2) && sameModelValue(leftRecord[key2], rightRecord[key2])
       );
     };
     nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
@@ -31502,7 +32212,7 @@ var init_audio = __esm({
       }
     });
     audioOptions = (raw, source) => {
-      if (Object.keys(raw).some((key) => key !== "padding" && key !== "loop")) {
+      if (Object.keys(raw).some((key2) => key2 !== "padding" && key2 !== "loop")) {
         throw new Error("Unknown WAVE-to-BRR option.");
       }
       const padding = raw.padding === void 0 ? "reject" : raw.padding;
@@ -31522,7 +32232,7 @@ var init_audio = __esm({
         }
         return { padding, loop: "source" };
       }
-      if (!requested || typeof requested !== "object" || Array.isArray(requested) || !("start" in requested) || !("end" in requested) || typeof requested.start !== "number" || typeof requested.end !== "number" || Object.keys(requested).some((key) => key !== "start" && key !== "end")) {
+      if (!requested || typeof requested !== "object" || Array.isArray(requested) || !("start" in requested) || !("end" in requested) || typeof requested.start !== "number" || typeof requested.end !== "number" || Object.keys(requested).some((key2) => key2 !== "start" && key2 !== "end")) {
         throw new Error("loop must be false, 'source', or { start, end } in sample frames.");
       }
       return { padding, loop: { start: requested.start, end: requested.end } };
@@ -35648,12 +36358,12 @@ function selectPalette(image, options, resources, capacity) {
           byColor.set("transparent", 0);
           continue;
         }
-        const key = colorKey(rgba.slice(0, 3));
-        let index2 = byColor.get(key);
+        const key2 = colorKey(rgba.slice(0, 3));
+        let index2 = byColor.get(key2);
         if (index2 === void 0) {
           index2 = colors.length;
           colors.push([rgba[0], rgba[1], rgba[2], 255]);
-          byColor.set(key, index2);
+          byColor.set(key2, index2);
         }
         indexes[pixel] = index2;
       }
@@ -35671,9 +36381,9 @@ function selectPalette(image, options, resources, capacity) {
       }
       const lookup = /* @__PURE__ */ new Map();
       colors.forEach((color, index2) => {
-        const key = colorKey(color);
-        if (!lookup.has(key)) {
-          lookup.set(key, index2);
+        const key2 = colorKey(color);
+        if (!lookup.has(key2)) {
+          lookup.set(key2, index2);
         }
       });
       indexes = new Uint8Array(image.width * image.height);
@@ -35981,7 +36691,7 @@ var init_image_conversion = __esm({
         throw new Error("Invalid layout.tileOrder.");
       }
       if (tileOrder !== "blocks") {
-        if (Object.keys(raw).some((key) => key !== "tileOrder")) {
+        if (Object.keys(raw).some((key2) => key2 !== "tileOrder")) {
           throw new Error("Block options require tileOrder: 'blocks'.");
         }
         return { tileOrder };
@@ -36009,7 +36719,7 @@ var init_image_conversion = __esm({
         throw new Error("withinBlock must contain each 2\xD72 quadrant once.");
       }
       if (Object.keys(raw).some(
-        (key) => !["tileOrder", "blockSize", "blockOrder", "blockRows", "withinBlock"].includes(key)
+        (key2) => !["tileOrder", "blockSize", "blockOrder", "blockRows", "withinBlock"].includes(key2)
       )) {
         throw new Error("Unknown block layout option.");
       }
@@ -36017,7 +36727,7 @@ var init_image_conversion = __esm({
     };
     readOptions = (raw, indexed) => {
       if (Object.keys(raw).some(
-        (key) => !["palette", "paletteExpansion", "layout", "tilemap"].includes(key)
+        (key2) => !["palette", "paletteExpansion", "layout", "tilemap"].includes(key2)
       )) {
         throw new Error("Unknown image conversion option.");
       }
@@ -36034,14 +36744,14 @@ var init_image_conversion = __esm({
       }
       const map = raw.tilemap === void 0 ? {} : raw.tilemap;
       if (!isRecord4(map) || Object.keys(map).some(
-        (key) => ![
+        (key2) => ![
           "layout",
           "startTileIndex",
           "paletteBank",
           "priority",
           "horizontalFlip",
           "verticalFlip"
-        ].includes(key)
+        ].includes(key2)
       )) {
         throw new Error("Invalid tilemap options.");
       }
@@ -36108,7 +36818,7 @@ var registry, encoders, aliases2, imageOptions, audioOptions2, optionSchemaFor, 
 var init_assembly_formats = __esm({
   async "packages/plugin-snes/src/assets/assembly-formats.ts"() {
     "use strict";
-    init_src2();
+    init_src3();
     await init_audio();
     init_data2();
     await init_image();
@@ -38314,7 +39024,7 @@ var init_ram_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/source-export.ts
-var init_source_export = __esm({
+var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
   }
@@ -38483,6 +39193,13 @@ var init_project_initializer = __esm({
   }
 });
 
+// packages/plugin-snes/src/disassembler/modification-project.ts
+var init_modification_project = __esm({
+  async "packages/plugin-snes/src/disassembler/modification-project.ts"() {
+    "use strict";
+  }
+});
+
 // packages/plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
   "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
@@ -38491,7 +39208,7 @@ var init_superfx_analysis = __esm({
 });
 
 // packages/plugin-snes/src/index.ts
-var init_src3 = __esm({
+var init_src4 = __esm({
   async "packages/plugin-snes/src/index.ts"() {
     "use strict";
     await init_assembler2();
@@ -38505,7 +39222,7 @@ var init_src3 = __esm({
     init_mesen_labels();
     init_framework_asset_helpers();
     init_rom_header();
-    init_source_export();
+    init_source_export2();
     init_spc700_address_space();
     init_spc700_analysis();
     init_spc700_hardware_registers();
@@ -38513,6 +39230,7 @@ var init_src3 = __esm({
     init_spc700_upload();
     init_processor_source_export();
     init_project_initializer();
+    init_modification_project();
     init_ram_map();
     init_superfx_address_space();
     init_superfx_analysis();
@@ -39046,19 +39764,19 @@ var require_linkedMap = __commonJS({
       get last() {
         return this._tail?.value;
       }
-      before(key) {
-        const item = this._map.get(key);
+      before(key2) {
+        const item = this._map.get(key2);
         return item ? item.previous?.value : void 0;
       }
-      after(key) {
-        const item = this._map.get(key);
+      after(key2) {
+        const item = this._map.get(key2);
         return item ? item.next?.value : void 0;
       }
-      has(key) {
-        return this._map.has(key);
+      has(key2) {
+        return this._map.has(key2);
       }
-      get(key, touch = Touch.None) {
-        const item = this._map.get(key);
+      get(key2, touch = Touch.None) {
+        const item = this._map.get(key2);
         if (!item) {
           return void 0;
         }
@@ -39067,15 +39785,15 @@ var require_linkedMap = __commonJS({
         }
         return item.value;
       }
-      set(key, value, touch = Touch.None) {
-        let item = this._map.get(key);
+      set(key2, value, touch = Touch.None) {
+        let item = this._map.get(key2);
         if (item) {
           item.value = value;
           if (touch !== Touch.None) {
             this.touch(item, touch);
           }
         } else {
-          item = { key, value, next: void 0, previous: void 0 };
+          item = { key: key2, value, next: void 0, previous: void 0 };
           switch (touch) {
             case Touch.None:
               this.addItemLast(item);
@@ -39090,20 +39808,20 @@ var require_linkedMap = __commonJS({
               this.addItemLast(item);
               break;
           }
-          this._map.set(key, item);
+          this._map.set(key2, item);
           this._size++;
         }
         return this;
       }
-      delete(key) {
-        return !!this.remove(key);
+      delete(key2) {
+        return !!this.remove(key2);
       }
-      remove(key) {
-        const item = this._map.get(key);
+      remove(key2) {
+        const item = this._map.get(key2);
         if (!item) {
           return void 0;
         }
-        this._map.delete(key);
+        this._map.delete(key2);
         this.removeItem(item);
         this._size--;
         return item.value;
@@ -39327,15 +40045,15 @@ var require_linkedMap = __commonJS({
       }
       toJSON() {
         const data = [];
-        this.forEach((value, key) => {
-          data.push([key, value]);
+        this.forEach((value, key2) => {
+          data.push([key2, value]);
         });
         return data;
       }
       fromJSON(data) {
         this.clear();
-        for (const [key, value] of data) {
-          this.set(key, value);
+        for (const [key2, value] of data) {
+          this.set(key2, value);
         }
       }
     };
@@ -39362,14 +40080,14 @@ var require_linkedMap = __commonJS({
         this._ratio = Math.min(Math.max(0, ratio), 1);
         this.checkTrim();
       }
-      get(key, touch = Touch.AsNew) {
-        return super.get(key, touch);
+      get(key2, touch = Touch.AsNew) {
+        return super.get(key2, touch);
       }
-      peek(key) {
-        return super.get(key, Touch.None);
+      peek(key2) {
+        return super.get(key2, Touch.None);
       }
-      set(key, value) {
-        super.set(key, value, Touch.Last);
+      set(key2, value) {
+        super.set(key2, value, Touch.Last);
         this.checkTrim();
         return this;
       }
@@ -40334,9 +41052,9 @@ var require_messageBuffer = __commonJS({
             throw new Error(`Message header must separate key and value using ':'
 ${header}`);
           }
-          const key = header.substr(0, index2);
+          const key2 = header.substr(0, index2);
           const value = header.substr(index2 + 1).trim();
-          result.set(lowerCaseKeys ? key.toLowerCase() : key, value);
+          result.set(lowerCaseKeys ? key2.toLowerCase() : key2, value);
         }
         return result;
       }
@@ -40813,13 +41531,13 @@ var require_connection = __commonJS({
         try {
           if (messages_1.Message.isNotification(message) && message.method === CancelNotification.type.method) {
             const cancelId = message.params.id;
-            const key = createRequestQueueKey(cancelId);
-            const toCancel = messageQueue.get(key);
+            const key2 = createRequestQueueKey(cancelId);
+            const toCancel = messageQueue.get(key2);
             if (messages_1.Message.isRequest(toCancel)) {
               const strategy = options?.connectionStrategy;
               const response = strategy && strategy.cancelUndispatched ? strategy.cancelUndispatched(toCancel, cancelUndispatched) : cancelUndispatched(toCancel);
               if (response && (response.error !== void 0 || response.result !== void 0)) {
-                messageQueue.delete(key);
+                messageQueue.delete(key2);
                 requestTokens.delete(cancelId);
                 response.id = toCancel.id;
                 traceSendingResponse(response, message.method, Date.now());
@@ -40936,11 +41654,11 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
             logger.error(`Received response message without id. No further error information provided.`);
           }
         } else {
-          const key = responseMessage.id;
-          const responsePromise = responsePromises.get(key);
+          const key2 = responseMessage.id;
+          const responsePromise = responsePromises.get(key2);
           traceReceivedResponse(responseMessage, responsePromise);
           if (responsePromise !== void 0) {
-            responsePromises.delete(key);
+            responsePromises.delete(key2);
             try {
               if (responseMessage.error) {
                 const error = responseMessage.error;
@@ -41033,8 +41751,8 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
 ${JSON.stringify(message, null, 4)}`);
         const responseMessage = message;
         if (Is.string(responseMessage.id) || Is.number(responseMessage.id)) {
-          const key = responseMessage.id;
-          const responseHandler = responsePromises.get(key);
+          const key2 = responseMessage.id;
+          const responseHandler = responsePromises.get(key2);
           if (responseHandler) {
             responseHandler.reject(new Error("The received response has neither a result nor an error property."));
           }
@@ -42366,9 +43084,9 @@ var require_main = __commonJS({
                   }
                 });
               } else if (workspaceEdit.changes) {
-                Object.keys(workspaceEdit.changes).forEach(function(key) {
-                  var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
-                  _this._textEditChanges[key] = textEditChange;
+                Object.keys(workspaceEdit.changes).forEach(function(key2) {
+                  var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key2]);
+                  _this._textEditChanges[key2] = textEditChange;
                 });
               }
             } else {
@@ -42394,13 +43112,13 @@ var require_main = __commonJS({
             enumerable: false,
             configurable: true
           });
-          WorkspaceChange2.prototype.getTextEditChange = function(key) {
-            if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+          WorkspaceChange2.prototype.getTextEditChange = function(key2) {
+            if (OptionalVersionedTextDocumentIdentifier.is(key2)) {
               this.initDocumentChanges();
               if (this._workspaceEdit.documentChanges === void 0) {
                 throw new Error("Workspace edit is not configured for document changes.");
               }
-              var textDocument = { uri: key.uri, version: key.version };
+              var textDocument = { uri: key2.uri, version: key2.version };
               var result = this._textEditChanges[textDocument.uri];
               if (!result) {
                 var edits2 = [];
@@ -42418,12 +43136,12 @@ var require_main = __commonJS({
               if (this._workspaceEdit.changes === void 0) {
                 throw new Error("Workspace edit is not configured for normal text edit changes.");
               }
-              var result = this._textEditChanges[key];
+              var result = this._textEditChanges[key2];
               if (!result) {
                 var edits2 = [];
-                this._workspaceEdit.changes[key] = edits2;
+                this._workspaceEdit.changes[key2] = edits2;
                 result = new TextEditChangeImpl(edits2);
-                this._textEditChanges[key] = result;
+                this._textEditChanges[key2] = result;
               }
               return result;
             }
@@ -46324,8 +47042,8 @@ var require_notebook = __commonJS({
         return value && value[0];
       }
       findNotebookDocumentForCell(cell) {
-        const key = typeof cell === "string" ? cell : cell.document;
-        const value = this.notebookCellMap.get(key);
+        const key2 = typeof cell === "string" ? cell : cell.document;
+        const value = this.notebookCellMap.get(key2);
         return value && value[1];
       }
       get onDidOpen() {
@@ -47402,8 +48120,8 @@ var require_files = __commonJS({
     exports.resolveGlobalYarnPath = resolveGlobalYarnPath;
     exports.resolveModulePath = resolveModulePath;
     var url = __importStar(__require("url"));
-    var path13 = __importStar(__require("path"));
-    var fs5 = __importStar(__require("fs"));
+    var path16 = __importStar(__require("path"));
+    var fs8 = __importStar(__require("fs"));
     var child_process_1 = __require("child_process");
     function uriToFilePath(uri) {
       const parsed = url.parse(uri);
@@ -47421,7 +48139,7 @@ var require_files = __commonJS({
           segments.shift();
         }
       }
-      return path13.normalize(segments.join("/"));
+      return path16.normalize(segments.join("/"));
     }
     function isWindows() {
       return process.platform === "win32";
@@ -47448,10 +48166,10 @@ var require_files = __commonJS({
       return new Promise((resolve2, reject) => {
         const env = process.env;
         const newEnv = /* @__PURE__ */ Object.create(null);
-        Object.keys(env).forEach((key) => newEnv[key] = env[key]);
-        if (nodePath2 && fs5.existsSync(nodePath2)) {
+        Object.keys(env).forEach((key2) => newEnv[key2] = env[key2]);
+        if (nodePath2 && fs8.existsSync(nodePath2)) {
           if (newEnv[nodePathKey]) {
-            newEnv[nodePathKey] = nodePath2 + path13.delimiter + newEnv[nodePathKey];
+            newEnv[nodePathKey] = nodePath2 + path16.delimiter + newEnv[nodePathKey];
           } else {
             newEnv[nodePathKey] = nodePath2;
           }
@@ -47496,7 +48214,7 @@ var require_files = __commonJS({
     function resolveGlobalNodePath(tracer) {
       let npmCommand = "npm";
       const env = /* @__PURE__ */ Object.create(null);
-      Object.keys(process.env).forEach((key) => env[key] = process.env[key]);
+      Object.keys(process.env).forEach((key2) => env[key2] = process.env[key2]);
       env["NO_UPDATE_NOTIFIER"] = "true";
       const options = {
         encoding: "utf8",
@@ -47523,9 +48241,9 @@ var require_files = __commonJS({
         }
         if (prefix.length > 0) {
           if (isWindows()) {
-            return path13.join(prefix, "node_modules");
+            return path16.join(prefix, "node_modules");
           } else {
-            return path13.join(prefix, "lib", "node_modules");
+            return path16.join(prefix, "lib", "node_modules");
           }
         }
         return void 0;
@@ -47564,7 +48282,7 @@ var require_files = __commonJS({
           try {
             const yarn = JSON.parse(line);
             if (yarn.type === "log") {
-              return path13.join(yarn.data, "node_modules");
+              return path16.join(yarn.data, "node_modules");
             }
           } catch (e) {
           }
@@ -47586,24 +48304,24 @@ var require_files = __commonJS({
         if (process.platform === "win32") {
           _isCaseSensitive = false;
         } else {
-          _isCaseSensitive = !fs5.existsSync(__filename.toUpperCase()) || !fs5.existsSync(__filename.toLowerCase());
+          _isCaseSensitive = !fs8.existsSync(__filename.toUpperCase()) || !fs8.existsSync(__filename.toLowerCase());
         }
         return _isCaseSensitive;
       }
       FileSystem2.isCaseSensitive = isCaseSensitive;
       function isParent(parent, child) {
         if (isCaseSensitive()) {
-          return path13.normalize(child).indexOf(path13.normalize(parent)) === 0;
+          return path16.normalize(child).indexOf(path16.normalize(parent)) === 0;
         } else {
-          return path13.normalize(child).toLowerCase().indexOf(path13.normalize(parent).toLowerCase()) === 0;
+          return path16.normalize(child).toLowerCase().indexOf(path16.normalize(parent).toLowerCase()) === 0;
         }
       }
       FileSystem2.isParent = isParent;
     })(FileSystem || (exports.FileSystem = FileSystem = {}));
     function resolveModulePath(workspaceRoot2, moduleName, nodePath2, tracer) {
       if (nodePath2) {
-        if (!path13.isAbsolute(nodePath2)) {
-          nodePath2 = path13.join(workspaceRoot2, nodePath2);
+        if (!path16.isAbsolute(nodePath2)) {
+          nodePath2 = path16.join(workspaceRoot2, nodePath2);
         }
         return resolve(moduleName, nodePath2, nodePath2, tracer).then((value) => {
           if (FileSystem.isParent(nodePath2, value)) {
@@ -47836,9 +48554,9 @@ var require_main2 = __commonJS({
     exports.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path13 = __importStar(__require("path"));
+    var path16 = __importStar(__require("path"));
     var os = __importStar(__require("os"));
-    var fs5 = __importStar(__require("fs"));
+    var fs8 = __importStar(__require("fs"));
     var crypto_1 = __require("crypto");
     var net_1 = __require("net");
     var api_1 = require_api();
@@ -47979,7 +48697,7 @@ var require_main2 = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs5.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
+      const tmpDir = fs8.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -47988,7 +48706,7 @@ var require_main2 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path13.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path16.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -48432,9 +49150,10 @@ ${stack}`);
 // packages/language-server/src/server.ts
 init_src();
 init_debug_map();
-import { createHash as createHash4 } from "node:crypto";
-import fs4 from "node:fs";
-import path12 from "node:path";
+init_src2();
+import { createHash as createHash5 } from "node:crypto";
+import fs7 from "node:fs";
+import path15 from "node:path";
 
 // packages/plugin-65xx/src/index.ts
 init_src();
@@ -50380,11 +51099,11 @@ function decodeTable(table) {
       if (!modeDefinition) {
         throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
       }
-      const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
-      if (seenModes.has(key)) {
+      const key2 = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
+      if (seenModes.has(key2)) {
         continue;
       }
-      seenModes.add(key);
+      seenModes.add(key2);
       forms.push(createForm(table, row, modeIndex, modeDefinition));
     }
   }
@@ -50700,15 +51419,15 @@ var mutableForms = decoded.map((entry, opcode) => {
   }
   const documented = legalOpcodes.has(opcode);
   const codec = getOperandCodec(mode3);
-  const key = `${mnemonic}:${mode3}`;
+  const key2 = `${mnemonic}:${mode3}`;
   let stability = "stable-undocumented";
   if (documented) {
     stability = "documented";
-  } else if (unstable.has(key)) {
+  } else if (unstable.has(key2)) {
     stability = "unstable-undocumented";
   }
   let note;
-  if (unstable.has(key)) {
+  if (unstable.has(key2)) {
     note = "Opcode semantics are unstable or chip-dependent. Assembly emits the canonical ca65-compatible byte.";
   } else if (opcode === 108) {
     note = "NMOS hardware wraps the high-byte fetch within the same page when the indirect pointer ends in $FF.";
@@ -50730,10 +51449,10 @@ var mutableForms = decoded.map((entry, opcode) => {
 });
 var groups = /* @__PURE__ */ new Map();
 for (const form of mutableForms) {
-  const key = `${form.mnemonic}:${form.mode}`;
-  const group = groups.get(key) ?? [];
+  const key2 = `${form.mnemonic}:${form.mode}`;
+  const group = groups.get(key2) ?? [];
   group.push(form);
-  groups.set(key, group);
+  groups.set(key2, group);
 }
 for (const group of groups.values()) {
   const preferred = group.find((form) => form.documented) ?? group[0];
@@ -51875,11 +52594,11 @@ function parseCa65AddressSizePrefix(operand) {
     return { rest: operand, force: void 0 };
   }
   const rest = match[2].trim();
-  const key = match[1].toLowerCase();
-  if (key === "z") {
+  const key2 = match[1].toLowerCase();
+  if (key2 === "z") {
     return { rest, force: 1 };
   }
-  if (key === "a") {
+  if (key2 === "a") {
     return { rest, force: 2 };
   }
   return { rest, force: 3 };
@@ -52026,9 +52745,9 @@ function parseNamedStatement(statement) {
     if (equals <= 0) {
       continue;
     }
-    const key = part.slice(0, equals).trim().toLowerCase();
+    const key2 = part.slice(0, equals).trim().toLowerCase();
     const value = part.slice(equals + 1).trim();
-    attrs[key] = value;
+    attrs[key2] = value;
   }
   return { name, attrs };
 }
@@ -52078,10 +52797,10 @@ function parseNumberToken(token) {
   }
   return void 0;
 }
-function requireNumber(attrs, key, owner) {
-  const value = parseNumberToken(attrs[key]);
+function requireNumber(attrs, key2, owner) {
+  const value = parseNumberToken(attrs[key2]);
   if (value === void 0) {
-    throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);
+    throw new Error(`ld65 '${owner}' is missing numeric ${key2}.`);
   }
   return value;
 }
@@ -52253,7 +52972,7 @@ function createRaw65xxTargetOptions(configured) {
     throw new Error("65xx raw target options must be an object with an optional numeric 'origin'.");
   }
   const keys = Object.keys(configured);
-  const unknown = keys.filter((key) => key !== "origin");
+  const unknown = keys.filter((key2) => key2 !== "origin");
   if (unknown.length > 0) {
     throw new Error(`Unknown 65xx raw target option(s): ${unknown.join(", ")}.`);
   }
@@ -52686,8 +53405,8 @@ var src_default = plugin;
 
 // packages/plugin-loader-node/src/configuration.ts
 init_plugin();
-import { existsSync as existsSync2, promises as fs } from "node:fs";
-import path6 from "node:path";
+import { existsSync as existsSync3, promises as fs4 } from "node:fs";
+import path9 from "node:path";
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
 var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
   "$schema",
@@ -52728,7 +53447,7 @@ var validatePluginEntry = (value, index2) => {
   if (!isRecord2(value)) {
     throw configurationError(`Configuration entry '${entry}' must be an object.`);
   }
-  const unknown = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
+  const unknown = Object.keys(value).filter((key2) => !PLUGIN_KEYS.has(key2));
   if (unknown.length > 0) {
     throw configurationError(
       `Configuration entry '${entry}' has unknown field(s): ${unknown.join(", ")}.`
@@ -52749,7 +53468,7 @@ var validateProjectConfiguration = (value) => {
   if (!isRecord2(value)) {
     throw configurationError("Project configuration must be a JSON object.");
   }
-  const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
+  const unknown = Object.keys(value).filter((key2) => !TOP_LEVEL_KEYS.has(key2));
   if (unknown.length > 0) {
     throw configurationError(`Project configuration has unknown field(s): ${unknown.join(", ")}.`);
   }
@@ -52776,19 +53495,19 @@ var validateProjectConfiguration = (value) => {
 };
 var discoverProjectConfigurationPath = (cwd, configuredPath) => {
   if (configuredPath) {
-    return path6.resolve(cwd, configuredPath);
+    return path9.resolve(cwd, configuredPath);
   }
-  const candidate = path6.resolve(cwd, PROJECT_CONFIG_FILENAME);
-  return existsSync2(candidate) ? candidate : void 0;
+  const candidate = path9.resolve(cwd, PROJECT_CONFIG_FILENAME);
+  return existsSync3(candidate) ? candidate : void 0;
 };
 var readProjectConfiguration = async (cwd, configuredPath) => {
   const explicit = configuredPath !== void 0;
-  const candidates = explicit ? [path6.resolve(cwd, configuredPath)] : [path6.resolve(cwd, PROJECT_CONFIG_FILENAME)];
+  const candidates = explicit ? [path9.resolve(cwd, configuredPath)] : [path9.resolve(cwd, PROJECT_CONFIG_FILENAME)];
   let lastError;
   for (const configPath of candidates) {
     let source;
     try {
-      source = await fs.readFile(configPath, "utf8");
+      source = await fs4.readFile(configPath, "utf8");
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
       if (code === "ENOENT") {
@@ -52805,12 +53524,12 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
     }
     return {
       path: configPath,
-      directory: path6.dirname(configPath),
+      directory: path9.dirname(configPath),
       configuration: validateProjectConfiguration(parsed)
     };
   }
   if (!explicit) {
-    return { directory: path6.resolve(cwd), configuration: {} };
+    return { directory: path9.resolve(cwd), configuration: {} };
   }
   throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
 };
@@ -52819,7 +53538,7 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
 init_plugin();
 import { realpath } from "node:fs/promises";
 import { registerHooks } from "node:module";
-import path7 from "node:path";
+import path10 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var toOptionsRecord = (value, entry) => {
@@ -52845,7 +53564,7 @@ var stableValue = (value) => {
   }
   if (isRecord3(value)) {
     return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, stableValue(value[key])])
+      Object.keys(value).sort().map((key2) => [key2, stableValue(value[key2])])
     );
   }
   return value;
@@ -52870,10 +53589,10 @@ var resolveExternalModule = async (request) => {
     if (request.module.startsWith("file:")) {
       return normalizeFileUrl(new URL(request.module));
     }
-    if (path7.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
-      return normalizeFileUrl(pathToFileURL(path7.resolve(request.baseDirectory, request.module)));
+    if (path10.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
+      return normalizeFileUrl(pathToFileURL(path10.resolve(request.baseDirectory, request.module)));
     }
-    const parent = pathToFileURL(path7.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
+    const parent = pathToFileURL(path10.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
     const marker = "uttori:resolve-project-plugin";
     const hooks = registerHooks({
       resolve(specifier, context, nextResolve) {
@@ -52931,7 +53650,7 @@ var NodePluginLoader = class {
    * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
    */
   async loadProjectEnvironment(options) {
-    const cwd = path7.resolve(options.cwd);
+    const cwd = path10.resolve(options.cwd);
     const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
     const configPlugins = loadedConfig.configuration.plugins ?? [];
     const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
@@ -52998,7 +53717,7 @@ var NodePluginLoader = class {
       includeBase = loadedConfig.directory;
     }
     const includePaths = [
-      ...new Set(configuredIncludePaths.map((entry) => path7.resolve(includeBase, entry)))
+      ...new Set(configuredIncludePaths.map((entry) => path10.resolve(includeBase, entry)))
     ];
     const preliminarySnapshot = JSON.stringify(
       stableValue({
@@ -53145,11 +53864,11 @@ var NodePluginLoader = class {
     };
   }
   #assertAllPluginOptionOverridesMatched(options, modules) {
-    for (const key of Object.keys(options.overrides?.pluginOptions ?? {})) {
-      if (!modules.some((item) => item.module === key || item.pluginId === key)) {
-        throw new PluginError(`Plugin option override '${key}' does not match a loaded plugin.`, {
+    for (const key2 of Object.keys(options.overrides?.pluginOptions ?? {})) {
+      if (!modules.some((item) => item.module === key2 || item.pluginId === key2)) {
+        throw new PluginError(`Plugin option override '${key2}' does not match a loaded plugin.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
-          pluginId: key
+          pluginId: key2
         });
       }
     }
@@ -53171,7 +53890,7 @@ var NodePluginLoader = class {
 };
 
 // packages/language-server/src/server.ts
-await init_src3();
+await init_src4();
 
 // node_modules/vscode-languageserver-textdocument/lib/esm/main.js
 var FullTextDocument = class _FullTextDocument {
@@ -53425,8 +54144,8 @@ function getWellformedEdit(textEdit) {
 var import_node = __toESM(require_main4(), 1);
 
 // packages/language-server/src/asset-preview-service.ts
-import { createHash as createHash3 } from "node:crypto";
-import path9 from "node:path";
+import { createHash as createHash4 } from "node:crypto";
+import path12 from "node:path";
 import { Worker } from "node:worker_threads";
 
 // packages/language-server/src/asset-language.ts
@@ -53468,9 +54187,10 @@ function assetLineAt(text, lineNumber) {
 init_src();
 
 // packages/language-server/src/providers.ts
+init_src2();
 var import_vscode_languageserver = __toESM(require_api3(), 1);
-import fs2 from "node:fs";
-import path8 from "node:path";
+import fs5 from "node:fs";
+import path11 from "node:path";
 import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
 var semanticTokensLegend = {
   tokenTypes: [
@@ -54015,8 +54735,8 @@ function documentSymbolsFor(index2, file) {
 function projectOutlineFor(index2) {
   const childrenByParent = /* @__PURE__ */ new Map();
   for (const edge of index2.getIncludeEdges()) {
-    const from = path8.resolve(edge.fromFile);
-    const to = path8.resolve(edge.toFile);
+    const from = path11.resolve(edge.fromFile);
+    const to = path11.resolve(edge.toFile);
     const list = childrenByParent.get(from) ?? [];
     if (!list.includes(to)) {
       list.push(to);
@@ -54025,11 +54745,11 @@ function projectOutlineFor(index2) {
   }
   const visited = /* @__PURE__ */ new Set();
   const buildFile = (file) => {
-    const resolved = path8.resolve(file);
+    const resolved = path11.resolve(file);
     if (visited.has(resolved)) {
       return {
         id: `include:${resolved}:${visited.size}`,
-        label: path8.basename(resolved),
+        label: path11.basename(resolved),
         detail: "include",
         kind: "include",
         uri: pathToUri(resolved)
@@ -54038,22 +54758,22 @@ function projectOutlineFor(index2) {
     visited.add(resolved);
     return {
       id: `file:${resolved}`,
-      label: path8.basename(resolved),
+      label: path11.basename(resolved),
       kind: "file",
       uri: pathToUri(resolved),
       children: (childrenByParent.get(resolved) ?? []).map((child) => buildFile(child))
     };
   };
-  const entries3 = index2.resolveRoots().map((root) => path8.resolve(root));
+  const entries3 = index2.resolveRoots().map((root) => path11.resolve(root));
   const roots = entries3.map((entry) => ({
     id: `entry:${entry}`,
-    label: `Entry: ${path8.basename(entry)}`,
+    label: `Entry: ${path11.basename(entry)}`,
     kind: "entry",
     uri: pathToUri(entry),
     children: [buildFile(entry)]
   }));
   const reachable = visited;
-  const analyzed = index2.getAnalyzedFiles().map((file) => path8.resolve(file));
+  const analyzed = index2.getAnalyzedFiles().map((file) => path11.resolve(file));
   const orphans = analyzed.filter((file) => !reachable.has(file));
   if (orphans.length === 0) {
     return roots;
@@ -54066,7 +54786,7 @@ function projectOutlineFor(index2) {
       kind: "orphanGroup",
       children: orphans.map((file) => ({
         id: `orphan:${file}`,
-        label: path8.basename(file),
+        label: path11.basename(file),
         kind: "file",
         uri: pathToUri(file)
       }))
@@ -54170,7 +54890,7 @@ function hoverFor(index2, file, position, text) {
       }
       let size;
       try {
-        size = fs2.statSync(resolved).size;
+        size = fs5.statSync(resolved).size;
       } catch {
         return markdownHover(
           `Asset \`${displayPath}\` changed or is unreadable. Build Binary will report its diagnostic.`
@@ -54266,11 +54986,11 @@ function completionsFor(index2) {
   }));
   const seen = /* @__PURE__ */ new Set();
   for (const symbol of index2.getAllSymbols()) {
-    const key = `${symbol.kind}\0${symbol.name}`;
-    if (seen.has(key)) {
+    const key2 = `${symbol.kind}\0${symbol.name}`;
+    if (seen.has(key2)) {
       continue;
     }
-    seen.add(key);
+    seen.add(key2);
     items.push({
       label: symbol.name,
       kind: symbolCompletionKind(symbol.kind),
@@ -54364,6 +55084,10 @@ function signatureHelpFor(lineText, index2) {
   return null;
 }
 function prepareRenameFor(index2, file, position) {
+  const target = renameTargetAt(index2, file, position);
+  if (target) {
+    assertRenameIsUserOwned(index2, file, target);
+  }
   const word2 = cursorWord(index2, file, position);
   const reference = cursorReference(index2, file, position, word2);
   if (reference && isRenameableReference(reference)) {
@@ -54380,6 +55104,7 @@ function renameEditsFor(index2, file, position, newName) {
   if (!target) {
     return null;
   }
+  assertRenameIsUserOwned(index2, file, target);
   const kind = target.symbol?.kind ?? target.reference?.kind;
   const effectiveName = kind === "define" && newName.startsWith("!") ? newName.slice(1) : newName;
   const editsByUri = /* @__PURE__ */ new Map();
@@ -54398,6 +55123,26 @@ function renameEditsFor(index2, file, position, newName) {
     return null;
   }
   return { changes: Object.fromEntries(editsByUri) };
+}
+function assertRenameIsUserOwned(index2, file, target) {
+  const files = /* @__PURE__ */ new Set([file]);
+  for (const symbol of index2.getAllSymbols()) {
+    if (symbolMatchesRenameTarget(symbol, target)) {
+      files.add(symbol.location.file);
+    }
+  }
+  for (const reference of index2.getAllReferences()) {
+    if (referenceMatchesRenameTarget(reference, target)) {
+      files.add(reference.location.file);
+    }
+  }
+  for (const candidate of files) {
+    if (findManagedSourceFile(candidate)) {
+      throw new Error(
+        "This symbol belongs to generated disassembly. Use Assembly: Inspect Disassembly Ownership, then Edit Owned Annotation or Open Owning Input. Text-only Rename Symbol would be lost during regeneration."
+      );
+    }
+  }
 }
 function renameTargetAt(index2, file, position) {
   const word2 = cursorWord(index2, file, position);
@@ -54563,21 +55308,21 @@ function definitionToLocation(index2, symbol) {
 function resolveIncludeTarget2(index2, file, target) {
   const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
   const normalizedTarget = trimmed.replace(/\\/g, "/");
-  const base = path8.basename(normalizedTarget);
+  const base = path11.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);
   const match = edges.find(
-    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path8.basename(edge.toFile) === base
+    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path11.basename(edge.toFile) === base
   );
   if (match?.toFile) {
     return match.toFile;
   }
   const searchRoots = [
-    path8.dirname(file),
-    ...index2.includePaths.map((entry) => path8.resolve(path8.dirname(file), entry))
+    path11.dirname(file),
+    ...index2.includePaths.map((entry) => path11.resolve(path11.dirname(file), entry))
   ];
   for (const root of searchRoots) {
-    const candidate = path8.isAbsolute(trimmed) ? trimmed : path8.resolve(root, trimmed);
-    if (fs2.existsSync(candidate)) {
+    const candidate = path11.isAbsolute(trimmed) ? trimmed : path11.resolve(root, trimmed);
+    if (fs5.existsSync(candidate)) {
       return candidate;
     }
   }
@@ -54611,7 +55356,7 @@ function renderSymbolDocs(index2, symbol) {
   if (annotation) {
     lines.push("", annotation);
   }
-  lines.push("", `Defined in \`${path8.basename(symbol.location.file)}\``);
+  lines.push("", `Defined in \`${path11.basename(symbol.location.file)}\``);
   return lines.join("\n");
 }
 function symbolAnnotation(index2, symbol) {
@@ -54675,14 +55420,14 @@ function outlineDetail(symbol) {
 function dedupeOutlineChildren(children) {
   const seen = /* @__PURE__ */ new Map();
   for (const child of children) {
-    const key = `${child.name}\0${child.selectionRange.start.line}`;
-    const existing = seen.get(key);
+    const key2 = `${child.name}\0${child.selectionRange.start.line}`;
+    const existing = seen.get(key2);
     const childCount = child.children?.length ?? 0;
     const existingCount = existing?.children?.length ?? 0;
     const childHasValue = child.detail?.includes("$") ?? false;
     const existingHasValue = existing?.detail?.includes("$") ?? false;
     if (!existing || childCount > existingCount || childCount === existingCount && childHasValue && !existingHasValue) {
-      seen.set(key, child);
+      seen.set(key2, child);
     }
   }
   return [...seen.values()];
@@ -54777,7 +55522,7 @@ var MAX_INPUT_BYTES2 = 2 * 1024 * 1024;
 var MAX_TOTAL_BYTES = 3 * 1024 * 1024;
 var MAX_CACHE_ENTRIES = 16;
 function supportsPortableAssetPreview(id) {
-  return id.startsWith("snes.") || id === "uttori.data.raw" || id === "som.sprite.frames" || id === "som.boss.graphics" || id === "som.palette.bgr555" || id === "som.brr.pcm" || id === "som.brr.segment";
+  return id.startsWith("snes.") || id === "uttori.data.raw" || id === "som.sprite.frames" || id === "som.boss.graphics" || id === "som.palette.bgr555" || id === "som.room" || id === "som.brr.pcm" || id === "som.brr.segment";
 }
 function literal(node) {
   if (node.kind === "string" || node.kind === "boolean") {
@@ -54804,7 +55549,7 @@ function literal(node) {
     return node.items.map(literal);
   }
   return Object.fromEntries(
-    Object.entries(node.entries).map(([key, value]) => [key, literal(value)])
+    Object.entries(node.entries).map(([key2, value]) => [key2, literal(value)])
   );
 }
 function readInput(provider, declaringFile, includePaths, name) {
@@ -54823,7 +55568,7 @@ function readInput(provider, declaringFile, includePaths, name) {
   if (bytes.length > MAX_INPUT_BYTES2) {
     throw new Error(`Asset '${name}' exceeds the preview input limit.`);
   }
-  const extension = path9.extname(resolved).toLowerCase();
+  const extension = path12.extname(resolved).toLowerCase();
   let mediaType = "application/octet-stream";
   if (extension === ".png") {
     mediaType = "image/png";
@@ -54926,7 +55671,7 @@ var AssetPreviewService = class {
         output
       };
       const observedInputs = [{ path: source.path, bytes: source.bytes }, ...resourceSnapshots];
-      const hash = createHash3("sha256");
+      const hash = createHash4("sha256");
       hash.update(format.id).update(format.version).update(JSON.stringify(allOptions)).update(output ?? "");
       hash.update(source.bytes);
       for (const [name, resource] of Object.entries(resources).sort(
@@ -54934,11 +55679,11 @@ var AssetPreviewService = class {
       )) {
         hash.update(name).update(resource.bytes);
       }
-      const key = hash.digest("hex");
-      const cached = this.#cache.get(key);
+      const key2 = hash.digest("hex");
+      const cached = this.#cache.get(key2);
       if (cached) {
-        this.#cache.delete(key);
-        this.#cache.set(key, cached);
+        this.#cache.delete(key2);
+        this.#cache.set(key2, cached);
         return { ok: true, preview: cached };
       }
       const result = await inWorker(input, signal);
@@ -54956,7 +55701,7 @@ var AssetPreviewService = class {
           return { ok: false, message: "Asset input changed during preview." };
         }
       }
-      this.#cache.set(key, result);
+      this.#cache.set(key2, result);
       if (this.#cache.size > MAX_CACHE_ENTRIES) {
         this.#cache.delete(this.#cache.keys().next().value);
       }
@@ -54972,12 +55717,12 @@ var AssetPreviewService = class {
 };
 
 // packages/language-server/src/build.ts
-import fs3 from "node:fs";
-import path10 from "node:path";
+import fs6 from "node:fs";
+import path13 from "node:path";
 var temporaryArtifactSequence = 0;
 var sameFileContent = (file, content) => {
   try {
-    return Buffer.from(content).equals(fs3.readFileSync(file));
+    return Buffer.from(content).equals(fs6.readFileSync(file));
   } catch (error) {
     if (error.code === "ENOENT") {
       return false;
@@ -54987,49 +55732,49 @@ var sameFileContent = (file, content) => {
 };
 var stageArtifact = (file, content) => {
   temporaryArtifactSequence += 1;
-  const staged = path10.join(
-    path10.dirname(file),
-    `.${path10.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
+  const staged = path13.join(
+    path13.dirname(file),
+    `.${path13.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
   );
-  fs3.writeFileSync(staged, content, { flag: "wx" });
+  fs6.writeFileSync(staged, content, { flag: "wx" });
   return staged;
 };
 function commitBuildArtifactPair(outputPath, output, debugMapJson) {
-  const resolvedOutput = path10.resolve(outputPath);
+  const resolvedOutput = path13.resolve(outputPath);
   const debugMapPath = `${resolvedOutput}.debug.json`;
   const mapBytes = Buffer.from(debugMapJson, "utf8");
-  fs3.mkdirSync(path10.dirname(resolvedOutput), { recursive: true });
+  fs6.mkdirSync(path13.dirname(resolvedOutput), { recursive: true });
   const outputChanged = !sameFileContent(resolvedOutput, output);
   const debugMapChanged = !sameFileContent(debugMapPath, mapBytes);
   if (!outputChanged && !debugMapChanged) {
     return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
   }
-  const oldOutput = fs3.existsSync(resolvedOutput) ? fs3.readFileSync(resolvedOutput) : void 0;
+  const oldOutput = fs6.existsSync(resolvedOutput) ? fs6.readFileSync(resolvedOutput) : void 0;
   const stagedOutput = stageArtifact(resolvedOutput, output);
   let stagedMap;
   let outputCommitted = false;
   try {
     stagedMap = stageArtifact(debugMapPath, mapBytes);
-    fs3.renameSync(stagedOutput, resolvedOutput);
+    fs6.renameSync(stagedOutput, resolvedOutput);
     outputCommitted = true;
-    fs3.renameSync(stagedMap, debugMapPath);
+    fs6.renameSync(stagedMap, debugMapPath);
     stagedMap = void 0;
   } catch (error) {
     if (outputCommitted) {
       if (oldOutput) {
         const rollback = stageArtifact(resolvedOutput, oldOutput);
-        fs3.renameSync(rollback, resolvedOutput);
-      } else if (fs3.existsSync(resolvedOutput)) {
-        fs3.unlinkSync(resolvedOutput);
+        fs6.renameSync(rollback, resolvedOutput);
+      } else if (fs6.existsSync(resolvedOutput)) {
+        fs6.unlinkSync(resolvedOutput);
       }
     }
     throw error;
   } finally {
-    if (fs3.existsSync(stagedOutput)) {
-      fs3.unlinkSync(stagedOutput);
+    if (fs6.existsSync(stagedOutput)) {
+      fs6.unlinkSync(stagedOutput);
     }
-    if (stagedMap && fs3.existsSync(stagedMap)) {
-      fs3.unlinkSync(stagedMap);
+    if (stagedMap && fs6.existsSync(stagedMap)) {
+      fs6.unlinkSync(stagedMap);
     }
   }
   return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
@@ -55038,12 +55783,12 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   const resolvedEntries = [
     ...new Set(
       entryPoints.map(
-        (entry) => path10.isAbsolute(entry) ? path10.normalize(entry) : path10.resolve(workspaceRoot2, entry)
+        (entry) => path13.isAbsolute(entry) ? path13.normalize(entry) : path13.resolve(workspaceRoot2, entry)
       )
     )
   ];
   if (requestedFile) {
-    const requested = path10.resolve(requestedFile);
+    const requested = path13.resolve(requestedFile);
     if (resolvedEntries.some((entry) => entry === requested)) {
       return {
         file: requested,
@@ -55055,7 +55800,7 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
     if (resolvedEntries.length > 0) {
       return {
         file: resolvedEntries[0],
-        reason: `active file ${path10.basename(requested)} is not a project entry point. Using ${path10.basename(resolvedEntries[0])}`,
+        reason: `active file ${path13.basename(requested)} is not a project entry point. Using ${path13.basename(resolvedEntries[0])}`,
         usedEntryPoint: true,
         requestedFile: requested
       };
@@ -55070,14 +55815,14 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   if (resolvedEntries.length > 0) {
     return {
       file: resolvedEntries[0],
-      reason: `no active editor. Using first project entry point ${path10.basename(resolvedEntries[0])}`,
+      reason: `no active editor. Using first project entry point ${path13.basename(resolvedEntries[0])}`,
       usedEntryPoint: true
     };
   }
   throw new Error("Open a source file or set asm.entryPoints before building.");
 }
 function emptyOutputMessage(file, usedEntryPoint) {
-  const base = path10.basename(file);
+  const base = path13.basename(file);
   if (usedEntryPoint) {
     return `Assembly produced 0 bytes for ${base}. Writes to unmapped addresses are skipped. the root file likely never set a mapper/org, or every store landed outside ROM.`;
   }
@@ -55089,8 +55834,8 @@ function formatElapsed(startedAt) {
 
 // packages/language-server/src/project-environment.ts
 init_src();
-import { existsSync as existsSync3 } from "node:fs";
-import path11 from "node:path";
+import { existsSync as existsSync4 } from "node:fs";
+import path14 from "node:path";
 var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
   if (typeof entry === "string") {
     if (!entry.trim()) {
@@ -55138,10 +55883,10 @@ var ProjectEnvironmentController = class {
    * @throws {Error} Configuration, plugin loading, or initial indexing fails.
    */
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
-    const cwd = path11.resolve(settings2.cwd);
+    const cwd = path14.resolve(settings2.cwd);
     const pluginModules = configuredPluginModules(settings2.plugins);
     const configuredPath = discoverProjectConfigurationPath(cwd, settings2.configFile);
-    const hasWorkspaceConfiguration = Boolean(settings2.configFile) || Boolean(configuredPath && existsSync3(configuredPath));
+    const hasWorkspaceConfiguration = Boolean(settings2.configFile) || Boolean(configuredPath && existsSync4(configuredPath));
     const workspacePluginsRequested = hasWorkspaceConfiguration || pluginModules.length > 0;
     const useHostDefaults = !settings2.workspaceTrusted || !hasWorkspaceConfiguration && pluginModules.length === 0;
     const loader = new NodePluginLoader();
@@ -55170,7 +55915,7 @@ var ProjectEnvironmentController = class {
         entryPoints: [...settings2.entryPoints ?? []],
         includePaths: [...loaded.includePaths],
         logger: this.options.logger,
-        cacheDir: path11.join(cwd, ".uttori-asm", "cache")
+        cacheDir: path14.join(cwd, ".uttori-asm", "cache")
       });
       for (const [file, content] of overlays) {
         index2.updateDocument(file, content);
@@ -55269,14 +56014,14 @@ var configurationDiagnostic;
 var configurationQueue = Promise.resolve();
 var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
 function resolveAgainstWorkspace(value) {
-  return path12.isAbsolute(value) ? path12.normalize(value) : path12.resolve(workspaceRoot(), value);
+  return path15.isAbsolute(value) ? path15.normalize(value) : path15.resolve(workspaceRoot(), value);
 }
 function isProjectConfigFile(file) {
-  const resolved = path12.resolve(file);
+  const resolved = path15.resolve(file);
   if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
     return true;
   }
-  return path12.basename(file) === PROJECT_CONFIG_FILENAME;
+  return path15.basename(file) === PROJECT_CONFIG_FILENAME;
 }
 function stringValue(value) {
   return typeof value === "string" && value.trim() ? value : void 0;
@@ -55289,7 +56034,7 @@ function mergeServerSettings(previous, value) {
     return previous;
   }
   const next = value;
-  const has = (key) => Object.prototype.hasOwnProperty.call(next, key);
+  const has = (key2) => Object.prototype.hasOwnProperty.call(next, key2);
   return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
     plugins: Array.isArray(next.plugins) ? next.plugins : previous.plugins,
@@ -55304,14 +56049,14 @@ function mergeServerSettings(previous, value) {
 }
 function applyConfigFileDefaults(next) {
   const discovered = discoverProjectConfigurationPath(workspaceRoot(), next.configFile);
-  if (!discovered || !fs4.existsSync(discovered)) {
+  if (!discovered || !fs7.existsSync(discovered)) {
     return next;
   }
-  const relativeConfig = path12.relative(workspaceRoot(), discovered) || path12.basename(discovered);
-  const relativeToConfig = (value) => path12.resolve(path12.dirname(discovered), value);
+  const relativeConfig = path15.relative(workspaceRoot(), discovered) || path15.basename(discovered);
+  const relativeToConfig = (value) => path15.resolve(path15.dirname(discovered), value);
   let extras = {};
   try {
-    extras = validateProjectConfiguration(JSON.parse(fs4.readFileSync(discovered, "utf8")));
+    extras = validateProjectConfiguration(JSON.parse(fs7.readFileSync(discovered, "utf8")));
   } catch {
     return { ...next, configFile: next.configFile ?? relativeConfig };
   }
@@ -55501,10 +56246,10 @@ connection.onDidChangeConfiguration((params) => {
   enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
 });
 function defaultOutputPath(file) {
-  const parsed = path12.parse(file);
+  const parsed = path15.parse(file);
   const { loaded } = environmentController.current;
   const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-  return path12.join(
+  return path15.join(
     parsed.dir,
     `${parsed.name}${extension.startsWith(".") ? extension : `.${extension}`}`
   );
@@ -55513,7 +56258,7 @@ function resolveOptionalBuildPath(configured, file) {
   if (!configured) {
     return void 0;
   }
-  return path12.isAbsolute(configured) ? path12.normalize(configured) : path12.resolve(workspaceRoots[0] ?? path12.dirname(file), configured);
+  return path15.isAbsolute(configured) ? path15.normalize(configured) : path15.resolve(workspaceRoots[0] ?? path15.dirname(file), configured);
 }
 function buildBinary(requestedFile, output, baseImage) {
   const startedAt = Date.now();
@@ -55537,7 +56282,7 @@ function buildBinary(requestedFile, output, baseImage) {
     log.info(`  configFile: ${settings.configFile || "(none)"}`);
     log.info(`  buildOutput setting: ${output ?? settings.buildOutput ?? "(default extension)"}`);
     log.info(`  baseImage setting: ${baseImage ?? settings.baseImage ?? "(none)"}`);
-    if (!fs4.existsSync(file)) {
+    if (!fs7.existsSync(file)) {
       const message = `Entry file does not exist: ${file}`;
       log.error(message);
       return { ok: false, message };
@@ -55546,24 +56291,26 @@ function buildBinary(requestedFile, output, baseImage) {
     const baseImagePath = resolveOptionalBuildPath(baseImage ?? settings.baseImage, file);
     if (baseImagePath) {
       log.info(`  base image path: ${baseImagePath}`);
-      if (!fs4.existsSync(baseImagePath)) {
+      if (!fs7.existsSync(baseImagePath)) {
         const message = `Base image does not exist: ${baseImagePath}`;
         log.error(message);
         return { ok: false, message };
       }
     }
     const assembler = environmentController.createAssembler({
-      ...baseImagePath ? { baseImage: new Uint8Array(fs4.readFileSync(baseImagePath)) } : {},
+      ...baseImagePath ? { baseImage: new Uint8Array(fs7.readFileSync(baseImagePath)) } : {},
       fileProvider: provider,
       collectSourceMetadata: true
     });
     try {
       const includePaths = [
-        .../* @__PURE__ */ new Set([path12.dirname(file), ...environmentController.current.loaded.includePaths])
+        .../* @__PURE__ */ new Set([path15.dirname(file), ...environmentController.current.loaded.includePaths])
       ];
       log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
       assembler.setIncludePaths(includePaths);
       assembler.setCurrentFile(file);
+      const managedGeneration = findManagedSourceFile(file);
+      const generationIdentity = managedGeneration ? sourceGenerationIdentity(managedGeneration.directory) : void 0;
       const source = provider.readTextFile(file);
       log.info(
         `  source: ${source.length} chars from ${provider.overlay.has(file) ? "editor buffer" : "disk"}`
@@ -55574,6 +56321,9 @@ function buildBinary(requestedFile, output, baseImage) {
       const assembleStarted = Date.now();
       assembler.assembleProgram(program);
       log.info(`  assembleProgram finished (${formatElapsed(assembleStarted)})`);
+      if (managedGeneration && generationIdentity) {
+        assertSourceGeneration(managedGeneration.directory, generationIdentity);
+      }
       const bytes = assembler.getBinaryOutput();
       log.info(`  emitted ${bytes.length} bytes (output buffer ${assembler.outputBytes.length})`);
       if (bytes.length === 0) {
@@ -55599,7 +56349,7 @@ function buildBinary(requestedFile, output, baseImage) {
             name: entry.name,
             size: sourceBytes.length,
             crc: CRC32.compute(sourceBytes),
-            sha256: createHash4("sha256").update(sourceBytes).digest("hex")
+            sha256: createHash5("sha256").update(sourceBytes).digest("hex")
           };
         }
       );
@@ -55609,6 +56359,9 @@ function buildBinary(requestedFile, output, baseImage) {
         mapping: assembler.addressToLineMapping,
         sourceRoot: workspaceRoot()
       });
+      if (managedGeneration && generationIdentity) {
+        assertSourceGeneration(managedGeneration.directory, generationIdentity);
+      }
       const committed = commitBuildArtifactPair(outputPath, bytes, canonicalDebugMapJson(debugMap));
       log.info(`  writing ${bytes.length} bytes \u2192 ${committed.outputPath}`);
       log.info(`  debug map \u2192 ${committed.debugMapPath}`);

@@ -71,9 +71,9 @@ export interface AnalyzeSnesProjectOptions extends SnesProjectOperationOptions {
     readonly romFile: string;
     /** Additional CPU bus addresses with explicit state, alongside vector and saved runtime seeds. */
     readonly entryPoints?: readonly Snes65816EntryPoint[];
-    /** Positive safe integer work limit, default 100000. */
+    /** Positive safe integer work limit. Omitted uses the analyzer default of 1_000_000. */
     readonly maxWorkItems?: number;
-    /** Nonnegative call-context depth, default 8. Zero discards call history. */
+    /** Nonnegative call-context depth. Omitted uses the analyzer default of 16. Zero discards call history. */
     readonly maxCallDepth?: number;
 }
 /** Structured summary of one bounded static-analysis pass. */
@@ -97,6 +97,12 @@ export interface AnalyzeSnesProjectResult {
 }
 /** Regenerates files owned by the export manifest while retaining user-owned input maps. */
 export interface ExportSnesProjectOptions extends SnesProjectOperationOptions {
+    /** Preferred dataStruct/row width including indentation; integer >= 40, defaults to 100. */
+    readonly structLineWidth?: number;
+    /** Wrap generated assembly comments; defaults to true. */
+    readonly wrapComments?: boolean;
+    /** Preferred comment columns including indentation, integer >= 20; default 100. */
+    readonly commentLineWidth?: number;
     readonly projectDirectory: string;
     readonly romFile: string;
     readonly sourceDirectory: string;
@@ -119,6 +125,10 @@ export interface VerifySnesProjectRoundTripOptions extends SnesProjectOperationO
     readonly romFile: string;
     /** Emit a debug map for the headerless content output. Defaults to true. */
     readonly emitDebugMap?: boolean;
+    /** Emit a symbols/types include for bounded modification projects after exact verification. */
+    readonly emitInterface?: boolean;
+    /** Verify retained historical source bytes even when metadata inputs are newer than its manifest. */
+    readonly retainedGeneration?: boolean;
     /** Trusted host loader called with the absolute build-configuration path after integrity and
      * ROM checks. The host owns plugin disposal after verification settles. Defaults to bundled
      * SNES support only; configured asset formats/transforms require a host loader.
@@ -135,6 +145,8 @@ export interface VerifySnesProjectRoundTripResult {
     readonly contentOutput: string;
     readonly finalOutput: string;
     readonly debugMap?: string;
+    /** Generated include of verified ROM labels, hardware/RAM constants, and data structures. */
+    readonly interfaceFile?: string;
     readonly comparison: ByteComparison;
 }
 /** A host-owned file written to the staged workspace before it is committed. */

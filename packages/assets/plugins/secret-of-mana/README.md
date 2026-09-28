@@ -9,6 +9,20 @@ assembler target. It registers `som.tile.actor3bpp`, an indexed PNG conversion b
 distance-mask modes and returns the exact consumed stream extent. Room map-piece and
 metatile compression have separate grammars and are not registered as `som.lz`.
 
+`som.world.rle` handles a world-map row independently of those formats. Its `size`
+option defaults to 512 output tiles (valid range 1–65536). Bytes below `$C0` are
+literal tile IDs; `$C0–$FF` repeat the following tile `(token & 63) + 1` times.
+The decoder rejects truncated streams, row overruns and trailing bytes. Encoding
+escapes high tile IDs and splits runs at 64. All 512 USA-ROM rows reproduce their
+original encoding exactly; callers should still retain native streams for other
+ROM revisions whose token choices may differ.
+
+The separate 64-byte bitmap at `$C67FC0` selects each row's starting bank, low bit
+first (`$C6 | bit`). The 512 little-endian pointers start at `$C68000`; pointer
+wrap is not a bank-selection rule. Row 357 starts in `$C6` and reads across into
+`$C7`. The full intro research verifies 258 decoded row instances against physical
+WRAM-port writes and reconstructs the complete 512×512 tile map.
+
 The cartridge's WAVE files contain standard mono PCM16 at a nominal 32 kHz preview
 rate. An `sBRR` RIFF chunk holds the original encoded BRR blocks. The plugin checks
 every PCM sample against the shared BRR decoder before emitting those blocks, which
@@ -128,7 +142,10 @@ For example, a two-tile source with one flipped visible tile can use this shape.
       "romAddress": "D78000",
       "palette": 0,
       "tileAtlas": { "bounds": [8, 32, 20, 10], "columns": 16, "step": 10, "sourceOnly": [] },
-      "tiles": [{ "x": 8, "y": 16 }, { "x": 24, "y": 16, "flipX": true }]
+      "tiles": [
+        { "x": 8, "y": 16 },
+        { "x": 24, "y": 16, "flipX": true }
+      ]
     }
   }
 }
@@ -171,10 +188,10 @@ To add a sprite from scratch:
 
 For the existing capture set, `secret-of-mana/tools/build-frame-atlases.py` performs
 steps 2–3 from the original ROM, shared palette catalogue, and reviewed Potos,
-Dwarf, Mantis Ant and Tropicallo records. It also writes the complete bottom tile atlases and
-records source-only tiles automatically. Running it
-**replaces the generated atlases**: finish current PNG edits first or use a separate
-copy. To add another captured actor to this exporter, add its verified ROM tile
+Dwarf, Mantis Ant and Tropicallo records when explicitly seeding new files with
+`--seed`. It also writes complete bottom tile atlases and records source-only tiles.
+Normal invocation only enriches existing sidecars with reviewed composition; it
+leaves PNG pixels untouched. Seeding refuses existing files. To add another captured actor to this exporter, add its verified ROM tile
 span and palette reference to `SOURCE_ROM_SPANS`, map its entity
 in `ENTITY_GROUP`, and load its frame records in `actor_frames()`. The exporter
 resolves frame tile offsets to source segments and writes the PNG/sidecar pair.
@@ -188,9 +205,8 @@ tile atlas is a reference for frame-backed tiles; changing only that reference d
 not alter ROM output. Edits to another visual occurrence of a repeated tile are
 likewise preview-only until copied to its authoritative rectangle. The grid color
 can be painted over transparent pixels; it encodes as zero. Changing a PNG palette
-color alone fails import. For an intentional color edit, update its catalogue BGR555
-word and the indexed PNG palette entries of all affected atlases, then regenerate
-the palette preview. The catalogue record owns the emitted ROM bytes; its `users`
+color alone fails import. For an intentional color edit, use the coordinated palette command below to update
+the catalogue, every affected primary PNG palette and the swatch previews together. The catalogue record owns the emitted ROM bytes; its `users`
 list and editor preview reveal every graphic affected by that word. The frame
 atlas does not specify animation timing; runtime variants such as Dwarf/Watts are
 recorded with `paletteVariants` and separate ROM palette references.
@@ -212,3 +228,181 @@ primitives for standard SNES tiles, palettes, maps, audio and previews. Convert 
 pixel run to PNG only when its actual palette and displayed shape are identified and
 visually checked. Original ROM
 compressed bytes remain authoritative until a reviewed rebuild deliberately repacks them.
+
+## Retained composition and current-source authoring
+
+The version-1 sidecars retain each frame's canvas `origin`, ordered native `blocks`,
+raw `nativeFrame` evidence when available, and stable tile `placements` with block
+and quadrant identity. Placements reference a segment and tile index, or an explicitly
+verified external blank tile. Native flags and shared flips remain in the SoM adapter.
+Whole-atlas validation reconciles raw native bytes, decoded blocks and derived
+placements. Direct edits to just one representation fail. Native body decoding and
+bounded coordinate patching live in the portable SoM adapter; assembly inclusion of
+those edited frame records and animation timing remain separate integration work.
+
+`inspectFrameAtlas` is the shared validation/extraction entry point used by assembly,
+editor previews and authoring. Segment scope checks the selected native source;
+`{ whole: true }` also checks every segment, frame and native-order strip. Refresh
+requires retained composition. `refreshFrameAtlas` reads authoritative rectangles from
+**current PNG pixels**, applies the retained composition and refreshes duplicate
+occurrences and the native-order strips. Publication checks that every encoded native
+segment, including compressed boss streams, remains identical to the pre-refresh source.
+
+Run from the repository root (after building workspace packages, plain `node` also works):
+
+```sh
+# Add reviewed composition to existing sidecars; leaves PNGs untouched.
+rtk proxy python3 secret-of-mana/tools/build-frame-atlases.py
+# To seed original ROM pixels, --seed requires new output files and refuses existing ones.
+rtk proxy python3 secret-of-mana/tools/build-frame-atlases.py --atlas rabite --seed --output /tmp/new-sprite-images
+
+# Dry-run by default; add --write to publish. --atlas is optional and repeatable.
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --atlas enemy/rabite-frames.png
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --edits /tmp/palette-edits.json
+```
+
+Palette edits are a JSON array: `[{"palette":"<catalogue ID>","index":1,"rgb":[255,0,0]}]`.
+`index` is the logical palette slot, including `firstIndex`. RGB channels must be exactly
+representable by the adapter's BGR555 bit-replication policy. Raw high bits survive,
+slot identity is never inferred from RGB equality, and variant-only users keep their
+primary PNG palette. The command audits the complete supplied atlas inventory and
+catalogue users before planning changes. Missing or stale users reject the edit.
+Validated native boss chunks are preserved, and their encoded streams are compared
+before publication. All expected swatch files must already exist.
+
+Both authoring commands accept `--export /path/to/staged-export` or
+`--project /path/to/project` (whose export is `disassembly`). They snapshot read
+sources and reject concurrent changes, refuse manifest-owned generated outputs, stage
+all replacements and recover earlier writes on ordinary publication failures. Recovery
+is not crash-atomic and intermediate files are visible to readers; avoid concurrent
+assembly while publishing. A recovery conflict retains backups for manual reconciliation.
+The Python evidence enricher accepts `--project`, `--output` (images root) and repeatable
+`--atlas`; its ROM decoding and research-record discovery are intentionally SoM-specific.
+
+### Stable storage, frame geometry and persistent baselines
+
+New seeds use `tileSources: "native-strip"`: every native tile owns a bottom-strip
+rectangle independent of pose position, overlap and visibility. In that mode
+`tileAtlas.sourceOnly` identifies tiles absent from every pose. Legacy layouts retain
+their existing source rectangles and source-only meaning until explicitly repacked.
+The Python builder calls `frame-composition-bridge.mjs` for derivation/rendering, so it
+requires Node, workspace dependencies/tsx and Pillow; it owns evidence discovery and
+decoration, not a second implementation of flip and placement rules.
+
+`planBodyFrameEdits(atlas, catalog, edits)` returns an owned PNG/layout pair. Edits are
+`{ frame, block, x?, y? }`, naming existing frame and native block IDs. It patches only
+signed seven-bit coordinates (−64..63), preserves native flags/run tokens/collision
+tails, updates every pose sharing the same record, derives placements and repacks the
+canvas with independent storage. Every native tile must remain byte-identical. A
+no-op retains the original PNG exactly. Boss/effect frame edits, tile reassignment,
+record growth and relocation are deliberately unsupported by this body codec. The
+result includes updated raw frame bytes but does not yet install ROM frame includes.
+
+Save dependencies at the beginning of an external editing session, then require the
+same baseline on import. The baseline includes atlas PNGs/layouts, palette catalogue
+and swatches, include sources/map and the generated-file manifest. It is relocatable;
+its identity includes the adapter revision and reference ROM hash.
+
+```sh
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/snapshot-sprite-assets.mjs --output /tmp/sprite-baseline.json
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --baseline /tmp/sprite-baseline.json
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --baseline /tmp/sprite-baseline.json --edits /tmp/palette-edits.json
+```
+
+The snapshot command refuses to overwrite an existing baseline. Authoring commands
+check it before planning and retain their command-lifetime concurrency checks.
+
+`sprite-source-stage.mjs` exposes `createSpriteSourceStage` and
+`publishSpriteSourceStage` for new source files and regenerated exports. Stages exclude
+`analysis` and `captures`; publication retains their live directory contents. The host
+must supply a build callback that enforces exact no-edit ROM equality or an approved
+edit diff. Generated-file integrity, source audit and unchanged verification inputs
+are mandatory gates around that callback. Use the exporter to regenerate staged
+banks/manifests; this API does not authorize hand-editing them. Publication is offline,
+recoverable on ordinary failures, and retains the previous source tree; it is not a
+crash-atomic transaction or a replacement for analysis-database transactions.
+
+## Verification against selected exports
+
+```sh
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-generated-export.mjs --export /path/to/export
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --source-only
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/build-palette-previews.mjs --export /path/to/export --check
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --rom /path/to/rebuilt.sfc
+```
+
+The integrity command reuses the generic disassembler manifest inspector. The sprite
+check discovers banks and includes, checks exact native ownership spans and dependencies,
+and audits indexed PNG palettes, source extraction and catalogue users. `--source-only`
+allows intentional edits without comparing them to the original ROM; it is not an
+assembly check. Without it, the default ROM is `<export>/build/rebuilt-content.sfc`;
+`--rom` or the legacy positional ROM argument selects another file. Original-ROM
+identity is a separate CLI `verify-roundtrip` check. Game compression, BGR555 catalogue
+shape and the HiROM address mapping remain explicit SoM adapter policy.
+
+Run both conversion and authoring regressions with:
+
+```sh
+rtk proxy node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs secret-of-mana/tools/asset-authoring.test.mjs
+```
+
+## Editable rooms (`som.room`)
+
+A room JSON owns three discontiguous, fixed ROM sections. Each section assembles
+from the same source file, so editing entity coordinates, event IDs, conditional
+layout placements or trigger words does not require editing bank assembly:
+
+```asm
+includeAsset("../assets/rooms/room-001e.json", "som.room", section: "objects", preview: "../assets/rooms/room-001e.preview.json")
+includeAsset("../assets/rooms/room-001e.json", "som.room", section: "assembly", preview: "../assets/rooms/room-001e.preview.json")
+includeAsset("../assets/rooms/room-001e.json", "som.room", section: "triggers", preview: "../assets/rooms/room-001e.preview.json")
+```
+
+Place each include at its corresponding `sections.<section>.address`; these are
+canonical CPU addresses, while the export include map uses ROM file offsets.
+`sections.<section>.bytes` is a fixed allocation. The converter validates all
+three sections on every conversion, rejects out-of-range fields and refuses
+length changes requiring relocation. It does not update ROM pointer tables.
+
+The version-1 source has `format: "som.room"`, `version: 1`, `id`, `name`,
+`sections`, an eight-byte `header`, `entities`, `pieces`, `triggers`, and
+`previewStory` keyed by decimal story-variable index. Header bytes preserve
+native packed flags: byte 0 low six bits selects graphics; byte 1 low seven bits
+selects background palette; byte 2 low six bits selects metatiles and its upper
+two bits select each layer's 192-metatile half. Other header bytes remain native
+values. Room coordinates are 16-pixel cells, with a physical 128-cell row stride.
+
+Entities expose `variable`, inclusive nibble `minimum`/`maximum`, `x`, `y`,
+`flags` (40/80), `orientationAndLayer`, `entity`, 12-bit `event`, and four-bit
+`interaction`. Pieces expose the same story predicate, one-based ten-bit
+`layout`, `x`, `y`, and `layer`. An explicit `marker: 254` or `255` changes to
+layer 1 or 2 before that record. Preserve original markers even if redundant.
+Story tests use the whole byte; a value such as 13 hex does not pass a 1..3 range.
+Triggers remain packed 16-bit words: below 0800 is an event ID; other values
+select exit ID `word - 0800`.
+
+The editor resolves the `preview` dependency, verifies the conversion and
+renders the **current source placements and preview story values** with captured
+planar graphics, BGR555 colors and native metatile words. `layer: 1` or `2`
+selects a separate layer. Captured resources retain their graphics-session,
+image-clock, phase and source hashes. Unknown graphics fail instead of becoming
+black pixels. Portable previews accept native room canvases up to 2048×2048 pixels
+and downscale the displayed PNG to a maximum edge of 1024 pixels.
+Each room also has a directly viewable `room-XXXX.preview.png` rendering beside
+its editable JSON. These are background asset views: actors, camera scrolling,
+mutable clones, BG3 and SNES color math are omitted. The captured palette is
+retained, including magenta forest regions also visible in the screenshots.
+A change to an uncaptured tileset or layout needs new preview resources.
+
+Shared compressed layouts, graphics and palettes are **references**, not
+additional ROM ownership of the room source. Editing a preview dependency alone
+does not change those ROM resources. `som-map-piece.mjs` is the bounded native
+layout decoder; unchanged compressed streams are preserved. The seven initial
+room assets are seeded by `secret-of-mana/tools/build-haunted-room-assets.mjs`,
+which refuses to overwrite an edited source. Its `--check` mode verifies the
+no-edit ROM conversion and saved preview PNGs.
+
+```sh
+rtk proxy node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-room-assets.test.mjs
+rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/build-haunted-room-assets.mjs --check
+```

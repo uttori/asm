@@ -3,7 +3,8 @@ import { registerHooks } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
-import type { ExtensionContext, Uri as VsCodeUri } from "vscode";
+import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
+import type { DebugAdapterDescriptorFactory, ExtensionContext, Uri as VsCodeUri } from "vscode";
 
 import { test } from "../../../../tests/ava-helper.js";
 
@@ -40,6 +41,7 @@ const host = {
   commands: new Map<string, (...args: unknown[]) => unknown>(),
   registered: [] as string[],
   providers: [] as string[],
+  factory: undefined as DebugAdapterDescriptorFactory | undefined,
 };
 
 (globalThis as { __uttoriDebugTest?: typeof host }).__uttoriDebugTest = host;
@@ -114,7 +116,8 @@ registerHooks({
               host.providers.push("config:" + type);
               return { dispose() {} };
             },
-            registerDebugAdapterDescriptorFactory: (type) => {
+            registerDebugAdapterDescriptorFactory: (type, factory) => {
+              host.factory = factory;
               host.providers.push("adapter:" + type);
               return { dispose() {} };
             },
@@ -146,6 +149,7 @@ const reset = (): void => {
   host.commands.clear();
   host.registered = [];
   host.providers = [];
+  host.factory = undefined;
 };
 
 const uri = (file: string): VsCodeUri =>
@@ -237,6 +241,41 @@ test.serial("liveDebugConfiguration names backends and resolves sourceRoot", (t)
   t.is(mesen.sourceRoot, "/build");
   t.false("aresSystem" in mesen);
   t.false("fastBoot" in mesen);
+});
+
+test.serial("debug launch rejects a valid ROM/map pair from a different selected build", (t) => {
+  reset();
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-debug-identity-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const program = path.join(directory, "modified.sfc");
+  const debugMap = `${program}.debug.json`;
+  const bytes = new Uint8Array([0xea]);
+  fs.writeFileSync(program, bytes);
+  const map = createDebugMap({
+    target: "snes.sfc",
+    output: bytes,
+    mapping: new AddressToLineMapping(),
+  });
+  fs.writeFileSync(debugMap, JSON.stringify(map));
+  const subscriptions = registerDebugging("/extension");
+  t.teardown(() => {
+    for (const subscription of subscriptions) {
+      subscription.dispose();
+    }
+  });
+  for (const [field, expected] of [
+    ["outputSha256", /ROM differs from the selected build/],
+    ["debugMapFingerprint", /Debug map differs from the selected build/],
+  ] as const) {
+    const session = {
+      id: "modified",
+      name: "Modified ROM",
+      configuration: { backend: "replay", program, debugMap, [field]: "0".repeat(64) },
+    };
+    t.throws(() => host.factory!.createDebugAdapterDescriptor(session as never, undefined), {
+      message: expected,
+    });
+  }
 });
 
 test.serial(

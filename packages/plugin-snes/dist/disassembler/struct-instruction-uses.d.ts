@@ -1,7 +1,7 @@
 import type { DecodedInstruction } from "@uttori/asm-core";
 import type { RomImage } from "@uttori/asm-disassembler";
 import { type SnesStructAccessPart } from "./struct-expressions.js";
-import type { SnesStructBinding, SnesStructLayout } from "./struct-map.js";
+import type { SnesStructBinding, SnesStructConstant, SnesStructLayout } from "./struct-map.js";
 /** A curated capture reference, separate from static operand identity and CPU control flow. */
 export interface SnesStructAccessObservation {
     readonly expression: string;
@@ -28,6 +28,8 @@ export interface SnesStructInstructionUse {
     /** Complete instruction encoding, including opcode. Stale metadata aborts export before writes. */
     readonly expectedBytes: readonly number[];
     readonly reason: string;
+    /** Optional display explanation; empty suppresses redundant prose without deleting its research reason. */
+    readonly comment?: string;
     /** Immediate value expression. Mutually exclusive with memoryOperand and access observations. */
     readonly operand?: {
         readonly expression: string;
@@ -46,9 +48,10 @@ export interface SnesStructInstructionUse {
  * @param {unknown} value Optional instructionUses array from JSON.
  * @param {readonly SnesStructLayout[]} structures Validated zero-based layouts.
  * @param {readonly SnesStructBinding[]} bindings Validated physical record bindings.
+ * @param {readonly SnesStructConstant[]} constants Optional declared scalar values, without storage ownership.
  * @returns {readonly SnesStructInstructionUse[]} Resolved uses in CPU-address order.
  */
-export declare const validateSnesStructInstructionUses: (value: unknown, structures: readonly SnesStructLayout[], bindings: readonly SnesStructBinding[]) => readonly SnesStructInstructionUse[];
+export declare const validateSnesStructInstructionUses: (value: unknown, structures: readonly SnesStructLayout[], bindings: readonly SnesStructBinding[], constants?: readonly SnesStructConstant[]) => readonly SnesStructInstructionUse[];
 /**
  * Index only annotated instructions, O(uses), rather than scanning uses for every CFG variant.
  * Mapper aliases, complete byte encodings and capture ROM identities are checked before export.
@@ -60,7 +63,7 @@ export declare const validateSnesStructInstructionUses: (value: unknown, structu
  */
 export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructInstructionUse[] | undefined, rom: RomImage, toFileOffset: (address: number) => number | undefined) => ReadonlyMap<number, SnesStructInstructionUse> | undefined;
 /**
- * Replace a proven immediate or direct memory operand, preserving its encoded width and indexing.
+ * Replace a proven immediate, direct address or direct-page data pointer without changing its mode.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
  * @param {DecodedInstruction} instruction One accepted decode context.
  * @param {string} source Existing formatted source, including any conservative numeric fallback.
@@ -69,9 +72,9 @@ export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructI
  */
 export declare const applySnesStructInstructionOperand: (instruction: DecodedInstruction, source: string, use: SnesStructInstructionUse) => string;
 /**
- * Render at most two bounded comments per instruction: its reason and an evidence summary.
- * All alternatives and provenance remain in struct-map.json; rendering never mutates them
- * or substitutes a captured effective address into a CPU operand.
+ * Render at most two bounded comments per instruction: its reason and a directly observed
+ * evidence summary. Trace-derived observations remain in struct-map.json for verification,
+ * but their reconstruction details are too noisy for generated assembly.
  * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
  * @returns {readonly string[]} Comment bodies, each at most 240 characters, without semicolons.
  */

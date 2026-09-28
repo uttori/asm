@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Owned SNES ROM modification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "baseline", "checksumPolicy", "replacements"],
+  "properties": {
+    "format": {
+      "const": "uttori-snes-modification"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "checksumPolicy": {
+      "const": "preserve"
+    },
+    "baseline": {
+      "type": "object",
+      "description": "Pinned by Create ROM Modification Project. A changed generation requires reviewed rebasing.",
+      "required": [
+        "sourceDirectory",
+        "romFile",
+        "rom",
+        "mapper",
+        "manifestSha256",
+        "interfaceSha256"
+      ],
+      "properties": {
+        "sourceDirectory": {
+          "type": "string"
+        },
+        "romFile": {
+          "type": "string"
+        },
+        "rom": {
+          "type": "object"
+        },
+        "mapper": {
+          "type": "string"
+        },
+        "manifestSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "interfaceSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "snapshotDirectory": {
+          "type": "string",
+          "description": "Retained immutable baseline generation used for source recovery and rebase."
+        }
+      }
+    },
+    "replacements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "offset", "expected", "input", "kind"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "description": "Also exposed as Patch_<id> for references between replacements."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Headerless ROM byte offset. Not a CPU address."
+          },
+          "expected": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-fA-F]{2})+$",
+            "description": "Original bytes as hex; decoded length is the exact replacement budget."
+          },
+          "input": {
+            "type": "string",
+            "pattern": "^inputs/",
+            "description": "Owned assembly or binary input. Include dependencies must remain under inputs/."
+          },
+          "kind": {
+            "enum": ["assembly", "binary", "asset"]
+          },
+          "accumulator": {
+            "enum": [8, 16],
+            "description": "Initial 65816 accumulator width."
+          },
+          "index": {
+            "enum": [8, 16],
+            "description": "Initial 65816 index width."
+          },
+          "fill": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Explicit padding for short binary/asset streams; assembly must emit its full budget."
+          },
+          "asset": {
+            "type": "object",
+            "required": ["format", "version", "mediaType"],
+            "additionalProperties": false,
+            "properties": {
+              "format": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "mediaType": {
+                "enum": ["image/png", "application/json", "application/octet-stream", "audio/wav"]
+              },
+              "output": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object"
+              },
+              "palette": {
+                "type": "array",
+                "description": "Pinned RGBA8 palette slots. Reordering, loss of duplicate slots, and color changes are rejected."
+              },
+              "transforms": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "version"],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "assembly"
+                }
+              }
+            },
+            "then": {
+              "required": ["accumulator", "index"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "asset"
+                }
+              }
+            },
+            "then": {
+              "required": ["asset"]
+            }
+          }
+        ]
+      }
+    },
+    "expansion": {
+      "type": "object",
+      "required": ["size", "fill"],
+      "additionalProperties": false,
+      "properties": {
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216,
+          "description": "Explicit headerless output size. Mapper, checksum and ROM header fields are never repaired implicitly."
+        },
+        "fill": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    }
+  }
+}

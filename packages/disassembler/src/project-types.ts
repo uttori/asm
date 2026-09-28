@@ -200,6 +200,8 @@ export interface ProjectLabel {
   readonly inlineComment?: string;
   /** False for presentation-only labels, which must not seed new code analysis. */
   readonly analysisEntryPoint?: boolean;
+  /** Hide this name and automatic function-name fallback, retaining comments and analysis seeds. */
+  readonly suppressed?: boolean;
   readonly author?: string;
   readonly confidence?: string;
   readonly evidence: readonly string[];
@@ -363,6 +365,41 @@ export interface AnalysisTargetSetRecord {
   readonly evidence: readonly string[];
 }
 
+/** Collections with user-editable metadata; generated CFG and runtime observations are excluded. */
+export type MetadataShard = "labels" | "comments" | "annotations" | "analysis";
+
+/** Records accepted by metadata editing and retained verbatim in reversible receipts. */
+export type EditableMetadataRecord =
+  | ProjectLabel
+  | ProjectComment
+  | IntervalAnnotation
+  | AnalysisTargetOverrideRecord
+  | AnalysisTargetSetRecord;
+
+/** One exact record transition. Omission means absence, including a durable removal tombstone. */
+export interface MetadataRecordChange {
+  readonly shard: MetadataShard;
+  readonly id: string;
+  readonly before?: EditableMetadataRecord;
+  readonly after?: EditableMetadataRecord;
+}
+
+/**
+ * Durable manual decision. Imports keep the latest manual record (including absence); historical
+ * facts and provenance remain in these receipts. Reanalysis must preserve this collection.
+ */
+export interface AnalysisMetadataEditRecord {
+  readonly id: string;
+  readonly kind: "metadata-edit";
+  /** Monotonic edit order, including operations composed before a single publication. */
+  readonly sequence: number;
+  readonly description: string;
+  readonly changes: readonly MetadataRecordChange[];
+  /** Earlier receipt restored by this operation, when this is an explicit history action. */
+  readonly restores?: string;
+  readonly evidence: readonly string[];
+}
+
 /** Discriminated analysis-shard record. */
 export type AnalysisRecord =
   | AnalysisControlFlowNodeRecord
@@ -372,7 +409,8 @@ export type AnalysisRecord =
   | AnalysisUnresolvedRecord
   | AnalysisSummaryRecord
   | AnalysisTargetOverrideRecord
-  | AnalysisTargetSetRecord;
+  | AnalysisTargetSetRecord
+  | AnalysisMetadataEditRecord;
 
 /** A scalar register or mode value captured from a runtime source. */
 export type RuntimeStateValue = string | number | boolean;

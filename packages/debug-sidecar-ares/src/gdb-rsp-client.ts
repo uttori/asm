@@ -10,35 +10,64 @@ export interface GdbRspTransport {
 
 /** Parsed stop notification from an RSP `S` or `T` packet. */
 export interface GdbRspStop {
+  /** The signal number that caused the stop. */
   readonly signal: number;
+  /** The payload of the stop notification. */
   readonly payload: string;
 }
 
 /** Bounds and deadlines for one RSP client. */
 export interface GdbRspClientOptions {
+  /** The transport to use for the RSP client. */
   readonly transport: GdbRspTransport;
+  /** The timeout for RSP requests. */
   readonly requestTimeoutMs?: number;
+  /** The maximum size of an RSP packet. */
   readonly maxPacketBytes?: number;
+  /** The maximum size of the RSP receive buffer. */
   readonly maxBufferedBytes?: number;
 }
 
 interface PendingResponse {
+  /** Whether the response should be accepted as a stop notification. */
   readonly acceptStop: boolean;
+  /** The function to call when the response is resolved. */
   readonly resolve: (payload: string) => void;
+  /** The function to call when the response is rejected. */
   readonly reject: (error: Error) => void;
+  /** The timer for the request timeout. */
   readonly timer: ReturnType<typeof setTimeout>;
 }
 
+/**
+ * Convert an unknown error to an Error.
+ * @param {unknown} error The error to convert.
+ * @returns {Error} The converted error.
+ */
 const asError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
+/**
+ * Calculate the checksum of an RSP payload.
+ * @param {Uint8Array} payload The payload to calculate the checksum for.
+ * @returns {number} The checksum of the payload.
+ */
 const checksum = (payload: Uint8Array): number => {
   let value = 0;
   // Indexed access avoids the byte iterator's overhead on large capture replies.
-  for (let index = 0; index < payload.length; index++) {value = (value + payload[index]) & 0xff;}
+  // oxlint-disable-next-line typescript/prefer-for-of
+  for (let index = 0; index < payload.length; index++) {
+    value = (value + payload[index]) & 0xff;
+  }
   return value;
 };
 
+/**
+ * Encode RSP payload as a sequence of escaped bytes.
+ * @param {string} payload The payload to escape.
+ * @returns {Uint8Array} The escaped payload.
+ * @throws {Error} If the payload contains a control character.
+ */
 const escapedPayload = (payload: string): Uint8Array => {
   const result: number[] = [];
   for (const byte of Buffer.from(payload, "ascii")) {
@@ -51,7 +80,8 @@ const escapedPayload = (payload: string): Uint8Array => {
   return Uint8Array.from(result);
 };
 
-/** Decode wire escapes without allocating a number array for large hex capture replies.
+/**
+ * Decode wire escapes without allocating a number array for large hex capture replies.
  * @param {Buffer} payload Checked wire payload. This view is valid only during receive processing.
  * @returns {string} Owned ASCII response. Unescaped RLE or a truncated escape throws.
  */
@@ -80,7 +110,8 @@ const unescapePayload = (payload: Buffer): string => {
   return result.toString("ascii", 0, length);
 };
 
-/** Parse exactly one ASCII checksum digit. Unlike parseInt, invalid suffixes cannot be ignored.
+/**
+ * Parse exactly one ASCII checksum digit. Unlike parseInt, invalid suffixes cannot be ignored.
  * @param {number} byte Raw wire byte, without ASCII high-bit masking.
  * @returns {number} Nibble value, or -1 for any non-hexadecimal byte.
  */

@@ -36,6 +36,7 @@ const interactiveOperations = new Set([
   "annotationLookup",
   "annotationSave",
   "annotationRefresh",
+  "metadata",
 ]);
 /**
  * Read-only editor/DAP annotation requests routed separately from edits and bulk views when
@@ -70,6 +71,7 @@ export class AnalysisWorkerClient {
       | "annotationLookup"
       | "annotationSave"
       | "annotationRefresh"
+      | "metadata"
       | "sourceId"
       | "sourceGroup"
       | "navigationTarget"

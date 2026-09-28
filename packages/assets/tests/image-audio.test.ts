@@ -10,7 +10,19 @@ import {
   withImageEncoders,
 } from "../src/image.js";
 import { AssetRegistry, convertAsset } from "../src/index.js";
+import { rgbaPreviewPng } from "../src/preview.js";
 import { snesNativeEncoders } from "../src/snes.js";
+
+test("complete native room previews downscale four megapixels and reject larger inputs", (t) => {
+  const rgba = new Uint8Array(2048 * 2048 * 4);
+  rgba.set([240, 30, 10, 255]);
+  const png = rgbaPreviewPng(rgba, 2048, 2048, 1024);
+  const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  t.is(view.getUint32(16), 1024);
+  t.is(view.getUint32(20), 1024);
+  t.throws(() => rgbaPreviewPng(rgba, 2048, 2049), { message: /four-megapixel/ });
+  t.throws(() => rgbaPreviewPng(rgba.subarray(4), 2048, 2048), { message: /missing/ });
+});
 
 const fixture = (name: string): Uint8Array =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url));

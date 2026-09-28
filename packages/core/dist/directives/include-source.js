@@ -141,8 +141,7 @@ const findTopLevelHyphen = (input) => {
  */
 const assertIncbinMathParensBalanced = (text) => {
     let depth = 0;
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
+    for (const char of text) {
         if (char === "(") {
             depth += 1;
             continue;
@@ -328,8 +327,8 @@ export const handleIncbin = ({ session, includeSource, operandResolver, runtime,
         }
         session.setWritePosition(targetAddress);
     }
-    for (let i = 0; i < incbinData.length; i++) {
-        session.write1(incbinData[i]);
+    for (const byte of incbinData) {
+        session.write1(byte);
     }
     if (targetLocation !== undefined) {
         runtime.handlePullPC();

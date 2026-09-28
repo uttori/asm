@@ -12,16 +12,50 @@ import { AnalysisSourcesProvider } from "../src/analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
+import { metadataSmokeHtml, assertMetadataSmoke } from "./metadata.js";
+import { runModificationSmoke } from "./modification.js";
+import { runOwnershipSmoke } from "./ownership.js";
 import { runReleaseAcceptance } from "./release-acceptance.js";
+import { romWorkbenchSmokeHtml, assertRomWorkbenchSmoke } from "./rom-workbench.js";
 
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
+  "asm.modification.edit",
+  "asm.asset.edit",
+  "asm.metadata.migrate",
+  "asm.retention.manage",
+  "asm.asset.extract",
+  "asm.asset.import",
+  "asm.asset.openExternal",
+  "asm.modification.openInput",
+  "asm.modification.remove",
+  "asm.allocation.review",
+  "asm.allocation.apply",
+  "asm.rebase.refresh",
+  "asm.rebase.review",
+  "asm.rebase.accept",
+  "asm.source.restore",
+  "asm.source.review",
+  "asm.source.import",
+  "asm.source.detach",
+  "asm.buildTarget.select",
+  "asm.baseline.verify",
+  "asm.modification.create",
+  "asm.modification.add",
+  "asm.modification.open",
+  "asm.modification.build",
+  "asm.modification.run",
+  "asm.modification.debug",
+  "asm.modification.watch",
+  "asm.modification.derive",
+
   "asm.build",
   "asm.assetPreview.open",
   "asm.analysis.toggleAnnotations",
   "asm.editorInfo.choosePreset",
   "asm.editorInfo.configureInline",
   "asm.editorInfo.inspectLine",
+  "asm.editorInfo.showStatus",
   "asm.runEmulator",
   "asm.debugEmulator",
   "asm.runAndWatch",
@@ -40,6 +74,17 @@ const REQUIRED_COMMANDS = [
   "asm.disassembly.status",
   "asm.disassembly.regenerate",
   "asm.disassembly.editAnnotation",
+  "asm.disassembly.inspectOwnership",
+  "asm.disassembly.editOwnedAnnotation",
+  "asm.disassembly.openOwningInput",
+  "asm.disassembly.showOwnedStatus",
+  "asm.disassembly.regenerateOwned",
+  "asm.disassembly.editMetadata",
+  "asm.disassembly.removeLabel",
+  "asm.disassembly.resetLabel",
+  "asm.disassembly.editComments",
+  "asm.disassembly.editClassification",
+  "asm.disassembly.editTargets",
 ];
 
 /**
@@ -398,9 +443,12 @@ export async function run(): Promise<void> {
   await vscode.window.showTextDocument(document);
   assert.equal(document.languageId, "uttori-snes", "Assembly language association is missing.");
   await waitForLanguageServer(sourceUri);
+  await runOwnershipSmoke(folder);
+  await runModificationSmoke(folder);
+  await vscode.window.showTextDocument(document);
 
   // Exercise packaged external HTML/CSS/JS under a real webview CSP, not a DOM mock.
-  for (const name of ["annotation", "panel", "disassembly"] as const) {
+  for (const name of ["annotation", "panel", "disassembly", "metadata", "rom-editor"] as const) {
     const view = vscode.window.createWebviewPanel(
       "uttori.webviewSmoke",
       "Webview smoke",
@@ -413,9 +461,18 @@ export async function run(): Promise<void> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let subscription: vscode.Disposable | undefined;
     try {
+      const messages: unknown[] = [];
       const ready = new Promise<void>((resolve, reject) => {
         subscription = view.webview.onDidReceiveMessage((message: { type?: string }) => {
-          if (message.type === "ready") {
+          messages.push(message);
+          let readyType = "ready";
+          if (name === "metadata") {
+            readyType = "metadata-smoke-complete";
+          }
+          if (name === "rom-editor") {
+            readyType = "rom-workbench-smoke-complete";
+          }
+          if (message.type === readyType) {
             resolve();
           }
         });
@@ -424,8 +481,22 @@ export async function run(): Promise<void> {
           10_000,
         );
       });
-      view.webview.html = renderWebviewTemplate(view.webview, extension.extensionUri, name);
+      const html = renderWebviewTemplate(view.webview, extension.extensionUri, name);
+      let testedHtml = html;
+      if (name === "metadata") {
+        testedHtml = metadataSmokeHtml(html);
+      }
+      if (name === "rom-editor") {
+        testedHtml = romWorkbenchSmokeHtml(html);
+      }
+      view.webview.html = testedHtml;
       await ready;
+      if (name === "metadata") {
+        assertMetadataSmoke(messages);
+      }
+      if (name === "rom-editor") {
+        assertRomWorkbenchSmoke(messages);
+      }
     } finally {
       clearTimeout(timer);
       subscription?.dispose();

@@ -1,12 +1,29 @@
+/**
+ * Convert an unknown error to an Error.
+ * @param {unknown} error The error to convert.
+ * @returns {Error} The converted error.
+ */
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
+/**
+ * Calculate the checksum of an RSP payload.
+ * @param {Uint8Array} payload The payload to calculate the checksum for.
+ * @returns {number} The checksum of the payload.
+ */
 const checksum = (payload) => {
     let value = 0;
     // Indexed access avoids the byte iterator's overhead on large capture replies.
+    // oxlint-disable-next-line typescript/prefer-for-of
     for (let index = 0; index < payload.length; index++) {
         value = (value + payload[index]) & 0xff;
     }
     return value;
 };
+/**
+ * Encode RSP payload as a sequence of escaped bytes.
+ * @param {string} payload The payload to escape.
+ * @returns {Uint8Array} The escaped payload.
+ * @throws {Error} If the payload contains a control character.
+ */
 const escapedPayload = (payload) => {
     const result = [];
     for (const byte of Buffer.from(payload, "ascii")) {
@@ -19,7 +36,8 @@ const escapedPayload = (payload) => {
     }
     return Uint8Array.from(result);
 };
-/** Decode wire escapes without allocating a number array for large hex capture replies.
+/**
+ * Decode wire escapes without allocating a number array for large hex capture replies.
  * @param {Buffer} payload Checked wire payload. This view is valid only during receive processing.
  * @returns {string} Owned ASCII response. Unescaped RLE or a truncated escape throws.
  */
@@ -51,7 +69,8 @@ const unescapePayload = (payload) => {
     }
     return result.toString("ascii", 0, length);
 };
-/** Parse exactly one ASCII checksum digit. Unlike parseInt, invalid suffixes cannot be ignored.
+/**
+ * Parse exactly one ASCII checksum digit. Unlike parseInt, invalid suffixes cannot be ignored.
  * @param {number} byte Raw wire byte, without ASCII high-bit masking.
  * @returns {number} Nibble value, or -1 for any non-hexadecimal byte.
  */

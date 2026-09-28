@@ -503,7 +503,7 @@ test("worker reanalysis preserves captured code across a legacy operand entry an
       {
         target,
         entryPoints: prepared.entryPoints,
-        maxWorkItems: 100_000,
+        maxWorkItems: 1_000_000,
       },
       budget,
     );
@@ -660,7 +660,7 @@ test.serial(
     t.is(prepared.before.runtimeEvents, 40_000);
     const analyzed = await client.run(
       "analyze",
-      { target, entryPoints: [], maxWorkItems: 100_000 },
+      { target, entryPoints: [], maxWorkItems: 1_000_000 },
       smallHeap,
     );
     t.is(analyzed.status, "complete");
@@ -727,7 +727,7 @@ test.serial(
     t.false((await client.run("import", input, smallHeap)).changed);
     const updated = await client.run(
       "analyze",
-      { target, entryPoints: [], maxWorkItems: 100_000 },
+      { target, entryPoints: [], maxWorkItems: 1_000_000 },
       smallHeap,
     );
     t.is(updated.capturedInstructions, 1);

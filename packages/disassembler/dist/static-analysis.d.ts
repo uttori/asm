@@ -120,9 +120,14 @@ export interface StaticTargetOverride {
     readonly targets: readonly number[];
     readonly evidence: readonly string[];
 }
+/** Default work-item budget when `analyzeStaticControlFlow` omits `maxWorkItems`. */
+export declare const DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1000000;
+/** Default call-context depth when `analyzeStaticControlFlow` omits `maxCallDepth`. */
+export declare const DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
 /**
  * Deterministic worklist caps.
- * Defaults inside `analyzeStaticControlFlow` are 100_000 items and call depth 8.
+ * Omitted limits use {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS} and
+ * {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}.
  */
 export interface StaticAnalysisLimits {
     /** Positive safe integer work budget. Reaching it returns an incomplete result with a reason. */

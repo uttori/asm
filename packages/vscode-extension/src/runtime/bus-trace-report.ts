@@ -5,13 +5,13 @@ import type {
   RuntimeTransferSummary,
 } from "@uttori/asm-disassembler";
 
+import { informationHex } from "../editor-info/format.js";
+
 /** Show register-derived byte candidates separately from captured bus facts and native boundaries.
  * @param {RuntimeGraphicsSummary} summary Bounded interpretation of ordered PPU port accesses.
  * @returns {string[]} Markdown with explicit unknown/latch states and physical-memory limitations.
  */
 const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
-  const hex = (value: number, width = 2): string =>
-    `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
   return [
     "## Graphics port destinations",
     "",
@@ -32,14 +32,14 @@ const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
       const bytes = write.bytes
         .map(
           (byte) =>
-            `${hex(byte.address, 5)} = ${byte.value === null ? "unknown" : hex(byte.value)} (event ${byte.sourceSequence ?? "unknown"})`,
+            `${informationHex(byte.address, 5)} = ${byte.value === null ? "unknown" : informationHex(byte.value, 2)} (event ${byte.sourceSequence ?? "unknown"})`,
         )
         .join(", ");
       let blank = "unknown";
       if (write.forcedBlank !== null) {
         blank = write.forcedBlank ? "yes" : "no";
       }
-      return `| ${write.sequence} | ${write.actor.toUpperCase()}/${write.channel ?? "—"} | ${hex(write.port, 4)} = ${hex(write.value)} | ${write.target.toUpperCase()} | ${write.reason ?? write.status} | ${blank} | ${bytes || "—"} |`;
+      return `| ${write.sequence} | ${write.actor.toUpperCase()}/${write.channel ?? "—"} | ${informationHex(write.port, 4)} = ${informationHex(write.value, 2)} | ${write.target.toUpperCase()} | ${write.reason ?? write.status} | ${blank} | ${bytes || "—"} |`;
     }),
     "",
     `${summary.omittedWrites} additional port writes omitted. All contribute to the totals. Data events identify the writes supplying each byte, which may precede the completing write or belong to another actor. They do not identify an A-bus source or setup instruction.`,
@@ -54,8 +54,6 @@ const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
  * @returns {string[]} Markdown lines including raw starting configuration and completion evidence.
  */
 const transferReport = (summary: RuntimeTransferSummary): string[] => {
-  const hex = (value: number, width = 2): string =>
-    `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
   return [
     "## Transfer boundaries",
     "",
@@ -78,13 +76,13 @@ const transferReport = (summary: RuntimeTransferSummary): string[] => {
       const c = window.begin?.configuration;
       const config = c
         ? [
-            hex(c.dmap),
-            hex(c.bbad),
-            `${hex(c.a1b)}:${hex(c.a1t, 4)}`,
-            hex(c.das, 4),
-            hex(c.dasb),
-            hex(c.a2a, 4),
-            hex(c.ntlr),
+            informationHex(c.dmap, 2),
+            informationHex(c.bbad, 2),
+            `${informationHex(c.a1b, 2)}:${informationHex(c.a1t, 4)}`,
+            informationHex(c.das, 4),
+            informationHex(c.dasb, 2),
+            informationHex(c.a2a, 4),
+            informationHex(c.ntlr, 2),
           ]
         : Array<string>(7).fill("unknown");
       return `| ${window.actor.toUpperCase()}/${window.channel} | ${window.status} | ${window.begin?.sequence ?? "?"}/${window.end?.sequence ?? "?"} | ${window.begin?.cycle ?? "?"}/${window.end?.cycle ?? "?"} | ${config.join(" | ")} | ${window.begin && window.end ? window.end.transferred : "?"} | ${window.reads}/${window.writes} |`;
@@ -151,7 +149,6 @@ export const renderBusTraceReport = (result: RuntimeBusProjectImportResult): str
  * @returns {string[]} Markdown lines explaining physical writes and capture limits.
  */
 const ppuReport = (summary: RuntimePPUSummary): string[] => {
-  const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
   return [
     "## Verified PPU writes",
     "",
@@ -163,8 +160,10 @@ const ppuReport = (summary: RuntimePPUSummary): string[] => {
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...summary.writes.map((write) => {
       const p = write.ppu;
-      const bytes = p.bytes.map((byte) => `${hex(byte.address)} = ${hex(byte.value)}`).join(", ");
-      return `| ${write.sequence} | ${write.actor.toUpperCase()}/${write.channel ?? "—"} | ${hex(write.port)} | ${p.target.toUpperCase()} | ${p.outcome} | ${p.implementation} | ${p.forcedBlank ? "yes" : "no"} | ${p.renderingRestricted ? "yes" : "no"} | ${p.hcounter}/${p.vcounter} | ${bytes || "—"} |`;
+      const bytes = p.bytes
+        .map((byte) => `${informationHex(byte.address, 0)} = ${informationHex(byte.value, 0)}`)
+        .join(", ");
+      return `| ${write.sequence} | ${write.actor.toUpperCase()}/${write.channel ?? "—"} | ${informationHex(write.port, 0)} | ${p.target.toUpperCase()} | ${p.outcome} | ${p.implementation} | ${p.forcedBlank ? "yes" : "no"} | ${p.renderingRestricted ? "yes" : "no"} | ${p.hcounter}/${p.vcounter} | ${bytes || "—"} |`;
     }),
     "",
     `${summary.omittedWrites} additional effects omitted from this view. The project retains physical write variants and totals. Event order and raster history require the source capture.`,

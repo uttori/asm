@@ -19,6 +19,7 @@ import {
   type TreeDataProvider,
 } from "vscode";
 
+import { informationHex } from "../editor-info/format.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import { analysisWorker } from "./worker-client.js";
 
@@ -81,7 +82,7 @@ const isAnalysisGraphNavigationTarget = (
 };
 
 /**
- * Graph row supporting eager children, lazy page factories, or asynchronous expansion while
+ * Graph row supporting lazy page factories or asynchronous expansion while
  * retaining exact navigation identity.
  */
 type AnalysisGraphTreeNode = {
@@ -91,7 +92,6 @@ type AnalysisGraphTreeNode = {
   readonly tooltip?: string;
   readonly icon: string;
   readonly state: TreeItemCollapsibleState;
-  readonly children?: readonly AnalysisGraphTreeNode[];
   readonly pageEntries?: readonly (() => AnalysisGraphTreeNode)[];
   readonly loadChildren?: () =>
     | readonly AnalysisGraphTreeNode[]
@@ -99,15 +99,6 @@ type AnalysisGraphTreeNode = {
   readonly resourceUri?: Uri;
   readonly navigationTarget?: AnalysisGraphNavigationTarget;
 };
-
-/**
- * Format a graph address as uppercase assembly hexadecimal with at least six digits, preserving
- * wider addresses.
- * @param {number} value Numeric value in the native address/state domain.
- * @returns {string} $-prefixed uppercase hex with at least 6 digits.
- */
-const hexadecimal = (value: number): string =>
-  `$${value.toString(16).toUpperCase().padStart(6, "0")}`;
 
 /**
  * Deduplicate identity strings and sort them for consistent navigation payloads and diagnostics.
@@ -281,7 +272,7 @@ const callNode = (
   const callers = call.callerFunctionIds.map((id) => functionName(functions.get(id)!));
   const callees = call.calleeFunctionIds.map((id) => functionName(functions.get(id)!));
   const caller = callers.length > 0 ? callers.join(" / ") : "unowned call site";
-  const callee = callees.length > 0 ? callees.join(" / ") : hexadecimal(call.toAddress);
+  const callee = callees.length > 0 ? callees.join(" / ") : informationHex(call.toAddress, 6);
   let label = `${caller} → ${callee}`;
   if (direction === "incoming") {
     label = `← ${caller}`;
@@ -292,10 +283,10 @@ const callNode = (
   return leaf(
     `${projectId}:call:${direction}:${call.id}`,
     label,
-    `${call.edgeKind} at ${hexadecimal(call.fromAddress)}${call.indirect ? " · indirect" : ""}`,
+    `${call.edgeKind} at ${informationHex(call.fromAddress, 6)}${call.indirect ? " · indirect" : ""}`,
     call.indirect ? "references" : "call-outgoing",
     [
-      `${call.addressSpace} ${hexadecimal(call.fromAddress)} → ${hexadecimal(call.toAddress)}`,
+      `${call.addressSpace} ${informationHex(call.fromAddress, 6)} → ${informationHex(call.toAddress, 6)}`,
       `Edge: ${call.id}`,
       `Caller functions: ${call.callerFunctionIds.join(", ") || "none"}`,
       `Callee functions: ${call.calleeFunctionIds.join(", ") || "none"}`,
@@ -337,11 +328,11 @@ const unresolvedNode = (
 ): AnalysisGraphTreeNode =>
   leaf(
     `${projectId}:unresolved:${unresolved.id}`,
-    `${hexadecimal(unresolved.address)} ${unresolved.flowKind}`,
+    `${informationHex(unresolved.address, 6)} ${unresolved.flowKind}`,
     `${unresolved.indirect ? "indirect" : "direct"} · ${unresolved.reason}`,
     unresolved.indirect ? "debug-disconnect" : "question",
     [
-      `${unresolved.addressSpace} ${hexadecimal(unresolved.address)}`,
+      `${unresolved.addressSpace} ${informationHex(unresolved.address, 6)}`,
       `Record: ${unresolved.id}`,
       `Owners: ${unresolved.ownerFunctionIds.join(", ") || "none"}`,
       `CFG nodes: ${unresolved.nodeIds.join(", ") || "none"}`,
@@ -424,10 +415,10 @@ const functionNode = (
   return {
     id: `${projectId}:function:${fn.id}`,
     label: functionName(fn),
-    description: `${fn.addressSpace} ${hexadecimal(fn.address)} · ${fn.source}`,
+    description: `${fn.addressSpace} ${informationHex(fn.address, 6)} · ${fn.source}`,
     tooltip: [
       `Function: ${fn.id}`,
-      `${fn.addressSpace} ${hexadecimal(fn.address)}`,
+      `${fn.addressSpace} ${informationHex(fn.address, 6)}`,
       `CFG nodes: ${fn.nodeIds.length}`,
       `Incoming calls: ${fn.incomingCallIds.length}`,
       `Outgoing calls: ${fn.outgoingCallIds.length}`,
@@ -565,7 +556,7 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
     if (element.pageEntries) {
       return this.pagedChildren(element);
     }
-    return [...(element.children ?? [])];
+    return [];
   }
 
   navigationTarget(element: unknown): AnalysisGraphNavigationTarget | undefined {

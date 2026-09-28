@@ -21,6 +21,7 @@ import {
   type TreeDataProvider,
 } from "vscode";
 
+import { informationHex } from "../editor-info/format.js";
 import { analysisWorker } from "./worker-client.js";
 
 /** Maximum segment or diagnostic rows requested from the worker for one expanded coverage page. */
@@ -271,7 +272,7 @@ const mapChildren = (
  * @returns {string} Hexadecimal interval label retaining the exclusive end.
  */
 const pageLabel = (start: number, end: number, width: number): string =>
-  `$${start.toString(16).toUpperCase().padStart(width, "0")}–$${end.toString(16).toUpperCase().padStart(width, "0")}`;
+  `${informationHex(start, width)}–${informationHex(end, width)}`;
 
 /**
  * Turn a half-open ROM-content segment into an editable row, preserving evidence IDs and

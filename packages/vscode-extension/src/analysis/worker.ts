@@ -26,12 +26,13 @@ import {
 import {
   lookupDisassemblyAnnotation,
   saveDisassemblyAnnotation,
-  refreshDisassemblyAnnotation,
   type AnnotationLookup,
   type AnnotationSave,
   type AnnotationRefreshInput,
 } from "../disassembly/annotation-data.js";
-import { formatInstructionAnnotationSummary } from "./annotation-format.js";
+import { processMetadata, type MetadataWorkerInput } from "../disassembly/metadata-data.js";
+import { publishVerifiedSource } from "../disassembly/source-publisher.js";
+import { formatInstructionAnnotationSummary } from "../editor-info/format.js";
 import {
   createInstructionAnnotationIndex,
   instructionAnnotationsForDebugRange,
@@ -60,6 +61,7 @@ export interface AnalysisWorkerRequest {
     | "annotationLookup"
     | "annotationSave"
     | "annotationRefresh"
+    | "metadata"
     | "heuristics"
     | "navigation"
     | "evidenceChoices"
@@ -75,6 +77,7 @@ export interface AnalysisWorkerRequest {
   readonly annotationLookup?: AnnotationLookup;
   readonly annotationSave?: AnnotationSave;
   readonly annotationRefresh?: AnnotationRefreshInput;
+  readonly metadata?: MetadataWorkerInput;
   readonly offset?: number;
   readonly ranges?: readonly DebugMapRange[];
 }
@@ -122,6 +125,12 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     return readAnalysisSourceCatalog(message.directory);
   }
   const store = projectDatabase(message.directory);
+  if (message.operation === "metadata") {
+    if (!message.metadata) {
+      throw new Error("Choose a metadata operation.");
+    }
+    return processMetadata(store, message.directory, message.metadata);
+  }
   if (message.operation === "evidenceChoices") {
     return store.transaction(
       () => ({
@@ -270,16 +279,20 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     ) {
       throw new Error("Annotation refresh target differs from the loaded project.");
     }
-    store.prepareAnnotationQueries();
-    return store.transaction(() => {
-      const view = store.sourceExportView();
-      const snapshot = { ...view, revision: analysisProjectRevision(view.manifest) };
-      return refreshDisassemblyAnnotation(
-        snapshot,
-        message.annotationRefresh!,
-        store.instructionExportGroups(),
-      );
-    }, false);
+    const { target, receipt } = message.annotationRefresh;
+    const revision = store.transaction(
+      () => analysisProjectRevision(store.manifest()).manifestSha256,
+      false,
+    );
+    if (revision !== receipt.after) {
+      return undefined;
+    }
+    return publishVerifiedSource(
+      target,
+      new AbortController().signal,
+      () => {},
+      receipt.after,
+    ).then((result) => result.exported);
   }
   const manifest = store.transaction(() => store.manifest(), false);
   if (message.operation === "manifest") {
@@ -451,7 +464,16 @@ const handleMessage = (message: AnalysisWorkerRequest): void => {
     }
   };
   try {
-    send({ id: message.id, value: request(message) });
+    const value = request(message);
+    if (value instanceof Promise) {
+      void value
+        .then((result: unknown) => send({ id: message.id, value: result }))
+        .catch((error: unknown) =>
+          send({ id: message.id, error: error instanceof Error ? error.message : String(error) }),
+        );
+    } else {
+      send({ id: message.id, value });
+    }
   } catch (error) {
     send({
       id: message.id,
@@ -462,8 +484,9 @@ const handleMessage = (message: AnalysisWorkerRequest): void => {
 };
 
 /**
- * Expose the synchronous worker dispatcher for direct callers and tests; it may read or mutate
- * project data and propagates errors.
+ * Expose the worker dispatcher for direct callers and tests. Projections/edits are synchronous;
+ * source publication returns a promise because trusted plugin loading is asynchronous. Both
+ * paths propagate errors, and the client serializes requests until their response arrives.
  */
 export const runAnalysisWorkerRequest = request;
 

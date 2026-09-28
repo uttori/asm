@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { canonicalJson } from "./canonical-json.js";
 import type { RomIdentity } from "./rom-image.js";
+import { sourceGenerationIdentity, assertSourceGeneration } from "./source-generation.js";
 
 /** Manifest `format` field for a generated source-export tree. */
 export const SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
@@ -88,6 +89,8 @@ export interface SourceExportManifest {
   readonly checksumPolicy: "preserve";
   /** User-owned inputs whose drift makes generated source stale without blocking regeneration. */
   readonly inputs?: readonly SourceExportInput[];
+  /** Optional export-time source/entity map, owned and hashed in files. No build is required to use it. */
+  readonly ownershipFile?: string;
   readonly files: readonly SourceExportFile[];
   readonly spans: readonly SourceExportSpan[];
 }
@@ -129,6 +132,7 @@ const assertSafePath = (relative: string): void => {
  * @returns {SourceExportManifest} Validated manifest.
  */
 export const loadSourceExportManifest = (directory: string): SourceExportManifest => {
+  const generation = sourceGenerationIdentity(directory);
   const manifest = JSON.parse(
     fs.readFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), "utf8"),
   ) as SourceExportManifest;
@@ -147,6 +151,12 @@ export const loadSourceExportManifest = (directory: string): SourceExportManifes
     paths.add(file.path);
   }
   const inputPaths = new Set<string>();
+  if (manifest.ownershipFile !== undefined) {
+    assertSafePath(manifest.ownershipFile);
+    if (!paths.has(manifest.ownershipFile)) {
+      throw new Error("Source ownership map is not a generated file.");
+    }
+  }
   for (const input of manifest.inputs ?? []) {
     assertSafePath(input.path);
     if (paths.has(input.path) || inputPaths.has(input.path)) {
@@ -187,6 +197,7 @@ export const loadSourceExportManifest = (directory: string): SourceExportManifes
   ) {
     throw new Error("Source-export copier-header ownership does not match the ROM identity.");
   }
+  assertSourceGeneration(directory, generation);
   return manifest;
 };
 
@@ -211,6 +222,7 @@ export const inspectSourceExportFiles = (
   directory: string,
   manifest = loadSourceExportManifest(directory),
 ): SourceExportFileIssue[] => {
+  const generation = sourceGenerationIdentity(directory);
   const issues: SourceExportFileIssue[] = [];
   for (const file of manifest.files) {
     const absolute = path.join(directory, file.path);
@@ -234,6 +246,7 @@ export const inspectSourceExportFiles = (
       });
     }
   }
+  assertSourceGeneration(directory, generation);
   return issues;
 };
 

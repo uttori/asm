@@ -203,6 +203,27 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
     },
   );
 
+  test.serial(
+    "selected build identity reaches the runtime host without changing installed runtime pins",
+    async (t) => {
+      const fixture = setup(t);
+      const original = readFileSync(fixture.manifest, "utf8");
+      const expected = "1".repeat(64);
+      await fixture.run([...fixture.args, "--rom-sha256", expected], {
+        [DEBUG_SIDECAR_SESSION_ENV]: session,
+      });
+      const finished = once(fixture.output, "finish");
+      fixture.input.end(fixture.frame("connect", 1));
+      await finished;
+      const host = fixture.createClient.thisValues[0] as { manifest: Record<string, unknown> };
+      t.is(host.manifest.romSha256, expected);
+      const installed = JSON.parse(original) as Record<string, unknown>;
+      t.is(host.manifest.executableSha256, installed.executableSha256);
+      t.deepEqual(host.manifest.resources, installed.resources);
+      t.is(readFileSync(fixture.manifest, "utf8"), original);
+    },
+  );
+
   for (const signal of ["SIGINT", "SIGTERM"]) {
     test.serial(
       `sidecar ${signal} shutdown tolerates host cleanup failure and runs once`,
