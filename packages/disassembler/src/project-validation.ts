@@ -171,12 +171,6 @@ const assertCodecReference = (
   }
 };
 
-/** A fresh reducer per read attempt. It must not publish facts before the load succeeds. */
-export interface RuntimeRecordProjection {
-  readonly push: (record: RuntimeEvidenceRecord) => void;
-  readonly finish: () => readonly RuntimeEvidenceRecord[];
-}
-
 /**
  * Validate runtime facts in one pass, spilling large duplicate-ID indexes to temporary disk storage.
  * Stored SQLite rows skip the duplicate index because their primary key already enforces uniqueness.

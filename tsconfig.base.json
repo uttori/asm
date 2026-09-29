@@ -4,6 +4,7 @@
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "checkJs": true,
+    "customConditions": ["uttori-source"],
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
@@ -13,16 +14,15 @@
     "module": "NodeNext",
     "moduleResolution": "nodenext",
     "noEmit": false,
+    "noEmitOnError": true,
     "noUncheckedIndexedAccess": false,
     "removeComments": false,
+    "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "strictNullChecks": true,
     "target": "ES2024",
-    "types": ["node", "sinon"],
-    "rewriteRelativeImportExtensions": true,
-    "customConditions": ["uttori-source"],
-    "noEmitOnError": true
+    "types": ["node", "sinon"]
   }
 }

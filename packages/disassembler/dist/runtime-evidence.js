@@ -1,4 +1,4 @@
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { manuallyOwnedMetadata } from "./metadata-edit.js";
 const emptyCounts = () => ({
     analysis: 0,
@@ -152,7 +152,7 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
             records.set(record.id, record);
             added[kind]++;
         }
-        else if (canonicalJson(current) === canonicalJson(record)) {
+        else if (canonicalEquals(current, record)) {
             existing[kind]++;
         }
         else if (kind === "analysis" &&
@@ -171,7 +171,7 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
                 targets: [...new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
                 evidence: sortedUnique([...left.evidence, ...right.evidence]),
             };
-            if (canonicalJson(current) === canonicalJson(merged)) {
+            if (canonicalEquals(current, merged)) {
                 existing[kind]++;
             }
             else {

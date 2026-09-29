@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
-  canonicalJson,
   type AnalysisRecord,
   type AnalysisControlFlowNodeRecord,
   type AnalysisControlFlowEdgeRecord,

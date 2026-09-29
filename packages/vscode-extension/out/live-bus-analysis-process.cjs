@@ -36,6 +36,45 @@ __export(live_bus_analysis_process_exports, {
 module.exports = __toCommonJS(live_bus_analysis_process_exports);
 var import_promises3 = require("node:timers/promises");
 
+// packages/core/src/canonical-json.ts
+var compareKeys = (a, b) => a.localeCompare(b);
+var canonicalValue = (value) => {
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(canonicalValue);
+  }
+  const input = value;
+  const result = {};
+  const keys = Object.keys(input);
+  if (keys.length > 1) {
+    keys.sort(compareKeys);
+  }
+  for (const key3 of keys) {
+    const entry = input[key3];
+    if (entry === void 0) {
+      continue;
+    }
+    const normalized = typeof entry === "object" && entry !== null ? canonicalValue(entry) : entry;
+    if (key3 === "__proto__") {
+      Object.defineProperty(result, key3, {
+        value: normalized,
+        enumerable: true,
+        writable: true,
+        configurable: true
+      });
+    } else {
+      result[key3] = normalized;
+    }
+  }
+  return result;
+};
+var canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+var canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
+var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
+`;
+
 // packages/debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
@@ -725,38 +764,6 @@ var nativePosition = (value, session, scope) => {
   }
   return position;
 };
-
-// packages/disassembler/src/canonical-json.ts
-var canonicalValue = (value) => {
-  if (Array.isArray(value)) {
-    return value.map(canonicalValue);
-  }
-  if (value !== null && typeof value === "object") {
-    const input = value;
-    const result = {};
-    for (const key3 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
-      const entry = input[key3];
-      if (entry === void 0) {
-        continue;
-      }
-      const normalized = canonicalValue(entry);
-      if (key3 === "__proto__") {
-        Object.defineProperty(result, key3, {
-          value: normalized,
-          enumerable: true,
-          writable: true,
-          configurable: true
-        });
-      } else {
-        result[key3] = normalized;
-      }
-    }
-    return result;
-  }
-  return value;
-};
-var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
-`;
 
 // packages/disassembler/src/sqlite-store.ts
 var import_node_crypto3 = require("node:crypto");
@@ -1797,7 +1804,7 @@ var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
     if (!current) {
       records.set(record.id, record);
       added[kind]++;
-    } else if (canonicalJson(current) === canonicalJson(record)) {
+    } else if (canonicalEquals(current, record)) {
       existing[kind]++;
     } else if (kind === "analysis" && "kind" in current && "kind" in record && current.kind === "target-override" && record.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
       const left = current;
@@ -1810,7 +1817,7 @@ var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
         targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
         evidence: sortedUnique2([...left.evidence, ...right.evidence])
       };
-      if (canonicalJson(current) === canonicalJson(merged)) {
+      if (canonicalEquals(current, merged)) {
         existing[kind]++;
       } else {
         records.set(record.id, merged);
@@ -3775,7 +3782,7 @@ var SqliteRuntimeWriter = class {
       );
       const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
       const expectedKind = record.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record.count && other.evidence_id === evidence && other.architecture === record.architecture && other.address_space === record.addressSpace && other.address === record.address && canonicalJson(parseSqlitePayload(other.payload).state) === canonicalJson(record.state)) {
+      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record.count && other.evidence_id === evidence && other.architecture === record.architecture && other.address_space === record.addressSpace && other.address === record.address && canonicalEquals(parseSqlitePayload(other.payload).state, record.state)) {
         if (record.kind === "runtime-cpu-state") {
           this.#pair.run(prefix, other.oid);
           return;
@@ -4867,11 +4874,11 @@ var SqliteAnalysisStore = class {
       const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
       for (const id of /* @__PURE__ */ new Set([...previous.keys(), ...next.keys()])) {
         const prior = previous.get(id), record = next.get(id);
-        if (canonicalJson(prior) === canonicalJson(record)) {
+        if (canonicalEquals(prior, record)) {
           continue;
         }
         const stored = find.get(id);
-        if (canonicalJson(stored ? parseRecord(stored.payload) : void 0) !== canonicalJson(prior)) {
+        if (!canonicalEquals(stored ? parseRecord(stored.payload) : void 0, prior)) {
           throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
         }
         remove.run(id);
@@ -4942,7 +4949,7 @@ var SqliteAnalysisStore = class {
             continue;
           }
           const before = JSON.parse(json);
-          if (JSON.stringify(canonicalValue(before)) === JSON.stringify(canonicalValue(record))) {
+          if (canonicalEquals(before, record)) {
             continue;
           }
           remove.run(record.id);
@@ -4972,7 +4979,7 @@ var SqliteAnalysisStore = class {
         throw new Error(`Duplicate runtime record ID '${record.id}'.`);
       }
       const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-      if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record)) {
+      if (prior && canonicalEquals(runtimeFromRow(prior), record)) {
         continue;
       }
       if (prior) {
@@ -4995,7 +5002,7 @@ var SqliteAnalysisStore = class {
     const identity = sqliteRuntimeIdentity(record.id);
     const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
     if (prior) {
-      if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record)) {
+      if (!canonicalEquals(runtimeFromRow(prior), record)) {
         throw new Error(
           `Runtime record '${record.id}' has changed content for a stable imported ID.`
         );

@@ -4,12 +4,12 @@ import path from "node:path";
 
 import {
   AddressToLineMapping,
-  canonicalDebugMapJson,
   createDebugMap,
   debugMapRangesForAddress,
   debugMapRangesForSource,
   validateDebugMap,
 } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 import { test } from "../../../tests/ava-helper.js";
 import { Assembler } from "../../../tests/test-assembler.js";
@@ -70,7 +70,7 @@ test("debug maps are deterministic, fingerprinted, architecture-aware, and mirro
   t.is(debugMapRangesForAddress(map, "spc.aram", 0x200, { architecture: "snes.spc700" }).length, 1);
   t.is(debugMapRangesForSource(map, source, 2, "snes.65816").length, 1);
 
-  const tampered = JSON.parse(canonicalDebugMapJson(map));
+  const tampered = JSON.parse(canonicalJson(map));
   tampered.target = "other";
   t.deepEqual(validateDebugMap(tampered), ["Debug-map fingerprint mismatch."]);
 });

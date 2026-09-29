@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { sqliteRuntimeIdentity, encodeSqlitePayload, parseSqlitePayload, } from "./sqlite-payload.js";
 import { runtimeColumns } from "./sqlite-records.js";
 import { RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA, runtimeIdentityKey, } from "./sqlite-runtime-facts.js";
@@ -158,8 +158,7 @@ export class SqliteRuntimeWriter {
                 other.architecture === record.architecture &&
                 other.address_space === record.addressSpace &&
                 other.address === record.address &&
-                canonicalJson(parseSqlitePayload(other.payload).state) ===
-                    canonicalJson(record.state)) {
+                canonicalEquals(parseSqlitePayload(other.payload).state, record.state)) {
                 if (record.kind === "runtime-cpu-state") {
                     this.#pair.run(prefix, other.oid);
                     return;

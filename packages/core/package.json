@@ -35,6 +35,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./canonical-json": {
+      "uttori-source": "./src/canonical-json.ts",
+      "types": "./dist/canonical-json.d.ts",
+      "import": "./dist/canonical-json.js"
+    },
     "./debug-map": {
       "uttori-source": "./src/debug-map.ts",
       "types": "./dist/debug-map.d.ts",

@@ -1,8 +1,9 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+
 import { test } from "../../../tests/ava-helper.js";
-import { canonicalJson } from "../../disassembler/src/index.js";
 import { importDizRaw } from "../src/index.js";
 
 const fixture = `<?xml version="1.0" encoding="utf-8"?>

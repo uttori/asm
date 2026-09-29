@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { canonicalEquals, canonicalJson } from "@uttori/asm-core/canonical-json";
 import { buildAnalysisSourceCatalog } from "./analysis-sources.js";
-import { canonicalJson, canonicalValue } from "./canonical-json.js";
 import { explainProjectEvidence } from "./project-edit.js";
 import { ANALYSIS_PROJECT_MANIFEST, } from "./project-types.js";
 import { validateLoadedShards } from "./project-validation.js";
@@ -489,11 +489,11 @@ export class SqliteAnalysisStore {
             const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
             for (const id of new Set([...previous.keys(), ...next.keys()])) {
                 const prior = previous.get(id), record = next.get(id);
-                if (canonicalJson(prior) === canonicalJson(record)) {
+                if (canonicalEquals(prior, record)) {
                     continue;
                 }
                 const stored = find.get(id);
-                if (canonicalJson(stored ? parseRecord(stored.payload) : undefined) !== canonicalJson(prior)) {
+                if (!canonicalEquals(stored ? parseRecord(stored.payload) : undefined, prior)) {
                     throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
                 }
                 remove.run(id);
@@ -571,9 +571,9 @@ export class SqliteAnalysisStore {
                         continue;
                     }
                     const before = JSON.parse(json);
-                    // Comparison is internal: preserve canonical key/undefined semantics without allocating
-                    // the pretty-printed identity format for every large CFG context twice.
-                    if (JSON.stringify(canonicalValue(before)) === JSON.stringify(canonicalValue(record))) {
+                    // Comparison is internal. Compact canonical JSON keeps key order and undefined
+                    // omission without the pretty identity text used for stored payloads.
+                    if (canonicalEquals(before, record)) {
                         continue;
                     }
                     remove.run(record.id);
@@ -598,7 +598,7 @@ export class SqliteAnalysisStore {
                 throw new Error(`Duplicate runtime record ID '${record.id}'.`);
             }
             const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-            if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record)) {
+            if (prior && canonicalEquals(runtimeFromRow(prior), record)) {
                 continue;
             }
             if (prior) {
@@ -621,7 +621,7 @@ export class SqliteAnalysisStore {
         const identity = sqliteRuntimeIdentity(record.id);
         const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
         if (prior) {
-            if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record)) {
+            if (!canonicalEquals(runtimeFromRow(prior), record)) {
                 throw new Error(`Runtime record '${record.id}' has changed content for a stable imported ID.`);
             }
             return false;

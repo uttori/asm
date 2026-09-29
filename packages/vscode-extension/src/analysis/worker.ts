@@ -2,13 +2,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parentPort } from "node:worker_threads";
 
+import { canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
 import type { DebugMapRange } from "@uttori/asm-core/debug-map";
 import {
   ANALYSIS_PROJECT_SQLITE_FILE,
   SqliteAnalysisStore,
   buildInstructionAnalysisAnnotations,
   HalfOpenIntervalIndex,
-  canonicalJson,
   analysisProjectRevision,
   assertAnalysisProjectRevision,
   openAnalysisProjectStore,
@@ -352,7 +352,7 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     );
     return store.cachedProjection(
       "snes_roles",
-      canonicalJson([1, config]),
+      canonicalJsonCompact([1, config]),
       ["analysis", "runtime", "evidence"],
       () => {
         const shards = {

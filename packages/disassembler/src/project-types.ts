@@ -527,6 +527,12 @@ export interface LoadedAnalysisProject {
   readonly shards: AnalysisProjectShards;
 }
 
+/** A fresh reducer per read attempt. It must not publish facts before the load succeeds. */
+export interface RuntimeRecordProjection {
+  readonly push: (record: RuntimeEvidenceRecord) => void;
+  readonly finish: () => readonly RuntimeEvidenceRecord[];
+}
+
 /** Metadata and optional runtime projection. Never pass this partial view to a full replacement. */
 export interface LoadedAnalysisProjectView {
   readonly manifest: AnalysisProjectManifest;

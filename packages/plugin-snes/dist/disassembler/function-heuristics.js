@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { canonicalJson, } from "@uttori/asm-disassembler";
+import { canonicalJson, canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
 import { identifySnesHardwareRegister } from "./hardware-registers.js";
 const isArray = (value) => Array.isArray(value);
 const rank = { low: 0, medium: 1, high: 2 };
@@ -364,7 +364,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
     }
     const contextNodes = new Map();
     for (const node of nodes.values()) {
-        const key = canonicalJson(node.context);
+        const key = canonicalJsonCompact(node.context);
         const indexed = contextNodes.get(key) ?? new Map();
         const choices = indexed.get(node.address) ?? [];
         choices.push(node);
@@ -384,7 +384,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
         if (!end || !start) {
             continue;
         }
-        const indexed = contextNodes.get(canonicalJson(start.context));
+        const indexed = contextNodes.get(canonicalJsonCompact(start.context));
         const loop = [];
         let cursor = start.address;
         while (cursor <= end.address && loop.length < limit) {
@@ -469,7 +469,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
                 .map((id) => nodes.get(id))
                 .find((candidate) => candidate &&
                 functionAddresses.has(candidate.address) &&
-                canonicalJson(candidate.context) === canonicalJson(node.context));
+                canonicalJsonCompact(candidate.context) === canonicalJsonCompact(node.context));
             if (owner && owner.address !== node.address) {
                 emit(owner, role.rule, role.role, role.confidence, [node, owner], `Function contains ${role.role} evidence at $${node.address.toString(16)}. ${role.explanation}`);
             }

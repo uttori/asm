@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+
 import type {
   EvidenceRecord,
   ImportReport,

@@ -1,7 +1,7 @@
-import { canonicalValue } from "./canonical-json.js";
+import { canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
 const sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
 const sortedNumbers = (values) => values ? [...new Set(values)].sort((left, right) => left - right) : [];
-const valueKey = (value, present) => present ? JSON.stringify(canonicalValue(value)) : "<absent>";
+const valueKey = (value, present) => present ? canonicalJsonCompact(value) : "<absent>";
 const locationKey = (addressSpace, address) => `${addressSpace}:${address}`;
 /**
  * Adds one value while preserving lazy allocation for the common empty case.
@@ -89,7 +89,7 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
         return instruction;
     };
     const addStateObservation = (instruction, source, architecture, state, recordId, evidence, count) => {
-        const stateKey = JSON.stringify(canonicalValue(state));
+        const stateKey = canonicalJsonCompact(state);
         const key = `${source}:${architecture}:${stateKey}`;
         const observations = (instruction.stateObservations ??= new Map());
         let observation = observations.get(key);
@@ -129,7 +129,7 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
                 });
                 continue;
             }
-            const key = JSON.stringify(canonicalValue(value));
+            const key = canonicalJsonCompact(value);
             const addresses = (instruction.effectiveAddresses ??= new Map());
             let entry = addresses.get(key);
             if (!entry) {
@@ -211,7 +211,7 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
                 ...(record.channel === undefined ? {} : { channel: record.channel }),
                 ...(record.value === undefined ? {} : { value: record.value }),
             };
-            const key = JSON.stringify(canonicalValue(value));
+            const key = canonicalJsonCompact(value);
             const accesses = (instruction.memoryAccesses ??= new Map());
             let access = accesses.get(key);
             if (!access) {

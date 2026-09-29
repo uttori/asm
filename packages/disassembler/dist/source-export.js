@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
-import { canonicalJson } from "./canonical-json.js";
 import { sourceGenerationIdentity, assertSourceGeneration } from "./source-generation.js";
 /** Manifest `format` field for a generated source-export tree. */
 export const SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
@@ -15,12 +14,6 @@ export const SOURCE_EXPORT_MANIFEST = "generated-files.json";
  * @returns {string} 64-character lowercase hex digest.
  */
 export const sourceExportSha256 = (value) => createHash("sha256").update(value).digest("hex");
-/**
- * Deterministic JSON: sorted object keys, dropped `undefined`, trailing newline.
- * @param {unknown} value Manifest or config object.
- * @returns {string} Canonical JSON text.
- */
-export const canonicalSourceExportJson = (value) => canonicalJson(value);
 /**
  * Asserts that a path is safe for use in a source export manifest.
  * @param {string} relative The path to assert.

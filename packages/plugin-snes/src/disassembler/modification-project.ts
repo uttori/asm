@@ -5,12 +5,12 @@ import path from "node:path";
 import {
   Assembler,
   NodeAssemblyFileProvider,
-  canonicalDebugMapJson,
   createDebugMap,
   validateDebugMap,
   CRC32,
   type DebugMap,
 } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   acquireFileLease,
   durableReplace,
@@ -393,7 +393,7 @@ const mergeModifiedMaps = (
   };
   return {
     ...payload,
-    fingerprint: { algorithm: "sha256", value: sourceExportSha256(canonicalDebugMapJson(payload)) },
+    fingerprint: { algorithm: "sha256", value: sourceExportSha256(canonicalJson(payload)) },
   };
 };
 
@@ -823,7 +823,7 @@ export const buildModifiedRom = async (
       ...payload,
       fingerprint: {
         algorithm: "sha256",
-        value: sourceExportSha256(canonicalDebugMapJson(payload)),
+        value: sourceExportSha256(canonicalJson(payload)),
       },
     };
     const issues = validateDebugMap(finalMap, output);
@@ -887,7 +887,7 @@ export const buildModifiedRom = async (
         output,
       ]),
     );
-    durableReplace(debugMapPath, canonicalDebugMapJson(finalMap));
+    durableReplace(debugMapPath, canonicalJson(finalMap));
     durableReplace(
       result.receiptFile,
       JSON.stringify(

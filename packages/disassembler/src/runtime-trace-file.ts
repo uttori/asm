@@ -2,7 +2,8 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
 
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+
 import {
   createRuntimeInstructionTraceImporter,
   createRuntimeTraceChunkValidator,
@@ -310,9 +311,7 @@ async function* traceFileChunks(
       });
     }
   }
-  if (
-    canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata)
-  ) {
+  if (!canonicalEquals(validateRuntimeInstructionTraceMetadata(properties), metadata)) {
     throw new Error("Instruction trace identity changed while importing.");
   }
 }

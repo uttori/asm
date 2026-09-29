@@ -1,6 +1,11 @@
-import test from "ava";
+import {
+  canonicalEquals,
+  canonicalJson,
+  canonicalJsonCompact,
+  canonicalValue,
+} from "@uttori/asm-core/canonical-json";
 
-import { canonicalJson, canonicalValue } from "../src/canonical-json.js";
+import { test } from "../../../tests/ava-helper.js";
 
 test("canonical JSON preserves locale ordering, undefined omission and own __proto__ data", (t) => {
   const input = JSON.parse(
@@ -17,4 +22,11 @@ test("canonical JSON preserves locale ordering, undefined omission and own __pro
   t.true(Object.hasOwn(normalized, "__proto__"));
   t.is(Object.getPrototypeOf(normalized), Object.prototype);
   t.false(Object.hasOwn(normalized, "omitted"));
+  t.is(
+    canonicalJsonCompact(input),
+    '{"2":"two","10":"ten","__proto__":{"polluted":true},"a":4,"ä":3,"array":[{"a":null,"z":false},null,"escaped\\n🎮"],"z":1}',
+  );
+  t.true(canonicalEquals({ z: 1, a: 2 }, { a: 2, z: 1, omitted: undefined }));
+  t.false(canonicalEquals({ a: 1 }, { a: 2 }));
+  t.false(canonicalEquals(undefined, null));
 });

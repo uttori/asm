@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { canonicalJson, } from "@uttori/asm-disassembler";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { Cpu65816Decoder } from "../architectures/65816-decoder.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { createSnesAddressContext } from "./address-identities.js";

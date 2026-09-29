@@ -1,6 +1,6 @@
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { validateEditableMetadataRecord, validateMetadataReceipt } from "./metadata-validation.js";
 export { validateEditableMetadataRecord, validateMetadataReceipt } from "./metadata-validation.js";
-import { canonicalJson } from "./canonical-json.js";
 import { projectSourceLabelNames } from "./project-labels.js";
 import { validateLoadedShards } from "./project-validation.js";
 /**
@@ -65,7 +65,7 @@ export const applyMetadataEdit = (project, request) => {
             void ignored;
             return value;
         };
-        if (canonicalJson(content(before)) === canonicalJson(content(after))) {
+        if (canonicalEquals(content(before), content(after))) {
             return;
         }
         if (after) {
@@ -180,8 +180,7 @@ export const applyMetadataEdit = (project, request) => {
             }
             restores = receipt.id;
             for (const change of receipt.changes) {
-                if (canonicalJson(existing(change.shard, change.id) ?? null) !==
-                    canonicalJson(change.after ?? null)) {
+                if (!canonicalEquals(existing(change.shard, change.id) ?? null, change.after ?? null)) {
                     throw new Error(`Cannot restore changed ${change.shard} record '${change.id}'. Review the newer edit first.`);
                 }
                 put(change.shard, change.id, change.before);

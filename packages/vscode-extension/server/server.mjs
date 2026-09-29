@@ -15682,28 +15682,59 @@ var init_decoder_types = __esm({
   }
 });
 
-// packages/core/src/debug-map.ts
-import { createHash } from "node:crypto";
-import path2 from "node:path";
-var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, createDebugMap;
-var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+// packages/core/src/canonical-json.ts
+var compareKeys, canonicalValue, canonicalJson;
+var init_canonical_json = __esm({
+  "packages/core/src/canonical-json.ts"() {
     "use strict";
-    DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
-    DEBUG_MAP_SCHEMA_VERSION = 1;
+    compareKeys = (a, b) => a.localeCompare(b);
     canonicalValue = (value) => {
+      if (typeof value !== "object" || value === null) {
+        return value;
+      }
       if (Array.isArray(value)) {
         return value.map(canonicalValue);
       }
-      if (value !== null && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue(entry)])
-        );
+      const input = value;
+      const result = {};
+      const keys = Object.keys(input);
+      if (keys.length > 1) {
+        keys.sort(compareKeys);
       }
-      return value;
+      for (const key2 of keys) {
+        const entry = input[key2];
+        if (entry === void 0) {
+          continue;
+        }
+        const normalized = typeof entry === "object" && entry !== null ? canonicalValue(entry) : entry;
+        if (key2 === "__proto__") {
+          Object.defineProperty(result, key2, {
+            value: normalized,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key2] = normalized;
+        }
+      }
+      return result;
     };
-    canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
+    canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
+  }
+});
+
+// packages/core/src/debug-map.ts
+import { createHash } from "node:crypto";
+import path2 from "node:path";
+var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, sha256, createDebugMap;
+var init_debug_map = __esm({
+  "packages/core/src/debug-map.ts"() {
+    "use strict";
+    init_canonical_json();
+    DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
+    DEBUG_MAP_SCHEMA_VERSION = 1;
     sha256 = (value) => createHash("sha256").update(value).digest("hex");
     createDebugMap = (options) => {
       const sourceRoot = path2.resolve(options.sourceRoot ?? process.cwd());
@@ -15752,7 +15783,7 @@ var init_debug_map = __esm({
       };
       return {
         ...payload,
-        fingerprint: { algorithm: "sha256", value: sha256(canonicalDebugMapJson(payload)) }
+        fingerprint: { algorithm: "sha256", value: sha256(canonicalJson(payload)) }
       };
     };
   }
@@ -17016,6 +17047,7 @@ var init_src = __esm({
     init_crc32();
     init_addressToLine();
     init_debug_map();
+    init_canonical_json();
     init_operand_syntax();
     init_syntax_profile();
     init_diagnostics();
@@ -49187,6 +49219,7 @@ ${stack}`);
 
 // packages/language-server/src/server.ts
 init_src();
+init_canonical_json();
 init_debug_map();
 init_src2();
 import { createHash as createHash5 } from "node:crypto";
@@ -56400,7 +56433,7 @@ function buildBinary(requestedFile, output, baseImage) {
       if (managedGeneration && generationIdentity) {
         assertSourceGeneration(managedGeneration.directory, generationIdentity);
       }
-      const committed = commitBuildArtifactPair(outputPath, bytes, canonicalDebugMapJson(debugMap));
+      const committed = commitBuildArtifactPair(outputPath, bytes, canonicalJson(debugMap));
       log.info(`  writing ${bytes.length} bytes \u2192 ${committed.outputPath}`);
       log.info(`  debug map \u2192 ${committed.debugMapPath}`);
       log.info(

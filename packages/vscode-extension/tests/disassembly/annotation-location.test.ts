@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { canonicalDebugMapJson, type DebugMap } from "@uttori/asm-core/debug-map";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { type DebugMap } from "@uttori/asm-core/debug-map";
 import type { AnalysisProjectShards } from "@uttori/asm-disassembler";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -45,7 +46,7 @@ const map = (): DebugMap => {
   };
   return {
     ...payload,
-    fingerprint: { algorithm: "sha256", value: hash(canonicalDebugMapJson(payload)) },
+    fingerprint: { algorithm: "sha256", value: hash(canonicalJson(payload)) },
   } as DebugMap;
 };
 

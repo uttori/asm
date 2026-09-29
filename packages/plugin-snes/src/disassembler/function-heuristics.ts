@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { canonicalJson, canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
 import {
-  canonicalJson,
   type AnalysisControlFlowNodeRecord as Node,
   type AnalysisControlFlowEdgeRecord as Edge,
   type AnalysisProjectShards,
@@ -513,7 +513,7 @@ export const analyzeSnesFunctionRoles = (
   }
   const contextNodes = new Map<string, Map<number, Node[]>>();
   for (const node of nodes.values()) {
-    const key = canonicalJson(node.context);
+    const key = canonicalJsonCompact(node.context);
     const indexed = contextNodes.get(key) ?? new Map<number, Node[]>();
     const choices = indexed.get(node.address) ?? [];
     choices.push(node);
@@ -537,7 +537,7 @@ export const analyzeSnesFunctionRoles = (
     if (!end || !start) {
       continue;
     }
-    const indexed = contextNodes.get(canonicalJson(start.context))!;
+    const indexed = contextNodes.get(canonicalJsonCompact(start.context))!;
     const loop: Node[] = [];
     let cursor = start.address;
     while (cursor <= end.address && loop.length < limit) {
@@ -658,7 +658,7 @@ export const analyzeSnesFunctionRoles = (
           (candidate) =>
             candidate &&
             functionAddresses.has(candidate.address) &&
-            canonicalJson(candidate.context) === canonicalJson(node.context),
+            canonicalJsonCompact(candidate.context) === canonicalJsonCompact(node.context),
         );
       if (owner && owner.address !== node.address) {
         emit(

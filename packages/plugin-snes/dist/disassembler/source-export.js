@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_MANIFEST, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_OWNERSHIP_FILE, HalfOpenIntervalIndex, canonicalSourceExportJson, loadSourceExportManifest, sourceExportSha256, projectSourceLabelNames, validateSourceLabelName, validateSourceExportFiles, } from "@uttori/asm-disassembler";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_MANIFEST, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_OWNERSHIP_FILE, HalfOpenIntervalIndex, loadSourceExportManifest, sourceExportSha256, projectSourceLabelNames, validateSourceLabelName, validateSourceExportFiles, } from "@uttori/asm-disassembler";
 import { Cpu65816Decoder, formatCpu65816Instruction, } from "../architectures/65816-decoder.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { createSnesAddressContext, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, } from "./address-identities.js";
@@ -1531,8 +1532,8 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
             : [];
     })
         .sort((left, right) => left.id.localeCompare(right.id));
-    writeFile(directory, "annotation-report.json", canonicalSourceExportJson({ issues: annotationIssues }), "configuration", files);
-    const defaultConfiguration = canonicalSourceExportJson({
+    writeFile(directory, "annotation-report.json", canonicalJson({ issues: annotationIssues }), "configuration", files);
+    const defaultConfiguration = canonicalJson({
         $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
         plugins: [
             {
@@ -1553,7 +1554,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         ? fs.readFileSync(configurationPath)
         : defaultConfiguration;
     writeFile(directory, "uttori-asm.config.json", configuration, "configuration", files);
-    writeFile(directory, SOURCE_OWNERSHIP_FILE, canonicalSourceExportJson({
+    writeFile(directory, SOURCE_OWNERSHIP_FILE, canonicalJson({
         format: "uttori-asm-source-ownership",
         sourceProjectSha256: options.sourceProjectSha256,
         romSha256: rom.identity.contentSha256,
@@ -1620,7 +1621,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         }
     }
     fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), canonicalSourceExportJson(manifest));
+    fs.writeFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), canonicalJson(manifest));
     return manifest;
 };
 //# sourceMappingURL=source-export.js.map

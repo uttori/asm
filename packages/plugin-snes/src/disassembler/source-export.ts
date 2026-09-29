@@ -2,13 +2,13 @@ import * as fs from "node:fs";
 import path from "node:path";
 
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_MANIFEST,
   SOURCE_EXPORT_SCHEMA_VERSION,
   SOURCE_OWNERSHIP_FILE,
   HalfOpenIntervalIndex,
-  canonicalSourceExportJson,
   loadSourceExportManifest,
   sourceExportSha256,
   projectSourceLabelNames,
@@ -2190,11 +2190,11 @@ export const exportSnes65816Source = (
   writeFile(
     directory,
     "annotation-report.json",
-    canonicalSourceExportJson({ issues: annotationIssues }),
+    canonicalJson({ issues: annotationIssues }),
     "configuration",
     files,
   );
-  const defaultConfiguration = canonicalSourceExportJson({
+  const defaultConfiguration = canonicalJson({
     $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
     plugins: [
       {
@@ -2218,7 +2218,7 @@ export const exportSnes65816Source = (
   writeFile(
     directory,
     SOURCE_OWNERSHIP_FILE,
-    canonicalSourceExportJson({
+    canonicalJson({
       format: "uttori-asm-source-ownership",
       sourceProjectSha256: options.sourceProjectSha256,
       romSha256: rom.identity.contentSha256,
@@ -2290,9 +2290,6 @@ export const exportSnes65816Source = (
     }
   }
   fs.mkdirSync(directory, { recursive: true });
-  fs.writeFileSync(
-    path.join(directory, SOURCE_EXPORT_MANIFEST),
-    canonicalSourceExportJson(manifest),
-  );
+  fs.writeFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), canonicalJson(manifest));
   return manifest;
 };

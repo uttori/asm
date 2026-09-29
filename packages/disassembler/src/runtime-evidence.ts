@@ -1,4 +1,5 @@
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+
 import { manuallyOwnedMetadata } from "./metadata-edit.js";
 import {
   type AnalysisProjectShards,
@@ -244,7 +245,7 @@ const mergeRecords = <T extends { readonly id: string }>(
     if (!current) {
       records.set(record.id, record);
       added[kind]++;
-    } else if (canonicalJson(current) === canonicalJson(record)) {
+    } else if (canonicalEquals(current, record)) {
       existing[kind]++;
     } else if (
       kind === "analysis" &&
@@ -264,7 +265,7 @@ const mergeRecords = <T extends { readonly id: string }>(
         targets: [...new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
         evidence: sortedUnique([...left.evidence, ...right.evidence]),
       } as unknown as T;
-      if (canonicalJson(current) === canonicalJson(merged)) {
+      if (canonicalEquals(current, merged)) {
         existing[kind]++;
       } else {
         records.set(record.id, merged);

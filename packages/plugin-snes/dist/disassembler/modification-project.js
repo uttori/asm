@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { Assembler, NodeAssemblyFileProvider, canonicalDebugMapJson, createDebugMap, validateDebugMap, CRC32, } from "@uttori/asm-core";
+import { Assembler, NodeAssemblyFileProvider, createDebugMap, validateDebugMap, CRC32, } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { acquireFileLease, durableReplace, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, sourceExportSha256, sourceGenerationIdentity, assertSourceGeneration, RomImage, } from "@uttori/asm-disassembler";
 import { createSnesAssemblerEnvironment } from "../assembler.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
@@ -234,7 +235,7 @@ const mergeModifiedMaps = (baseline, patches, project, sourceDirectory, output) 
     };
     return {
         ...payload,
-        fingerprint: { algorithm: "sha256", value: sourceExportSha256(canonicalDebugMapJson(payload)) },
+        fingerprint: { algorithm: "sha256", value: sourceExportSha256(canonicalJson(payload)) },
     };
 };
 /**
@@ -578,7 +579,7 @@ export const buildModifiedRom = async (options) => {
             ...payload,
             fingerprint: {
                 algorithm: "sha256",
-                value: sourceExportSha256(canonicalDebugMapJson(payload)),
+                value: sourceExportSha256(canonicalJson(payload)),
             },
         };
         const issues = validateDebugMap(finalMap, output);
@@ -635,7 +636,7 @@ export const buildModifiedRom = async (options) => {
             Buffer.from(rom.fileBytes()).subarray(0, project.baseline.rom.headerSize),
             output,
         ]));
-        durableReplace(debugMapPath, canonicalDebugMapJson(finalMap));
+        durableReplace(debugMapPath, canonicalJson(finalMap));
         durableReplace(result.receiptFile, JSON.stringify({
             ...result,
             baseline: project.baseline,

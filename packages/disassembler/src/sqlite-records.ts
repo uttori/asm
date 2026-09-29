@@ -1,4 +1,5 @@
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+
 import type { AnalysisRecord, RuntimeEvidenceRecord, RuntimeStateValue } from "./project-types.js";
 import type { RuntimeBusFact } from "./runtime-bus-types.js";
 import { parseSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";

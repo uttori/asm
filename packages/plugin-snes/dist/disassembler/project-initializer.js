@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
+import { Assembler, createDebugMap } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, compareByteImages, openAnalysisProjectStore, analysisProjectRevision, assertAnalysisProjectRevision, commitAnalysisProjectViewUpdate, loadSourceExportManifest, sourceGenerationIdentity, assertSourceGeneration, validateAnalysisProject, validateProjectRom, validateSourceExportFiles, validateSourceExportInputs, publishAnalysisProject, } from "@uttori/asm-disassembler";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { analyzeSnes65816 } from "./65816-analysis.js";
@@ -612,7 +613,7 @@ export const verifySnesProjectRoundTrip = async (options) => {
         if (options.emitDebugMap ?? true) {
             report(options, "verify", "Generating the debug map.");
             debugMap = `${contentOutput}.debug.json`;
-            fs.writeFileSync(debugMap, canonicalDebugMapJson(createDebugMap({
+            fs.writeFileSync(debugMap, canonicalJson(createDebugMap({
                 target: TARGET_ID,
                 output: content,
                 mapping: assembler.addressToLineMapping,

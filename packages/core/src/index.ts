@@ -17,6 +17,7 @@ export * from "./address-width.js";
 export * from "./crc32.js";
 export * from "./addressToLine.js";
 export * from "./debug-map.js";
+export * from "./canonical-json.js";
 export * from "./operand-syntax.js";
 export * from "./syntax-profile.js";
 export * from "./diagnostics.js";

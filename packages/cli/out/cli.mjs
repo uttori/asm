@@ -15717,28 +15717,61 @@ var init_decoder_types = __esm({
   }
 });
 
-// packages/core/src/debug-map.ts
-import { createHash } from "node:crypto";
-import path2 from "node:path";
-var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, createDebugMap;
-var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+// packages/core/src/canonical-json.ts
+var compareKeys, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
+var init_canonical_json = __esm({
+  "packages/core/src/canonical-json.ts"() {
     "use strict";
-    DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
-    DEBUG_MAP_SCHEMA_VERSION = 1;
+    compareKeys = (a, b) => a.localeCompare(b);
     canonicalValue = (value) => {
+      if (typeof value !== "object" || value === null) {
+        return value;
+      }
       if (Array.isArray(value)) {
         return value.map(canonicalValue);
       }
-      if (value !== null && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key3, entry]) => [key3, canonicalValue(entry)])
-        );
+      const input = value;
+      const result = {};
+      const keys = Object.keys(input);
+      if (keys.length > 1) {
+        keys.sort(compareKeys);
       }
-      return value;
+      for (const key3 of keys) {
+        const entry = input[key3];
+        if (entry === void 0) {
+          continue;
+        }
+        const normalized = typeof entry === "object" && entry !== null ? canonicalValue(entry) : entry;
+        if (key3 === "__proto__") {
+          Object.defineProperty(result, key3, {
+            value: normalized,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key3] = normalized;
+        }
+      }
+      return result;
     };
-    canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
+    canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+    canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
+    canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
+  }
+});
+
+// packages/core/src/debug-map.ts
+import { createHash } from "node:crypto";
+import path2 from "node:path";
+var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, sha256, createDebugMap;
+var init_debug_map = __esm({
+  "packages/core/src/debug-map.ts"() {
+    "use strict";
+    init_canonical_json();
+    DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
+    DEBUG_MAP_SCHEMA_VERSION = 1;
     sha256 = (value) => createHash("sha256").update(value).digest("hex");
     createDebugMap = (options) => {
       const sourceRoot = path2.resolve(options.sourceRoot ?? process.cwd());
@@ -15787,7 +15820,7 @@ var init_debug_map = __esm({
       };
       return {
         ...payload,
-        fingerprint: { algorithm: "sha256", value: sha256(canonicalDebugMapJson(payload)) }
+        fingerprint: { algorithm: "sha256", value: sha256(canonicalJson(payload)) }
       };
     };
   }
@@ -15877,6 +15910,7 @@ var init_src = __esm({
     init_crc32();
     init_addressToLine();
     init_debug_map();
+    init_canonical_json();
     init_operand_syntax();
     init_syntax_profile();
     init_diagnostics();
@@ -15906,44 +15940,6 @@ var init_analysis_graph = __esm({
 var init_coverage_map = __esm({
   "packages/disassembler/src/coverage-map.ts"() {
     "use strict";
-  }
-});
-
-// packages/disassembler/src/canonical-json.ts
-var canonicalValue2, canonicalJson;
-var init_canonical_json = __esm({
-  "packages/disassembler/src/canonical-json.ts"() {
-    "use strict";
-    canonicalValue2 = (value) => {
-      if (Array.isArray(value)) {
-        return value.map(canonicalValue2);
-      }
-      if (value !== null && typeof value === "object") {
-        const input = value;
-        const result = {};
-        for (const key3 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
-          const entry = input[key3];
-          if (entry === void 0) {
-            continue;
-          }
-          const normalized = canonicalValue2(entry);
-          if (key3 === "__proto__") {
-            Object.defineProperty(result, key3, {
-              value: normalized,
-              enumerable: true,
-              writable: true,
-              configurable: true
-            });
-          } else {
-            result[key3] = normalized;
-          }
-        }
-        return result;
-      }
-      return value;
-    };
-    canonicalJson = (value) => `${JSON.stringify(canonicalValue2(value), void 0, 2)}
-`;
   }
 });
 
@@ -17118,7 +17114,7 @@ var init_runtime_evidence = __esm({
         if (!current) {
           records.set(record3.id, record3);
           added[kind]++;
-        } else if (canonicalJson(current) === canonicalJson(record3)) {
+        } else if (canonicalEquals(current, record3)) {
           existing[kind]++;
         } else if (kind === "analysis" && "kind" in current && "kind" in record3 && current.kind === "target-override" && record3.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
           const left = current;
@@ -17131,7 +17127,7 @@ var init_runtime_evidence = __esm({
             targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
             evidence: sortedUnique2([...left.evidence, ...right.evidence])
           };
-          if (canonicalJson(current) === canonicalJson(merged)) {
+          if (canonicalEquals(current, merged)) {
             existing[kind]++;
           } else {
             records.set(record3.id, merged);
@@ -19168,7 +19164,7 @@ END;
           );
           const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
           const expectedKind = record3.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record3.count && other.evidence_id === evidence && other.architecture === record3.architecture && other.address_space === record3.addressSpace && other.address === record3.address && canonicalJson(parseSqlitePayload(other.payload).state) === canonicalJson(record3.state)) {
+          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record3.count && other.evidence_id === evidence && other.architecture === record3.architecture && other.address_space === record3.addressSpace && other.address === record3.address && canonicalEquals(parseSqlitePayload(other.payload).state, record3.state)) {
             if (record3.kind === "runtime-cpu-state") {
               this.#pair.run(prefix, other.oid);
               return;
@@ -19834,8 +19830,8 @@ var ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEM
 var init_sqlite_store = __esm({
   "packages/disassembler/src/sqlite-store.ts"() {
     "use strict";
-    init_analysis_sources();
     init_canonical_json();
+    init_analysis_sources();
     init_project_edit();
     init_project_types();
     init_project_validation();
@@ -20319,11 +20315,11 @@ PRAGMA user_version=4;
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
           for (const id of /* @__PURE__ */ new Set([...previous.keys(), ...next.keys()])) {
             const prior = previous.get(id), record3 = next.get(id);
-            if (canonicalJson(prior) === canonicalJson(record3)) {
+            if (canonicalEquals(prior, record3)) {
               continue;
             }
             const stored = find.get(id);
-            if (canonicalJson(stored ? parseRecord(stored.payload) : void 0) !== canonicalJson(prior)) {
+            if (!canonicalEquals(stored ? parseRecord(stored.payload) : void 0, prior)) {
               throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
             }
             remove.run(id);
@@ -20394,7 +20390,7 @@ PRAGMA user_version=4;
                 continue;
               }
               const before = JSON.parse(json);
-              if (JSON.stringify(canonicalValue2(before)) === JSON.stringify(canonicalValue2(record3))) {
+              if (canonicalEquals(before, record3)) {
                 continue;
               }
               remove.run(record3.id);
@@ -20424,7 +20420,7 @@ PRAGMA user_version=4;
             throw new Error(`Duplicate runtime record ID '${record3.id}'.`);
           }
           const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-          if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record3)) {
+          if (prior && canonicalEquals(runtimeFromRow(prior), record3)) {
             continue;
           }
           if (prior) {
@@ -20447,7 +20443,7 @@ PRAGMA user_version=4;
         const identity = sqliteRuntimeIdentity(record3.id);
         const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
         if (prior) {
-          if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record3)) {
+          if (!canonicalEquals(runtimeFromRow(prior), record3)) {
             throw new Error(
               `Runtime record '${record3.id}' has changed content for a stable imported ID.`
             );
@@ -21373,7 +21369,6 @@ var init_project_store = __esm({
     init_project_validation();
     init_sqlite_records();
     init_sqlite_store();
-    init_canonical_json();
     parseAnalysisProjectManifest = (input) => {
       if (!input || typeof input !== "object") {
         throw new Error("Invalid analysis project manifest.");
@@ -22360,7 +22355,7 @@ async function* traceFileChunks(file, metadata, options = {}) {
       });
     }
   }
-  if (canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata)) {
+  if (!canonicalEquals(validateRuntimeInstructionTraceMetadata(properties), metadata)) {
     throw new Error("Instruction trace identity changed while importing.");
   }
 }
@@ -22447,17 +22442,15 @@ var init_source_generation = __esm({
 import { createHash as createHash7 } from "node:crypto";
 import * as fs8 from "node:fs";
 import path8 from "node:path";
-var SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, inspectSourceExportFiles, describeSourceExportFileIssue, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
+var SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, assertSafePath, loadSourceExportManifest, inspectSourceExportFiles, describeSourceExportFileIssue, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source-export.ts"() {
     "use strict";
-    init_canonical_json();
     init_source_generation();
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
     SOURCE_EXPORT_MANIFEST = "generated-files.json";
     sourceExportSha256 = (value) => createHash7("sha256").update(value).digest("hex");
-    canonicalSourceExportJson = (value) => canonicalJson(value);
     assertSafePath = (relative2) => {
       if (relative2 === "" || path8.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
         throw new Error(`Unsafe generated-file path '${relative2}'.`);
@@ -46551,7 +46544,7 @@ var SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
-    init_src2();
+    init_canonical_json();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
     SNES_RAM_MAP_SOURCE = "ram-map.json";
@@ -46719,7 +46712,7 @@ var init_ram_map = __esm({
       const file = path12.join(directory, SNES_RAM_MAP_SOURCE);
       if (!fs11.existsSync(file)) {
         fs11.mkdirSync(directory, { recursive: true });
-        fs11.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+        fs11.writeFileSync(file, canonicalJson(emptySnesRamMap()));
       }
       const sourceBytes = fs11.readFileSync(file);
       let parsed;
@@ -46791,7 +46784,7 @@ var init_ram_map = __esm({
       return `${lines.join("\n")}
 `;
     };
-    renderSnesRamMapSchema = () => canonicalSourceExportJson({
+    renderSnesRamMapSchema = () => canonicalJson({
       $schema: "https://json-schema.org/draft/2020-12/schema",
       title: "Uttori ASM SNES RAM Map",
       type: "object",
@@ -47956,6 +47949,7 @@ var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
     init_src();
+    init_canonical_json();
     init_src2();
     init_decoder();
     init_address_space();
@@ -49431,11 +49425,11 @@ var init_source_export2 = __esm({
       writeFile(
         directory,
         "annotation-report.json",
-        canonicalSourceExportJson({ issues: annotationIssues }),
+        canonicalJson({ issues: annotationIssues }),
         "configuration",
         files
       );
-      const defaultConfiguration = canonicalSourceExportJson({
+      const defaultConfiguration = canonicalJson({
         $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
         plugins: [
           {
@@ -49455,7 +49449,7 @@ var init_source_export2 = __esm({
       writeFile(
         directory,
         SOURCE_OWNERSHIP_FILE,
-        canonicalSourceExportJson({
+        canonicalJson({
           format: "uttori-asm-source-ownership",
           sourceProjectSha256: options.sourceProjectSha256,
           romSha256: rom.identity.contentSha256,
@@ -49519,10 +49513,7 @@ var init_source_export2 = __esm({
         }
       }
       fs13.mkdirSync(directory, { recursive: true });
-      fs13.writeFileSync(
-        path14.join(directory, SOURCE_EXPORT_MANIFEST),
-        canonicalSourceExportJson(manifest)
-      );
+      fs13.writeFileSync(path14.join(directory, SOURCE_EXPORT_MANIFEST), canonicalJson(manifest));
       return manifest;
     };
   }
@@ -49619,7 +49610,7 @@ var isArray3, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSn
 var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
-    init_src2();
+    init_canonical_json();
     init_hardware_registers();
     isArray3 = (value) => Array.isArray(value);
     rank = { low: 0, medium: 1, high: 2 };
@@ -49998,7 +49989,7 @@ var init_function_heuristics = __esm({
       }
       const contextNodes = /* @__PURE__ */ new Map();
       for (const node of nodes.values()) {
-        const key3 = canonicalJson(node.context);
+        const key3 = canonicalJsonCompact(node.context);
         const indexed = contextNodes.get(key3) ?? /* @__PURE__ */ new Map();
         const choices = indexed.get(node.address) ?? [];
         choices.push(node);
@@ -50017,7 +50008,7 @@ var init_function_heuristics = __esm({
         if (!end || !start) {
           continue;
         }
-        const indexed = contextNodes.get(canonicalJson(start.context));
+        const indexed = contextNodes.get(canonicalJsonCompact(start.context));
         const loop = [];
         let cursor = start.address;
         while (cursor <= end.address && loop.length < limit) {
@@ -50115,7 +50106,7 @@ var init_function_heuristics = __esm({
       for (const role of [...found.values()]) {
         for (const node of atAddress.get(role.address) ?? []) {
           const owner = [...node.evidencePath].reverse().map((id) => nodes.get(id)).find(
-            (candidate) => candidate && functionAddresses.has(candidate.address) && canonicalJson(candidate.context) === canonicalJson(node.context)
+            (candidate) => candidate && functionAddresses.has(candidate.address) && canonicalJsonCompact(candidate.context) === canonicalJsonCompact(node.context)
           );
           if (owner && owner.address !== node.address) {
             emit(
@@ -50187,7 +50178,7 @@ var init_runtime_code = __esm({
   "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
     init_src();
-    init_src2();
+    init_canonical_json();
     init_decoder();
     init_address_space();
     init_address_identities();
@@ -51048,6 +51039,7 @@ var init_src4 = __esm({
 
 // packages/cli/src/index.ts
 init_src();
+init_canonical_json();
 init_src2();
 import * as fs16 from "node:fs";
 import path17 from "node:path";
@@ -52307,7 +52299,7 @@ var assemble = async (parsed, cwd) => {
         dependencyKinds: assembler.assetAssembly.dependencies,
         sourceRoot: path17.dirname(inputFile)
       });
-      outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
+      outputs.push({ file: debugMapFile, contents: canonicalJson(debugMap) });
     }
     if (managedGeneration && generationIdentity) {
       assertSourceGeneration(managedGeneration.directory, generationIdentity);

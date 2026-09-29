@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { canonicalDebugMapJson } from "@uttori/asm-core/debug-map";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -137,7 +137,7 @@ test("lookupDisassemblyAnnotation uses named locations or a current debug map", 
     mapFile,
     JSON.stringify({
       ...payload,
-      fingerprint: { algorithm: "sha256", value: hash(canonicalDebugMapJson(payload)) },
+      fingerprint: { algorithm: "sha256", value: hash(canonicalJson(payload)) },
     }),
   );
   const mapped = lookupDisassemblyAnnotation(snapshot, {

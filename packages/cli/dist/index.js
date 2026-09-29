@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import { Assembler, NodeAssemblyFileProvider, PluginError, canonicalDebugMapJson, createDebugMap, } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, findManagedSourceFile, sourceGenerationIdentity, assertSourceGeneration, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
+import { Assembler, NodeAssemblyFileProvider, PluginError, createDebugMap } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, compareByteImages, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, findManagedSourceFile, sourceGenerationIdentity, assertSourceGeneration, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, identifySnesFileOffset, } from "@uttori/asm-plugin-snes";
 import { publishOutputFiles } from "./output-files.js";
@@ -764,7 +765,7 @@ const assemble = async (parsed, cwd) => {
                 dependencyKinds: assembler.assetAssembly.dependencies,
                 sourceRoot: path.dirname(inputFile),
             });
-            outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
+            outputs.push({ file: debugMapFile, contents: canonicalJson(debugMap) });
         }
         if (managedGeneration && generationIdentity) {
             assertSourceGeneration(managedGeneration.directory, generationIdentity);

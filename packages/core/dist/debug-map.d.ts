@@ -50,12 +50,6 @@ export interface CreateDebugMapOptions {
     readonly sourceRoot?: string;
 }
 /**
- * Serializes a value with recursively sorted object keys.
- * @param {unknown} value JSON-compatible value.
- * @returns {string} Canonical newline-terminated JSON.
- */
-export declare const canonicalDebugMapJson: (value: unknown) => string;
-/**
  * Creates a deterministic debug map whose fingerprint covers every field except itself.
  * @param {CreateDebugMapOptions} options Output and mapping inputs.
  * @returns {DebugMap} Fingerprinted debug map.

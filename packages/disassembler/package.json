@@ -33,12 +33,6 @@
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./canonical-json": {
-      "uttori-source": "./src/canonical-json.ts",
-      "types": "./dist/canonical-json.d.ts",
-      "import": "./dist/canonical-json.js",
-      "require": "./dist/canonical-json.js"
     }
   },
   "publishConfig": {
@@ -49,6 +43,9 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "pack:check": "npm pack --dry-run",
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace disassembler && npm run make-types"
+  },
+  "dependencies": {
+    "@uttori/asm-core": "1.0.0"
   },
   "engines": {
     "node": ">=26"

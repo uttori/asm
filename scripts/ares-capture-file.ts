@@ -10,7 +10,7 @@ if (!file || !["inspect", "export"].includes(operation ?? "")) {
   );
 }
 if (operation === "export") {
-  if (!destination) throw new Error("Export requires a new JSON destination.");
+  if (!destination) {throw new Error("Export requires a new JSON destination.");}
   await exportCaptureJson(file, destination);
   console.log(`Exported ${destination}`);
 } else {

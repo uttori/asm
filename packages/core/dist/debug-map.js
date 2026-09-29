@@ -1,25 +1,8 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { canonicalJson } from "./canonical-json.js";
 export const DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 export const DEBUG_MAP_SCHEMA_VERSION = 1;
-const canonicalValue = (value) => {
-    if (Array.isArray(value)) {
-        return value.map(canonicalValue);
-    }
-    if (value !== null && typeof value === "object") {
-        return Object.fromEntries(Object.entries(value)
-            .filter(([, entry]) => entry !== undefined)
-            .sort(([left], [right]) => left.localeCompare(right))
-            .map(([key, entry]) => [key, canonicalValue(entry)]));
-    }
-    return value;
-};
-/**
- * Serializes a value with recursively sorted object keys.
- * @param {unknown} value JSON-compatible value.
- * @returns {string} Canonical newline-terminated JSON.
- */
-export const canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}\n`;
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 /**
  * Creates a deterministic debug map whose fingerprint covers every field except itself.
@@ -90,7 +73,7 @@ export const createDebugMap = (options) => {
     };
     return {
         ...payload,
-        fingerprint: { algorithm: "sha256", value: sha256(canonicalDebugMapJson(payload)) },
+        fingerprint: { algorithm: "sha256", value: sha256(canonicalJson(payload)) },
     };
 };
 /**
@@ -108,7 +91,7 @@ export const validateDebugMap = (map, output) => {
     if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
         issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
     }
-    const actualFingerprint = sha256(canonicalDebugMapJson(payload));
+    const actualFingerprint = sha256(canonicalJson(payload));
     if (fingerprint.algorithm !== "sha256" || fingerprint.value !== actualFingerprint) {
         issues.push("Debug-map fingerprint mismatch.");
     }

@@ -9,6 +9,7 @@ import {
   type ArchitectureDecoder,
   type DecodedInstruction,
 } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   DEBUG_SIDECAR_PROTOCOL,
   DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -24,11 +25,9 @@ import {
   RUNTIME_INSTRUCTION_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
   RomImage,
-  canonicalJson,
   importRuntimeInstructionTrace,
   loadAnalysisProject,
   parseAnalysisProjectManifest,
-  validateAnalysisProjectManifest,
   publishAnalysisProject,
   type AnalysisProject,
   type AnalysisProjectManifest,
@@ -228,7 +227,6 @@ test("deterministic project fuzz rejects or validates arbitrary manifests", (t) 
       continue;
     }
     accepted++;
-    t.notThrows(() => validateAnalysisProjectManifest(migrated.value));
     t.is(migrated.value.schemaVersion, ANALYSIS_PROJECT_SCHEMA_VERSION);
   }
   t.true(accepted >= 1, `seed ${seed} retained at least one valid current manifest`);

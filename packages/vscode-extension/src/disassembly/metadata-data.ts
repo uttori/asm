@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { canonicalEquals, canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
 import {
   analysisProjectRevision,
   applyMetadataEdit,
-  canonicalJson,
   commitAnalysisProjectSelectedEdit,
   durableReplace,
   loadSourceExportManifest,
@@ -348,7 +348,7 @@ const processMetadataUncoordinated = (
     );
     const query = (input.query ?? "").toLowerCase();
     const filtered = records.filter((record) =>
-      canonicalJson(record).toLowerCase().includes(query),
+      canonicalJsonCompact(record).toLowerCase().includes(query),
     );
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const context = createSnesAddressContext(snapshot.manifest.mapping.mapper as SnesMapper);
@@ -392,7 +392,7 @@ const processMetadataUncoordinated = (
       addressSpaces: snapshot.manifest.addressSpaces.map(({ id, name }) => ({ id, name })),
     } satisfies MetadataPage;
   }
-  if (canonicalJson(input.revision) !== canonicalJson(snapshot.revision)) {
+  if (!canonicalEquals(input.revision, snapshot.revision)) {
     throw new Error(
       "Metadata changed while this draft was open. Your draft is retained; reload and review it against the current records.",
     );
@@ -550,7 +550,7 @@ const processMapMetadata = (
       "This map changed after the draft was opened. The draft is retained; compare with the current file before saving.",
     );
   }
-  if (input.revision && canonicalJson(input.revision) !== canonicalJson(snapshot.revision)) {
+  if (input.revision && !canonicalEquals(input.revision, snapshot.revision)) {
     throw new Error(
       "Analysis changed since the map preview. Reload metadata and review the retained draft.",
     );

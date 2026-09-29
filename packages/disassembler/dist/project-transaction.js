@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals, canonicalJson } from "@uttori/asm-core/canonical-json";
 import { loadAnalysisProject, loadAnalysisProjectView, openAnalysisProjectStore, } from "./project-store.js";
 import { ANALYSIS_PROJECT_MANIFEST, } from "./project-types.js";
 import { validateAnalysisProjectManifest, validateLoadedShards } from "./project-validation.js";
@@ -184,7 +184,7 @@ export const commitAnalysisProjectAnnotationUpdate = (directory, expected, updat
             // Compare authoritative rows, not a mutable caller snapshot. This avoids scanning every
             // retained CFG/runtime reference while still rejecting removed or rewritten provenance.
             for (const record of store.loadTable("evidence")) {
-                if (canonicalJson(record) !== canonicalJson(evidence.get(record.id))) {
+                if (!canonicalEquals(record, evidence.get(record.id))) {
                     throw new Error(`Annotation updates must preserve existing evidence '${record.id}'.`);
                 }
             }

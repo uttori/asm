@@ -3,11 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  canonicalDebugMapJson,
-  createDebugMap,
-  validateDebugMap,
-} from "@uttori/asm-core/debug-map";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { createDebugMap, validateDebugMap } from "@uttori/asm-core/debug-map";
 import type { WorkspaceConfiguration } from "vscode";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -277,7 +274,7 @@ test("diagnostics identify a changed dependency for every editor in its build an
       ...updated,
       fingerprint: {
         algorithm: "sha256",
-        value: createHash("sha256").update(canonicalDebugMapJson(updated)).digest("hex"),
+        value: createHash("sha256").update(canonicalJson(updated)).digest("hex"),
       },
     }),
   );

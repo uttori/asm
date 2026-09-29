@@ -4,8 +4,6 @@ import { ANALYSIS_PROJECT_MANIFEST, } from "./project-types.js";
 import { validateAnalysisProjectManifest, validateLoadedShards, createRuntimeRecordValidator, } from "./project-validation.js";
 import { compareRuntimeRecordIds } from "./sqlite-records.js";
 import { SqliteAnalysisStore, analysisProjectSqlitePath } from "./sqlite-store.js";
-export { canonicalJson } from "./canonical-json.js";
-export { validateAnalysisProjectManifest, } from "./project-validation.js";
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
  * @param {unknown} input Parsed watcher or database manifest.

@@ -1,19 +1,13 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
-import {
-  Assembler,
-  NodeAssemblyFileProvider,
-  PluginError,
-  canonicalDebugMapJson,
-  createDebugMap,
-} from "@uttori/asm-core";
+import { Assembler, NodeAssemblyFileProvider, PluginError, createDebugMap } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
   ANALYSIS_PROJECT_MANIFEST,
   SOURCE_EXPORT_MANIFEST,
   RomImage,
-  canonicalJson,
   compareByteImages,
   importRuntimeTraceIntoProject,
   openAnalysisProjectStore,
@@ -910,7 +904,7 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
         dependencyKinds: assembler.assetAssembly.dependencies,
         sourceRoot: path.dirname(inputFile),
       });
-      outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
+      outputs.push({ file: debugMapFile, contents: canonicalJson(debugMap) });
     }
     if (managedGeneration && generationIdentity) {
       assertSourceGeneration(managedGeneration.directory, generationIdentity);

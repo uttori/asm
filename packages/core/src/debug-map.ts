@@ -7,6 +7,7 @@ import type {
   InstructionSourceInfo,
   AssetEmissionInfo,
 } from "./addressToLine.js";
+import { canonicalJson } from "./canonical-json.js";
 
 export const DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 export const DEBUG_MAP_SCHEMA_VERSION = 1;
@@ -58,29 +59,6 @@ export interface CreateDebugMapOptions {
   /** Base directory used to make source paths portable. Defaults to the process cwd. */
   readonly sourceRoot?: string;
 }
-
-const canonicalValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.map(canonicalValue);
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .filter(([, entry]) => entry !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, entry]) => [key, canonicalValue(entry)]),
-    );
-  }
-  return value;
-};
-
-/**
- * Serializes a value with recursively sorted object keys.
- * @param {unknown} value JSON-compatible value.
- * @returns {string} Canonical newline-terminated JSON.
- */
-export const canonicalDebugMapJson = (value: unknown): string =>
-  `${JSON.stringify(canonicalValue(value), null, 2)}\n`;
 
 const sha256 = (value: string | Uint8Array): string =>
   createHash("sha256").update(value).digest("hex");
@@ -158,7 +136,7 @@ export const createDebugMap = (options: CreateDebugMapOptions): DebugMap => {
   } as const;
   return {
     ...payload,
-    fingerprint: { algorithm: "sha256", value: sha256(canonicalDebugMapJson(payload)) },
+    fingerprint: { algorithm: "sha256", value: sha256(canonicalJson(payload)) },
   };
 };
 
@@ -177,7 +155,7 @@ export const validateDebugMap = (map: DebugMap, output?: Uint8Array): readonly s
   if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
     issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
   }
-  const actualFingerprint = sha256(canonicalDebugMapJson(payload));
+  const actualFingerprint = sha256(canonicalJson(payload));
   if (fingerprint.algorithm !== "sha256" || fingerprint.value !== actualFingerprint) {
     issues.push("Debug-map fingerprint mismatch.");
   }

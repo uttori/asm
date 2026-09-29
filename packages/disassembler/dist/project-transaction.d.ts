@@ -1,5 +1,4 @@
-import { type RuntimeRecordProjection } from "./project-store.js";
-import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards, type LoadedAnalysisProject, type LoadedAnalysisProjectView } from "./project-types.js";
+import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards, type LoadedAnalysisProject, type LoadedAnalysisProjectView, type RuntimeRecordProjection } from "./project-types.js";
 import { SqliteAnalysisStore } from "./sqlite-store.js";
 /** Identity marker for optimistic project revision tokens. */
 export declare const ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";

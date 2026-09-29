@@ -33,9 +33,10 @@ Pass `fileProvider` and call `setIncludePaths()` for host-managed includes. Use 
 `analyzeSource()` provides recovery-oriented diagnostics. Assembly errors throw.
 Dispose each assembler session and any `PluginManager` your host creates.
 
-## Entry points
+## Entry Points
 
 - `@uttori/asm-core`: assembler, analysis, and tooling APIs.
+- `@uttori/asm-core/canonical-json`: stable JSON identities for equality, hashes, and review files.
 - `@uttori/asm-core/plugin`: plugin registration and lifecycle contracts.
 - `@uttori/asm-core/debug-map`: source mapping and binary identity helpers.
 

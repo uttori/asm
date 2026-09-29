@@ -2,13 +2,14 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+
 import { test } from "../../../tests/ava-helper.js";
 import {
   compareByteImages,
   SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_MANIFEST,
   SOURCE_EXPORT_SCHEMA_VERSION,
-  canonicalSourceExportJson,
   describeSourceExportFileIssue,
   inspectSourceExportFiles,
   loadSourceExportManifest,
@@ -75,10 +76,7 @@ test("source export manifests validate generated hashes and byte differences", (
         },
       ],
     };
-    fs.writeFileSync(
-      path.join(directory, SOURCE_EXPORT_MANIFEST),
-      canonicalSourceExportJson(manifest),
-    );
+    fs.writeFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), canonicalJson(manifest));
     t.is(loadSourceExportManifest(directory).entrySource, "main.asm");
     t.notThrows(() => validateSourceExportFiles(directory));
     t.notThrows(() => validateSourceExportInputs(directory));

@@ -10,7 +10,8 @@ export const createEditorRuntimeBusSource = async (
   options: RuntimeTraceFileOptions = {},
 ): Promise<RuntimeBusTraceSource> => {
   // Workspace packages are ESM while the extension host bundle is CommonJS.
-  const { canonicalJson, DEFAULT_RUNTIME_TRACE_MAX_BYTES, validateRuntimeBusTraceMetadata } =
+  const { canonicalEquals } = await import("@uttori/asm-core/canonical-json");
+  const { DEFAULT_RUNTIME_TRACE_MAX_BYTES, validateRuntimeBusTraceMetadata } =
     await import("@uttori/asm-disassembler");
   const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-debug-adapter");
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
@@ -48,7 +49,7 @@ export const createEditorRuntimeBusSource = async (
       if (!result.complete) {
         throw new Error(`Capture archive is incomplete: ${result.reason}`);
       }
-      if (canonicalJson(result.header) !== canonicalJson(header)) {
+      if (!canonicalEquals(result.header, header)) {
         throw new Error("Capture archive identity changed while importing.");
       }
     },

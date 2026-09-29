@@ -1,3 +1,4 @@
+import { canonicalValue } from "@uttori/asm-core/canonical-json";
 import type { DebugMapInstruction, DebugMapRange } from "@uttori/asm-core/debug-map";
 import type {
   InstructionAnalysisAnnotation,
@@ -6,7 +7,6 @@ import type {
   InstructionStateObservationAnnotation,
   InstructionStateTransitionAnnotation,
 } from "@uttori/asm-disassembler";
-import { canonicalValue } from "@uttori/asm-disassembler/canonical-json";
 
 /** Qualified location; an absent count means observations were not requested or unavailable. */
 export interface EditorLocation {

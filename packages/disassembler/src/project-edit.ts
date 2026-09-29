@@ -1,4 +1,5 @@
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+
 import { projectSourceLabelNames, validateSourceLabelName } from "./project-labels.js";
 import type {
   AnalysisConflictRecord,
@@ -243,9 +244,6 @@ const assertStableId = (id: string, label: string): void => {
   }
 };
 
-const recordMatches = (left: unknown, right: unknown): boolean =>
-  canonicalJson(left) === canonicalJson(right);
-
 const sortedUnique = (values: readonly string[]): readonly string[] =>
   [...new Set(values)].sort((left, right) => left.localeCompare(right));
 
@@ -434,16 +432,16 @@ export const revertRangeClassificationEdit = (
 ): AnalysisProject => {
   const annotation = project.shards.annotations.find(({ id }) => id === inverse.annotation.id);
   const evidence = project.shards.evidence.find(({ id }) => id === inverse.evidence.id);
-  if (!annotation || !recordMatches(annotation, inverse.annotation)) {
+  if (!annotation || !canonicalEquals(annotation, inverse.annotation)) {
     throw new Error(`Cannot undo changed analysis annotation '${inverse.annotation.id}'.`);
   }
-  if (!evidence || !recordMatches(evidence, inverse.evidence)) {
+  if (!evidence || !canonicalEquals(evidence, inverse.evidence)) {
     throw new Error(`Cannot undo changed evidence '${inverse.evidence.id}'.`);
   }
   const conflictIds = new Set(inverse.conflicts.map(({ id }) => id));
   for (const expected of inverse.conflicts) {
     const conflict = project.shards.analysis.find(({ id }) => id === expected.id);
-    if (!conflict || !recordMatches(conflict, expected)) {
+    if (!conflict || !canonicalEquals(conflict, expected)) {
       throw new Error(`Cannot undo changed analysis conflict '${expected.id}'.`);
     }
   }
@@ -612,16 +610,16 @@ export const revertStateEntryPointEdit = (
 ): AnalysisProject => {
   const annotation = project.shards.annotations.find(({ id }) => id === inverse.annotation.id);
   const evidence = project.shards.evidence.find(({ id }) => id === inverse.evidence.id);
-  if (!annotation || !recordMatches(annotation, inverse.annotation)) {
+  if (!annotation || !canonicalEquals(annotation, inverse.annotation)) {
     throw new Error(`Cannot undo changed analysis annotation '${inverse.annotation.id}'.`);
   }
-  if (!evidence || !recordMatches(evidence, inverse.evidence)) {
+  if (!evidence || !canonicalEquals(evidence, inverse.evidence)) {
     throw new Error(`Cannot undo changed evidence '${inverse.evidence.id}'.`);
   }
   const conflictIds = new Set(inverse.conflicts.map(({ id }) => id));
   for (const expected of inverse.conflicts) {
     const conflict = project.shards.analysis.find(({ id }) => id === expected.id);
-    if (!conflict || !recordMatches(conflict, expected)) {
+    if (!conflict || !canonicalEquals(conflict, expected)) {
       throw new Error(`Cannot undo changed analysis conflict '${expected.id}'.`);
     }
   }
@@ -724,10 +722,10 @@ export const revertTargetResolutionEdit = (
 ): AnalysisProject => {
   const after = project.shards.analysis.find(({ id }) => id === inverse.after.id);
   const evidence = project.shards.evidence.find(({ id }) => id === inverse.evidence.id);
-  if (!after || !recordMatches(after, inverse.after)) {
+  if (!after || !canonicalEquals(after, inverse.after)) {
     throw new Error(`Cannot undo changed target override '${inverse.after.id}'.`);
   }
-  if (!evidence || !recordMatches(evidence, inverse.evidence)) {
+  if (!evidence || !canonicalEquals(evidence, inverse.evidence)) {
     throw new Error(`Cannot undo changed evidence '${inverse.evidence.id}'.`);
   }
   const addedReferences = evidenceReferences(project.shards, inverse.evidence.id).filter(
@@ -815,10 +813,10 @@ export const revertLabelRenameEdit = (
 ): AnalysisProject => {
   const after = project.shards.labels.find(({ id }) => id === inverse.after.id);
   const evidence = project.shards.evidence.find(({ id }) => id === inverse.evidence.id);
-  if (!after || !recordMatches(after, inverse.after)) {
+  if (!after || !canonicalEquals(after, inverse.after)) {
     throw new Error(`Cannot undo changed analysis label '${inverse.after.id}'.`);
   }
-  if (!evidence || !recordMatches(evidence, inverse.evidence)) {
+  if (!evidence || !canonicalEquals(evidence, inverse.evidence)) {
     throw new Error(`Cannot undo changed evidence '${inverse.evidence.id}'.`);
   }
   const addedReferences = evidenceReferences(project.shards, inverse.evidence.id).filter(
@@ -963,8 +961,8 @@ export const applyDisassemblyAnnotationEdit = (
     return value;
   };
   if (
-    recordMatches(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) &&
-    recordMatches(withoutEvidence(commentBefore), withoutEvidence(commentAfter))
+    canonicalEquals(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) &&
+    canonicalEquals(withoutEvidence(commentBefore), withoutEvidence(commentAfter))
   ) {
     throw new Error("The annotation has no changes to save.");
   }
@@ -1013,15 +1011,15 @@ export const revertDisassemblyAnnotationEdit = (
   const labelId = inverse.labelAfter?.id ?? inverse.labelBefore?.id;
   const commentId = inverse.commentAfter?.id ?? inverse.commentBefore?.id;
   if (
-    !recordMatches(
+    !canonicalEquals(
       project.shards.labels.find(({ id }) => id === labelId),
       inverse.labelAfter,
     ) ||
-    !recordMatches(
+    !canonicalEquals(
       project.shards.comments.find(({ id }) => id === commentId),
       inverse.commentAfter,
     ) ||
-    !recordMatches(
+    !canonicalEquals(
       project.shards.evidence.find(({ id }) => id === inverse.evidence.id),
       inverse.evidence,
     )

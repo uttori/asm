@@ -1,4 +1,5 @@
-import { canonicalValue } from "./canonical-json.js";
+import { canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
+
 import type {
   AnalysisControlFlowNodeRecord,
   AnalysisProjectManifest,
@@ -157,7 +158,7 @@ const sortedNumbers = (values?: Iterable<number>): readonly number[] =>
   values ? [...new Set(values)].sort((left, right) => left - right) : [];
 
 const valueKey = (value: unknown, present: boolean): string =>
-  present ? JSON.stringify(canonicalValue(value)) : "<absent>";
+  present ? canonicalJsonCompact(value) : "<absent>";
 
 const locationKey = (addressSpace: string, address: number): string => `${addressSpace}:${address}`;
 
@@ -282,7 +283,7 @@ export const buildInstructionAnalysisAnnotations = (
     evidence: readonly string[],
     count?: number,
   ): void => {
-    const stateKey = JSON.stringify(canonicalValue(state));
+    const stateKey = canonicalJsonCompact(state);
     const key = `${source}:${architecture}:${stateKey}`;
     const observations = (instruction.stateObservations ??= new Map<string, StateMutable>());
     let observation = observations.get(key);
@@ -324,7 +325,7 @@ export const buildInstructionAnalysisAnnotations = (
         });
         continue;
       }
-      const key = JSON.stringify(canonicalValue(value));
+      const key = canonicalJsonCompact(value);
       const addresses = (instruction.effectiveAddresses ??= new Map<string, EffectiveMutable>());
       let entry = addresses.get(key);
       if (!entry) {
@@ -415,7 +416,7 @@ export const buildInstructionAnalysisAnnotations = (
         ...(record.channel === undefined ? {} : { channel: record.channel }),
         ...(record.value === undefined ? {} : { value: record.value }),
       };
-      const key = JSON.stringify(canonicalValue(value));
+      const key = canonicalJsonCompact(value);
       const accesses = (instruction.memoryAccesses ??= new Map<string, MemoryMutable>());
       let access = accesses.get(key);
       if (!access) {

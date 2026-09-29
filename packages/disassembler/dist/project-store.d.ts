@@ -1,9 +1,6 @@
-import { type AnalysisProjectManifest, type LoadedAnalysisProject, type LoadedAnalysisProjectView } from "./project-types.js";
-import { type RuntimeRecordProjection } from "./project-validation.js";
+import { type AnalysisProjectManifest, type LoadedAnalysisProject, type LoadedAnalysisProjectView, type RuntimeRecordProjection } from "./project-types.js";
 import type { RomImage } from "./rom-image.js";
 import { SqliteAnalysisStore } from "./sqlite-store.js";
-export { canonicalJson } from "./canonical-json.js";
-export { validateAnalysisProjectManifest, type RuntimeRecordProjection, } from "./project-validation.js";
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
  * @param {unknown} input Parsed watcher or database manifest.

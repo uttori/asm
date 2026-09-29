@@ -7,7 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { CRC32 } from "@uttori/asm-core";
-import { canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core/debug-map";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { createDebugMap } from "@uttori/asm-core/debug-map";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
   findManagedSourceFile,
@@ -726,7 +727,7 @@ function buildBinary(
       if (managedGeneration && generationIdentity) {
         assertSourceGeneration(managedGeneration.directory, generationIdentity);
       }
-      const committed = commitBuildArtifactPair(outputPath, bytes, canonicalDebugMapJson(debugMap));
+      const committed = commitBuildArtifactPair(outputPath, bytes, canonicalJson(debugMap));
       log.info(`  writing ${bytes.length} bytes → ${committed.outputPath}`);
       log.info(`  debug map → ${committed.debugMapPath}`);
       log.info(

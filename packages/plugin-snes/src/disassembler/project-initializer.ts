@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
-import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
+import { Assembler, createDebugMap } from "@uttori/asm-core";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import type { AssemblerEnvironment } from "@uttori/asm-core/plugin";
 import {
   ANALYSIS_PROJECT_FORMAT,
@@ -950,7 +951,7 @@ export const verifySnesProjectRoundTrip = async (
       debugMap = `${contentOutput}.debug.json`;
       fs.writeFileSync(
         debugMap,
-        canonicalDebugMapJson(
+        canonicalJson(
           createDebugMap({
             target: TARGET_ID,
             output: content,

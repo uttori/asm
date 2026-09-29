@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
-import { canonicalSourceExportJson } from "@uttori/asm-disassembler";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 /** Format identifier for a user-maintained SNES RAM map. */
 export const SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
@@ -268,7 +268,7 @@ export const loadSnesRamMap = (directory: string): LoadedSnesRamMap => {
   const file = path.join(directory, SNES_RAM_MAP_SOURCE);
   if (!fs.existsSync(file)) {
     fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+    fs.writeFileSync(file, canonicalJson(emptySnesRamMap()));
   }
   const sourceBytes = fs.readFileSync(file);
   let parsed: unknown;
@@ -383,7 +383,7 @@ export const renderSnesRamDefines = (
  * @returns {string} Canonical JSON Schema text.
  */
 export const renderSnesRamMapSchema = (): string =>
-  canonicalSourceExportJson({
+  canonicalJson({
     $schema: "https://json-schema.org/draft/2020-12/schema",
     title: "Uttori ASM SNES RAM Map",
     type: "object",

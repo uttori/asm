@@ -43,6 +43,13 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
+// packages/core/src/canonical-json.ts
+var init_canonical_json = __esm({
+  "packages/core/src/canonical-json.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/debug-map.ts
 var init_debug_map = __esm({
   "packages/core/src/debug-map.ts"() {
@@ -2646,6 +2653,7 @@ var init_src = __esm({
     init_crc32();
     init_addressToLine();
     init_debug_map();
+    init_canonical_json();
     init_operand_syntax();
     init_syntax_profile();
     init_diagnostics();

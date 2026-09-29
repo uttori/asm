@@ -6,7 +6,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import vm from "node:vm";
 
-import { canonicalDebugMapJson } from "@uttori/asm-core/debug-map";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import type { DebugMap } from "@uttori/asm-core/debug-map";
 import {
   RomImage,
@@ -246,7 +246,7 @@ const harness = (t: { teardown(callback: () => void): void }) => {
     mapFile,
     JSON.stringify({
       ...payload,
-      fingerprint: { algorithm: "sha256", value: hash(canonicalDebugMapJson(payload)) },
+      fingerprint: { algorithm: "sha256", value: hash(canonicalJson(payload)) },
     }),
   );
   host.trusted = true;
@@ -482,7 +482,7 @@ test.serial(
       h.mapFile,
       JSON.stringify({
         ...payload,
-        fingerprint: { algorithm: "sha256", value: hash(canonicalDebugMapJson(payload)) },
+        fingerprint: { algorithm: "sha256", value: hash(canonicalJson(payload)) },
       }),
     );
     await h.editor.editAnnotation();

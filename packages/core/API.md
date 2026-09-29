@@ -8,6 +8,7 @@ bundled runtime. Published entry points contain JavaScript and TypeScript declar
 | Entry point                                             | Intended use                                                                                            |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `@uttori/asm-core`                                      | `Assembler`, file providers, diagnostics, architecture/decoder types, syntax, source maps, and tooling  |
+| `@uttori/asm-core/canonical-json`                       | Canonical JSON values, compact equality, and pretty durable/review text                                 |
 | `@uttori/asm-core/plugin`                               | Plugin definitions, contribution contracts, `PluginManager`, environments, state, and structured errors |
 | `@uttori/asm-core/debug-map`                            | Debug-map serialization, validation, source mapping, and binary identity                                |
 | `@uttori/asm-plugin-loader-node`                        | Configuration validation/discovery and trusted Node plugin loading                                      |

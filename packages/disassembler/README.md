@@ -6,7 +6,7 @@ and source-export contracts. Target plugins supply decoding, mapping, and source
 ## Install
 
 Requires Node.js 26 or newer, including built-in `node:sqlite`.
-Exposes ESM JavaScript and TypeScript declarations. `./canonical-json` also supports `require()`.
+Exposes ESM JavaScript and TypeScript declarations.
 
 ```sh
 npm install @uttori/asm-disassembler

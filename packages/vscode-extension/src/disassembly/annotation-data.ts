@@ -3,10 +3,10 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { validateDebugMap, type DebugMap, type DebugMapSource } from "@uttori/asm-core/debug-map";
 import {
   applyDisassemblyAnnotationEdit,
-  canonicalJson,
   commitAnalysisProjectAnnotationUpdate,
   openAnalysisProjectStore,
   assertAnalysisProjectRevision,
@@ -475,7 +475,7 @@ export const saveDisassemblyAnnotation = (
   snapshot: AnalysisProjectSnapshot,
   input: AnnotationSave,
 ): { inverse: DisassemblyAnnotationInverse; snapshot: AnalysisProjectSnapshot } => {
-  if (canonicalJson(snapshot.revision) !== canonicalJson(input.revision)) {
+  if (!canonicalEquals(snapshot.revision, input.revision)) {
     throw new Error(
       "The analysis project changed while this form was open. Reopen the annotation and retry.",
     );

@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { createRuntimeInstructionTraceImporter, createRuntimeTraceChunkValidator, validateRuntimeInstructionTraceMetadata, } from "./runtime-trace.js";
 /** Default file-size budget, independent of static-analysis work. */
 export const DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
@@ -264,7 +264,7 @@ async function* traceFileChunks(file, metadata, options = {}) {
             });
         }
     }
-    if (canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata)) {
+    if (!canonicalEquals(validateRuntimeInstructionTraceMetadata(properties), metadata)) {
         throw new Error("Instruction trace identity changed while importing.");
     }
 }

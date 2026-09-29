@@ -35,8 +35,6 @@ export * from "./analysis-sources.js";
 
 export * from "./runtime-trace-project.js";
 
-export { canonicalValue } from "./canonical-json.js";
-
 export {
   DEFAULT_ANALYSIS_STORAGE_POLICY,
   type AnalysisStoragePolicy,

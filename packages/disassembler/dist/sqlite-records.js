@@ -1,4 +1,4 @@
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { parseSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
 /**
  * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.

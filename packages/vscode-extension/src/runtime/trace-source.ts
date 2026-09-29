@@ -14,8 +14,8 @@ export const createEditorRuntimeTraceSource = async (
   options: RuntimeTraceFileOptions = {},
 ): Promise<RuntimeTraceSource> => {
   // The editor bundle is CommonJS. Load ESM workspace packages through their import exports.
+  const { canonicalEquals } = await import("@uttori/asm-core/canonical-json");
   const {
-    canonicalJson,
     createRuntimeTraceFileSource,
     DEFAULT_RUNTIME_TRACE_MAX_BYTES,
     validateRuntimeInstructionTraceMetadata,
@@ -82,7 +82,7 @@ export const createEditorRuntimeTraceSource = async (
       if (!result.complete) {
         throw new Error(`Capture archive is incomplete: ${result.reason}`);
       }
-      if (canonicalJson(result.header) !== canonicalJson(header)) {
+      if (!canonicalEquals(result.header, header)) {
         throw new Error("Capture archive identity changed while importing.");
       }
     },

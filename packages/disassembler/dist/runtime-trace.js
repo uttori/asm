@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { canonicalJson } from "./canonical-json.js";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { project65816AnalysisState, RUNTIME_ANALYSIS_PROFILE } from "./runtime-trace-profile.js";
 import { validateRuntimeInstructionDetails, } from "./trace-detail.js";
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */

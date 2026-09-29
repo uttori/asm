@@ -1,6 +1,7 @@
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+
 import { test } from "../../../tests/ava-helper.js";
 import {
-  canonicalJson,
   inspectRuntimeEvidence,
   mergeRuntimeEvidence,
   type AnalysisProjectShards,

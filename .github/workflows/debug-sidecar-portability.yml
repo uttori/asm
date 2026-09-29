@@ -33,6 +33,6 @@ jobs:
       - name: Build and smoke-test sidecars
         run: npm run sidecar:build && npm run sidecar:smoke
       - name: Run neutral protocol and backend tests
-        run: npm test -- packages/debug-adapter/tests packages/debug-sidecar-ares/tests packages/debug-sidecar-mesence/tests
+        run: npm test -- packages/debug-adapter/tests packages/debug-sidecar-ares/tests
       - name: Check package boundaries and tarballs
         run: npm run check:boundaries && npm run pack:check

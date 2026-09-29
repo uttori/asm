@@ -42,6 +42,51 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// packages/core/src/canonical-json.ts
+var compareKeys, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
+var init_canonical_json = __esm({
+  "packages/core/src/canonical-json.ts"() {
+    "use strict";
+    compareKeys = (a, b) => a.localeCompare(b);
+    canonicalValue = (value) => {
+      if (typeof value !== "object" || value === null) {
+        return value;
+      }
+      if (Array.isArray(value)) {
+        return value.map(canonicalValue);
+      }
+      const input = value;
+      const result = {};
+      const keys = Object.keys(input);
+      if (keys.length > 1) {
+        keys.sort(compareKeys);
+      }
+      for (const key3 of keys) {
+        const entry = input[key3];
+        if (entry === void 0) {
+          continue;
+        }
+        const normalized = typeof entry === "object" && entry !== null ? canonicalValue(entry) : entry;
+        if (key3 === "__proto__") {
+          Object.defineProperty(result, key3, {
+            value: normalized,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key3] = normalized;
+        }
+      }
+      return result;
+    };
+    canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+    canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
+    canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
+`;
+  }
+});
+
 // packages/disassembler/src/analysis-graph.ts
 var init_analysis_graph = __esm({
   "packages/disassembler/src/analysis-graph.ts"() {
@@ -56,44 +101,6 @@ var init_coverage_map = __esm({
   }
 });
 
-// packages/disassembler/src/canonical-json.ts
-var canonicalValue, canonicalJson;
-var init_canonical_json = __esm({
-  "packages/disassembler/src/canonical-json.ts"() {
-    "use strict";
-    canonicalValue = (value) => {
-      if (Array.isArray(value)) {
-        return value.map(canonicalValue);
-      }
-      if (value !== null && typeof value === "object") {
-        const input = value;
-        const result = {};
-        for (const key3 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
-          const entry = input[key3];
-          if (entry === void 0) {
-            continue;
-          }
-          const normalized = canonicalValue(entry);
-          if (key3 === "__proto__") {
-            Object.defineProperty(result, key3, {
-              value: normalized,
-              enumerable: true,
-              writable: true,
-              configurable: true
-            });
-          } else {
-            result[key3] = normalized;
-          }
-        }
-        return result;
-      }
-      return value;
-    };
-    canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
-`;
-  }
-});
-
 // packages/disassembler/src/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
@@ -102,7 +109,7 @@ var init_instruction_annotations = __esm({
     init_canonical_json();
     sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
     sortedNumbers = (values) => values ? [...new Set(values)].sort((left, right) => left - right) : [];
-    valueKey = (value, present) => present ? JSON.stringify(canonicalValue(value)) : "<absent>";
+    valueKey = (value, present) => present ? canonicalJsonCompact(value) : "<absent>";
     locationKey = (addressSpace, address3) => `${addressSpace}:${address3}`;
     addValue = (target, value) => {
       const values = target ?? /* @__PURE__ */ new Set();
@@ -164,7 +171,7 @@ var init_instruction_annotations = __esm({
         return instruction;
       };
       const addStateObservation = (instruction, source, architecture, state, recordId, evidence, count) => {
-        const stateKey = JSON.stringify(canonicalValue(state));
+        const stateKey = canonicalJsonCompact(state);
         const key3 = `${source}:${architecture}:${stateKey}`;
         const observations = instruction.stateObservations ??= /* @__PURE__ */ new Map();
         let observation = observations.get(key3);
@@ -204,7 +211,7 @@ var init_instruction_annotations = __esm({
             });
             continue;
           }
-          const key3 = JSON.stringify(canonicalValue(value));
+          const key3 = canonicalJsonCompact(value);
           const addresses2 = instruction.effectiveAddresses ??= /* @__PURE__ */ new Map();
           let entry = addresses2.get(key3);
           if (!entry) {
@@ -292,7 +299,7 @@ var init_instruction_annotations = __esm({
             ...record2.channel === void 0 ? {} : { channel: record2.channel },
             ...record2.value === void 0 ? {} : { value: record2.value }
           };
-          const key3 = JSON.stringify(canonicalValue(value));
+          const key3 = canonicalJsonCompact(value);
           const accesses = instruction.memoryAccesses ??= /* @__PURE__ */ new Map();
           let access = accesses.get(key3);
           if (!access) {
@@ -1435,8 +1442,8 @@ var manuallyOwnedMetadata, applyMetadataEdit;
 var init_metadata_edit = __esm({
   "packages/disassembler/src/metadata-edit.ts"() {
     "use strict";
-    init_metadata_validation();
     init_canonical_json();
+    init_metadata_validation();
     init_project_labels();
     init_project_validation();
     manuallyOwnedMetadata = (shards) => new Set(
@@ -1482,7 +1489,7 @@ var init_metadata_edit = __esm({
           void ignored2;
           return value;
         };
-        if (canonicalJson(content(before)) === canonicalJson(content(after))) {
+        if (canonicalEquals(content(before), content(after))) {
           return;
         }
         if (after) {
@@ -1585,7 +1592,7 @@ var init_metadata_edit = __esm({
           }
           restores = receipt2.id;
           for (const change of receipt2.changes) {
-            if (canonicalJson(existing(change.shard, change.id) ?? null) !== canonicalJson(change.after ?? null)) {
+            if (!canonicalEquals(existing(change.shard, change.id) ?? null, change.after ?? null)) {
               throw new Error(
                 `Cannot restore changed ${change.shard} record '${change.id}'. Review the newer edit first.`
               );
@@ -1648,7 +1655,7 @@ var init_metadata_edit = __esm({
 });
 
 // packages/disassembler/src/project-edit.ts
-var isStableId2, manifestWithoutShards, assertStableId, recordMatches, sortedUnique, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, evidenceReferences, applyDisassemblyAnnotationEdit, explainProjectEvidence;
+var isStableId2, manifestWithoutShards, assertStableId, sortedUnique, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, evidenceReferences, applyDisassemblyAnnotationEdit, explainProjectEvidence;
 var init_project_edit = __esm({
   "packages/disassembler/src/project-edit.ts"() {
     "use strict";
@@ -1683,7 +1690,6 @@ var init_project_edit = __esm({
         throw new Error(`${label} '${id}' is not a stable project id.`);
       }
     };
-    recordMatches = (left, right) => canonicalJson(left) === canonicalJson(right);
     sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
     assertManualEvidenceRequest = (project, evidenceId, sourceId) => {
       assertStableId(evidenceId, "Evidence id");
@@ -1807,7 +1813,7 @@ var init_project_edit = __esm({
         void ignored;
         return value;
       };
-      if (recordMatches(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) && recordMatches(withoutEvidence(commentBefore), withoutEvidence(commentAfter))) {
+      if (canonicalEquals(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) && canonicalEquals(withoutEvidence(commentBefore), withoutEvidence(commentAfter))) {
         throw new Error("The annotation has no changes to save.");
       }
       const evidence = manualEvidence(
@@ -2016,7 +2022,7 @@ var init_runtime_evidence = __esm({
         if (!current) {
           records.set(record2.id, record2);
           added[kind]++;
-        } else if (canonicalJson(current) === canonicalJson(record2)) {
+        } else if (canonicalEquals(current, record2)) {
           existing[kind]++;
         } else if (kind === "analysis" && "kind" in current && "kind" in record2 && current.kind === "target-override" && record2.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
           const left = current;
@@ -2029,7 +2035,7 @@ var init_runtime_evidence = __esm({
             targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
             evidence: sortedUnique2([...left.evidence, ...right.evidence])
           };
-          if (canonicalJson(current) === canonicalJson(merged)) {
+          if (canonicalEquals(current, merged)) {
             existing[kind]++;
           } else {
             records.set(record2.id, merged);
@@ -4066,7 +4072,7 @@ END;
           );
           const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
           const expectedKind = record2.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record2.count && other.evidence_id === evidence && other.architecture === record2.architecture && other.address_space === record2.addressSpace && other.address === record2.address && canonicalJson(parseSqlitePayload(other.payload).state) === canonicalJson(record2.state)) {
+          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record2.count && other.evidence_id === evidence && other.architecture === record2.architecture && other.address_space === record2.addressSpace && other.address === record2.address && canonicalEquals(parseSqlitePayload(other.payload).state, record2.state)) {
             if (record2.kind === "runtime-cpu-state") {
               this.#pair.run(prefix, other.oid);
               return;
@@ -4732,8 +4738,8 @@ var init_sqlite_store = __esm({
     import_node_fs3 = __toESM(require("node:fs"), 1);
     import_node_path2 = __toESM(require("node:path"), 1);
     import_node_sqlite2 = require("node:sqlite");
-    init_analysis_sources();
     init_canonical_json();
+    init_analysis_sources();
     init_project_edit();
     init_project_types();
     init_project_validation();
@@ -5217,11 +5223,11 @@ PRAGMA user_version=4;
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
           for (const id of /* @__PURE__ */ new Set([...previous.keys(), ...next.keys()])) {
             const prior = previous.get(id), record2 = next.get(id);
-            if (canonicalJson(prior) === canonicalJson(record2)) {
+            if (canonicalEquals(prior, record2)) {
               continue;
             }
             const stored = find.get(id);
-            if (canonicalJson(stored ? parseRecord(stored.payload) : void 0) !== canonicalJson(prior)) {
+            if (!canonicalEquals(stored ? parseRecord(stored.payload) : void 0, prior)) {
               throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
             }
             remove.run(id);
@@ -5292,7 +5298,7 @@ PRAGMA user_version=4;
                 continue;
               }
               const before = JSON.parse(json2);
-              if (JSON.stringify(canonicalValue(before)) === JSON.stringify(canonicalValue(record2))) {
+              if (canonicalEquals(before, record2)) {
                 continue;
               }
               remove.run(record2.id);
@@ -5322,7 +5328,7 @@ PRAGMA user_version=4;
             throw new Error(`Duplicate runtime record ID '${record2.id}'.`);
           }
           const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-          if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record2)) {
+          if (prior && canonicalEquals(runtimeFromRow(prior), record2)) {
             continue;
           }
           if (prior) {
@@ -5345,7 +5351,7 @@ PRAGMA user_version=4;
         const identity = sqliteRuntimeIdentity(record2.id);
         const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
         if (prior) {
-          if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record2)) {
+          if (!canonicalEquals(runtimeFromRow(prior), record2)) {
             throw new Error(
               `Runtime record '${record2.id}' has changed content for a stable imported ID.`
             );
@@ -6271,7 +6277,6 @@ var init_project_store = __esm({
     init_project_validation();
     init_sqlite_records();
     init_sqlite_store();
-    init_canonical_json();
     parseAnalysisProjectManifest = (input) => {
       if (!input || typeof input !== "object") {
         throw new Error("Invalid analysis project manifest.");
@@ -6445,7 +6450,7 @@ var init_project_transaction = __esm({
           validateAnalysisProjectManifest({ ...current, shards: [] });
           const evidence = new Map(updates.evidence.map((record2) => [record2.id, record2]));
           for (const record2 of store.loadTable("evidence")) {
-            if (canonicalJson(record2) !== canonicalJson(evidence.get(record2.id))) {
+            if (!canonicalEquals(record2, evidence.get(record2.id))) {
               throw new Error(`Annotation updates must preserve existing evidence '${record2.id}'.`);
             }
           }
@@ -6662,20 +6667,18 @@ var init_source_generation = __esm({
 });
 
 // packages/disassembler/src/source-export.ts
-var import_node_crypto7, fs8, import_node_path6, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, inspectSourceExportFiles, describeSourceExportFileIssue, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
+var import_node_crypto7, fs8, import_node_path6, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, assertSafePath, loadSourceExportManifest, inspectSourceExportFiles, describeSourceExportFileIssue, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source-export.ts"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     fs8 = __toESM(require("node:fs"), 1);
     import_node_path6 = __toESM(require("node:path"), 1);
-    init_canonical_json();
     init_source_generation();
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
     SOURCE_EXPORT_MANIFEST = "generated-files.json";
     sourceExportSha256 = (value) => (0, import_node_crypto7.createHash)("sha256").update(value).digest("hex");
-    canonicalSourceExportJson = (value) => canonicalJson(value);
     assertSafePath = (relative2) => {
       if (relative2 === "" || import_node_path6.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
         throw new Error(`Unsafe generated-file path '${relative2}'.`);
@@ -23484,27 +23487,15 @@ var init_decoder_types = __esm({
 });
 
 // packages/core/src/debug-map.ts
-var import_node_crypto10, import_node_path10, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2562, createDebugMap, validateDebugMap;
+var import_node_crypto10, import_node_path10, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, sha2562, createDebugMap, validateDebugMap;
 var init_debug_map = __esm({
   "packages/core/src/debug-map.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
     import_node_path10 = __toESM(require("node:path"), 1);
+    init_canonical_json();
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
     DEBUG_MAP_SCHEMA_VERSION = 1;
-    canonicalValue2 = (value) => {
-      if (Array.isArray(value)) {
-        return value.map(canonicalValue2);
-      }
-      if (value !== null && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key3, entry]) => [key3, canonicalValue2(entry)])
-        );
-      }
-      return value;
-    };
-    canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue2(value), null, 2)}
-`;
     sha2562 = (value) => (0, import_node_crypto10.createHash)("sha256").update(value).digest("hex");
     createDebugMap = (options) => {
       const sourceRoot = import_node_path10.default.resolve(options.sourceRoot ?? process.cwd());
@@ -23553,7 +23544,7 @@ var init_debug_map = __esm({
       };
       return {
         ...payload,
-        fingerprint: { algorithm: "sha256", value: sha2562(canonicalDebugMapJson(payload)) }
+        fingerprint: { algorithm: "sha256", value: sha2562(canonicalJson(payload)) }
       };
     };
     validateDebugMap = (map, output) => {
@@ -23565,7 +23556,7 @@ var init_debug_map = __esm({
       if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
         issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
       }
-      const actualFingerprint = sha2562(canonicalDebugMapJson(payload));
+      const actualFingerprint = sha2562(canonicalJson(payload));
       if (fingerprint.algorithm !== "sha256" || fingerprint.value !== actualFingerprint) {
         issues.push("Debug-map fingerprint mismatch.");
       }
@@ -23666,6 +23657,7 @@ var init_src2 = __esm({
     init_crc32();
     init_addressToLine();
     init_debug_map();
+    init_canonical_json();
     init_operand_syntax();
     init_syntax_profile();
     init_diagnostics();
@@ -47438,7 +47430,7 @@ var init_ram_map = __esm({
     "use strict";
     fs12 = __toESM(require("node:fs"), 1);
     import_node_path11 = __toESM(require("node:path"), 1);
-    init_src();
+    init_canonical_json();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
     SNES_RAM_MAP_SOURCE = "ram-map.json";
@@ -47606,7 +47598,7 @@ var init_ram_map = __esm({
       const file = import_node_path11.default.join(directory, SNES_RAM_MAP_SOURCE);
       if (!fs12.existsSync(file)) {
         fs12.mkdirSync(directory, { recursive: true });
-        fs12.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+        fs12.writeFileSync(file, canonicalJson(emptySnesRamMap()));
       }
       const sourceBytes = fs12.readFileSync(file);
       let parsed;
@@ -47678,7 +47670,7 @@ var init_ram_map = __esm({
       return `${lines.join("\n")}
 `;
     };
-    renderSnesRamMapSchema = () => canonicalSourceExportJson({
+    renderSnesRamMapSchema = () => canonicalJson({
       $schema: "https://json-schema.org/draft/2020-12/schema",
       title: "Uttori ASM SNES RAM Map",
       type: "object",
@@ -48843,6 +48835,7 @@ var init_source_export2 = __esm({
     fs14 = __toESM(require("node:fs"), 1);
     import_node_path13 = __toESM(require("node:path"), 1);
     init_src2();
+    init_canonical_json();
     init_src();
     init_decoder();
     init_address_space();
@@ -50318,11 +50311,11 @@ var init_source_export2 = __esm({
       writeFile(
         directory,
         "annotation-report.json",
-        canonicalSourceExportJson({ issues: annotationIssues }),
+        canonicalJson({ issues: annotationIssues }),
         "configuration",
         files
       );
-      const defaultConfiguration = canonicalSourceExportJson({
+      const defaultConfiguration = canonicalJson({
         $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
         plugins: [
           {
@@ -50342,7 +50335,7 @@ var init_source_export2 = __esm({
       writeFile(
         directory,
         SOURCE_OWNERSHIP_FILE,
-        canonicalSourceExportJson({
+        canonicalJson({
           format: "uttori-asm-source-ownership",
           sourceProjectSha256: options.sourceProjectSha256,
           romSha256: rom.identity.contentSha256,
@@ -50406,10 +50399,7 @@ var init_source_export2 = __esm({
         }
       }
       fs14.mkdirSync(directory, { recursive: true });
-      fs14.writeFileSync(
-        import_node_path13.default.join(directory, SOURCE_EXPORT_MANIFEST),
-        canonicalSourceExportJson(manifest)
-      );
+      fs14.writeFileSync(import_node_path13.default.join(directory, SOURCE_EXPORT_MANIFEST), canonicalJson(manifest));
       return manifest;
     };
   }
@@ -51442,7 +51432,7 @@ var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     import_node_crypto13 = require("node:crypto");
-    init_src();
+    init_canonical_json();
     init_hardware_registers();
     isArray3 = (value) => Array.isArray(value);
     rank2 = { low: 0, medium: 1, high: 2 };
@@ -51821,7 +51811,7 @@ var init_function_heuristics = __esm({
       }
       const contextNodes = /* @__PURE__ */ new Map();
       for (const node of nodes.values()) {
-        const key3 = canonicalJson(node.context);
+        const key3 = canonicalJsonCompact(node.context);
         const indexed = contextNodes.get(key3) ?? /* @__PURE__ */ new Map();
         const choices = indexed.get(node.address) ?? [];
         choices.push(node);
@@ -51840,7 +51830,7 @@ var init_function_heuristics = __esm({
         if (!end || !start) {
           continue;
         }
-        const indexed = contextNodes.get(canonicalJson(start.context));
+        const indexed = contextNodes.get(canonicalJsonCompact(start.context));
         const loop = [];
         let cursor = start.address;
         while (cursor <= end.address && loop.length < limit) {
@@ -51938,7 +51928,7 @@ var init_function_heuristics = __esm({
       for (const role of [...found.values()]) {
         for (const node of atAddress.get(role.address) ?? []) {
           const owner = [...node.evidencePath].reverse().map((id) => nodes.get(id)).find(
-            (candidate) => candidate && functionAddresses.has(candidate.address) && canonicalJson(candidate.context) === canonicalJson(node.context)
+            (candidate) => candidate && functionAddresses.has(candidate.address) && canonicalJsonCompact(candidate.context) === canonicalJsonCompact(node.context)
           );
           if (owner && owner.address !== node.address) {
             emit(
@@ -52010,7 +52000,7 @@ var init_runtime_code = __esm({
     "use strict";
     import_node_crypto14 = require("node:crypto");
     init_src2();
-    init_src();
+    init_canonical_json();
     init_decoder();
     init_address_space();
     init_address_identities();
@@ -52304,6 +52294,7 @@ var init_project_initializer = __esm({
     fs15 = __toESM(require("node:fs"), 1);
     import_node_path14 = __toESM(require("node:path"), 1);
     init_src2();
+    init_canonical_json();
     init_src();
     init_address_space();
     init_analysis();
@@ -52885,7 +52876,7 @@ var init_project_initializer = __esm({
           debugMap = `${contentOutput}.debug.json`;
           fs15.writeFileSync(
             debugMap,
-            canonicalDebugMapJson(
+            canonicalJson(
               createDebugMap({
                 target: TARGET_ID,
                 output: content,
@@ -53263,6 +53254,7 @@ var init_modification_project = __esm({
     import_node_fs10 = __toESM(require("node:fs"), 1);
     import_node_path17 = __toESM(require("node:path"), 1);
     init_src2();
+    init_canonical_json();
     init_src();
     init_assembler2();
     init_address_space();
@@ -53454,7 +53446,7 @@ var init_modification_project = __esm({
       };
       return {
         ...payload,
-        fingerprint: { algorithm: "sha256", value: sourceExportSha256(canonicalDebugMapJson(payload)) }
+        fingerprint: { algorithm: "sha256", value: sourceExportSha256(canonicalJson(payload)) }
       };
     };
     createRomModificationProject = async (options) => {
@@ -53799,7 +53791,7 @@ ${emit} "${modificationOwnedPath(root, replacement.input)}"
           ...payload,
           fingerprint: {
             algorithm: "sha256",
-            value: sourceExportSha256(canonicalDebugMapJson(payload))
+            value: sourceExportSha256(canonicalJson(payload))
           }
         };
         const issues = validateDebugMap(finalMap, output);
@@ -53860,7 +53852,7 @@ ${emit} "${modificationOwnedPath(root, replacement.input)}"
             output
           ])
         );
-        durableReplace(debugMapPath, canonicalDebugMapJson(finalMap));
+        durableReplace(debugMapPath, canonicalJson(finalMap));
         durableReplace(
           result.receiptFile,
           JSON.stringify(
@@ -56429,6 +56421,7 @@ module.exports = __toCommonJS(worker_exports);
 var fs30 = __toESM(require("node:fs"), 1);
 var path31 = __toESM(require("node:path"), 1);
 var import_node_worker_threads = require("node:worker_threads");
+init_canonical_json();
 init_src();
 init_src4();
 
@@ -56436,6 +56429,7 @@ init_src4();
 var import_node_crypto24 = require("node:crypto");
 var fs25 = __toESM(require("node:fs"), 1);
 var path25 = __toESM(require("node:path"), 1);
+init_canonical_json();
 init_debug_map();
 init_src();
 init_src4();
@@ -56771,7 +56765,7 @@ var lookupDisassemblyAnnotation = (snapshot, input, readNodes) => {
   };
 };
 var saveDisassemblyAnnotation = (directory, snapshot, input) => {
-  if (canonicalJson(snapshot.revision) !== canonicalJson(input.revision)) {
+  if (!canonicalEquals(snapshot.revision, input.revision)) {
     throw new Error(
       "The analysis project changed while this form was open. Reopen the annotation and retry."
     );
@@ -56803,12 +56797,14 @@ var saveDisassemblyAnnotation = (directory, snapshot, input) => {
 var import_node_crypto25 = require("node:crypto");
 var import_node_fs18 = __toESM(require("node:fs"), 1);
 var import_node_path25 = __toESM(require("node:path"), 1);
+init_canonical_json();
 init_src();
 init_src4();
 
 // packages/vscode-extension/src/disassembly/edit-coordinator.ts
 var import_node_fs17 = __toESM(require("node:fs"), 1);
 var import_node_path24 = __toESM(require("node:path"), 1);
+init_canonical_json();
 init_src();
 var acquireEditLease = (directory) => acquireFileLease(import_node_path24.default.join(directory, ".editing", "writer.lock"));
 var operationFile = (directory, id) => import_node_path24.default.join(directory, ".editing", "operations", `${sourceExportSha256(id)}.json`);
@@ -57140,7 +57136,7 @@ var processMetadataUncoordinated = (store, directory, input) => {
     );
     const query = (input.query ?? "").toLowerCase();
     const filtered = records.filter(
-      (record2) => canonicalJson(record2).toLowerCase().includes(query)
+      (record2) => canonicalJsonCompact(record2).toLowerCase().includes(query)
     );
     const offset = Math.max(0, Math.trunc(input.offset ?? 0));
     const context = createSnesAddressContext(snapshot.manifest.mapping.mapper);
@@ -57176,7 +57172,7 @@ var processMetadataUncoordinated = (store, directory, input) => {
       addressSpaces: snapshot.manifest.addressSpaces.map(({ id, name }) => ({ id, name }))
     };
   }
-  if (canonicalJson(input.revision) !== canonicalJson(snapshot.revision)) {
+  if (!canonicalEquals(input.revision, snapshot.revision)) {
     throw new Error(
       "Metadata changed while this draft was open. Your draft is retained; reload and review it against the current records."
     );
@@ -57302,7 +57298,7 @@ var processMapMetadata = (snapshot, directory, input) => {
       "This map changed after the draft was opened. The draft is retained; compare with the current file before saving."
     );
   }
-  if (input.revision && canonicalJson(input.revision) !== canonicalJson(snapshot.revision)) {
+  if (input.revision && !canonicalEquals(input.revision, snapshot.revision)) {
     throw new Error(
       "Analysis changed since the map preview. Reload metadata and review the retained draft."
     );
@@ -58567,7 +58563,7 @@ var request = (message) => {
     );
     return store.cachedProjection(
       "snes_roles",
-      canonicalJson([1, config]),
+      canonicalJsonCompact([1, config]),
       ["analysis", "runtime", "evidence"],
       () => {
         const shards = {

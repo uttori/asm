@@ -7,21 +7,16 @@ import {
   type AnalysisProjectShards,
   type LoadedAnalysisProject,
   type LoadedAnalysisProjectView,
+  type RuntimeRecordProjection,
 } from "./project-types.js";
 import {
   validateAnalysisProjectManifest,
   validateLoadedShards,
   createRuntimeRecordValidator,
-  type RuntimeRecordProjection,
 } from "./project-validation.js";
 import type { RomImage } from "./rom-image.js";
 import { compareRuntimeRecordIds } from "./sqlite-records.js";
 import { SqliteAnalysisStore, analysisProjectSqlitePath } from "./sqlite-store.js";
-export { canonicalJson } from "./canonical-json.js";
-export {
-  validateAnalysisProjectManifest,
-  type RuntimeRecordProjection,
-} from "./project-validation.js";
 
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.

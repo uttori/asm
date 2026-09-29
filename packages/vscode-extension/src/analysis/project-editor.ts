@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { canonicalEquals, canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   RANGE_CLASSIFICATIONS,
   applyLabelRenameEdit,
@@ -10,7 +11,6 @@ import {
   applyRangeClassificationEdit,
   applyStateEntryPointEdit,
   applyTargetResolutionEdit,
-  canonicalJson,
   findManagedSourceFile,
   commitAnalysisProjectSelectedEdit,
   openAnalysisProjectStore,
@@ -913,7 +913,7 @@ export class AnalysisProjectEditor {
               "The source changed while this form was open. Reopen the annotation from current generated source.",
             );
           }
-          if (canonicalJson(fields) === canonicalJson(initialFields)) {
+          if (canonicalEquals(fields, initialFields)) {
             return;
           }
           if (label && !fields.name.trim()) {
