@@ -23,6 +23,7 @@ import {
   buildRomCoverageMap,
 } from "../../src/index.js";
 import { compareRuntimeRecordIds, runtimeColumns } from "../../src/storage/sqlite-records.js";
+import { RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL } from "../../src/storage/sqlite-runtime-batch.js";
 import { RUNTIME_RECORD_STREAM_SQL } from "../../src/storage/sqlite-runtime-storage.js";
 import { runtimeSummaryInputSql } from "../../src/storage/sqlite-runtime-summary.js";
 import { RUNTIME_RECORD_LOOKUP_SQL } from "../../src/storage/sqlite-store.js";
@@ -206,6 +207,27 @@ test("runtime batch insertion keeps namespace, uniqueness and existing-record co
 });
 
 const temporary = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sqlite-store-"));
+
+test("bulk trace observation joins probe retained indexes without rebuilding a history-sized index", (t) => {
+  const directory = temporary();
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  const db = new DatabaseSync(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+  t.teardown(() => {
+    db.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  db.exec(`CREATE TEMP TABLE runtime_trace_batch(
+    position INTEGER PRIMARY KEY,fingerprint BLOB,identity_value,prefix_id,evidence_id,count,state_prefix_id,query_ready
+  )`);
+  const plan = db
+    .prepare(`EXPLAIN QUERY PLAN ${RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL}`)
+    .all()
+    .map((row) => String(row.detail));
+  t.true(plan.some((detail) => detail.includes("runtime_fact_fingerprint")));
+  t.true(plan.some((detail) => detail.includes("runtime_identity_key")));
+  t.false(plan.some((detail) => detail.includes("AUTOMATIC")));
+  t.false(plan.some((detail) => /SCAN (f|i)(\s|$)/.test(detail)));
+});
 
 test("instruction variants avoid materializing the complete runtime history", (t) => {
   const directory = temporary();

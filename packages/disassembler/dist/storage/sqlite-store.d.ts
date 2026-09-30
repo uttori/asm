@@ -5,6 +5,7 @@ import { type AnalysisProjectManifest, type AnalysisProjectShards, type Analysis
 import { type RuntimeEvidenceBatch, type RuntimeEvidenceConflict } from "../runtime/runtime-evidence.js";
 import type { RuntimeTraceFactIndex } from "../runtime/runtime-trace.js";
 import { type InstructionExecutionSummaryRow, type AnnotationQueryRange, type SqliteAnnotationView, type InstructionExportRecord } from "./sqlite-annotation-query.js";
+import { type RuntimeTracePublicationSink } from "./sqlite-runtime-batch.js";
 import { type AnalysisStoragePolicy } from "./sqlite-storage-policy.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
@@ -94,6 +95,13 @@ export declare class SqliteAnalysisStore {
      * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
      */
     runtimeBatchInserter(prefix: string): (record: RuntimeEvidenceRecord) => boolean;
+    /**
+     * Prepare bounded bulk publication for a validated distinct instruction trace. All four source
+     * namespaces must be empty; receipts cannot prove this after pruning. Retained/partial sources
+     * use exact per-record comparisons and repair. Call finish() before the writer transaction commits.
+     * The sink and its pending buffers belong to this transaction and must not escape it.
+     */
+    runtimeTracePublicationSink(sourceSha256: string): RuntimeTracePublicationSink;
     /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
     validateRuntimeEvidence(): void;
     /**

@@ -7,7 +7,7 @@ var __rewriteRelativeImportExtension = (this && this.__rewriteRelativeImportExte
     return path;
 };
 import { realpath } from "node:fs/promises";
-import { registerHooks } from "node:module";
+import { createRequire, registerHooks } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PluginError, PluginManager, } from "@uttori/asm-core/plugin";
@@ -62,6 +62,10 @@ const moduleLoadError = (request, message, resolvedModule, cause) => new PluginE
     pluginModule: resolvedModule ?? request.module,
     cause,
 });
+/** Resolve a trusted plugin from its configuration directory to a canonical file URL.
+ * Package resolution retains host export conditions with import semantics in ESM and CJS hosts.
+ * Resolution failures reject with a PluginError naming the configuration entry and its cause.
+ */
 const resolveExternalModule = async (request) => {
     try {
         if (request.module.startsWith("file:")) {
@@ -73,26 +77,31 @@ const resolveExternalModule = async (request) => {
             return normalizeFileUrl(pathToFileURL(path.resolve(request.baseDirectory, request.module)));
         }
         const parent = pathToFileURL(path.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
-        // Node ignores import.meta.resolve's parent argument without an experimental flag.
-        // Redirect this synchronous resolution only, preserving Node's active import conditions
-        // and the host's resolver chain without leaving a process-wide hook installed.
+        // createRequire survives CommonJS bundling, where import.meta.resolve is unavailable.
+        // Replace only the require condition: the eventual dynamic import must select import
+        // exports while retaining the host's custom conditions and resolver chain.
         const marker = "uttori:resolve-project-plugin";
         const hooks = registerHooks({
             resolve(specifier, context, nextResolve) {
                 if (specifier === marker) {
-                    return nextResolve(request.module, { ...context, parentURL: parent.href });
+                    return nextResolve(request.module, {
+                        ...context,
+                        parentURL: parent.href,
+                        conditions: context.conditions.map((condition) => condition === "require" ? "import" : condition),
+                    });
                 }
                 return nextResolve(specifier, context);
             },
         });
         let resolved;
         try {
-            resolved = import.meta.resolve(marker);
+            resolved = createRequire(parent).resolve(marker);
         }
         finally {
+            // Resolution is synchronous; never leave a process-wide hook across the import await.
             hooks.deregister();
         }
-        return await normalizeFileUrl(new URL(resolved));
+        return await normalizeFileUrl(pathToFileURL(resolved));
     }
     catch (error) {
         throw moduleLoadError(request, "module could not be resolved", undefined, error);

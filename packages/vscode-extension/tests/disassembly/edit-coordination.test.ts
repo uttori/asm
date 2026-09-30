@@ -144,6 +144,75 @@ test("staged source is verified before publication; old generation is retained a
   t.true(fs.readFileSync(f.file, "utf8").includes("publish-comment"));
 });
 
+test("OS metadata is omitted from both stages and may change during verification", async (t) => {
+  const f = ownershipFixture();
+  t.teardown(f.cleanup);
+  call(f, comment(f, "metadata-independent-publication"));
+  const metadata = [
+    ".DS_Store",
+    "banks/.DS_Store",
+    "banks/._bank-000.asm",
+    "banks/THUMBS.DB",
+    "desktop.ini",
+    "ehthumbs.db",
+    ".LSOverride",
+    ".directory",
+    ".AppleDouble/info",
+    ".Spotlight-V100/index",
+    ".Trashes/info",
+    ".fseventsd/events",
+    ".TemporaryItems/info",
+    "__MACOSX/info",
+    ".Trash-1000/info",
+  ];
+  for (const name of metadata) {
+    const file = path.join(f.sourceDirectory, name);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "before verification");
+  }
+  // Sidecars must be ignored before the regular-file guard, even when they are dangling links.
+  const sidecar = path.join(f.sourceDirectory, "._main.asm");
+  fs.symlinkSync("missing-os-metadata", sidecar);
+  const hiddenInput = "banks/.project-input.inc";
+  fs.writeFileSync(path.join(f.sourceDirectory, hiddenInput), "; hidden project input\n");
+  let metadataChanged = false;
+  const result = await publishVerifiedSource(
+    {
+      projectDirectory: f.projectDirectory,
+      sourceDirectory: f.sourceDirectory,
+      romFile: f.romFile,
+      sourceManifest: loadSourceExportManifest(f.sourceDirectory),
+    },
+    new AbortController().signal,
+    (message) => {
+      if (message === "Verifying candidate ROM bytes before publication…") {
+        for (const name of metadata) {
+          fs.writeFileSync(path.join(f.sourceDirectory, name), "updated by OS");
+        }
+        fs.rmSync(path.join(f.sourceDirectory, ".DS_Store"));
+        fs.writeFileSync(path.join(f.sourceDirectory, "banks/desktop.ini"), "new OS metadata");
+        metadataChanged = true;
+      }
+    },
+  );
+  t.true(metadataChanged);
+  t.true(result.verified.comparison.equal);
+  t.is(result.publication.phase, "published");
+  for (const stage of [result.publication.previous, result.publication.candidate]) {
+    for (const name of [...metadata, "._main.asm", "banks/desktop.ini"]) {
+      t.false(fs.existsSync(path.join(stage, name)), `${name} must not be staged`);
+    }
+    // lstat detects a dangling symlink, which existsSync would treat as absent.
+    t.throws(() => fs.lstatSync(path.join(stage, "._main.asm")), { code: "ENOENT" });
+    t.is(fs.readFileSync(path.join(stage, hiddenInput), "utf8"), "; hidden project input\n");
+    t.notThrows(() => validateSourceExportFiles(stage));
+  }
+  t.is(fs.readFileSync(path.join(f.sourceDirectory, "banks/.DS_Store"), "utf8"), "updated by OS");
+  t.false(fs.existsSync(path.join(f.sourceDirectory, ".DS_Store")));
+  t.true(fs.lstatSync(sidecar).isSymbolicLink());
+  t.notThrows(() => validateSourceExportFiles(f.sourceDirectory));
+});
+
 test("each publication interruption rejects readers and recovers old or completely published bytes", (t) => {
   const f = ownershipFixture();
   t.teardown(f.cleanup);
@@ -301,39 +370,48 @@ test("failed candidate verification never exposes candidate source", async (t) =
   t.notThrows(() => validateSourceExportFiles(f.sourceDirectory));
 });
 
-test("an input edit during verification preserves visible source and records the failed publication", async (t) => {
-  const f = ownershipFixture();
-  t.teardown(f.cleanup);
-  call(f, comment(f, "staged-only"));
-  const before = fs.readFileSync(path.join(f.sourceDirectory, "generated-files.json"));
-  const mapFile = path.join(f.sourceDirectory, "ram-map.json");
-  const originalMap = fs.readFileSync(mapFile, "utf8");
-  await t.throwsAsync(
-    publishVerifiedSource(
+for (const input of ["ram-map.json", "banks/.project-input.inc"]) {
+  test(`an edit to ${input} during verification preserves visible source and records the failed publication`, async (t) => {
+    const f = ownershipFixture();
+    t.teardown(f.cleanup);
+    call(f, comment(f, "staged-only"));
+    const before = fs.readFileSync(path.join(f.sourceDirectory, "generated-files.json"));
+    const inputFile = path.join(f.sourceDirectory, input);
+    if (!fs.existsSync(inputFile)) {
+      fs.writeFileSync(inputFile, "; hidden project input\n");
+    }
+    const originalInput = fs.readFileSync(inputFile, "utf8");
+    await t.throwsAsync(
+      publishVerifiedSource(
+        {
+          projectDirectory: f.projectDirectory,
+          sourceDirectory: f.sourceDirectory,
+          romFile: f.romFile,
+          sourceManifest: loadSourceExportManifest(f.sourceDirectory),
+        },
+        new AbortController().signal,
+        (message) => {
+          if (message === "Verifying candidate ROM bytes before publication…") {
+            fs.appendFileSync(inputFile, "\n");
+          }
+        },
+      ),
       {
-        projectDirectory: f.projectDirectory,
-        sourceDirectory: f.sourceDirectory,
-        romFile: f.romFile,
-        sourceManifest: loadSourceExportManifest(f.sourceDirectory),
+        message: `Source input changed during staging: ${path.normalize(input)}. Visible source was preserved.`,
       },
-      new AbortController().signal,
-      (message) => {
-        if (message === "Verifying candidate ROM bytes before publication…") {
-          fs.appendFileSync(mapFile, "\n");
-        }
-      },
-    ),
-    { message: /Source input changed during staging/ },
-  );
-  t.deepEqual(fs.readFileSync(path.join(f.sourceDirectory, "generated-files.json")), before);
-  t.is(fs.readFileSync(mapFile, "utf8"), originalMap + "\n");
-  t.notThrows(() => validateSourceExportFiles(f.sourceDirectory));
-  const folder = path.join(f.projectDirectory, ".editing", "publications");
-  const journal = JSON.parse(fs.readFileSync(path.join(folder, fs.readdirSync(folder)[0]), "utf8"));
-  t.is(journal.phase, "failed");
-  t.notThrows(() => validateSourceExportFiles(journal.previousDirectory));
-  t.notThrows(() => validateSourceExportFiles(journal.candidateDirectory));
-});
+    );
+    t.deepEqual(fs.readFileSync(path.join(f.sourceDirectory, "generated-files.json")), before);
+    t.is(fs.readFileSync(inputFile, "utf8"), originalInput + "\n");
+    t.notThrows(() => validateSourceExportFiles(f.sourceDirectory));
+    const folder = path.join(f.projectDirectory, ".editing", "publications");
+    const journal = JSON.parse(
+      fs.readFileSync(path.join(folder, fs.readdirSync(folder)[0]), "utf8"),
+    );
+    t.is(journal.phase, "failed");
+    t.notThrows(() => validateSourceExportFiles(journal.previousDirectory));
+    t.notThrows(() => validateSourceExportFiles(journal.candidateDirectory));
+  });
+}
 
 test("map response recovery distinguishes a committed write from an external conflict", (t) => {
   const f = ownershipFixture();

@@ -84,7 +84,7 @@ ROM identity (analyze, export, verify-roundtrip, evidence-import):
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
-  --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
+  --trace-index <mode>         full (default; retains all registers)
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
@@ -285,8 +285,8 @@ export const parseCliArguments = (argv) => {
                 break;
             }
             case "--trace-index":
-                if (value !== "full" && value !== "65816-disassembly" && value !== "65816-analysis") {
-                    throw new Error("--trace-index must be full, 65816-disassembly, or 65816-analysis.");
+                if (value !== "full") {
+                    throw new Error("--trace-index must be full.");
                 }
                 traceIndex = value;
                 break;

@@ -304,17 +304,16 @@ Instruction trace artifacts can retain execution-time bytes/state and CPU/DMA/HD
 
 ## Working-index and storage
 
-Native `snes.65816` / `snes.cpu` captures default to `65816-analysis` (`65816-analysis-v2` on disk).
-The projection preserves joint PC/bytes and current decoder inputs: normalized P width bits, E, D and
-DB, with program bank derived from the instruction address. Unknown/invalid state remains unknown.
-Emulation mode forces the documented widths. Other processors default to full indexing. Explicit
-`full` and `65816-disassembly` projections remain available. The selected profile is retained
-with each capture receipt. Changing a setting does not rewrite saved observations.
+Instruction imports retain all supplied bytes, registers, execution counts and bus observations.
+`full` is the only supported index mode. In-memory imports default to an 8M distinct-record
+budget; SQLite project imports have no fixed record ceiling when counters and emitted facts
+both remain on disk. Explicit input, record and storage budgets still apply.
 
-Capture receipts survive source-file removal. Same-profile reimports repair missing facts through stable-ID
-checks. A different-profile reimport reuses the retained profile and reports that choice. It never
-reintroduces discarded full rows or increments lifetime counts. Pure in-memory batch merging still
-rejects incompatible profiles. SQLite receipt handling is the durable import API.
+Capture receipts survive source-file removal. Full reimports repair missing facts through
+stable-ID checks. Historical reduced-index receipts in existing Secret of Mana projects remain
+readable. Reimporting those sources preserves their retained facts with a warning; it does not
+restore omitted registers or double-count observations. In-memory batch merging rejects
+incompatible retained facts.
 
 `project-storage` displays budgets, facts/relationships, allocated database/WAL bytes, free pages,
 optional cache allocation, and capture receipts. Its controls are `--cache-max-mib` (256) and

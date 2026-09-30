@@ -5,6 +5,46 @@ import { runtimeColumns } from "./sqlite-records.js";
 import { RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA, runtimeIdentityKey, } from "./sqlite-runtime-facts.js";
 import { RUNTIME_HISTORY_SCHEMA } from "./sqlite-runtime-history.js";
 import { encodePackedRuntimePayload } from "./sqlite-runtime-payload.js";
+/**
+ * Preserve the persisted canonical fingerprint across individual and batch publication.
+ * Columns must come from runtimeColumns(record); payload is its canonical text, not encoded bytes.
+ * Fixed key order, null fields, two-space indentation and the trailing newline are identity bytes;
+ * changing their layout would duplicate retained facts. Keep this aligned with runtimeColumns.
+ */
+export const runtimeFactFingerprint = (record, columns) => createHash("sha256")
+    .update(JSON.stringify({
+    accessedAddress: columns.accessedAddress,
+    accessedAddressSpace: columns.accessedAddressSpace,
+    address: columns.address,
+    addressSpace: columns.addressSpace,
+    architecture: record.architecture,
+    coverage: columns.coverage,
+    end: columns.end,
+    fromAddress: columns.fromAddress,
+    fromAddressSpace: columns.fromAddressSpace,
+    instructionAddress: columns.instructionAddress,
+    instructionAddressSpace: columns.instructionAddressSpace,
+    kind: record.kind,
+    payload: columns.payload,
+    start: columns.start,
+    toAddress: columns.toAddress,
+    toAddressSpace: columns.toAddressSpace,
+}, undefined, 2) + "\n")
+    .digest();
+/** Encode a new shared fact losslessly. Unusual register shapes retain the general codec. */
+export const encodeRuntimeFactPayload = (record, payload) => {
+    if (payload === null) {
+        return null;
+    }
+    if (record.architecture === "snes.65816" &&
+        (record.kind === "runtime-instruction" || record.kind === "runtime-cpu-state")) {
+        const snapshot = record.kind === "runtime-instruction"
+            ? { bytes: record.bytes, state: record.state }
+            : { state: record.state };
+        return encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
+    }
+    return encodeSqlitePayload(payload);
+};
 /** Stream negative virtual rowids first, then positive observations, using the observation PK.
  * Sorting the expanded compatibility view can spill the entire history to temporary disk.
  * LEFT dictionary joins let decoders reject missing entries rather than silently omit records.
@@ -170,51 +210,13 @@ export class SqliteRuntimeWriter {
         // runtimeColumns already canonicalizes the payload. Parsing it again would
         // repeat allocations and sorting for every distinct fact.
         const payload = columns.payload;
-        const fingerprint = createHash("sha256")
-            .update(
-        // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
-        // per row. Nulls, two-space indentation and the trailing newline preserve
-        // persisted fact fingerprints. Changing the layout would duplicate retained facts.
-        // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
-        JSON.stringify({
-            accessedAddress: columns.accessedAddress,
-            accessedAddressSpace: columns.accessedAddressSpace,
-            address: columns.address,
-            addressSpace: columns.addressSpace,
-            architecture: record.architecture,
-            coverage: columns.coverage,
-            end: columns.end,
-            fromAddress: columns.fromAddress,
-            fromAddressSpace: columns.fromAddressSpace,
-            instructionAddress: columns.instructionAddress,
-            instructionAddressSpace: columns.instructionAddressSpace,
-            kind: record.kind,
-            payload,
-            start: columns.start,
-            toAddress: columns.toAddress,
-            toAddressSpace: columns.toAddressSpace,
-        }, undefined, 2) + "\n")
-            .digest();
+        const fingerprint = runtimeFactFingerprint(record, columns);
         const found = this.#findFact.get(fingerprint);
         let fid = found?.fid;
         if (fid === undefined) {
             // Existing shared facts need only a new observation. Encode payloads only
             // on insertion. Large snapshots retain the bounded general codec.
-            let encoded = null;
-            if (payload !== null) {
-                // Native numeric snapshots have an exact fixed-width representation. Unknowns, aliases
-                // and other processors retain the general codec; none are coerced into the packed form.
-                if (record.architecture === "snes.65816" &&
-                    (record.kind === "runtime-instruction" || record.kind === "runtime-cpu-state")) {
-                    const snapshot = record.kind === "runtime-instruction"
-                        ? { bytes: record.bytes, state: record.state }
-                        : { state: record.state };
-                    encoded = encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
-                }
-                else {
-                    encoded = encodeSqlitePayload(payload);
-                }
-            }
+            const encoded = encodeRuntimeFactPayload(record, payload);
             this.#insertFact.run(fingerprint, record.kind, record.architecture, columns.addressSpace, columns.address, columns.start, columns.end, columns.fromAddressSpace, columns.fromAddress, columns.toAddressSpace, columns.toAddress, columns.instructionAddressSpace, columns.instructionAddress, columns.accessedAddressSpace, columns.accessedAddress, columns.coverage, encoded, encoded, encoded);
             // INSTEAD OF view triggers restore last_insert_rowid; resolve the inserted stable fingerprint.
             fid = this.#findFact.get(fingerprint).fid;

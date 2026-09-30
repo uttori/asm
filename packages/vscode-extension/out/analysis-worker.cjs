@@ -2547,7 +2547,7 @@ var init_runtime_evidence = __esm({
         }
         if (traceProfiles.has(report2.sourceSha256) && traceProfiles.get(report2.sourceSha256) !== report2.indexProfile) {
           throw new Error(
-            `Trace '${report2.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
+            `Trace '${report2.sourceName}' has incompatible retained facts. Import into a separate project to avoid double-counting observations.`
           );
         }
         traceProfiles.set(report2.sourceSha256, report2.indexProfile);
@@ -4521,7 +4521,7 @@ END;`;
 });
 
 // packages/disassembler/src/storage/sqlite-runtime-storage.ts
-var import_node_crypto2, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
+var import_node_crypto2, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
   "packages/disassembler/src/storage/sqlite-runtime-storage.ts"() {
     "use strict";
@@ -4532,6 +4532,40 @@ var init_sqlite_runtime_storage = __esm({
     init_sqlite_runtime_facts();
     init_sqlite_runtime_history();
     init_sqlite_runtime_payload();
+    runtimeFactFingerprint = (record2, columns2) => (0, import_node_crypto2.createHash)("sha256").update(
+      JSON.stringify(
+        {
+          accessedAddress: columns2.accessedAddress,
+          accessedAddressSpace: columns2.accessedAddressSpace,
+          address: columns2.address,
+          addressSpace: columns2.addressSpace,
+          architecture: record2.architecture,
+          coverage: columns2.coverage,
+          end: columns2.end,
+          fromAddress: columns2.fromAddress,
+          fromAddressSpace: columns2.fromAddressSpace,
+          instructionAddress: columns2.instructionAddress,
+          instructionAddressSpace: columns2.instructionAddressSpace,
+          kind: record2.kind,
+          payload: columns2.payload,
+          start: columns2.start,
+          toAddress: columns2.toAddress,
+          toAddressSpace: columns2.toAddressSpace
+        },
+        void 0,
+        2
+      ) + "\n"
+    ).digest();
+    encodeRuntimeFactPayload = (record2, payload) => {
+      if (payload === null) {
+        return null;
+      }
+      if (record2.architecture === "snes.65816" && (record2.kind === "runtime-instruction" || record2.kind === "runtime-cpu-state")) {
+        const snapshot = record2.kind === "runtime-instruction" ? { bytes: record2.bytes, state: record2.state } : { state: record2.state };
+        return encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
+      }
+      return encodeSqlitePayload(payload);
+    };
     RUNTIME_RECORD_STREAM_SQL = [true, false].map(
       (paired) => `
   SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
@@ -4686,46 +4720,11 @@ END;
           }
         }
         const payload = columns2.payload;
-        const fingerprint = (0, import_node_crypto2.createHash)("sha256").update(
-          // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
-          // per row. Nulls, two-space indentation and the trailing newline preserve
-          // persisted fact fingerprints. Changing the layout would duplicate retained facts.
-          // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
-          JSON.stringify(
-            {
-              accessedAddress: columns2.accessedAddress,
-              accessedAddressSpace: columns2.accessedAddressSpace,
-              address: columns2.address,
-              addressSpace: columns2.addressSpace,
-              architecture: record2.architecture,
-              coverage: columns2.coverage,
-              end: columns2.end,
-              fromAddress: columns2.fromAddress,
-              fromAddressSpace: columns2.fromAddressSpace,
-              instructionAddress: columns2.instructionAddress,
-              instructionAddressSpace: columns2.instructionAddressSpace,
-              kind: record2.kind,
-              payload,
-              start: columns2.start,
-              toAddress: columns2.toAddress,
-              toAddressSpace: columns2.toAddressSpace
-            },
-            void 0,
-            2
-          ) + "\n"
-        ).digest();
+        const fingerprint = runtimeFactFingerprint(record2, columns2);
         const found = this.#findFact.get(fingerprint);
         let fid = found?.fid;
         if (fid === void 0) {
-          let encoded = null;
-          if (payload !== null) {
-            if (record2.architecture === "snes.65816" && (record2.kind === "runtime-instruction" || record2.kind === "runtime-cpu-state")) {
-              const snapshot = record2.kind === "runtime-instruction" ? { bytes: record2.bytes, state: record2.state } : { state: record2.state };
-              encoded = encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
-            } else {
-              encoded = encodeSqlitePayload(payload);
-            }
-          }
+          const encoded = encodeRuntimeFactPayload(record2, payload);
           this.#insertFact.run(
             fingerprint,
             record2.kind,
@@ -4760,6 +4759,166 @@ END;
           statePrefix,
           record2.kind === "runtime-execution" ? 0 : 1
         );
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+function assertTraceRecordNamespace(record2, sourceSha256) {
+  const root = `runtime:instruction-trace:${sourceSha256}:`;
+  let prefix = root;
+  if (record2.kind === "runtime-instruction") {
+    prefix += "code:";
+  } else if (record2.kind === "runtime-cpu-state") {
+    prefix += "state:";
+  } else if (record2.kind === "runtime-memory-access") {
+    prefix += "memory:";
+  } else if (record2.kind !== "runtime-execution") {
+    throw new Error("Unsupported instruction trace batch record.");
+  }
+  const suffix = record2.id.slice(prefix.length);
+  let validSuffix = /^[\da-f]{64}$/.test(suffix);
+  if (record2.kind === "runtime-execution") {
+    validSuffix = suffix === record2.address.toString(16).toUpperCase().padStart(6, "0");
+  }
+  if (!record2.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record2.evidence, [root.slice(0, -1)])) {
+    throw new Error("Runtime record escaped its trace batch namespace or provenance.");
+  }
+}
+var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL, SqliteRuntimeTraceBatch;
+var init_sqlite_runtime_batch = __esm({
+  "packages/disassembler/src/storage/sqlite-runtime-batch.ts"() {
+    "use strict";
+    init_canonical_json();
+    init_sqlite_payload();
+    init_sqlite_records();
+    init_sqlite_runtime_facts();
+    init_sqlite_runtime_storage();
+    RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
+  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
+    SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
+    FROM temp.runtime_trace_batch b CROSS JOIN runtime_fact_rows f
+      ON substr(f.fingerprint,1,8)=substr(b.fingerprint,1,8) AND f.fingerprint=b.fingerprint
+    CROSS JOIN runtime_identities i
+      ON (${runtimeIdentityKey("i.value")})=(${runtimeIdentityKey("b.identity_value")}) AND i.value=b.identity_value
+    ORDER BY b.position
+`;
+    SqliteRuntimeTraceBatch = class {
+      #db;
+      #source;
+      #intern;
+      #stage;
+      #pending;
+      #rows = 0;
+      #finished = false;
+      constructor(db, source, intern) {
+        this.#db = db;
+        this.#source = source;
+        this.#intern = intern;
+        db.exec(`CREATE TEMP TABLE runtime_trace_batch (
+      position INTEGER PRIMARY KEY, fingerprint BLOB NOT NULL,
+      ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",")},
+      payload, prefix_id INTEGER NOT NULL, identity_value NOT NULL,
+      evidence_id INTEGER NOT NULL, count INTEGER NOT NULL, state_prefix_id INTEGER, query_ready INTEGER NOT NULL
+    )`);
+        this.#stage = db.prepare(
+          `INSERT INTO temp.runtime_trace_batch VALUES (${Array(24).fill("?").join(",")})`
+        );
+      }
+      /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
+      add(record2) {
+        if (this.#finished || !this.#db.isTransaction) {
+          throw new Error("Runtime trace batch is no longer active.");
+        }
+        assertTraceRecordNamespace(record2, this.#source);
+        if (this.#pending) {
+          const instruction = this.#pending;
+          if (record2.kind !== "runtime-cpu-state" || record2.id !== instruction.id.replace(":code:", ":state:") || record2.architecture !== instruction.architecture || record2.addressSpace !== instruction.addressSpace || record2.address !== instruction.address || record2.count !== instruction.count || !canonicalEquals(record2.state, instruction.state)) {
+            throw new Error("Instruction trace batch has an inconsistent code/state pair.");
+          }
+          this.#pending = void 0;
+          this.#append(
+            instruction,
+            this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record2.id).prefix)
+          );
+        } else if (record2.kind === "runtime-instruction") {
+          this.#pending = record2;
+        } else if (record2.kind === "runtime-cpu-state") {
+          throw new Error("Instruction trace batch state has no preceding instruction.");
+        } else {
+          this.#append(record2, null);
+        }
+        return true;
+      }
+      /** Encode once per physical observation; repeated shared facts are resolved together in SQL. */
+      #append(record2, statePrefix) {
+        const columns2 = runtimeColumns(record2);
+        const identity = sqliteRuntimeIdentity(record2.id);
+        this.#stage.run(
+          ++this.#rows,
+          runtimeFactFingerprint(record2, columns2),
+          record2.kind,
+          record2.architecture,
+          columns2.addressSpace,
+          columns2.address,
+          columns2.start,
+          columns2.end,
+          columns2.fromAddressSpace,
+          columns2.fromAddress,
+          columns2.toAddressSpace,
+          columns2.toAddress,
+          columns2.instructionAddressSpace,
+          columns2.instructionAddress,
+          columns2.accessedAddressSpace,
+          columns2.accessedAddress,
+          columns2.coverage,
+          encodeRuntimeFactPayload(record2, columns2.payload),
+          this.#intern("runtime_prefixes", identity.prefix),
+          identity.suffix,
+          this.#intern("runtime_evidence", JSON.stringify(record2.evidence)),
+          record2.count,
+          statePrefix,
+          record2.kind === "runtime-execution" ? 0 : 1
+        );
+        if (this.#rows >= 1024) {
+          this.#flush();
+        }
+      }
+      /** Full hash/value equality follows each compact index key; collisions never merge distinct facts. */
+      #flush() {
+        if (!this.#rows) {
+          return;
+        }
+        const columns2 = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",");
+        const selected = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `b."${column}"`).join(",");
+        this.#db.exec(`
+      INSERT INTO runtime_facts(fingerprint,${columns2},payload)
+        SELECT DISTINCT b.fingerprint,${selected},CASE WHEN typeof(b.payload)='text' THEN jsonb(b.payload) ELSE b.payload END
+        FROM temp.runtime_trace_batch b WHERE NOT EXISTS (
+          SELECT 1 FROM runtime_fact_rows f
+          WHERE substr(f.fingerprint,1,8)=substr(b.fingerprint,1,8) AND f.fingerprint=b.fingerprint
+        );
+      INSERT INTO runtime_identities(value)
+        SELECT DISTINCT b.identity_value FROM temp.runtime_trace_batch b WHERE NOT EXISTS (
+          SELECT 1 FROM runtime_identities i
+          WHERE (${runtimeIdentityKey("i.value")})=(${runtimeIdentityKey("b.identity_value")}) AND i.value=b.identity_value
+        );
+      ${RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL};
+      DELETE FROM temp.runtime_trace_batch;
+    `);
+        this.#rows = 0;
+      }
+      finish() {
+        if (this.#finished || !this.#db.isTransaction) {
+          throw new Error("Runtime trace batch is no longer active.");
+        }
+        if (this.#pending) {
+          throw new Error("Instruction trace batch ended without its paired state.");
+        }
+        this.#flush();
+        this.#db.exec("DROP TABLE temp.runtime_trace_batch");
+        this.#finished = true;
       }
     };
   }
@@ -5320,6 +5479,7 @@ var init_sqlite_store = __esm({
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
+    init_sqlite_runtime_batch();
     init_sqlite_runtime_facts();
     init_sqlite_runtime_history();
     init_sqlite_runtime_storage();
@@ -5955,6 +6115,61 @@ PRAGMA user_version=4;
           }
           this.#insertRecord("runtime", record2);
           return true;
+        };
+      }
+      /**
+       * Prepare bounded bulk publication for a validated distinct instruction trace. All four source
+       * namespaces must be empty; receipts cannot prove this after pruning. Retained/partial sources
+       * use exact per-record comparisons and repair. Call finish() before the writer transaction commits.
+       * The sink and its pending buffers belong to this transaction and must not escape it.
+       */
+      runtimeTracePublicationSink(sourceSha256) {
+        this.#requireTransaction();
+        if (!/^[\da-f]{64}$/.test(sourceSha256)) {
+          throw new Error("Invalid trace source SHA-256.");
+        }
+        const root = `runtime:instruction-trace:${sourceSha256}:`;
+        const existing = this.#database.prepare(`
+      SELECT 1 FROM runtime_observations
+      WHERE prefix_id IN (SELECT id FROM runtime_prefixes WHERE value IN (?1,?2,?3,?4))
+      UNION ALL SELECT 1 FROM runtime_observations
+      WHERE state_prefix_id IN (SELECT id FROM runtime_prefixes WHERE value IN (?1,?2,?3,?4))
+      LIMIT 1
+    `).get(root, `${root}code:`, `${root}state:`, `${root}memory:`);
+        if (!existing) {
+          const batch = new SqliteRuntimeTraceBatch(
+            this.#database,
+            sourceSha256,
+            (table, value) => this.#intern(table, value)
+          );
+          return {
+            add: (record2) => {
+              this.#requireTransaction();
+              return batch.add(record2);
+            },
+            finish: () => {
+              this.#requireTransaction();
+              batch.finish();
+            }
+          };
+        }
+        let finished = false;
+        return {
+          add: (record2) => {
+            this.#requireTransaction();
+            if (finished) {
+              throw new Error("Runtime trace batch is no longer active.");
+            }
+            assertTraceRecordNamespace(record2, sourceSha256);
+            return this.insertRuntime(record2);
+          },
+          finish: () => {
+            this.#requireTransaction();
+            if (finished) {
+              throw new Error("Runtime trace batch is no longer active.");
+            }
+            finished = true;
+          }
         };
       }
       /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
@@ -55428,7 +55643,6 @@ var import_node_module = require("node:module");
 var import_node_path27 = __toESM(require("node:path"), 1);
 var import_node_url = require("node:url");
 init_plugin();
-var import_meta = {};
 var isRecord4 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var toOptionsRecord = (value, entry) => {
   if (value === void 0) {
@@ -55486,18 +55700,24 @@ var resolveExternalModule = async (request2) => {
     const hooks = (0, import_node_module.registerHooks)({
       resolve(specifier, context, nextResolve) {
         if (specifier === marker) {
-          return nextResolve(request2.module, { ...context, parentURL: parent.href });
+          return nextResolve(request2.module, {
+            ...context,
+            parentURL: parent.href,
+            conditions: context.conditions.map(
+              (condition) => condition === "require" ? "import" : condition
+            )
+          });
         }
         return nextResolve(specifier, context);
       }
     });
     let resolved;
     try {
-      resolved = import_meta.resolve(marker);
+      resolved = (0, import_node_module.createRequire)(parent).resolve(marker);
     } finally {
       hooks.deregister();
     }
-    return await normalizeFileUrl(new URL(resolved));
+    return await normalizeFileUrl((0, import_node_url.pathToFileURL)(resolved));
   } catch (error) {
     throw moduleLoadError(request2, "module could not be resolved", void 0, error);
   }
@@ -55780,6 +56000,23 @@ var NodePluginLoader = class {
 
 // packages/vscode-extension/src/disassembly/source-publisher.ts
 init_src4();
+var osMetadataNames = /* @__PURE__ */ new Set([
+  ".ds_store",
+  ".lsoverride",
+  ".appledouble",
+  ".spotlight-v100",
+  ".trashes",
+  ".fseventsd",
+  ".temporaryitems",
+  "__macosx",
+  "thumbs.db",
+  "ehthumbs.db",
+  "desktop.ini",
+  ".directory"
+]);
+function isOsMetadata(name) {
+  return osMetadataNames.has(name.toLowerCase()) || name.startsWith("._") || /^\.Trash-\d+$/.test(name);
+}
 function stageSource(root, project, suffix) {
   const directory = import_node_fs20.default.mkdtempSync(
     import_node_path28.default.join(import_node_path28.default.dirname(root), `.${import_node_path28.default.basename(root)}-${suffix}-`)
@@ -55790,7 +56027,7 @@ function stageSource(root, project, suffix) {
     for (const item of import_node_fs20.default.readdirSync(import_node_path28.default.join(root, relative2), { withFileTypes: true })) {
       const name = import_node_path28.default.join(relative2, item.name);
       const source = import_node_path28.default.join(root, name);
-      if (import_node_path28.default.resolve(source) === import_node_path28.default.resolve(project) || ["captures", "build", ".git", "node_modules", ".editing"].includes(item.name) || item.name.startsWith(".uttori-publication")) {
+      if (isOsMetadata(item.name) || import_node_path28.default.resolve(source) === import_node_path28.default.resolve(project) || ["captures", "build", ".git", "node_modules", ".editing"].includes(item.name) || item.name.startsWith(".uttori-publication")) {
         continue;
       }
       if (item.isSymbolicLink() || !item.isDirectory() && !item.isFile()) {

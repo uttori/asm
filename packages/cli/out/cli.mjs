@@ -17704,7 +17704,7 @@ var init_runtime_evidence = __esm({
         }
         if (traceProfiles.has(report2.sourceSha256) && traceProfiles.get(report2.sourceSha256) !== report2.indexProfile) {
           throw new Error(
-            `Trace '${report2.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
+            `Trace '${report2.sourceName}' has incompatible retained facts. Import into a separate project to avoid double-counting observations.`
           );
         }
         traceProfiles.set(report2.sourceSha256, report2.indexProfile);
@@ -17781,55 +17781,18 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-trace-profile.ts
-var RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState;
-var init_runtime_trace_profile = __esm({
-  "packages/disassembler/src/runtime/runtime-trace-profile.ts"() {
-    "use strict";
-    RUNTIME_ANALYSIS_PROFILE = "65816-analysis-v2";
-    project65816AnalysisState = (state) => {
-      const value = (key3, max) => {
-        const entry = state[key3] ?? state[key3.toUpperCase()];
-        return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
-      };
-      const result = {};
-      const e = value("e", 1);
-      const p = value("p", 255);
-      if (e !== void 0) {
-        result.e = e;
-      }
-      if (e === 1) {
-        result.p = 48;
-      } else if (p !== void 0) {
-        result.p = p & 48;
-      }
-      const db = value("db", 255);
-      const d = value("d", 65535);
-      if (db !== void 0) {
-        result.db = db;
-      }
-      if (d !== void 0) {
-        result.d = d;
-      }
-      return result;
-    };
-  }
-});
-
 // packages/disassembler/src/runtime/runtime-trace.ts
 import { createHash as createHash3 } from "node:crypto";
-var RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
+var RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
   "packages/disassembler/src/runtime/runtime-trace.ts"() {
     "use strict";
     init_canonical_json();
     init_trace_detail();
-    init_runtime_trace_profile();
     RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
     RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
-    DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2e6;
-    MAX_RUNTIME_TRACE_INDEX_RECORDS = 8e6;
-    DISASSEMBLY_STATE_FIELDS = /* @__PURE__ */ new Set(["p", "e", "d", "db", "pb", "pc"]);
+    DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8e6;
+    MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
     record = (value, context) => {
       if (typeof value !== "object" || value === null || Array.isArray(value)) {
         throw new Error(`${context} must be an object.`);
@@ -17939,11 +17902,11 @@ var init_runtime_trace = __esm({
       };
     };
     runtimeTraceIndexRecordLimit = (mode3, requested, storage) => {
+      if (mode3 !== "full") {
+        throw new Error("Only full runtime trace indexing is supported.");
+      }
       let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
       let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
-      if (mode3 === "full") {
-        defaultLimit = MAX_RUNTIME_TRACE_INDEX_RECORDS;
-      }
       if (storage?.index.diskBacked && storage.onRecord) {
         defaultLimit = Number.MAX_SAFE_INTEGER;
         maximum = Number.MAX_SAFE_INTEGER;
@@ -17983,21 +17946,7 @@ var init_runtime_trace = __esm({
       }
       const sourceName = string(context.sourceName, "Instruction trace source name");
       const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
-      const native65816 = artifact.architecture === "snes.65816" && addressSpace === "snes.cpu";
-      const indexMode = context.indexMode ?? (native65816 ? "65816-analysis" : "full");
-      let indexProfile;
-      if (indexMode === "65816-disassembly") {
-        indexProfile = "65816-disassembly-v1";
-      }
-      if (indexMode === "65816-analysis") {
-        indexProfile = RUNTIME_ANALYSIS_PROFILE;
-      }
-      if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode)) {
-        throw new Error("Unsupported runtime trace index mode.");
-      }
-      if (indexMode !== "full" && (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")) {
-        throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
-      }
+      const indexMode = context.indexMode ?? "full";
       const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
       const envelope = canonicalJson({ ...artifact, chunks: [] });
       const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
@@ -18010,12 +17959,8 @@ var init_runtime_trace = __esm({
       let indexRecords = 0;
       const reserve = (count) => {
         if (count > maxIndexRecords - indexRecords) {
-          let hint = "The capture has too many distinct code/state/bus variants for this index budget. ";
-          if (indexMode === "full" && native65816) {
-            hint = "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
-          }
           throw new Error(
-            `Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged. No partial import was committed.`
+            `Trace index exceeds ${maxIndexRecords} records. The capture has too many distinct code/state/bus variants for this index budget. The original capture is unchanged. No partial import was committed.`
           );
         }
         indexRecords += count;
@@ -18051,21 +17996,12 @@ var init_runtime_trace = __esm({
           memoryLoss += detail.droppedMemoryAccesses ?? 0;
           const address3 = chunk.addresses[offset];
           const base = { architecture: artifact.architecture, count: 1, evidence: [] };
-          let state = detail.state;
-          if (indexMode === "65816-analysis") {
-            state = project65816AnalysisState(detail.state);
-          } else if (indexMode === "65816-disassembly") {
-            state = Object.fromEntries(
-              Object.entries(detail.state).filter(
-                ([field]) => DISASSEMBLY_STATE_FIELDS.has(field.toLowerCase())
-              )
-            );
-          }
+          const state = detail.state;
           const content = canonicalJson({ address: address3, bytes: detail.bytes, state });
-          const key3 = indexMode === "full" ? sha2563(content) : content;
+          const key3 = sha2563(content);
           if (index.add(`code:${key3}`, () => ({
             kind: "instruction",
-            identity: indexMode === "full" ? key3 : sha2563(key3),
+            identity: key3,
             address: address3,
             bytes: detail.bytes,
             state
@@ -18122,7 +18058,7 @@ var init_runtime_trace = __esm({
         }
         finished = true;
         const sourceSha256 = hash.update(chunks ? "\n  ]" : "[]").update(suffix).digest("hex");
-        storage?.onSource?.(sourceSha256, indexProfile ?? "full");
+        storage?.onSource?.(sourceSha256, "full");
         const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
         const evidenceIds = [evidenceId];
         const executions = [];
@@ -18207,8 +18143,7 @@ var init_runtime_trace = __esm({
           }
         };
         const report2 = {
-          id: `import:instruction-trace:${sourceSha256}${indexProfile ? `:${indexProfile}` : ""}`,
-          ...indexProfile ? { indexProfile } : {},
+          id: `import:instruction-trace:${sourceSha256}`,
           format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
           sourceName,
           sourceSha256,
@@ -18227,9 +18162,6 @@ var init_runtime_trace = __esm({
             }
           ],
           warnings: [
-            ...indexMode === "full" ? [] : [
-              indexMode === "65816-analysis" ? "Analysis index retains joint PC/bytes/decoder-state variants, exact counts and bus observations. Full register history requires an available capture archive." : "Disassembly index retains every PC/bytes/P/E/D/DB/PB/PC variant and exact execution counts. Other register snapshots require the original capture."
-            ],
             ...!complete ? ["Trace artifact ended while capture was still active."] : [],
             ...detailedEvents < observedEvents ? [
               `${observedEvents - detailedEvents} instruction observations have no captured bytes/state. RAM code cannot be recovered from PCs alone.`
@@ -20386,7 +20318,7 @@ END;`;
 
 // packages/disassembler/src/storage/sqlite-runtime-storage.ts
 import { createHash as createHash4 } from "node:crypto";
-var RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
+var runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
   "packages/disassembler/src/storage/sqlite-runtime-storage.ts"() {
     "use strict";
@@ -20396,6 +20328,40 @@ var init_sqlite_runtime_storage = __esm({
     init_sqlite_runtime_facts();
     init_sqlite_runtime_history();
     init_sqlite_runtime_payload();
+    runtimeFactFingerprint = (record3, columns2) => createHash4("sha256").update(
+      JSON.stringify(
+        {
+          accessedAddress: columns2.accessedAddress,
+          accessedAddressSpace: columns2.accessedAddressSpace,
+          address: columns2.address,
+          addressSpace: columns2.addressSpace,
+          architecture: record3.architecture,
+          coverage: columns2.coverage,
+          end: columns2.end,
+          fromAddress: columns2.fromAddress,
+          fromAddressSpace: columns2.fromAddressSpace,
+          instructionAddress: columns2.instructionAddress,
+          instructionAddressSpace: columns2.instructionAddressSpace,
+          kind: record3.kind,
+          payload: columns2.payload,
+          start: columns2.start,
+          toAddress: columns2.toAddress,
+          toAddressSpace: columns2.toAddressSpace
+        },
+        void 0,
+        2
+      ) + "\n"
+    ).digest();
+    encodeRuntimeFactPayload = (record3, payload) => {
+      if (payload === null) {
+        return null;
+      }
+      if (record3.architecture === "snes.65816" && (record3.kind === "runtime-instruction" || record3.kind === "runtime-cpu-state")) {
+        const snapshot = record3.kind === "runtime-instruction" ? { bytes: record3.bytes, state: record3.state } : { state: record3.state };
+        return encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
+      }
+      return encodeSqlitePayload(payload);
+    };
     RUNTIME_RECORD_STREAM_SQL = [true, false].map(
       (paired) => `
   SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
@@ -20550,46 +20516,11 @@ END;
           }
         }
         const payload = columns2.payload;
-        const fingerprint = createHash4("sha256").update(
-          // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
-          // per row. Nulls, two-space indentation and the trailing newline preserve
-          // persisted fact fingerprints. Changing the layout would duplicate retained facts.
-          // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
-          JSON.stringify(
-            {
-              accessedAddress: columns2.accessedAddress,
-              accessedAddressSpace: columns2.accessedAddressSpace,
-              address: columns2.address,
-              addressSpace: columns2.addressSpace,
-              architecture: record3.architecture,
-              coverage: columns2.coverage,
-              end: columns2.end,
-              fromAddress: columns2.fromAddress,
-              fromAddressSpace: columns2.fromAddressSpace,
-              instructionAddress: columns2.instructionAddress,
-              instructionAddressSpace: columns2.instructionAddressSpace,
-              kind: record3.kind,
-              payload,
-              start: columns2.start,
-              toAddress: columns2.toAddress,
-              toAddressSpace: columns2.toAddressSpace
-            },
-            void 0,
-            2
-          ) + "\n"
-        ).digest();
+        const fingerprint = runtimeFactFingerprint(record3, columns2);
         const found = this.#findFact.get(fingerprint);
         let fid = found?.fid;
         if (fid === void 0) {
-          let encoded = null;
-          if (payload !== null) {
-            if (record3.architecture === "snes.65816" && (record3.kind === "runtime-instruction" || record3.kind === "runtime-cpu-state")) {
-              const snapshot = record3.kind === "runtime-instruction" ? { bytes: record3.bytes, state: record3.state } : { state: record3.state };
-              encoded = encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
-            } else {
-              encoded = encodeSqlitePayload(payload);
-            }
-          }
+          const encoded = encodeRuntimeFactPayload(record3, payload);
           this.#insertFact.run(
             fingerprint,
             record3.kind,
@@ -20624,6 +20555,166 @@ END;
           statePrefix,
           record3.kind === "runtime-execution" ? 0 : 1
         );
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+function assertTraceRecordNamespace(record3, sourceSha256) {
+  const root = `runtime:instruction-trace:${sourceSha256}:`;
+  let prefix = root;
+  if (record3.kind === "runtime-instruction") {
+    prefix += "code:";
+  } else if (record3.kind === "runtime-cpu-state") {
+    prefix += "state:";
+  } else if (record3.kind === "runtime-memory-access") {
+    prefix += "memory:";
+  } else if (record3.kind !== "runtime-execution") {
+    throw new Error("Unsupported instruction trace batch record.");
+  }
+  const suffix = record3.id.slice(prefix.length);
+  let validSuffix = /^[\da-f]{64}$/.test(suffix);
+  if (record3.kind === "runtime-execution") {
+    validSuffix = suffix === record3.address.toString(16).toUpperCase().padStart(6, "0");
+  }
+  if (!record3.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record3.evidence, [root.slice(0, -1)])) {
+    throw new Error("Runtime record escaped its trace batch namespace or provenance.");
+  }
+}
+var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL, SqliteRuntimeTraceBatch;
+var init_sqlite_runtime_batch = __esm({
+  "packages/disassembler/src/storage/sqlite-runtime-batch.ts"() {
+    "use strict";
+    init_canonical_json();
+    init_sqlite_payload();
+    init_sqlite_records();
+    init_sqlite_runtime_facts();
+    init_sqlite_runtime_storage();
+    RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
+  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
+    SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
+    FROM temp.runtime_trace_batch b CROSS JOIN runtime_fact_rows f
+      ON substr(f.fingerprint,1,8)=substr(b.fingerprint,1,8) AND f.fingerprint=b.fingerprint
+    CROSS JOIN runtime_identities i
+      ON (${runtimeIdentityKey("i.value")})=(${runtimeIdentityKey("b.identity_value")}) AND i.value=b.identity_value
+    ORDER BY b.position
+`;
+    SqliteRuntimeTraceBatch = class {
+      #db;
+      #source;
+      #intern;
+      #stage;
+      #pending;
+      #rows = 0;
+      #finished = false;
+      constructor(db, source, intern) {
+        this.#db = db;
+        this.#source = source;
+        this.#intern = intern;
+        db.exec(`CREATE TEMP TABLE runtime_trace_batch (
+      position INTEGER PRIMARY KEY, fingerprint BLOB NOT NULL,
+      ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",")},
+      payload, prefix_id INTEGER NOT NULL, identity_value NOT NULL,
+      evidence_id INTEGER NOT NULL, count INTEGER NOT NULL, state_prefix_id INTEGER, query_ready INTEGER NOT NULL
+    )`);
+        this.#stage = db.prepare(
+          `INSERT INTO temp.runtime_trace_batch VALUES (${Array(24).fill("?").join(",")})`
+        );
+      }
+      /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
+      add(record3) {
+        if (this.#finished || !this.#db.isTransaction) {
+          throw new Error("Runtime trace batch is no longer active.");
+        }
+        assertTraceRecordNamespace(record3, this.#source);
+        if (this.#pending) {
+          const instruction = this.#pending;
+          if (record3.kind !== "runtime-cpu-state" || record3.id !== instruction.id.replace(":code:", ":state:") || record3.architecture !== instruction.architecture || record3.addressSpace !== instruction.addressSpace || record3.address !== instruction.address || record3.count !== instruction.count || !canonicalEquals(record3.state, instruction.state)) {
+            throw new Error("Instruction trace batch has an inconsistent code/state pair.");
+          }
+          this.#pending = void 0;
+          this.#append(
+            instruction,
+            this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record3.id).prefix)
+          );
+        } else if (record3.kind === "runtime-instruction") {
+          this.#pending = record3;
+        } else if (record3.kind === "runtime-cpu-state") {
+          throw new Error("Instruction trace batch state has no preceding instruction.");
+        } else {
+          this.#append(record3, null);
+        }
+        return true;
+      }
+      /** Encode once per physical observation; repeated shared facts are resolved together in SQL. */
+      #append(record3, statePrefix) {
+        const columns2 = runtimeColumns(record3);
+        const identity = sqliteRuntimeIdentity(record3.id);
+        this.#stage.run(
+          ++this.#rows,
+          runtimeFactFingerprint(record3, columns2),
+          record3.kind,
+          record3.architecture,
+          columns2.addressSpace,
+          columns2.address,
+          columns2.start,
+          columns2.end,
+          columns2.fromAddressSpace,
+          columns2.fromAddress,
+          columns2.toAddressSpace,
+          columns2.toAddress,
+          columns2.instructionAddressSpace,
+          columns2.instructionAddress,
+          columns2.accessedAddressSpace,
+          columns2.accessedAddress,
+          columns2.coverage,
+          encodeRuntimeFactPayload(record3, columns2.payload),
+          this.#intern("runtime_prefixes", identity.prefix),
+          identity.suffix,
+          this.#intern("runtime_evidence", JSON.stringify(record3.evidence)),
+          record3.count,
+          statePrefix,
+          record3.kind === "runtime-execution" ? 0 : 1
+        );
+        if (this.#rows >= 1024) {
+          this.#flush();
+        }
+      }
+      /** Full hash/value equality follows each compact index key; collisions never merge distinct facts. */
+      #flush() {
+        if (!this.#rows) {
+          return;
+        }
+        const columns2 = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",");
+        const selected = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `b."${column}"`).join(",");
+        this.#db.exec(`
+      INSERT INTO runtime_facts(fingerprint,${columns2},payload)
+        SELECT DISTINCT b.fingerprint,${selected},CASE WHEN typeof(b.payload)='text' THEN jsonb(b.payload) ELSE b.payload END
+        FROM temp.runtime_trace_batch b WHERE NOT EXISTS (
+          SELECT 1 FROM runtime_fact_rows f
+          WHERE substr(f.fingerprint,1,8)=substr(b.fingerprint,1,8) AND f.fingerprint=b.fingerprint
+        );
+      INSERT INTO runtime_identities(value)
+        SELECT DISTINCT b.identity_value FROM temp.runtime_trace_batch b WHERE NOT EXISTS (
+          SELECT 1 FROM runtime_identities i
+          WHERE (${runtimeIdentityKey("i.value")})=(${runtimeIdentityKey("b.identity_value")}) AND i.value=b.identity_value
+        );
+      ${RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL};
+      DELETE FROM temp.runtime_trace_batch;
+    `);
+        this.#rows = 0;
+      }
+      finish() {
+        if (this.#finished || !this.#db.isTransaction) {
+          throw new Error("Runtime trace batch is no longer active.");
+        }
+        if (this.#pending) {
+          throw new Error("Instruction trace batch ended without its paired state.");
+        }
+        this.#flush();
+        this.#db.exec("DROP TABLE temp.runtime_trace_batch");
+        this.#finished = true;
       }
     };
   }
@@ -21184,6 +21275,7 @@ var init_sqlite_store = __esm({
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
+    init_sqlite_runtime_batch();
     init_sqlite_runtime_facts();
     init_sqlite_runtime_history();
     init_sqlite_runtime_storage();
@@ -21819,6 +21911,61 @@ PRAGMA user_version=4;
           }
           this.#insertRecord("runtime", record3);
           return true;
+        };
+      }
+      /**
+       * Prepare bounded bulk publication for a validated distinct instruction trace. All four source
+       * namespaces must be empty; receipts cannot prove this after pruning. Retained/partial sources
+       * use exact per-record comparisons and repair. Call finish() before the writer transaction commits.
+       * The sink and its pending buffers belong to this transaction and must not escape it.
+       */
+      runtimeTracePublicationSink(sourceSha256) {
+        this.#requireTransaction();
+        if (!/^[\da-f]{64}$/.test(sourceSha256)) {
+          throw new Error("Invalid trace source SHA-256.");
+        }
+        const root = `runtime:instruction-trace:${sourceSha256}:`;
+        const existing = this.#database.prepare(`
+      SELECT 1 FROM runtime_observations
+      WHERE prefix_id IN (SELECT id FROM runtime_prefixes WHERE value IN (?1,?2,?3,?4))
+      UNION ALL SELECT 1 FROM runtime_observations
+      WHERE state_prefix_id IN (SELECT id FROM runtime_prefixes WHERE value IN (?1,?2,?3,?4))
+      LIMIT 1
+    `).get(root, `${root}code:`, `${root}state:`, `${root}memory:`);
+        if (!existing) {
+          const batch = new SqliteRuntimeTraceBatch(
+            this.#database,
+            sourceSha256,
+            (table, value) => this.#intern(table, value)
+          );
+          return {
+            add: (record3) => {
+              this.#requireTransaction();
+              return batch.add(record3);
+            },
+            finish: () => {
+              this.#requireTransaction();
+              batch.finish();
+            }
+          };
+        }
+        let finished = false;
+        return {
+          add: (record3) => {
+            this.#requireTransaction();
+            if (finished) {
+              throw new Error("Runtime trace batch is no longer active.");
+            }
+            assertTraceRecordNamespace(record3, sourceSha256);
+            return this.insertRuntime(record3);
+          },
+          finish: () => {
+            this.#requireTransaction();
+            if (finished) {
+              throw new Error("Runtime trace batch is no longer active.");
+            }
+            finished = true;
+          }
         };
       }
       /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
@@ -22920,6 +23067,7 @@ var init_runtime_trace_project = __esm({
         }
         const execution = [];
         let addedRuntime = 0;
+        let publication;
         let validate;
         options.onStage?.("Indexing trace facts in SQLite\u2026");
         options.signal?.throwIfAborted();
@@ -22935,6 +23083,9 @@ var init_runtime_trace_project = __esm({
                   throw new Error("Capture receipt has no retained import provenance.");
                 }
               }
+              if (!retainedReport) {
+                publication = store.runtimeTracePublicationSink(sha2564);
+              }
             },
             onRecord: (record3) => {
               options.signal?.throwIfAborted();
@@ -22949,7 +23100,7 @@ var init_runtime_trace_project = __esm({
                 false
               );
               validate(record3);
-              if (!retainedReport && store.insertRuntime(record3)) {
+              if (publication?.add(record3)) {
                 addedRuntime++;
               }
               if (record3.kind === "runtime-execution") {
@@ -22972,6 +23123,7 @@ var init_runtime_trace_project = __esm({
           let imported;
           try {
             imported = importer.finish();
+            publication?.finish();
           } finally {
             validate?.close();
           }
@@ -23035,7 +23187,7 @@ var init_runtime_trace_project = __esm({
           warnings: [
             ...maintenanceWarnings,
             ...retainedReport ? [
-              "This capture was already imported with a different profile. Its retained facts and counts were reused."
+              "This capture has historical reduced-index facts. Its existing facts and counts were preserved; reimport did not restore omitted registers."
             ] : []
           ]
         };
@@ -50005,7 +50157,7 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
 // packages/plugin-loader-node/src/loader.ts
 init_plugin();
 import { realpath } from "node:fs/promises";
-import { registerHooks } from "node:module";
+import { createRequire, registerHooks } from "node:module";
 import path11 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -50065,18 +50217,24 @@ var resolveExternalModule = async (request) => {
     const hooks = registerHooks({
       resolve(specifier, context, nextResolve) {
         if (specifier === marker) {
-          return nextResolve(request.module, { ...context, parentURL: parent.href });
+          return nextResolve(request.module, {
+            ...context,
+            parentURL: parent.href,
+            conditions: context.conditions.map(
+              (condition) => condition === "require" ? "import" : condition
+            )
+          });
         }
         return nextResolve(specifier, context);
       }
     });
     let resolved;
     try {
-      resolved = import.meta.resolve(marker);
+      resolved = createRequire(parent).resolve(marker);
     } finally {
       hooks.deregister();
     }
-    return await normalizeFileUrl(new URL(resolved));
+    return await normalizeFileUrl(pathToFileURL(resolved));
   } catch (error) {
     throw moduleLoadError(request, "module could not be resolved", void 0, error);
   }
@@ -50528,7 +50686,7 @@ ROM identity (analyze, export, verify-roundtrip, evidence-import):
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
-  --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
+  --trace-index <mode>         full (default; retains all registers)
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
@@ -50719,8 +50877,8 @@ var parseCliArguments = (argv) => {
         break;
       }
       case "--trace-index":
-        if (value !== "full" && value !== "65816-disassembly" && value !== "65816-analysis") {
-          throw new Error("--trace-index must be full, 65816-disassembly, or 65816-analysis.");
+        if (value !== "full") {
+          throw new Error("--trace-index must be full.");
         }
         traceIndex = value;
         break;

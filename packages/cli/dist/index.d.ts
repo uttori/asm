@@ -28,7 +28,7 @@ export interface CliArguments {
     readonly instructionTrace?: string;
     /** Positive integer MiB limit. Undefined delegates to the import default of 2048. */
     readonly traceMaxMiB?: number;
-    readonly traceIndex?: "full" | "65816-disassembly" | "65816-analysis";
+    readonly traceIndex?: "full";
     readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
     /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
     readonly entryPoints: readonly number[];

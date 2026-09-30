@@ -505,7 +505,7 @@ const traceStoragePolicy = (directory: string) => {
   return policy;
 };
 
-/** Leave an unset profile to the importer so other processors retain their full state.
+/** Read the explicit full-index setting; the importer also retains full state when unset.
  * @param {string} directory Workspace owning the capture import settings.
  * @returns {import("@uttori/asm-disassembler").RuntimeTraceIndexMode | undefined} Explicit profile override.
  */

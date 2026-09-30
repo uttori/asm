@@ -12,7 +12,6 @@ import {
 import {
   runtimeTraceIndexRecordLimit,
   type RuntimeTraceFactIndex,
-  type RuntimeTraceIndexMode,
 } from "../../src/runtime/runtime-trace.js";
 
 const romContentSha256 = "a".repeat(64);
@@ -53,56 +52,48 @@ test("instruction budgets lift the memory ceiling only with a disk index and rec
     clear: () => t.fail("Budget selection cleared facts"),
   };
   const onRecord = () => t.fail("Budget selection emitted a record");
-  for (const mode of ["full", "65816-disassembly", "65816-analysis"] as RuntimeTraceIndexMode[]) {
-    const memoryLimit = mode === "full" ? 8_000_000 : 2_000_000;
-    t.is(runtimeTraceIndexRecordLimit(mode, undefined), memoryLimit);
-    t.is(runtimeTraceIndexRecordLimit(mode, undefined, { index }), memoryLimit);
-    t.is(
-      runtimeTraceIndexRecordLimit(mode, undefined, {
-        index: { ...index, diskBacked: false },
-        onRecord,
-      }),
-      memoryLimit,
-    );
-    t.is(
-      runtimeTraceIndexRecordLimit(mode, undefined, {
-        index: { ...index, diskBacked: undefined },
-        onRecord,
-      }),
-      memoryLimit,
-    );
-    t.is(
-      runtimeTraceIndexRecordLimit(mode, undefined, { index, onRecord }),
-      Number.MAX_SAFE_INTEGER,
-    );
-    t.is(runtimeTraceIndexRecordLimit(mode, 8_000_001, { index, onRecord }), 8_000_001);
-    t.is(runtimeTraceIndexRecordLimit(mode, 1, { index, onRecord }), 1);
-    for (const storage of [
-      undefined,
-      { index },
-      { index: { ...index, diskBacked: false }, onRecord },
-    ]) {
-      t.throws(() => runtimeTraceIndexRecordLimit(mode, 8_000_001, storage), {
-        message: "Trace index record limit must not exceed 8000000.",
-      });
-    }
-    for (const limit of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
-      t.throws(() => runtimeTraceIndexRecordLimit(mode, limit, { index, onRecord }), {
-        message: /safe integer/,
-      });
-    }
+  const mode = "full";
+  const memoryLimit = 8_000_000;
+  t.is(runtimeTraceIndexRecordLimit(mode, undefined), memoryLimit);
+  t.is(runtimeTraceIndexRecordLimit(mode, undefined, { index }), memoryLimit);
+  t.is(
+    runtimeTraceIndexRecordLimit(mode, undefined, {
+      index: { ...index, diskBacked: false },
+      onRecord,
+    }),
+    memoryLimit,
+  );
+  t.is(
+    runtimeTraceIndexRecordLimit(mode, undefined, {
+      index: { ...index, diskBacked: undefined },
+      onRecord,
+    }),
+    memoryLimit,
+  );
+  t.is(runtimeTraceIndexRecordLimit(mode, undefined, { index, onRecord }), Number.MAX_SAFE_INTEGER);
+  t.is(runtimeTraceIndexRecordLimit(mode, 8_000_001, { index, onRecord }), 8_000_001);
+  t.is(runtimeTraceIndexRecordLimit(mode, 1, { index, onRecord }), 1);
+  for (const storage of [
+    undefined,
+    { index },
+    { index: { ...index, diskBacked: false }, onRecord },
+  ]) {
+    t.throws(() => runtimeTraceIndexRecordLimit(mode, 8_000_001, storage), {
+      message: "Trace index record limit must not exceed 8000000.",
+    });
+  }
+  for (const limit of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    t.throws(() => runtimeTraceIndexRecordLimit(mode, limit, { index, onRecord }), {
+      message: /safe integer/,
+    });
   }
 });
 
-test("disassembly index folds changing general registers while preserving code, decoding state, counts and source identity", (t) => {
+test("default full indexing retains register variants, status bits and exact observations", (t) => {
   const details = Array.from({ length: 1000 }, (_, x) => ({
     bytes: [0xa9, 1],
-    state: { a: x, x, y: x, s: 512 - x, p: 0x30, e: 0, db: 0x7e, d: 0, pb: 0x7e, pc: 0x2000 },
+    state: { a: x, x, y: x, s: 1024 - x, p: 0x31, e: 0, db: 0x7e, d: 0, pb: 0x7e, pc: 0x2000 },
   }));
-  details.push({ ...details[0], bytes: [0xa9, 2] });
-  details.push({ ...details[0], state: { ...details[0].state, db: 0x7f } });
-  details.push({ ...details[0], state: { ...details[0].state, d: 0x100 } });
-  details.push({ ...details[0], bytes: [0xa9, 1, 0], state: { ...details[0].state, p: 0x10 } });
   const trace = {
     ...artifact(),
     chunks: [
@@ -115,33 +106,27 @@ test("disassembly index folds changing general registers while preserving code, 
       },
     ],
   };
-  const context = { projectRomContentSha256: romContentSha256, sourceName: "large.json" };
-  const full = importRuntimeInstructionTrace(trace, context);
-  const indexed = importRuntimeInstructionTrace(trace, {
-    ...context,
-    indexMode: "65816-disassembly",
-    maxIndexRecords: 11,
-  });
-  t.is(indexed.sourceSha256, full.sourceSha256);
-  t.deepEqual(indexed.batch.evidence, full.batch.evidence);
-  t.is(indexed.observedEvents, 1004);
-  t.is(indexed.batch.runtime.length, 11);
-  const instructions = indexed.batch.runtime.filter((r) => r.kind === "runtime-instruction");
-  t.is(instructions.length, 5);
-  t.true(instructions.some((r) => r.count === 1000));
-  t.true(instructions.every((r) => !("x" in r.state) && !("a" in r.state) && !("s" in r.state)));
-  t.is(indexed.report.indexProfile, "65816-disassembly-v1");
-  t.true(indexed.report.warnings.some((w) => w.includes("original capture")));
-  t.is(trace.chunks[0].details[500].state.x, 500);
-  const merged = mergeRuntimeEvidence(emptyShards(), indexed.batch);
-  t.false(mergeRuntimeEvidence(merged.shards, indexed.batch).changed);
-  t.throws(() => mergeRuntimeEvidence(merged.shards, full.batch), {
-    message: /different index profile/,
-  });
+  const context = { projectRomContentSha256: romContentSha256, sourceName: "full.json" };
+  const imported = importRuntimeInstructionTrace(trace, context);
+  t.deepEqual(imported, importRuntimeInstructionTrace(trace, { ...context, indexMode: "full" }));
+  const instructions = imported.batch.runtime.filter((r) => r.kind === "runtime-instruction");
+  t.is(instructions.length, 1000);
+  t.true(
+    instructions.every(
+      (r) => r.count === 1 && r.state.p === 0x31 && "a" in r.state && "s" in r.state,
+    ),
+  );
+  t.deepEqual(
+    instructions.map((r) => r.state.x).sort((a, b) => Number(a) - Number(b)),
+    details.map((r) => r.state.x),
+  );
+  t.is(imported.report.indexProfile, undefined);
+  const merged = mergeRuntimeEvidence(emptyShards(), imported.batch);
+  t.false(mergeRuntimeEvidence(merged.shards, imported.batch).changed);
+  // Runtime callers can bypass TypeScript. Reject unsupported modes before consuming a trace.
   t.throws(
-    () =>
-      mergeRuntimeEvidence(mergeRuntimeEvidence(emptyShards(), full.batch).shards, indexed.batch),
-    { message: /different index profile/ },
+    () => importRuntimeInstructionTrace(trace, { ...context, indexMode: "sample" as "full" }),
+    { message: /Only full/ },
   );
 });
 
@@ -168,28 +153,9 @@ test("trace indexes fail at an explicit record budget without sampling or exhaus
         sequenceStart: 2,
         details: [{ bytes: [0xea], state: { p: 0x30, x: 2 } }],
       }),
-    { message: /Trace index exceeds 3 records.*disassembly index/ },
+    { message: /Trace index exceeds 3 records.*No partial import/ },
   );
   t.throws(() => importer.finish(), { message: /Trace index exceeds 3 records/ });
-  const projected = createRuntimeInstructionTraceImporter(artifact(), {
-    ...context,
-    indexMode: "65816-disassembly",
-  });
-  projected.push(chunk);
-  projected.push({
-    ...chunk,
-    sequenceStart: 2,
-    details: [{ bytes: [0xea], state: { p: 0x30, x: 2 } }],
-  });
-  t.is(projected.finish().batch.runtime.find((r) => r.kind === "runtime-instruction")?.count, 2);
-  t.throws(
-    () =>
-      createRuntimeInstructionTraceImporter(
-        { ...artifact(), architecture: "snes.spc700" },
-        { ...context, indexMode: "65816-disassembly" },
-      ),
-    { message: /requires snes.65816/ },
-  );
 });
 
 test("rich traces retain byte variants, state, bus actors and explicit loss without double counting PCs", (t) => {
@@ -230,16 +196,6 @@ test("rich traces retain byte variants, state, bus actors and explicit loss with
     sourceName: "rich.json",
   });
   const runtime = imported.batch.runtime;
-  const compact = importRuntimeInstructionTrace(trace, {
-    projectRomContentSha256: romContentSha256,
-    sourceName: "rich.json",
-    indexMode: "65816-disassembly",
-  });
-  t.deepEqual(
-    compact.batch.runtime,
-    runtime,
-    "bus actors, values, counts and unchanged decoding states survive compact indexing",
-  );
   t.is(runtime.filter((record) => record.kind === "runtime-execution")[0]?.count, 2);
   t.is(runtime.filter((record) => record.kind === "runtime-instruction").length, 2);
   t.is(runtime.filter((record) => record.kind === "runtime-cpu-state").length, 2);

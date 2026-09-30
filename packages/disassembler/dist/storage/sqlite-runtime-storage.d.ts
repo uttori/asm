@@ -1,5 +1,15 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { RuntimeEvidenceRecord } from "../model/project-types.js";
+import { runtimeColumns } from "./sqlite-records.js";
+/**
+ * Preserve the persisted canonical fingerprint across individual and batch publication.
+ * Columns must come from runtimeColumns(record); payload is its canonical text, not encoded bytes.
+ * Fixed key order, null fields, two-space indentation and the trailing newline are identity bytes;
+ * changing their layout would duplicate retained facts. Keep this aligned with runtimeColumns.
+ */
+export declare const runtimeFactFingerprint: (record: RuntimeEvidenceRecord, columns: ReturnType<typeof runtimeColumns>) => Buffer;
+/** Encode a new shared fact losslessly. Unusual register shapes retain the general codec. */
+export declare const encodeRuntimeFactPayload: (record: RuntimeEvidenceRecord, payload: string | null) => string | Buffer | null;
 /** Stream negative virtual rowids first, then positive observations, using the observation PK.
  * Sorting the expanded compatibility view can spill the entire history to temporary disk.
  * LEFT dictionary joins let decoders reject missing entries rather than silently omit records.

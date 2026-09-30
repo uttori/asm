@@ -52898,7 +52898,7 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
 // packages/plugin-loader-node/src/loader.ts
 init_plugin();
 import { realpath } from "node:fs/promises";
-import { registerHooks } from "node:module";
+import { createRequire, registerHooks } from "node:module";
 import path10 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -52958,18 +52958,24 @@ var resolveExternalModule = async (request) => {
     const hooks = registerHooks({
       resolve(specifier, context, nextResolve) {
         if (specifier === marker) {
-          return nextResolve(request.module, { ...context, parentURL: parent.href });
+          return nextResolve(request.module, {
+            ...context,
+            parentURL: parent.href,
+            conditions: context.conditions.map(
+              (condition) => condition === "require" ? "import" : condition
+            )
+          });
         }
         return nextResolve(specifier, context);
       }
     });
     let resolved;
     try {
-      resolved = import.meta.resolve(marker);
+      resolved = createRequire(parent).resolve(marker);
     } finally {
       hooks.deregister();
     }
-    return await normalizeFileUrl(new URL(resolved));
+    return await normalizeFileUrl(pathToFileURL(resolved));
   } catch (error) {
     throw moduleLoadError(request, "module could not be resolved", void 0, error);
   }

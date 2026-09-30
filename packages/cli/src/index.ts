@@ -82,7 +82,7 @@ export interface CliArguments {
   readonly instructionTrace?: string;
   /** Positive integer MiB limit. Undefined delegates to the import default of 2048. */
   readonly traceMaxMiB?: number;
-  readonly traceIndex?: "full" | "65816-disassembly" | "65816-analysis";
+  readonly traceIndex?: "full";
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
   /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
   readonly entryPoints: readonly number[];
@@ -182,7 +182,7 @@ ROM identity (analyze, export, verify-roundtrip, evidence-import):
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
-  --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
+  --trace-index <mode>         full (default; retains all registers)
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
@@ -250,7 +250,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let instructionTrace: string | undefined;
   let traceMaxMiB: number | undefined;
   const storagePolicy: Partial<Record<keyof AnalysisStoragePolicy, number>> = {};
-  let traceIndex: "full" | "65816-disassembly" | "65816-analysis" | undefined;
+  let traceIndex: "full" | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let structLineWidth: number | undefined;
@@ -396,8 +396,8 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         break;
       }
       case "--trace-index":
-        if (value !== "full" && value !== "65816-disassembly" && value !== "65816-analysis") {
-          throw new Error("--trace-index must be full, 65816-disassembly, or 65816-analysis.");
+        if (value !== "full") {
+          throw new Error("--trace-index must be full.");
         }
         traceIndex = value;
         break;

@@ -33,7 +33,31 @@ export interface PublishedSource {
   readonly publication: SourcePublicationState;
 }
 
+/** OS-managed metadata basenames, matched case-insensitively at every source-tree depth. */
+const osMetadataNames = new Set([
+  ".ds_store",
+  ".lsoverride",
+  ".appledouble",
+  ".spotlight-v100",
+  ".trashes",
+  ".fseventsd",
+  ".temporaryitems",
+  "__macosx",
+  "thumbs.db",
+  "ehthumbs.db",
+  "desktop.ini",
+  ".directory",
+]);
+
+/** Exclude OS sidecars and trash directories without excluding hidden project inputs. */
+function isOsMetadata(name: string): boolean {
+  return (
+    osMetadataNames.has(name.toLowerCase()) || name.startsWith("._") || /^\.Trash-\d+$/.test(name)
+  );
+}
+
 /** Clone bounded source inputs without copying the database/captures or following symlinks.
+ * OS metadata is neither copied nor tracked for publication drift checks.
  * Stages are siblings so relative trusted plugin paths retain their original meaning.
  * @param {string} root Visible source directory.
  * @param {string} project Native database directory excluded from publication.
@@ -54,7 +78,9 @@ function stageSource(
     for (const item of fs.readdirSync(path.join(root, relative), { withFileTypes: true })) {
       const name = path.join(relative, item.name);
       const source = path.join(root, name);
+      // OS metadata can change independently of assembly; skip it before traversal, size or hash checks.
       if (
+        isOsMetadata(item.name) ||
         path.resolve(source) === path.resolve(project) ||
         ["captures", "build", ".git", "node_modules", ".editing"].includes(item.name) ||
         item.name.startsWith(".uttori-publication")

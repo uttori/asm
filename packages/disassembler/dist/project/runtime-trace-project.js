@@ -48,6 +48,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         }
         const execution = [];
         let addedRuntime = 0;
+        let publication;
         let validate;
         options.onStage?.("Indexing trace facts in SQLite…");
         options.signal?.throwIfAborted();
@@ -57,8 +58,9 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                 onMergeProgress: options.onMergeProgress,
                 onSource: (sha256, profile) => {
                     const receipt = store.captureReceipt(sha256);
-                    // A previously imported capture cannot restore old full rows or double-count lifetime evidence.
-                    // Same-profile imports still repair missing rows with ordinary stable-ID checks.
+                    // Older Secret of Mana projects retain receipts from reduced indexes. Preserve their
+                    // existing facts and provenance on reimport; mixing full variants would double-count them.
+                    // Current full imports still repair missing rows with ordinary stable-ID checks.
                     if (receipt && receipt.profile !== profile) {
                         retainedReport = store
                             .loadTable("imports")
@@ -66,6 +68,11 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                         if (!retainedReport) {
                             throw new Error("Capture receipt has no retained import provenance.");
                         }
+                    }
+                    if (!retainedReport) {
+                        // The source hash is final only after the complete stream validates. Prepare the
+                        // fresh-source fast path under the publication lock, keeping retries collision-safe.
+                        publication = store.runtimeTracePublicationSink(sha256);
                     }
                 },
                 onRecord: (record) => {
@@ -79,7 +86,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                         confidence: "certain",
                     })), false);
                     validate(record);
-                    if (!retainedReport && store.insertRuntime(record)) {
+                    if (publication?.add(record)) {
                         addedRuntime++;
                     }
                     if (record.kind === "runtime-execution") {
@@ -102,6 +109,9 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
             let imported;
             try {
                 imported = importer.finish();
+                // Provisional records can still be buffered when finish returns. Flush them before
+                // provenance/revision publication so a SQL failure rolls back the entire source.
+                publication?.finish();
             }
             finally {
                 validate?.close();
@@ -170,7 +180,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                 ...maintenanceWarnings,
                 ...(retainedReport
                     ? [
-                        "This capture was already imported with a different profile. Its retained facts and counts were reused.",
+                        "This capture has historical reduced-index facts. Its existing facts and counts were preserved; reimport did not restore omitted registers.",
                     ]
                     : []),
             ],

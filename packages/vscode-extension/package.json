@@ -1236,12 +1236,10 @@
           "type": "string",
           "scope": "resource",
           "enum": [
-            "65816-analysis",
-            "full",
-            "65816-disassembly"
+            "full"
           ],
-          "default": "65816-analysis",
-          "description": "Native SNES CPU captures default to the versioned decoder-state index: joint bytes, width/bank variants, exact counts and bus observations. Full register history requires an available capture archive. Other processors use full indexing."
+          "default": "full",
+          "description": "Retains all supplied instruction bytes, register snapshots, exact execution counts and bus observations."
         },
         "asm.trace.maxImportSizeMiB": {
           "type": "integer",

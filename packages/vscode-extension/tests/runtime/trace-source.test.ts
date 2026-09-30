@@ -49,17 +49,15 @@ test("direct ACT2 consumption matches exported JSON facts, canonical identities"
     const json = path.join(root, `${events}.json`);
     await writeCaptureFixture(archive, events);
     await exportCaptureJson(archive, json);
-    for (const indexMode of ["full", "65816-disassembly"] as const) {
-      const context = {
-        projectRomContentSha256: captureFixtureHeader.romContentSha256,
-        sourceName: "capture",
-        indexMode,
-      };
-      const source = await createEditorRuntimeTraceSource(archive);
-      const importer = createRuntimeInstructionTraceImporter(source.metadata, context);
-      await source.read(importer.push);
-      t.deepEqual(importer.finish(), await importRuntimeInstructionTraceFile(json, context));
-    }
+    const context = {
+      projectRomContentSha256: captureFixtureHeader.romContentSha256,
+      sourceName: "capture",
+      indexMode: "full" as const,
+    };
+    const source = await createEditorRuntimeTraceSource(archive);
+    const importer = createRuntimeInstructionTraceImporter(source.metadata, context);
+    await source.read(importer.push);
+    t.deepEqual(importer.finish(), await importRuntimeInstructionTraceFile(json, context));
     // Detect content rather than trusting suffixes, including historical .json.act2 filenames.
     const renamed = path.join(root, `${events}.unknown`);
     await writeFile(renamed, await readFile(archive));

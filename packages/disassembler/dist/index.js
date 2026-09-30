@@ -23,7 +23,6 @@ export * from "./edits/metadata-edit.js";
 export * from "./runtime/runtime-evidence.js";
 export * from "./runtime/runtime-trace.js";
 export * from "./runtime/runtime-trace-file.js";
-export { RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState, } from "./runtime/runtime-trace-profile.js";
 export * from "./runtime/runtime-bus-trace.js";
 export * from "./runtime/runtime-transfer.js";
 export * from "./runtime/runtime-graphics.js";

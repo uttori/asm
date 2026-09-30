@@ -134,7 +134,7 @@ test("streamed import rejects truncated, malformed and inconsistent suffixes bef
   );
 });
 
-test("streaming compact index validates the original rich capture before returning any import", async (t) => {
+test("streaming full index validates the original rich capture before returning any import", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "uttori-trace-index-"));
   t.teardown(() => rm(directory, { recursive: true, force: true }));
   const file = path.join(directory, "trace.json");
@@ -155,8 +155,8 @@ test("streaming compact index validates the original rich capture before returni
   };
   const indexedContext = {
     ...context,
-    indexMode: "65816-disassembly" as const,
-    maxIndexRecords: 3,
+    indexMode: "full" as const,
+    maxIndexRecords: 5,
   };
   await writeFile(file, JSON.stringify(trace));
   t.deepEqual(

@@ -1,17 +1,13 @@
 import { createHash } from "node:crypto";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { validateRuntimeInstructionDetails, } from "../model/trace-detail.js";
-import { project65816AnalysisState, RUNTIME_ANALYSIS_PROFILE } from "./runtime-trace-profile.js";
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
 /** Supported trace-artifact schema. Readers reject other revisions. */
 export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
-/** Default in-memory distinct-fact budget for compact indexes. Full memory indexes default to 8M. */
-export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2_000_000;
-const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
-// P/E control instruction widths. D/DB resolve direct-page and data-bank operands.
-// Preserve PB/PC observations with them so projection does not invent state combinations.
-const DISASSEMBLY_STATE_FIELDS = new Set(["p", "e", "d", "db", "pb", "pc"]);
+/** Default and maximum distinct-fact budget when counters or output records remain on the heap. */
+export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8_000_000;
+const MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
 const record = (value, context) => {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
         throw new Error(`${context} must be an object.`);
@@ -159,11 +155,11 @@ export const importRuntimeInstructionTrace = (value, context) => {
  * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
  */
 export const runtimeTraceIndexRecordLimit = (mode, requested, storage) => {
+    if (mode !== "full") {
+        throw new Error("Only full runtime trace indexing is supported.");
+    }
     let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
     let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
-    if (mode === "full") {
-        defaultLimit = MAX_RUNTIME_TRACE_INDEX_RECORDS;
-    }
     // Project imports keep both distinct counters and emitted facts in SQLite. Applying the old
     // Map guard here would reject valid captures late, even when their file/storage budgets allow them.
     if (storage?.index.diskBacked && storage.onRecord) {
@@ -213,23 +209,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
     }
     const sourceName = string(context.sourceName, "Instruction trace source name");
     const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
-    const native65816 = artifact.architecture === "snes.65816" && addressSpace === "snes.cpu";
-    const indexMode = context.indexMode ?? (native65816 ? "65816-analysis" : "full");
-    let indexProfile;
-    if (indexMode === "65816-disassembly") {
-        indexProfile = "65816-disassembly-v1";
-    }
-    if (indexMode === "65816-analysis") {
-        indexProfile = RUNTIME_ANALYSIS_PROFILE;
-    }
-    if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode)) {
-        throw new Error("Unsupported runtime trace index mode.");
-    }
-    // This projection follows the 65816 decoder's inputs. Another CPU may need the omitted registers.
-    if (indexMode !== "full" &&
-        (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")) {
-        throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
-    }
+    const indexMode = context.indexMode ?? "full";
     const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
     // Match canonicalJson({...metadata, chunks}) exactly without making one huge string.
     const envelope = canonicalJson({ ...artifact, chunks: [] });
@@ -246,12 +226,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         // Subtract first so a pair cannot overflow the safe integer ceiling before comparison.
         // Reject the whole import rather than letting callers mistake a truncated index for success.
         if (count > maxIndexRecords - indexRecords) {
-            let hint = "The capture has too many distinct code/state/bus variants for this index budget. ";
-            if (indexMode === "full" && native65816) {
-                hint =
-                    "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
-            }
-            throw new Error(`Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged. No partial import was committed.`);
+            throw new Error(`Trace index exceeds ${maxIndexRecords} records. The capture has too many distinct code/state/bus variants for this index budget. The original capture is unchanged. No partial import was committed.`);
         }
         indexRecords += count;
     };
@@ -269,7 +244,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             throw new Error("Instruction trace import already finished.");
         }
         const chunk = validateChunk(value);
-        // Hash the original chunk before projecting its registers so both index modes identify the same capture.
+        // Hash every original chunk so identity covers all supplied bytes, registers and counts.
         hash.update(chunks++ === 0 ? "[\n" : ",\n");
         // canonicalJson always has one trailing newline. Indent its text directly instead of
         // allocating one array entry and callback result for every line in a rich trace chunk.
@@ -293,21 +268,14 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             const base = { architecture: artifact.architecture, count: 1, evidence: [] };
             // Keep bytes and decoding state together: independent sets could pair self-modified code
             // with register values that were never observed when those bytes executed.
-            let state = detail.state;
-            if (indexMode === "65816-analysis") {
-                state = project65816AnalysisState(detail.state);
-            }
-            else if (indexMode === "65816-disassembly") {
-                state = Object.fromEntries(Object.entries(detail.state).filter(([field]) => DISASSEMBLY_STATE_FIELDS.has(field.toLowerCase())));
-            }
+            const state = detail.state;
             const content = canonicalJson({ address, bytes: detail.bytes, state });
-            // Full snapshots may contain large or mostly unique register objects.
-            // Keep their map keys fixed-size. Compact states benefit from reusing the
-            // content key without hashing every repetition of a hot instruction.
-            const key = indexMode === "full" ? sha256(content) : content;
+            // Full snapshots may contain large or mostly unique register objects. Fixed-size keys
+            // bound per-variant key allocations without dropping any captured register fields.
+            const key = sha256(content);
             if (index.add(`code:${key}`, () => ({
                 kind: "instruction",
-                identity: indexMode === "full" ? key : sha256(key),
+                identity: key,
                 address,
                 bytes: detail.bytes,
                 state,
@@ -370,7 +338,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             .update(chunks ? "\n  ]" : "[]")
             .update(suffix)
             .digest("hex");
-        storage?.onSource?.(sourceSha256, indexProfile ?? "full");
+        storage?.onSource?.(sourceSha256, "full");
         const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
         const evidenceIds = [evidenceId];
         const executions = [];
@@ -468,8 +436,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             },
         };
         const report = {
-            id: `import:instruction-trace:${sourceSha256}${indexProfile ? `:${indexProfile}` : ""}`,
-            ...(indexProfile ? { indexProfile } : {}),
+            id: `import:instruction-trace:${sourceSha256}`,
             format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
             sourceName,
             sourceSha256,
@@ -490,13 +457,6 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                     },
                 ],
             warnings: [
-                ...(indexMode === "full"
-                    ? []
-                    : [
-                        indexMode === "65816-analysis"
-                            ? "Analysis index retains joint PC/bytes/decoder-state variants, exact counts and bus observations. Full register history requires an available capture archive."
-                            : "Disassembly index retains every PC/bytes/P/E/D/DB/PB/PC variant and exact execution counts. Other register snapshots require the original capture.",
-                    ]),
                 ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
                 ...(detailedEvents < observedEvents
                     ? [

@@ -70,7 +70,7 @@ const fixtureRom = (): Uint8Array => {
   return bytes;
 };
 
-test("maintenance verification loads configured asset plugins and include paths, then disposes them", async (t) => {
+test("bundled maintenance verifies and publishes configured package asset plugins, then disposes them", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-assets-"));
   const client = new DisassemblyMaintenanceClient(processFile);
   t.teardown(() => {
@@ -83,13 +83,23 @@ test("maintenance verification loads configured asset plugins and include paths,
   fs.writeFileSync(romFile, fixtureRom());
   createSnesAnalysisProject({ romFile, projectDirectory, mapper: "lorom" });
   fs.mkdirSync(sourceDirectory);
-  fs.mkdirSync(path.join(directory, "plugins"));
+  const pluginDirectory = path.join(directory, "node_modules", "test-palette-plugin");
+  fs.mkdirSync(pluginDirectory, { recursive: true });
+  // Only the import condition provides a usable module; CommonJS hosts must still
+  // resolve project plugins with the conditions used by their dynamic import.
+  fs.writeFileSync(
+    path.join(pluginDirectory, "package.json"),
+    JSON.stringify({
+      type: "module",
+      exports: { require: "./wrong.cjs", import: "./palette.mjs" },
+    }),
+  );
   fs.mkdirSync(path.join(directory, "asset-inputs"));
   const paletteFile = path.join(directory, "asset-inputs", "palette.json");
-  const marker = path.join(directory, "plugins", "lifecycle.txt");
+  const marker = path.join(pluginDirectory, "lifecycle.txt");
   fs.writeFileSync(paletteFile, JSON.stringify([0xea, 0xea, 0xea, 0xea]));
   fs.writeFileSync(
-    path.join(directory, "plugins", "palette.mjs"),
+    path.join(pluginDirectory, "palette.mjs"),
     `
 import { appendFileSync } from "node:fs";
 const marker = new URL("./lifecycle.txt", import.meta.url);
@@ -115,7 +125,7 @@ export default {
   fs.writeFileSync(
     path.join(sourceDirectory, "uttori-asm.config.json"),
     JSON.stringify({
-      plugins: [{ module: "@uttori/asm-plugin-snes" }, { module: "../plugins/palette.mjs" }],
+      plugins: [{ module: "@uttori/asm-plugin-snes" }, { module: "test-palette-plugin" }],
       target: "snes.sfc",
       architecture: "snes.65816",
       includePaths: ["../asset-inputs"],
@@ -135,16 +145,22 @@ export default {
   t.true((await client.run("verify", target, budget)).comparison.equal);
   t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\n");
 
+  // Publication verifies two sibling stages. Both must discover the project's package,
+  // even though the worker bundle itself lives outside the project's node_modules tree.
+  const published = await client.run("publish", target, budget);
+  t.true(published.verified.comparison.equal);
+  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\n".repeat(3));
+
   fs.writeFileSync(paletteFile, "{}");
   await t.throwsAsync(client.run("verify", target, budget), { message: /Invalid test palette/ });
-  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\nactivate\ndispose\n");
+  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\n".repeat(4));
 
   // An invalid generated tree must fail before executing configured JavaScript plugins.
   fs.appendFileSync(path.join(sourceDirectory, "main.asm"), "; changed\n");
   await t.throwsAsync(client.run("verify", target, budget), {
     message: /Generated source differs.*main.asm/,
   });
-  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\nactivate\ndispose\n");
+  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\n".repeat(4));
 });
 
 test("annotation refresh reuses analysis, preserves runtime, verifies renamed source, and guards stale receipts", async (t) => {
@@ -319,7 +335,7 @@ test("maintenance processes import, analyze, export and verify without returning
     maxBytes: 1024 * 1024,
     architecture: "snes.65816",
     addressSpace: "snes.cpu",
-    indexMode: "65816-disassembly" as const,
+    indexMode: "full" as const,
   };
   const imported = await client.run("import", input, budget);
   t.is(imported.observedEvents, 3);
@@ -331,7 +347,7 @@ test("maintenance processes import, analyze, export and verify without returning
   t.true(
     indexed.shards.runtime
       .filter((record) => record.kind === "runtime-cpu-state")
-      .every((record) => !("a" in record.state)),
+      .every((record) => record.state.a === 3 && record.state.x === 1 && record.state.p === 0x30),
   );
   t.false((await client.run("import", input, budget)).changed);
   const prepared = await client.run("prepare", { target, seeds: imported.seeds }, budget);
@@ -493,7 +509,7 @@ test("worker reanalysis preserves captured code across a legacy operand entry an
         maxBytes: 1024 * 1024,
         architecture: "snes.65816",
         addressSpace: "snes.cpu",
-        indexMode: "65816-disassembly",
+        indexMode: "full",
       },
       budget,
     );

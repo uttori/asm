@@ -274,26 +274,27 @@ test("parseCliArguments: parses evidence and storage flags", (t) => {
     "--rom=game.sfc",
     "--instruction-trace=game.uttori-trace.json",
     "--trace-max-mib=4096",
-    "--trace-index=65816-disassembly",
+    "--trace-index=full",
     "--cache-max-mib=1",
     "--storage-max-mib=8",
   ]);
   t.is(evidence.command, "evidence-import");
   t.is(evidence.instructionTrace, "game.uttori-trace.json");
   t.is(evidence.traceMaxMiB, 4096);
-  t.is(evidence.traceIndex, "65816-disassembly");
+  t.is(evidence.traceIndex, "full");
   t.deepEqual(evidence.storagePolicy, {
     cacheMaxBytes: 1024 ** 2,
     databaseMaxBytes: 8 * 1024 ** 2,
   });
   t.is(parseCliArguments(["evidence-import", "p", "--trace-index=full"]).traceIndex, "full");
-  t.is(
-    parseCliArguments(["evidence-import", "p", "--trace-index=65816-analysis"]).traceIndex,
-    "65816-analysis",
-  );
-  t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-index=sample"]), {
-    message: /full, 65816-disassembly, or 65816-analysis/,
-  });
+  for (const mode of ["65816-analysis", "65816-disassembly", "sample"]) {
+    t.throws(
+      () => parseCliArguments(["evidence-import", "game.analysis", `--trace-index=${mode}`]),
+      {
+        message: "--trace-index must be full.",
+      },
+    );
+  }
   t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-max-mib=0"]), {
     message: /positive integer/,
   });
@@ -923,11 +924,11 @@ test("E2E: runCli imports, reports, and reimports a native instruction trace", a
     romFile,
     "--instruction-trace",
     instructionTraceFile,
-    "--trace-index=65816-disassembly",
+    "--trace-index=full",
   ];
   t.is(await runCli(importArguments), 0);
   const imported = loadAnalysisProject(project);
-  t.true(imported.shards.imports.some((report) => report.indexProfile === "65816-disassembly-v1"));
+  t.true(imported.shards.imports.every((report) => report.indexProfile === undefined));
   t.true(imported.shards.runtime.length > 0);
   const manifestBefore = await fs.readFile(path.join(project, "analysis.json"), "utf8");
   const runtimeBefore = imported.shards.runtime;

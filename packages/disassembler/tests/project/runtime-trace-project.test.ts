@@ -12,6 +12,7 @@ import {
   validateRuntimeInstructionTraceMetadata,
   loadAnalysisProject,
   loadAnalysisProjectViewSnapshot,
+  openAnalysisProjectStore,
   mergeRuntimeEvidence,
   publishAnalysisProject,
   type AnalysisProject,
@@ -147,78 +148,238 @@ const trace = (project: AnalysisProject): RuntimeInstructionTraceArtifact => {
   };
 };
 
-for (const indexMode of ["full", "65816-disassembly", "65816-analysis"] as const) {
-  test(`disk import preserves canonical ${indexMode} facts and repairs incomplete reimports`, async (t) => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-disk-import-"));
-    t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-    const directory = path.join(root, "analysis");
-    const project = fixture();
-    const artifact = trace(project);
-    const file = path.join(root, "trace.json");
-    fs.writeFileSync(file, JSON.stringify(artifact));
-    publishAnalysisProject(directory, project);
-    const context = {
-      projectRomContentSha256: artifact.romContentSha256,
-      sourceName: "trace.json",
-      indexMode,
-    };
-    const expected = importRuntimeInstructionTrace(artifact, context);
-    const merged = mergeRuntimeEvidence(project.shards, expected.batch);
-    publishAnalysisProject(path.join(root, "expected"), {
-      ...project,
-      shards: merged.shards,
-    });
-    // SQLite accepts explicit budgets beyond the old Map ceiling without projecting away
-    // full register variants. Compare every stored fact against the small in-memory fixture.
-    const result = await importRuntimeTraceIntoProject(file, directory, {
-      ...context,
-      maxIndexRecords: 8_000_001,
-    });
-    t.deepEqual(result.report, expected.report);
-    t.deepEqual(result.added, { runtime: merged.added.runtime, evidence: merged.added.evidence });
-    t.deepEqual(
-      loadAnalysisProject(directory).shards,
-      loadAnalysisProject(path.join(root, "expected")).shards,
-    );
-    const revision = loadAnalysisProjectViewSnapshot(directory).revision;
-    t.false((await importRuntimeTraceIntoProject(file, directory, context)).changed);
-    t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, revision);
-    const reused = await importRuntimeTraceIntoProject(file, directory, {
-      ...context,
-      indexMode: indexMode === "full" ? "65816-disassembly" : "full",
-    });
-    t.false(reused.changed);
-    t.true(reused.warnings.some((warning) => warning.includes("different profile")));
-    t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, revision);
-    // An import report alone must not suppress a missing fact, or hide a changed fact's content.
-    const complete = loadAnalysisProject(directory);
-    const shortened = {
-      ...complete,
-      shards: {
-        ...complete.shards,
-        runtime: complete.shards.runtime.filter((record) => record.kind !== "runtime-cpu-state"),
-      },
-    };
-    publishAnalysisProject(directory, shortened);
-    const repaired = await importRuntimeTraceIntoProject(file, directory, context);
-    t.is(repaired.added.runtime, complete.shards.runtime.length - shortened.shards.runtime.length);
-    t.deepEqual(loadAnalysisProject(directory).shards, complete.shards);
-    publishAnalysisProject(directory, {
-      ...complete,
-      shards: {
-        ...complete.shards,
-        runtime: complete.shards.runtime.map((record) =>
-          record.id === "existing" ? record : { ...record, count: record.count + 1 },
-        ),
-      },
-    });
-    const altered = loadAnalysisProjectViewSnapshot(directory).revision;
-    await t.throwsAsync(importRuntimeTraceIntoProject(file, directory, context), {
-      message: /changed content/,
-    });
-    t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, altered);
+test("disk import preserves canonical full facts and repairs incomplete reimports", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-disk-import-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const directory = path.join(root, "analysis");
+  const project = fixture();
+  const artifact = trace(project);
+  const file = path.join(root, "trace.json");
+  fs.writeFileSync(file, JSON.stringify(artifact));
+  publishAnalysisProject(directory, project);
+  const context = {
+    projectRomContentSha256: artifact.romContentSha256,
+    sourceName: "trace.json",
+    indexMode: "full" as const,
+  };
+  const expected = importRuntimeInstructionTrace(artifact, context);
+  const merged = mergeRuntimeEvidence(project.shards, expected.batch);
+  publishAnalysisProject(path.join(root, "expected"), {
+    ...project,
+    shards: merged.shards,
   });
-}
+  // SQLite accepts explicit budgets beyond the old Map ceiling without projecting away
+  // full register variants. Compare every stored fact against the small in-memory fixture.
+  const result = await importRuntimeTraceIntoProject(file, directory, {
+    ...context,
+    maxIndexRecords: 8_000_001,
+  });
+  t.deepEqual(result.report, expected.report);
+  t.deepEqual(result.added, { runtime: merged.added.runtime, evidence: merged.added.evidence });
+  t.deepEqual(
+    loadAnalysisProject(directory).shards,
+    loadAnalysisProject(path.join(root, "expected")).shards,
+  );
+  const revision = loadAnalysisProjectViewSnapshot(directory).revision;
+  t.false((await importRuntimeTraceIntoProject(file, directory, context)).changed);
+  t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, revision);
+  // An import report alone must not suppress a missing fact, or hide a changed fact's content.
+  const complete = loadAnalysisProject(directory);
+  const shortened = {
+    ...complete,
+    shards: {
+      ...complete.shards,
+      runtime: complete.shards.runtime.filter((record) => record.kind !== "runtime-cpu-state"),
+    },
+  };
+  publishAnalysisProject(directory, shortened);
+  const repaired = await importRuntimeTraceIntoProject(file, directory, context);
+  t.is(repaired.added.runtime, complete.shards.runtime.length - shortened.shards.runtime.length);
+  t.deepEqual(loadAnalysisProject(directory).shards, complete.shards);
+  publishAnalysisProject(directory, {
+    ...complete,
+    shards: {
+      ...complete.shards,
+      runtime: complete.shards.runtime.map((record) =>
+        record.id === "existing" ? record : { ...record, count: record.count + 1 },
+      ),
+    },
+  });
+  const altered = loadAnalysisProjectViewSnapshot(directory).revision;
+  await t.throwsAsync(importRuntimeTraceIntoProject(file, directory, context), {
+    message: /changed content/,
+  });
+  t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, altered);
+});
+
+test("historical capture receipts remain readable and reimports preserve retained Secret of Mana facts", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-retained-trace-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const project = fixture();
+  const artifact = trace(project);
+  const context = {
+    projectRomContentSha256: artifact.romContentSha256,
+    sourceName: "retained.json",
+  };
+  const imported = importRuntimeInstructionTrace(artifact, context);
+  const merged = mergeRuntimeEvidence(project.shards, imported.batch);
+  // Existing databases own their historical receipt metadata. Reading it needs no projection
+  // implementation, and a reimport must not pretend previously omitted fields were restored.
+  const report = {
+    ...imported.report,
+    id: `${imported.report.id}:retained`,
+    indexProfile: "retained-index",
+  };
+  const retained = { ...project, shards: { ...merged.shards, imports: [report] } };
+  const directory = path.join(root, "analysis");
+  publishAnalysisProject(directory, retained);
+  const store = openAnalysisProjectStore(directory);
+  try {
+    store.transaction(() => store.recordCaptureReceipt(report));
+  } finally {
+    store.close();
+  }
+  const file = path.join(root, "trace.json");
+  fs.writeFileSync(file, JSON.stringify(artifact));
+  const before = loadAnalysisProject(directory);
+  const result = await importRuntimeTraceIntoProject(file, directory, context);
+  t.false(result.changed);
+  t.deepEqual(result.report, report);
+  t.true(result.warnings.some((warning) => warning.includes("did not restore omitted registers")));
+  t.deepEqual(loadAnalysisProject(directory), before);
+});
+
+test("bulk trace publication crosses batches losslessly, shares facts and rolls back flushed rows", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-bulk-trace-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const project = fixture();
+  const directory = path.join(root, "analysis");
+  publishAnalysisProject(directory, project);
+  const addresses = Array.from({ length: 1500 }, (_, index) => 0xc0800a + index);
+  const details = addresses.map((_, index) => ({
+    bytes: [0xea],
+    // Half use an extra register so bulk publication also exercises the general payload codec.
+    state:
+      index % 2 === 0 ? { p: 0x31, e: 0, a: index } : { p: 0x31, e: 0, a: index, extra: index },
+    memoryAccesses: [
+      { access: "write" as const, addressSpace: "snes.cpu", address: 0x2118, width: 1, value: 0 },
+    ],
+  }));
+  const artifact: RuntimeInstructionTraceArtifact = {
+    ...trace(project),
+    chunks: [{ sequenceStart: 1, addresses, details, droppedEvents: 0, active: false }],
+  };
+  const context = {
+    sourceName: "bulk-fixture",
+    projectRomContentSha256: artifact.romContentSha256,
+    indexMode: "full" as const,
+  };
+  const source = (value: RuntimeInstructionTraceArtifact) => ({
+    metadata: validateRuntimeInstructionTraceMetadata(value),
+    read: async (accept: (chunk: unknown) => void) => value.chunks.forEach(accept),
+  });
+  // Several complete SQL batches have flushed by this phase; none may survive a late failure.
+  await t.throwsAsync(
+    importRuntimeTraceSourceIntoProject(source(artifact), directory, context, {
+      onStage: (stage) => {
+        if (stage === "Validating merged runtime provenance…") {
+          throw new Error("Stop after flush");
+        }
+      },
+    }),
+    { message: "Stop after flush" },
+  );
+  t.deepEqual(loadAnalysisProject(directory).shards, project.shards);
+  const expected = importRuntimeInstructionTrace(artifact, context);
+  const actual = await importRuntimeTraceSourceIntoProject(source(artifact), directory, context);
+  const merged = mergeRuntimeEvidence(project.shards, expected.batch);
+  publishAnalysisProject(path.join(root, "expected"), { ...project, shards: merged.shards });
+  t.deepEqual(
+    loadAnalysisProject(directory).shards,
+    loadAnalysisProject(path.join(root, "expected")).shards,
+  );
+  t.is(actual.added.runtime, 6000);
+  const second = { ...artifact, producer: { ...artifact.producer, revision: "2" } };
+  const reused = await importRuntimeTraceSourceIntoProject(source(second), directory, context);
+  t.is(reused.storage.newFacts, 0);
+  t.is(reused.added.runtime, actual.added.runtime);
+  t.false((await importRuntimeTraceSourceIntoProject(source(second), directory, context)).changed);
+});
+
+test("trace publication rejects inconsistent pairs, duplicate IDs and escaped source provenance", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-bulk-trace-invalid-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const project = fixture();
+  publishAnalysisProject(root, project);
+  const sha256 = "1".repeat(64);
+  const evidence = [`runtime:instruction-trace:${sha256}`];
+  const instruction = {
+    id: `${evidence[0]}:code:${"2".repeat(64)}`,
+    kind: "runtime-instruction" as const,
+    architecture: "snes.65816",
+    addressSpace: "snes.cpu",
+    address: 0xc0800a,
+    count: 1,
+    evidence,
+    bytes: [0xea],
+    state: { p: 0x31, e: 0, a: 42 },
+  };
+  const state = {
+    ...instruction,
+    id: instruction.id.replace(":code:", ":state:"),
+    kind: "runtime-cpu-state" as const,
+  };
+  const store = openAnalysisProjectStore(root);
+  try {
+    for (const invalid of [
+      { ...state, count: 2 },
+      { ...state, state: { ...state.state, a: 43 } },
+    ]) {
+      t.throws(
+        () =>
+          store.transaction(() => {
+            const sink = store.runtimeTracePublicationSink(sha256);
+            sink.add(instruction);
+            sink.add(invalid);
+            sink.finish();
+          }),
+        { message: /inconsistent code\/state pair/ },
+      );
+    }
+    t.throws(
+      () =>
+        store.transaction(() => {
+          const sink = store.runtimeTracePublicationSink(sha256);
+          sink.add(instruction);
+          sink.finish();
+        }),
+      { message: /without its paired state/ },
+    );
+    t.throws(
+      () =>
+        store.transaction(() => {
+          const sink = store.runtimeTracePublicationSink(sha256);
+          sink.add({ ...instruction, evidence: [] });
+        }),
+      { message: /escaped/ },
+    );
+    t.throws(
+      () =>
+        store.transaction(() => {
+          const sink = store.runtimeTracePublicationSink(sha256);
+          sink.add(instruction);
+          sink.add(state);
+          sink.add(instruction);
+          sink.add(state);
+          sink.finish();
+        }),
+      { message: /UNIQUE/ },
+    );
+    t.deepEqual(loadAnalysisProject(root).shards, project.shards);
+  } finally {
+    store.close();
+  }
+});
 
 test("disk import rejects invalid tails, budgets and cancellation without publication", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-disk-import-failure-"));

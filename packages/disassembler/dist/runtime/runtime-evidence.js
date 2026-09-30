@@ -196,8 +196,8 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
  * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.
  */
 export const mergeRuntimeEvidence = (shards, batch) => {
-    // Profiles share a source hash and some record IDs. Reject mixing before merging any shards,
-    // or overlapping observations could be counted twice under different byte/state identities.
+    // Historical Secret of Mana receipts may describe reduced facts. Reject incompatible batches
+    // before merging: a full reimport could otherwise double-count overlapping source observations.
     const traceProfiles = new Map();
     for (const report of [...shards.imports, ...(batch.imports ?? [])]) {
         if (report.format !== "uttori-asm-instruction-trace") {
@@ -205,7 +205,7 @@ export const mergeRuntimeEvidence = (shards, batch) => {
         }
         if (traceProfiles.has(report.sourceSha256) &&
             traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
-            throw new Error(`Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`);
+            throw new Error(`Trace '${report.sourceName}' has incompatible retained facts. Import into a separate project to avoid double-counting observations.`);
         }
         traceProfiles.set(report.sourceSha256, report.indexProfile);
     }

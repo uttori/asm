@@ -62,6 +62,11 @@ import {
 } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds } from "./sqlite-records.js";
+import {
+  assertTraceRecordNamespace,
+  SqliteRuntimeTraceBatch,
+  type RuntimeTracePublicationSink,
+} from "./sqlite-runtime-batch.js";
 import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
 import {
   collectRuntimeHistory,
@@ -839,6 +844,62 @@ export class SqliteAnalysisStore {
       // namespace. The surrounding writer transaction excludes competing inserts.
       this.#insertRecord("runtime", record);
       return true;
+    };
+  }
+
+  /**
+   * Prepare bounded bulk publication for a validated distinct instruction trace. All four source
+   * namespaces must be empty; receipts cannot prove this after pruning. Retained/partial sources
+   * use exact per-record comparisons and repair. Call finish() before the writer transaction commits.
+   * The sink and its pending buffers belong to this transaction and must not escape it.
+   */
+  runtimeTracePublicationSink(sourceSha256: string): RuntimeTracePublicationSink {
+    this.#requireTransaction();
+    if (!/^[\da-f]{64}$/.test(sourceSha256)) {
+      throw new Error("Invalid trace source SHA-256.");
+    }
+    const root = `runtime:instruction-trace:${sourceSha256}:`;
+    const existing = this.#database
+      .prepare(`
+      SELECT 1 FROM runtime_observations
+      WHERE prefix_id IN (SELECT id FROM runtime_prefixes WHERE value IN (?1,?2,?3,?4))
+      UNION ALL SELECT 1 FROM runtime_observations
+      WHERE state_prefix_id IN (SELECT id FROM runtime_prefixes WHERE value IN (?1,?2,?3,?4))
+      LIMIT 1
+    `)
+      .get(root, `${root}code:`, `${root}state:`, `${root}memory:`);
+    if (!existing) {
+      const batch = new SqliteRuntimeTraceBatch(this.#database, sourceSha256, (table, value) =>
+        this.#intern(table, value),
+      );
+      return {
+        add: (record) => {
+          this.#requireTransaction();
+          return batch.add(record);
+        },
+        finish: () => {
+          this.#requireTransaction();
+          batch.finish();
+        },
+      };
+    }
+    let finished = false;
+    return {
+      add: (record) => {
+        this.#requireTransaction();
+        if (finished) {
+          throw new Error("Runtime trace batch is no longer active.");
+        }
+        assertTraceRecordNamespace(record, sourceSha256);
+        return this.insertRuntime(record);
+      },
+      finish: () => {
+        this.#requireTransaction();
+        if (finished) {
+          throw new Error("Runtime trace batch is no longer active.");
+        }
+        finished = true;
+      },
     };
   }
 

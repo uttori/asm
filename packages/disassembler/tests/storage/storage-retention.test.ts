@@ -11,7 +11,6 @@ import {
   importRuntimeTraceIntoProject,
   importRuntimeTraceSourceIntoProject,
   validateRuntimeInstructionTraceMetadata,
-  project65816AnalysisState,
   type AnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "../../src/index.js";
@@ -112,25 +111,15 @@ test("explicit maintenance retires product caches and triggers without changing 
   }
 });
 
-test("default decoder profile preserves joint width/bank unknowns and normalizes aliases without inventing state", (t) => {
-  t.deepEqual(project65816AnalysisState({ p: 0x31, P: 0, e: 0, d: 0, db: 255, a: 9 }), {
-    p: 0x30,
-    e: 0,
-    d: 0,
-    db: 255,
-  });
-  t.deepEqual(project65816AnalysisState({ p: 256, P: 0x30, e: true, db: -1, d: 65536 }), {});
-  t.deepEqual(project65816AnalysisState({ p: "unknown", e: 1 }), { p: 0x30, e: 1 });
-  t.deepEqual(project65816AnalysisState({ E: 0, P: 0, D: 0, DB: 0 }), { e: 0, p: 0, d: 0, db: 0 });
+test("default imports preserve register aliases and status flags without projection", (t) => {
   const imported = importRuntimeInstructionTrace(trace(), context);
-  t.is(imported.report.indexProfile, "65816-analysis-v2");
+  t.is(imported.report.indexProfile, undefined);
   const instructions = imported.batch.runtime!.filter((r) => r.kind === "runtime-instruction");
-  t.is(instructions.length, 1);
-  t.is(instructions[0].count, 3);
-  t.is(
-    imported.sourceSha256,
-    importRuntimeInstructionTrace(trace(), { ...context, indexMode: "full" }).sourceSha256,
-  );
+  t.is(instructions.length, 3);
+  t.true(instructions.every((r) => r.count === 1));
+  t.true(instructions.some((r) => r.state.p === 0x31 && r.state.a === 1));
+  t.true(instructions.some((r) => r.state.A === 3 && r.state.P === 0x30));
+  t.deepEqual(imported, importRuntimeInstructionTrace(trace(), { ...context, indexMode: "full" }));
 });
 
 test("shared facts and virtual state pairs keep exact per-capture counts and detach independent mutations", async (t) => {
@@ -139,16 +128,16 @@ test("shared facts and virtual state pairs keep exact per-capture counts and det
   publishAnalysisProject(directory, project());
   const first = await importRuntimeTraceSourceIntoProject(source(trace()), directory, context);
   const second = await importRuntimeTraceSourceIntoProject(source(trace("2")), directory, context);
-  t.is(first.storage.newFacts, 2);
+  t.is(first.storage.newFacts, 4);
   t.is(second.storage.newFacts, 0);
-  t.is(second.storage.reusedFacts, 2);
+  t.is(second.storage.reusedFacts, 4);
   const store = openAnalysisProjectStore(directory);
   const db = new DatabaseSync(store.file);
   try {
-    t.is(store.storageSnapshot().pairedStates, 2);
-    t.is(store.storageSnapshot().observations, 4);
-    t.is(store.counts().runtime, 6);
-    t.is(db.prepare("SELECT COUNT(*) AS n FROM runtime_identities").get()!.n, 2);
+    t.is(store.storageSnapshot().pairedStates, 6);
+    t.is(store.storageSnapshot().observations, 8);
+    t.is(store.counts().runtime, 14);
+    t.is(db.prepare("SELECT COUNT(*) AS n FROM runtime_identities").get()!.n, 4);
     t.is(store.runtimeExecutionCounts().events, 6);
     // A point lookup must use both physical IDs and the virtual-state expression index.
     // Otherwise each execution-offset update can scan the entire paired-state history.
@@ -160,17 +149,17 @@ test("shared facts and virtual state pairs keep exact per-capture counts and det
     db.prepare("UPDATE runtime SET count=9 WHERE rowid=?").run(code.rowid);
     t.deepEqual(
       [...store.runtimeRecordsByKinds(["runtime-cpu-state"])].map((r) => r.count),
-      [3, 3],
+      [1, 1, 1, 1, 1, 1],
     );
     t.deepEqual(
       [...store.runtimeRecordsByKinds(["runtime-instruction"])]
         .map((r) => r.count)
         .sort((a, b) => a - b),
-      [3, 9],
+      [1, 1, 1, 1, 1, 9],
     );
     db.exec("DELETE FROM runtime WHERE kind='runtime-cpu-state'");
     t.is([...store.runtimeRecordsByKinds(["runtime-cpu-state"])].length, 0);
-    t.is([...store.runtimeRecordsByKinds(["runtime-instruction"])].length, 2);
+    t.is([...store.runtimeRecordsByKinds(["runtime-instruction"])].length, 6);
     db.exec("DELETE FROM runtime");
     t.is(store.storageSnapshot().observations, 0);
     t.is(store.storageSnapshot().facts, 0);

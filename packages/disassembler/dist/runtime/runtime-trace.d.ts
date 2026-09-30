@@ -39,28 +39,25 @@ export interface RuntimeInstructionTraceImportContext {
     /** Lowercase SHA-256 of headerless ROM content. A mismatch rejects the import. */
     readonly projectRomContentSha256: string;
     readonly sourceName: string;
-    /** Defaults to 65816-analysis for native SNES CPU captures, full for other CPUs. Capture identity is unchanged. */
+    /** Full indexing retains every supplied register; other modes are rejected. */
     readonly indexMode?: RuntimeTraceIndexMode;
     /**
      * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
-     * In-memory imports default to 2M in compact mode or 8M in full mode, with an 8M ceiling.
+     * In-memory imports default to 8M records, with an 8M ceiling.
      * Disk indexes with a record sink default to Number.MAX_SAFE_INTEGER and accept any positive
      * safe integer budget. Explicit budgets apply to both paths. Not a byte/heap limit.
      */
     readonly maxIndexRecords?: number;
 }
-/**
- * Full keeps all supplied registers. Compact preserves the joint 65816 decoding state and
- * execution counts. A/X/Y/S history remains in the capture and is unavailable from this index.
- */
-export type RuntimeTraceIndexMode = "full" | "65816-disassembly" | "65816-analysis";
-/** Default in-memory distinct-fact budget for compact indexes. Full memory indexes default to 8M. */
-export declare const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2000000;
+/** Instruction imports retain all supplied registers, bytes, counts and bus observations. */
+export type RuntimeTraceIndexMode = "full";
+/** Default and maximum distinct-fact budget when counters or output records remain on the heap. */
+export declare const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8000000;
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
 export interface RuntimeInstructionTraceImportResult {
     readonly batch: RuntimeEvidenceBatch;
     readonly report: ImportReport;
-    /** Canonical identity of all validated input, including registers omitted from a compact index. */
+    /** Canonical identity of all validated input, including every supplied register. */
     readonly sourceSha256: string;
     readonly observedEvents: number;
     readonly droppedEvents: number;

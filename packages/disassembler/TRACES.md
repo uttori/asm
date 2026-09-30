@@ -26,7 +26,7 @@ try {
     {
       projectRomContentSha256: manifest.rom.contentSha256,
       sourceName: file,
-      indexMode: "65816-analysis",
+      indexMode: "full",
     },
     {
       signal: controller.signal,
@@ -56,9 +56,8 @@ source or retain its chunks.
 | Limit                                         | Default                   | Meaning                                                                           |
 | --------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
 | File `maxBytes`                               | 2 GiB                     | Whole input file, positive safe integer                                           |
-| SQLite project `maxIndexRecords`, any profile | `Number.MAX_SAFE_INTEGER` | No fixed 2M/8M record ceiling; storage and input budgets still apply              |
+| SQLite project `maxIndexRecords` | `Number.MAX_SAFE_INTEGER` | No fixed record ceiling; storage and input budgets still apply              |
 | In-memory `maxIndexRecords`, full profile     | 8,000,000                 | Distinct aggregate index records                                                  |
-| In-memory `maxIndexRecords`, 65816 profile    | 2,000,000                 | Distinct aggregate index records                                                  |
 | Explicit `maxIndexRecords`                    | Caller supplied           | Positive safe integer; maximum 8M when counters or final records remain in memory |
 
 Records are derived facts, not input instructions: each distinct PC counts once, each joint
@@ -73,14 +72,12 @@ A custom source must enforce its own input-byte budget. Chunk validation, sequen
 cumulative loss counts, ROM identity, and index limits still apply. Progress callbacks run
 synchronously and should return quickly.
 
-The `65816-analysis` profile is the default for native SNES CPU captures. It normalizes aliases
-and retains instruction bytes with P width bits, E, D, and DB. `65816-disassembly` retains the
-selected decoding registers without that normalization. Both omit A/X/Y/S register history and
-retain supported memory observations. `full` retains supplied registers and is the default for
-other processors. None replaces the original chronological capture. Source identity hashes
-canonical validated metadata and chunks, so JSON whitespace does not create a new capture.
-Reimporting the same source does not double counts. An existing import under another profile is
-reused with a warning. Keep separate projects when comparing profiles.
+`full` is the only supported index mode and retains every supplied register, instruction byte
+variant, execution count and supported memory observation. It does not replace the original
+chronological capture. Source identity hashes canonical validated metadata and chunks, so
+JSON whitespace does not create a new capture. Reimporting the same source does not double
+counts. Historical reduced-index receipts in existing Secret of Mana projects remain readable;
+reimporting them preserves retained facts with a warning rather than restoring omitted registers.
 
 Storage policy controls retained SQLite import history and maintenance. It is separate from the
 parser's input and index limits. Inspect storage before reducing retention, and back up a closed
