@@ -29,6 +29,7 @@ import {
   debug,
   window,
   StatusBarAlignment,
+  ProgressLocation,
   workspace,
   type DebugAdapter,
   type DebugAdapterDescriptor,
@@ -822,7 +823,16 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
     throw new Error("No Uttori ASM trace recording is active.");
   }
   activeTraceRecording = undefined;
-  const summary = await active.recorder.stop();
+  // Finalization can drain a large archive and hash/sync its graphics companion. Show this
+  // phase immediately and keep it non-cancellable so a stop cannot interrupt durable publication.
+  const summary = await window.withProgress(
+    {
+      location: ProgressLocation.Notification,
+      title: "Assembly: stopping recording and finalizing capture…",
+      cancellable: false,
+    },
+    () => active.recorder.stop(),
+  );
   // Bus evidence has its own importer: observed accesses cannot supply instruction bytes or code seeds.
   if ("scope" in summary && summary.scope !== "snes.65816.instructions") {
     if (active.live) {

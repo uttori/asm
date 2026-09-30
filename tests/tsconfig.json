@@ -10,7 +10,7 @@
     "../packages/plugin-snes/tests/struct-instruction-uses.test.ts",
     "./project/**/*.ts",
     "./helpers/**/*.ts",
-    "../packages/disassembler/tests/runtime-graphics.test.ts",
+    "../packages/disassembler/tests/runtime/runtime-graphics.test.ts",
     "../packages/vscode-extension/tests/runtime/bus-source.test.ts",
     "../packages/core/tests/debug-tracing.test.ts",
     "../packages/core/tests/source-location.test.ts",

@@ -602,7 +602,7 @@ const analyzeProject = (parsed, cwd) => {
             ...(parsed.maxCallDepth === undefined ? {} : { maxCallDepth: parsed.maxCallDepth }),
         });
         console.log(`Success: ${result.status} 65816 analysis wrote ${result.instructions} instruction(s), ${result.functions} function candidate(s), ${result.conflicts} conflict(s), and ${result.unresolved} unresolved flow(s).`);
-        console.log(`Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code. ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}. Observed PCs without code: ${result.runtimePcsWithoutCode}. Heuristic findings: ${result.heuristicRoles}.`);
+        console.log(`Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code. ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}. Observed PCs without code: ${result.runtimePcsWithoutCode}.`);
         if (result.status === "incomplete") {
             console.log(`Incomplete: ${result.incompleteReasons.map((reason) => reason.message).join(" ")}`);
         }

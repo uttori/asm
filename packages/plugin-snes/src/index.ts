@@ -38,7 +38,6 @@ export * from "./directives/spc.js";
 export * from "./target/address-space.js";
 export * from "./tooling/instruction-catalog.js";
 
-export * from "./disassembler/function-heuristics.js";
 export * from "./disassembler/runtime-code.js";
 
 export {

@@ -2,26 +2,18 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parentPort } from "node:worker_threads";
 
-import { canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
 import type { DebugMapRange } from "@uttori/asm-core/debug-map";
 import {
   ANALYSIS_PROJECT_SQLITE_FILE,
   SqliteAnalysisStore,
   buildInstructionAnalysisAnnotations,
-  HalfOpenIntervalIndex,
   analysisProjectRevision,
-  assertAnalysisProjectRevision,
   openAnalysisProjectStore,
   type AnalysisProjectSnapshot,
   type AnalysisSourceGroup,
   type ShardKind,
   type InstructionAnalysisAnnotation,
 } from "@uttori/asm-disassembler";
-import {
-  analyzeSnesFunctionRoles,
-  validateSnesHeuristicConfiguration,
-  snesHardwareDefines,
-} from "@uttori/asm-plugin-snes";
 
 import {
   lookupDisassemblyAnnotation,
@@ -37,8 +29,8 @@ import {
   createInstructionAnnotationIndex,
   instructionAnnotationsForDebugRange,
 } from "./annotation-index.js";
-import type { AnalysisGraphNavigationTarget } from "./graph-tree.js";
 import { projectAnalysisNavigation } from "./navigation-data.js";
+import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import { readAnalysisSourceCatalog } from "./sources-data.js";
 
 /**
@@ -54,7 +46,6 @@ export interface AnalysisWorkerRequest {
     | "coverage"
     | "segments"
     | "details"
-    | "graph"
     | "annotationSummary"
     | "annotations"
     | "debugAnnotations"
@@ -62,14 +53,13 @@ export interface AnalysisWorkerRequest {
     | "annotationSave"
     | "annotationRefresh"
     | "metadata"
-    | "heuristics"
     | "navigation"
     | "evidenceChoices"
     | "explainEvidence"
     | "sources"
     | "sourceSummary"
     | "sourceEntries";
-  readonly navigationTarget?: AnalysisGraphNavigationTarget;
+  readonly navigationTarget?: AnalysisNavigationTarget;
   readonly sourceId?: string;
   readonly evidenceSelection?: Partial<Record<ShardKind, readonly string[]>>;
   readonly evidenceRecord?: { kind: ShardKind; id: string };
@@ -342,110 +332,11 @@ const request = (message: AnalysisWorkerRequest): unknown => {
       );
     }, false);
   }
-  if (message.operation === "heuristics") {
-    if (manifest.target !== "snes.sfc") {
-      throw new Error("Function heuristics require a SNES analysis project.");
-    }
-    const file = path.join(message.directory, "heuristics.json");
-    const config = validateSnesHeuristicConfiguration(
-      fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {},
-    );
-    return store.cachedProjection(
-      "snes_roles",
-      canonicalJsonCompact([1, config]),
-      ["analysis", "runtime", "evidence"],
-      () => {
-        const shards = {
-          labels: [],
-          comments: [],
-          annotations: [],
-          regions: [],
-          imports: [],
-          evidence: store.loadTable("evidence"),
-          runtime: [],
-          analysis: store.analysisByKinds(["cfg-node", "cfg-edge", "function"]),
-        };
-        const registers = [...new Set(snesHardwareDefines().map(([, address]) => address))];
-        const addresses = [];
-        for (let bank = 0; bank < 256; bank++) {
-          if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf)) {
-            for (const low of registers) {
-              addresses.push((bank << 16) | low);
-            }
-          }
-        }
-        const result = analyzeSnesFunctionRoles(
-          shards,
-          config,
-          store.runtimeMemoryAtAddresses("snes.65816", "snes.cpu", addresses),
-        );
-        return {
-          enabled: config.enabled !== false,
-          total: result.roles.length,
-          roles: result.roles.slice(0, 500),
-        };
-      },
-    );
-  }
   if (message.operation === "coverage") {
     return store.coverageSummary();
   }
   if (message.operation === "segments" || message.operation === "details") {
     return store.coveragePage(message.operation, message.offset);
-  }
-  if (message.operation === "graph") {
-    const graphRevision = analysisProjectRevision(store.manifest());
-    const graph = store.callGraph();
-    store.prepareRuntimeArchitectures();
-    return store.transaction(() => {
-      assertAnalysisProjectRevision(store, graphRevision);
-      const manifest = store.manifest();
-      const annotations = store.loadTable("annotations");
-      const fileSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id);
-      const indexes = new Map(
-        manifest.addressSpaces.map(({ id }) => [
-          id,
-          new HalfOpenIntervalIndex(annotations.filter((a) => a.addressSpace === id)),
-        ]),
-      );
-      const summaries = [
-        ...new Set(
-          store
-            .analysisByKinds(["summary"])
-            .flatMap((r) => (r.kind === "summary" ? [r.architecture] : [])),
-        ),
-      ];
-      const hints: Record<string, readonly string[]> = {};
-      for (const location of [
-        ...graph.functions,
-        ...graph.unresolved,
-        ...graph.calls.map((call) => ({
-          addressSpace: call.addressSpace,
-          address: call.fromAddress,
-          outputOffsets: call.fromOutputOffsets,
-        })),
-      ]) {
-        const key = `${location.addressSpace}:${location.address}`;
-        if (hints[key]) {
-          continue;
-        }
-        const relevant = [
-          ...(indexes.get(location.addressSpace)?.at(location.address) ?? []),
-          ...fileSpaces.flatMap((space) =>
-            location.outputOffsets.flatMap((offset) => indexes.get(space)?.at(offset) ?? []),
-          ),
-        ];
-        const architectures = [
-          ...new Set([
-            ...relevant.map((a) => a.architecture),
-            ...store.runtimeArchitecturesAt(location.addressSpace, location.address),
-          ]),
-        ];
-        const fallback = summaries.length === 1 ? summaries : [];
-        hints[key] = architectures.length ? architectures : fallback;
-      }
-      return { manifest, graph, hints };
-    }, false);
   }
   throw new Error("Unknown analysis worker operation.");
 };

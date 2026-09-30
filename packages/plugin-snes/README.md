@@ -67,7 +67,9 @@ The exporter splits raw spans at these bounds and replaces complete non-code
 spans. It rejects overlaps, code, typed-header splits and interior source labels.
 The asset source path is relative to the generated bank file. The exporter records
 the map as an input in `generated-files.json` and preserves an existing
-`uttori-asm.config.json`, including custom asset plugin registrations. Keep each
+`uttori-asm.config.json`, including custom asset plugin registrations. The build configuration is
+also recorded as a user-owned input. Edits make the export stale and are preserved by normal
+regeneration. Keep each
 entry's end offset aligned with the bytes the asset plugin emits; verify the full
 ROM after editing an asset or its map entry.
 

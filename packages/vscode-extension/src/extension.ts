@@ -35,7 +35,7 @@ import {
   TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
 } from "./analysis/annotation-controller.js";
 import { AnalysisCoverageProvider } from "./analysis/coverage-tree.js";
-import { AnalysisGraphProvider } from "./analysis/graph-tree.js";
+import { parseAnalysisNavigationTarget } from "./analysis/navigation-target.js";
 import { navigateToAnalysisLocation } from "./analysis/navigation.js";
 import { AnalysisProjectEditor } from "./analysis/project-editor.js";
 import { AnalysisSourcesProvider } from "./analysis/sources-tree.js";
@@ -260,7 +260,6 @@ export function activate(context: ExtensionContext): void {
   const disassemblyPanelProvider = new DisassemblyPanelProvider(context.extensionUri);
   const outlineProvider = new ProjectOutlineProvider(() => client);
   const coverageProvider = new AnalysisCoverageProvider();
-  const analysisGraphProvider = new AnalysisGraphProvider();
   const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController();
   editorInformationController = analysisAnnotationController;
@@ -290,7 +289,6 @@ export function activate(context: ExtensionContext): void {
     analysisRefreshTimer = setTimeout(() => {
       worker.invalidate();
       coverageProvider.refresh();
-      analysisGraphProvider.refresh();
       sourcesProvider.refresh();
       analysisAnnotationController.invalidate();
     }, 150);
@@ -352,10 +350,6 @@ export function activate(context: ExtensionContext): void {
     }),
     window.createTreeView(AnalysisCoverageProvider.viewId, {
       treeDataProvider: coverageProvider,
-      showCollapseAll: true,
-    }),
-    window.createTreeView(AnalysisGraphProvider.viewId, {
-      treeDataProvider: analysisGraphProvider,
       showCollapseAll: true,
     }),
     window.createTreeView(AnalysisSourcesProvider.viewId, {
@@ -421,10 +415,9 @@ export function activate(context: ExtensionContext): void {
     ),
     commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
     commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
-    commands.registerCommand("asm.analysisGraph.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
-      const target = analysisGraphProvider.navigationTarget(element);
+      const target = parseAnalysisNavigationTarget(element);
       if (target) {
         void navigateToAnalysisLocation(target);
       }

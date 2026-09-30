@@ -5,8 +5,8 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { crc32 } from "node:zlib";
 
-import { CRC32 } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { createDebugMap } from "@uttori/asm-core/debug-map";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
@@ -713,7 +713,7 @@ function buildBinary(
           return {
             name: entry.name,
             size: sourceBytes.length,
-            crc: CRC32.compute(sourceBytes),
+            crc: crc32(sourceBytes),
             sha256: createHash("sha256").update(sourceBytes).digest("hex"),
           };
         },

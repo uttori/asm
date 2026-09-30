@@ -1,0 +1,1 @@
+{"version":3,"file":"runtime-trace-profile.d.ts","sourceRoot":"","sources":["../../src/runtime/runtime-trace-profile.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,2BAA2B,CAAC;AAEnE,sGAAsG;AACtG,eAAO,MAAM,wBAAwB,sBAAsB,CAAC;AAE5D;;;;;;GAMG;AACH,eAAO,MAAM,yBAAyB,UAC7B,QAAQ,CAAC,MAAM,CAAC,MAAM,EAAE,iBAAiB,CAAC,CAAC,KACjD,MAAM,CAAC,MAAM,EAAE,iBAAiB,CA2BlC,CAAC"}

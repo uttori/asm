@@ -4,6 +4,7 @@ import { decodeBrrPcm, waveImporter } from "@uttori/asm-assets/audio";
 import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { decodePlanarTiles, encodePlanarTiles, snesNativeEncoders } from "@uttori/asm-assets/snes";
 import { definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
+import { readAssetPng } from "../png.js";
 import { encodeBossGraphics, expandBossGraphics } from "./som-boss-graphics.js";
 import { encodeFrameAtlas, readFrameLayout } from "./som-frame-atlas.js";
 import { compressSomLz, decompressSomLz } from "./som-lz.js";
@@ -20,29 +21,16 @@ for (const encoder of withImageEncoders(snesNativeEncoders)) {
  * @returns {Uint8Array | undefined} Chunk payload, excluding its CRC.
  */
 function nativeBossChunk(png, wanted = "soMz") {
-    const signature = [137, 80, 78, 71, 13, 10, 26, 10];
-    if (png.length < 8 || signature.some((byte, index) => png[index] !== byte)) {
-        throw new Error("Boss graphics require a PNG source.");
-    }
-    const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    const image = readAssetPng(png);
     let native;
-    for (let offset = 8; offset < png.length;) {
-        if (offset + 12 > png.length) {
-            throw new Error("Truncated boss graphics PNG chunk.");
-        }
-        const length = view.getUint32(offset);
-        const end = offset + 12 + length;
-        if (end > png.length) {
-            throw new Error("Truncated boss graphics PNG payload.");
-        }
-        const type = String.fromCharCode(...png.subarray(offset + 4, offset + 8));
+    for (const { type, data } of image.chunks) {
         if (type === wanted) {
             if (native) {
                 throw new Error("Duplicate native boss graphics PNG chunk.");
             }
-            native = png.slice(offset + 8, end - 4);
+            // The parsed payload borrows PNG storage; native outputs need independent ownership.
+            native = Uint8Array.from(data);
         }
-        offset = end;
     }
     return native;
 }

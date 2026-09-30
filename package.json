@@ -18,6 +18,7 @@
     "benchmark:annotation": "node --expose-gc --max-old-space-size=4096 --conditions=uttori-source --import=tsx scripts/benchmark-annotation.ts",
     "benchmark:chou:stable": "tsx --conditions=uttori-source scripts/run-production-benchmarks.ts --warmups 0 --repetitions 3 --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
     "benchmark:chou": "tsx --conditions=uttori-source scripts/run-production-benchmarks.ts --fast --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
+    "benchmark:crc32": "node --conditions=uttori-source --import=tsx scripts/benchmark-crc32.ts",
     "benchmark:disassembler:check": "node --conditions=uttori-source --import=tsx scripts/benchmark-disassembler.ts --warmups 0 --repetitions 3 --budgets docs/performance/disassembler-budgets-macos-arm64.json --summary-only",
     "benchmark:disassembler:derive-budgets": "node --conditions=uttori-source --import=tsx scripts/derive-disassembler-budgets.ts docs/performance/disassembler-macos-arm64-2026-09-03.json docs/performance/disassembler-budgets-macos-arm64.json",
     "benchmark:disassembler:fast": "node --conditions=uttori-source --import=tsx scripts/benchmark-disassembler.ts --fast",

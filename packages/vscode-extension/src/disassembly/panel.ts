@@ -8,8 +8,6 @@ import { renderWebviewTemplate } from "../webview-template.js";
  */
 const actions = new Map([
   ["editAnnotation", "asm.disassembly.editAnnotation"],
-  ["configureHeuristics", "asm.heuristics.configure"],
-  ["previewHeuristics", "asm.heuristics.preview"],
   ["disassemblyStatus", "asm.disassembly.status"],
   ["regenerateDisassembly", "asm.disassembly.regenerate"],
   ["openRamMap", "asm.ramMap.open"],

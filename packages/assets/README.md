@@ -76,10 +76,15 @@ tile bytes to keep displayed pixels exact. A full BG map uses 32×32 screen bloc
 `encodeBgScreenMap` and `decodeBgScreenMap` handle maps with repeated tile references;
 `encodeMode7MapLayout` distinguishes a full 128×128 map from partial uploads.
 
-The PNG importer uses `@uttori/data-tools` 4.1.0 for its chunk model, then validates
-CRC and bounds and reconstructs indexed/Adam7 scanlines exactly. Supported input is
+The PNG importer uses `@uttori/data-tools` 5.0.0 `ImagePNG` for validated container
+parsing and bounded lazy pixel decoding. Supported input is
 indexed 1/2/4/8-bit, grayscale 1/2/4/8-bit, RGB8, grayscale-alpha8, and RGBA8.
-Sixteen-bit PNG is explicitly rejected. Conversion is synchronous and browser safe.
+Sixteen-bit PNG and animated PNG are explicitly rejected. Imports are bounded to
+16 MiB of input, one megapixel, 5 MiB of inflated scanlines and 16,384 chunks.
+Conversion is synchronous and browser safe; returned pixels own their storage.
+Indexed PNG creation and rewriting also delegate to `ImagePNG`. Preview encoding
+uses `ImagePNG.encodeRGBA` and `RgbaSurface.fitNearest`, preserving the shared-scale
+nearest-neighbor sampling used by the editor, including odd aspect ratios.
 
 ## Indexed authoring helpers
 

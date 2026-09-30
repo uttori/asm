@@ -1,7 +1,6 @@
 import type { AssemblerEnvironment } from "@uttori/asm-core/plugin";
 import { type AnalysisProjectManifest, type ByteComparison, type ImportReport, type ProjectMapping, type RomIdentity, type SourceExportManifest, type StaticAnalysisIncompleteReason } from "@uttori/asm-disassembler";
 import { type Snes65816EntryPoint } from "./65816-analysis.js";
-import { type SnesHeuristicConfiguration } from "./function-heuristics.js";
 import { type SnesMapper, type SnesRomDetection } from "./rom-header.js";
 /** Stable target id written to native SNES analysis projects. */
 declare const TARGET_ID = "snes.sfc";
@@ -66,7 +65,6 @@ export interface CreateSnesAnalysisProjectResult {
 }
 /** Reanalysis preserves manual annotations and runtime evidence, and rejects concurrent project edits. */
 export interface AnalyzeSnesProjectOptions extends SnesProjectOperationOptions {
-    readonly heuristics?: SnesHeuristicConfiguration;
     readonly projectDirectory: string;
     readonly romFile: string;
     /** Additional CPU bus addresses with explicit state, alongside vector and saved runtime seeds. */
@@ -84,7 +82,6 @@ export interface AnalyzeSnesProjectResult {
     readonly instructions: number;
     readonly capturedInstructions: number;
     readonly runtimePcsWithoutCode: number;
-    readonly heuristicRoles: number;
     readonly functions: number;
     readonly conflicts: number;
     readonly unresolved: number;

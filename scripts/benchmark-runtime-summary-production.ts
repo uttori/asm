@@ -9,9 +9,9 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { parseSqlitePayload } from "../packages/disassembler/src/sqlite-payload.js";
-import { registerRuntimeHistory } from "../packages/disassembler/src/sqlite-runtime-history.js";
-import { SqliteAnalysisStore } from "../packages/disassembler/src/sqlite-store.js";
+import { registerRuntimeHistory, SqliteAnalysisStore } from "@uttori/asm-disassembler";
+
+import { parseSqlitePayload } from "../packages/disassembler/src/storage/sqlite-payload.js";
 
 const file = path.resolve(process.argv[2] ?? "secret-of-mana/disassembly/analysis/analysis.sqlite");
 const reportFile = process.argv[3];

@@ -552,6 +552,12 @@ test("maintenance workers import ACT2 directly and reject a bad tail without cha
     projectDirectory: path.join(sourceDirectory, "analysis"),
     sourceManifest: loadSourceExportManifest(sourceDirectory),
   };
+  const configuration = target.sourceManifest.inputs!.find(
+    (entry) => entry.path === target.sourceManifest.buildConfiguration,
+  )!;
+  const configFile = path.join(sourceDirectory, target.sourceManifest.buildConfiguration);
+  fs.appendFileSync(configFile, "\n");
+  const editedConfiguration = fs.readFileSync(configFile, "utf8");
   const traceFile = path.join(directory, "capture.act2");
   await writeCaptureFixture(traceFile, 3, 2, target.sourceManifest.rom.contentSha256);
   const input = {
@@ -569,6 +575,12 @@ test("maintenance workers import ACT2 directly and reject a bad tail without cha
   t.true(logs.some((message) => message.includes("Runtime import committed")));
   t.true(logs.some((message) => message.includes("Completed. Worker exited")));
   t.false(fs.existsSync(`${traceFile}.json`));
+
+  const published = await client.run("publish", target, budget);
+  t.true(published.verified.comparison.equal);
+  t.false(published.exported.manifest.files.some((entry) => entry.path === configuration.path));
+  t.is(fs.readFileSync(configFile, "utf8"), editedConfiguration);
+  target.sourceManifest = published.exported.manifest;
 
   const before = loadAnalysisProjectSnapshot(target.projectDirectory);
   fs.appendFileSync(traceFile, "bad tail");
@@ -667,12 +679,11 @@ test.serial(
     t.is(analyzed.capturedInstructions, 1);
     t.is(runtimeCount(), 40_001);
     const exported = await client.run("export", target, smallHeap);
+    // Publication replaces the generated-file hashes. Later imports must validate
+    // the published generation rather than the manifest from workspace initialization.
+    target.sourceManifest = exported.manifest;
     t.true((await client.run("verify", target, smallHeap)).comparison.equal);
-    const after = await client.run(
-      "coverage",
-      { ...target, sourceManifest: exported.manifest },
-      smallHeap,
-    );
+    const after = await client.run("coverage", target, smallHeap);
     t.is(after.runtimeEvents, 40_000);
     // The incoming capture also exceeds the child heap, with every snapshot distinct. This exercises
     // disk aggregation, merging against existing history, ID validation and exact reimport together.

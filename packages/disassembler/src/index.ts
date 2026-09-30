@@ -1,56 +1,66 @@
 /**
- * Target-neutral contracts for analysis projects, ROM images, static CFG
- * traversal, and deterministic source export. Architecture plugins implement
- * the adapters. This package does not know 65816 or SNES.
+ * Analysis projects, ROM identity, bounded static traversal, runtime evidence, and verified
+ * source publication. Target plugins own decoding/mapping; capture contracts retain their
+ * explicit architecture identities.
  * @module @uttori/asm-disassembler
  */
-export * from "./analysis-graph.js";
-export * from "./coverage-map.js";
-export * from "./instruction-annotations.js";
-export * from "./interval-index.js";
-export * from "./sqlite-store.js";
-export { registerRuntimeHistory } from "./sqlite-runtime-history.js";
+
+// Semantic contracts and record validation are shared by every operation.
+export * from "./model/project-types.js";
+export * from "./model/project-asset-ids.js";
+export * from "./model/project-labels.js";
+export * from "./model/rom-image.js";
+export * from "./model/trace-detail.js";
+export * from "./model/runtime-bus-types.js";
+export type { RuntimePPUEffect } from "./model/runtime-ppu-effect.js";
+
+// Read-only projections and proposed edits do not publish a project revision.
+export * from "./analysis/analysis-graph.js";
+export * from "./analysis/analysis-sources.js";
+export * from "./analysis/coverage-map.js";
+export * from "./analysis/instruction-annotations.js";
+export * from "./analysis/static-analysis.js";
+export {
+  explainProjectEvidence,
+  type ProjectEvidenceExplanation,
+  type AnalysisProjectShardRecord,
+} from "./analysis/project-evidence.js";
+export * from "./edits/project-edit.js";
+export * from "./edits/metadata-edit.js";
+
+export * from "./runtime/runtime-evidence.js";
+export * from "./runtime/runtime-trace.js";
+export * from "./runtime/runtime-trace-file.js";
+export {
+  RUNTIME_ANALYSIS_PROFILE,
+  project65816AnalysisState,
+} from "./runtime/runtime-trace-profile.js";
+export * from "./runtime/runtime-bus-trace.js";
+export * from "./runtime/runtime-transfer.js";
+export * from "./runtime/runtime-graphics.js";
+export type { RuntimePPUSummary } from "./runtime/runtime-ppu.js";
+
+// The connection facade stays public; codecs and query implementation helpers stay internal.
+export * from "./storage/sqlite-store.js";
+export { registerRuntimeHistory } from "./storage/sqlite-runtime-history.js";
 export type {
   InstructionExportRecord,
   InstructionExecutionSummary,
   InstructionExecutionSummaryRow,
-} from "./sqlite-annotation-query.js";
-export * from "./project-store.js";
-export * from "./project-transaction.js";
-export * from "./project-edit.js";
-export * from "./project-asset-ids.js";
-export * from "./project-labels.js";
-export * from "./project-types.js";
-export * from "./rom-image.js";
-export * from "./runtime-evidence.js";
-export * from "./runtime-trace.js";
-export * from "./runtime-trace-file.js";
-export * from "./source-export.js";
-export * from "./source-ownership.js";
-export * from "./static-analysis.js";
-
-export * from "./trace-detail.js";
-
-export * from "./analysis-sources.js";
-
-export * from "./runtime-trace-project.js";
-
+} from "./storage/sqlite-annotation-query.js";
 export {
   DEFAULT_ANALYSIS_STORAGE_POLICY,
   type AnalysisStoragePolicy,
   type AnalysisStorageSnapshot,
-} from "./sqlite-storage-policy.js";
-export { RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState } from "./runtime-trace-profile.js";
+} from "./storage/sqlite-storage-policy.js";
+export * from "./project/project-store.js";
+export * from "./project/project-transaction.js";
+export * from "./project/runtime-trace-project.js";
+export * from "./project/runtime-bus-project.js";
 
-export * from "./runtime-bus-types.js";
-export * from "./runtime-bus-trace.js";
-export * from "./runtime-bus-project.js";
-
-export * from "./runtime-transfer.js";
-export * from "./runtime-graphics.js";
-
-export type { RuntimePPUEffect, RuntimePPUSummary } from "./runtime-ppu.js";
-
-export * from "./durable-files.js";
-export * from "./source-generation.js";
-export * from "./source-publication.js";
+export * from "./source/source-export.js";
+export * from "./source/source-ownership.js";
+export * from "./source/source-generation.js";
+export * from "./source/source-publication.js";
+export * from "./internal/interval-index.js";
+export * from "./internal/durable-files.js";

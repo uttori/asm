@@ -7,6 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { readRuntimeTraceFileMetadata, readRuntimeTraceFileChunks } from "@uttori/asm-disassembler";
+
 import {
   LosslessCaptureFileRecorder,
   recoverCaptureFile,
@@ -15,10 +17,6 @@ import { validateCapturePosition } from "../packages/debug-adapter/src/capture-v
 import { AresRspDebugBackend } from "../packages/debug-sidecar-ares/src/ares-rsp-backend.js";
 import { GdbRspClient } from "../packages/debug-sidecar-ares/src/gdb-rsp-client.js";
 import { NodeTcpGdbRspTransport } from "../packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.js";
-import {
-  readRuntimeTraceFileMetadata,
-  readRuntimeTraceFileChunks,
-} from "../packages/disassembler/src/runtime-trace-file.js";
 
 const executable = path.resolve(
   process.argv[2] ?? "fixtures/external/ares/runtime/ares.app/Contents/MacOS/ares",

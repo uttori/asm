@@ -3,8 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { parseSqlitePayload } from "../packages/disassembler/src/sqlite-payload.js";
-import { registerRuntimeHistory } from "../packages/disassembler/src/sqlite-runtime-history.js";
+import { registerRuntimeHistory } from "@uttori/asm-disassembler";
+
+import { parseSqlitePayload } from "../packages/disassembler/src/storage/sqlite-payload.js";
 
 /** Read-only experiment for one native decoder signature; never installs a production cache.
  * Run with node --conditions=uttori-source --import=tsx scripts/benchmark-runtime-summary.ts DB REPORT.

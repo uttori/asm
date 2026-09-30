@@ -1,12 +1,12 @@
 import type { Tile } from "./snes.js";
 /** Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
- * @param {Uint8Array} rgba Exact row-major RGBA8 pixels.
+ * @param {Uint8Array | Uint8ClampedArray} rgba Exact row-major RGBA8 pixels, including Canvas buffers.
  * @param {number} width Original pixel width.
  * @param {number} height Original pixel height.
  * @param {number} maxEdge Longest displayed edge in pixels, at most 1024.
  * @returns {Uint8Array} Complete PNG bytes.
  */
-export declare function rgbaPreviewPng(rgba: Uint8Array, width: number, height: number, maxEdge?: number): Uint8Array;
+export declare function rgbaPreviewPng(rgba: Uint8Array | Uint8ClampedArray, width: number, height: number, maxEdge?: number): Uint8Array;
 /** Draw bounded min/max PCM buckets without changing the audio used for playback.
  * @param {Int16Array} samples Signed source or decoded PCM16 frames.
  * @returns {Uint8Array} A 256×64 PNG waveform thumbnail.

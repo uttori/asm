@@ -1,6 +1,6 @@
 Bundled npm dependency notices. License text is reproduced unchanged.
 
-@uttori/data-tools@4.1.0
+@uttori/data-tools@5.0.0
 ========================
 
 MIT license declared in package.json; published tarball has no license file.

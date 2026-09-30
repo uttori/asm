@@ -332,3 +332,16 @@ Post-import maintenance evicts stale or over-budget disposable projections and a
 checkpoint/truncation. Active readers can defer truncation. The configured 64 MiB journal size limit
 controls recycled allocation, not a hard cap on an active transaction. Core editor/export indexes stay
 available. VACUUM remains explicit after large deletions. It does not run after every annotation save.
+
+## Implementation ownership
+
+The public entry remains `@uttori/asm-disassembler`. Physical source and declaration paths follow
+[the internal module boundaries](ARCHITECTURE.md#internal-module-boundaries). Project APIs own
+validation/revision-checked publication; the SQLite facade owns bounded physical queries. Source
+integrity/publication accepts explicit verified inputs. Shared evidence inspection computes provenance
+and reverse links without proposing edits.
+
+`runtimeEvidenceReferences(ids)` reads candidate provenance references from the runtime dictionary
+and physical observations in the caller's snapshot, without decoding history payloads. Its result
+is bounded by the candidate list and is used when retiring unused evidence. Explicit storage
+maintenance removes retired disposable product caches; ordinary opens and read projections do not.

@@ -280,6 +280,21 @@
         "typescript/require-array-sort-compare": "off",
         "typescript/unbound-method": "off"
       }
+    },
+    {
+      "files": [
+        "**/*.ts",
+        "**/*.tsx"
+      ],
+      "rules": {
+        "jsdoc/require-param": "off",
+        "jsdoc/require-param-type": "off",
+        "jsdoc/require-property-type": "off",
+        "jsdoc/require-returns": "off",
+        "jsdoc/require-returns-type": "off",
+        "jsdoc/require-throws-type": "off",
+        "jsdoc/require-yields-type": "off"
+      }
     }
   ]
 }

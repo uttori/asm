@@ -15,6 +15,8 @@ import {
   type RuntimeTraceIndexMode,
   type AnalysisStoragePolicy,
   type RuntimeTraceProjectImportResult,
+  type RuntimeInstructionTraceMetadata,
+  type RuntimeBusTraceMetadata,
 } from "@uttori/asm-disassembler";
 import { NodePluginLoader } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, {
@@ -174,6 +176,9 @@ export interface MaintenanceJobs {
   };
   revision: { input: { projectDirectory: string }; output: string };
   verify: { input: ResolvedTarget; output: VerifySnesProjectRoundTripResult };
+  /** Discovery stays in the worker because JSON can put identity after a large chunks array. */
+  traceIdentity: { input: { traceFile: string }; output: RuntimeInstructionTraceMetadata };
+  busIdentity: { input: { traceFile: string }; output: RuntimeBusTraceMetadata };
   import: {
     input: {
       target: ResolvedTarget;
@@ -503,8 +508,28 @@ const executeMaintenanceJob = async (
         await loader.dispose();
       }
     }
+    case "traceIdentity":
+    case "busIdentity": {
+      progress({ message: "Reading capture identity…" });
+      const options = {
+        // Project selection determines the actual import budget; this pass returns identity only.
+        maxBytes: Number.MAX_SAFE_INTEGER,
+        signal,
+        onProgress: (bytesRead: number, totalBytes: number) => progress({ bytesRead, totalBytes }),
+      };
+      const source =
+        job.operation === "traceIdentity"
+          ? await createEditorRuntimeTraceSource(job.input.traceFile, options)
+          : await createEditorRuntimeBusSource(job.input.traceFile, options);
+      return source.metadata;
+    }
     case "import": {
       const { target, traceFile, maxBytes, architecture, addressSpace } = job.input;
+      // Check before importing any facts, in this child process so hashing thousands of files
+      // cannot stall editor commands or prevent the progress notification from rendering.
+      progress({ message: "Validating generated source before import…" });
+      validateSourceExportFiles(target.sourceDirectory, target.sourceManifest);
+      signal.throwIfAborted();
       progress({ message: "Opening and validating trace metadata" });
       const source = await createEditorRuntimeTraceSource(traceFile, {
         maxBytes,

@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 
 import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
+import { LosslessCaptureFileRecorder, type CaptureFileSummary } from "@uttori/asm-debug-adapter";
+import sinon from "sinon";
 import type { DebugAdapterDescriptorFactory, ExtensionContext, Uri as VsCodeUri } from "vscode";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -38,6 +40,10 @@ const host = {
   dialogs: [] as ({ scheme: string; fsPath: string }[] | undefined)[],
   quickPick: undefined as { label: string; backend: "ares" } | undefined,
   messages: [] as string[],
+  progress: [] as { title: string; cancellable: boolean }[],
+  activeSession: undefined as unknown,
+  destination: undefined as VsCodeUri | undefined,
+  executed: [] as string[],
   commands: new Map<string, (...args: unknown[]) => unknown>(),
   registered: [] as string[],
   providers: [] as string[],
@@ -91,6 +97,11 @@ registerHooks({
             }),
           };
           export const window = {
+            showSaveDialog: async () => host.destination,
+            withProgress: async (options, action) => {
+              host.progress.push(options);
+              return action({ report() {} });
+            },
             showQuickPick: async (items) => host.quickPick === undefined ? undefined : host.quickPick ?? items[0],
             showOpenDialog: async () => host.dialogs.shift(),
             showInformationMessage: async (message) => { host.messages.push(message); },
@@ -109,9 +120,10 @@ registerHooks({
               host.registered.push(id);
               return { dispose() { host.commands.delete(id); } };
             },
-            executeCommand: async () => {},
+            executeCommand: async (id) => { host.executed.push(id); },
           };
           export const debug = {
+            get activeDebugSession() { return host.activeSession; },
             registerDebugConfigurationProvider: (type) => {
               host.providers.push("config:" + type);
               return { dispose() {} };
@@ -146,6 +158,10 @@ const reset = (): void => {
   host.dialogs = [];
   host.quickPick = undefined;
   host.messages = [];
+  host.progress = [];
+  host.activeSession = undefined;
+  host.destination = undefined;
+  host.executed = [];
   host.commands.clear();
   host.registered = [];
   host.providers = [];
@@ -322,6 +338,82 @@ test.serial(
       fastBoot: true,
     });
     t.true(host.messages.some((message) => message.includes("ares runtime configured")));
+  },
+);
+
+test.serial(
+  "stop shows finalization progress while the recorder drains and imports only after completion",
+  async (t) => {
+    reset();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-stop-progress-"));
+    t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const program = path.join(directory, "rom.sfc");
+    const debugMap = `${program}.debug.json`;
+    const bytes = new Uint8Array([0xea]);
+    fs.writeFileSync(program, bytes);
+    const mapping = new AddressToLineMapping();
+    mapping.includeByte(path.join(directory, "main.asm"), 1, "snes.65816", "snes.cpu", 0x8000, 0);
+    fs.writeFileSync(
+      debugMap,
+      JSON.stringify(createDebugMap({ target: "snes.sfc", output: bytes, mapping })),
+    );
+    let release!: (summary: CaptureFileSummary) => void;
+    const completion = new Promise<CaptureFileSummary>((resolve) => {
+      release = resolve;
+    });
+    let stopRequested = false;
+    const stub = sinon.stub(LosslessCaptureFileRecorder, "create").resolves({
+      completion,
+      stop: () => {
+        stopRequested = true;
+        return completion;
+      },
+    } as never);
+    t.teardown(() => stub.restore());
+    const subscriptions = registerDebugging("/extension");
+    t.teardown(() => subscriptions.forEach((subscription) => subscription.dispose()));
+    const session = {
+      id: "progress",
+      type: "uttori-asm",
+      configuration: { backend: "replay", program, debugMap },
+      customRequest: async () => ({
+        traces: [{ architecture: "snes.65816", addressSpace: "snes.cpu" }],
+      }),
+    };
+    const adapter = host.factory!.createDebugAdapterDescriptor(
+      session as never,
+      undefined,
+    ) as unknown as { adapter: { dispose(): void } };
+    t.teardown(() => adapter.adapter.dispose());
+    host.activeSession = session;
+    host.destination = uri(path.join(directory, "capture.act2"));
+    const waitFor = async (condition: () => boolean): Promise<void> => {
+      for (let attempt = 0; attempt < 200 && !condition(); attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      t.true(condition());
+    };
+    host.commands.get("asm.trace.start")?.();
+    await waitFor(() => host.messages.some((message) => message.includes("recording lossless")));
+    host.commands.get("asm.trace.stopAnalyze")?.();
+    await waitFor(() => stopRequested);
+    t.like(host.progress[0], {
+      title: "Assembly: stopping recording and finalizing capture…",
+      cancellable: false,
+    });
+    t.deepEqual(host.executed, []);
+    release({
+      file: host.destination.fsPath,
+      archive: host.destination.fsPath,
+      observedEvents: 1000000,
+      droppedEvents: 0,
+      complete: true,
+      chunks: 1,
+    } as CaptureFileSummary);
+    await waitFor(() => host.executed.includes("asm.trace.importRegenerate"));
+    t.true(
+      host.messages.some((message) => message.includes("1,000,000 instruction event(s) retained")),
+    );
   },
 );
 

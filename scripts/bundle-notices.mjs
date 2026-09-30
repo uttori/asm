@@ -62,10 +62,10 @@ export const withBundleNotices = (build) => async (options) => {
         )
         .sort();
       if (files.length === 0) {
-        // Data Tools 4.1.0 declares MIT and Matthew Callis as author, but its published
-        // tarball omits a license file. Ship the declared license text from this workspace
-        // until that upstream packaging omission is fixed in a later release.
-        if (key === "@uttori/data-tools@4.1.0") {
+        // These published Data Tools releases declare MIT and Matthew Callis as author,
+        // but omit the license file. Keep their existing archives buildable; later
+        // releases must include the upstream LICENSE instead of using this fallback.
+        if (key === "@uttori/data-tools@4.1.0" || key === "@uttori/data-tools@5.0.0") {
           packages.set(
             key,
             `MIT license declared in package.json; published tarball has no license file.\n\n${fs.readFileSync(path.resolve(import.meta.dirname, "../packages/assets/LICENSE"), "utf8")}`,

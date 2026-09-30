@@ -125,14 +125,6 @@ test.serial("analysis worker projects catalog, coverage and bounded annotation r
   t.is(coverage.summary.totalBytes, 1024);
   t.true(Array.isArray(request(directory, "segments")));
   t.true(Array.isArray(request(directory, "details")));
-  const graph = request(directory, "graph") as {
-    manifest: unknown;
-    graph: unknown;
-    hints: unknown;
-  };
-  t.truthy(graph.manifest);
-  t.truthy(graph.graph);
-  t.truthy(graph.hints);
   t.deepEqual(request(directory, "annotations", { ranges: [] }), []);
   t.throws(
     () =>
@@ -225,7 +217,9 @@ test.serial("analysis worker navigation, evidence and missing payloads throw clo
   t.throws(() => request(directory, "unknown" as never), {
     message: /Unknown analysis worker operation/,
   });
-  t.throws(() => request(directory, "heuristics"), {
-    message: /Function heuristics require a SNES analysis project/,
-  });
+  for (const operation of ["graph", "heuristics"]) {
+    t.throws(() => request(directory, operation as never), {
+      message: /Unknown analysis worker operation/,
+    });
+  }
 });

@@ -1,31 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { deflateSync } from "node:zlib";
+import { crc32, deflateSync } from "node:zlib";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../packages/assets/tests/fixtures");
 mkdirSync(root, { recursive: true });
 const write = (name: string, bytes: Uint8Array | string): void =>
   writeFileSync(join(root, name), bytes);
 
-const crcTable = Uint32Array.from({ length: 256 }, (_, index) => {
-  let value = index;
-  for (let bit = 0; bit < 8; bit++) {
-    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-  }
-  return value >>> 0;
-});
-/** Compute the PNG chunk checksum over its type and payload.
- * @param {Uint8Array} bytes Chunk type and payload bytes.
- * @returns {number} Unsigned CRC-32 value.
- */
-const crc32 = (bytes: Uint8Array): number => {
-  let value = 0xffffffff;
-  for (const byte of bytes) {
-    value = crcTable[(value ^ byte) & 255] ^ (value >>> 8);
-  }
-  return (value ^ 0xffffffff) >>> 0;
-};
 const u32be = (value: number): Buffer => {
   const bytes = Buffer.alloc(4);
   bytes.writeUInt32BE(value);

@@ -6,7 +6,7 @@ import {
 } from "@uttori/asm-disassembler";
 
 import { formatInstructionAnnotationSummary } from "../editor-info/format.js";
-import type { AnalysisGraphNavigationTarget } from "./graph-tree.js";
+import type { AnalysisNavigationTarget } from "./navigation-target.js";
 
 /**
  * Bounded disassembly text plus an indicator that saved instruction bytes at the target lack a
@@ -20,13 +20,13 @@ export interface AnalysisNavigationProjection {
 /**
  * Build a small disassembly window in the analysis process, preserving exact architecture/space.
  * @param {Pick<AnalysisProjectSnapshot, "manifest" | "shards">} project Validated native snapshot.
- * @param {AnalysisGraphNavigationTarget} target Exact navigation identity.
+ * @param {AnalysisNavigationTarget} target Exact navigation identity.
  * @param {ReadonlyMap} [executionCounts] Exact SQL totals for bounded runtime previews.
  * @returns {AnalysisNavigationProjection} At most 32 CFG rows plus 32 saved instruction variants.
  */
 export const projectAnalysisNavigation = (
   project: Pick<AnalysisProjectSnapshot, "manifest" | "shards">,
-  target: AnalysisGraphNavigationTarget,
+  target: AnalysisNavigationTarget,
   executionCounts?: ReadonlyMap<string, number>,
 ): AnalysisNavigationProjection => {
   if (

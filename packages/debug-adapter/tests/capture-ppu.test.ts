@@ -12,8 +12,8 @@ import {
   publishAnalysisProject,
   loadAnalysisProject,
   importRuntimeBusTraceSourceIntoProject,
+  createRuntimeBusTraceImporter,
 } from "../../disassembler/src/index.js";
-import { createRuntimeBusTraceImporter } from "../../disassembler/src/runtime-bus-trace.js";
 import { createEditorRuntimeBusSource } from "../../vscode-extension/src/runtime/bus-source.js";
 import { renderBusTraceReport } from "../../vscode-extension/src/runtime/bus-trace-report.js";
 import { recoverCaptureFile } from "../src/capture-file.js";

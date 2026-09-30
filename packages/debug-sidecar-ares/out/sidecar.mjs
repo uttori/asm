@@ -11,12 +11,12 @@ var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
-var __esm = (fn, res, err) => function __init() {
-  if (err) throw err[0];
+var __esm = (fn, res, err2) => function __init() {
+  if (err2) throw err2[0];
   try {
     return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   } catch (e) {
-    throw err = [e], e;
+    throw err2 = [e], e;
   }
 };
 var __commonJS = (cb, mod) => function __require2() {
@@ -57,6 +57,82 @@ var init_debug_map = __esm({
   }
 });
 
+// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+function isDataBuffer(data) {
+  return typeof data === "object" && data !== null && Symbol.for(DATA_BUFFER_BRAND) in data;
+}
+var DATA_BUFFER_BRAND, CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, textEncoder, hashBytes, computeBytes, isoChecksum, compute;
+var init_data_hash_crc32 = __esm({
+  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+    DATA_BUFFER_BRAND = "uttori.DataBuffer";
+    CRC32_POLYNOMIAL = 3988292384;
+    CRC32C_POLYNOMIAL = 2197175160;
+    reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
+      let crc = index;
+      for (let bit2 = 0; bit2 < 8; bit2++) {
+        crc = crc & 1 ? polynomial ^ crc >>> 1 : crc >>> 1;
+      }
+      return crc >>> 0;
+    });
+    sliceTable = (table) => {
+      const slices = [Uint32Array.from(table)];
+      for (let width = 1; width < 8; width++) {
+        const previous = slices[width - 1];
+        slices.push(Uint32Array.from(previous, (crc) => crc >>> 8 ^ table[crc & 255]));
+      }
+      return [slices[0], slices[1], slices[2], slices[3], slices[4], slices[5], slices[6], slices[7]];
+    };
+    CRC32_TABLE = /* @__PURE__ */ reflectedTable(CRC32_POLYNOMIAL);
+    CRC32C_TABLE = /* @__PURE__ */ reflectedTable(CRC32C_POLYNOMIAL);
+    crc32Slices = /* @__PURE__ */ sliceTable(CRC32_TABLE);
+    crc32cSlices = /* @__PURE__ */ sliceTable(CRC32C_TABLE);
+    [i0, i1, i2, i3, i4, i5, i6, i7] = crc32Slices;
+    [c0, c1, c2, c3, c4, c5, c6, c7] = crc32cSlices;
+    hashBytes = (data) => {
+      if (data instanceof Uint8Array) {
+        return data;
+      }
+      if (isDataBuffer(data)) {
+        return data.data;
+      }
+      if (typeof data === "string") {
+        textEncoder ??= new TextEncoder();
+        return textEncoder.encode(data);
+      }
+      if (data instanceof ArrayBuffer) {
+        return new Uint8Array(data);
+      }
+      if (Array.isArray(data)) {
+        return new Uint8Array(data);
+      }
+      if (typeof data === "number") {
+        return new Uint8Array(data);
+      }
+      if (ArrayBuffer.isView(data) && data.buffer instanceof ArrayBuffer) {
+        return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      }
+      const error = `Unknown type of input for DataBuffer: ${typeof data}`;
+      throw new TypeError(error);
+    };
+    computeBytes = (bytes) => {
+      let crc = -1;
+      let index = 0;
+      const length = bytes.length;
+      const blockEnd = length - 7;
+      for (; index < blockEnd; index += 8) {
+        const mixed = crc ^ (bytes[index] | bytes[index + 1] << 8 | bytes[index + 2] << 16 | bytes[index + 3] << 24);
+        crc = i7[mixed & 255] ^ i6[mixed >>> 8 & 255] ^ i5[mixed >>> 16 & 255] ^ i4[mixed >>> 24] ^ i3[bytes[index + 4]] ^ i2[bytes[index + 5]] ^ i1[bytes[index + 6]] ^ i0[bytes[index + 7]];
+      }
+      for (; index < length; index++) {
+        crc = crc >>> 8 ^ i0[(crc ^ bytes[index]) & 255];
+      }
+      return ~crc >>> 0;
+    };
+    isoChecksum = (data) => computeBytes(hashBytes(data));
+    compute = (data) => isoChecksum(data);
+  }
+});
+
 // packages/core/src/address-width.ts
 var init_address_width = __esm({
   "packages/core/src/address-width.ts"() {
@@ -69,35 +145,26 @@ var CRC32;
 var init_crc32 = __esm({
   "packages/core/src/crc32.ts"() {
     "use strict";
+    init_data_hash_crc32();
     CRC32 = class _CRC32 {
-      /** Precomputed CRC32 table. */
+      /** Legacy lookup-table snapshot for inspection; mutations do not customize compute().
+       * @deprecated Use node:zlib in Node-only code or data-tools in portable integrations.
+       */
       static table = _CRC32.makeCRCTable();
       /**
-       * Builds the lookup table used for CRC32 computation.
+       * Return an independent snapshot of the standard reflected CRC32 lookup table.
        * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
        */
       static makeCRCTable() {
-        const table = new Uint32Array(256);
-        for (let i = 0; i < 256; i++) {
-          let c = i;
-          for (let k = 0; k < 8; k++) {
-            c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
-          }
-          table[i] = c;
-        }
-        return table;
+        return Uint32Array.from(CRC32_TABLE);
       }
       /**
        * Computes the CRC32 checksum for the given data.
        * @param {number[] | Uint8Array} data A Uint8Array (or Node.js Buffer) of data.
-       * @returns {number} The computed CRC32 checksum.
+       * @returns {number} Unsigned CRC-32, without modifying the input.
        */
       static compute(data) {
-        let crc = 4294967295;
-        for (let i = 0; i < data.length; i++) {
-          crc = _CRC32.table[(crc ^ data[i]) & 255] ^ crc >>> 8;
-        }
-        return (crc ^ 4294967295) >>> 0;
+        return compute(data);
       }
     };
   }
@@ -495,9 +562,9 @@ var require_constants = __commonJS({
 var require_debug = __commonJS({
   "node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
-    var debug5 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    var debug4 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module.exports = debug5;
+    module.exports = debug4;
   }
 });
 
@@ -510,7 +577,7 @@ var require_re = __commonJS({
       MAX_SAFE_BUILD_LENGTH,
       MAX_LENGTH
     } = require_constants();
-    var debug5 = require_debug();
+    var debug4 = require_debug();
     exports = module.exports = {};
     var re = exports.re = [];
     var safeRe = exports.safeRe = [];
@@ -533,7 +600,7 @@ var require_re = __commonJS({
     var createToken = (name, value, isGlobal) => {
       const safe = makeSafeRegex(value);
       const index = R++;
-      debug5(name, index, value);
+      debug4(name, index, value);
       t[name] = index;
       src[index] = value;
       safeSrc[index] = safe;
@@ -637,7 +704,7 @@ var require_identifiers = __commonJS({
 var require_semver = __commonJS({
   "node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
-    var debug5 = require_debug();
+    var debug4 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
@@ -671,7 +738,7 @@ var require_semver = __commonJS({
             `version is longer than ${MAX_LENGTH} characters`
           );
         }
-        debug5("SemVer", version, options);
+        debug4("SemVer", version, options);
         this.options = options;
         this.loose = !!options.loose;
         this.includePrerelease = !!options.includePrerelease;
@@ -719,7 +786,7 @@ var require_semver = __commonJS({
         return this.version;
       }
       compare(other) {
-        debug5("SemVer.compare", this.version, this.options, other);
+        debug4("SemVer.compare", this.version, this.options, other);
         if (!(other instanceof _SemVer)) {
           if (typeof other === "string" && other === this.version) {
             return 0;
@@ -770,7 +837,7 @@ var require_semver = __commonJS({
         do {
           const a = this.prerelease[i];
           const b = other.prerelease[i];
-          debug5("prerelease compare", i, a, b);
+          debug4("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -792,7 +859,7 @@ var require_semver = __commonJS({
         do {
           const a = this.build[i];
           const b = other.build[i];
-          debug5("build compare", i, a, b);
+          debug4("build compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -1002,7 +1069,7 @@ var require_diff = __commonJS({
   "node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
-    var diff2 = (version1, version2) => {
+    var diff = (version1, version2) => {
       const v1 = parse(version1, null, true);
       const v2 = parse(version2, null, true);
       const comparison = v1.compare(v2);
@@ -1037,7 +1104,7 @@ var require_diff = __commonJS({
       }
       return "prerelease";
     };
-    module.exports = diff2;
+    module.exports = diff;
   }
 });
 
@@ -1463,21 +1530,21 @@ var require_range = __commonJS({
         const loose = this.options.loose;
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
-        debug5("hyphen replace", range);
+        debug4("hyphen replace", range);
         range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
-        debug5("comparator trim", range);
+        debug4("comparator trim", range);
         range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
-        debug5("tilde trim", range);
+        debug4("tilde trim", range);
         range = range.replace(re[t.CARETTRIM], caretTrimReplace);
-        debug5("caret trim", range);
+        debug4("caret trim", range);
         let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
         if (loose) {
           rangeList = rangeList.filter((comp) => {
-            debug5("loose invalid filter", comp, this.options);
+            debug4("loose invalid filter", comp, this.options);
             return !!comp.match(re[t.COMPARATORLOOSE]);
           });
         }
-        debug5("range list", rangeList);
+        debug4("range list", rangeList);
         const rangeMap = /* @__PURE__ */ new Map();
         const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
         for (const comp of comparators) {
@@ -1532,7 +1599,7 @@ var require_range = __commonJS({
     var cache = new LRU();
     var parseOptions = require_parse_options();
     var Comparator = require_comparator();
-    var debug5 = require_debug();
+    var debug4 = require_debug();
     var SemVer = require_semver();
     var {
       safeRe: re,
@@ -1560,15 +1627,15 @@ var require_range = __commonJS({
     };
     var parseComparator = (comp, options) => {
       comp = comp.replace(re[t.BUILD], "");
-      debug5("comp", comp, options);
+      debug4("comp", comp, options);
       comp = replaceCarets(comp, options);
-      debug5("caret", comp);
+      debug4("caret", comp);
       comp = replaceTildes(comp, options);
-      debug5("tildes", comp);
+      debug4("tildes", comp);
       comp = replaceXRanges(comp, options);
-      debug5("xrange", comp);
+      debug4("xrange", comp);
       comp = replaceStars(comp, options);
-      debug5("stars", comp);
+      debug4("stars", comp);
       return comp;
     };
     var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
@@ -1580,7 +1647,7 @@ var require_range = __commonJS({
       const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug5("tilde", comp, _, M, m, p, pr);
+        debug4("tilde", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -1589,12 +1656,12 @@ var require_range = __commonJS({
         } else if (isX(p)) {
           ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
         } else if (pr) {
-          debug5("replaceTilde pr", pr);
+          debug4("replaceTilde pr", pr);
           ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
         } else {
           ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
         }
-        debug5("tilde return", ret);
+        debug4("tilde return", ret);
         return ret;
       });
     };
@@ -1602,11 +1669,11 @@ var require_range = __commonJS({
       return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
     };
     var replaceCaret = (comp, options) => {
-      debug5("caret", comp, options);
+      debug4("caret", comp, options);
       const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug5("caret", comp, _, M, m, p, pr);
+        debug4("caret", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -1619,7 +1686,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
           }
         } else if (pr) {
-          debug5("replaceCaret pr", pr);
+          debug4("replaceCaret pr", pr);
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
@@ -1630,7 +1697,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
           }
         } else {
-          debug5("no pr");
+          debug4("no pr");
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p} <${M}.${m}.${+p + 1}-0`;
@@ -1641,19 +1708,19 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
           }
         }
-        debug5("caret return", ret);
+        debug4("caret return", ret);
         return ret;
       });
     };
     var replaceXRanges = (comp, options) => {
-      debug5("replaceXRanges", comp, options);
+      debug4("replaceXRanges", comp, options);
       return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
     };
     var replaceXRange = (comp, options) => {
       comp = comp.trim();
       const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
       return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
-        debug5("xRange", comp, ret, gtlt, M, m, p, pr);
+        debug4("xRange", comp, ret, gtlt, M, m, p, pr);
         if (invalidXRangeOrder(M, m, p)) {
           return comp;
         }
@@ -1703,16 +1770,16 @@ var require_range = __commonJS({
         } else if (xp) {
           ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
         }
-        debug5("xRange return", ret);
+        debug4("xRange return", ret);
         return ret;
       });
     };
     var replaceStars = (comp, options) => {
-      debug5("replaceStars", comp, options);
+      debug4("replaceStars", comp, options);
       return comp.trim().replace(re[t.STAR], "");
     };
     var replaceGTE0 = (comp, options) => {
-      debug5("replaceGTE0", comp, options);
+      debug4("replaceGTE0", comp, options);
       return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
     };
     var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
@@ -1750,7 +1817,7 @@ var require_range = __commonJS({
       }
       if (version.prerelease.length && !options.includePrerelease) {
         for (let i = 0; i < set.length; i++) {
-          debug5(set[i].semver);
+          debug4(set[i].semver);
           if (set[i].semver === Comparator.ANY) {
             continue;
           }
@@ -1787,7 +1854,7 @@ var require_comparator = __commonJS({
           }
         }
         comp = comp.trim().split(/\s+/).join(" ");
-        debug5("comparator", comp, options);
+        debug4("comparator", comp, options);
         this.options = options;
         this.loose = !!options.loose;
         this.parse(comp);
@@ -1796,7 +1863,7 @@ var require_comparator = __commonJS({
         } else {
           this.value = this.operator + this.semver.version;
         }
-        debug5("comp", this);
+        debug4("comp", this);
       }
       parse(comp) {
         const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
@@ -1818,7 +1885,7 @@ var require_comparator = __commonJS({
         return this.value;
       }
       test(version) {
-        debug5("Comparator.test", version, this.options.loose);
+        debug4("Comparator.test", version, this.options.loose);
         if (this.semver === ANY || version === ANY) {
           return true;
         }
@@ -1875,7 +1942,7 @@ var require_comparator = __commonJS({
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
-    var debug5 = require_debug();
+    var debug4 = require_debug();
     var SemVer = require_semver();
     var Range = require_range();
   }
@@ -2368,7 +2435,7 @@ var require_semver2 = __commonJS({
     var valid = require_valid();
     var clean = require_clean();
     var inc = require_inc();
-    var diff2 = require_diff();
+    var diff = require_diff();
     var major = require_major();
     var minor = require_minor();
     var patch = require_patch();
@@ -2407,7 +2474,7 @@ var require_semver2 = __commonJS({
       valid,
       clean,
       inc,
-      diff: diff2,
+      diff,
       major,
       minor,
       patch,
@@ -10232,14 +10299,13 @@ function inflate_fast(strm, start) {
   state.hold = hold;
   state.bits = bits;
 }
-function inflate(input, options = {}) {
-  const inflator = new Inflate(options);
-  inflator.push(input, true);
-  if (inflator.err) throw new Error(inflator.msg);
-  const result = inflator.result;
-  return options.toText ? new TextDecoder().decode(result) : result;
+function deflate(input, options = {}) {
+  const deflator = new Deflate(options);
+  deflator.push(input, true);
+  if (deflator.err) throw new Error(deflator.msg);
+  return deflator.result;
 }
-var Z_FIXED, Z_BINARY, Z_TEXT, Z_UNKNOWN, STORED_BLOCK, STATIC_TREES, DYN_TREES, LENGTH_CODES, LITERALS, L_CODES, D_CODES, BL_CODES, HEAP_SIZE$1, MAX_BITS, Buf_size, END_BLOCK, REP_3_6, REPZ_3_10, REPZ_11_138, extra_lbits, extra_dbits, extra_blbits, bl_order, DIST_CODE_LEN, static_ltree, static_dtree, _dist_code, _length_code, base_length, base_dist, d_code, put_short, send_bits, send_code, bi_reverse, gen_bitlen, gen_codes, init_block, bi_windup, smaller, pqdownheap, compress_block, build_tree, scan_tree, send_tree, build_bl_tree, send_all_trees, detect_data_type, _tr_stored_block, _tr_flush_block, _tr_tally, adler32, makeTable, crcTable2, crc32, messages_default, MIN_MATCH, MAX_MATCH, MIN_LOOKAHEAD, BS_NEED_MORE, BS_BLOCK_DONE, BS_FINISH_STARTED, BS_FINISH_DONE, slide_hash, HASH, INSERT_STRING, flush_pending, flush_block_only, read_buf, longest_match, fill_window, deflate_stored, deflate_fast, deflate_slow, Config, configuration_table, BAD$1, TYPE$1, MAXBITS, ENOUGH_LENS$1, ENOUGH_DISTS$1, CODES$1, LENS$1, DISTS$1, lbase, lext, dbase, dext, inflate_table, CODES, LENS, DISTS, HEAD, FLAGS, TIME, OS, EXLEN, EXTRA, NAME, COMMENT, HCRC, DICTID, DICT, TYPE, TYPEDO, STORED, COPY_, COPY, TABLE, LENLENS, CODELENS, LEN_, LEN, LENEXT, DIST, DISTEXT, MATCH, LIT, CHECK, LENGTH, DONE, BAD, MEM, SYNC, ENOUGH_LENS, ENOUGH_DISTS, zswap32, InflateState, inflateStateCheck, inflateResetKeep, inflateReset, inflateReset2, inflateInit2, virgin, lenfix, distfix, fixedtables, updatewindow, inflate$1, inflateEnd, inflateSetDictionary, ZStream, flattenChunks, toString, defaultOptions, Inflate;
+var Z_FIXED, Z_BINARY, Z_TEXT, Z_UNKNOWN, STORED_BLOCK, STATIC_TREES, DYN_TREES, LENGTH_CODES, LITERALS, L_CODES, D_CODES, BL_CODES, HEAP_SIZE$1, MAX_BITS, Buf_size, MAX_BL_BITS, END_BLOCK, REP_3_6, REPZ_3_10, REPZ_11_138, extra_lbits, extra_dbits, extra_blbits, bl_order, DIST_CODE_LEN, static_ltree, static_dtree, _dist_code, _length_code, base_length, base_dist, StaticTreeDesc, static_l_desc, static_d_desc, static_bl_desc, TreeDesc, d_code, put_short, send_bits, send_code, bi_reverse, bi_flush, gen_bitlen, gen_codes, tr_static_init, init_block, bi_windup, smaller, pqdownheap, compress_block, build_tree, scan_tree, send_tree, build_bl_tree, send_all_trees, detect_data_type, static_init_done, _tr_init, _tr_stored_block, _tr_align, _tr_flush_block, _tr_tally, adler32, makeTable, crcTable, crc32, messages_default, MAX_MEM_LEVEL, HEAP_SIZE, MIN_MATCH, MAX_MATCH, MIN_LOOKAHEAD, PRESET_DICT, INIT_STATE, GZIP_STATE, EXTRA_STATE, NAME_STATE, COMMENT_STATE, HCRC_STATE, BUSY_STATE, FINISH_STATE, BS_NEED_MORE, BS_BLOCK_DONE, BS_FINISH_STARTED, BS_FINISH_DONE, OS_CODE, err, rank, zero, slide_hash, HASH, INSERT_STRING, flush_pending, flush_block_only, put_byte, putShortMSB, read_buf, longest_match, fill_window, deflate_stored, deflate_fast, deflate_slow, deflate_rle, deflate_huff, Config, configuration_table, lm_init, DeflateState, deflateStateCheck, deflateResetKeep, deflateReset, deflateInit2, deflate$1, deflateEnd, deflateSetDictionary, BAD$1, TYPE$1, MAXBITS, ENOUGH_LENS$1, ENOUGH_DISTS$1, CODES$1, LENS$1, DISTS$1, lbase, lext, dbase, dext, inflate_table, CODES, LENS, DISTS, HEAD, FLAGS, TIME, OS, EXLEN, EXTRA, NAME, COMMENT, HCRC, DICTID, DICT, TYPE, TYPEDO, STORED, COPY_, COPY, TABLE, LENLENS, CODELENS, LEN_, LEN, LENEXT, DIST, DISTEXT, MATCH, LIT, CHECK, LENGTH, DONE, BAD, MEM, SYNC, ENOUGH_LENS, ENOUGH_DISTS, zswap32, InflateState, inflateStateCheck, inflateResetKeep, inflateReset, inflateReset2, inflateInit2, virgin, lenfix, distfix, fixedtables, updatewindow, inflate$1, inflateEnd, inflateSetDictionary, ZStream, flattenChunks, toString$1, defaultOptions$1, Deflate, toString, defaultOptions, Inflate;
 var init_pako = __esm({
   "node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs"() {
     Z_FIXED = 4;
@@ -10257,6 +10323,7 @@ var init_pako = __esm({
     HEAP_SIZE$1 = 573;
     MAX_BITS = 15;
     Buf_size = 16;
+    MAX_BL_BITS = 7;
     END_BLOCK = 256;
     REP_3_6 = 16;
     REPZ_3_10 = 17;
@@ -10379,6 +10446,23 @@ var init_pako = __esm({
     zero$1(base_length);
     base_dist = new Array(D_CODES);
     zero$1(base_dist);
+    StaticTreeDesc = class {
+      constructor(static_tree, extra_bits, extra_base, elems, max_length) {
+        this.static_tree = static_tree;
+        this.extra_bits = extra_bits;
+        this.extra_base = extra_base;
+        this.elems = elems;
+        this.max_length = max_length;
+        this.has_stree = static_tree && static_tree.length;
+      }
+    };
+    TreeDesc = class {
+      constructor(dyn_tree, stat_desc) {
+        this.dyn_tree = dyn_tree;
+        this.max_code = 0;
+        this.stat_desc = stat_desc;
+      }
+    };
     d_code = (dist) => {
       return dist < 256 ? _dist_code[dist] : _dist_code[256 + (dist >>> 7)];
     };
@@ -10408,6 +10492,17 @@ var init_pako = __esm({
         res <<= 1;
       } while (--len > 0);
       return res >>> 1;
+    };
+    bi_flush = (s) => {
+      if (s.bi_valid === 16) {
+        put_short(s, s.bi_buf);
+        s.bi_buf = 0;
+        s.bi_valid = 0;
+      } else if (s.bi_valid >= 8) {
+        s.pending_buf[s.pending++] = s.bi_buf & 255;
+        s.bi_buf >>= 8;
+        s.bi_valid -= 8;
+      }
     };
     gen_bitlen = (s, desc) => {
       const tree = desc.dyn_tree;
@@ -10477,6 +10572,60 @@ var init_pako = __esm({
         if (len === 0) continue;
         tree[n * 2] = bi_reverse(next_code[len]++, len);
       }
+    };
+    tr_static_init = () => {
+      let n;
+      let bits;
+      let length;
+      let code;
+      let dist;
+      const bl_count = new Array(16);
+      length = 0;
+      for (code = 0; code < LENGTH_CODES - 1; code++) {
+        base_length[code] = length;
+        for (n = 0; n < 1 << extra_lbits[code]; n++) _length_code[length++] = code;
+      }
+      _length_code[length - 1] = code;
+      dist = 0;
+      for (code = 0; code < 16; code++) {
+        base_dist[code] = dist;
+        for (n = 0; n < 1 << extra_dbits[code]; n++) _dist_code[dist++] = code;
+      }
+      dist >>= 7;
+      for (; code < D_CODES; code++) {
+        base_dist[code] = dist << 7;
+        for (n = 0; n < 1 << extra_dbits[code] - 7; n++) _dist_code[256 + dist++] = code;
+      }
+      for (bits = 0; bits <= MAX_BITS; bits++) bl_count[bits] = 0;
+      n = 0;
+      while (n <= 143) {
+        static_ltree[n * 2 + 1] = 8;
+        n++;
+        bl_count[8]++;
+      }
+      while (n <= 255) {
+        static_ltree[n * 2 + 1] = 9;
+        n++;
+        bl_count[9]++;
+      }
+      while (n <= 279) {
+        static_ltree[n * 2 + 1] = 7;
+        n++;
+        bl_count[7]++;
+      }
+      while (n <= 287) {
+        static_ltree[n * 2 + 1] = 8;
+        n++;
+        bl_count[8]++;
+      }
+      gen_codes(static_ltree, 287, bl_count);
+      for (n = 0; n < D_CODES; n++) {
+        static_dtree[n * 2 + 1] = 5;
+        static_dtree[n * 2] = bi_reverse(n, 5);
+      }
+      static_l_desc = new StaticTreeDesc(static_ltree, extra_lbits, 257, L_CODES, MAX_BITS);
+      static_d_desc = new StaticTreeDesc(static_dtree, extra_dbits, 0, D_CODES, MAX_BITS);
+      static_bl_desc = new StaticTreeDesc(new Array(0), extra_blbits, 0, BL_CODES, MAX_BL_BITS);
     };
     init_block = (s) => {
       let n;
@@ -10676,11 +10825,11 @@ var init_pako = __esm({
       return max_blindex;
     };
     send_all_trees = (s, lcodes, dcodes, blcodes) => {
-      let rank;
+      let rank2;
       send_bits(s, lcodes - 257, 5);
       send_bits(s, dcodes - 1, 5);
       send_bits(s, blcodes - 4, 4);
-      for (rank = 0; rank < blcodes; rank++) send_bits(s, s.bl_tree[bl_order[rank] * 2 + 1], 3);
+      for (rank2 = 0; rank2 < blcodes; rank2++) send_bits(s, s.bl_tree[bl_order[rank2] * 2 + 1], 3);
       send_tree(s, s.dyn_ltree, lcodes - 1);
       send_tree(s, s.dyn_dtree, dcodes - 1);
     };
@@ -10692,6 +10841,19 @@ var init_pako = __esm({
       for (n = 32; n < LITERALS; n++) if (s.dyn_ltree[n * 2] !== 0) return Z_TEXT;
       return Z_BINARY;
     };
+    static_init_done = false;
+    _tr_init = (s) => {
+      if (!static_init_done) {
+        tr_static_init();
+        static_init_done = true;
+      }
+      s.l_desc = new TreeDesc(s.dyn_ltree, static_l_desc);
+      s.d_desc = new TreeDesc(s.dyn_dtree, static_d_desc);
+      s.bl_desc = new TreeDesc(s.bl_tree, static_bl_desc);
+      s.bi_buf = 0;
+      s.bi_valid = 0;
+      init_block(s);
+    };
     _tr_stored_block = (s, buf, stored_len, last) => {
       send_bits(s, (STORED_BLOCK << 1) + (last ? 1 : 0), 3);
       bi_windup(s);
@@ -10699,6 +10861,11 @@ var init_pako = __esm({
       put_short(s, ~stored_len);
       if (stored_len) s.pending_buf.set(s.window.subarray(buf, buf + stored_len), s.pending);
       s.pending += stored_len;
+    };
+    _tr_align = (s) => {
+      send_bits(s, STATIC_TREES << 1, 3);
+      send_code(s, END_BLOCK, static_ltree);
+      bi_flush(s);
     };
     _tr_flush_block = (s, buf, stored_len, last) => {
       let opt_lenb, static_lenb;
@@ -10760,9 +10927,9 @@ var init_pako = __esm({
       }
       return table;
     };
-    crcTable2 = new Uint32Array(makeTable());
+    crcTable = new Uint32Array(makeTable());
     crc32 = (crc, buf, len, pos) => {
-      const t = crcTable2;
+      const t = crcTable;
       const end = pos + len;
       crc ^= -1;
       for (let i = pos; i < end; i++) crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
@@ -10779,13 +10946,36 @@ var init_pako = __esm({
       "-5": "buffer error",
       "-6": "incompatible version"
     };
+    MAX_MEM_LEVEL = 9;
+    HEAP_SIZE = 573;
     MIN_MATCH = 3;
     MAX_MATCH = 258;
     MIN_LOOKAHEAD = 262;
+    PRESET_DICT = 32;
+    INIT_STATE = 42;
+    GZIP_STATE = 57;
+    EXTRA_STATE = 69;
+    NAME_STATE = 73;
+    COMMENT_STATE = 91;
+    HCRC_STATE = 103;
+    BUSY_STATE = 113;
+    FINISH_STATE = 666;
     BS_NEED_MORE = 1;
     BS_BLOCK_DONE = 2;
     BS_FINISH_STARTED = 3;
     BS_FINISH_DONE = 4;
+    OS_CODE = 3;
+    err = (strm, errorCode) => {
+      strm.msg = messages_default[errorCode];
+      return errorCode;
+    };
+    rank = (f) => {
+      return f * 2 - (f > 4 ? 9 : 0);
+    };
+    zero = (buf) => {
+      let len = buf.length;
+      while (--len >= 0) buf[len] = 0;
+    };
     slide_hash = (s) => {
       let n, m;
       let p;
@@ -10833,6 +11023,13 @@ var init_pako = __esm({
       _tr_flush_block(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
       s.block_start = s.strstart;
       flush_pending(s.strm);
+    };
+    put_byte = (s, b) => {
+      s.pending_buf[s.pending++] = b;
+    };
+    putShortMSB = (s, b) => {
+      s.pending_buf[s.pending++] = b >>> 8 & 255;
+      s.pending_buf[s.pending++] = b & 255;
     };
     read_buf = (strm, buf, start, size) => {
       let len = strm.avail_in;
@@ -11126,6 +11323,88 @@ var init_pako = __esm({
       }
       return BS_BLOCK_DONE;
     };
+    deflate_rle = (s, flush) => {
+      let bflush;
+      let prev;
+      let scan, strend;
+      const _win = s.window;
+      for (; ; ) {
+        if (s.lookahead <= MAX_MATCH) {
+          fill_window(s);
+          if (s.lookahead <= MAX_MATCH && flush === 0) return BS_NEED_MORE;
+          if (s.lookahead === 0) break;
+        }
+        s.match_length = 0;
+        if (s.lookahead >= MIN_MATCH && s.strstart > 0) {
+          scan = s.strstart - 1;
+          prev = _win[scan];
+          if (prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan]) {
+            strend = s.strstart + MAX_MATCH;
+            do
+              ;
+            while (prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan] && prev === _win[++scan] && scan < strend);
+            s.match_length = MAX_MATCH - (strend - scan);
+            if (s.match_length > s.lookahead) s.match_length = s.lookahead;
+          }
+        }
+        if (s.match_length >= MIN_MATCH) {
+          bflush = _tr_tally(s, 1, s.match_length - MIN_MATCH);
+          s.lookahead -= s.match_length;
+          s.strstart += s.match_length;
+          s.match_length = 0;
+        } else {
+          bflush = _tr_tally(s, 0, s.window[s.strstart]);
+          s.lookahead--;
+          s.strstart++;
+        }
+        if (bflush) {
+          flush_block_only(s, false);
+          if (s.strm.avail_out === 0) return BS_NEED_MORE;
+        }
+      }
+      s.insert = 0;
+      if (flush === 4) {
+        flush_block_only(s, true);
+        if (s.strm.avail_out === 0) return BS_FINISH_STARTED;
+        return BS_FINISH_DONE;
+      }
+      if (s.sym_next) {
+        flush_block_only(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE;
+      }
+      return BS_BLOCK_DONE;
+    };
+    deflate_huff = (s, flush) => {
+      let bflush;
+      for (; ; ) {
+        if (s.lookahead === 0) {
+          fill_window(s);
+          if (s.lookahead === 0) {
+            if (flush === 0) return BS_NEED_MORE;
+            break;
+          }
+        }
+        s.match_length = 0;
+        bflush = _tr_tally(s, 0, s.window[s.strstart]);
+        s.lookahead--;
+        s.strstart++;
+        if (bflush) {
+          flush_block_only(s, false);
+          if (s.strm.avail_out === 0) return BS_NEED_MORE;
+        }
+      }
+      s.insert = 0;
+      if (flush === 4) {
+        flush_block_only(s, true);
+        if (s.strm.avail_out === 0) return BS_FINISH_STARTED;
+        return BS_FINISH_DONE;
+      }
+      if (s.sym_next) {
+        flush_block_only(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE;
+      }
+      return BS_BLOCK_DONE;
+    };
     Config = class {
       constructor(good_length, max_lazy, nice_length, max_chain, func) {
         this.good_length = good_length;
@@ -11147,6 +11426,422 @@ var init_pako = __esm({
       new Config(32, 128, 258, 1024, deflate_slow),
       new Config(32, 258, 258, 4096, deflate_slow)
     ];
+    lm_init = (s) => {
+      s.window_size = 2 * s.w_size;
+      zero(s.head);
+      s.max_lazy_match = configuration_table[s.level].max_lazy;
+      s.good_match = configuration_table[s.level].good_length;
+      s.nice_match = configuration_table[s.level].nice_length;
+      s.max_chain_length = configuration_table[s.level].max_chain;
+      s.strstart = 0;
+      s.block_start = 0;
+      s.lookahead = 0;
+      s.insert = 0;
+      s.match_length = s.prev_length = MIN_MATCH - 1;
+      s.match_available = 0;
+      s.ins_h = 0;
+    };
+    DeflateState = class {
+      constructor() {
+        this.strm = null;
+        this.status = 0;
+        this.pending_buf = null;
+        this.pending_buf_size = 0;
+        this.pending_out = 0;
+        this.pending = 0;
+        this.wrap = 0;
+        this.gzhead = null;
+        this.gzindex = 0;
+        this.method = 8;
+        this.last_flush = -1;
+        this.w_size = 0;
+        this.w_bits = 0;
+        this.w_mask = 0;
+        this.window = null;
+        this.window_size = 0;
+        this.prev = null;
+        this.head = null;
+        this.ins_h = 0;
+        this.legacy_hash = 0;
+        this.hash_size = 0;
+        this.hash_bits = 0;
+        this.hash_mask = 0;
+        this.hash_shift = 0;
+        this.block_start = 0;
+        this.match_length = 0;
+        this.prev_match = 0;
+        this.match_available = 0;
+        this.strstart = 0;
+        this.match_start = 0;
+        this.lookahead = 0;
+        this.prev_length = 0;
+        this.max_chain_length = 0;
+        this.max_lazy_match = 0;
+        this.level = 0;
+        this.strategy = 0;
+        this.good_match = 0;
+        this.nice_match = 0;
+        this.dyn_ltree = new Uint16Array(HEAP_SIZE * 2);
+        this.dyn_dtree = /* @__PURE__ */ new Uint16Array(122);
+        this.bl_tree = /* @__PURE__ */ new Uint16Array(78);
+        zero(this.dyn_ltree);
+        zero(this.dyn_dtree);
+        zero(this.bl_tree);
+        this.l_desc = null;
+        this.d_desc = null;
+        this.bl_desc = null;
+        this.bl_count = /* @__PURE__ */ new Uint16Array(16);
+        this.heap = /* @__PURE__ */ new Uint16Array(573);
+        zero(this.heap);
+        this.heap_len = 0;
+        this.heap_max = 0;
+        this.depth = /* @__PURE__ */ new Uint16Array(573);
+        zero(this.depth);
+        this.sym_buf = 0;
+        this.lit_bufsize = 0;
+        this.sym_next = 0;
+        this.sym_end = 0;
+        this.opt_len = 0;
+        this.static_len = 0;
+        this.matches = 0;
+        this.insert = 0;
+        this.bi_buf = 0;
+        this.bi_valid = 0;
+      }
+    };
+    deflateStateCheck = (strm) => {
+      if (!strm) return 1;
+      const s = strm.state;
+      if (!s || s.strm !== strm || s.status !== INIT_STATE && s.status !== GZIP_STATE && s.status !== EXTRA_STATE && s.status !== NAME_STATE && s.status !== COMMENT_STATE && s.status !== HCRC_STATE && s.status !== BUSY_STATE && s.status !== FINISH_STATE) return 1;
+      return 0;
+    };
+    deflateResetKeep = (strm) => {
+      if (deflateStateCheck(strm)) return err(strm, -2);
+      strm.total_in = strm.total_out = 0;
+      strm.data_type = 2;
+      const s = strm.state;
+      s.pending = 0;
+      s.pending_out = 0;
+      if (s.wrap < 0) s.wrap = -s.wrap;
+      s.status = s.wrap === 2 ? GZIP_STATE : s.wrap ? INIT_STATE : BUSY_STATE;
+      strm.adler = s.wrap === 2 ? 0 : 1;
+      s.last_flush = -2;
+      _tr_init(s);
+      return 0;
+    };
+    deflateReset = (strm) => {
+      const ret = deflateResetKeep(strm);
+      if (ret === 0) lm_init(strm.state);
+      return ret;
+    };
+    deflateInit2 = (strm, level, method, windowBits, memLevel, strategy, legacyHash) => {
+      if (!strm) return -2;
+      let wrap = 1;
+      if (level === -1) level = 6;
+      if (windowBits < 0) {
+        wrap = 0;
+        windowBits = -windowBits;
+      } else if (windowBits > 15) {
+        wrap = 2;
+        windowBits -= 16;
+      }
+      if (memLevel < 1 || memLevel > MAX_MEM_LEVEL || method !== 8 || windowBits < 8 || windowBits > 15 || level < 0 || level > 9 || strategy < 0 || strategy > 4 || windowBits === 8 && wrap !== 1) return err(strm, -2);
+      if (windowBits === 8) windowBits = 9;
+      const s = new DeflateState();
+      strm.state = s;
+      s.strm = strm;
+      s.status = INIT_STATE;
+      s.wrap = wrap;
+      s.gzhead = null;
+      s.w_bits = windowBits;
+      s.w_size = 1 << s.w_bits;
+      s.w_mask = s.w_size - 1;
+      s.legacy_hash = legacyHash ? 1 : 0;
+      s.hash_bits = memLevel + 7;
+      if (!s.legacy_hash && s.hash_bits < 15) s.hash_bits = 15;
+      s.hash_size = 1 << s.hash_bits;
+      s.hash_mask = s.hash_size - 1;
+      s.hash_shift = ~~((s.hash_bits + MIN_MATCH - 1) / MIN_MATCH);
+      s.window = new Uint8Array(s.w_size * 2);
+      s.head = new Uint16Array(s.hash_size);
+      s.prev = new Uint16Array(s.w_size);
+      s.lit_bufsize = 1 << memLevel + 6;
+      s.pending_buf_size = s.lit_bufsize * 4;
+      s.pending_buf = new Uint8Array(s.pending_buf_size);
+      s.sym_buf = s.lit_bufsize;
+      s.sym_end = (s.lit_bufsize - 1) * 3;
+      s.level = level;
+      s.strategy = strategy;
+      s.method = method;
+      return deflateReset(strm);
+    };
+    deflate$1 = (strm, flush) => {
+      if (deflateStateCheck(strm) || flush > 5 || flush < 0) return strm ? err(strm, -2) : -2;
+      const s = strm.state;
+      if (!strm.output || strm.avail_in !== 0 && !strm.input || s.status === FINISH_STATE && flush !== 4) return err(strm, strm.avail_out === 0 ? -5 : -2);
+      const old_flush = s.last_flush;
+      s.last_flush = flush;
+      if (s.pending !== 0) {
+        flush_pending(strm);
+        if (strm.avail_out === 0) {
+          s.last_flush = -1;
+          return 0;
+        }
+      } else if (strm.avail_in === 0 && rank(flush) <= rank(old_flush) && flush !== 4) return err(strm, -5);
+      if (s.status === FINISH_STATE && strm.avail_in !== 0) return err(strm, -5);
+      if (s.status === INIT_STATE && s.wrap === 0) s.status = BUSY_STATE;
+      if (s.status === INIT_STATE) {
+        let header = 8 + (s.w_bits - 8 << 4) << 8;
+        let level_flags = -1;
+        if (s.strategy >= 2 || s.level < 2) level_flags = 0;
+        else if (s.level < 6) level_flags = 1;
+        else if (s.level === 6) level_flags = 2;
+        else level_flags = 3;
+        header |= level_flags << 6;
+        if (s.strstart !== 0) header |= PRESET_DICT;
+        header += 31 - header % 31;
+        putShortMSB(s, header);
+        if (s.strstart !== 0) {
+          putShortMSB(s, strm.adler >>> 16);
+          putShortMSB(s, strm.adler & 65535);
+        }
+        strm.adler = 1;
+        s.status = BUSY_STATE;
+        flush_pending(strm);
+        if (s.pending !== 0) {
+          s.last_flush = -1;
+          return 0;
+        }
+      }
+      if (s.status === GZIP_STATE) {
+        strm.adler = 0;
+        put_byte(s, 31);
+        put_byte(s, 139);
+        put_byte(s, 8);
+        if (!s.gzhead) {
+          put_byte(s, 0);
+          put_byte(s, 0);
+          put_byte(s, 0);
+          put_byte(s, 0);
+          put_byte(s, 0);
+          put_byte(s, s.level === 9 ? 2 : s.strategy >= 2 || s.level < 2 ? 4 : 0);
+          put_byte(s, OS_CODE);
+          s.status = BUSY_STATE;
+          flush_pending(strm);
+          if (s.pending !== 0) {
+            s.last_flush = -1;
+            return 0;
+          }
+        } else {
+          put_byte(s, (s.gzhead.text ? 1 : 0) + (s.gzhead.hcrc ? 2 : 0) + (!s.gzhead.extra ? 0 : 4) + (!s.gzhead.name ? 0 : 8) + (!s.gzhead.comment ? 0 : 16));
+          put_byte(s, s.gzhead.time & 255);
+          put_byte(s, s.gzhead.time >> 8 & 255);
+          put_byte(s, s.gzhead.time >> 16 & 255);
+          put_byte(s, s.gzhead.time >> 24 & 255);
+          put_byte(s, s.level === 9 ? 2 : s.strategy >= 2 || s.level < 2 ? 4 : 0);
+          put_byte(s, s.gzhead.os & 255);
+          if (s.gzhead.extra && s.gzhead.extra.length) {
+            put_byte(s, s.gzhead.extra.length & 255);
+            put_byte(s, s.gzhead.extra.length >> 8 & 255);
+          }
+          if (s.gzhead.hcrc) strm.adler = crc32(strm.adler, s.pending_buf, s.pending, 0);
+          s.gzindex = 0;
+          s.status = EXTRA_STATE;
+        }
+      }
+      if (s.status === EXTRA_STATE) {
+        if (s.gzhead.extra) {
+          let beg = s.pending;
+          let left = (s.gzhead.extra.length & 65535) - s.gzindex;
+          while (s.pending + left > s.pending_buf_size) {
+            let copy = s.pending_buf_size - s.pending;
+            s.pending_buf.set(s.gzhead.extra.subarray(s.gzindex, s.gzindex + copy), s.pending);
+            s.pending = s.pending_buf_size;
+            if (s.gzhead.hcrc && s.pending > beg) strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+            s.gzindex += copy;
+            flush_pending(strm);
+            if (s.pending !== 0) {
+              s.last_flush = -1;
+              return 0;
+            }
+            beg = 0;
+            left -= copy;
+          }
+          let gzhead_extra = new Uint8Array(s.gzhead.extra);
+          s.pending_buf.set(gzhead_extra.subarray(s.gzindex, s.gzindex + left), s.pending);
+          s.pending += left;
+          if (s.gzhead.hcrc && s.pending > beg) strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+          s.gzindex = 0;
+        }
+        s.status = NAME_STATE;
+      }
+      if (s.status === NAME_STATE) {
+        if (s.gzhead.name) {
+          let beg = s.pending;
+          let val;
+          do {
+            if (s.pending === s.pending_buf_size) {
+              if (s.gzhead.hcrc && s.pending > beg) strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              flush_pending(strm);
+              if (s.pending !== 0) {
+                s.last_flush = -1;
+                return 0;
+              }
+              beg = 0;
+            }
+            if (s.gzindex < s.gzhead.name.length) val = s.gzhead.name.charCodeAt(s.gzindex++) & 255;
+            else val = 0;
+            put_byte(s, val);
+          } while (val !== 0);
+          if (s.gzhead.hcrc && s.pending > beg) strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+          s.gzindex = 0;
+        }
+        s.status = COMMENT_STATE;
+      }
+      if (s.status === COMMENT_STATE) {
+        if (s.gzhead.comment) {
+          let beg = s.pending;
+          let val;
+          do {
+            if (s.pending === s.pending_buf_size) {
+              if (s.gzhead.hcrc && s.pending > beg) strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              flush_pending(strm);
+              if (s.pending !== 0) {
+                s.last_flush = -1;
+                return 0;
+              }
+              beg = 0;
+            }
+            if (s.gzindex < s.gzhead.comment.length) val = s.gzhead.comment.charCodeAt(s.gzindex++) & 255;
+            else val = 0;
+            put_byte(s, val);
+          } while (val !== 0);
+          if (s.gzhead.hcrc && s.pending > beg) strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+        }
+        s.status = HCRC_STATE;
+      }
+      if (s.status === HCRC_STATE) {
+        if (s.gzhead.hcrc) {
+          if (s.pending + 2 > s.pending_buf_size) {
+            flush_pending(strm);
+            if (s.pending !== 0) {
+              s.last_flush = -1;
+              return 0;
+            }
+          }
+          put_byte(s, strm.adler & 255);
+          put_byte(s, strm.adler >> 8 & 255);
+          strm.adler = 0;
+        }
+        s.status = BUSY_STATE;
+        flush_pending(strm);
+        if (s.pending !== 0) {
+          s.last_flush = -1;
+          return 0;
+        }
+      }
+      if (strm.avail_in !== 0 || s.lookahead !== 0 || flush !== 0 && s.status !== FINISH_STATE) {
+        let bstate = s.level === 0 ? deflate_stored(s, flush) : s.strategy === 2 ? deflate_huff(s, flush) : s.strategy === 3 ? deflate_rle(s, flush) : configuration_table[s.level].func(s, flush);
+        if (bstate === BS_FINISH_STARTED || bstate === BS_FINISH_DONE) s.status = FINISH_STATE;
+        if (bstate === BS_NEED_MORE || bstate === BS_FINISH_STARTED) {
+          if (strm.avail_out === 0) s.last_flush = -1;
+          return 0;
+        }
+        if (bstate === BS_BLOCK_DONE) {
+          if (flush === 1) _tr_align(s);
+          else if (flush !== 5) {
+            _tr_stored_block(s, 0, 0, false);
+            if (flush === 3) {
+              zero(s.head);
+              if (s.lookahead === 0) {
+                s.strstart = 0;
+                s.block_start = 0;
+                s.insert = 0;
+              }
+            }
+          }
+          flush_pending(strm);
+          if (strm.avail_out === 0) {
+            s.last_flush = -1;
+            return 0;
+          }
+        }
+      }
+      if (flush !== 4) return 0;
+      if (s.wrap <= 0) return 1;
+      if (s.wrap === 2) {
+        put_byte(s, strm.adler & 255);
+        put_byte(s, strm.adler >> 8 & 255);
+        put_byte(s, strm.adler >> 16 & 255);
+        put_byte(s, strm.adler >> 24 & 255);
+        put_byte(s, strm.total_in & 255);
+        put_byte(s, strm.total_in >> 8 & 255);
+        put_byte(s, strm.total_in >> 16 & 255);
+        put_byte(s, strm.total_in >> 24 & 255);
+      } else {
+        putShortMSB(s, strm.adler >>> 16);
+        putShortMSB(s, strm.adler & 65535);
+      }
+      flush_pending(strm);
+      if (s.wrap > 0) s.wrap = -s.wrap;
+      return s.pending !== 0 ? 0 : 1;
+    };
+    deflateEnd = (strm) => {
+      if (deflateStateCheck(strm)) return -2;
+      const status = strm.state.status;
+      strm.state = null;
+      return status === BUSY_STATE ? err(strm, -3) : 0;
+    };
+    deflateSetDictionary = (strm, dictionary) => {
+      let dictLength = dictionary.length;
+      if (deflateStateCheck(strm)) return -2;
+      const s = strm.state;
+      const wrap = s.wrap;
+      if (wrap === 2 || wrap === 1 && s.status !== INIT_STATE || s.lookahead) return -2;
+      if (wrap === 1) strm.adler = adler32(strm.adler, dictionary, dictLength, 0);
+      s.wrap = 0;
+      if (dictLength >= s.w_size) {
+        if (wrap === 0) {
+          zero(s.head);
+          s.strstart = 0;
+          s.block_start = 0;
+          s.insert = 0;
+        }
+        let tmpDict = new Uint8Array(s.w_size);
+        tmpDict.set(dictionary.subarray(dictLength - s.w_size, dictLength), 0);
+        dictionary = tmpDict;
+        dictLength = s.w_size;
+      }
+      const avail = strm.avail_in;
+      const next = strm.next_in;
+      const input = strm.input;
+      strm.avail_in = dictLength;
+      strm.next_in = 0;
+      strm.input = dictionary;
+      fill_window(s);
+      while (s.lookahead >= MIN_MATCH) {
+        let str = s.strstart;
+        let n = s.lookahead - (MIN_MATCH - 1);
+        do {
+          INSERT_STRING(s, str);
+          str++;
+        } while (--n);
+        s.strstart = str;
+        s.lookahead = MIN_MATCH - 1;
+        fill_window(s);
+      }
+      s.strstart += s.lookahead;
+      s.block_start = s.strstart;
+      s.insert = s.lookahead;
+      s.lookahead = 0;
+      s.match_length = s.prev_length = MIN_MATCH - 1;
+      s.match_available = 0;
+      strm.next_in = next;
+      strm.input = input;
+      strm.avail_in = avail;
+      s.wrap = wrap;
+      return 0;
+    };
     BAD$1 = 16209;
     TYPE$1 = 16191;
     MAXBITS = 15;
@@ -12423,6 +13118,183 @@ var init_pako = __esm({
       }
       return result;
     };
+    toString$1 = Object.prototype.toString;
+    defaultOptions$1 = {
+      level: -1,
+      chunkSize: 16384,
+      windowBits: 15,
+      memLevel: 8,
+      strategy: 0,
+      raw: false,
+      gzip: false,
+      legacyHash: false,
+      dictionary: /* @__PURE__ */ new Uint8Array(0)
+    };
+    Deflate = class {
+      options;
+      /**
+      * Error code after deflate finishes. {@link Z_OK} on success.
+      * You will not need it in real life, because deflate errors
+      * are possible only on wrong options or bad custom `onData` / `onEnd`
+      * handlers.
+      */
+      err;
+      /** Error message, if {@link Deflate.err} is not {@link Z_OK}. */
+      msg;
+      ended;
+      started;
+      /**
+      * Chunks of output data, if {@link Deflate.onData} not overridden.
+      * @internal
+      */
+      chunks;
+      strm;
+      /**
+      * Compressed result, generated by default {@link Deflate.onData}
+      * and {@link Deflate.onEnd} handlers. Filled after you push last chunk
+      * (call {@link Deflate.push} with {@link Z_FINISH} / `true` param).
+      */
+      result;
+      /**
+      * Creates a new deflator instance with the specified params. Throws an
+      * exception on bad params. See {@link DeflateOptions} for the list of
+      * supported options.
+      *
+      * @example
+      * ```javascript
+      * import { Deflate } from 'pako'
+      *
+      * const chunk1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+      * const chunk2 = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+      *
+      * const deflate = new Deflate({ level: 3 })
+      *
+      * deflate.push(chunk1, false)
+      * deflate.push(chunk2, true)  // true -> last chunk
+      *
+      * if (deflate.err) throw new Error(deflate.err)
+      *
+      * console.log(deflate.result)
+      * ```
+      */
+      constructor(options = {}) {
+        this.options = Object.assign({}, defaultOptions$1, options);
+        const opt = this.options;
+        if (opt.raw && opt.windowBits > 0) opt.windowBits = -opt.windowBits;
+        else if (opt.gzip && opt.windowBits > 0 && opt.windowBits < 16) opt.windowBits += 16;
+        this.err = 0;
+        this.msg = "";
+        this.ended = false;
+        this.started = false;
+        this.chunks = [];
+        this.result = /* @__PURE__ */ new Uint8Array(0);
+        this.strm = new ZStream();
+        this.strm.avail_out = 0;
+        let status = deflateInit2(this.strm, opt.level, 8, opt.windowBits, opt.memLevel, opt.strategy, opt.legacyHash);
+        if (status !== 0) throw new Error(messages_default[status]);
+        if (toString$1.call(opt.dictionary) === "[object ArrayBuffer]") opt.dictionary = new Uint8Array(opt.dictionary);
+        const dictionary = opt.dictionary;
+        if (dictionary.length) {
+          if (opt.gzip) throw new Error("dictionary is not supported with gzip");
+          status = deflateSetDictionary(this.strm, dictionary);
+          if (status !== 0) throw new Error(messages_default[status]);
+        }
+      }
+      /**
+      * Sends input data to the deflate pipe, generating {@link Deflate.onData} calls
+      * with new compressed chunks. Returns `true` on success. The last data block must
+      * have `flush_mode` {@link Z_FINISH} (or `true`). That will flush the internal
+      * pending buffers and call {@link Deflate.onEnd}.
+      *
+      * On failure, calls {@link Deflate.onEnd} with the error code and returns false.
+      *
+      * @param data input data. Strings will be converted to utf8 byte sequence.
+      * @param flush_mode 0..6 for corresponding {@link Z_NO_FLUSH}..{@link Z_TREES} modes.
+      *   See constants. Skipped or `false` means {@link Z_NO_FLUSH}, `true` means {@link Z_FINISH}.
+      *
+      * @example
+      * ```javascript
+      * push(chunk, false) // push one of data chunks
+      * ...
+      * push(chunk, true)  // push last chunk
+      * ```
+      */
+      push(data, flush_mode = false) {
+        const strm = this.strm;
+        const chunkSize = this.options.chunkSize;
+        let status;
+        let _flush_mode;
+        if (this.ended) return false;
+        if (typeof flush_mode === "number") _flush_mode = flush_mode;
+        else _flush_mode = flush_mode === true ? 4 : 0;
+        if (typeof data === "string") strm.input = new TextEncoder().encode(data);
+        else if (toString$1.call(data) === "[object ArrayBuffer]") strm.input = new Uint8Array(data);
+        else strm.input = data;
+        strm.next_in = 0;
+        strm.avail_in = strm.input.length;
+        if (!this.started) {
+          this.started = true;
+          this.onStart(strm);
+        }
+        for (; ; ) {
+          if (strm.avail_out === 0) {
+            strm.output = new Uint8Array(chunkSize);
+            strm.next_out = 0;
+            strm.avail_out = chunkSize;
+          }
+          if ((_flush_mode === 2 || _flush_mode === 3) && strm.avail_out <= 6) {
+            this.onData(strm.output.subarray(0, strm.next_out));
+            strm.avail_out = 0;
+            continue;
+          }
+          status = deflate$1(strm, _flush_mode);
+          if (status === -2) break;
+          if (status === 1) {
+            if (strm.next_out > 0) this.onData(strm.output.subarray(0, strm.next_out));
+            status = deflateEnd(this.strm);
+            break;
+          }
+          if (strm.avail_out === 0) {
+            this.onData(strm.output);
+            continue;
+          }
+          if (_flush_mode > 0 && strm.next_out > 0) {
+            this.onData(strm.output.subarray(0, strm.next_out));
+            strm.avail_out = 0;
+            continue;
+          }
+          if (strm.avail_in === 0) return true;
+        }
+        this.err = status;
+        this.msg = strm.msg || messages_default[status];
+        this.ended = true;
+        this.onEnd(status);
+        return status === 0;
+      }
+      /**
+      * Called once before the first low-level deflate call.
+      */
+      onStart(strm) {
+      }
+      /**
+      * By default, stores data blocks in the {@link Deflate.chunks} property and glues
+      * them in {@link Deflate.onEnd}. Override this handler if you need another behaviour.
+      */
+      onData(chunk) {
+        this.chunks.push(chunk);
+      }
+      /**
+      * Called once after you tell deflate that the input stream is
+      * complete ({@link Z_FINISH}). By default, joins the collected {@link Deflate.chunks}
+      * into the {@link Deflate.result} property.
+      *
+      * @param status deflate status. {@link Z_OK} on success, other if not.
+      */
+      onEnd(status) {
+        if (status === 0) this.result = flattenChunks(this.chunks);
+        this.chunks = [];
+      }
+    };
     toString = Object.prototype.toString;
     defaultOptions = {
       chunkSize: 1024 * 64,
@@ -12650,34 +13522,63 @@ var init_pako = __esm({
   }
 });
 
-// node_modules/@uttori/data-tools/src/underflow-error.js
-var UnderflowError, underflow_error_default;
-var init_underflow_error = __esm({
-  "node_modules/@uttori/data-tools/src/underflow-error.js"() {
-    UnderflowError = class extends Error {
-      /**
-       * Creates a new UnderflowError.
-       * @param {string} message Message to show when the error is thrown.
-       * @class
-       */
-      constructor(message) {
-        super(message);
-        this.name = "UnderflowError";
-        this.stack = new Error(message).stack;
-        if (typeof Error.captureStackTrace === "function") {
-          Error.captureStackTrace(this, this.constructor);
+// node_modules/@uttori/data-tools/dist/data-helpers.js
+var validateBytes, decodeExtended, float48, float80, convertFromIeeeExtended;
+var init_data_helpers = __esm({
+  "node_modules/@uttori/data-tools/dist/data-helpers.js"() {
+    validateBytes = (uint8, length) => {
+      if (uint8.length < length) {
+        throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
+      }
+      if (Array.isArray(uint8)) {
+        for (let i = 0; i < length; i++) {
+          if (!Number.isInteger(uint8[i]) || uint8[i] < 0 || uint8[i] > 255) {
+            throw new RangeError(`Invalid byte at index ${i}: ${uint8[i]}`);
+          }
         }
       }
     };
-    underflow_error_default = UnderflowError;
-  }
-});
-
-// node_modules/@uttori/data-tools/src/data-helpers.js
-var float48, float80, convertFromIeeeExtended;
-var init_data_helpers = __esm({
-  "node_modules/@uttori/data-tools/src/data-helpers.js"() {
+    decodeExtended = (sign, exponent, high, low) => {
+      if (exponent === 32767) {
+        return (high & 2147483647) === 0 && low === 0 ? sign * Infinity : Number.NaN;
+      }
+      if (high === 0 && low === 0) {
+        return sign * 0;
+      }
+      const adjustedExponent = (exponent === 0 ? 1 : exponent) - 16383;
+      if (high >= 2147483648 && adjustedExponent >= -1022 && adjustedExponent <= 1023) {
+        return sign * ((high / 2147483648 + low / 9223372036854776e3) * 2 ** adjustedExponent);
+      }
+      const highestBit = high === 0 ? 31 - Math.clz32(low) : 63 - Math.clz32(high);
+      const power = adjustedExponent + highestBit - 63;
+      if (power > 1023) {
+        return sign * Infinity;
+      }
+      if (power < -1075) {
+        return sign * 0;
+      }
+      if (power >= -1022) {
+        const mantissa2 = high * 4294967296 + low;
+        return sign * (mantissa2 / 2 ** highestBit * 2 ** power);
+      }
+      const mantissa = BigInt(high) << 32n | BigInt(low);
+      const shift = adjustedExponent + 1011;
+      let rounded;
+      if (shift >= 0) {
+        rounded = mantissa << BigInt(shift);
+      } else {
+        const discarded = BigInt(-shift);
+        rounded = mantissa >> discarded;
+        const remainder = mantissa - (rounded << discarded);
+        const half = 1n << discarded - 1n;
+        if (remainder > half || remainder === half && (rounded & 1n) !== 0n) {
+          rounded++;
+        }
+      }
+      return sign * (Number(rounded) * Number.MIN_VALUE);
+    };
     float48 = (uint8) => {
+      validateBytes(uint8, 6);
       let mantissa = 0;
       let exponent = uint8[0];
       if (exponent === 0) {
@@ -12695,346 +13596,49 @@ var init_data_helpers = __esm({
         mantissa = -mantissa;
       }
       const output = mantissa * 2 ** exponent;
-      return Number.parseFloat(output.toFixed(4));
+      return output;
     };
     float80 = (uint8) => {
-      const uint32 = new Uint32Array(uint8.buffer, uint8.byteOffset, uint8.byteLength / 4);
-      const [high, low] = [...uint32];
+      validateBytes(uint8, 10);
+      const high = (uint8[7] << 24 | uint8[6] << 16 | uint8[5] << 8 | uint8[4]) >>> 0;
+      const low = (uint8[3] << 24 | uint8[2] << 16 | uint8[1] << 8 | uint8[0]) >>> 0;
       const a0 = uint8[9];
       const a1 = uint8[8];
       const sign = 1 - (a0 >>> 7) * 2;
-      let exponent = (a0 & 127) << 8 | a1;
-      if (exponent === 0 && low === 0 && high === 0) {
-        return 0;
-      }
-      if (exponent === 32767) {
-        if (low === 0 && high === 0) {
-          return sign * Number.POSITIVE_INFINITY;
-        }
-        return Number.NaN;
-      }
-      exponent -= 16383;
-      let out = low * 2 ** (exponent - 31);
-      out += high * 2 ** (exponent - 63);
-      return sign * out;
+      const exponent = (a0 & 127) << 8 | a1;
+      return decodeExtended(sign, exponent, high, low);
     };
     convertFromIeeeExtended = (uint8) => {
+      validateBytes(uint8, 10);
       const sign = uint8[0] & 128 ? -1 : 1;
       const exponent = (uint8[0] & 127) << 8 | uint8[1];
       const hiMant = (uint8[2] << 24 | uint8[3] << 16 | uint8[4] << 8 | uint8[5]) >>> 0;
       const loMant = (uint8[6] << 24 | uint8[7] << 16 | uint8[8] << 8 | uint8[9]) >>> 0;
-      if (exponent === 0 && hiMant === 0 && loMant === 0) {
-        return sign * 0;
-      }
-      if (exponent === 32767) {
-        return sign * Infinity;
-      }
-      const adjustedExponent = exponent - 16383;
-      return sign * (hiMant * 2 ** (adjustedExponent - 31) + loMant * 2 ** (adjustedExponent - 63));
+      return decodeExtended(sign, exponent, hiMant, loMant);
     };
   }
 });
 
-// node_modules/@uttori/data-tools/src/diff/myers.js
-var Myers, myers_default;
-var init_myers = __esm({
-  "node_modules/@uttori/data-tools/src/diff/myers.js"() {
-    Myers = class {
-      // Inputs to compare.
-      /** @type {string[] | number[] | Uint8Array[]} */
-      x = [];
-      /** @type {string[] | number[] | Uint8Array[]} */
-      y = [];
-      // Arrays for forwards and backwards iteration respectively.
-      // An array stores the furthest reaching endpoint of a d-path in diagonal k in v[v0+k] where v0 is the offset that translates k in [-d, d] to k0 = v0+k in [0, 2*d].
-      // The endpoints only store the s-coordinate since t = s - k.
-      /** @type {number[]} */
-      vf = [];
-      /** @type {number[]} */
-      vb = [];
-      /** @type {number} */
-      v0 = 0;
-      // Mapping of s, t indices to the location in the result vectors.
-      /** @type {number[]} */
-      xidx = [];
-      /** @type {number[]} */
-      yidx = [];
-      // Result vectors.
-      /** @type {boolean[]} */
-      resultVectorX = [];
-      /** @type {boolean[]} */
-      resultVectorY = [];
-      // Equality function
-      /** @type {import('./diff.js').EqualityFunction} */
-      equal;
-      // Bounds after stripping common prefix/suffix
-      /** @type {number} */
-      smin = 0;
-      /** @type {number} */
-      smax = 0;
-      /** @type {number} */
-      tmin = 0;
-      /** @type {number} */
-      tmax = 0;
+// node_modules/@uttori/data-tools/dist/underflow-error.js
+var UnderflowError, underflow_error_default;
+var init_underflow_error = __esm({
+  "node_modules/@uttori/data-tools/dist/underflow-error.js"() {
+    UnderflowError = class extends Error {
       /**
-       * @param {number[]} xidx Mapping of s indices to result vector positions
-       * @param {number[]} yidx Mapping of t indices to result vector positions
-       * @param {string[] | number[] | Uint8Array[]} x0 The first array to compare
-       * @param {string[] | number[] | Uint8Array[]} y0 The second array to compare
-       * @param {import('./diff.js').EqualityFunction} equal Equality function to compare elements
+       * Creates a new UnderflowError.
+       * @param message Message to show when the error is thrown.
+       * @class
        */
-      constructor(xidx, yidx, x0, y0, equal) {
-        this.xidx = xidx;
-        this.yidx = yidx;
-        this.equal = equal;
-        this.resultVectorX = Array.from({ length: x0.length + 1 }, () => false);
-        this.resultVectorY = Array.from({ length: y0.length + 1 }, () => false);
-        let smin = 0;
-        let tmin = 0;
-        let smax = x0.length;
-        let tmax = y0.length;
-        while (smin < smax && tmin < tmax && equal(x0[smin], y0[tmin])) {
-          smin++;
-          tmin++;
-        }
-        while (smax > smin && tmax > tmin && equal(x0[smax - 1], y0[tmax - 1])) {
-          smax--;
-          tmax--;
-        }
-        this.smin = smin;
-        this.smax = smax;
-        this.tmin = tmin;
-        this.tmax = tmax;
-        const N = smax - smin;
-        const M = tmax - tmin;
-        const diagonals = N + M;
-        const vlen = 2 * diagonals + 3;
-        const buf = Array.from({ length: 2 * vlen }, () => 0);
-        this.x = x0;
-        this.y = y0;
-        this.vf = buf.slice(0, vlen);
-        this.vb = buf.slice(vlen);
-        this.v0 = diagonals + 1;
-      }
-      /**
-       * Find an optimal d-path from (smin, tmin) to (smax, tmax).
-       * @param {number} smin The start index of the first array
-       * @param {number} smax The end index of the first array
-       * @param {number} tmin The start index of the second array
-       * @param {number} tmax The end index of the second array
-       */
-      compare(smin, smax, tmin, tmax) {
-        if (smin === smax) {
-          for (let t = tmin; t < tmax; t++) {
-            this.resultVectorY[this.yidx[t]] = true;
-          }
-        } else if (tmin === tmax) {
-          for (let s = smin; s < smax; s++) {
-            this.resultVectorX[this.xidx[s]] = true;
-          }
-        } else {
-          const { s0, s1, t0, t1 } = this.split(smin, smax, tmin, tmax);
-          this.compare(smin, s0, tmin, t0);
-          this.compare(s1, smax, t1, tmax);
-        }
-      }
-      /**
-       * Find the endpoints of sequence of diagonals in the middle of an optimal path from (smin, tmin) to (smax, tmax).
-       * @param {number} smin The start index of the first array
-       * @param {number} smax The end index of the first array
-       * @param {number} tmin The start index of the second array
-       * @param {number} tmax The end index of the second array
-       * @returns {SplitResult} The endpoints of the sequence of diagonals
-       */
-      split(smin, smax, tmin, tmax) {
-        const N = smax - smin;
-        const M = tmax - tmin;
-        const x = this.x;
-        const y = this.y;
-        const vf = this.vf;
-        const vb = this.vb;
-        const v0 = this.v0;
-        const kmin = smin - tmax;
-        const kmax = smax - tmin;
-        const fmid = smin - tmin;
-        const bmid = smax - tmax;
-        let fmin = fmid;
-        let fmax = fmid;
-        let bmin = bmid;
-        let bmax = bmid;
-        const odd = (N - M) % 2 !== 0;
-        vf[v0 + fmid] = smin;
-        vb[v0 + bmid] = smax;
-        for (let d = 1; ; d++) {
-          if (fmin > kmin) {
-            fmin--;
-            vf[v0 + fmin - 1] = Number.MIN_SAFE_INTEGER;
-          } else {
-            fmin++;
-          }
-          if (fmax < kmax) {
-            fmax++;
-            vf[v0 + fmax + 1] = Number.MIN_SAFE_INTEGER;
-          } else {
-            fmax--;
-          }
-          for (let k = fmin; k <= fmax; k += 2) {
-            const k0 = k + v0;
-            let s;
-            if (vf[k0 - 1] < vf[k0 + 1]) {
-              s = vf[k0 + 1];
-            } else {
-              s = vf[k0 - 1] + 1;
-            }
-            let t = s - k;
-            const s0 = s;
-            const t0 = t;
-            while (s < smax && t < tmax && this.equal(x[s], y[t])) {
-              s++;
-              t++;
-            }
-            vf[k0] = s;
-            if (odd && bmin <= k && k <= bmax && s >= vb[k0]) {
-              return {
-                s0,
-                s1: s,
-                t0,
-                t1: t
-              };
-            }
-          }
-          if (bmin > kmin) {
-            bmin--;
-            vb[v0 + bmin - 1] = Number.MAX_SAFE_INTEGER;
-          } else {
-            bmin++;
-          }
-          if (bmax < kmax) {
-            bmax++;
-            vb[v0 + bmax + 1] = Number.MAX_SAFE_INTEGER;
-          } else {
-            bmax--;
-          }
-          for (let k = bmin; k <= bmax; k += 2) {
-            const k0 = k + v0;
-            let s;
-            if (vb[k0 - 1] < vb[k0 + 1]) {
-              s = vb[k0 - 1];
-            } else {
-              s = vb[k0 + 1] - 1;
-            }
-            let t = s - k;
-            const s0 = s, t0 = t;
-            while (s > smin && t > tmin && this.equal(x[s - 1], y[t - 1])) {
-              s--;
-              t--;
-            }
-            vb[k0] = s;
-            if (!odd && fmin <= k && k <= fmax && s <= vf[v0 + k]) {
-              return {
-                s0: s,
-                s1: s0,
-                t0: t,
-                t1: t0
-              };
-            }
-          }
+      constructor(message) {
+        super(message);
+        this.name = "UnderflowError";
+        this.stack = new Error(message).stack;
+        if (typeof Error.captureStackTrace === "function") {
+          Error.captureStackTrace(this, this.constructor);
         }
       }
     };
-    myers_default = Myers;
-  }
-});
-
-// node_modules/@uttori/data-tools/src/diff/diff.js
-function edits(x, y, eq = (a, b) => a === b) {
-  const { rx, ry } = diff(x, y, eq);
-  return createEdits(x, y, rx, ry);
-}
-function createEdits(x, y, rx, ry) {
-  const edits2 = [];
-  const n = rx.length - 1;
-  const m = ry.length - 1;
-  let s = 0, t = 0;
-  while (s < n || t < m) {
-    while (s < n && rx[s]) {
-      edits2.push({
-        op: Op.Delete,
-        x: x[s],
-        y: x[s]
-        // This should be zero value
-      });
-      s++;
-    }
-    while (t < m && ry[t]) {
-      edits2.push({
-        op: Op.Insert,
-        x: y[t],
-        // This should be zero value
-        y: y[t]
-      });
-      t++;
-    }
-    while (s < n && t < m && !rx[s] && !ry[t]) {
-      edits2.push({
-        op: Op.Match,
-        x: x[s],
-        y: y[t]
-      });
-      s++;
-      t++;
-    }
-  }
-  return edits2;
-}
-function diff(x, y, eq = (a, b) => a === b) {
-  const x0 = [];
-  const y0 = [];
-  const xidx = [];
-  const yidx = [];
-  const counts = [];
-  const elements = [];
-  const findId = (e) => {
-    for (let i = 0; i < elements.length; i++) {
-      if (eq(elements[i], e)) {
-        return i;
-      }
-    }
-    const id = elements.length;
-    elements.push(e);
-    counts.push(0);
-    return id;
-  };
-  for (let i = 0; i < x.length; i++) {
-    const e = x[i];
-    const id = findId(e);
-    counts[id] = (counts[id] || 0) + 1;
-    x0.push(id);
-    xidx.push(i);
-  }
-  for (let i = 0; i < y.length; i++) {
-    const e = y[i];
-    const id = findId(e);
-    counts[id] = (counts[id] || 0) + 1;
-    y0.push(id);
-    yidx.push(i);
-  }
-  const m = new myers_default(xidx, yidx, x0, y0, (a, b) => a === b);
-  m.compare(m.smin, m.smax, m.tmin, m.tmax);
-  return { rx: m.resultVectorX, ry: m.resultVectorY };
-}
-var Op;
-var init_diff = __esm({
-  "node_modules/@uttori/data-tools/src/diff/diff.js"() {
-    init_myers();
-    Op = {
-      Match: 0,
-      // Two slice elements match
-      Delete: 1,
-      // A deletion from an element on the left slice
-      Insert: 2
-      // An insertion of an element from the right side
-    };
+    underflow_error_default = UnderflowError;
   }
 });
 
@@ -13186,11 +13790,11 @@ var require_common = __commonJS({
         let enableOverride = null;
         let namespacesCache;
         let enabledCache;
-        function debug5(...args) {
-          if (!debug5.enabled) {
+        function debug4(...args) {
+          if (!debug4.enabled) {
             return;
           }
-          const self = debug5;
+          const self = debug4;
           const curr = Number(/* @__PURE__ */ new Date());
           const ms = curr - (prevTime || curr);
           self.diff = ms;
@@ -13220,12 +13824,12 @@ var require_common = __commonJS({
           const logFn = self.log || createDebug.log;
           logFn.apply(self, args);
         }
-        debug5.namespace = namespace;
-        debug5.useColors = createDebug.useColors();
-        debug5.color = createDebug.selectColor(namespace);
-        debug5.extend = extend;
-        debug5.destroy = createDebug.destroy;
-        Object.defineProperty(debug5, "enabled", {
+        debug4.namespace = namespace;
+        debug4.useColors = createDebug.useColors();
+        debug4.color = createDebug.selectColor(namespace);
+        debug4.extend = extend;
+        debug4.destroy = createDebug.destroy;
+        Object.defineProperty(debug4, "enabled", {
           enumerable: true,
           configurable: false,
           get: () => {
@@ -13243,9 +13847,9 @@ var require_common = __commonJS({
           }
         });
         if (typeof createDebug.init === "function") {
-          createDebug.init(debug5);
+          createDebug.init(debug4);
         }
-        return debug5;
+        return debug4;
       }
       function extend(namespace, delimiter) {
         const newDebug = createDebug(this.namespace + (typeof delimiter === "undefined" ? ":" : delimiter) + namespace);
@@ -13770,11 +14374,11 @@ var require_node = __commonJS({
     function load() {
       return process.env.DEBUG;
     }
-    function init(debug5) {
-      debug5.inspectOpts = {};
+    function init(debug4) {
+      debug4.inspectOpts = {};
       const keys = Object.keys(exports.inspectOpts);
       for (let i = 0; i < keys.length; i++) {
-        debug5.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
+        debug4.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
       }
     }
     module.exports = require_common()(exports);
@@ -13801,14 +14405,21 @@ var require_src = __commonJS({
   }
 });
 
-// node_modules/@uttori/data-tools/src/data-buffer.js
-var debug, DataBuffer, data_buffer_default;
+// node_modules/@uttori/data-tools/dist/data-buffer.js
+function dataBufferBrand() {
+  return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
+}
+function nativeEndian() {
+  return new Uint16Array(new Uint8Array([18, 52]).buffer)[0] === 13330;
+}
+var DATA_BUFFER_BRAND2, NATIVE_ENDIAN, debug, DataBuffer, data_buffer_default;
 var init_data_buffer = __esm({
-  async "node_modules/@uttori/data-tools/src/data-buffer.js"() {
-    init_underflow_error();
+  async "node_modules/@uttori/data-tools/dist/data-buffer.js"() {
     init_data_helpers();
-    init_diff();
-    debug = () => {
+    init_underflow_error();
+    DATA_BUFFER_BRAND2 = /* @__PURE__ */ dataBufferBrand();
+    NATIVE_ENDIAN = /* @__PURE__ */ nativeEndian();
+    debug = (..._args) => {
     };
     if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
       try {
@@ -13818,14 +14429,60 @@ var init_data_buffer = __esm({
       }
     }
     DataBuffer = class _DataBuffer {
-      /** @type {Buffer|Uint8Array} Bytes owned or borrowed by this view. */
+      /** Bytes owned or borrowed by this view. */
       data = new Uint8Array(0);
+      /** Is this instance for creating a new file? */
+      writing = false;
+      /** Native Endianness of the machine, true is Little Endian, false is Big Endian */
+      nativeEndian = false;
+      /** Reading / Writing offset */
+      offset = 0;
+      /** Backing store for the internal write buffer, null until first write to avoid copying when read-only, based on `this.writing` flag. */
+      _buffer = null;
+      /** The number of bytes avaliable to read. */
+      lengthInBytes = 0;
+      /** When the buffer is part of a bufferlist, the next DataBuffer in the list. */
+      next = null;
+      /** When the buffer is part of a bufferlist, the previous DataBuffer in the list. */
+      prev = null;
+      /** Cached numeric view, bounded to data. */
+      #dataView = null;
+      /** The data identity and byte length used to construct the cached numeric view. */
+      #viewData = null;
+      #viewLength = -1;
       /**
-      * Creates an instance of DataBuffer.
-      * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} [input] The data to process.
-      * @throws {TypeError} Missing input data.
-      * @throws {TypeError} Unknown type of input for DataBuffer: ${typeof input}
-      */
+       * Reuse the numeric view until data is replaced or its backing buffer is resized.
+       * Do not inspect the old DataView's byte length, a resize may have made it out of bounds.
+       * @returns {DataView} A view covering exactly the current data.
+       */
+      get #view() {
+        const { data } = this;
+        if (this.#dataView === null || this.#viewData !== data || this.#viewLength !== data.byteLength) {
+          this.#dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+          this.#viewData = data;
+          this.#viewLength = data.byteLength;
+        }
+        return this.#dataView;
+      }
+      /**
+       * Validate the complete write range before initializing or modifying the staging array.
+       * Array indices stop before 0xFFFFFFFF, which is the maximum number[] length.
+       * @param {number} bytes The number of staged elements to write.
+       * @param {number} offset The destination offset.
+       * @throws {RangeError} The write range is not a valid array range.
+       */
+      #validateWrite(bytes, offset) {
+        if (!Number.isSafeInteger(bytes) || bytes < 0 || !Number.isSafeInteger(offset) || offset < 0 || bytes > 4294967295 - offset) {
+          throw new RangeError(`Invalid write range: ${offset} + ${bytes}`);
+        }
+      }
+      /**
+       * Creates an instance of DataBuffer.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} [input] The data to process.
+       * Omitted input creates an empty writable buffer.
+       * @throws {RangeError} The requested numeric length is not a nonnegative safe integer.
+       * @throws {TypeError} Unknown type of input for DataBuffer: ${typeof input}
+       */
       constructor(input) {
         this.writing = false;
         if (typeof Buffer !== "undefined" && Buffer.isBuffer(input)) {
@@ -13836,7 +14493,11 @@ var init_data_buffer = __esm({
           this.data = new TextEncoder().encode(input);
         } else if (input instanceof Uint8Array) {
           debug("constructor: from Uint8Array");
-          this.data = input;
+          if (input.buffer instanceof ArrayBuffer) {
+            this.data = input;
+          } else {
+            this.data = new Uint8Array(input);
+          }
         } else if (input instanceof ArrayBuffer) {
           debug("constructor: from ArrayBuffer");
           this.data = new Uint8Array(input);
@@ -13845,13 +14506,16 @@ var init_data_buffer = __esm({
           this.data = new Uint8Array(input);
         } else if (typeof input === "number") {
           debug("constructor: Number (i.e. length)");
+          if (!Number.isSafeInteger(input) || input < 0) {
+            throw new RangeError(`Invalid buffer length: ${input}`);
+          }
           this.data = new Uint8Array(input);
         } else if (input instanceof _DataBuffer) {
           debug("constructor: from DataBuffer, a shallow copy");
           this.data = input.data;
-        } else if (input && input.buffer && input.buffer instanceof ArrayBuffer) {
+        } else if (ArrayBuffer.isView(input) && "BYTES_PER_ELEMENT" in input && input.buffer instanceof ArrayBuffer) {
           debug("constructor: from typed arrays other than Uint8Array");
-          this.data = new Uint8Array(input.buffer, input.byteOffset, input.length * input.BYTES_PER_ELEMENT);
+          this.data = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
         } else if (typeof input === "undefined") {
           debug("constructor: empty, creating a new file from scratch");
           this.writing = true;
@@ -13864,13 +14528,14 @@ var init_data_buffer = __esm({
         this.lengthInBytes = this.data.length;
         this.next = null;
         this.prev = null;
-        this.nativeEndian = new Uint16Array(new Uint8Array([18, 52]).buffer)[0] === 13330;
+        Object.defineProperty(this, DATA_BUFFER_BRAND2, { value: true });
+        this.nativeEndian = NATIVE_ENDIAN;
         this.offset = 0;
         this._buffer = this.writing ? [] : null;
       }
       /**
        * Buffer for creating new files. Lazy-inits from a copy of data on first write when instance was created read-only.
-       * @type {number[]}
+       * @returns {number[]} The buffer.
        */
       get buffer() {
         if (this._buffer === null) {
@@ -13896,39 +14561,39 @@ var init_data_buffer = __esm({
       }
       /**
        * Compares another DataBuffer against the current data buffer at a specified offset.
-       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array|undefined} input The size of the requested DataBuffer.
-       * @param {number} [offset] The size of the requested DataBuffer, default is 0.
-       * @returns {boolean} Returns true when both DataBuffers are equal, false if there is any difference.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array|undefined} input The data to compare against the current DataBuffer.
+       * @param {number} [offset] The offset in the current DataBuffer to start comparing, default is 0.
+       * @returns {boolean} Returns true when all input bytes match the region at offset, false if there is any difference, the input is empty, or the region is out of bounds.
        */
       compare(input, offset = 0) {
-        const buffer = new _DataBuffer(input);
-        const { length } = buffer;
+        let data;
+        if (input instanceof _DataBuffer) {
+          data = input.data;
+        } else if (input instanceof Uint8Array) {
+          data = input;
+        } else {
+          data = new _DataBuffer(input).data;
+        }
+        const { length } = data;
         if (!length) {
           debug("compare: no input provided");
           return false;
         }
-        const { data } = buffer;
+        if (!this.availableAt(length, offset, false)) {
+          return false;
+        }
+        const current = this.data;
+        if (data === current && offset === 0) {
+          return true;
+        }
         for (let i = 0; i < length; i++) {
-          if (this.data[offset + i] !== data[i]) {
+          if (current[offset + i] !== data[i]) {
             debug("compare: first failed match at", i);
             return false;
           }
         }
         debug("compare: data is the same");
         return true;
-      }
-      /**
-       * Diffs another DataBuffer against the current data buffer at a specified offset and returns the edits.
-       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array|undefined} input The DataBuffer to compare against.
-       * @param {number} [offset] The offset to start the comparison from, default is 0.
-       * @returns {import('./diff/diff.js').Edit[]} Returns an array of edits describing the differences.
-       */
-      diff(input, offset = 0) {
-        const buffer = new _DataBuffer(input);
-        const x = Array.from(this.data.slice(offset));
-        const y = Array.from(buffer.data);
-        debug("diff: comparing", x.length, "bytes against", y.length, "bytes");
-        return edits(x, y, (a, b) => a === b);
       }
       /**
        * Compares input data against the upcoming data, byte by byte.
@@ -13941,7 +14606,7 @@ var init_data_buffer = __esm({
           debug("isNextBytes: no input provided");
           return false;
         }
-        if (!this.available(input.length)) {
+        if (!this.available(input.length, false)) {
           debug(`isNextBytes: Insufficient Bytes: ${input.length} <= ${this.remainingBytes()}`);
           return false;
         }
@@ -13961,7 +14626,7 @@ var init_data_buffer = __esm({
        */
       copy() {
         debug("copy");
-        return new _DataBuffer(new Uint8Array(this.data.slice(0)));
+        return new _DataBuffer(new Uint8Array(this.data));
       }
       /**
        * Creates a copy of the current DataBuffer from a specified offset and a specified length.
@@ -13971,10 +14636,10 @@ var init_data_buffer = __esm({
        */
       slice(position, length = this.length) {
         debug("slice:", position, length);
-        if (position === 0 && length >= this.length) {
-          return new _DataBuffer(this.data);
+        if (!Number.isSafeInteger(position) || position < 0 || !Number.isSafeInteger(length) || length < 0) {
+          throw new RangeError(`Invalid slice range: ${position} + ${length}`);
         }
-        return new _DataBuffer(this.data.slice(position, position + length));
+        return new _DataBuffer(new Uint8Array(this.data.subarray(position, position + length)));
       }
       /**
        * Returns the remaining bytes to be read in the DataBuffer.
@@ -13985,30 +14650,41 @@ var init_data_buffer = __esm({
       }
       /**
        * Checks if a given number of bytes are avaliable in the DataBuffer.
-       * If writing mode is enabled, this is always true.
+       * If writing mode is enabled, this is true for valid nonnegative integer ranges.
+       * Pass false for writing when checking committed bytes for a read.
        * @param {number} bytes The number of bytes to check for.
+       * @param {boolean} [writing] Allow growth instead of requiring committed bytes, default is this.writing.
        * @returns {boolean} True if there are the requested amount, or more, of bytes left in the DataBuffer.
        */
-      available(bytes) {
-        return this.writing || bytes <= this.remainingBytes();
+      available(bytes, writing = this.writing) {
+        return this.availableAt(bytes, this.offset, writing);
       }
       /**
        * Checks if a given number of bytes are avaliable after a given offset in the buffer.
-       * If writing mode is enabled, this is always true.
+       * If writing mode is enabled, this is true for valid nonnegative integer ranges.
+       * Pass false for writing when checking committed bytes for a read.
        * @param {number} bytes The number of bytes to check for.
        * @param {number} offset The offset to start from.
+       * @param {boolean} [writing] Allow growth instead of requiring committed bytes, default is this.writing.
        * @returns {boolean} True if there are the requested amount, or more, of bytes left in the stream.
        */
-      availableAt(bytes, offset) {
-        return this.writing || bytes <= this.length - offset;
+      availableAt(bytes, offset, writing = this.writing) {
+        return Number.isSafeInteger(bytes) && bytes >= 0 && Number.isSafeInteger(offset) && offset >= 0 && (writing ? bytes <= Number.MAX_SAFE_INTEGER - offset : bytes <= this.length - offset);
       }
       /**
        * Advance the offset by a given number of bytes.
        * @param {number} bytes The number of bytes to advance.
+       * @throws {RangeError} The byte count or current offset is not a nonnegative safe integer.
        * @throws {UnderflowError} Insufficient Bytes in the DataBuffer.
        */
       advance(bytes) {
         debug("advance:", bytes);
+        if (!Number.isSafeInteger(bytes) || bytes < 0) {
+          throw new RangeError(`Invalid byte count: ${bytes}`);
+        }
+        if (!Number.isSafeInteger(this.offset) || this.offset < 0) {
+          throw new RangeError(`Invalid offset: ${this.offset}`);
+        }
         if (!this.available(bytes)) {
           throw new underflow_error_default(`Insufficient Bytes: ${bytes} <= ${this.remainingBytes()}`);
         }
@@ -14018,10 +14694,17 @@ var init_data_buffer = __esm({
       /**
        * Rewind the offset by a given number of bytes.
        * @param {number} bytes The number of bytes to go back.
+       * @throws {RangeError} The byte count or current offset is not a nonnegative safe integer.
        * @throws {UnderflowError} Insufficient Bytes in the DataBuffer.
        */
       rewind(bytes) {
         debug("rewind:", bytes);
+        if (!Number.isSafeInteger(bytes) || bytes < 0) {
+          throw new RangeError(`Invalid byte count: ${bytes}`);
+        }
+        if (!Number.isSafeInteger(this.offset) || this.offset < 0) {
+          throw new RangeError(`Invalid offset: ${this.offset}`);
+        }
         if (bytes > this.offset) {
           throw new underflow_error_default(`Insufficient Bytes: ${bytes} > ${this.offset}`);
         }
@@ -14031,9 +14714,19 @@ var init_data_buffer = __esm({
       /**
        * Go to a specified offset in the stream.
        * @param {number} position The offset to go to.
+       * @throws {RangeError} The requested position or current offset is not a nonnegative safe integer.
        */
       seek(position) {
         debug(`seek: from ${this.offset} to ${position}`);
+        if (!Number.isSafeInteger(position) || position < 0) {
+          throw new RangeError(`Invalid position: ${position}`);
+        }
+        if (!Number.isSafeInteger(this.offset) || this.offset < 0) {
+          throw new RangeError(`Invalid offset: ${this.offset}`);
+        }
+        if (position === this.offset && !this.available(0)) {
+          throw new underflow_error_default(`Insufficient Bytes: 0 <= ${this.remainingBytes()}`);
+        }
         if (position > this.offset) {
           this.advance(position - this.offset);
         }
@@ -14048,7 +14741,7 @@ var init_data_buffer = __esm({
        * @throws {UnderflowError} Insufficient Bytes in the stream.
        */
       readUInt8() {
-        if (!this.available(1)) {
+        if (!this.available(1, false)) {
           throw new underflow_error_default("Insufficient Bytes: 1");
         }
         const output = this.data[this.offset];
@@ -14062,7 +14755,7 @@ var init_data_buffer = __esm({
        * @throws {UnderflowError} Insufficient Bytes in the stream.
        */
       peekUInt8(offset = 0) {
-        if (!this.availableAt(1, offset)) {
+        if (!this.availableAt(1, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 1`);
         }
         return this.data[offset];
@@ -14073,20 +14766,22 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {Uint8Array} The UInt8 value at the current offset.
        */
-      read(bytes, littleEndian2 = false) {
-        if (!this.available(bytes)) {
+      read(bytes, littleEndian3 = false) {
+        if (!this.available(bytes, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${bytes}`);
         }
         const start = this.offset;
-        this.offset += bytes;
-        if (littleEndian2 && bytes > 1) {
-          const uint8 = new Uint8Array(bytes);
+        if (littleEndian3 && bytes > 1) {
+          const uint82 = new Uint8Array(bytes);
           for (let i = 0; i < bytes; i++) {
-            uint8[i] = this.data[start + bytes - 1 - i];
+            uint82[i] = this.data[start + bytes - 1 - i];
           }
-          return uint8;
+          this.offset += bytes;
+          return uint82;
         }
-        return this.data.slice(start, start + bytes);
+        const uint8 = new Uint8Array(this.data.subarray(start, start + bytes));
+        this.offset += bytes;
+        return uint8;
       }
       /**
        * Read from the provided offset and return the value.
@@ -14095,21 +14790,23 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {Uint8Array} The UInt8 value at the current offset.
        */
-      peek(bytes, offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(bytes, offset)) {
+      peek(bytes, offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(bytes, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + ${bytes}`);
         }
-        if (littleEndian2 && bytes > 1) {
+        if (littleEndian3 && bytes > 1) {
           const uint8 = new Uint8Array(bytes);
           for (let i = 0; i < bytes; i++) {
             uint8[i] = this.data[offset + bytes - 1 - i];
           }
           return uint8;
         }
-        return this.data.slice(offset, offset + bytes);
+        return new Uint8Array(this.data.subarray(offset, offset + bytes));
       }
       /**
        * Read the bits from the bytes from the provided offset and return the value.
+       * Bits are numbered from the most significant bit. Requests extending past bit 7
+       * are zero-filled on the right, preserving the existing single-byte behavior.
        * @param {number} position The bit position to read, 0 to 7.
        * @param {number} [length] The number of bits to read, 1 to 8, default is 1.
        * @param {number} [offset] The offset to read from, default is 0.
@@ -14132,11 +14829,10 @@ var init_data_buffer = __esm({
        * @returns {number} The Int8 value at the current offset.
        */
       readInt8() {
-        if (!this.available(1)) {
+        if (!this.available(1, false)) {
           throw new underflow_error_default("Insufficient Bytes: 1");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 1);
-        const v = view.getInt8(0);
+        const v = this.#view.getInt8(this.offset);
         this.offset += 1;
         return v;
       }
@@ -14146,22 +14842,21 @@ var init_data_buffer = __esm({
        * @returns {number} The Int8 value at the current offset.
        */
       peekInt8(offset = 0) {
-        if (!this.availableAt(1, offset)) {
+        if (!this.availableAt(1, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 1`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 1).getInt8(0);
+        return this.#view.getInt8(offset);
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The UInt16 value at the current offset.
        */
-      readUInt16(littleEndian2) {
-        if (!this.available(2)) {
+      readUInt16(littleEndian3 = false) {
+        if (!this.available(2, false)) {
           throw new underflow_error_default("Insufficient Bytes: 2");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 2);
-        const v = view.getUint16(0, littleEndian2);
+        const v = this.#view.getUint16(this.offset, littleEndian3);
         this.offset += 2;
         return v;
       }
@@ -14171,23 +14866,22 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int8 value at the current offset.
        */
-      peekUInt16(offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(2, offset)) {
+      peekUInt16(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(2, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 2`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 2).getUint16(0, littleEndian2);
+        return this.#view.getUint16(offset, littleEndian3);
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int16 value at the current offset.
        */
-      readInt16(littleEndian2 = false) {
-        if (!this.available(2)) {
+      readInt16(littleEndian3 = false) {
+        if (!this.available(2, false)) {
           throw new underflow_error_default("Insufficient Bytes: 2");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 2);
-        const v = view.getInt16(0, littleEndian2);
+        const v = this.#view.getInt16(this.offset, littleEndian3);
         this.offset += 2;
         return v;
       }
@@ -14197,22 +14891,26 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int16 value at the current offset.
        */
-      peekInt16(offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(2, offset)) {
+      peekInt16(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(2, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 2`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 2).getInt16(0, littleEndian2);
+        return this.#view.getInt16(offset, littleEndian3);
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The UInt24 value at the current offset.
        */
-      readUInt24(littleEndian2 = false) {
-        if (littleEndian2) {
-          return this.readUInt16(true) + (this.readUInt8() << 16);
+      readUInt24(littleEndian3 = false) {
+        if (!this.available(3, false)) {
+          throw new underflow_error_default("Insufficient Bytes: 3");
         }
-        return (this.readUInt16() << 8) + this.readUInt8();
+        const { offset } = this;
+        const { data } = this;
+        const value = littleEndian3 ? data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 : data[offset] << 16 | data[offset + 1] << 8 | data[offset + 2];
+        this.offset += 3;
+        return value;
       }
       /**
        * Read from the specified offset without advancing the offsets and return the value.
@@ -14220,22 +14918,28 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The UInt24 value at the current offset.
        */
-      peekUInt24(offset = 0, littleEndian2 = false) {
-        if (littleEndian2) {
-          return this.peekUInt16(offset, true) + (this.peekUInt8(offset + 2) << 16);
+      peekUInt24(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(3, offset, false)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 3`);
         }
-        return (this.peekUInt16(offset) << 8) + this.peekUInt8(offset + 2);
+        const { data } = this;
+        const value = littleEndian3 ? data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 : data[offset] << 16 | data[offset + 1] << 8 | data[offset + 2];
+        return value;
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int24 value at the current offset.
        */
-      readInt24(littleEndian2 = false) {
-        if (littleEndian2) {
-          return this.readUInt16(true) + (this.readInt8() << 16);
+      readInt24(littleEndian3 = false) {
+        if (!this.available(3, false)) {
+          throw new underflow_error_default("Insufficient Bytes: 3");
         }
-        return (this.readInt16() << 8) + this.readUInt8();
+        const { offset } = this;
+        const { data } = this;
+        const value = littleEndian3 ? data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 : data[offset] << 16 | data[offset + 1] << 8 | data[offset + 2];
+        this.offset += 3;
+        return value << 8 >> 8;
       }
       /**
        * Read from the specified offset without advancing the offsets and return the value.
@@ -14243,23 +14947,24 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int24 value at the current offset.
        */
-      peekInt24(offset = 0, littleEndian2 = false) {
-        if (littleEndian2) {
-          return this.peekUInt16(offset, true) + (this.peekInt8(offset + 2) << 16);
+      peekInt24(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(3, offset, false)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 3`);
         }
-        return (this.peekInt16(offset) << 8) + this.peekUInt8(offset + 2);
+        const { data } = this;
+        const value = littleEndian3 ? data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 : data[offset] << 16 | data[offset + 1] << 8 | data[offset + 2];
+        return value << 8 >> 8;
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The UInt32 value at the current offset.
        */
-      readUInt32(littleEndian2 = false) {
-        if (!this.available(4)) {
+      readUInt32(littleEndian3 = false) {
+        if (!this.available(4, false)) {
           throw new underflow_error_default("Insufficient Bytes: 4");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 4);
-        const v = view.getUint32(0, littleEndian2);
+        const v = this.#view.getUint32(this.offset, littleEndian3);
         this.offset += 4;
         return v;
       }
@@ -14269,23 +14974,22 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The UInt32 value at the current offset.
        */
-      peekUInt32(offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(4, offset)) {
+      peekUInt32(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(4, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 4`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 4).getUint32(0, littleEndian2);
+        return this.#view.getUint32(offset, littleEndian3);
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int32 value at the current offset.
        */
-      readInt32(littleEndian2 = false) {
-        if (!this.available(4)) {
+      readInt32(littleEndian3 = false) {
+        if (!this.available(4, false)) {
           throw new underflow_error_default("Insufficient Bytes: 4");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 4);
-        const v = view.getInt32(0, littleEndian2);
+        const v = this.#view.getInt32(this.offset, littleEndian3);
         this.offset += 4;
         return v;
       }
@@ -14295,23 +14999,22 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Int32 value at the current offset.
        */
-      peekInt32(offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(4, offset)) {
+      peekInt32(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(4, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 4`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 4).getInt32(0, littleEndian2);
+        return this.#view.getInt32(offset, littleEndian3);
       }
       /**
        * Read from the current offset and return the value.
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Float32 value at the current offset.
        */
-      readFloat32(littleEndian2 = false) {
-        if (!this.available(4)) {
+      readFloat32(littleEndian3 = false) {
+        if (!this.available(4, false)) {
           throw new underflow_error_default("Insufficient Bytes: 4");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 4);
-        const v = view.getFloat32(0, littleEndian2);
+        const v = this.#view.getFloat32(this.offset, littleEndian3);
         this.offset += 4;
         return v;
       }
@@ -14321,11 +15024,11 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Float32 value at the current offset.
        */
-      peekFloat32(offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(4, offset)) {
+      peekFloat32(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(4, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 4`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 4).getFloat32(0, littleEndian2);
+        return this.#view.getFloat32(offset, littleEndian3);
       }
       /**
        * Read from the current offset and return the Turbo Pascal 48 bit extended float value.
@@ -14333,8 +15036,8 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Float48 value at the current offset.
        */
-      readFloat48(littleEndian2 = false) {
-        const uint8 = this.read(6, littleEndian2 || this.nativeEndian);
+      readFloat48(littleEndian3 = false) {
+        const uint8 = this.read(6, !littleEndian3);
         return float48(uint8);
       }
       /**
@@ -14344,8 +15047,8 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Float48 value at the specified offset.
        */
-      peekFloat48(offset = 0, littleEndian2 = false) {
-        const uint8 = this.peek(6, offset, littleEndian2 || this.nativeEndian);
+      peekFloat48(offset = 0, littleEndian3 = false) {
+        const uint8 = this.peek(6, offset, !littleEndian3);
         return float48(uint8);
       }
       /**
@@ -14353,12 +15056,11 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Float64 value at the current offset.
        */
-      readFloat64(littleEndian2 = false) {
-        if (!this.available(8)) {
+      readFloat64(littleEndian3 = false) {
+        if (!this.available(8, false)) {
           throw new underflow_error_default("Insufficient Bytes: 8");
         }
-        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 8);
-        const v = view.getFloat64(0, littleEndian2);
+        const v = this.#view.getFloat64(this.offset, littleEndian3);
         this.offset += 8;
         return v;
       }
@@ -14368,29 +15070,31 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The Float64 value at the current offset.
        */
-      peekFloat64(offset = 0, littleEndian2 = false) {
-        if (!this.availableAt(8, offset)) {
+      peekFloat64(offset = 0, littleEndian3 = false) {
+        if (!this.availableAt(8, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + 8`);
         }
-        return new DataView(this.data.buffer, this.data.byteOffset + offset, 8).getFloat64(0, littleEndian2);
+        return this.#view.getFloat64(offset, littleEndian3);
       }
       /**
        * Read from the current offset and return the IEEE 80 bit extended float value.
-       * @param {boolean} [littleEndian] Read in Little Endian format, defaults to system value, default is the current nativeEndian value.
+       * @param {boolean} [littleEndian] Reverse the input bytes before conversion, defaults to system value, default is the current nativeEndian value.
+       * This legacy flag is retained for compatibility; use readFloatIEEE754 / peekFloatIEEE754 for conventional input-endianness semantics.
        * @returns {number} The Float80 value at the current offset.
        */
-      readFloat80(littleEndian2 = this.nativeEndian) {
-        const uint8 = this.read(10, littleEndian2);
+      readFloat80(littleEndian3 = this.nativeEndian) {
+        const uint8 = this.read(10, littleEndian3);
         return float80(uint8);
       }
       /**
        * Read from the specified offset without advancing the offsets and return the IEEE 80 bit extended float value.
        * @param {number} [offset] The offset to read from, default is 0.
-       * @param {boolean} [littleEndian] Read in Little Endian format, defaults to system value, default is the current nativeEndian value.
+       * @param {boolean} [littleEndian] Reverse the input bytes before conversion, defaults to system value, default is the current nativeEndian value.
+       * This legacy flag is retained for compatibility; use readFloatIEEE754 / peekFloatIEEE754 for conventional input-endianness semantics.
        * @returns {number} The Float80 value at the current offset.
        */
-      peekFloat80(offset = 0, littleEndian2 = this.nativeEndian) {
-        const uint8 = this.peek(10, offset, littleEndian2);
+      peekFloat80(offset = 0, littleEndian3 = this.nativeEndian) {
+        const uint8 = this.peek(10, offset, littleEndian3);
         return float80(uint8);
       }
       /**
@@ -14399,8 +15103,8 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The IEEE 754 extended float value at the current offset.
        */
-      readFloatIEEE754(littleEndian2 = false) {
-        const uint8 = this.read(10, littleEndian2);
+      readFloatIEEE754(littleEndian3 = false) {
+        const uint8 = this.read(10, littleEndian3);
         return convertFromIeeeExtended(uint8);
       }
       /**
@@ -14410,8 +15114,8 @@ var init_data_buffer = __esm({
        * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
        * @returns {number} The IEEE 754 extended float value at the specified offset.
        */
-      peekFloatIEEE754(offset = 0, littleEndian2 = false) {
-        const uint8 = this.peek(10, offset, littleEndian2);
+      peekFloatIEEE754(offset = 0, littleEndian3 = false) {
+        const uint8 = this.peek(10, offset, littleEndian3);
         return convertFromIeeeExtended(uint8);
       }
       /**
@@ -14420,12 +15124,12 @@ var init_data_buffer = __esm({
        * @returns {DataBuffer} The requested number of bytes as a DataBuffer.
        */
       readBuffer(length) {
-        if (!this.available(length)) {
+        if (!this.available(length, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${length}`);
         }
-        const chunk = this.data.slice(this.offset, this.offset + length);
+        const chunk = new _DataBuffer(new Uint8Array(this.data.subarray(this.offset, this.offset + length)));
         this.offset += length;
-        return new _DataBuffer(chunk);
+        return chunk;
       }
       /**
        * Read from the specified offset and return the value as a DataBuffer.
@@ -14434,14 +15138,14 @@ var init_data_buffer = __esm({
        * @returns {DataBuffer} The requested number of bytes as a DataBuffer.
        */
       peekBuffer(offset, length) {
-        if (!this.availableAt(length, offset)) {
+        if (!this.availableAt(length, offset, false)) {
           throw new underflow_error_default(`Insufficient Bytes: ${offset} + ${length}`);
         }
-        return new _DataBuffer(this.data.slice(offset, offset + length));
+        return new _DataBuffer(new Uint8Array(this.data.subarray(offset, offset + length)));
       }
       /**
        * Read from the current offset for a given length and return the value as a string.
-       * @param {number} length The number of bytes to read.
+       * @param {number|null} [length] The number of bytes to read; omitted reads the remainder, null reads through a null terminator, and zero reads nothing.
        * @param {string} [encoding] The encoding of the string, default is `ascii`.
        * @returns {string} The read value as a string.
        */
@@ -14452,7 +15156,7 @@ var init_data_buffer = __esm({
       /**
        * Read from the specified offset for a given length and return the value as a string.
        * @param {number} offset The offset to read from.
-       * @param {number} length The number of bytes to read.
+       * @param {number|null} [length] The number of bytes to read; omitted reads the remainder, null reads through a null terminator, and zero reads nothing.
        * @param {string} [encoding] The encoding of the string, default is `ascii`.
        * @returns {string} The read value as a string.
        */
@@ -14463,30 +15167,41 @@ var init_data_buffer = __esm({
       /**
        * Read from the specified offset for a given length and return the value as a string in a specified encoding, and optionally advance the offsets.
        * Supported Encodings: ascii / latin1, utf8 / utf-8, utf16-be, utf16be, utf16le, utf16-le, utf16bom, utf16-bom
+       * Encoding names are case-insensitive. Malformed UTF-8 is replaced with U+FFFD without
+       * consuming bytes outside the field; malformed UTF-16 retains the existing error behavior.
+       * A failed decode does not move the cursor. A successful advancing decode ends at the supplied offset plus consumed bytes.
        * @private
        * @param {number} offset The offset to read from.
-       * @param {number|null} length The number of bytes to read, if not defined it is the remaining bytes in the buffer. If NULL a null terminated string will be read.
+       * @param {number|null|undefined} length The number of bytes to read, if not defined it is the remaining bytes in the buffer. If NULL a null terminated string will be read.
        * @param {string} encoding The encoding of the string.
-       * @param {boolean} advance Flag to optionally advance the offsets.
+       * @param {boolean} [advance] Flag to optionally advance the offsets, default is false.
        * @returns {string} The read value as a string.
        */
-      decodeString(offset, length, encoding, advance) {
+      decodeString(offset, length, encoding, advance = false) {
         debug("decodeString:", { offset, length, encoding, advance });
         encoding = encoding.toLowerCase();
-        const nullEnd = length === null ? 0 : -1;
-        if (!length) {
-          length = this.remainingBytes();
+        if (length === null) {
+          return this.decodeNullTerminatedString(offset, encoding, advance);
+        }
+        if (length === void 0) {
+          length = this.length - offset;
+        }
+        if (!this.availableAt(length, offset, false)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + ${length}`);
         }
         const end = offset + length;
+        const { data } = this;
         const codes = [];
+        const chunks = [];
         switch (encoding) {
           case "ascii":
           case "latin1": {
             while (offset < end) {
-              const character = this.peekUInt8(offset++);
-              if (character === nullEnd) {
-                break;
+              if (codes.length >= 16384) {
+                chunks.push(String.fromCharCode(...codes));
+                codes.length = 0;
               }
+              const character = data[offset++];
               codes.push(character);
             }
             break;
@@ -14494,26 +15209,59 @@ var init_data_buffer = __esm({
           case "utf8":
           case "utf-8": {
             while (offset < end) {
-              const b1 = this.peekUInt8(offset++);
-              if (b1 === nullEnd) {
-                break;
+              if (codes.length >= 16384) {
+                chunks.push(String.fromCharCode(...codes));
+                codes.length = 0;
               }
-              let b2;
-              let b3;
-              if ((b1 & 128) === 0) {
+              const b1 = data[offset++];
+              let needed = 0;
+              let point = 0;
+              let lower = 128;
+              let upper = 191;
+              if (b1 < 128) {
                 codes.push(b1);
-              } else if ((b1 & 224) === 192) {
-                b2 = this.peekUInt8(offset++) & 63;
-                codes.push((b1 & 31) << 6 | b2);
-              } else if ((b1 & 240) === 224) {
-                b2 = this.peekUInt8(offset++) & 63;
-                b3 = this.peekUInt8(offset++) & 63;
-                codes.push((b1 & 15) << 12 | b2 << 6 | b3);
-              } else if ((b1 & 248) === 240) {
-                b2 = this.peekUInt8(offset++) & 63;
-                b3 = this.peekUInt8(offset++) & 63;
-                const b4 = this.peekUInt8(offset++) & 63;
-                const pt = ((b1 & 15) << 18 | b2 << 12 | b3 << 6 | b4) - 65536;
+                continue;
+              } else if (b1 >= 194 && b1 <= 223) {
+                needed = 1;
+                point = b1 & 31;
+              } else if (b1 >= 224 && b1 <= 239) {
+                needed = 2;
+                point = b1 & 15;
+                if (b1 === 224) {
+                  lower = 160;
+                }
+                if (b1 === 237) {
+                  upper = 159;
+                }
+              } else if (b1 >= 240 && b1 <= 244) {
+                needed = 3;
+                point = b1 & 7;
+                if (b1 === 240) {
+                  lower = 144;
+                }
+                if (b1 === 244) {
+                  upper = 143;
+                }
+              } else {
+                codes.push(65533);
+                continue;
+              }
+              let valid = true;
+              for (let i = 0; i < needed; i++) {
+                if (offset >= end || data[offset] < lower || data[offset] > upper) {
+                  valid = false;
+                  break;
+                }
+                point = point << 6 | data[offset++] & 63;
+                lower = 128;
+                upper = 191;
+              }
+              if (!valid) {
+                codes.push(65533);
+              } else if (point < 65536) {
+                codes.push(point);
+              } else {
+                const pt = point - 65536;
                 codes.push(55296 + (pt >> 10), 56320 + (pt & 1023));
               }
             }
@@ -14525,40 +15273,50 @@ var init_data_buffer = __esm({
           case "utf16-le":
           case "utf16bom":
           case "utf16-bom": {
-            let littleEndian2;
+            let littleEndian3;
             switch (encoding) {
               case "utf16be":
               case "utf16-be": {
-                littleEndian2 = false;
+                littleEndian3 = false;
                 break;
               }
               case "utf16le":
               case "utf16-le": {
-                littleEndian2 = true;
+                littleEndian3 = true;
                 break;
               }
               case "utf16bom":
               case "utf16-bom":
               default: {
-                const bom = this.peekUInt16(offset);
-                if (length < 2 || bom === nullEnd) {
-                  if (advance) {
-                    this.advance(offset += 2);
+                littleEndian3 = false;
+                if (end - offset >= 2) {
+                  const bom = data[offset] << 8 | data[offset + 1];
+                  if (bom === 65279 || bom === 65534) {
+                    littleEndian3 = bom === 65534;
+                    offset += 2;
                   }
-                  return String.fromCharCode(...codes);
                 }
-                littleEndian2 = bom === 65534;
-                offset += 2;
                 break;
               }
             }
             let w1 = 0;
-            while (offset < end && (w1 = this.peekUInt16(offset, littleEndian2)) !== nullEnd) {
+            while (offset < end) {
+              if (codes.length >= 16384) {
+                chunks.push(String.fromCharCode(...codes));
+                codes.length = 0;
+              }
+              if (end - offset < 2) {
+                throw new Error("Invalid utf16 sequence.");
+              }
+              w1 = littleEndian3 ? data[offset] | data[offset + 1] << 8 : data[offset] << 8 | data[offset + 1];
               offset += 2;
               if (w1 < 55296 || w1 > 57343) {
                 codes.push(w1);
               } else {
-                const w2 = this.peekUInt16(offset, littleEndian2);
+                if (w1 > 56319 || end - offset < 2) {
+                  throw new Error("Invalid utf16 sequence.");
+                }
+                const w2 = littleEndian3 ? data[offset] | data[offset + 1] << 8 : data[offset] << 8 | data[offset + 1];
                 if (w2 < 56320 || w2 > 57343) {
                   throw new Error("Invalid utf16 sequence.");
                 }
@@ -14566,18 +15324,15 @@ var init_data_buffer = __esm({
                 offset += 2;
               }
             }
-            if (w1 === nullEnd) {
-              offset += 2;
-            }
             break;
           }
           default: {
             throw new Error(`Unknown Encoding: ${encoding}`);
           }
         }
-        const result = String.fromCharCode(...codes);
+        const result = chunks.length ? chunks.join("") + String.fromCharCode(...codes) : String.fromCharCode(...codes);
         if (advance) {
-          this.advance(length);
+          this.offset = end;
         }
         return result;
       }
@@ -14608,101 +15363,78 @@ var init_data_buffer = __esm({
       }
       /**
        * Decode a null-terminated string from the specified offset.
-       * Reads bytes until a null byte (0x00) is encountered.
+       * Reads bytes until a null byte (0x00) is encountered. For UTF-16, a terminator is two
+       * copies of nullValue at a code-unit boundary. Without a terminator, reads to the end of data.
+       * Uses the same encodings and Unicode validation as decodeString.
        * @private
-       * @param {number} offset The offset to read from.
-       * @param {string} encoding The encoding of the string.
-       * @param {boolean} advance Flag to optionally advance the offsets.
-       * @param {number} [nullValue] The byte value that terminates the string, default is 0x00.
-       * @returns {string} The read value as a string (without the null terminator).
+       * @param offset The offset to read from.
+       * @param encoding The encoding of the string.
+       * @param advance Flag to optionally advance the offsets.
+       * @param nullValue The byte value that terminates the string, default is 0x00.
+       * @returns The read value as a string (without the null terminator).
        */
       decodeNullTerminatedString(offset, encoding, advance, nullValue = 0) {
         debug("decodeNullTerminatedString:", { offset, encoding, advance, nullValue });
         encoding = encoding.toLowerCase();
-        const codes = [];
+        if (!this.availableAt(0, offset, false)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 0`);
+        }
+        if (!Number.isInteger(nullValue) || nullValue < 0 || nullValue > 255) {
+          throw new RangeError(`Invalid null value: ${nullValue}`);
+        }
+        const start = offset;
+        const { data } = this;
+        const { length } = data;
+        let end = length;
         switch (encoding) {
           case "utf8":
           case "utf-8": {
-            while (offset < this.length) {
-              const b1 = this.peekUInt8(offset++);
-              if (b1 === nullValue) {
-                break;
-              }
-              let b2;
-              let b3;
-              if ((b1 & 128) === 0) {
-                codes.push(b1);
-              } else if ((b1 & 224) === 192) {
-                if (offset >= this.length) break;
-                b2 = this.peekUInt8(offset++);
-                if (b2 === nullValue) break;
-                codes.push((b1 & 31) << 6 | b2 & 63);
-              } else if ((b1 & 240) === 224) {
-                if (offset >= this.length) break;
-                b2 = this.peekUInt8(offset++);
-                if (b2 === nullValue) break;
-                if (offset >= this.length) break;
-                b3 = this.peekUInt8(offset++);
-                if (b3 === nullValue) break;
-                codes.push((b1 & 15) << 12 | (b2 & 63) << 6 | b3 & 63);
-              } else if ((b1 & 248) === 240) {
-                if (offset >= this.length) break;
-                b2 = this.peekUInt8(offset++);
-                if (b2 === nullValue) break;
-                if (offset >= this.length) break;
-                b3 = this.peekUInt8(offset++);
-                if (b3 === nullValue) break;
-                if (offset >= this.length) break;
-                const b4 = this.peekUInt8(offset++);
-                if (b4 === nullValue) break;
-                const pt = ((b1 & 15) << 18 | (b2 & 63) << 12 | (b3 & 63) << 6 | b4 & 63) - 65536;
-                codes.push(55296 + (pt >> 10), 56320 + (pt & 1023));
-              }
+            const terminator = data.indexOf(nullValue, offset);
+            if (terminator !== -1) {
+              end = terminator;
+              offset = terminator + 1;
+            } else {
+              offset = length;
             }
             break;
           }
           case "utf16-be":
-          case "utf16be": {
-            while (offset < this.length - 1) {
-              const b1 = this.peekUInt8(offset);
-              const b2 = this.peekUInt8(offset + 1);
+          case "utf16be":
+          case "utf16-le":
+          case "utf16le":
+          case "utf16bom":
+          case "utf16-bom": {
+            while (offset < length - 1) {
+              const b1 = data[offset];
+              const b2 = data[offset + 1];
               if (b1 === nullValue && b2 === nullValue) {
+                end = offset;
                 offset += 2;
                 break;
               }
-              codes.push(b1 << 8 | b2);
               offset += 2;
             }
-            break;
-          }
-          case "utf16-le":
-          case "utf16le": {
-            while (offset < this.length - 1) {
-              const b1 = this.peekUInt8(offset);
-              const b2 = this.peekUInt8(offset + 1);
-              if (b1 === nullValue && b2 === nullValue) {
-                offset += 2;
-                break;
-              }
-              codes.push(b2 << 8 | b1);
-              offset += 2;
+            if (end === length) {
+              offset = length;
             }
             break;
           }
           case "ascii":
-          case "latin1":
-          default: {
-            while (offset < this.length) {
-              const byte = this.peekUInt8(offset++);
-              if (byte === nullValue) {
-                break;
-              }
-              codes.push(byte);
+          case "latin1": {
+            const terminator = data.indexOf(nullValue, offset);
+            if (terminator !== -1) {
+              end = terminator;
+              offset = terminator + 1;
+            } else {
+              offset = length;
             }
             break;
           }
+          default: {
+            throw new Error(`Unknown Encoding: ${encoding}`);
+          }
         }
-        const result = String.fromCharCode(...codes);
+        const result = this.decodeString(start, end - start, encoding, false);
         if (advance) {
           this.offset = offset;
         }
@@ -14719,100 +15451,118 @@ var init_data_buffer = __esm({
        * Writes a single 8 bit byte.
        * @param {number} data The data to write.
        * @param {number} [offset] The offset to write the data to, default is current offset.
-       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [advance] Flag to set the cursor to the supplied offset plus the number of bytes written, default is true; false leaves the cursor unchanged.
        */
       writeUInt8(data, offset = this.offset, advance = true) {
         debug("writeUInt8:", { data, offset, advance });
-        this.buffer[offset] = data;
+        this.#validateWrite(1, offset);
+        const buffer = this.buffer;
+        buffer[offset] = data;
         if (advance) {
-          this.offset++;
+          this.offset = offset + 1;
         }
       }
       /**
        * Writes an unsigned 16 bit value, 2 bytes.
        * @param {number} data The data to write.
        * @param {number} [offset] The offset to write the data to, default is current offset.
-       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [advance] Flag to set the cursor to the supplied offset plus the number of bytes written, default is true; false leaves the cursor unchanged.
        * @param {boolean} [littleEndian] Endianness of the write order, little Endian when `true`, default is big Endian `false`.
        */
-      writeUInt16(data, offset = this.offset, advance = true, littleEndian2 = false) {
-        debug("writeUInt16:", { data, offset, advance, littleEndian: littleEndian2 });
-        if (littleEndian2) {
-          this.buffer[offset] = data & 255;
-          this.buffer[offset + 1] = (data & 65280) >> 8;
+      writeUInt16(data, offset = this.offset, advance = true, littleEndian3 = false) {
+        debug("writeUInt16:", { data, offset, advance, littleEndian: littleEndian3 });
+        this.#validateWrite(2, offset);
+        const buffer = this.buffer;
+        if (littleEndian3) {
+          buffer[offset] = data & 255;
+          buffer[offset + 1] = (data & 65280) >> 8;
         } else {
-          this.buffer[offset] = (data & 65280) >> 8;
-          this.buffer[offset + 1] = data & 255;
+          buffer[offset] = (data & 65280) >> 8;
+          buffer[offset + 1] = data & 255;
         }
         if (advance) {
-          this.offset += 2;
+          this.offset = offset + 2;
         }
       }
       /**
        * Writes an unsigned 24 bit value, 3 bytes.
        * @param {number} data The data to write.
        * @param {number} [offset] The offset to write the data to, default is current offset.
-       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [advance] Flag to set the cursor to the supplied offset plus the number of bytes written, default is true; false leaves the cursor unchanged.
        * @param {boolean} [littleEndian] Endianness of the write order, little Endian when `true`, default is big Endian `false`.
        */
-      writeUInt24(data, offset = this.offset, advance = true, littleEndian2 = false) {
-        debug("writeUInt24:", { data, offset, advance, littleEndian: littleEndian2 });
-        if (littleEndian2) {
-          this.buffer[offset] = data & 255;
-          this.buffer[offset + 1] = (data & 65280) >> 8;
-          this.buffer[offset + 2] = (data & 16711680) >> 16;
+      writeUInt24(data, offset = this.offset, advance = true, littleEndian3 = false) {
+        debug("writeUInt24:", { data, offset, advance, littleEndian: littleEndian3 });
+        this.#validateWrite(3, offset);
+        const buffer = this.buffer;
+        if (littleEndian3) {
+          buffer[offset] = data & 255;
+          buffer[offset + 1] = (data & 65280) >> 8;
+          buffer[offset + 2] = (data & 16711680) >> 16;
         } else {
-          this.buffer[offset] = (data & 16711680) >> 16;
-          this.buffer[offset + 1] = (data & 65280) >> 8;
-          this.buffer[offset + 2] = data & 255;
+          buffer[offset] = (data & 16711680) >> 16;
+          buffer[offset + 1] = (data & 65280) >> 8;
+          buffer[offset + 2] = data & 255;
         }
         if (advance) {
-          this.offset += 3;
+          this.offset = offset + 3;
         }
       }
       /**
        * Writes an unsigned 32 bit value, 4 bytes.
        * @param {number} data The data to write.
        * @param {number} [offset] The offset to write the data to, default is current offset.
-       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [advance] Flag to set the cursor to the supplied offset plus the number of bytes written, default is true; false leaves the cursor unchanged.
        * @param {boolean} [littleEndian] Endianness of the write order, little Endian when `true`, default is big Endian `false`.
        */
-      writeUInt32(data, offset = this.offset, advance = true, littleEndian2 = false) {
-        debug("writeUInt32:", { data, offset, advance, littleEndian: littleEndian2 });
-        if (littleEndian2) {
-          this.buffer[offset] = data & 255;
-          this.buffer[offset + 1] = (data & 65280) >> 8;
-          this.buffer[offset + 2] = (data & 16711680) >> 16;
-          this.buffer[offset + 3] = (data & 4278190080) >> 24;
+      writeUInt32(data, offset = this.offset, advance = true, littleEndian3 = false) {
+        debug("writeUInt32:", { data, offset, advance, littleEndian: littleEndian3 });
+        this.#validateWrite(4, offset);
+        const buffer = this.buffer;
+        if (littleEndian3) {
+          buffer[offset] = data & 255;
+          buffer[offset + 1] = (data & 65280) >> 8;
+          buffer[offset + 2] = (data & 16711680) >> 16;
+          buffer[offset + 3] = data >>> 24;
         } else {
-          this.buffer[offset] = (data & 4278190080) >> 24;
-          this.buffer[offset + 1] = (data & 16711680) >> 16;
-          this.buffer[offset + 2] = (data & 65280) >> 8;
-          this.buffer[offset + 3] = data & 255;
+          buffer[offset] = data >>> 24;
+          buffer[offset + 1] = (data & 16711680) >> 16;
+          buffer[offset + 2] = (data & 65280) >> 8;
+          buffer[offset + 3] = data & 255;
         }
         if (advance) {
-          this.offset += 4;
+          this.offset = offset + 4;
         }
       }
       /**
        * Write a series of bytes.
+       * Wider typed arrays retain the existing element-wise behavior: one staged value per element,
+       * converted to a byte by commit(), not the constructor's raw-memory interpretation.
        * @param {number[]|Int8Array|Int16Array|Int32Array|Uint8Array|Uint16Array|Uint32Array} data The data to write.
        * @param {number} [offset] The offset to write the data to, default is current offset.
-       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [advance] Flag to set the cursor to the supplied offset plus the number of bytes written, default is true; false leaves the cursor unchanged.
        */
       writeBytes(data, offset = this.offset, advance = true) {
         debug("writeBytes:", { data, offset, advance });
-        for (let i = 0; i < data.length; i++) {
-          this.buffer[offset + i] = data[i];
+        const { length } = data;
+        this.#validateWrite(length, offset);
+        if (length > 0) {
+          const buffer = this.buffer;
+          const source = data === buffer ? buffer.slice() : data;
+          for (let i = 0; i < length; i++) {
+            buffer[offset + i] = source[i];
+          }
         }
         if (advance) {
-          this.offset += data.length;
+          this.offset = offset + length;
         }
       }
       /**
        * Write a string as a given encoding.
        *
-       * Valid encodings are: 'ascii' aka 'latin1', 'utf8' / 'utf8', 'utf16be', 'utf16le'.
+       * Valid encodings are: 'ascii' aka 'latin1', 'utf8' / 'utf-8', 'utf16be' / 'utf16-be', 'utf16le' / 'utf16-le', 'utf16bom' / 'utf16-bom'.
+       * Names are case-insensitive. BOM encodings write a big-endian BOM before the UTF-16 data.
+       * UTF-8 replaces unpaired surrogates with U+FFFD; UTF-16 retains the original code units.
        *
        * For UTF-8:
        * Up to 4 bytes per character can be used. The fewest number of bytes possible is used.
@@ -14824,10 +15574,12 @@ var init_data_buffer = __esm({
        * @param {string} string The data to write.
        * @param {number} [offset] The offset to write the data to, default is current offset.
        * @param {string} [encoding] The encoding of the string, defailt is `ascii`.
-       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [advance] Flag to set the cursor to the supplied offset plus the number of bytes written, default is true; false leaves the cursor unchanged.
        */
       writeString(string2, offset = this.offset, encoding = "ascii", advance = true) {
         debug("writeString:", { string: string2, offset, encoding, advance });
+        this.#validateWrite(0, offset);
+        encoding = encoding.toLowerCase();
         const data = [];
         switch (encoding) {
           case "ascii":
@@ -14844,36 +15596,35 @@ var init_data_buffer = __esm({
               if (charcode < 128) {
                 data.push(charcode);
               } else if (charcode < 2048) {
-                data.push(
-                  192 | charcode >> 6,
-                  128 | charcode & 63
-                );
+                data.push(192 | charcode >> 6, 128 | charcode & 63);
               } else if (charcode < 55296 || charcode >= 57344) {
-                data.push(
-                  224 | charcode >> 12,
-                  128 | charcode >> 6 & 63,
-                  128 | charcode & 63
-                );
+                data.push(224 | charcode >> 12, 128 | charcode >> 6 & 63, 128 | charcode & 63);
               } else {
+                const next = string2.charCodeAt(i + 1);
+                if (charcode > 56319 || !(next >= 56320 && next <= 57343)) {
+                  data.push(239, 191, 189);
+                  continue;
+                }
                 i++;
                 charcode = 65536 + ((charcode & 1023) << 10 | string2.charCodeAt(i) & 1023);
-                data.push(
-                  240 | charcode >> 18,
-                  128 | charcode >> 12 & 63,
-                  128 | charcode >> 6 & 63,
-                  128 | charcode & 63
-                );
+                data.push(240 | charcode >> 18, 128 | charcode >> 12 & 63, 128 | charcode >> 6 & 63, 128 | charcode & 63);
               }
             }
             break;
           }
           case "utf16be":
+          case "utf16-be":
           case "utf16le":
-          case "utf16bom": {
-            const littleEndian2 = encoding === "utf16le";
+          case "utf16-le":
+          case "utf16bom":
+          case "utf16-bom": {
+            const littleEndian3 = encoding === "utf16le" || encoding === "utf16-le";
+            if (encoding === "utf16bom" || encoding === "utf16-bom") {
+              data.push(254, 255);
+            }
             for (let i = 0; i < string2.length; i++) {
               const charcode = string2.charCodeAt(i);
-              if (littleEndian2) {
+              if (littleEndian3) {
                 data.push(charcode & 255, charcode / 256 >>> 0);
               } else {
                 data.push(charcode / 256 >>> 0, charcode & 255);
@@ -14894,6 +15645,10 @@ var init_data_buffer = __esm({
       commit() {
         debug("commit: converting to read mode file");
         this.data = new Uint8Array(this.buffer);
+        this.lengthInBytes = this.data.length;
+        this.#dataView = null;
+        this.#viewData = null;
+        this.#viewLength = -1;
         this._buffer = null;
         this.writing = false;
       }
@@ -14902,148 +15657,21 @@ var init_data_buffer = __esm({
   }
 });
 
-// node_modules/@uttori/data-tools/src/data-buffer-list.js
-var debug2, DataBufferList, data_buffer_list_default;
-var init_data_buffer_list = __esm({
-  async "node_modules/@uttori/data-tools/src/data-buffer-list.js"() {
-    debug2 = () => {
-    };
-    if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
-      try {
-        const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
-        debug2 = d("DataBufferList");
-      } catch {
-      }
-    }
-    DataBufferList = class _DataBufferList {
-      /**
-       * Creates an instance of DataBufferList.
-       * @param {import('./data-buffer.js').default[]} [buffers] DataBuffers to initialize with.
-       */
-      constructor(buffers) {
-        debug2("constructor");
-        this.first = null;
-        this.last = null;
-        this.totalBuffers = 0;
-        this.availableBytes = 0;
-        this.availableBuffers = 0;
-        if (buffers && Array.isArray(buffers)) {
-          for (const buffer of buffers) {
-            this.append(buffer);
-          }
-        }
-      }
-      /**
-       * Creates a copy of the DataBufferList.
-       * @returns {DataBufferList} The copied DataBufferList.
-       */
-      copy() {
-        debug2("copy");
-        const result = new _DataBufferList();
-        result.first = this.first;
-        result.last = this.last;
-        result.totalBuffers = this.totalBuffers;
-        result.availableBytes = this.availableBytes;
-        result.availableBuffers = this.availableBuffers;
-        return result;
-      }
-      /**
-       * Appends a DataBuffer to the DataBufferList.
-       * @param {import('./data-buffer.js').default} buffer The DataBuffer to add to the list.
-       * @returns {number} The new number of buffers in the DataBufferList.
-       */
-      append(buffer) {
-        debug2("append");
-        buffer.prev = this.last;
-        if (this.last) {
-          this.last.next = buffer;
-        }
-        this.last = buffer;
-        if (this.first == null) {
-          this.first = buffer;
-        }
-        this.availableBytes += buffer.length;
-        this.availableBuffers++;
-        this.totalBuffers++;
-        debug2("append:", this.totalBuffers);
-        return this.totalBuffers;
-      }
-      /**
-       * Checks if we are on the last buffer in the list.
-       * @returns {boolean} Returns false if there are more buffers in the list, returns true when we are on the last buffer.
-       */
-      moreAvailable() {
-        if (this.first && this.first.next != null) {
-          debug2("moreAvailable: true");
-          return true;
-        }
-        debug2("moreAvailable: false");
-        return false;
-      }
-      /**
-       * Advance the buffer list to the next DataBuffer or to `null` when at the end of avaliable DataBuffers.
-       *
-       * If there is no next buffer, the current buffer is set to null.
-       * @returns {boolean} Returns false if there is no more buffers, returns true when the next buffer is set.
-       */
-      advance() {
-        debug2("advance");
-        if (this.first) {
-          this.availableBytes -= this.first.length;
-          this.availableBuffers--;
-        }
-        if (this.first && this.first.next) {
-          debug2("advance: advancing");
-          this.first = this.first.next;
-          return true;
-        }
-        debug2("advance: nothing to advance to");
-        this.first = null;
-        return false;
-      }
-      /**
-       * Rewind the buffer list to the previous buffer.
-       * @returns {boolean} Returns false if there is no previous buffer, returns true when the previous buffer is set.
-       */
-      rewind() {
-        debug2("rewind");
-        if (this.first && !this.first.prev) {
-          return false;
-        }
-        this.first = this.first ? this.first.prev : this.last;
-        if (this.first) {
-          this.availableBytes += this.first.length;
-          this.availableBuffers++;
-        }
-        return this.first != null;
-      }
-      /**
-       * Reset the list to the beginning.
-       */
-      reset() {
-        debug2("reset");
-        while (this.rewind()) {
-          continue;
-        }
-      }
-    };
-    data_buffer_list_default = DataBufferList;
-  }
-});
-
-// node_modules/@uttori/data-tools/src/audio/audio-wav.js
-var debug3, WAVE_FORMAT_TAGS, WAVE_CHANNEL_MASK_LABELS, ROLAND_SP404SX_PADS, AudioWAV, audio_wav_default;
+// node_modules/@uttori/data-tools/dist/audio/audio-wav.js
+function rolandPads() {
+  return ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].flatMap((bank) => Array.from({ length: 12 }, (_value, pad) => `${bank}${pad + 1}`));
+}
+var _a, debug2, WAVE_FORMAT_TAGS, WAVE_CHANNEL_MASK_LABELS, ROLAND_SP404SX_PADS, AudioWAV, audio_wav_default;
 var init_audio_wav = __esm({
-  async "node_modules/@uttori/data-tools/src/audio/audio-wav.js"() {
+  async "node_modules/@uttori/data-tools/dist/audio/audio-wav.js"() {
     init_pako();
     await init_data_buffer();
-    await init_data_buffer_list();
-    debug3 = () => {
+    debug2 = (..._args) => {
     };
     if (typeof process !== "undefined" && process.env.UTTORI_AUDIOWAV_DEBUG) {
       try {
         const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
-        debug3 = d("Uttori.AudioWAV");
+        debug2 = d("Uttori.AudioWAV");
       } catch {
       }
     }
@@ -15312,12 +15940,142 @@ var init_audio_wav = __esm({
       131072: "speaker_top_back_right",
       2147483648: "speaker_all"
     };
-    ROLAND_SP404SX_PADS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].flatMap((bank) => Array.from({ length: 12 }, (_value, pad) => `${bank}${pad + 1}`));
-    AudioWAV = class _AudioWAV extends data_buffer_default {
+    ROLAND_SP404SX_PADS = /* @__PURE__ */ rolandPads();
+    AudioWAV = class extends data_buffer_default {
+      /** The container type, `WAVE` or `AIFF`. */
+      container;
+      /** The file type, `WAVE` or `AIFF`. */
+      type;
+      /** The parsed chunks. */
+      chunks;
+      /** The options for the AudioWAV instance. */
+      options;
+      /** Recoverable structural and metadata errors from the most recent parse. */
+      errors = [];
+      /** The first decoded format and file-wide sample-count metadata. */
+      #format;
+      #fact;
+      #common;
+      #soundChunks = [];
+      #ds64;
+      #headerID = "";
+      #dataSeen = 0;
+      #sizeTable;
+      #dataChunks = [];
+      /** Report recoverable damage, or fail immediately when strict parsing is requested. */
+      #issue(message, offset = this.offset) {
+        if (this.options.strict) {
+          throw new RangeError(`${message} (offset ${offset})`);
+        }
+        this.errors.push({ offset, message });
+        debug2("Error Parsing:", message, "at offset", offset);
+      }
+      /** Combine unsigned 64-bit words only when JavaScript can represent the result exactly. */
+      static #uint64(low, high) {
+        const value = high * 4294967296 + low;
+        if (!Number.isSafeInteger(value)) {
+          throw new RangeError("64-bit chunk size or sample count exceeds Number.MAX_SAFE_INTEGER");
+        }
+        return value;
+      }
+      /** Restrict a standalone decoder to its declared payload, excluding padding and later chunks. */
+      static #chunkBuffer(chunk, minimumSize, littleEndian3 = true) {
+        const buffer = new data_buffer_default(typeof Buffer !== "undefined" && Buffer.isBuffer(chunk) ? new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength) : chunk);
+        if (buffer.length < 8) {
+          throw new RangeError("Truncated chunk header: expected 8 bytes");
+        }
+        const size = buffer.peekUInt32(4, littleEndian3);
+        if (size < minimumSize || size > buffer.length - 8) {
+          throw new RangeError(`Invalid chunk payload size: ${size}; minimum ${minimumSize}, available ${buffer.length - 8}`);
+        }
+        if (buffer.length !== size + 8) {
+          buffer.data = buffer.data.subarray(0, size + 8);
+          buffer.lengthInBytes = buffer.data.length;
+        }
+        return buffer;
+      }
+      /** Validate integer writer fields without allocating a temporary validation table. */
+      static #unsigned(value, maximum, name) {
+        if (!Number.isInteger(value) || value < 0 || value > maximum) {
+          throw new RangeError(`Invalid ${name}: ${value}`);
+        }
+      }
+      /** Check count-derived ranges before allocating objects or entering a loop. */
+      static #countFits(count, width, available, name) {
+        if (count > Math.floor(available / width)) {
+          throw new RangeError(`Invalid ${name}: ${count} entries exceed ${available} bytes`);
+        }
+      }
+      /** Remove AIFF block-fill bytes once COMM is known, even when COMM follows SSND. */
+      #updateAiffSoundData() {
+        const common = this.#common;
+        if (!common) {
+          if (this.#soundChunks.length) {
+            this.#issue("AIFF sound data has no decoded COMM chunk", 12);
+          }
+          return;
+        }
+        if (!["", "NONE", "twos", "sowt", "fl32", "FL32", "fl64", "FL64"].includes(common.compressionType)) {
+          return;
+        }
+        const size = common.sampleFrames * common.channels * Math.ceil(common.sampleSize / 8);
+        if (!Number.isSafeInteger(size) || common.channels === 0 || common.sampleSize === 0) {
+          this.#issue("Invalid AIFF sample-frame byte count", 12);
+          return;
+        }
+        if (this.#soundChunks.length !== 1) {
+          return;
+        }
+        const { value, offset } = this.#soundChunks[0];
+        if (size > value.soundData.length) {
+          this.#issue(`AIFF sound data has ${value.soundData.length} bytes; COMM requires ${size}`, offset);
+        } else {
+          value.soundData = value.soundData.subarray(0, size);
+        }
+      }
+      /** Complete timing after all chunks, including metadata that follows the audio payload. */
+      #updateDurations() {
+        const format = this.#format;
+        if (!format) {
+          if (this.#dataChunks.length) {
+            this.#issue("Audio data has no decoded fmt chunk", 12);
+          }
+          return;
+        }
+        const isPCM = format.audioFormatValue === 1 || format.audioFormatValue === 3 || format.audioFormatValue === 65534 && (format.subFormat_1 === 1 || format.subFormat_1 === 3) && format.subFormat_2 === 0 && format.subFormat_3 === 16 && format.subFormat_4 === 2852126848 && format.subFormat_5 === 1905997824;
+        const byteRate = format.byteRate || (isPCM ? format.sampleRate * format.blockAlign : 0);
+        for (const entry2 of this.#dataChunks) {
+          let duration = 0;
+          if (entry2.size === 0) {
+            duration = 0;
+          } else if (byteRate > 0) {
+            duration = entry2.size / byteRate;
+          } else {
+            duration = Number.NaN;
+          }
+          entry2.value.duration = duration;
+        }
+        const entry = this.#dataChunks.length === 1 ? this.#dataChunks[0] : void 0;
+        if (entry?.complete && entry.size > 0 && format.sampleRate > 0) {
+          let samples;
+          if (this.#ds64 && (this.#ds64.sampleCountLow || this.#ds64.sampleCountHigh)) {
+            try {
+              samples = _a.#uint64(this.#ds64.sampleCountLow, this.#ds64.sampleCountHigh);
+            } catch (error) {
+              this.#issue(error instanceof Error ? error.message : String(error));
+            }
+          } else if (!isPCM && this.#fact && this.#fact.numberOfSamples !== 4294967295) {
+            samples = this.#fact.numberOfSamples;
+          }
+          if (samples !== void 0) {
+            entry.value.duration = samples / format.sampleRate;
+          }
+        }
+      }
       /**
        * Creates a new AudioWAV.
-       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} input The data to process.
-       * @param {object} [opts] Options for this AudioWAV instance.
+       * @param input The data to process.
+       * @param opts Options for this AudioWAV instance.
        * @class
        */
       constructor(input, opts = {}) {
@@ -15327,54 +16085,94 @@ var init_audio_wav = __esm({
         this.chunks = [];
         this.options = {
           // This keeps in spec, some files fail with this.
-          roundOddChunks: true,
-          ...opts
+          ...opts,
+          roundOddChunks: opts.roundOddChunks ?? true,
+          strict: opts.strict ?? false,
+          maxResUSize: opts.maxResUSize ?? 16 * 1024 * 1024
         };
+        if (!Number.isSafeInteger(this.options.maxResUSize) || this.options.maxResUSize < 0) {
+          throw new RangeError("maxResUSize must be a nonnegative safe integer");
+        }
         this.parse();
       }
       /**
        * Creates a new AudioWAV from file data.
-       * @param {Buffer} data The data of the file to process.
-       * @param {object} [options] Options for returned AudioWAV instance.
-       * @returns {AudioWAV} the new AudioWAV instance for the provided file data
+       * @param data The data of the file to process.
+       * @param options Options for returned AudioWAV instance.
+       * @returns the new AudioWAV instance for the provided file data
        * @static
        */
-      static fromFile(data, options) {
-        debug3("fromFile:", data.length, data.byteLength);
-        const buffer = new data_buffer_default(data);
-        const list = new data_buffer_list_default();
-        list.append(buffer);
-        return new _AudioWAV(data, options);
+      static fromFile(data, options = {}) {
+        debug2("fromFile:", data.length, data.byteLength);
+        return new _a(data, options);
       }
       /**
        * Creates a new AudioWAV from a DataBuffer.
-       * @param {DataBuffer} buffer The DataBuffer of the file to process.
-       * @param {object} [options] Options for returned AudioWAV instance.
-       * @returns {AudioWAV} the new AudioWAV instance for the provided DataBuffer
+       * @param buffer The DataBuffer of the file to process.
+       * @param options Options for returned AudioWAV instance.
+       * @returns the new AudioWAV instance for the provided DataBuffer
        * @static
        */
-      static fromBuffer(buffer, options) {
-        debug3("fromBuffer:", buffer.length);
-        const list = new data_buffer_list_default();
-        list.append(buffer);
-        return new _AudioWAV(buffer, options);
+      static fromBuffer(buffer, options = {}) {
+        debug2("fromBuffer:", buffer.length);
+        return new _a(buffer, options);
       }
       /**
        * Parse the WAV file, decoding the supported chunks.
        */
       parse() {
-        debug3("parse");
+        debug2("parse");
+        this.seek(0);
+        this.chunks.length = 0;
+        this.errors.length = 0;
+        this.container = "";
+        this.type = "";
+        this.#headerID = "";
+        this.#common = void 0;
+        this.#soundChunks.length = 0;
+        this.#format = void 0;
+        this.#fact = void 0;
+        this.#ds64 = void 0;
+        this.#dataSeen = 0;
+        this.#sizeTable?.clear();
+        this.#dataChunks.length = 0;
+        if (this.remainingBytes() < 12) {
+          throw new RangeError("Truncated file header: expected 12 bytes");
+        }
         const chunk = this.read(12, false);
-        const value = _AudioWAV.decodeHeader(chunk);
+        const value = _a.decodeHeader(chunk);
         this.chunks.push({ type: "header", value });
         this.type = value.type;
+        this.container = value.type;
+        this.#headerID = value.chunkID;
+        const extended = value.chunkID === "RF64" || value.chunkID === "BW64";
+        if (!extended && value.size + 8 !== this.length) {
+          this.#issue(`Container declares ${value.size + 8} bytes; input has ${this.length}`, 4);
+        }
+        if (extended && value.size !== 4294967295) {
+          this.#issue("RF64 / BW64 header size must be 0xFFFFFFFF", 4);
+        }
         while (this.remainingBytes()) {
+          const offset = this.offset;
           try {
             this.decodeChunk();
           } catch (error) {
-            debug3("Error Parsing:", error);
-            console.error(error);
+            if (this.options.strict) {
+              throw error;
+            }
+            this.#issue(error instanceof Error ? error.message : String(error), offset);
           }
+          if (this.offset <= offset) {
+            this.#issue("Parser made no progress", offset);
+            this.advance(this.remainingBytes());
+          }
+        }
+        if (extended && !this.#ds64) {
+          this.#issue("RF64 / BW64 file is missing ds64", 12);
+        }
+        this.#updateDurations();
+        if (this.type === "AIFF") {
+          this.#updateAiffSoundData();
         }
       }
       /**
@@ -15384,14 +16182,17 @@ var init_audio_wav = __esm({
        * Signature (Decimal): [82, 73, 70, 70, ..., ..., ..., ..., 87, 65, 86, 69]
        * Signature (Hexadecimal): [52, 49, 46, 46, ..., ..., ..., ..., 57, 41, 56, 45]
        * Signature (ASCII): [R, I, F, F, ..., ..., ..., ..., W, A, V, E]
-       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} chunk The data to process.
-       * @static
-       * @returns {WavHeader} The decoded values.
+       * @param chunk The data to process.
+       * @returns The decoded values.
        * @throws {Error} Invalid WAV header
+       * @static
        */
       static decodeHeader(chunk) {
-        debug3("decodeHeader");
+        debug2("decodeHeader");
         const header = new data_buffer_default(chunk);
+        if (header.length < 12) {
+          throw new RangeError("Truncated file header: expected 12 bytes");
+        }
         const chunkID = header.readString(4);
         let type = "";
         if (["RIFF", "RF64", "BW64"].includes(chunkID)) {
@@ -15419,19 +16220,30 @@ var init_audio_wav = __esm({
       }
       /**
        * Enocdes JSON values to a valid Wave Header chunk Buffer.
-       * @param {object} data - The values to encode to the header chunk chunk.
-       * @param {string} [data.riff] - RIFF Header, should contains the string `RIFF`, `RF64`, or `BW64` in ASCII form.
-       * @param {number} data.size - This is the size of the entire file in bytes minus 8 bytes for the 2 fields not included in this count. RF64 sets this to -1 = 0xFFFFFFFF as it doesn't use this to support larger sizes in the DS64 chunk.
-       * @param {string} [data.format] - WAVE Header, the string `WAVE` in ASCII form.
-       * @returns {Buffer} The newley encoded header chunk.
+       * @param data The values to encode to the header chunk chunk.
+       * @param data.riff RIFF Header, should contains the string `RIFF`, `RF64`, or `BW64` in ASCII form.
+       * @param data.size This is the size of the entire file in bytes minus 8 bytes for the 2 fields not included in this count. RF64 sets this to -1 = 0xFFFFFFFF as it doesn't use this to support larger sizes in the DS64 chunk.
+       * @param data.format WAVE Header, the string `WAVE` in ASCII form.
+       * @returns The newley encoded header chunk.
        * @static
        */
       static encodeHeader({ riff = "RIFF", size, format = "WAVE" }) {
-        debug3("encodeHeader:", { riff, size, format });
+        debug2("encodeHeader:", { riff, size, format });
+        if (!/^[\x20-\x7e]{4}$/.test(riff) || !/^[\x20-\x7e]{4}$/.test(format)) {
+          throw new TypeError("Header IDs must contain exactly four printable ASCII characters");
+        }
+        const encodedSize = size === -1 && (riff === "RF64" || riff === "BW64") ? 4294967295 : size;
+        if (!Number.isInteger(encodedSize) || encodedSize < 0 || encodedSize > 4294967295) {
+          throw new RangeError("Header size must be an unsigned 32-bit integer");
+        }
         const header = Buffer.alloc(12);
-        header.write(riff, 0);
-        header.writeUInt32LE(size, 4);
-        header.write(format, 8);
+        header.write(riff, 0, 4, "ascii");
+        if (["FORM", "AIFF", "AIFC"].includes(riff)) {
+          header.writeUInt32BE(encodedSize, 4);
+        } else {
+          header.writeUInt32LE(encodedSize, 4);
+        }
+        header.write(format, 8, 4, "ascii");
         return header;
       }
       /**
@@ -15439,177 +16251,211 @@ var init_audio_wav = __esm({
        * Supported Chunk Types: `fmt `, `fact`, `inst`, `DISP`, `smpl`, `tlst`, `data`, `LIST`, `RLND`, `JUNK`, `acid`, `cue `, `bext`, `ResU`, `ds64`, `cart`
        *
        * Chunk Structure:
-       * Length: 4 bytes (integer)
        * Type:   4 bytes (string)
+       * Length: 4 bytes (unsigned integer, excluding the alignment byte)
        * Chunk:  {length} bytes
        * @returns {string} Chunk Type
-       * @throws {Error} Invalid Chunk Length when less than 0
+       * @throws {Error} Invalid chunk boundaries or metadata when strict parsing is enabled
        */
       decodeChunk() {
-        debug3("decodeChunk at offset", this.offset, "with", this.remainingBytes(), "remaining bytes");
+        debug2("decodeChunk at offset", this.offset, "with", this.remainingBytes(), "remaining bytes");
+        const offset = this.offset;
+        if (this.remainingBytes() < 8) {
+          this.#issue("Truncated chunk header: expected 8 bytes", offset);
+          this.chunks.push({
+            type: "(broken)",
+            chunk: this.read(this.remainingBytes(), false),
+            unknown: true
+          });
+          return "(broken)";
+        }
         let type = this.readString(4);
-        debug3("decodeChunk type", type);
-        let size = this.readUInt32(this.type !== "AIFF");
-        debug3("decodeChunk size", size);
-        if (size < 0) {
-          throw new Error(`Invalid SubChunk Size: ${4294967295 & size}`);
+        debug2("decodeChunk type", type);
+        const declaredSize = this.readUInt32(this.type !== "AIFF");
+        let size = declaredSize;
+        let resolved = true;
+        debug2("decodeChunk size", size);
+        const extended = this.#headerID === "RF64" || this.#headerID === "BW64";
+        if (extended && offset === 12 && type !== "ds64") {
+          this.#issue("ds64 must be the first RF64 / BW64 chunk", offset);
         }
-        if (this.options.roundOddChunks && size % 2 !== 0) {
-          size += 1;
+        if (extended && size === 4294967295) {
+          try {
+            if (type === "data" && this.#dataSeen === 0 && this.#ds64) {
+              size = _a.#uint64(this.#ds64.dataSizeLow, this.#ds64.dataSizeHigh);
+            } else {
+              const table = this.#sizeTable?.get(type);
+              if (!table || table.next >= table.sizes.length) {
+                throw new RangeError(`Missing ds64 size for '${type}'`);
+              }
+              size = table.sizes[table.next++];
+            }
+          } catch (error) {
+            this.#issue(error instanceof Error ? error.message : String(error), offset);
+            resolved = false;
+            size = this.remainingBytes();
+          }
         }
+        if (type === "data") {
+          this.#dataSeen++;
+        }
+        const complete = resolved && size <= this.remainingBytes();
         if (size > this.remainingBytes()) {
-          debug3("decodeChunk size", size, "too large, using remaining bytes", this.remainingBytes());
+          this.#issue(`Chunk '${type}' declares ${size} payload bytes; only ${this.remainingBytes()} remain`, offset);
           size = this.remainingBytes();
         }
-        if (!type || size === 0) {
-          debug3("decodeChunk something is wrong, ending");
+        let padding = this.options.roundOddChunks && size % 2 !== 0 ? 1 : 0;
+        if (padding && size + padding > this.remainingBytes()) {
+          this.#issue(`Missing alignment byte after '${type}'`, offset);
+          padding = 0;
+        }
+        if (!/^[\x20-\x7e]{4}$/.test(type)) {
+          this.#issue("Invalid chunk ID", offset);
           type = "(broken)";
           size = this.remainingBytes();
+          padding = 0;
+        }
+        this.rewind(8);
+        const chunk = this.read(8 + size + padding, false);
+        let decodeBytes = chunk;
+        if (extended && declaredSize === 4294967295 && size < 4294967295) {
+          decodeBytes = Uint8Array.from(chunk);
+          new DataView(decodeBytes.buffer, decodeBytes.byteOffset, decodeBytes.byteLength).setUint32(4, size, true);
         }
         switch (type) {
           case "fmt ": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeFMT(chunk);
+            const value = _a.decodeFMT(decodeBytes);
+            this.#format ??= value;
             this.chunks.push({ type: "format", value, chunk });
             break;
           }
           case "fact": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeFACT(chunk);
+            const value = _a.decodeFACT(decodeBytes);
+            this.#fact ??= value;
             this.chunks.push({ type: "fact", value, chunk });
             break;
           }
           case "inst": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeINST(chunk);
+            const value = _a.decodeINST(decodeBytes);
             this.chunks.push({ type: "instrument", value, chunk });
             break;
           }
           case "DISP": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeDISP(chunk);
+            const value = _a.decodeDISP(decodeBytes);
             this.chunks.push({ type: "display", value, chunk });
             break;
           }
           case "smpl": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeSMPL(chunk);
+            const value = _a.decodeSMPL(decodeBytes);
             this.chunks.push({ type: "sample", value, chunk });
             break;
           }
           case "tlst": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeTLST(chunk);
+            const value = _a.decodeTLST(decodeBytes);
             this.chunks.push({ type: "trigger_list", value, chunk });
             break;
           }
           case "data": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            _AudioWAV.decodeDATA(chunk);
-            const format = this.chunks.find((c) => c.type === "format");
-            const formatValue = (
-              /** @type {WavFormat} */
-              format?.value
-            );
-            const duration = size / formatValue.byteRate;
-            this.chunks.push({ type: "data", chunk, value: { duration } });
+            _a.decodeDATA(decodeBytes);
+            let duration = 0;
+            if (size === 0) {
+              duration = 0;
+            } else if (this.#format?.byteRate) {
+              duration = size / this.#format.byteRate;
+            } else {
+              duration = Number.NaN;
+            }
+            const value = { duration };
+            this.#dataChunks.push({ value, size, complete });
+            this.chunks.push({ type: "data", chunk, value });
             break;
           }
           case "LIST": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeLIST(chunk);
+            const value = _a.decodeLIST(decodeBytes, this.options);
             this.chunks.push({ type: "list", value, chunk });
             break;
           }
           case "RLND": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeRLND(chunk);
+            const value = _a.decodeRLND(decodeBytes);
             this.chunks.push({ type: "roland", value, chunk });
             break;
           }
           case "JUNK": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            _AudioWAV.decodeJUNK(chunk, this.options);
+            _a.decodeJUNK(decodeBytes, this.options);
             this.chunks.push({ type: "junk", chunk });
             break;
           }
           case "PAD ": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            _AudioWAV.decodePAD(chunk);
+            _a.decodePAD(decodeBytes);
             this.chunks.push({ type: "padding", chunk });
             break;
           }
           case "PEAK": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodePEAK(chunk);
+            const value = _a.decodePEAK(decodeBytes, this.type !== "AIFF");
             this.chunks.push({ type: "peak", value, chunk });
             break;
           }
           case "acid": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeACID(chunk);
+            const value = _a.decodeACID(decodeBytes);
             this.chunks.push({ type: "acid", value, chunk });
             break;
           }
           case "strc": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeSTRC(chunk);
+            const value = _a.decodeSTRC(decodeBytes);
             this.chunks.push({ type: "strc", value, chunk });
             break;
           }
           case "cue ": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeCue(chunk);
+            const value = _a.decodeCue(decodeBytes);
             this.chunks.push({ type: "cue_points", value, chunk });
             break;
           }
           case "bext": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeBEXT(chunk, this.options);
+            const value = _a.decodeBEXT(decodeBytes, this.options);
             this.chunks.push({ type: "broadcast_extension", value, chunk });
             break;
           }
           case "ResU": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeResU(chunk);
+            const value = _a.decodeResU(decodeBytes, this.options);
+            if (value.error) {
+              this.#issue(value.error, offset);
+            }
             this.chunks.push({ type: "logic_resu", value, chunk });
             break;
           }
           case "ds64": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeDS64(chunk);
+            const value = _a.decodeDS64(decodeBytes);
             this.chunks.push({ type: "data_size_64", value, chunk });
+            if (extended) {
+              if (this.#ds64) {
+                this.#issue("Duplicate ds64 chunk", offset);
+                break;
+              }
+              this.#ds64 = value;
+              const riffSize = _a.#uint64(value.riffSizeLow, value.riffSizeHigh);
+              if (!Number.isSafeInteger(riffSize + 8) || riffSize + 8 !== this.length) {
+                this.#issue(`ds64 declares ${riffSize} RIFF payload bytes; input has ${this.length - 8}`, offset);
+              }
+              this.#sizeTable ??= /* @__PURE__ */ new Map();
+              for (const entry of value.table) {
+                const size2 = _a.#uint64(entry.chunkSizeLow, entry.chunkSizeHigh);
+                let table = this.#sizeTable.get(entry.chunkID);
+                if (!table) {
+                  table = { sizes: [], next: 0 };
+                  this.#sizeTable.set(entry.chunkID, table);
+                }
+                table.sizes.push(size2);
+              }
+            }
             break;
           }
           case "cart": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
             this.chunks.push({ type: "cart", chunk, unknown: true });
             break;
           }
           case "AFAn":
           case "AFmd": {
-            debug3(`macOS Special Binary Chunk: '${type}' with ${size} bytes`);
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
+            debug2(`macOS Special Binary Chunk: '${type}' with ${size} bytes`);
             this.chunks.push({ type, chunk, description: "macOS Special Binary Chunk" });
             break;
           }
@@ -15618,51 +16464,41 @@ var init_audio_wav = __esm({
           case "regn":
           case "ovwf":
           case "umid": {
-            debug3(`ProTools Special Chunk: '${type}' with ${size} bytes`);
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
+            debug2(`ProTools Special Chunk: '${type}' with ${size} bytes`);
             this.chunks.push({ type, chunk, description: "ProTools Special Chunk" });
             break;
           }
           case "COMM": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeCOMM(chunk);
+            const value = _a.decodeCOMM(decodeBytes);
+            this.#common ??= value;
             this.chunks.push({ type: "common", value, chunk });
             break;
           }
           case "SSND": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeSSND(chunk);
-            this.chunks.push({ type: "common", value, chunk });
+            const value = _a.decodeSSND(decodeBytes);
+            this.#soundChunks.push({ value, offset });
+            this.chunks.push({ type: "sound_data", value, chunk });
             break;
           }
           case "FVER": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const value = _AudioWAV.decodeFVER(chunk);
-            this.chunks.push({ type: "common", value, chunk });
+            const value = _a.decodeFVER(decodeBytes);
+            this.chunks.push({ type: "format_version", value, chunk });
             break;
           }
           case "ANNO":
           case "AUTH":
           case "NAME": {
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
-            const stream = new data_buffer_default(chunk);
+            const stream = _a.#chunkBuffer(decodeBytes, 0, this.type !== "AIFF");
             const chunkID = stream.readString(4);
-            const nameSize = stream.readUInt32();
-            const name = stream.readString(nameSize);
+            const nameSize = stream.readUInt32(this.type !== "AIFF");
+            const name = nameSize ? stream.readString(nameSize) : "";
             const value = { chunkID, size: nameSize, name };
-            debug3("decodeGenericText =", JSON.stringify(value, null, 2));
+            debug2("decodeGenericText =", value);
             this.chunks.push({ type: chunkID.toLowerCase(), value, chunk });
             break;
           }
           default: {
-            debug3(`Unsupported Chunk: '${type}' with ${size} bytes`);
-            this.rewind(8);
-            const chunk = this.read(8 + size, false);
+            debug2(`Unsupported Chunk: '${type}' with ${size} bytes`);
             this.chunks.push({ type, chunk, unknown: true });
             break;
           }
@@ -15681,13 +16517,13 @@ var init_audio_wav = __esm({
        * Bits per Sample     2 bytes
        * [Extra Param Size]  2 bytes
        * [Extra Params]      n bytes
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavFormat} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        */
       static decodeFMT(chunk) {
-        debug3("decodeFMT");
-        const format = new data_buffer_default(chunk);
+        debug2("decodeFMT");
+        const format = _a.#chunkBuffer(chunk, 16);
         const chunkID = format.readString(4);
         const size = format.readUInt32(true);
         const audioFormatValue = format.readUInt16(true);
@@ -15708,28 +16544,48 @@ var init_audio_wav = __esm({
           blockAlign,
           bitsPerSample
         };
-        if (format.remainingBytes()) {
+        if (size > 16) {
+          if (format.remainingBytes() < 2) {
+            throw new RangeError("Truncated fmt extension size");
+          }
           value.extraParamSize = format.readUInt16(true);
+          if (value.extraParamSize > format.remainingBytes()) {
+            throw new RangeError("Truncated fmt extension data");
+          }
           if (audioFormatValue === 65534) {
+            if (value.extraParamSize < 22) {
+              throw new RangeError("Extensible fmt requires at least 22 extension bytes");
+            }
             value.validBitsPerSample = format.readUInt16(true);
             value.channelMask = format.readUInt32(true);
             value.channelMaskLabel = WAVE_CHANNEL_MASK_LABELS[value.channelMask];
             if (value.channelMaskLabel === void 0) {
-              debug3("Unknown Channel Mask:", value.channelMask);
-              value.channelMaskLabel = `unknown_${value.channelMask}`;
+              debug2("Unknown Channel Mask:", value.channelMask);
+              const labels = Object.entries(WAVE_CHANNEL_MASK_LABELS).filter(([mask]) => (value.channelMask & Number(mask)) !== 0).map(([, label]) => label);
+              const unknown = (value.channelMask & ~2147745791) >>> 0;
+              if (unknown) {
+                labels.push(`unknown_${unknown}`);
+              }
+              value.channelMaskLabel = labels.length ? labels.join(" | ") : "unspecified";
             }
             value.subFormat_1 = format.readUInt32(true);
             value.subFormat_2 = format.readUInt16(true);
             value.subFormat_3 = format.readUInt16(true);
             value.subFormat_4 = format.readUInt32(true);
             value.subFormat_5 = format.readUInt32(true);
+            if (value.extraParamSize > 22) {
+              value.extraParams = format.read(value.extraParamSize - 22, false);
+            }
           } else if (value.extraParamSize > 0) {
             value.extraParams = format.read(value.extraParamSize, false);
           } else {
             value.extraParams = new Uint8Array();
           }
         }
-        debug3("decodeFMT =", JSON.stringify(value, null, 2));
+        if (audioFormatValue === 65534 && value.extraParamSize === void 0) {
+          throw new RangeError("Extensible fmt is missing its extension");
+        }
+        debug2("decodeFMT =", value);
         return value;
       }
       /**
@@ -15737,32 +16593,50 @@ var init_audio_wav = __esm({
        *
        * Defaults are set to Red Book Compact Disc Digital Audio (CDDA or CD-DA) / Audio CD standards.
        *
-       * RF64 specific fields are currently unsupported.
-       * @param {object} [data] The values to encode to the `fmt ` chunk.
-       * @param {number} [data.audioFormatValue] Format of the audio data, 1 is PCM and values other than 1 indicate some form of compression. See `decodeFMT` for a listing
-       * @param {number} [data.channels] Mono = 1, Stereo = 2, etc.
-       * @param {number} [data.sampleRate] 8000, 44100, 96000, etc.
-       * @param {number} [data.byteRate] Sample Rate * Channels * Bits per Sample / 8
-       * @param {number} [data.blockAlign] The number of bytes for one sample including all channels. Channels * Bits per Sample / 8
-       * @param {number} [data.bitsPerSample] 8 bits = 8, 16 bits = 16, etc.
-       * @param {number} [data.extraParamSize] The size of the extra paramteres to follow, or 0.
-       * @param {number} [data.extraParams] Any extra data to encode.
-       * @returns {Buffer} The newley encoded `fmt ` chunk.
+       * Extensible format fields can be supplied as a complete binary extraParams block (at least 22 bytes).
+       * @param data The values to encode to the `fmt ` chunk.
+       * @param data.audioFormatValue Format of the audio data, 1 is PCM and values other than 1 indicate some form of compression. See `decodeFMT` for a listing
+       * @param data.channels Mono = 1, Stereo = 2, etc.
+       * @param data.sampleRate 8000, 44100, 96000, etc.
+       * @param data.byteRate Sample Rate * Channels * Bits per Sample / 8
+       * @param data.blockAlign The number of bytes for one sample including all channels. Channels * Bits per Sample / 8
+       * @param data.bitsPerSample 8 bits = 8, 16 bits = 16, etc.
+       * @param data.extraParamSize The size of the extra paramteres to follow, or 0.
+       * @param data.extraParams Any extra data to encode. Byte arrays are copied verbatim; strings and legacy numeric values are encoded as UTF-8 text.
+       * @returns The newley encoded `fmt ` chunk.
        * @static
        */
       static encodeFMT(data = {}) {
-        debug3("encodeFMT:", data);
-        const {
-          audioFormatValue = 1,
-          channels = 2,
-          sampleRate = 44100,
-          byteRate = 176400,
-          blockAlign = 4,
-          bitsPerSample = 16,
-          extraParamSize = 0,
-          extraParams = 0
-        } = data;
-        const buffer = Buffer.alloc(26 + extraParamSize, 0);
+        debug2("encodeFMT:", data);
+        const { audioFormatValue = 1, channels = 2, sampleRate = 44100, bitsPerSample = 16, blockAlign = channels * Math.ceil(bitsPerSample / 8), byteRate = sampleRate * blockAlign, extraParams = 0 } = data;
+        let params;
+        if (extraParams instanceof Uint8Array) {
+          params = extraParams;
+        } else if (Array.isArray(extraParams)) {
+          params = Uint8Array.from(extraParams);
+        } else if (extraParams === 0) {
+          params = void 0;
+        } else {
+          params = new TextEncoder().encode(String(extraParams));
+        }
+        if (Array.isArray(extraParams) && Array.from(extraParams).some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)) {
+          throw new RangeError("extraParams must contain unsigned bytes");
+        }
+        const extraParamSize = data.extraParamSize ?? params?.length ?? 0;
+        _a.#unsigned(audioFormatValue, 65535, "audioFormatValue");
+        _a.#unsigned(channels, 65535, "channels");
+        _a.#unsigned(sampleRate, 4294967295, "sampleRate");
+        _a.#unsigned(byteRate, 4294967295, "byteRate");
+        _a.#unsigned(blockAlign, 65535, "blockAlign");
+        _a.#unsigned(bitsPerSample, 65535, "bitsPerSample");
+        _a.#unsigned(extraParamSize, 65535, "extraParamSize");
+        if (params && params.length > extraParamSize) {
+          throw new RangeError("extraParams exceeds extraParamSize");
+        }
+        if (audioFormatValue === 65534 && extraParamSize < 22) {
+          throw new RangeError("Extensible fmt requires at least 22 extension bytes");
+        }
+        const buffer = Buffer.alloc(26 + extraParamSize + extraParamSize % 2, 0);
         buffer.write("fmt ", 0);
         buffer.writeUInt32LE(26 - 8 + extraParamSize, 4);
         buffer.writeUInt16LE(audioFormatValue, 8);
@@ -15772,24 +16646,24 @@ var init_audio_wav = __esm({
         buffer.writeUInt16LE(blockAlign, 20);
         buffer.writeUInt16LE(bitsPerSample, 22);
         buffer.writeUInt16LE(extraParamSize, 24);
-        if (extraParamSize > 0 && extraParams) {
-          buffer.fill(0, 26, 26 + extraParamSize);
-          buffer.write(String(extraParams), 26);
+        if (params && params.length > 0) {
+          buffer.set(params, 26);
         }
-        debug3("Buffer:", buffer.toString("hex"));
+        debug2("Buffer:", buffer);
         return buffer;
       }
       /**
        * Decode the LIST (LIST Information) chunk.
        *
        * A LIST chunk defines a list of sub-chunks and has the following format.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavList} The decoded values.
+       * @param chunk Data Blob
+       * @param options Nested chunk alignment options.
+       * @returns The decoded values.
        * @static
        */
-      static decodeLIST(chunk) {
-        debug3("decodeLIST");
-        const list = new data_buffer_default(chunk);
+      static decodeLIST(chunk, options = {}) {
+        debug2("decodeLIST");
+        const list = _a.#chunkBuffer(chunk, 4);
         const chunkID = list.readString(4);
         const size = list.readUInt32(true);
         const type = list.readString(4);
@@ -15800,40 +16674,47 @@ var init_audio_wav = __esm({
         };
         switch (type) {
           case "INFO": {
-            value.data = _AudioWAV.decodeLISTINFO(list);
+            value.data = _a.decodeLISTINFO(list, options);
             break;
           }
           case "adtl": {
-            value.data = _AudioWAV.decodeLISTadtl(list);
+            value.data = _a.decodeLISTadtl(list, options);
             break;
           }
           default: {
-            debug3(`Unknown LIST Type: ${type}`);
+            debug2(`Unknown LIST Type: ${type}`);
           }
         }
-        debug3("decodeLIST =", JSON.stringify(value, null, 2));
+        debug2("decodeLIST =", value);
         return value;
       }
       /**
        * Decode the LIST INFO chunks.
-       * @param {DataBuffer} buffer List DataBuffer
-       * @returns {WavListInfo[]} The parsed list.
+       * @param buffer List DataBuffer
+       * @param options Nested chunk alignment options.
+       * @returns The parsed list.
        */
-      static decodeLISTINFO(buffer) {
-        debug3("decodeLISTINFO");
+      static decodeLISTINFO(buffer, options = {}) {
+        debug2("decodeLISTINFO");
         const value = [];
         while (buffer.remainingBytes()) {
-          const info = (
-            /** @type {WavListInfo} */
-            {}
-          );
+          if (buffer.remainingBytes() < 8) {
+            throw new RangeError("Truncated LIST INFO sub-chunk header");
+          }
+          const info = { id: "", size: 0, text: "" };
           info.id = buffer.readString(4);
-          debug3("decodeLISTINFO chunk id:", info.id);
+          debug2("decodeLISTINFO chunk id:", info.id);
           info.size = buffer.readUInt32(true);
-          debug3("decodeLISTINFO chunk size:", info.size);
-          info.text = buffer.readString(info.size);
-          debug3("decodeLISTINFO chunk text:", info.text);
-          if (info.size % 2 !== 0) {
+          debug2("decodeLISTINFO chunk size:", info.size);
+          if (info.size > buffer.remainingBytes()) {
+            throw new RangeError("Truncated LIST INFO text");
+          }
+          info.text = info.size ? buffer.readString(info.size) : "";
+          debug2("decodeLISTINFO chunk text:", info.text);
+          if ((options.roundOddChunks ?? true) && info.size % 2 !== 0) {
+            if (!buffer.remainingBytes()) {
+              throw new RangeError("Missing LIST INFO alignment byte");
+            }
             buffer.advance(1);
           }
           value.push(info);
@@ -15842,32 +16723,64 @@ var init_audio_wav = __esm({
       }
       /**
        * Decode the LIST adtl chunks.
-       * @param {DataBuffer} buffer List DataBuffer
-       * @returns {WavListAdtl[]} The parsed list.
+       * @param buffer List DataBuffer
+       * @param options Nested chunk alignment options.
+       * @returns The parsed list.
        */
-      static decodeLISTadtl(buffer) {
-        debug3("decodeLISTadtl");
+      static decodeLISTadtl(buffer, options = {}) {
+        debug2("decodeLISTadtl");
         const value = [];
         while (buffer.remainingBytes()) {
-          const adtl = (
-            /** @type {WavListAdtl} */
-            {}
-          );
+          if (buffer.remainingBytes() < 8) {
+            throw new RangeError("Truncated LIST adtl sub-chunk header");
+          }
+          const adtl = { id: "", size: 0, label: void 0, ltxt: void 0 };
           adtl.id = buffer.readString(4);
           adtl.size = buffer.readUInt32(true);
+          if (adtl.size > buffer.remainingBytes()) {
+            throw new RangeError("Truncated LIST adtl payload");
+          }
+          const end = buffer.offset + adtl.size;
           switch (adtl.id) {
-            case "labl": {
-              adtl.label = buffer.readString(adtl.size).trim();
+            case "labl":
+            case "note": {
+              if (adtl.size < 4) {
+                throw new RangeError("LIST label / note requires a cue point ID");
+              }
+              adtl.cuePointID = buffer.readUInt32(true);
+              const text = adtl.size > 4 ? buffer.readString(adtl.size - 4).replace(/\0.*$/s, "") : "";
+              if (adtl.id === "labl") {
+                adtl.label = text;
+              } else {
+                adtl.note = text;
+              }
               break;
             }
             case "ltxt": {
-              adtl.ltxt = buffer.readString(adtl.size).trim();
+              if (adtl.size < 20) {
+                throw new RangeError("LIST ltxt requires a 20-byte header");
+              }
+              adtl.cuePointID = buffer.readUInt32(true);
+              adtl.sampleLength = buffer.readUInt32(true);
+              adtl.purposeID = buffer.readString(4);
+              adtl.country = buffer.readUInt16(true);
+              adtl.language = buffer.readUInt16(true);
+              adtl.dialect = buffer.readUInt16(true);
+              adtl.codePage = buffer.readUInt16(true);
+              adtl.ltxt = adtl.size > 20 ? buffer.readString(adtl.size - 20).replace(/\0.*$/s, "") : "";
               break;
             }
             default: {
-              debug3(`Unknown ID: ${adtl.id}`);
+              debug2(`Unknown ID: ${adtl.id}`);
               buffer.advance(adtl.size);
             }
+          }
+          buffer.seek(end);
+          if ((options.roundOddChunks ?? true) && adtl.size % 2 !== 0) {
+            if (!buffer.remainingBytes()) {
+              throw new RangeError("Missing LIST adtl alignment byte");
+            }
+            buffer.advance(1);
           }
           value.push(adtl);
         }
@@ -15875,11 +16788,11 @@ var init_audio_wav = __esm({
       }
       /**
        * Decode the data (Audio Data) chunk.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @param chunk Data Blob
        * @static
        */
       static decodeDATA(chunk) {
-        debug3(`decodeDATA: ${chunk.length} data bytes`);
+        debug2(`decodeDATA: ${chunk.length} data bytes`);
       }
       /**
        * Decode the `tlst` (Trigger List) chunk.
@@ -15889,16 +16802,16 @@ var init_audio_wav = __esm({
        * Specifies a list of triggers which can be used to trigger playback of a series of cue points or Playlist entries.
        *
        * There's a historical bug in dwName (which is in fact an index, and the bug is that it's actually Index-1).
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavTriggerList} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        */
       static decodeTLST(chunk) {
-        debug3("decodeTLST");
-        const tlst = new data_buffer_default(chunk);
+        debug2("decodeTLST");
+        const tlst = _a.#chunkBuffer(chunk, 24);
         const _chunkID = tlst.readString(4);
         const size = tlst.readUInt32(true);
-        debug3("decodeTLST size", size);
+        debug2("decodeTLST size", size);
         const list = tlst.readUInt32(true);
         const name = tlst.readString(4);
         const type = tlst.readUInt32(true);
@@ -15908,9 +16821,18 @@ var init_audio_wav = __esm({
         const triggerOn4 = tlst.readUInt8();
         const func = tlst.readUInt32(true);
         const extra = tlst.readUInt32(true);
-        const extraData = tlst.readUInt32(true);
+        if (extra > tlst.remainingBytes()) {
+          throw new RangeError("Truncated tlst extra data");
+        }
+        const extraDataBytes = extra ? tlst.read(extra, false) : new Uint8Array();
+        let extraData = 0;
+        if (extra >= 4) {
+          extraData = new DataView(extraDataBytes.buffer, extraDataBytes.byteOffset, extraDataBytes.byteLength).getUint32(0, true);
+        } else if (extra === 0 && tlst.remainingBytes() >= 4) {
+          extraData = tlst.readUInt32(true);
+        }
         const value = {
-          list,
+          list: list.toString(),
           name,
           type,
           triggerOn1,
@@ -15921,7 +16843,10 @@ var init_audio_wav = __esm({
           extraData,
           function: func
         };
-        debug3("decodeTLST =", JSON.stringify(value, null, 2));
+        if (extra) {
+          value.extraDataBytes = extraDataBytes;
+        }
+        debug2("decodeTLST =", value);
         return value;
       }
       /**
@@ -15932,48 +16857,65 @@ var init_audio_wav = __esm({
        *
        * According to the fact chunk's initial specification, the data portion of the fact chunk will contain only one 4-byte number that specifies the number of samples in the data chunk of the Wave file.
        * This number, when combined with the samples per second value in the format chunk of the Wave file, can be used to compute the length of the audio data in seconds.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavFact} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        * @see {@link https://www.recordingblogs.com/wiki/fact-chunk-of-a-wave-file | Fact chunk (of a Wave file)}
        * @see {@link http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html | Audio File Format Specifications}
        */
       static decodeFACT(chunk) {
-        debug3("decodeFACT");
-        const fact = new data_buffer_default(chunk);
+        debug2("decodeFACT");
+        const fact = _a.#chunkBuffer(chunk, 4);
         const _chunkID = fact.readString(4);
         const size = fact.readUInt32(true);
-        debug3("decodeFACT size", size);
+        debug2("decodeFACT size", size);
         const numberOfSamples = fact.readUInt32(true);
         const value = { numberOfSamples };
-        debug3("decodeFACT =", JSON.stringify(value, null, 2));
+        debug2("decodeFACT =", value);
         return value;
       }
-      // TODO: Should have more entries by number of channels, https://github.com/libsndfile/libsndfile/blob/08d802a3d18fa19c74f38ed910d9e33f80248187/src/aiff.c#L110
+      // Per-channel entries are decoded below; reference: https://github.com/libsndfile/libsndfile/blob/08d802a3d18fa19c74f38ed910d9e33f80248187/src/aiff.c#L110
       /**
        * Decode the PEAK chunk.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavPeak} The decoded values.
+       * @param chunk Data Blob
+       * @param littleEndian True for WAVE, false for AIFF.
+       * @returns The decoded values.
        * @static
        * @see {@link https://code.google.com/archive/p/awesome-wav/wikis/WAVFormat.wiki|awesome-wav - WAVFormat.wiki}
        */
-      static decodePEAK(chunk) {
-        debug3("decodePEAK");
-        const peak = new data_buffer_default(chunk);
+      static decodePEAK(chunk, littleEndian3 = true) {
+        debug2("decodePEAK");
+        const peak = _a.#chunkBuffer(chunk, 8, littleEndian3);
         const _chunkID = peak.readString(4);
-        const size = peak.readUInt32(true);
-        debug3("decodePEAK size", size);
-        const version = peak.readUInt32(true);
-        const timestamp = peak.readUInt32(true);
-        const ppeakPointer = peak.readUInt32(true);
-        const bitAlign = peak.readUInt32(true);
+        const size = peak.readUInt32(littleEndian3);
+        debug2("decodePEAK size", size);
+        const version = peak.readUInt32(littleEndian3);
+        const timestamp = peak.readUInt32(littleEndian3);
+        if ((size - 8) % 8 !== 0) {
+          throw new RangeError("Incomplete PEAK channel entry");
+        }
+        const peaks = [];
+        let ppeakPointer = 0;
+        let bitAlign = 0;
+        while (peak.remainingBytes()) {
+          const rawValue = peak.readUInt32(littleEndian3);
+          peak.rewind(4);
+          const amplitude = peak.readFloat32(littleEndian3);
+          const position = peak.readUInt32(littleEndian3);
+          if (!peaks.length) {
+            ppeakPointer = rawValue;
+            bitAlign = position;
+          }
+          peaks.push({ value: amplitude, position });
+        }
         const value = {
           version,
           timestamp,
           ppeakPointer,
-          bitAlign
+          bitAlign,
+          peaks
         };
-        debug3("decodePEAK =", JSON.stringify(value, null, 2));
+        debug2("decodePEAK =", value);
         return value;
       }
       /**
@@ -15988,22 +16930,28 @@ var init_audio_wav = __esm({
        * This text should be short so that it can be easily displayed in menu bars and under icons.
        * Note: do not use a CF_TEXT for a description of the data.
        * Bibliographic data chunks will be added to support the standard MARC (Machine Readable Cataloging) data.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavDisplay} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        * @see {@link http://netghost.narod.ru/gff/vendspec/micriff/ms_riff.txt|New Multimedia Data Types and Data Techniques}
        * @see {@link https://docs.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats|Standard Clipboard Formats}
        */
       static decodeDISP(chunk) {
-        debug3("decodeDISP");
-        const disp = new data_buffer_default(chunk);
+        debug2("decodeDISP");
+        const disp = _a.#chunkBuffer(chunk, 4);
         const _chunkID = disp.readString(4);
         const size = disp.readUInt32(true);
-        debug3("decodeDISP size", size);
+        debug2("decodeDISP size", size);
         const type = disp.readUInt32(true);
-        const data = disp.readUInt16(true);
-        const value = { type, data };
-        debug3("decodeDISP =", JSON.stringify(value, null, 2));
+        const rawData = size > 4 ? disp.read(size - 4, false) : new Uint8Array();
+        const data = (rawData[0] ?? 0) | (rawData[1] ?? 0) << 8;
+        const value = { type, data, rawData };
+        if (type === 1) {
+          value.text = new TextDecoder("windows-1252").decode(rawData).replace(/\0.*$/s, "");
+        } else if (type === 13) {
+          value.text = new TextDecoder("utf-16le").decode(rawData).replace(/\0.*$/s, "");
+        }
+        debug2("decodeDISP =", value);
         return value;
       }
       /**
@@ -16015,24 +16963,24 @@ var init_audio_wav = __esm({
        *
        *  Although the phrase "ACID loops" technically only refers to loops which have been "acidized", some people use the term to refer to loops in general, even when used with other software packages.
        * @static
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavAcid} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @memberof AudioWAV
        */
       static decodeACID(chunk) {
-        debug3("decodeACID");
-        const acid = new data_buffer_default(chunk);
+        debug2("decodeACID");
+        const acid = _a.#chunkBuffer(chunk, 24);
         const _chunkID = acid.readString(4);
         const size = acid.readUInt32(true);
-        debug3("decodeACID size", size);
+        debug2("decodeACID size", size);
         const type = acid.readUInt32(true);
         const rootNote = acid.readUInt16(true);
         const unknown1 = acid.readUInt16(true);
-        const unknown2 = acid.readUInt32(true);
+        const unknown2 = acid.readFloat32(true);
         const beats = acid.readUInt32(true);
         const meterDenominator = acid.readUInt16(true);
         const meterNumerator = acid.readUInt16(true);
-        const tempo = acid.readUInt32(true);
+        const tempo = acid.readFloat32(true);
         const value = {
           type,
           rootNote,
@@ -16043,7 +16991,7 @@ var init_audio_wav = __esm({
           meterNumerator,
           tempo
         };
-        debug3("decodeACID =", JSON.stringify(value, null, 2));
+        debug2("decodeACID =", value);
         return value;
       }
       /**
@@ -16051,19 +16999,19 @@ var init_audio_wav = __esm({
        *
        * When a wave file is used as wave samples in a MIDI synthesizer,
        * the instrument chunk helps the MIDI synthesizer define the sample pitch & relative volume of the samples.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavInstrument} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        */
       static decodeINST(chunk) {
-        debug3("decodeINST");
-        const inst = new data_buffer_default(chunk);
+        debug2("decodeINST");
+        const inst = _a.#chunkBuffer(chunk, 7);
         const _chunkID = inst.readString(4);
         const size = inst.readUInt32(true);
-        debug3("decodeINST size", size);
+        debug2("decodeINST size", size);
         const unshiftedNote = inst.readUInt8();
-        const fineTuning = inst.readUInt8();
-        const gain = inst.readUInt8();
+        const fineTuning = inst.readInt8();
+        const gain = inst.readInt8();
         const lowNote = inst.readUInt8();
         const highNote = inst.readUInt8();
         const lowVelocity = inst.readUInt8();
@@ -16077,23 +17025,23 @@ var init_audio_wav = __esm({
           lowVelocity,
           highVelocity
         };
-        debug3("decodeINST =", JSON.stringify(value, null, 2));
+        debug2("decodeINST =", value);
         return value;
       }
       /**
        * Decode the smpl (Sample) chunk.
        *
        * The sample chunk allows a MIDI sampler to use the Wave file as a collection of samples.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavSample} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        */
       static decodeSMPL(chunk) {
-        debug3("decodeSMPL");
-        const smpl = new data_buffer_default(chunk);
+        debug2("decodeSMPL");
+        const smpl = _a.#chunkBuffer(chunk, 36);
         const _chunkID = smpl.readString(4);
         const size = smpl.readUInt32(true);
-        debug3("decodeSMPL size", size);
+        debug2("decodeSMPL size", size);
         const manufacturer1 = smpl.readUInt8();
         const manufacturer2 = smpl.readUInt8();
         const manufacturer3 = smpl.readUInt8();
@@ -16103,15 +17051,20 @@ var init_audio_wav = __esm({
         const midiUnityNote = smpl.readUInt32(true);
         const midiPitchFraction = smpl.readUInt32(true);
         const SMPTEFormat = smpl.readUInt32(true);
-        const SMPTEOffset1 = smpl.readUInt8();
-        const SMPTEOffset2 = smpl.readUInt8();
-        const SMPTEOffset3 = smpl.readUInt8();
-        const SMPTEOffset4 = smpl.readUInt8();
+        const SMPTEOffset = smpl.readUInt32(true);
+        const SMPTEOffset1 = SMPTEOffset >> 24;
+        const SMPTEOffset2 = SMPTEOffset >>> 16 & 255;
+        const SMPTEOffset3 = SMPTEOffset >>> 8 & 255;
+        const SMPTEOffset4 = SMPTEOffset & 255;
         const sampleLoopsCount = smpl.readUInt32(true);
         const sampleDataSize = smpl.readUInt32(true);
+        if (sampleDataSize > smpl.remainingBytes()) {
+          throw new RangeError("Truncated sampler-specific data");
+        }
+        _a.#countFits(sampleLoopsCount, 24, smpl.remainingBytes() - sampleDataSize, "sample loop count");
         const sampleLoops = [];
         if (sampleLoopsCount > 0) {
-          debug3("decodeSMPL sampleLoopsCount", sampleLoopsCount);
+          debug2("decodeSMPL sampleLoopsCount", sampleLoopsCount);
           for (let i = 0; i < sampleLoopsCount; i++) {
             const ID = smpl.readUInt32(true);
             const type = smpl.readUInt32(true);
@@ -16129,7 +17082,7 @@ var init_audio_wav = __esm({
             });
           }
         }
-        let sampleData;
+        let sampleData = new Uint8Array();
         if (sampleDataSize > 0) {
           sampleData = smpl.read(sampleDataSize, false);
         }
@@ -16152,7 +17105,7 @@ var init_audio_wav = __esm({
           sampleLoops,
           sampleData
         };
-        debug3("decodeSMPL =", JSON.stringify(value, null, 2));
+        debug2("decodeSMPL =", value);
         return value;
       }
       /**
@@ -16161,13 +17114,13 @@ var init_audio_wav = __esm({
        * Useful for use on SP-404 / SP-404SX / SP-404A samplers, perhaps others.
        *
        * This chunk is sized and padded with zeros to ensure that the the sample data starts exactly at offset 512.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavRoland} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        */
       static decodeRLND(chunk) {
-        debug3("decodeRLND");
-        const roland = new data_buffer_default(chunk);
+        debug2("decodeRLND");
+        const roland = _a.#chunkBuffer(chunk, 13);
         const chunkID = roland.readString(4);
         const size = roland.readUInt32(true);
         const device = roland.readString(8);
@@ -16180,7 +17133,7 @@ var init_audio_wav = __esm({
         if (device === "roifspsx") {
           const label = ROLAND_SP404SX_PADS[sampleIndex];
           if (label === void 0) {
-            debug3("Unknown Pad:", sampleIndex);
+            debug2("Unknown Pad:", sampleIndex);
           } else {
             sampleLabel = label;
           }
@@ -16196,7 +17149,7 @@ var init_audio_wav = __esm({
           sampleIndex,
           sampleLabel
         };
-        debug3("decodeRLND =", JSON.stringify(value, null, 2));
+        debug2("decodeRLND =", value);
         return value;
       }
       /**
@@ -16208,46 +17161,52 @@ var init_audio_wav = __esm({
        *
        * This chunk is sized and padded with zeros to ensure that the the sample data starts exactly at offset 512.
        * @static
-       * @param {object} data The JSON values to set in the RLND chunk.
-       * @param {string} data.device An 8 character string representing the device label. SP-404SX Wave Converter v1.01 on macOS sets this value to `roifspsx`.
-       * @param {number} [data.unknown1] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x04`.
-       * @param {number} [data.unknown2] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
-       * @param {number} [data.unknown3] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
-       * @param {number} [data.unknown4] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
-       * @param {number|string} data.sampleIndex The pad the sample plays on, between `0` and `119` as a number or the pad label, `A1` - `J12`. Only the SP404SX (device === `roifspsx`) provided values can be converted from string corrently, and if it is not found it will defailt to `0` / `A1`.
-       * @returns {Buffer<ArrayBuffer>} The new RLND chunk.
+       * @param data The JSON values to set in the RLND chunk.
+       * @param data.device An 8 character string representing the device label. SP-404SX Wave Converter v1.01 on macOS sets this value to `roifspsx`.
+       * @param data.unknown1 Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x04`.
+       * @param data.unknown2 Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
+       * @param data.unknown3 Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
+       * @param data.unknown4 Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
+       * @param data.sampleIndex The pad the sample plays on, between `0` and `119` as a number or the pad label, `A1` - `J12`. Only the SP404SX (device === `roifspsx`) provided values can be converted from string corrently, and if it is not found it will defailt to `0` / `A1`.
+       * @returns The new RLND chunk.
        * @static
        * @see {@link https://www.roland.com/global/support/by_product/sp-404sx/updates_drivers/|SP-404SX Support Page}
        */
       static encodeRLND(data) {
-        const {
-          device,
-          unknown1 = 4,
-          unknown2 = 0,
-          unknown3 = 0,
-          unknown4 = 0
-        } = data;
-        let { sampleIndex } = data;
-        debug3("encodeRLND:", device, unknown1, unknown2, unknown3, unknown4, sampleIndex);
+        const { device, unknown1, unknown2, unknown3, unknown4 } = data;
+        for (const value of [unknown1 ?? 4, unknown2 ?? 0, unknown3 ?? 0, unknown4 ?? 0]) {
+          if (!Number.isInteger(value) || value < 0 || value > 255) {
+            throw new RangeError("Invalid Roland parameter byte");
+          }
+        }
+        let { sampleIndex = 0 } = data;
+        if (!/^[\x20-\x7e]{1,8}$/.test(device)) {
+          throw new TypeError("Roland device must contain one to eight printable ASCII characters");
+        }
+        debug2("encodeRLND:", device, unknown1, unknown2, unknown3, unknown4, sampleIndex);
         const buffer = Buffer.alloc(466, 0);
         buffer.write("RLND", 0);
         buffer.writeUInt32LE(458, 4);
-        buffer.write(device, 8);
-        buffer.writeUInt8(unknown1, 16);
-        buffer.writeUInt8(unknown2, 17);
-        buffer.writeUInt8(unknown3, 18);
-        buffer.writeUInt8(unknown4, 19);
+        buffer.write(device, 8, 8, "ascii");
+        buffer.writeUInt8(unknown1 ?? 4, 16);
+        buffer.writeUInt8(unknown2 ?? 0, 17);
+        buffer.writeUInt8(unknown3 ?? 0, 18);
+        buffer.writeUInt8(unknown4 ?? 0, 19);
         if (device === "roifspsx" && typeof sampleIndex === "string") {
-          const index = ROLAND_SP404SX_PADS.indexOf(sampleIndex.toUpperCase());
-          if (index === -1) {
-            debug3("Unknown Pad:", sampleIndex);
+          const index2 = ROLAND_SP404SX_PADS.indexOf(sampleIndex.toUpperCase());
+          if (index2 === -1) {
+            debug2("Unknown Pad:", sampleIndex);
             sampleIndex = 0;
           } else {
-            sampleIndex = index;
+            sampleIndex = index2;
           }
         }
-        buffer.writeUInt8(Number(sampleIndex), 20);
-        debug3("Buffer:", buffer.toString("hex"));
+        const index = Number(sampleIndex);
+        if (!Number.isInteger(index) || index < 0 || index > 255) {
+          throw new RangeError("Invalid Roland sample index");
+        }
+        buffer.writeUInt8(index, 20);
+        debug2("Buffer:", buffer);
         return buffer;
       }
       /**
@@ -16256,52 +17215,66 @@ var init_audio_wav = __esm({
        * To align RIFF chunks to certain boundaries (i.e. 2048 bytes for CD-ROMs) the RIFF specification includes a JUNK chunk.
        * The contents are to be skipped when reading.
        * When writing RIFFs, JUNK chunks should not have an odd Size.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @param {object} options Decoding options.
-       * @param {boolean} options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
+       * @param chunk Data Blob
+       * @param options Decoding options.
+       * @param options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
        * @static
        */
-      static decodeJUNK(chunk, options) {
+      static decodeJUNK(chunk, options = {}) {
         const junk = new data_buffer_default(chunk);
         const chunkID = junk.readString(4);
         let size = junk.readUInt32(true);
         if (options.roundOddChunks && size % 2 !== 0) {
           size += 1;
         }
-        debug3(`decodeJUNK: ${chunk.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
+        debug2(`decodeJUNK: ${chunk.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
       }
       /**
        * Decode the `PAD ` (Padding) chunk.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @param chunk Data Blob
        * @static
        */
       static decodePAD(chunk) {
         const pad = new data_buffer_default(chunk);
         const chunkID = pad.readString(4);
         const size = pad.readUInt32(true);
-        debug3(`decodePAD: ${chunk.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
+        debug2(`decodePAD: ${chunk.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
       }
       /**
        * Decode the bext (Broadcast Wave Format (BWF) Broadcast Extension) chunk.
        * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @param {object} options Decoding options.
-       * @param {boolean} options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
-       * @returns {WavBext} The decoded values.
+       * @param options Decoding options.
+       * @param options.roundOddChunks Retained for API compatibility; alignment is handled by the container, not included in the decoded size.
+       * @returns The decoded values.
        * @static
        * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
        * @see {@link https://tech.ebu.ch/docs/tech/tech3285.pdf|Spec}
        */
-      static decodeBEXT(chunk, options) {
-        debug3("decodeBEXT");
-        const bext = new data_buffer_default(chunk);
+      static decodeBEXT(chunk, options = {}) {
+        debug2("decodeBEXT");
+        const bext = _a.#chunkBuffer(chunk, 602);
         const chunkID = bext.readString(4);
-        let size = bext.readUInt32(true);
-        if (options.roundOddChunks && size % 2 !== 0) {
-          size += 1;
-        }
+        const size = bext.readUInt32(true);
+        debug2("decodeBEXT roundOddChunks:", options.roundOddChunks);
         const value = {
           chunkID,
-          size
+          size,
+          description: "",
+          originator: "",
+          originatorReference: "",
+          originationDate: "",
+          originationTime: "",
+          timeReferenceLow: 0,
+          timeReferenceHigh: 0,
+          version: 0,
+          umid: new Uint8Array(),
+          loudnessValue: 0,
+          loudnessRange: 0,
+          maxTruePeakLevel: 0,
+          maxMomentaryLoudness: 0,
+          maxShortTermLoudness: 0,
+          reserved: new Uint8Array(),
+          codingHistory: new Uint8Array()
         };
         value.description = bext.readString(256);
         value.originator = bext.readString(32);
@@ -16311,15 +17284,35 @@ var init_audio_wav = __esm({
         value.timeReferenceLow = bext.readUInt32(true);
         value.timeReferenceHigh = bext.readUInt32(true);
         value.version = bext.readUInt16(true);
-        value.umid = bext.read(64, false);
-        value.loudnessValue = bext.readUInt16(true);
-        value.loudnessRange = bext.readUInt16(true);
-        value.maxTruePeakLevel = bext.readUInt16(true);
-        value.maxMomentaryLoudness = bext.readUInt16(true);
-        value.maxShortTermLoudness = bext.readUInt16(true);
-        value.reserved = bext.read(180, false);
-        value.codingHistory = bext.read(bext.remainingBytes(), true);
-        debug3("decodeBEXT =", JSON.stringify(value, null, 2));
+        if (value.version >= 1) {
+          value.umid = bext.read(64, false);
+        }
+        if (value.version >= 2) {
+          value.loudnessValue = bext.readInt16(true);
+        }
+        if (value.version >= 2) {
+          value.loudnessRange = bext.readInt16(true);
+        }
+        if (value.version >= 2) {
+          value.maxTruePeakLevel = bext.readInt16(true);
+        }
+        if (value.version >= 2) {
+          value.maxMomentaryLoudness = bext.readInt16(true);
+        }
+        if (value.version >= 2) {
+          value.maxShortTermLoudness = bext.readInt16(true);
+        }
+        let reservedSize = 0;
+        if (value.version >= 2) {
+          reservedSize = 180;
+        } else if (value.version === 1) {
+          reservedSize = 190;
+        } else {
+          reservedSize = 254;
+        }
+        value.reserved = bext.read(reservedSize, false);
+        value.codingHistory = bext.remainingBytes() ? bext.read(bext.remainingBytes(), false) : new Uint8Array();
+        debug2("decodeBEXT =", value);
         return value;
       }
       /**
@@ -16329,33 +17322,35 @@ var init_audio_wav = __esm({
        * For example, the beginning and end of a verse in a song may have cue points to make them easier to find.
        * The cue chunk is optional and if included, a single cue chunk should specify all cue points for the "WAVE" chunk.
        * No more than one cue chunk is allowed in a "WAVE" chunk.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavCue} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
        */
       static decodeCue(chunk) {
-        debug3("decodeCue");
-        const cue = new data_buffer_default(chunk);
+        debug2("decodeCue");
+        const cue = _a.#chunkBuffer(chunk, 4);
         const chunkID = cue.readString(4);
         const size = cue.readUInt32(true);
-        debug3("decodeCue size", size);
+        debug2("decodeCue size", size);
         const numberCuePoints = cue.readUInt32(true);
-        debug3("decodeCue numberCuePoints", numberCuePoints);
-        const value = (
-          /** @type {WavCue} */
-          {
-            chunkID,
-            size,
-            numberCuePoints,
-            data: []
-          }
-        );
+        debug2("decodeCue numberCuePoints", numberCuePoints);
+        _a.#countFits(numberCuePoints, 24, cue.remainingBytes(), "cue point count");
+        const value = {
+          chunkID,
+          size,
+          numberCuePoints,
+          data: []
+        };
         for (let i = 0; i < numberCuePoints; i++) {
-          const point = (
-            /** @type {WavCuePoint} */
-            {}
-          );
+          const point = {
+            id: 0,
+            position: 0,
+            chunkID: "",
+            chunkStart: 0,
+            blockStart: 0,
+            sampleOffset: 0
+          };
           point.id = cue.readUInt32(true);
           point.position = cue.readUInt32(true);
           point.chunkID = cue.readString(4);
@@ -16365,52 +17360,66 @@ var init_audio_wav = __esm({
           value.data.push(point);
         }
         if (cue.remainingBytes() > 0) {
-          debug3(`Unexpected ${cue.remainingBytes()} bytes remaining`);
+          debug2(`Unexpected ${cue.remainingBytes()} bytes remaining`);
         }
-        debug3("decodeCue =", JSON.stringify(value, null, 2));
+        debug2("decodeCue =", value);
         return value;
       }
       /**
-       * Decode the 'ResU' chunk, a ZIP compressed JSON Data containg Time Signature, Tempo and other data for Logic Pro X.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavResU} The decoded values.
+       * Decode the 'ResU' chunk, zlib-compressed JSON data containing Time Signature, Tempo and other data for Logic Pro X.
+       * @param chunk Data Blob
+       * @param options Decompression limits.
+       * @param options.maxResUSize Maximum uncompressed JSON bytes, default 16 MiB.
+       * @returns The decoded values.
        * @static
        */
-      static decodeResU(chunk) {
-        debug3("decodeResU");
-        const resu = new data_buffer_default(chunk);
+      static decodeResU(chunk, options = {}) {
+        debug2("decodeResU");
+        const resu = _a.#chunkBuffer(chunk, 0);
         const chunkID = resu.readString(4);
         const size = resu.readUInt32(true);
-        const data = resu.read(size, false);
-        let decompressed = "";
-        try {
-          decompressed = new TextDecoder().decode(inflate(data));
-          debug3("Inflated Size:", decompressed.length);
-        } catch (error) {
-          debug3("Error Inflating ResU:", error);
+        const data = size ? resu.read(size, false) : new Uint8Array();
+        const limit = options.maxResUSize ?? 16 * 1024 * 1024;
+        if (!Number.isSafeInteger(limit) || limit < 0) {
+          throw new RangeError("maxResUSize must be a nonnegative safe integer");
         }
-        const value = {
-          chunkID,
-          size
-        };
+        const value = { chunkID, size };
         try {
-          value.data = /** @type {unknown} */
-          JSON.parse(decompressed);
+          let bytes = 0;
+          const text = [];
+          const decoder = new TextDecoder();
+          const inflator = new Inflate({ chunkSize: 16384 });
+          inflator.onData = (output) => {
+            bytes += output.length;
+            if (bytes > limit) {
+              throw new RangeError(`ResU exceeds maxResUSize (${limit} bytes)`);
+            }
+            text.push(decoder.decode(output, { stream: true }));
+          };
+          inflator.push(data, false);
+          if (inflator.err || !inflator.ended) {
+            throw new Error(inflator.msg || "Incomplete ResU compressed stream");
+          }
+          text.push(decoder.decode());
+          const decompressed = text.join("");
+          debug2("Inflated Size:", bytes);
+          value.data = JSON.parse(decompressed);
         } catch (error) {
-          debug3("Error Parsing ResU JSON:", error);
+          value.error = error instanceof Error ? error.message : String(error);
+          debug2("Error Inflating / Parsing ResU:", error);
         }
-        debug3("decodeResU =", JSON.stringify(value, null, 2));
+        debug2("decodeResU =", value);
         return value;
       }
       /**
        * DataSize 64 Parsing
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavDS64} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @see {@link https://tech.ebu.ch/docs/tech/tech3306v1_0.pdf|RF64: An extended File Format for Audio}
        * @static
        */
       static decodeDS64(chunk) {
-        const ds64 = new data_buffer_default(chunk);
+        const ds64 = _a.#chunkBuffer(chunk, 28);
         const chunkID = ds64.readString(4);
         const size = ds64.readUInt32(true);
         const riffSizeLow = ds64.readUInt32(true);
@@ -16420,9 +17429,10 @@ var init_audio_wav = __esm({
         const sampleCountLow = ds64.readUInt32(true);
         const sampleCountHigh = ds64.readUInt32(true);
         const tableLength = ds64.readUInt32(true);
+        _a.#countFits(tableLength, 12, ds64.remainingBytes(), "ds64 table length");
         const table = [];
         if (tableLength > 0) {
-          while (ds64.remainingBytes() > 0) {
+          for (let i = 0; i < tableLength; i++) {
             table.push({
               chunkID: ds64.readString(4),
               chunkSizeLow: ds64.readUInt32(true),
@@ -16442,7 +17452,7 @@ var init_audio_wav = __esm({
           tableLength,
           table
         };
-        debug3("decodeDS64 =", JSON.stringify(value, null, 2));
+        debug2("decodeDS64 =", value);
         return value;
       }
       /**
@@ -16450,16 +17460,16 @@ var init_audio_wav = __esm({
        *
        * When a wave file is used as wave samples in a MIDI synthesizer,
        * the instrument chunk helps the MIDI synthesizer define the sample pitch & relative volume of the samples.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {WavStrc} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @static
        */
       static decodeSTRC(chunk) {
-        debug3("decodeSTRC");
-        const strc = new data_buffer_default(chunk);
+        debug2("decodeSTRC");
+        const strc = _a.#chunkBuffer(chunk, 28);
         const _chunkID = strc.readString(4);
         const size = strc.readUInt32(true);
-        debug3("decodeSTRC size:", size);
+        debug2("decodeSTRC size:", size);
         const unknown1 = strc.readUInt32(true);
         const numberOfSlices = strc.readUInt32(true);
         const unknown2 = strc.readUInt32(true);
@@ -16467,8 +17477,9 @@ var init_audio_wav = __esm({
         const unknown4 = strc.readUInt32(true);
         const unknown5 = strc.readUInt32(true);
         const unknown6 = strc.readUInt32(true);
+        _a.#countFits(Math.max(0, numberOfSlices - 1), 32, strc.remainingBytes(), "strc slice count");
         const slices = [];
-        debug3("decodeSTRC numberOfSlices:", numberOfSlices);
+        debug2("decodeSTRC numberOfSlices:", numberOfSlices);
         for (let i = 0; i < numberOfSlices - 1; i++) {
           const header = strc.readUInt32(true);
           const ID1 = strc.readUInt32(true);
@@ -16488,11 +17499,11 @@ var init_audio_wav = __esm({
             data3,
             ID2
           };
-          debug3("decodeSTRC slice:", i, slice);
-          debug3("remaining", strc.remainingBytes());
+          debug2("decodeSTRC slice:", i, slice);
+          debug2("remaining", strc.remainingBytes());
           slices.push(slice);
         }
-        debug3("decodeSTRC remaining", strc.remainingBytes());
+        debug2("decodeSTRC remaining", strc.remainingBytes());
         const value = {
           unknown1,
           numberOfSlices,
@@ -16503,20 +17514,20 @@ var init_audio_wav = __esm({
           unknown6,
           slices
         };
-        debug3("decodeSTRC =", JSON.stringify(value, null, 2));
+        debug2("decodeSTRC =", value);
         return value;
       }
       /**
        * Decode the COMM (Common) chunk.
        * The Common Chunk describes fundamental parameters of the sampled sound.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {AiffCommon} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
        * @static
        */
       static decodeCOMM(chunk) {
-        debug3("decodeCOMM");
-        const commonChunk = new data_buffer_default(chunk);
+        debug2("decodeCOMM");
+        const commonChunk = _a.#chunkBuffer(chunk, 18, false);
         const chunkID = commonChunk.readString(4);
         const size = commonChunk.readUInt32();
         const channels = commonChunk.readUInt16();
@@ -16526,9 +17537,22 @@ var init_audio_wav = __esm({
         let compressionType = "";
         let compressionTypeName = "";
         if (size !== 18) {
+          if (size < 23) {
+            throw new RangeError("Truncated AIFF-C compression fields");
+          }
           compressionType = commonChunk.readString(4);
           const nameLength = commonChunk.readUInt8();
-          compressionTypeName = commonChunk.readString(nameLength);
+          if (nameLength > commonChunk.remainingBytes()) {
+            throw new RangeError("Truncated AIFF-C compression name");
+          }
+          compressionTypeName = nameLength ? commonChunk.readString(nameLength) : "";
+          const padding = (nameLength + 1) % 2;
+          if (padding > commonChunk.remainingBytes()) {
+            throw new RangeError("Missing AIFF-C Pascal string padding");
+          }
+          if (padding) {
+            commonChunk.advance(padding);
+          }
         }
         const value = {
           chunkID,
@@ -16540,7 +17564,7 @@ var init_audio_wav = __esm({
           compressionType,
           compressionTypeName
         };
-        debug3("decodeCOMM =", JSON.stringify(value, null, 2));
+        debug2("decodeCOMM =", value);
         return value;
       }
       /**
@@ -16549,19 +17573,23 @@ var init_audio_wav = __esm({
        * Offset:     4 bytes
        * Block Size: 4 bytes
        * Sound Data: n bytes
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {AiffSoundData} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
        * @static
        */
       static decodeSSND(chunk) {
-        debug3("decodeSSND");
-        const ssndChunk = new data_buffer_default(chunk);
+        debug2("decodeSSND");
+        const ssndChunk = _a.#chunkBuffer(chunk, 8, false);
         const chunkID = ssndChunk.readString(4);
         const size = ssndChunk.readUInt32();
         const offset = ssndChunk.readUInt32();
         const blockSize = ssndChunk.readUInt32();
-        const soundData = ssndChunk.read(ssndChunk.remainingBytes());
+        if (offset > ssndChunk.remainingBytes()) {
+          throw new RangeError("AIFF SSND offset exceeds sound data");
+        }
+        ssndChunk.advance(offset);
+        const soundData = ssndChunk.remainingBytes() ? ssndChunk.read(ssndChunk.remainingBytes(), false) : new Uint8Array();
         const value = {
           chunkID,
           size,
@@ -16569,7 +17597,7 @@ var init_audio_wav = __esm({
           blockSize,
           soundData
         };
-        debug3("decodeSSND =", JSON.stringify({ chunkID, size, offset, blockSize }, null, 2));
+        debug2("decodeSSND =", { chunkID, size, offset, blockSize });
         return value;
       }
       /**
@@ -16578,14 +17606,14 @@ var init_audio_wav = __esm({
        * The Format Version Chunk contains a date field to indicate the format rules for an AIFF-C specification.
        * The timestamp holds the number of seconds since January 1, 1904.
        * The FVER chunk appears only in AIFF-C files.
-       * @param {string|Buffer|Uint8Array} chunk Data Blob
-       * @returns {AiffFormatVersion} The decoded values.
+       * @param chunk Data Blob
+       * @returns The decoded values.
        * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
        * @static
        */
       static decodeFVER(chunk) {
-        debug3("decodeFVER");
-        const formatVersionChunk = new data_buffer_default(chunk);
+        debug2("decodeFVER");
+        const formatVersionChunk = _a.#chunkBuffer(chunk, 4, false);
         const chunkID = formatVersionChunk.readString(4);
         const size = formatVersionChunk.readUInt32();
         const timestamp = formatVersionChunk.readUInt32();
@@ -16596,10 +17624,11 @@ var init_audio_wav = __esm({
           timestamp,
           versionName
         };
-        debug3("decodeFVER =", JSON.stringify(value, null, 2));
+        debug2("decodeFVER =", value);
         return value;
       }
     };
+    _a = AudioWAV;
     audio_wav_default = AudioWAV;
   }
 });
@@ -17324,305 +18353,957 @@ var init_data = __esm({
   }
 });
 
-// node_modules/@uttori/data-tools/src/data-hash-crc32.js
-var CRC32_TABLE, calculate, data_hash_crc32_default;
-var init_data_hash_crc32 = __esm({
-  async "node_modules/@uttori/data-tools/src/data-hash-crc32.js"() {
-    await init_data_buffer();
-    CRC32_TABLE = [
-      0,
-      1996959894,
-      3993919788,
-      2567524794,
-      124634137,
-      1886057615,
-      3915621685,
-      2657392035,
-      249268274,
-      2044508324,
-      3772115230,
-      2547177864,
-      162941995,
-      2125561021,
-      3887607047,
-      2428444049,
-      498536548,
-      1789927666,
-      4089016648,
-      2227061214,
-      450548861,
-      1843258603,
-      4107580753,
-      2211677639,
-      325883990,
-      1684777152,
-      4251122042,
-      2321926636,
-      335633487,
-      1661365465,
-      4195302755,
-      2366115317,
-      997073096,
-      1281953886,
-      3579855332,
-      2724688242,
-      1006888145,
-      1258607687,
-      3524101629,
-      2768942443,
-      901097722,
-      1119000684,
-      3686517206,
-      2898065728,
-      853044451,
-      1172266101,
-      3705015759,
-      2882616665,
-      651767980,
-      1373503546,
-      3369554304,
-      3218104598,
-      565507253,
-      1454621731,
-      3485111705,
-      3099436303,
-      671266974,
-      1594198024,
-      3322730930,
-      2970347812,
-      795835527,
-      1483230225,
-      3244367275,
-      3060149565,
-      1994146192,
-      31158534,
-      2563907772,
-      4023717930,
-      1907459465,
-      112637215,
-      2680153253,
-      3904427059,
-      2013776290,
-      251722036,
-      2517215374,
-      3775830040,
-      2137656763,
-      141376813,
-      2439277719,
-      3865271297,
-      1802195444,
-      476864866,
-      2238001368,
-      4066508878,
-      1812370925,
-      453092731,
-      2181625025,
-      4111451223,
-      1706088902,
-      314042704,
-      2344532202,
-      4240017532,
-      1658658271,
-      366619977,
-      2362670323,
-      4224994405,
-      1303535960,
-      984961486,
-      2747007092,
-      3569037538,
-      1256170817,
-      1037604311,
-      2765210733,
-      3554079995,
-      1131014506,
-      879679996,
-      2909243462,
-      3663771856,
-      1141124467,
-      855842277,
-      2852801631,
-      3708648649,
-      1342533948,
-      654459306,
-      3188396048,
-      3373015174,
-      1466479909,
-      544179635,
-      3110523913,
-      3462522015,
-      1591671054,
-      702138776,
-      2966460450,
-      3352799412,
-      1504918807,
-      783551873,
-      3082640443,
-      3233442989,
-      3988292384,
-      2596254646,
-      62317068,
-      1957810842,
-      3939845945,
-      2647816111,
-      81470997,
-      1943803523,
-      3814918930,
-      2489596804,
-      225274430,
-      2053790376,
-      3826175755,
-      2466906013,
-      167816743,
-      2097651377,
-      4027552580,
-      2265490386,
-      503444072,
-      1762050814,
-      4150417245,
-      2154129355,
-      426522225,
-      1852507879,
-      4275313526,
-      2312317920,
-      282753626,
-      1742555852,
-      4189708143,
-      2394877945,
-      397917763,
-      1622183637,
-      3604390888,
-      2714866558,
-      953729732,
-      1340076626,
-      3518719985,
-      2797360999,
-      1068828381,
-      1219638859,
-      3624741850,
-      2936675148,
-      906185462,
-      1090812512,
-      3747672003,
-      2825379669,
-      829329135,
-      1181335161,
-      3412177804,
-      3160834842,
-      628085408,
-      1382605366,
-      3423369109,
-      3138078467,
-      570562233,
-      1426400815,
-      3317316542,
-      2998733608,
-      733239954,
-      1555261956,
-      3268935591,
-      3050360625,
-      752459403,
-      1541320221,
-      2607071920,
-      3965973030,
-      1969922972,
-      40735498,
-      2617837225,
-      3943577151,
-      1913087877,
-      83908371,
-      2512341634,
-      3803740692,
-      2075208622,
-      213261112,
-      2463272603,
-      3855990285,
-      2094854071,
-      198958881,
-      2262029012,
-      4057260610,
-      1759359992,
-      534414190,
-      2176718541,
-      4139329115,
-      1873836001,
-      414664567,
-      2282248934,
-      4279200368,
-      1711684554,
-      285281116,
-      2405801727,
-      4167216745,
-      1634467795,
-      376229701,
-      2685067896,
-      3608007406,
-      1308918612,
-      956543938,
-      2808555105,
-      3495958263,
-      1231636301,
-      1047427035,
-      2932959818,
-      3654703836,
-      1088359270,
-      936918e3,
-      2847714899,
-      3736837829,
-      1202900863,
-      817233897,
-      3183342108,
-      3401237130,
-      1404277552,
-      615818150,
-      3134207493,
-      3453421203,
-      1423857449,
-      601450431,
-      3009837614,
-      3294710456,
-      1567103746,
-      711928724,
-      3020668471,
-      3272380065,
-      1510334235,
-      755167117
-    ];
-    calculate = (data) => {
-      const buffer = new data_buffer_default(data);
-      let crc = -1;
-      for (const byte of buffer.data) {
-        crc = crc >>> 8 ^ CRC32_TABLE[(crc ^ byte) & 255];
+// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+function freezeGlyphs() {
+  return Object.freeze(Object.fromEntries(Object.entries({
+    " ": [0, 0, 0, 0, 0, 0, 0],
+    A: [14, 17, 17, 31, 17, 17, 17],
+    B: [30, 17, 17, 30, 17, 17, 30],
+    C: [14, 17, 16, 16, 16, 17, 14],
+    D: [30, 17, 17, 17, 17, 17, 30],
+    E: [31, 16, 16, 30, 16, 16, 31],
+    F: [31, 16, 16, 30, 16, 16, 16],
+    G: [14, 17, 16, 23, 17, 17, 15],
+    H: [17, 17, 17, 31, 17, 17, 17],
+    I: [14, 4, 4, 4, 4, 4, 14],
+    J: [7, 2, 2, 2, 2, 18, 12],
+    K: [17, 18, 20, 24, 20, 18, 17],
+    L: [16, 16, 16, 16, 16, 16, 31],
+    M: [17, 27, 21, 21, 17, 17, 17],
+    N: [17, 25, 21, 19, 17, 17, 17],
+    O: [14, 17, 17, 17, 17, 17, 14],
+    P: [30, 17, 17, 30, 16, 16, 16],
+    Q: [14, 17, 17, 17, 21, 18, 13],
+    R: [30, 17, 17, 30, 20, 18, 17],
+    S: [15, 16, 16, 14, 1, 1, 30],
+    T: [31, 4, 4, 4, 4, 4, 4],
+    U: [17, 17, 17, 17, 17, 17, 14],
+    V: [17, 17, 17, 17, 17, 10, 4],
+    W: [17, 17, 17, 21, 21, 27, 17],
+    X: [17, 17, 10, 4, 10, 17, 17],
+    Y: [17, 17, 10, 4, 4, 4, 4],
+    Z: [31, 1, 2, 4, 8, 16, 31],
+    0: [14, 17, 19, 21, 25, 17, 14],
+    1: [4, 12, 4, 4, 4, 4, 14],
+    2: [14, 17, 1, 2, 4, 8, 31],
+    3: [30, 1, 1, 14, 1, 1, 30],
+    4: [2, 6, 10, 18, 31, 2, 2],
+    5: [31, 16, 16, 30, 1, 1, 30],
+    6: [14, 16, 16, 30, 17, 17, 14],
+    7: [31, 1, 2, 4, 8, 8, 8],
+    8: [14, 17, 17, 14, 17, 17, 14],
+    9: [14, 17, 17, 15, 1, 1, 14],
+    ".": [0, 0, 0, 0, 0, 12, 12],
+    ",": [0, 0, 0, 0, 4, 4, 8],
+    ":": [0, 12, 12, 0, 12, 12, 0],
+    ";": [0, 12, 12, 0, 4, 4, 8],
+    "!": [4, 4, 4, 4, 4, 0, 4],
+    "?": [14, 17, 1, 2, 4, 0, 4],
+    "-": [0, 0, 0, 31, 0, 0, 0],
+    _: [0, 0, 0, 0, 0, 0, 31],
+    "+": [0, 4, 4, 31, 4, 4, 0],
+    "=": [0, 0, 31, 0, 31, 0, 0],
+    "/": [1, 2, 2, 4, 8, 8, 16],
+    "\\": [16, 8, 8, 4, 2, 2, 1],
+    "(": [2, 4, 8, 8, 8, 4, 2],
+    ")": [8, 4, 2, 2, 2, 4, 8],
+    "[": [14, 8, 8, 8, 8, 8, 14],
+    "]": [14, 2, 2, 2, 2, 2, 14],
+    "<": [1, 2, 4, 8, 4, 2, 1],
+    ">": [16, 8, 4, 2, 4, 8, 16],
+    "#": [10, 10, 31, 10, 31, 10, 10],
+    "%": [25, 25, 2, 4, 8, 19, 19],
+    "*": [0, 21, 14, 31, 14, 21, 0],
+    "|": [4, 4, 4, 4, 4, 4, 4],
+    "'": [4, 4, 8, 0, 0, 0, 0],
+    '"': [10, 10, 20, 0, 0, 0, 0],
+    "@": [14, 17, 23, 21, 23, 16, 14],
+    "&": [12, 18, 20, 8, 21, 18, 13],
+    $: [4, 15, 20, 14, 5, 30, 4],
+    "^": [4, 10, 17, 0, 0, 0, 0],
+    "~": [0, 0, 8, 21, 2, 0, 0],
+    "`": [8, 4, 2, 0, 0, 0, 0],
+    "{": [2, 4, 4, 8, 4, 4, 2],
+    "}": [8, 4, 4, 2, 4, 4, 8]
+  }).map(([key, rows]) => [key, Object.freeze(rows)])));
+}
+function layout(text, options = {}) {
+  if (typeof text !== "string") {
+    throw new TypeError("Caption must be a string.");
+  }
+  if (text.length > 4096) {
+    throw new RangeError("Caption exceeds 4096 UTF-16 code units.");
+  }
+  const scale = options.scale ?? 1;
+  if (!Number.isSafeInteger(scale) || scale < 1 || scale > 64) {
+    throw new RangeError("Text scale must be an integer in [1, 64].");
+  }
+  const lines = text.length ? text.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").split("\n").map((line) => Array.from(line)) : [];
+  const maxColumns = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  return {
+    lines,
+    scale,
+    metrics: {
+      width: maxColumns ? (maxColumns * 6 - 1) * scale : 0,
+      height: lines.length ? (lines.length * 8 - 1) * scale : 0,
+      advanceX: (lines.at(-1)?.length ?? 0) * 6 * scale,
+      advanceY: Math.max(0, lines.length - 1) * 8 * scale,
+      lineHeight: 8 * scale,
+      baseline: 7 * scale,
+      lines: lines.length
+    }
+  };
+}
+function drawBitmapText(surface, text, x, y, color, options) {
+  if (!Number.isSafeInteger(x) || x < -2147483647 || x > 2147483647) {
+    throw new RangeError("Text x must be an integer in [-2147483647, 2147483647].");
+  }
+  if (!Number.isSafeInteger(y) || y < -2147483647 || y > 2147483647) {
+    throw new RangeError("Text y must be an integer in [-2147483647, 2147483647].");
+  }
+  const { lines, scale, metrics } = layout(text, options);
+  for (let line = 0; line < lines.length; line++) {
+    for (let column = 0; column < lines[line].length; column++) {
+      let character = lines[line][column];
+      const code = character.codePointAt(0);
+      if (code && code >= 97 && code <= 122) {
+        character = String.fromCharCode(code - 32);
       }
-      return (~crc >>> 0).toString(16).toUpperCase();
-    };
-    data_hash_crc32_default = {
-      of: calculate
+      const glyph = GLYPHS[character] ?? GLYPHS["?"];
+      for (let row = 0; row < 7; row++) {
+        for (let cx = 0; cx < 5; ) {
+          if (!(glyph[row] & 16 >>> cx)) {
+            cx++;
+            continue;
+          }
+          const start = cx++;
+          while (cx < 5 && glyph[row] & 16 >>> cx) {
+            cx++;
+          }
+          surface.fill(color, {
+            x: x + (column * 6 + start) * scale,
+            y: y + (line * 8 + row) * scale,
+            width: (cx - start) * scale,
+            height: scale
+          });
+        }
+      }
+    }
+  }
+  return metrics;
+}
+var GLYPHS, BitmapText;
+var init_bitmap_text = __esm({
+  "node_modules/@uttori/data-tools/dist/image/bitmap-text.js"() {
+    GLYPHS = /* @__PURE__ */ freezeGlyphs();
+    BitmapText = /* @__PURE__ */ Object.freeze({
+      glyphWidth: 5,
+      glyphHeight: 7,
+      advance: 6,
+      lineHeight: 8,
+      measure(text, options = {}) {
+        return layout(text, options).metrics;
+      }
+    });
+  }
+});
+
+// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+function colorRGBA(color) {
+  if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
+    throw new TypeError("Color must have four RGBA8 components.");
+  }
+  for (const component of color) {
+    if (!Number.isSafeInteger(component) || component < 0 || component > 255) {
+      throw new RangeError(`RGBA component must be an integer in [0, 255].`);
+    }
+  }
+  return color;
+}
+function validateRGBA(image, maxPixels = DEFAULT_MAX_PIXELS) {
+  if (!Number.isSafeInteger(image.width) || image.width < 1 || image.width > 2147483647) {
+    throw new RangeError(`width must be an integer in [1, 0x7fffffff].`);
+  }
+  if (!Number.isSafeInteger(image.height) || image.height < 1 || image.height > 2147483647) {
+    throw new RangeError(`height must be an integer in [1, 0x7fffffff].`);
+  }
+  if (!Number.isSafeInteger(maxPixels) || maxPixels < 1 || maxPixels > Number.MAX_SAFE_INTEGER) {
+    throw new RangeError(`maxPixels must be an integer in [1, ${Number.MAX_SAFE_INTEGER}].`);
+  }
+  if (!Number.isSafeInteger(image.width * image.height) || image.width * image.height > maxPixels) {
+    throw new RangeError(`Image dimensions ${image.width}x${image.height} exceed the pixel limit ${maxPixels}.`);
+  }
+  if (!(image.rgba instanceof Uint8Array) || image.rgba.length !== image.width * image.height * 4) {
+    throw new TypeError(`RGBA must be an exact ${image.width}x${image.height}x4 Uint8Array.`);
+  }
+}
+function littleEndian() {
+  return new Uint8Array(new Uint32Array([16909060]).buffer)[0] === 4;
+}
+function blend(destination, offset, r, g, b, a) {
+  if (a === 0) {
+    return;
+  }
+  if (a === 255) {
+    destination[offset] = r;
+    destination[offset + 1] = g;
+    destination[offset + 2] = b;
+    destination[offset + 3] = a;
+    return;
+  }
+  const da = destination[offset + 3], inverse = 255 - a;
+  const denominator = a * 255 + da * inverse;
+  destination[offset] = Math.round((r * a * 255 + destination[offset] * da * inverse) / denominator);
+  destination[offset + 1] = Math.round((g * a * 255 + destination[offset + 1] * da * inverse) / denominator);
+  destination[offset + 2] = Math.round((b * a * 255 + destination[offset + 2] * da * inverse) / denominator);
+  destination[offset + 3] = Math.round(denominator / 255);
+}
+var DEFAULT_MAX_PIXELS, LITTLE_ENDIAN, wordView, RgbaSurface;
+var init_rgba_surface = __esm({
+  "node_modules/@uttori/data-tools/dist/image/rgba-surface.js"() {
+    init_bitmap_text();
+    DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
+    LITTLE_ENDIAN = /* @__PURE__ */ littleEndian();
+    wordView = (bytes) => bytes.byteOffset % 4 === 0 ? new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4) : void 0;
+    RgbaSurface = class _RgbaSurface {
+      kind;
+      width;
+      height;
+      rgba;
+      maxPixels;
+      constructor(width, height, rgba, options = {}) {
+        const maxPixels = options.maxPixels ?? DEFAULT_MAX_PIXELS;
+        if (!Number.isSafeInteger(width) || width < 1 || width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(height) || height < 1 || height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(maxPixels) || maxPixels < 1 || maxPixels > Number.MAX_SAFE_INTEGER) {
+          throw new RangeError(`Pixel limit must be an integer in [1, ${Number.MAX_SAFE_INTEGER}].`);
+        }
+        if (!Number.isSafeInteger(width * height) || width * height > maxPixels) {
+          throw new RangeError(`Image dimensions ${width}\xD7${height} exceed the pixel limit ${maxPixels}.`);
+        }
+        if (rgba !== void 0) {
+          validateRGBA({ width, height, rgba }, maxPixels);
+        }
+        let bytes;
+        if (rgba === void 0) {
+          bytes = new Uint8Array(width * height * 4);
+        } else if (options.copy === false) {
+          bytes = rgba;
+        } else {
+          bytes = Uint8Array.from(rgba);
+        }
+        this.kind = "rgba-image";
+        this.width = width;
+        this.height = height;
+        this.rgba = bytes;
+        this.maxPixels = maxPixels;
+        Object.defineProperties(this, {
+          kind: { writable: false, configurable: false },
+          width: { writable: false, configurable: false },
+          height: { writable: false, configurable: false },
+          rgba: { writable: false, configurable: false },
+          maxPixels: { writable: false, configurable: false }
+        });
+      }
+      static from(image, options) {
+        return new _RgbaSurface(image.width, image.height, image.rgba, options);
+      }
+      static fromIndexed(image, options) {
+        const maxPixels = options?.maxPixels ?? DEFAULT_MAX_PIXELS;
+        if (!Number.isSafeInteger(image.width) || image.width < 1 || image.width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(image.height) || image.height < 1 || image.height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(maxPixels) || maxPixels < 1 || maxPixels > Number.MAX_SAFE_INTEGER) {
+          throw new RangeError(`Pixel limit must be an integer in [1, ${Number.MAX_SAFE_INTEGER}].`);
+        }
+        if (!Number.isSafeInteger(image.width * image.height) || image.width * image.height > maxPixels) {
+          throw new RangeError(`Image dimensions ${image.width}x${image.height} exceed the pixel limit ${maxPixels}.`);
+        }
+        if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== image.width * image.height) {
+          throw new Error("Indexed buffer does not match dimensions.");
+        }
+        if (!Array.isArray(image.palette)) {
+          throw new TypeError("Palette must be an array.");
+        }
+        if (image.palette.length < 1 || image.palette.length > 256) {
+          throw new RangeError("Palette slots must be between 1 and 256.");
+        }
+        for (const color of image.palette) {
+          colorRGBA(color);
+        }
+        const result = new _RgbaSurface(image.width, image.height, void 0, options);
+        for (let i = 0, offset = 0; i < image.indexes.length; i++, offset += 4) {
+          const color = image.palette[image.indexes[i]];
+          if (!color) {
+            throw new Error(`Missing palette slot ${image.indexes[i]}.`);
+          }
+          result.rgba[offset] = color[0];
+          result.rgba[offset + 1] = color[1];
+          result.rgba[offset + 2] = color[2];
+          result.rgba[offset + 3] = color[3];
+        }
+        return result;
+      }
+      clone() {
+        return new _RgbaSurface(this.width, this.height, this.rgba, { maxPixels: this.maxPixels });
+      }
+      /** Copy-mode fill, including RGB under alpha zero. Rectangles are clipped, not resized. */
+      fill(color, rect = {}) {
+        colorRGBA(color);
+        const x = rect.x ?? 0;
+        if (!Number.isSafeInteger(x) || x < -2147483647 || x > 2147483647) {
+          throw new RangeError("Fill x must be an integer in [-2147483647, 2147483647].");
+        }
+        const y = rect.y ?? 0;
+        if (!Number.isSafeInteger(y) || y < -2147483647 || y > 2147483647) {
+          throw new RangeError("Fill y must be an integer in [-2147483647, 2147483647].");
+        }
+        const width = rect.width ?? this.width;
+        if (!Number.isSafeInteger(width) || width < 0 || width > 2147483647) {
+          throw new RangeError("Fill width must be an integer in [0, 2147483647].");
+        }
+        const height = rect.height ?? this.height;
+        if (!Number.isSafeInteger(height) || height < 0 || height > 2147483647) {
+          throw new RangeError("Fill height must be an integer in [0, 2147483647].");
+        }
+        const left = Math.max(0, x);
+        const top = Math.max(0, y);
+        const right = Math.min(this.width, x + width);
+        const bottom = Math.min(this.height, y + height);
+        if (left >= right || top >= bottom) {
+          return this;
+        }
+        const words = wordView(this.rgba);
+        if (words) {
+          const value = LITTLE_ENDIAN ? color[0] | color[1] << 8 | color[2] << 16 | color[3] << 24 : color[3] | color[2] << 8 | color[1] << 16 | color[0] << 24;
+          for (let row = top; row < bottom; row++) {
+            words.fill(value, row * this.width + left, row * this.width + right);
+          }
+        } else {
+          for (let row = top; row < bottom; row++) {
+            for (let offset = (row * this.width + left) * 4, end = (row * this.width + right) * 4; offset < end; offset += 4) {
+              this.rgba[offset] = color[0];
+              this.rgba[offset + 1] = color[1];
+              this.rgba[offset + 2] = color[2];
+              this.rgba[offset + 3] = color[3];
+            }
+          }
+        }
+        return this;
+      }
+      /** Clip against source and destination. Snapshot aliased buffers before the first write. */
+      blit(source, x, y, options = {}) {
+        validateRGBA(source, this.maxPixels);
+        if (!Number.isSafeInteger(x) || x < -2147483647 || x > 2147483647) {
+          throw new RangeError("Blit x must be an integer in [-2147483647, 2147483647].");
+        }
+        if (!Number.isSafeInteger(y) || y < -2147483647 || y > 2147483647) {
+          throw new RangeError("Blit y must be an integer in [-2147483647, 2147483647].");
+        }
+        const sx = options.sx ?? 0;
+        if (!Number.isSafeInteger(sx) || sx < -2147483647 || sx > 2147483647) {
+          throw new RangeError("Source x must be an integer in [-2147483647, 2147483647].");
+        }
+        const sy = options.sy ?? 0;
+        if (!Number.isSafeInteger(sy) || sy < -2147483647 || sy > 2147483647) {
+          throw new RangeError("Source y must be an integer in [-2147483647, 2147483647].");
+        }
+        const width = options.width ?? source.width;
+        if (!Number.isSafeInteger(width) || width < 0 || width > 2147483647) {
+          throw new RangeError("Blit width must be an integer in [0, 2147483647].");
+        }
+        const height = options.height ?? source.height;
+        if (!Number.isSafeInteger(height) || height < 0 || height > 2147483647) {
+          throw new RangeError("Blit height must be an integer in [0, 2147483647].");
+        }
+        const mode3 = options.mode ?? "copy";
+        if (!["copy", "source-over"].includes(mode3)) {
+          throw new Error("Blit mode must be copy or source-over.");
+        }
+        const left = Math.max(0, -sx, -x);
+        const top = Math.max(0, -sy, -y);
+        const right = Math.min(width, source.width - sx, this.width - x);
+        const bottom = Math.min(height, source.height - sy, this.height - y);
+        if (left >= right || top >= bottom) {
+          return this;
+        }
+        const rowLength = (right - left) * 4;
+        const rows = bottom - top;
+        let bytes = source.rgba;
+        let stride = source.width * 4;
+        let start = ((sy + top) * source.width + sx + left) * 4;
+        if (bytes.buffer === this.rgba.buffer) {
+          const snapshot = new Uint8Array(rows * rowLength);
+          for (let row = 0; row < rows; row++) {
+            snapshot.set(bytes.subarray(start + row * stride, start + row * stride + rowLength), row * rowLength);
+          }
+          bytes = snapshot;
+          stride = rowLength;
+          start = 0;
+        }
+        for (let row = 0; row < rows; row++) {
+          let destination = ((y + top + row) * this.width + x + left) * 4;
+          const input = start + row * stride;
+          if (mode3 === "copy") {
+            this.rgba.set(bytes.subarray(input, input + rowLength), destination);
+          } else {
+            for (let i = input; i < input + rowLength; i += 4, destination += 4) {
+              blend(this.rgba, destination, bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]);
+            }
+          }
+        }
+        return this;
+      }
+      /** Strict in-bounds crop; invalid or zero dimensions are errors rather than implicit padding. */
+      crop(x, y, width, height) {
+        if (!Number.isSafeInteger(x) || x < 0 || x > 2147483647) {
+          throw new RangeError("Crop x must be an integer in [0, 2147483647].");
+        }
+        if (!Number.isSafeInteger(y) || y < 0 || y > 2147483647) {
+          throw new RangeError("Crop y must be an integer in [0, 2147483647].");
+        }
+        if (!Number.isSafeInteger(width) || width < 1 || width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(height) || height < 1 || height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(this.maxPixels) || this.maxPixels < 1 || this.maxPixels > Number.MAX_SAFE_INTEGER) {
+          throw new RangeError(`Pixel limit must be an integer in [1, ${Number.MAX_SAFE_INTEGER}].`);
+        }
+        if (!Number.isSafeInteger(width * height) || width * height > this.maxPixels) {
+          throw new RangeError(`Image dimensions ${width}\xD7${height} exceed the pixel limit ${this.maxPixels}.`);
+        }
+        if (x + width > this.width || y + height > this.height) {
+          throw new RangeError("Crop rectangle exceeds surface bounds.");
+        }
+        return new _RgbaSurface(width, height, void 0, { maxPixels: this.maxPixels }).blit(this, 0, 0, { sx: x, sy: y, width, height });
+      }
+      /** Flip the surface horizontally or vertically. */
+      flip({ horizontal = false, vertical = false } = {}) {
+        if (typeof horizontal !== "boolean" || typeof vertical !== "boolean") {
+          throw new TypeError("Flip flags must be booleans.");
+        }
+        const result = new _RgbaSurface(this.width, this.height, void 0, {
+          maxPixels: this.maxPixels
+        });
+        const inputWords = wordView(this.rgba), outputWords = wordView(result.rgba);
+        for (let y = 0; y < this.height; y++) {
+          const sy = vertical ? this.height - y - 1 : y;
+          if (!horizontal) {
+            result.rgba.set(this.rgba.subarray(sy * this.width * 4, (sy + 1) * this.width * 4), y * this.width * 4);
+          } else {
+            for (let x = 0; x < this.width; x++) {
+              const input = sy * this.width + this.width - x - 1, output = y * this.width + x;
+              if (inputWords && outputWords) {
+                outputWords[output] = inputWords[input];
+              } else {
+                for (let c = 0; c < 4; c++) {
+                  result.rgba[output * 4 + c] = this.rgba[input * 4 + c];
+                }
+              }
+            }
+          }
+        }
+        return result;
+      }
+      /** Flip the surface horizontally. */
+      flipX() {
+        return this.flip({ horizontal: true });
+      }
+      /** Flip the surface vertically. */
+      flipY() {
+        return this.flip({ vertical: true });
+      }
+      /** Nearest neighbor with floor(x * sourceWidth / width), independently on each axis. */
+      scaleNearest(width, height) {
+        return this._resample(width, height);
+      }
+      /** Aspect fit with the original preview.ts shared-scale sampling convention. */
+      fitNearest(maxEdge, { upscale = false } = {}) {
+        if (!Number.isSafeInteger(maxEdge) || maxEdge < 1 || maxEdge > 2147483647) {
+          throw new RangeError("Maximum edge must be an integer in [1, 2147483647].");
+        }
+        if (typeof upscale !== "boolean") {
+          throw new TypeError("upscale must be a boolean.");
+        }
+        const scale = Math.min(upscale ? Infinity : 1, maxEdge / Math.max(this.width, this.height));
+        return this._resample(Math.max(1, Math.floor(this.width * scale)), Math.max(1, Math.floor(this.height * scale)), scale);
+      }
+      _resample(width, height, scale) {
+        if (!Number.isSafeInteger(width) || width < 1 || width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(height) || height < 1 || height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(this.maxPixels) || this.maxPixels < 1 || this.maxPixels > Number.MAX_SAFE_INTEGER) {
+          throw new RangeError(`Pixel limit must be an integer in [1, ${Number.MAX_SAFE_INTEGER}].`);
+        }
+        if (!Number.isSafeInteger(width * height) || width * height > this.maxPixels) {
+          throw new RangeError(`Image dimensions ${width}\xD7${height} exceed the pixel limit ${this.maxPixels}.`);
+        }
+        const result = new _RgbaSurface(width, height, void 0, { maxPixels: this.maxPixels });
+        const offsets = new Uint32Array(width), inputWords = wordView(this.rgba), outputWords = wordView(result.rgba);
+        for (let x = 0; x < width; x++) {
+          offsets[x] = Math.min(this.width - 1, Math.floor(scale === void 0 ? x * this.width / width : x / scale));
+        }
+        for (let y = 0; y < height; y++) {
+          const sy = Math.min(this.height - 1, Math.floor(scale === void 0 ? y * this.height / height : y / scale));
+          const sourceRow = sy * this.width, destinationRow = y * width;
+          if (inputWords && outputWords) {
+            for (let x = 0; x < width; x++) {
+              outputWords[destinationRow + x] = inputWords[sourceRow + offsets[x]];
+            }
+          } else {
+            for (let x = 0; x < width; x++) {
+              const input = (sourceRow + offsets[x]) * 4, output = (destinationRow + x) * 4;
+              result.rgba[output] = this.rgba[input];
+              result.rgba[output + 1] = this.rgba[input + 1];
+              result.rgba[output + 2] = this.rgba[input + 2];
+              result.rgba[output + 3] = this.rgba[input + 3];
+            }
+          }
+        }
+        return result;
+      }
+      /** Inclusive 1px Bresenham line. Clip the segment first to bound work by visible dimensions. */
+      line(x0, y0, x1, y1, color) {
+        if (!Number.isSafeInteger(x0) || x0 < -2147483647 || x0 > 2147483647) {
+          throw new RangeError("Line x0 must be an integer in [-2147483647, 2147483647].");
+        }
+        if (!Number.isSafeInteger(y0) || y0 < -2147483647 || y0 > 2147483647) {
+          throw new RangeError("Line y0 must be an integer in [-2147483647, 2147483647].");
+        }
+        if (!Number.isSafeInteger(x1) || x1 < -2147483647 || x1 > 2147483647) {
+          throw new RangeError("Line x1 must be an integer in [-2147483647, 2147483647].");
+        }
+        if (!Number.isSafeInteger(y1) || y1 < -2147483647 || y1 > 2147483647) {
+          throw new RangeError("Line y1 must be an integer in [-2147483647, 2147483647].");
+        }
+        colorRGBA(color);
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        let start = 0;
+        let end = 1;
+        for (const [p, q] of [
+          [-dx, x0],
+          [dx, this.width - 1 - x0],
+          [-dy, y0],
+          [dy, this.height - 1 - y0]
+        ]) {
+          if (p === 0) {
+            if (q < 0) {
+              return this;
+            }
+            continue;
+          }
+          const ratio = q / p;
+          if (p < 0) {
+            start = Math.max(start, ratio);
+          } else {
+            end = Math.min(end, ratio);
+          }
+          if (start > end) {
+            return this;
+          }
+        }
+        x1 = Math.round(x0 + end * dx);
+        y1 = Math.round(y0 + end * dy);
+        x0 = Math.round(x0 + start * dx);
+        y0 = Math.round(y0 + start * dy);
+        if (x0 === x1) {
+          return this.fill(color, {
+            x: x0,
+            y: Math.min(y0, y1),
+            width: 1,
+            height: Math.abs(y1 - y0) + 1
+          });
+        }
+        if (y0 === y1) {
+          return this.fill(color, {
+            x: Math.min(x0, x1),
+            y: y0,
+            width: Math.abs(x1 - x0) + 1,
+            height: 1
+          });
+        }
+        const ax = Math.abs(x1 - x0), ay = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let error = ax + ay;
+        while (true) {
+          const offset = (y0 * this.width + x0) * 4;
+          this.rgba[offset] = color[0];
+          this.rgba[offset + 1] = color[1];
+          this.rgba[offset + 2] = color[2];
+          this.rgba[offset + 3] = color[3];
+          if (x0 === x1 && y0 === y1) {
+            break;
+          }
+          const doubled = error * 2;
+          if (doubled >= ay) {
+            error += ay;
+            x0 += sx;
+          }
+          if (doubled <= ax) {
+            error += ax;
+            y0 += sy;
+          }
+        }
+        return this;
+      }
+      measureText(text, options) {
+        return BitmapText.measure(text, options);
+      }
+      drawText(text, x, y, color, options) {
+        colorRGBA(color);
+        drawBitmapText(this, text, x, y, color, options);
+        return this;
+      }
     };
   }
 });
 
-// node_modules/@uttori/data-tools/src/image/data-image-png.js
-var debug4, ImagePNG, data_image_png_default;
+// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+function zlibState(inflator) {
+  return inflator.strm;
+}
+function resolveLimits(options = {}) {
+  const result = { ...DEFAULT_LIMITS };
+  for (const key of Object.keys(result)) {
+    const value = options[key];
+    if (value !== void 0) {
+      if (!Number.isSafeInteger(value) || value < 1 || value > Number.MAX_SAFE_INTEGER) {
+        throw new RangeError(`${String(key)} must be an integer in [1, ${Number.MAX_SAFE_INTEGER}].`);
+      }
+      result[key] = value;
+    }
+  }
+  return result;
+}
+function prepareInput(input, options, maxInputBytes) {
+  if (options.copyInput !== void 0 && typeof options.copyInput !== "boolean") {
+    throw new TypeError("copyInput must be a boolean.");
+  }
+  if (options.allow16Bit !== void 0 && typeof options.allow16Bit !== "boolean") {
+    throw new TypeError("allow16Bit must be a boolean.");
+  }
+  if (options.animation !== void 0 && options.animation !== "reject" && options.animation !== "default-image") {
+    throw new Error("animation must be reject or default-image.");
+  }
+  if (input instanceof data_buffer_default) {
+    input = input.data;
+  }
+  if (typeof input === "number") {
+    throw new TypeError("ImagePNG requires PNG data, not an allocation length.");
+  }
+  let bytes;
+  if (input instanceof ArrayBuffer) {
+    bytes = new Uint8Array(input);
+  } else if (ArrayBuffer.isView(input)) {
+    bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
+  } else if (Array.isArray(input) || typeof input === "string") {
+    if (input.length > maxInputBytes) {
+      throw new RangeError("PNG exceeds the input byte limit.");
+    }
+    bytes = new data_buffer_default(input).data;
+  } else {
+    throw new TypeError("ImagePNG requires PNG bytes or a DataBuffer.");
+  }
+  if (bytes.length > maxInputBytes) {
+    throw new RangeError("PNG exceeds the input byte limit.");
+  }
+  if (options.copyInput === false) {
+    return bytes;
+  }
+  return Uint8Array.from(bytes);
+}
+function passLength(size, start, step) {
+  if (size <= start) {
+    return 0;
+  }
+  return Math.ceil((size - start) / step);
+}
+function paethPredictor(left, above, upperLeft) {
+  const prediction = left + above - upperLeft;
+  const leftDistance = Math.abs(prediction - left);
+  const aboveDistance = Math.abs(prediction - above);
+  const upperLeftDistance = Math.abs(prediction - upperLeft);
+  if (leftDistance <= aboveDistance && leftDistance <= upperLeftDistance) {
+    return left;
+  }
+  if (aboveDistance <= upperLeftDistance) {
+    return above;
+  }
+  return upperLeft;
+}
+function unfilterRow(row, previous, bpp, length, filter) {
+  const leading = Math.min(bpp, length);
+  switch (filter) {
+    case 0:
+      break;
+    case 1:
+      for (let i = bpp; i < length; i++) {
+        row[i] += row[i - bpp];
+      }
+      break;
+    case 2:
+      for (let i = 0; i < length; i++) {
+        row[i] += previous[i];
+      }
+      break;
+    case 3:
+      for (let i = 0; i < leading; i++) {
+        row[i] += previous[i] >>> 1;
+      }
+      for (let i = leading; i < length; i++) {
+        row[i] += row[i - bpp] + previous[i] >>> 1;
+      }
+      break;
+    case 4:
+      for (let i = 0; i < leading; i++) {
+        row[i] += previous[i];
+      }
+      for (let i = leading; i < length; i++) {
+        row[i] += paethPredictor(row[i - bpp], previous[i], previous[i - bpp]);
+      }
+      break;
+    default:
+      throw new Error(`Invalid PNG scanline filter ${filter}.`);
+  }
+}
+function unfilterScanline(filter, pixels, scanline, bpp, offset, length) {
+  if (!Number.isSafeInteger(bpp) || bpp < 1 || bpp > 2147483647) {
+    throw new RangeError("Unfilter stride must be an integer in [1, 2147483647].");
+  }
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > 2147483647) {
+    throw new RangeError("Unfilter offset must be an integer in [0, 2147483647].");
+  }
+  if (!Number.isSafeInteger(length) || length < 0 || length > 2147483647) {
+    throw new RangeError("Unfilter length must be an integer in [0, 2147483647].");
+  }
+  if (offset + length > pixels.length || length > scanline.length) {
+    throw new RangeError("Unfilter buffer is too small.");
+  }
+  const row = Uint8Array.from(scanline.slice(0, length));
+  const previous = new Uint8Array(length);
+  if (offset >= length) {
+    for (let i = 0; i < length; i++) {
+      previous[i] = pixels[offset - length + i];
+    }
+  }
+  unfilterRow(row, previous, bpp, length, filter);
+  if (pixels instanceof Uint8Array) {
+    pixels.set(row, offset);
+  } else {
+    for (let i = 0; i < length; i++) {
+      pixels[offset + i] = row[i];
+    }
+  }
+  return pixels;
+}
+function validateIndexed(image, bitDepth, maxPixels) {
+  if (!Number.isSafeInteger(image.width) || image.width < 1 || image.width > 2147483647) {
+    throw new RangeError("Width must be an integer in [1, 2147483647].");
+  }
+  if (!Number.isSafeInteger(image.height) || image.height < 1 || image.height > 2147483647) {
+    throw new RangeError("Height must be an integer in [1, 2147483647].");
+  }
+  if (!Number.isSafeInteger(image.width * image.height) || image.width * image.height > maxPixels) {
+    throw new RangeError(`Image dimensions ${image.width}x${image.height} exceed the pixel limit ${maxPixels}.`);
+  }
+  if (bitDepth !== 1 && bitDepth !== 2 && bitDepth !== 4 && bitDepth !== 8) {
+    throw new Error("Indexed bit depth must be 1, 2, 4, or 8.");
+  }
+  if (!Array.isArray(image.palette)) {
+    throw new TypeError("Palette must be an array of RGBA8 slots.");
+  }
+  if (!Number.isSafeInteger(image.palette.length) || image.palette.length < 1 || image.palette.length > 2 ** bitDepth) {
+    throw new RangeError(`Palette slots must be an integer in [1, ${2 ** bitDepth}].`);
+  }
+  for (const color of image.palette) {
+    if (!Array.isArray(color) || color.length !== 4) {
+      throw new Error("Palette entries require RGBA8.");
+    }
+    for (const value of color) {
+      if (!Number.isSafeInteger(value) || value < 0 || value > 255) {
+        throw new RangeError("Palette component must be an integer in [0, 255].");
+      }
+    }
+  }
+  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== image.width * image.height) {
+    throw new Error("Indexed buffer length does not match dimensions.");
+  }
+  for (const index of image.indexes) {
+    if (index >= image.palette.length) {
+      throw new Error("PNG pixel index exceeds palette slots.");
+    }
+  }
+}
+function joinChunks(parts, maxBytes) {
+  let length = 0;
+  for (const part of parts) {
+    length += part.length;
+  }
+  if (!Number.isSafeInteger(length) || length > maxBytes) {
+    throw new RangeError("PNG exceeds the output byte limit.");
+  }
+  const output = new Uint8Array(length);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.length;
+  }
+  return output;
+}
+function makeChunk(type, data) {
+  if (!/^[A-Za-z]{2}[A-Z][A-Za-z]$/.test(type)) {
+    throw new Error(`Invalid PNG chunk type '${type}'.`);
+  }
+  if (!Number.isSafeInteger(data.length) || data.length < 0 || data.length > 2147483647) {
+    throw new RangeError("Chunk length must be an integer in [0, 2147483647].");
+  }
+  const header = data_buffer_default.allocate(8);
+  header.writeUInt32(data.length);
+  header.writeString(type);
+  header.commit();
+  const output = new Uint8Array(data.length + 12);
+  output.set(header.data);
+  output.set(data, 8);
+  const checksum2 = data_buffer_default.allocate(4);
+  checksum2.writeUInt32(computeBytes(output.subarray(4, data.length + 8)));
+  checksum2.commit();
+  output.set(checksum2.data, data.length + 8);
+  return output;
+}
+function makeHeader(width, height, bitDepth, colorType) {
+  const header = data_buffer_default.allocate(13);
+  header.writeUInt32(width);
+  header.writeUInt32(height);
+  header.writeUInt8(bitDepth);
+  header.writeUInt8(colorType);
+  header.writeUInt8(0);
+  header.writeUInt8(0);
+  header.writeUInt8(0);
+  header.commit();
+  return header.data;
+}
+function makePaletteChunks(palette) {
+  const rgb = new Uint8Array(palette.length * 3);
+  const alpha = new Uint8Array(palette.length);
+  for (let i = 0; i < palette.length; i++) {
+    const color = palette[i];
+    rgb[i * 3] = color[0];
+    rgb[i * 3 + 1] = color[1];
+    rgb[i * 3 + 2] = color[2];
+    alpha[i] = color[3];
+  }
+  return [makeChunk("PLTE", rgb), makeChunk("tRNS", alpha)];
+}
+var debug3, PNG_SIGNATURE, ADAM7_PASSES, SINGLE_PASS, COLOR_DEPTHS, ANIMATION_CHUNKS, DEFAULT_LIMITS, ImagePNG, data_image_png_default;
 var init_data_image_png = __esm({
-  async "node_modules/@uttori/data-tools/src/image/data-image-png.js"() {
+  async "node_modules/@uttori/data-tools/dist/image/data-image-png.js"() {
     init_pako();
     await init_data_buffer();
-    debug4 = () => {
+    init_data_hash_crc32();
+    init_rgba_surface();
+    debug3 = () => {
     };
     if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
       try {
         const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
-        debug4 = d("Uttori.ImagePNG");
+        debug3 = d("Uttori.ImagePNG");
       } catch {
       }
     }
+    PNG_SIGNATURE = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
+    ADAM7_PASSES = [
+      [0, 0, 8, 8],
+      [4, 0, 8, 8],
+      [0, 4, 4, 8],
+      [2, 0, 4, 4],
+      [0, 2, 2, 4],
+      [1, 0, 2, 2],
+      [0, 1, 1, 2]
+    ];
+    SINGLE_PASS = [[0, 0, 1, 1]];
+    COLOR_DEPTHS = {
+      0: [1, 2, 4, 8, 16],
+      2: [8, 16],
+      3: [1, 2, 4, 8],
+      4: [8, 16],
+      6: [8, 16]
+    };
+    ANIMATION_CHUNKS = /* @__PURE__ */ new Set(["acTL", "fcTL", "fdAT"]);
+    DEFAULT_LIMITS = Object.freeze({
+      maxInputBytes: 64 * 1024 * 1024,
+      maxPixels: 4 * 1024 * 1024,
+      maxInflatedBytes: 64 * 1024 * 1024,
+      maxOutputBytes: 64 * 1024 * 1024,
+      maxChunks: 16384
+    });
     ImagePNG = class _ImagePNG extends data_buffer_default {
+      /** Pixel Width */
+      width;
+      /** Pixel Height */
+      height;
+      /** Image Bit Depth, one of: 1, 2, 4, 8, 16 */
+      bitDepth;
+      /** Defines pixel structure, one of: 0, 2, 3, 4, 6 */
+      colorType;
+      /** Type of compression, always 0 */
+      compressionMethod;
+      /** Type of filtering, always 0 */
+      filterMethod;
+      /** Type of interlacing, one of: 0, 1 */
+      interlaceMethod;
+      /** Number of native samples per pixel, not the number of packed bytes. */
+      colors;
+      /** True when the image has an alpha transparency layer */
+      alpha;
+      /** Raw Color data */
+      palette;
+      /** Row-major native samples, with one element per sample or index. */
+      pixels;
+      /** Raw Transparency data */
+      transparency;
+      /** Object containing physical dimension information */
+      physical;
+      /** Image Data pieces */
+      dataChunks;
+      /** PNG Signature from the data */
+      header;
+      /** Validated chunks, including views of their original framing and CRC. */
+      chunks;
+      /** Whether animation chunks were found under the explicit default-image policy. */
+      animated;
+      /** Decoder policies captured at construction. */
+      options;
+      /** True when the image has been decoded */
+      _decoded;
+      /** Validated allocation bounds, reused for parsing and decoding. */
+      _limits;
+      /** Chunk names used for singleton and ordering checks. */
+      _seenChunks;
+      /** Whether a non-IDAT chunk has ended the contiguous IDAT sequence. */
+      _dataEnded;
       /**
        * Creates a new ImagePNG.
-       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} input The data to process.
+       *
+       * The container is validated immediately; native pixels are decoded on demand.
+       * @param input The data to process.
+       * @param options Ownership, allocation limits, and format policies.
+       * @throws {Error} Signature, framing, CRC, ordering, or metadata are invalid.
        */
-      constructor(input) {
-        super(input);
+      constructor(input, options = {}) {
+        const limits = resolveLimits(options);
+        super(prepareInput(input, options, limits.maxInputBytes));
         this.width = 0;
         this.height = 0;
         this.bitDepth = 0;
@@ -17632,51 +19313,65 @@ var init_data_image_png = __esm({
         this.interlaceMethod = 0;
         this.colors = 0;
         this.alpha = false;
-        this.palette = [];
+        this.palette = new Uint8Array();
         this.pixels = new Uint8Array();
         this.transparency = new Uint8Array();
-        this.physical = {
-          /** @type {number} Physical Dimension Width */
-          width: 0,
-          /** @type {number} Physical Dimension Height */
-          height: 0,
-          /** @type {number} Physical Dimension Units, with 0 being unknown and 1 being Meters */
-          unit: 0
-        };
+        this.physical = { width: 0, height: 0, unit: 0 };
         this.dataChunks = [];
-        this.header = [];
+        this.header = new Uint8Array();
+        this.chunks = [];
+        this.animated = false;
+        this.options = Object.freeze({ ...options });
+        this._decoded = false;
+        this._limits = Object.freeze(limits);
+        this._seenChunks = /* @__PURE__ */ new Set();
+        this._dataEnded = false;
         this.parse();
       }
       /**
        * Creates a new ImagePNG from file data.
-       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} data The data of the image to process.
+       *
+       * The container is validated immediately; native pixels are decoded on demand.
+       * @param data The data of the image to process.
+       * @param options Ownership, allocation limits, and format policies.
        * @returns {ImagePNG} the new ImagePNG instance for the provided file data
        * @static
        */
-      static fromFile(data) {
-        debug4("fromFile:", data);
-        return new _ImagePNG(data);
+      static fromFile(data, options = {}) {
+        debug3("fromFile");
+        return new _ImagePNG(data, options);
       }
       /**
        * Creates a new ImagePNG from a DataBuffer.
-       * @param {DataBuffer} buffer The DataBuffer of the image to process.
-       * @returns {ImagePNG} the new ImagePNG instance for the provided DataBuffer
+       *
+       * The container is validated immediately; native pixels are decoded on demand.
+       * @param buffer The DataBuffer of the image to process.
+       * @param options Ownership, allocation limits, and format policies.
+       * @returns the new ImagePNG instance for the provided DataBuffer
        * @static
        */
-      static fromBuffer(buffer) {
-        debug4("fromBuffer:", buffer.length);
-        return new _ImagePNG(buffer);
+      static fromBuffer(buffer, options = {}) {
+        debug3("fromBuffer:", buffer.length);
+        return new _ImagePNG(buffer, options);
       }
       /**
        * Sets the bitDepth on the ImagePNG instance.
-       * @param {number} bitDepth The bitDepth to set, one of: 1, 2, 4, 8, 16
+       *
+       * Discard samples decoded with the old layout. The complete color/depth
+       * combination is checked before decoding.
+       * @param bitDepth The bitDepth to set, one of: 1, 2, 4, 8, 16
+       * @throws {Error} The depth is invalid or disabled by caller policy.
        */
       setBitDepth(bitDepth) {
-        debug4("setBitDepth:", bitDepth);
+        debug3("setBitDepth:", bitDepth);
         if (![1, 2, 4, 8, 16].includes(bitDepth)) {
           throw new Error(`Invalid Bit Depth: ${bitDepth}, can be one of: 1, 2, 4, 8, 16`);
         }
+        if (bitDepth === 16 && this.options.allow16Bit === false) {
+          throw new Error("16-bit PNG samples are disabled by caller policy.");
+        }
         this.bitDepth = bitDepth;
+        this.invalidatePixels();
       }
       /**
        * Sets the colorType on the ImagePNG instance.
@@ -17689,22 +19384,22 @@ var init_data_image_png = __esm({
        * | 3          | 1, 2, 4, 8         | Each pixel is a palette index; a `PLTE` chunk must appear.
        * | 4          | 8, 16              | Each pixel is a grayscale sample, followed by an alpha sample.
        * | 6          | 8, 16              | Each pixel is an R, G, B triple, followed by an alpha sample.
-       * @param {number} colorType - The colorType to set, one of: 0, 2, 3, 4, 6
+       *
+       * Discard samples decoded with the old layout.
+       * @param colorType The colorType to set, one of: 0, 2, 3, 4, 6
        * @throws {Error} Invalid Color Type, anything other than 0, 2, 3, 4, 6
        */
       setColorType(colorType) {
-        debug4("setColorType:", colorType);
+        debug3("setColorType:", colorType);
         let colors = 0;
         let alpha = false;
         switch (colorType) {
           case 0:
+          case 3:
             colors = 1;
             break;
           case 2:
             colors = 3;
-            break;
-          case 3:
-            colors = 1;
             break;
           case 4:
             colors = 2;
@@ -17720,15 +19415,15 @@ var init_data_image_png = __esm({
         this.colors = colors;
         this.alpha = alpha;
         this.colorType = colorType;
+        this.invalidatePixels();
       }
       /**
        * Sets the compressionMethod on the ImagePNG instance.
        * The compressionMethod should always be 0.
-       * @param {number} compressionMethod - The compressionMethod to set, always 0
+       * @param compressionMethod The compressionMethod to set, always 0
        * @throws {Error} Unsupported Compression Method, anything other than 0
        */
       setCompressionMethod(compressionMethod) {
-        debug4("setCompressionMethod:", compressionMethod);
         if (compressionMethod !== 0) {
           throw new Error(`Unsupported Compression Method: ${compressionMethod}, should be 0`);
         }
@@ -17737,11 +19432,10 @@ var init_data_image_png = __esm({
       /**
        * Sets the filterMethod on the ImagePNG instance.
        * The filterMethod should always be 0.
-       * @param {number} filterMethod - The filterMethod to set, always 0
+       * @param filterMethod The filterMethod to set, always 0
        * @throws {Error} Unsupported Filter Method, anything other than 0
        */
       setFilterMethod(filterMethod) {
-        debug4("setFilterMethod:", filterMethod);
         if (filterMethod !== 0) {
           throw new Error(`Unsupported Filter Method: ${filterMethod}, should be 0`);
         }
@@ -17750,110 +19444,94 @@ var init_data_image_png = __esm({
       /**
        * Sets the interlaceMethod on the ImagePNG instance.
        * The interlaceMethod should always be 0 or 1.
-       * @param {number} interlaceMethod The interlaceMethod to set, always 0 or 1
+       *
+       * Discard samples decoded with the old layout.
+       * @param interlaceMethod The interlaceMethod to set, always 0 or 1
        * @throws {Error} Unsupported Interlace Method, anything other than 0 or 1
        */
       setInterlaceMethod(interlaceMethod) {
-        debug4("setInterlaceMethod:", interlaceMethod);
         if (interlaceMethod !== 0 && interlaceMethod !== 1) {
           throw new Error(`Unsupported Interlace Method: ${interlaceMethod}`);
         }
         this.interlaceMethod = interlaceMethod;
+        this.invalidatePixels();
       }
       /**
        * Sets the palette on the ImagePNG instance.
-       * @param {number[] | Uint8Array} palette The palette to set
+       *
+       * Palette slots retain their identity; duplicate RGB triples are not deduplicated.
+       * @param palette The palette to set
        * @throws {Error} No colors in the palette
        * @throws {Error} Too many colors for the current bit depth
+       * @throws {Error} Components, transparency length, or referenced slots are invalid.
        */
       setPalette(palette) {
-        debug4("setPalette:", palette);
-        if (!Array.isArray(palette) && !ArrayBuffer.isView(palette)) {
-          debug4("Invalid palette provided.");
-          return;
+        if (!Array.isArray(palette) && !(palette instanceof Uint8Array) || palette.length === 0 || palette.length % 3 !== 0 || palette.length > 768) {
+          throw new Error("Invalid PNG palette; expected 1 to 256 RGB triples.");
         }
-        if (palette.length === 0) {
-          throw new Error("Palette contains no colors");
+        const count = palette.length / 3;
+        if (this.colorType === 3 && count > 2 ** this.bitDepth) {
+          throw new Error(`Palette contains more than ${2 ** this.bitDepth} colors.`);
         }
-        if (palette.length > 2 ** this.bitDepth * 3) {
-          throw new Error(`Palette contains more colors than ${2 ** this.bitDepth * 3} ((2 ^ ${this.bitDepth}) * 3)`);
+        for (const value of palette) {
+          if (!Number.isSafeInteger(value) || value < 0 || value > 255) {
+            throw new RangeError("Palette byte must be an integer in [0, 255].");
+          }
         }
-        this.palette = palette;
+        if (this.colorType === 3) {
+          if (this.transparency.length > count) {
+            throw new Error("Transparency exceeds the new palette.");
+          }
+          if (this._decoded) {
+            for (const index of this.pixels) {
+              if (index >= count) {
+                throw new Error("Decoded index exceeds the new palette.");
+              }
+            }
+          }
+        }
+        this.palette = Uint8Array.from(palette);
       }
-      /**
-       * Get the pixel color at a specified x, y location.
-       * @param {number} x The hoizontal offset to read.
-       * @param {number} y The vertical offset to read.
-       * @returns {Array<number>} the color as [red, green, blue, alpha]
-       * @throws {Error} x is out of bound for the image
-       * @throws {Error} y is out of bound for the image
-       * @throws {Error} Unknown color types
-       */
-      getPixel(x, y) {
-        if (!this.pixels) {
-          throw new Error("Pixel data has not been decoded.");
-        }
-        if (!Number.isInteger(x) || x >= this.width || x < 0) {
-          throw new Error(`x position out of bounds or invalid: ${x}`);
-        }
-        if (!Number.isInteger(y) || y >= this.height || y < 0) {
-          throw new Error(`y position out of bounds or invalid: ${y}`);
-        }
-        debug4("getPixel x:", x, "y:", y, "colorType:", this.colorType, "colors:", this.colors, "bitDepth:", this.bitDepth);
-        const i = this.colors * this.bitDepth / 8 * (y * this.width + x);
-        debug4("index:", i);
-        switch (this.colorType) {
-          case 0: {
-            return [this.pixels[i], this.pixels[i], this.pixels[i], 255];
-          }
-          case 2: {
-            return [this.pixels[i], this.pixels[i + 1], this.pixels[i + 2], 255];
-          }
-          case 3: {
-            let alpha = 255;
-            if (this.transparency != null && this.transparency[this.pixels[i]] != null) {
-              alpha = this.transparency[this.pixels[i]];
-            }
-            return [
-              this.palette[this.pixels[i] * 3 + 0],
-              this.palette[this.pixels[i] * 3 + 1],
-              this.palette[this.pixels[i] * 3 + 2],
-              alpha
-            ];
-          }
-          case 4: {
-            if (this.bitDepth === 8) {
-              return [this.pixels[i], this.pixels[i], this.pixels[i], this.pixels[i + 1]];
-            }
-            return [this.pixels[i + 1], this.pixels[i + 1], this.pixels[i + 1], this.pixels[i + 3]];
-          }
-          case 6: {
-            if (this.bitDepth === 8) {
-              return [this.pixels[i], this.pixels[i + 1], this.pixels[i + 2], this.pixels[i + 3]];
-            }
-            return [this.pixels[i + 1], this.pixels[i + 3], this.pixels[i + 5], this.pixels[i + 7]];
-          }
-          default: {
-            throw new Error(`Unknown Color Type: ${this.colorType}`);
-          }
+      /** Discard decoded native samples without changing the original compressed IDAT data. */
+      invalidatePixels() {
+        this._decoded = false;
+        if (this.pixels.length !== 0) {
+          this.pixels = new Uint8Array();
         }
       }
       /**
        * Parse the PNG file, decoding the supported chunks.
+       *
+       * Start from the beginning and reset metadata and cached samples.
+       * @returns This image.
+       * @throws {Error} Required chunks are missing or any chunk fails validation.
        */
       parse() {
-        debug4("parse");
+        debug3("parse");
+        if (this.data.length > this._limits.maxInputBytes) {
+          throw new RangeError("PNG exceeds the input byte limit.");
+        }
+        this.reset();
+        this.palette = new Uint8Array();
+        this.transparency = new Uint8Array();
+        this.physical = { width: 0, height: 0, unit: 0 };
+        this.dataChunks = [];
+        this.chunks = [];
+        this.animated = false;
+        this._seenChunks.clear();
+        this._dataEnded = false;
+        this.invalidatePixels();
         this.decodeHeader();
-        while (this.remainingBytes()) {
-          const type = this.decodeChunk();
-          if (type === "IEND") {
-            const leftover = this.remainingBytes();
-            if (leftover > 0) {
-              debug4("ending with data left:", leftover, "bytes left");
-            }
+        while (this.remainingBytes() > 0) {
+          if (this.decodeChunk() === "IEND") {
             break;
           }
         }
+        if (!this._seenChunks.has("IHDR") || !this._seenChunks.has("IEND")) {
+          throw new Error("PNG is missing IHDR or IEND.");
+        }
+        this._expectedInflatedBytes();
+        return this;
       }
       /**
        * Decodes and validates PNG Header.
@@ -17861,20 +19539,17 @@ var init_data_image_png = __esm({
        * Signature (Hexadecimal): [89, 50, 4E, 47, 0D, 0A, 1A, 0A]
        * Signature (ASCII): [\211, P, N, G, \r, \n, \032, \n]
        * @throws {Error} Missing or invalid PNG header
+       * @throws {Error} The header is not being read from offset zero.
        * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#5PNG-file-signature|PNG Signature}
        */
       decodeHeader() {
-        debug4("decodeHeader: offset =", this.offset);
         if (this.offset !== 0) {
-          debug4("Offset should be at 0 to read the header.");
+          throw new Error("PNG header must be read at offset zero.");
         }
-        const header = this.read(8);
-        debug4("header:", header);
-        const header_buffer = new data_buffer_default(header);
-        if (!header_buffer.compare([137, 80, 78, 71, 13, 10, 26, 10])) {
+        if (!this.isNextBytes(PNG_SIGNATURE)) {
           throw new Error("Missing or invalid PNG header.");
         }
-        this.header = header;
+        this.header = this.read(PNG_SIGNATURE.length);
       }
       /**
        * Decodes the chunk type, and attempts to parse that chunk if supported.
@@ -17885,38 +19560,84 @@ var init_data_image_png = __esm({
        * Type:   4 bytes (IHDR, PLTE, IDAT, IEND, etc.)
        * Chunk:  {length} bytes
        * CRC:    4 bytes
+       *
+       * Validate CRCs, chunk ordering, and bounds before dispatching.
+       * Ancillary records retain their original framing for indexed rewriting.
        * @returns {string} Chunk Type
-       * @throws {Error} Invalid Chunk Length when less than 0
+       * @throws {Error} Invalid chunk length, CRC, ordering, or critical chunk type.
        * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#5Chunk-layout|Chunk Layout}
        */
       decodeChunk() {
-        debug4("decodeChunk");
-        const length = this.readUInt32();
-        if (length < 0) {
-          throw new Error(`Invalid Chunk Length: ${4294967295 & length}`);
+        const offset = this.offset;
+        if (!Number.isSafeInteger(offset) || offset < 8 || offset > this.data.length) {
+          throw new RangeError(`Chunk offset must be an integer in [8, ${this.data.length}].`);
         }
-        const type = this.readString(4);
-        const chunk = this.read(length);
-        const crc = this.readUInt32();
-        debug4("decodeChunk type", type, "chunk size", length, "crc", crc.toString(16).toUpperCase());
+        if (this.chunks.length >= this._limits.maxChunks) {
+          throw new RangeError("PNG exceeds the chunk count limit.");
+        }
+        if (this._seenChunks.has("IEND")) {
+          throw new Error("PNG contains data after IEND.");
+        }
+        if (!this.available(12)) {
+          throw new Error("Truncated PNG chunk header.");
+        }
+        const length = this.peekUInt32(offset);
+        if (length > 2147483647 || length > this.data.length - offset - 12) {
+          throw new Error("Invalid PNG chunk length.");
+        }
+        const end = offset + length + 12;
+        const type = this.peekString(offset + 4, 4);
+        if (!/^[A-Za-z]{2}[A-Z][A-Za-z]$/.test(type)) {
+          throw new Error(`Invalid PNG chunk type '${type}'.`);
+        }
+        const expectedCrc = this.peekUInt32(end - 4);
+        const actualCrc = computeBytes(this.data.subarray(offset + 4, end - 4));
+        if (expectedCrc !== actualCrc) {
+          throw new Error(`PNG ${type} CRC mismatch.`);
+        }
+        if (!this._seenChunks.has("IHDR") && type !== "IHDR") {
+          throw new Error("PNG IHDR must be first.");
+        }
+        const chunk = this.data.subarray(offset + 8, end - 4);
+        const critical = (this.peekUInt8(offset + 4) & 32) === 0;
+        const dataSeen = this.dataChunks.length !== 0;
+        debug3("decodeChunk:", type, "length:", length);
         switch (type) {
           case "IHDR":
+            if (this._seenChunks.has(type)) {
+              throw new Error("PNG requires exactly one IHDR.");
+            }
             this.decodeIHDR(chunk);
             break;
           case "PLTE":
+            if (this._seenChunks.has(type) || dataSeen || this._seenChunks.has("tRNS") || this.colorType === 0 || this.colorType === 4) {
+              throw new Error("Invalid PNG PLTE placement.");
+            }
             this.decodePLTE(chunk);
             break;
-          case "IDAT":
-            this.decodeIDAT(chunk);
-            break;
-          case "IEND":
-            this.decodeIEND(chunk);
-            break;
           case "tRNS":
+            if (this._seenChunks.has(type) || dataSeen) {
+              throw new Error("Invalid PNG tRNS placement.");
+            }
             this.decodeTRNS(chunk);
             break;
           case "pHYs":
+            if (this._seenChunks.has(type) || dataSeen) {
+              throw new Error("Invalid PNG pHYs placement.");
+            }
             this.decodePHYS(chunk);
+            break;
+          case "IDAT":
+            if (this._dataEnded || this.colorType === 3 && !this._seenChunks.has("PLTE")) {
+              throw new Error("PNG IDAT chunks must be contiguous and follow PLTE.");
+            }
+            this.decodeIDAT(chunk);
+            break;
+          case "IEND":
+            if (!dataSeen || end !== this.data.length) {
+              throw new Error("Invalid PNG IEND chunk or trailing file bytes.");
+            }
+            this.decodeIEND(chunk);
             break;
           // case 'cHRM': decodeCHRM(chunk); break;
           // case 'gAMA': decodeGAMA(chunk); break;
@@ -17927,9 +19648,32 @@ var init_data_image_png = __esm({
           // case 'sRGB': decodeSRGB(chunk); break;
           // case 'sBIT': decodeSBIT(chunk); break;
           default:
-            debug4(`Unsupported Chunk: '${type}'`);
+            if (critical) {
+              throw new Error(`Unsupported critical PNG chunk '${type}'.`);
+            }
+            if (ANIMATION_CHUNKS.has(type)) {
+              if (this.options.animation !== "default-image") {
+                throw new Error("Animated PNG is not supported; request animation: default-image explicitly.");
+              }
+              this.animated = true;
+            }
             break;
         }
+        this.chunks.push({
+          type,
+          offset,
+          end,
+          length,
+          data: chunk,
+          raw: this.data.subarray(offset, end),
+          critical,
+          safeToCopy: (this.peekUInt8(offset + 7) & 32) !== 0
+        });
+        this._seenChunks.add(type);
+        if (dataSeen && type !== "IDAT") {
+          this._dataEnded = true;
+        }
+        this.seek(end);
         return type;
       }
       /**
@@ -17943,67 +19687,105 @@ var init_data_image_png = __esm({
        * Compression Method: 1 byte
        * Filter Method:      1 byte
        * Interlace Method:   1 byte
-       * @param {Uint8Array} chunk - Data Blob
+       * @param chunk Data Blob
+       * @throws {Error} Dimensions, sample layout, or PNG methods are invalid.
        * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IHDR|Image Header}
        * @see {@link http://www.libpng.org/pub/png/spec/1.2/png-1.2-pdg.html#C.IHDR|Image Header}
        */
       decodeIHDR(chunk) {
-        debug4("decodeIHDR");
+        if (chunk.length !== 13) {
+          throw new Error("PNG requires a 13-byte IHDR.");
+        }
         const header = new data_buffer_default(chunk);
         const width = header.readUInt32();
         const height = header.readUInt32();
-        const bit_depth = header.readUInt8();
-        const color_type = header.readUInt8();
-        const compression_method = header.readUInt8();
-        const filter_method = header.readUInt8();
-        const interlace_method = header.readUInt8();
+        const bitDepth = header.readUInt8();
+        const colorType = header.readUInt8();
+        const compressionMethod = header.readUInt8();
+        const filterMethod = header.readUInt8();
+        const interlaceMethod = header.readUInt8();
+        if (!Number.isSafeInteger(width) || width < 1 || width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(height) || height < 1 || height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(width * height) || width * height > this._limits.maxPixels) {
+          throw new RangeError(`Image dimensions ${width}x${height} exceed the pixel limit ${this._limits.maxPixels}.`);
+        }
+        if (!COLOR_DEPTHS[colorType]?.includes(bitDepth)) {
+          throw new Error(`Invalid PNG color type ${colorType} at ${bitDepth} bits.`);
+        }
         this.width = width;
         this.height = height;
-        this.setBitDepth(bit_depth);
-        this.setColorType(color_type);
-        this.setCompressionMethod(compression_method);
-        this.setFilterMethod(filter_method);
-        this.setInterlaceMethod(interlace_method);
-        debug4("decodeIHDR =", JSON.stringify({
-          width,
-          height,
-          bit_depth,
-          color_type,
-          compression_method,
-          filter_method,
-          interlace_method
-        }));
+        this.setBitDepth(bitDepth);
+        this.setColorType(colorType);
+        this.setCompressionMethod(compressionMethod);
+        this.setFilterMethod(filterMethod);
+        this.setInterlaceMethod(interlaceMethod);
       }
       /**
        * Decode the PLTE (Palette) chunk.
        * The PLTE chunk contains from 1 to 256 palette entries, each a three-byte series of the form.
        * The number of entries is determined from the chunk length. A chunk length not divisible by 3 is an error.
-       * @param {Uint8Array} chunk - Data Blob
+       *
+       * Preserve the original palette slot order, including duplicate colors.
+       * @param chunk Data Blob
        * @see {@link http://www.w3.org/TR/PNG/#11PLTE|Palette}
        */
       decodePLTE(chunk) {
-        debug4("decodePLTE");
         this.setPalette(chunk);
       }
       /**
        * Decode the IDAT (Image Data) chunk.
        * The IDAT chunk contains the actual image data which is the output stream of the compression algorithm.
-       * @param {Uint8Array} chunk - Data Blob
+       *
+       * Retain a payload view for bounded inflation on demand and invalidate cached
+       * samples. Empty IDAT chunks are legal.
+       * @param chunk Data Blob
        * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IDAT|Image Data}
        */
       decodeIDAT(chunk) {
-        debug4("decodeIDAT:", chunk.length, "bytes");
         this.dataChunks.push(chunk);
+        this.invalidatePixels();
       }
       /**
        * Decode the tRNS (Transparency) chunk.
        * The tRNS chunk specifies that the image uses simple transparency: either alpha values associated with palette entries (for indexed-color images) or a single transparent color (for grayscale and truecolor images). Although simple transparency is not as elegant as the full alpha channel, it requires less storage space and is sufficient for many common cases.
-       * @param {Uint8Array} chunk - Data Blob
+       * @param chunk Data Blob
+       * @throws {Error} Transparency is incompatible with the color type or sample depth.
        * @see {@link https://www.w3.org/TR/PNG/#11tRNS|Transparency}
        */
       decodeTRNS(chunk) {
-        debug4("decodeTRNS");
-        this.transparency = chunk;
+        switch (this.colorType) {
+          case 3:
+            if (this.palette.length === 0 || chunk.length === 0 || chunk.length > this.palette.length / 3) {
+              throw new Error("Invalid indexed PNG tRNS chunk.");
+            }
+            break;
+          case 0:
+            if (chunk.length !== 2) {
+              throw new Error("Grayscale PNG tRNS requires two bytes.");
+            }
+            break;
+          case 2:
+            if (chunk.length !== 6) {
+              throw new Error("RGB PNG tRNS requires six bytes.");
+            }
+            break;
+          default:
+            throw new Error("PNG color types with alpha cannot contain tRNS.");
+        }
+        if (this.colorType !== 3) {
+          const maximum = 2 ** this.bitDepth - 1;
+          const buffer = new data_buffer_default(chunk);
+          while (buffer.remainingBytes() > 0) {
+            if (buffer.readUInt16() > maximum) {
+              throw new Error("PNG tRNS sample exceeds bit depth.");
+            }
+          }
+        }
+        this.transparency = Uint8Array.from(chunk);
       }
       /**
        * Decode the pHYs (Pixel Dimensions) chunk.
@@ -18017,117 +19799,171 @@ var init_data_image_png = __esm({
        * Unit specifier:          1 byte
        * 0: unit is unknown
        * 1: unit is the meter
-       * @param {Uint8Array} chunk - Data Blob
+       *
+       * Keep the raw pixels-per-unit values. When unit is 1, multiplying by 0.0254
+       * converts pixels per meter to pixels per inch without changing stored metadata.
+       * @param chunk Data Blob
+       * @throws {Error} The length or unit specifier is invalid.
        * @see {@link https://www.w3.org/TR/PNG/#11pHYs|Pixel Dimensions}
        */
       decodePHYS(chunk) {
-        const INCH_TO_METERS = 0.0254;
+        if (chunk.length !== 9) {
+          throw new Error("Invalid PNG pHYs chunk.");
+        }
         const buffer = new data_buffer_default(chunk);
-        let width = buffer.readUInt32();
-        let height = buffer.readUInt32();
+        const width = buffer.readUInt32();
+        const height = buffer.readUInt32();
         const unit = buffer.readUInt8();
-        if (unit === 1) {
-          width = Math.floor(width * INCH_TO_METERS);
-          height = Math.floor(height * INCH_TO_METERS);
+        if (unit > 1) {
+          throw new Error("Invalid PNG pHYs chunk.");
         }
         this.physical = { width, height, unit };
       }
       /**
        * Decode the IEND (Image trailer) chunk.
        * The IEND chunk marks the end of the PNG DataBuffer. The chunk's data field is empty.
-       * @param {Uint8Array} _chunk - Unused.
+       * @param chunk The IEND payload, which must have no bytes.
+       * @throws {Error} IEND contains data.
        * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IEND|Image Trailer}
        */
-      decodeIEND(_chunk) {
-        debug4("decodeIEND");
+      decodeIEND(chunk) {
+        if (chunk.length !== 0) {
+          throw new Error("IEND must be empty.");
+        }
+      }
+      /**
+       * Measure the exact decompressed layout, including filter bytes for each pass.
+       * @param interlaceMethod The layout to measure; defaults to the current IHDR value.
+       * @returns Expected filtered scanline byte count.
+       * @throws {Error} The layout is invalid or exceeds the inflation limit.
+       */
+      _expectedInflatedBytes(interlaceMethod = this.interlaceMethod) {
+        if (!Number.isSafeInteger(this.width) || this.width < 1 || this.width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(this.height) || this.height < 1 || this.height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(this.width * this.height) || this.width * this.height > this._limits.maxPixels) {
+          throw new RangeError(`Image dimensions ${this.width}x${this.height} exceed the pixel limit ${this._limits.maxPixels}.`);
+        }
+        if (!COLOR_DEPTHS[this.colorType]?.includes(this.bitDepth)) {
+          throw new Error(`Invalid PNG color type ${this.colorType} at ${this.bitDepth} bits.`);
+        }
+        if (interlaceMethod !== 0 && interlaceMethod !== 1) {
+          throw new Error(`Unsupported Interlace Method: ${interlaceMethod}`);
+        }
+        let passes = SINGLE_PASS;
+        if (interlaceMethod === 1) {
+          passes = ADAM7_PASSES;
+        }
+        let expected = 0;
+        for (const [startX, startY, stepX, stepY] of passes) {
+          const width = passLength(this.width, startX, stepX);
+          const height = passLength(this.height, startY, stepY);
+          if (width !== 0 && height !== 0) {
+            const rowBytes = Math.ceil(width * this.colors * this.bitDepth / 8);
+            expected += height * (rowBytes + 1);
+          }
+        }
+        if (!Number.isSafeInteger(expected) || expected > this._limits.maxInflatedBytes) {
+          throw new RangeError("PNG exceeds the inflated byte limit.");
+        }
+        return expected;
       }
       /**
        * Uncompress IDAT chunks.
+       *
+       * Reverse scanline filters and unpack native samples after bounded inflation.
+       * Successful decodes are cached. Forcing a decode discards in-memory pixel edits
+       * and reconstructs the source IDAT; failures never expose partial pixel buffers.
+       * @param options Cache control for this decode.
+       * @param options.force Discard cached samples and decode the source again.
+       * @returns Row-major native samples, retaining original palette indexes.
        * @throws {Error} No IDAT chunks to decode
        * @throws {Error} Deinterlacing Error
        * @throws {Error} Inflating Error
-       * @throws {Error} Adam7 interlaced format is unsupported
+       * @throws {Error} Compressed data, scanline lengths, filters, or indexes are invalid.
        */
-      decodePixels() {
-        debug4("decodePixels");
+      decodePixels({ force = false } = {}) {
+        if (typeof force !== "boolean") {
+          throw new TypeError("force must be a boolean.");
+        }
+        if (this._decoded && !force) {
+          return this.pixels;
+        }
+        this.invalidatePixels();
         if (this.dataChunks.length === 0) {
           throw new Error("No IDAT chunks to decode.");
         }
-        const length = this.dataChunks.reduce((accumulator, chunk) => accumulator + chunk.length, 0);
-        debug4("Data Chunks Total Size:", length);
-        const data = new Uint8Array(length);
-        let k = 0;
+        const expected = this._expectedInflatedBytes();
+        const output = new Uint8Array(expected);
+        const inflator = new Inflate({
+          windowBits: 15,
+          chunkSize: 16 * 1024
+        });
+        const zlib = zlibState(inflator);
+        let written = 0;
+        let compressedLength = 0;
+        let ended = false;
+        let errorCode = 0;
+        inflator.onData = (chunk) => {
+          if (written + chunk.length > expected) {
+            throw new Error("PNG inflated data exceeds declared dimensions.");
+          }
+          output.set(chunk, written);
+          written += chunk.length;
+        };
+        inflator.onEnd = (status) => {
+          ended = true;
+          errorCode = status;
+        };
         for (const chunk of this.dataChunks) {
-          for (const j of chunk) {
-            data[k++] = j;
+          if (chunk.length === 0) {
+            continue;
+          }
+          if (ended) {
+            throw new Error("PNG has compressed data after the zlib stream.");
+          }
+          compressedLength += chunk.length;
+          if (compressedLength > this._limits.maxInputBytes) {
+            throw new RangeError("PNG exceeds the input byte limit.");
+          }
+          if (!inflator.push(chunk, false) || errorCode !== 0) {
+            throw new Error(`Invalid PNG image data: ${zlib.msg || "inflate failure"}.`);
+          }
+          if (zlib.avail_in !== 0) {
+            throw new Error("PNG has trailing bytes after the zlib stream.");
           }
         }
-        let out;
-        try {
-          out = inflate(data);
-        } catch (err) {
-          debug4("Error Inflating:", err);
-          throw err;
+        if (!ended || errorCode !== 0 || written !== expected) {
+          throw new Error("Invalid PNG image data: incomplete zlib stream or scanline length mismatch.");
         }
-        debug4("Inflated Size:", out.length);
-        try {
-          if (this.interlaceMethod === 0) {
-            this.interlaceNone(out);
-          } else {
-            this.interlaceAdam7(out);
-          }
-        } catch (e) {
-          debug4("Error Deinterlacing:", e);
-          throw e;
+        if (zlib.total_in !== compressedLength) {
+          throw new Error("PNG IDAT must contain exactly one zlib stream.");
         }
+        if (this.interlaceMethod === 0) {
+          return this.interlaceNone(output);
+        }
+        return this.interlaceAdam7(output);
       }
       /**
        * Deinterlace with no interlacing.
-       * @param {Buffer|Uint8Array} data Data to deinterlace.
+       * @param data Data to deinterlace.
+       * @returns Native samples, also stored in pixels on success.
        * @see {@link https://www.w3.org/TR/PNG-Filters.html|PNG Filters}
        */
       interlaceNone(data) {
-        const bytes_per_pixel = Math.max(1, this.colors * this.bitDepth / 8);
-        const color_bytes_per_row = bytes_per_pixel * this.width;
-        this.pixels = new Uint8Array(bytes_per_pixel * this.width * this.height);
-        const chunk = new data_buffer_default(data);
-        debug4("interlaceNone: bytes:", chunk.remainingBytes(), "bytes_per_pixel:", bytes_per_pixel, "color_bytes_per_row:", color_bytes_per_row);
-        let offset = 0;
-        while (chunk.remainingBytes() > 0) {
-          const type = chunk.readUInt8();
-          const scanline = chunk.read(chunk.remainingBytes() < color_bytes_per_row ? chunk.remainingBytes() : color_bytes_per_row);
-          switch (type) {
-            case 0: {
-              this.pixels = _ImagePNG.unFilterNone(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-              break;
-            }
-            case 1: {
-              this.pixels = _ImagePNG.unFilterSub(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-              break;
-            }
-            case 2: {
-              this.pixels = _ImagePNG.unFilterUp(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-              break;
-            }
-            case 3: {
-              this.pixels = _ImagePNG.unFilterAverage(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-              break;
-            }
-            case 4: {
-              this.pixels = _ImagePNG.unFilterPaeth(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-              break;
-            }
-            default: {
-              debug4(`Unknown filtered scanline type: '${type}', at offset`, offset);
-            }
-          }
-          offset += chunk.offset;
-        }
+        return this._decodeScanlines(data, 0);
       }
       /**
        * Deinterlace with Adam7 interlacing.
        * Adam7 divides the image into 7 passes with different starting positions and step sizes.
-       * @param {Buffer|Uint8Array} data Data to deinterlace.
+       *
+       * Empty passes consume neither filter bytes nor row bytes. Scatter decoded
+       * samples into row-major image order without converting palette indexes.
+       * @param data Data to deinterlace.
+       * @returns Native samples, also stored in pixels on success.
        * @see {@link https://www.w3.org/TR/PNG/#8Interlace|PNG Adam7 Interlacing}
        * @see {@link https://github.com/em2046/lens/blob/master/assets/js/interlace.js}
        * @see {@link https://github.com/em2046/aperture/tree/master/lib/png/chunks}
@@ -18136,170 +19972,620 @@ var init_data_image_png = __esm({
        * @see {@link https://github.com/SixLabors/ImageSharp/blob/master/src/ImageSharp/Formats/Png/Adam7.cs}
        */
       interlaceAdam7(data) {
-        const bytes_per_pixel = Math.max(1, this.colors * this.bitDepth / 8);
-        const xoffset = [0, 4, 0, 2, 0, 1, 0];
-        const yoffset = [0, 0, 4, 0, 2, 0, 1];
-        const xstep = [8, 8, 4, 4, 2, 2, 1];
-        const ystep = [8, 8, 8, 4, 4, 2, 2];
-        this.pixels = new Uint8Array(bytes_per_pixel * this.width * this.height);
-        const chunk = new data_buffer_default(data);
-        debug4("interlaceAdam7: bytes:", chunk.remainingBytes(), "bytes_per_pixel:", bytes_per_pixel);
-        for (let pass = 0; pass < 7; pass++) {
-          const pass_width = Math.ceil((this.width - xoffset[pass]) / xstep[pass]);
-          const pass_height = Math.ceil((this.height - yoffset[pass]) / ystep[pass]);
-          debug4(`Adam7 pass ${pass + 1}: width=${pass_width}, height=${pass_height}`);
-          if (pass_width > 0 && pass_height > 0) {
-            const color_bytes_per_row = bytes_per_pixel * pass_width;
-            let pass_pixels = new Uint8Array(bytes_per_pixel * pass_width * pass_height);
-            for (let row = 0; row < pass_height; row++) {
-              if (chunk.remainingBytes() === 0) {
-                break;
+        return this._decodeScanlines(data, 1);
+      }
+      /**
+       * Share row reconstruction and native sample unpacking across interlace modes.
+       * @param data Exact filtered scanline bytes.
+       * @param interlaceMethod Zero for the full image, or one for Adam7 passes.
+       * @returns The fully reconstructed native sample buffer.
+       */
+      _decodeScanlines(data, interlaceMethod) {
+        this.invalidatePixels();
+        if (data.length !== this._expectedInflatedBytes(interlaceMethod)) {
+          throw new Error("PNG scanline length mismatch.");
+        }
+        const { width, height, colors, bitDepth } = this;
+        const sampleCount = width * height * colors;
+        let samples;
+        if (bitDepth === 16) {
+          samples = new Uint16Array(sampleCount);
+        } else {
+          samples = new Uint8Array(sampleCount);
+        }
+        let passes = SINGLE_PASS;
+        if (interlaceMethod === 1) {
+          passes = ADAM7_PASSES;
+        }
+        const bytesPerPixel = Math.max(1, Math.ceil(colors * bitDepth / 8));
+        const maxRowBytes = Math.ceil(width * colors * bitDepth / 8);
+        let current = new data_buffer_default(maxRowBytes);
+        let previous = new data_buffer_default(maxRowBytes);
+        const scanlines = new data_buffer_default(data);
+        for (const [startX, startY, stepX, stepY] of passes) {
+          const passWidth = passLength(width, startX, stepX);
+          const passHeight = passLength(height, startY, stepY);
+          if (passWidth === 0 || passHeight === 0) {
+            continue;
+          }
+          const rowBytes = Math.ceil(passWidth * colors * bitDepth / 8);
+          previous.data.fill(0, 0, rowBytes);
+          for (let y = 0; y < passHeight; y++) {
+            const filter = scanlines.readUInt8();
+            current.data.set(data.subarray(scanlines.offset, scanlines.offset + rowBytes));
+            scanlines.advance(rowBytes);
+            current.reset();
+            unfilterRow(current.data, previous.data, bytesPerPixel, rowBytes, filter);
+            let destination = ((startY + y * stepY) * width + startX) * colors;
+            if (bitDepth === 8 && stepX === 1) {
+              samples.set(current.data.subarray(0, rowBytes), destination);
+            } else if (bitDepth < 8) {
+              const mask = (1 << bitDepth) - 1;
+              for (let x = 0, bit2 = 0; x < passWidth; x++, bit2 += bitDepth, destination += stepX) {
+                samples[destination] = current.data[bit2 >>> 3] >>> 8 - bitDepth - (bit2 & 7) & mask;
               }
-              const type = chunk.readUInt8();
-              const scanline = chunk.read(chunk.remainingBytes() < color_bytes_per_row ? chunk.remainingBytes() : color_bytes_per_row);
-              const offset = row * color_bytes_per_row;
-              switch (type) {
-                case 0: {
-                  pass_pixels = _ImagePNG.unFilterNone(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-                  break;
-                }
-                case 1: {
-                  pass_pixels = _ImagePNG.unFilterSub(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-                  break;
-                }
-                case 2: {
-                  pass_pixels = _ImagePNG.unFilterUp(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-                  break;
-                }
-                case 3: {
-                  pass_pixels = _ImagePNG.unFilterAverage(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-                  break;
-                }
-                case 4: {
-                  pass_pixels = _ImagePNG.unFilterPaeth(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
-                  break;
-                }
-                default: {
-                  debug4(`Unknown filtered scanline type: '${type}', at pass ${pass + 1}, row ${row}`);
+            } else {
+              for (let x = 0; x < passWidth; x++, destination += stepX * colors) {
+                for (let channel = 0; channel < colors; channel++) {
+                  if (bitDepth === 16) {
+                    samples[destination + channel] = current.readUInt16();
+                  } else {
+                    samples[destination + channel] = current.readUInt8();
+                  }
                 }
               }
             }
-            for (let row = 0; row < pass_height; row++) {
-              const y = yoffset[pass] + row * ystep[pass];
-              for (let col = 0; col < pass_width; col++) {
-                const x = xoffset[pass] + col * xstep[pass];
-                const pass_index = (row * pass_width + col) * bytes_per_pixel;
-                const image_index = (y * this.width + x) * bytes_per_pixel;
-                for (let b = 0; b < bytes_per_pixel; b++) {
-                  this.pixels[image_index + b] = pass_pixels[pass_index + b];
-                }
-              }
+            const temporary = previous;
+            previous = current;
+            current = temporary;
+          }
+        }
+        if (this.colorType === 3) {
+          const paletteSize = this.palette.length / 3;
+          for (const index of samples) {
+            if (index >= paletteSize) {
+              throw new Error(`PNG palette index ${index} is out of range.`);
             }
           }
         }
+        this.pixels = samples;
+        this._decoded = true;
+        return samples;
       }
-      // TODO Make these static so we can use them in Adam7 as well.
-      // Unfiltering
+      /**
+       * Get indexed pixels without flattening duplicate palette colors.
+       * @param options Index-buffer ownership.
+       * @param options.copy False to borrow decoded indexes; defaults to true.
+       * @returns Native indexes, newly expanded RGBA slots, and original index depth.
+       * @throws {Error} The source is not indexed.
+       */
+      toIndexed({ copy = true } = {}) {
+        if (typeof copy !== "boolean") {
+          throw new TypeError("copy must be a boolean.");
+        }
+        if (this.colorType !== 3) {
+          throw new Error("PNG does not contain indexed pixels.");
+        }
+        const pixels = this.decodePixels();
+        if (!(pixels instanceof Uint8Array)) {
+          throw new Error("Indexed PNG pixels must be byte-sized samples.");
+        }
+        let indexes = pixels;
+        if (copy) {
+          indexes = Uint8Array.from(pixels);
+        }
+        return {
+          kind: "indexed-image",
+          width: this.width,
+          height: this.height,
+          indexes,
+          palette: this._paletteRGBA(),
+          sourceBitDepth: this.bitDepth
+        };
+      }
+      /**
+       * Convert native samples to straight-alpha RGBA8 for rendering.
+       * Sixteen-bit values are rounded to the nearest eight-bit value after testing
+       * native transparency keys. Native samples and indexes remain unchanged.
+       * @param options Output-buffer ownership for an RGBA8 source.
+       * @param options.copy False to share existing RGBA8 samples; defaults to true.
+       * @returns The RGBA surface; other source formats always require a new buffer.
+       */
+      toRGBA({ copy = true } = {}) {
+        if (typeof copy !== "boolean") {
+          throw new TypeError("copy must be a boolean.");
+        }
+        const pixels = this.decodePixels();
+        if (this.colorType === 6 && this.bitDepth === 8 && pixels instanceof Uint8Array) {
+          return new RgbaSurface(this.width, this.height, pixels, {
+            copy,
+            maxPixels: this._limits.maxPixels
+          });
+        }
+        const rgba = new Uint8Array(this.width * this.height * 4);
+        const key = this._transparencyKey();
+        for (let pixel = 0, offset = 0; pixel < this.width * this.height; pixel++, offset += 4) {
+          this._writePixel(pixel, rgba, offset, key);
+        }
+        return new RgbaSurface(this.width, this.height, rgba, {
+          copy: false,
+          maxPixels: this._limits.maxPixels
+        });
+      }
+      /**
+       * Get the pixel color at a specified x, y location.
+       *
+       * Decode native samples on demand, then convert the selected pixel to RGBA8.
+       * Sixteen-bit samples are rounded after testing native transparency keys.
+       * Prefer toRGBA() for bulk conversion or getPixelInto() for reusable output.
+       * @param x The hoizontal offset to read.
+       * @param y The vertical offset to read.
+       * @returns the color as [red, green, blue, alpha]
+       * @throws {Error} x is out of bound for the image
+       * @throws {Error} y is out of bound for the image
+       * @throws {Error} Unknown color types
+       */
+      getPixel(x, y) {
+        if (!Number.isSafeInteger(x) || x < 0 || x > this.width - 1) {
+          throw new RangeError(`x position must be an integer in [0, ${this.width - 1}].`);
+        }
+        if (!Number.isSafeInteger(y) || y < 0 || y > this.height - 1) {
+          throw new RangeError(`y position must be an integer in [0, ${this.height - 1}].`);
+        }
+        this.decodePixels();
+        const output = [0, 0, 0, 0];
+        this._writePixel(y * this.width + x, output, 0, this._transparencyKey());
+        return output;
+      }
+      /**
+       * Write an RGBA8 pixel into a caller-owned buffer without allocating an output tuple.
+       * @param x Horizontal pixel coordinate.
+       * @param y Vertical pixel coordinate.
+       * @param output Destination bytes.
+       * @param offset First of four writable destination bytes.
+       * @returns The same output buffer.
+       */
+      getPixelInto(x, y, output, offset = 0) {
+        if (!Number.isSafeInteger(x) || x < 0 || x > this.width - 1) {
+          throw new RangeError(`x position must be an integer in [0, ${this.width - 1}].`);
+        }
+        if (!Number.isSafeInteger(y) || y < 0 || y > this.height - 1) {
+          throw new RangeError(`y position must be an integer in [0, ${this.height - 1}].`);
+        }
+        if (!Number.isSafeInteger(offset) || offset < 0 || offset > 2147483647) {
+          throw new RangeError("Output offset must be an integer in [0, 2147483647].");
+        }
+        if (!(output instanceof Uint8Array) || offset + 4 > output.length) {
+          throw new RangeError("Output needs four writable bytes.");
+        }
+        this.decodePixels();
+        this._writePixel(y * this.width + x, output, offset, this._transparencyKey());
+        return output;
+      }
+      /**
+       * Expand RGB palette metadata into newly owned RGBA tuples without remapping slots.
+       * @returns Palette slots, with full opacity for entries omitted from tRNS.
+       */
+      _paletteRGBA() {
+        const palette = [];
+        for (let index = 0; index < this.palette.length / 3; index++) {
+          const offset = index * 3;
+          palette.push([
+            this.palette[offset],
+            this.palette[offset + 1],
+            this.palette[offset + 2],
+            this.transparency[index] ?? 255
+          ]);
+        }
+        return palette;
+      }
+      /**
+       * Read a grayscale/RGB transparency key in native sample precision.
+       * @returns Key components, or an empty array when there is no color key.
+       */
+      _transparencyKey() {
+        const key = [];
+        if (this.colorType !== 0 && this.colorType !== 2) {
+          return key;
+        }
+        if (this.transparency.length !== 0) {
+          const buffer = new data_buffer_default(this.transparency);
+          while (buffer.remainingBytes() > 0) {
+            key.push(buffer.readUInt16());
+          }
+        }
+        return key;
+      }
+      /**
+       * Write one native pixel as RGBA8, retaining RGB beneath transparent alpha.
+       * @param pixel Row-major pixel index, not a byte offset.
+       * @param output Destination array or byte buffer.
+       * @param offset Destination byte offset.
+       * @param key Native transparency components, resolved once per bulk conversion.
+       */
+      _writePixel(pixel, output, offset, key) {
+        const source = pixel * this.colors;
+        let scale = 1;
+        if (this.bitDepth !== 8) {
+          scale = 255 / (2 ** this.bitDepth - 1);
+        }
+        switch (this.colorType) {
+          case 3: {
+            const index = this.pixels[source];
+            const paletteOffset = index * 3;
+            output[offset] = this.palette[paletteOffset];
+            output[offset + 1] = this.palette[paletteOffset + 1];
+            output[offset + 2] = this.palette[paletteOffset + 2];
+            output[offset + 3] = this.transparency[index] ?? 255;
+            break;
+          }
+          case 0:
+          case 4: {
+            const gray = Math.round(this.pixels[source] * scale);
+            let alpha = 255;
+            if (this.colorType === 4) {
+              alpha = Math.round(this.pixels[source + 1] * scale);
+            } else if (this.pixels[source] === key[0]) {
+              alpha = 0;
+            }
+            output[offset] = gray;
+            output[offset + 1] = gray;
+            output[offset + 2] = gray;
+            output[offset + 3] = alpha;
+            break;
+          }
+          case 2:
+          case 6: {
+            let alpha = 255;
+            if (this.colorType === 6) {
+              alpha = Math.round(this.pixels[source + 3] * scale);
+            } else if (this.pixels[source] === key[0] && this.pixels[source + 1] === key[1] && this.pixels[source + 2] === key[2]) {
+              alpha = 0;
+            }
+            output[offset] = Math.round(this.pixels[source] * scale);
+            output[offset + 1] = Math.round(this.pixels[source + 1] * scale);
+            output[offset + 2] = Math.round(this.pixels[source + 2] * scale);
+            output[offset + 3] = alpha;
+            break;
+          }
+          default:
+            throw new Error(`Unknown Color Type: ${this.colorType}`);
+        }
+      }
+      /**
+       * Encode indexed pixels without quantization, palette reordering, or deduplication.
+       * @param image Native indexes and RGBA palette slots.
+       * @param options Bit depth, filters, compression level, and allocation limits.
+       * @returns Owned non-interlaced PNG bytes; the default index depth is eight bits.
+       * @static
+       */
+      static encodeIndexed(image, options = {}) {
+        const limits = resolveLimits(options);
+        const bitDepth = options.bitDepth ?? 8;
+        validateIndexed(image, bitDepth, limits.maxPixels);
+        const compressed = _ImagePNG._encodeIndexedData(image, bitDepth, options, limits);
+        return joinChunks([
+          PNG_SIGNATURE,
+          makeChunk("IHDR", makeHeader(image.width, image.height, bitDepth, 3)),
+          ...makePaletteChunks(image.palette),
+          makeChunk("IDAT", compressed),
+          makeChunk("IEND", new Uint8Array())
+        ], limits.maxOutputBytes);
+      }
+      /**
+       * Create an indexed PNG using the encodeIndexed() implementation.
+       * @param image Native indexes and RGBA palette slots.
+       * @param options Bit depth, filters, compression level, and allocation limits.
+       * @returns Owned PNG bytes retaining each supplied palette slot.
+       * @static
+       */
+      static createIndexedPng(image, options = {}) {
+        return _ImagePNG.encodeIndexed(image, options);
+      }
+      /**
+       * Encode straight-alpha RGBA8 without changing hidden RGB components.
+       * @param image Dimensions and an exact row-major RGBA8 buffer.
+       * @param options Filters, compression level, and allocation limits.
+       * @returns Owned non-interlaced RGBA8 PNG bytes.
+       * @static
+       */
+      static encodeRGBA(image, options = {}) {
+        const limits = resolveLimits(options);
+        if (!Number.isSafeInteger(image.width) || image.width < 1 || image.width > 2147483647) {
+          throw new RangeError("Width must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(image.height) || image.height < 1 || image.height > 2147483647) {
+          throw new RangeError("Height must be an integer in [1, 2147483647].");
+        }
+        if (!Number.isSafeInteger(image.width * image.height) || image.width * image.height > limits.maxPixels) {
+          throw new RangeError(`Image dimensions ${image.width}x${image.height} exceed the pixel limit ${limits.maxPixels}.`);
+        }
+        if (!(image.rgba instanceof Uint8Array) || image.rgba.length !== image.width * image.height * 4) {
+          throw new Error("RGBA buffer length does not match dimensions.");
+        }
+        const rowBytes = image.width * 4;
+        const compressed = _ImagePNG._encodeRows(image.height, rowBytes, 4, (row, y) => {
+          row.set(image.rgba.subarray(y * rowBytes, (y + 1) * rowBytes));
+        }, options, limits);
+        return joinChunks([
+          PNG_SIGNATURE,
+          makeChunk("IHDR", makeHeader(image.width, image.height, 8, 6)),
+          makeChunk("IDAT", compressed),
+          makeChunk("IEND", new Uint8Array())
+        ], limits.maxOutputBytes);
+      }
+      /**
+       * Rewrite indexed pixels, dimensions, or same-slot palette entries without an RGBA round trip.
+       * No-op edits return an exact owned copy. Palette-only changes keep the original
+       * IDAT bytes, including Adam7. Pixel edits use new non-interlaced packed rows.
+       * Safe-to-copy ancillary chunks survive edits. Unsafe chunks require explicit
+       * retention after caller-supplied, format-specific validation.
+       * @param source Original PNG file bytes, rather than a mutable decoded model.
+       * @param edit Palette edits and optional complete pixel/canvas replacements.
+       * @param options Decoder/encoder limits and optional application validation.
+       * @returns Owned PNG bytes preserving palette slot identities.
+       * @throws {Error} Palette slot count changes or resizing omits replacement pixels.
+       * @static
+       */
+      static rewriteIndexed(source, edit = {}, options = {}) {
+        const image = new _ImagePNG(source, options);
+        if (image.colorType !== 3) {
+          throw new Error("PNG editing requires indexed pixels.");
+        }
+        const original = image.toIndexed({ copy: false });
+        const palette = edit.palette ?? original.palette;
+        const width = edit.dimensions?.width ?? original.width;
+        const height = edit.dimensions?.height ?? original.height;
+        const resized = width !== original.width || height !== original.height;
+        if (resized && edit.indexes === void 0) {
+          throw new Error("Resizing requires replacement indexed pixels.");
+        }
+        if (palette.length !== original.palette.length) {
+          throw new Error("Palette edit must preserve slot count.");
+        }
+        const indexes = edit.indexes ?? original.indexes;
+        const next = { width, height, palette, indexes };
+        validateIndexed(next, image.bitDepth, image._limits.maxPixels);
+        if (options.validateIndexed !== void 0) {
+          if (typeof options.validateIndexed !== "function") {
+            throw new TypeError("validateIndexed must be a function.");
+          }
+          options.validateIndexed({ width, height, indexes });
+        }
+        const retained = new Set(edit.preserveChunks ?? []);
+        for (const type of retained) {
+          if (typeof type !== "string" || !/^[a-z][A-Za-z][A-Z][A-Za-z]$/.test(type) || ANIMATION_CHUNKS.has(type)) {
+            throw new Error(`Invalid preserved ancillary chunk '${type}'.`);
+          }
+        }
+        let pixelsChanged = resized;
+        if (!pixelsChanged) {
+          for (let i = 0; i < indexes.length; i++) {
+            if (indexes[i] !== original.indexes[i]) {
+              pixelsChanged = true;
+              break;
+            }
+          }
+        }
+        let paletteChanged = false;
+        for (let i = 0; i < palette.length; i++) {
+          const color = palette[i];
+          const previous = original.palette[i];
+          if (color[0] !== previous[0] || color[1] !== previous[1] || color[2] !== previous[2] || color[3] !== previous[3]) {
+            paletteChanged = true;
+            break;
+          }
+        }
+        if (!pixelsChanged && !paletteChanged) {
+          if (image.data.length > image._limits.maxOutputBytes) {
+            throw new RangeError("PNG exceeds the output byte limit.");
+          }
+          return Uint8Array.from(image.data);
+        }
+        if (image.animated) {
+          throw new Error("Cannot rewrite an animated PNG through the static indexed editor.");
+        }
+        let compressed;
+        if (pixelsChanged) {
+          compressed = _ImagePNG._encodeIndexedData(next, original.sourceBitDepth, options, image._limits);
+        }
+        const parts = [PNG_SIGNATURE];
+        let wrotePixels = false;
+        for (const chunk of image.chunks) {
+          const { type } = chunk;
+          if (type === "IHDR" && pixelsChanged) {
+            parts.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
+          } else if (type === "PLTE" && paletteChanged) {
+            parts.push(...makePaletteChunks(palette));
+          } else if (type === "tRNS" && paletteChanged) {
+            continue;
+          } else if (type === "IDAT" && compressed !== void 0) {
+            if (!wrotePixels) {
+              parts.push(makeChunk(type, compressed));
+              wrotePixels = true;
+            }
+          } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk.safeToCopy || retained.has(type)) {
+            parts.push(chunk.raw);
+          }
+        }
+        return joinChunks(parts, image._limits.maxOutputBytes);
+      }
+      /**
+       * Rewrite an indexed PNG using rewriteIndexed().
+       * @param source Original indexed PNG bytes.
+       * @param edit Palette edits and optional complete pixel/canvas replacements.
+       * @param options Decoder/encoder limits and optional application validation.
+       * @returns Owned PNG bytes preserving palette slot identities.
+       * @static
+       */
+      static rewriteIndexedPng(source, edit = {}, options = {}) {
+        return _ImagePNG.rewriteIndexed(source, edit, options);
+      }
+      /**
+       * Pack validated indexes into scanlines and compress them for IDAT.
+       * @param image A validated indexed surface.
+       * @param bitDepth Number of bits per index.
+       * @param options Filtering and compression options.
+       * @param limits Resolved allocation limits.
+       * @returns A complete zlib stream.
+       */
+      static _encodeIndexedData(image, bitDepth, options, limits) {
+        const rowBytes = Math.ceil(image.width * bitDepth / 8);
+        return _ImagePNG._encodeRows(image.height, rowBytes, 1, (row, y) => {
+          const source = y * image.width;
+          if (bitDepth === 8) {
+            row.set(image.indexes.subarray(source, source + image.width));
+            return;
+          }
+          for (let x = 0, bit2 = 0; x < image.width; x++, bit2 += bitDepth) {
+            row[bit2 >>> 3] |= image.indexes[source + x] << 8 - bitDepth - (bit2 & 7);
+          }
+        }, options, limits);
+      }
+      /**
+       * Filter and compress rows for indexed and RGBA8 output.
+       * None is the deterministic, low-CPU default. Adaptive filtering tries all five
+       * predictors and selects the lowest signed-byte residual score for each row.
+       * @param height Number of scanlines.
+       * @param rowBytes Packed byte count per row, excluding its filter byte.
+       * @param bpp Byte distance to the previous pixel for filtering.
+       * @param fillRow Callback writing one unfiltered row into zero-initialized storage.
+       * @param options Filtering and compression options.
+       * @param limits Resolved allocation limits.
+       * @returns A complete zlib stream.
+       */
+      static _encodeRows(height, rowBytes, bpp, fillRow, options, limits) {
+        const length = height * (rowBytes + 1);
+        if (!Number.isSafeInteger(length) || length > limits.maxInflatedBytes) {
+          throw new RangeError("PNG exceeds the scanline byte limit.");
+        }
+        const filter = options.filter ?? "none";
+        if (filter !== "none" && filter !== "sub" && filter !== "adaptive") {
+          throw new Error("Filter must be none, sub, or adaptive.");
+        }
+        const level = options.level ?? 6;
+        if (!Number.isSafeInteger(level) || level < 0 || level > 9) {
+          throw new RangeError("Compression level must be an integer in [0, 9].");
+        }
+        const rows = new Uint8Array(length);
+        if (filter === "none") {
+          for (let y = 0; y < height; y++) {
+            const offset = y * (rowBytes + 1);
+            fillRow(rows.subarray(offset + 1, offset + rowBytes + 1), y);
+          }
+        } else {
+          let current = new Uint8Array(rowBytes);
+          let previous = new Uint8Array(rowBytes);
+          const candidate = new Uint8Array(rowBytes);
+          let firstFilter = 0;
+          let lastFilter = 4;
+          if (filter === "sub") {
+            firstFilter = 1;
+            lastFilter = 1;
+          }
+          for (let y = 0; y < height; y++) {
+            current.fill(0);
+            fillRow(current, y);
+            const offset = y * (rowBytes + 1);
+            let bestScore = Infinity;
+            for (let type = firstFilter; type <= lastFilter; type++) {
+              let score = 0;
+              for (let i = 0; i < rowBytes; i++) {
+                let left = 0;
+                let upperLeft = 0;
+                if (i >= bpp) {
+                  left = current[i - bpp];
+                  upperLeft = previous[i - bpp];
+                }
+                const above = previous[i];
+                let predictor = 0;
+                switch (type) {
+                  case 1:
+                    predictor = left;
+                    break;
+                  case 2:
+                    predictor = above;
+                    break;
+                  case 3:
+                    predictor = left + above >>> 1;
+                    break;
+                  case 4:
+                    predictor = paethPredictor(left, above, upperLeft);
+                    break;
+                  default:
+                    break;
+                }
+                const byte = current[i] - predictor & 255;
+                candidate[i] = byte;
+                if (byte < 128) {
+                  score += byte;
+                } else {
+                  score += 256 - byte;
+                }
+              }
+              if (score < bestScore) {
+                bestScore = score;
+                rows[offset] = type;
+                rows.set(candidate, offset + 1);
+              }
+            }
+            const temporary = previous;
+            previous = current;
+            current = temporary;
+          }
+        }
+        return deflate(rows, { level });
+      }
       /**
        * No filtering, direct copy.
-       * @param {number[]|Uint8Array} pixels Pixels to update.
-       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
-       * @param {number} bpp Bytes Per Pixel
-       * @param {number} offset Offset
-       * @param {number} length Length
-       * @returns {number[]|Uint8Array} Pixels
+       * @param pixels Pixels to update.
+       * @param scanline Scanline to search for pixels in.
+       * @param bpp Bytes Per Pixel
+       * @param offset Offset
+       * @param length Length
+       * @returns Pixels
        */
       static unFilterNone(pixels, scanline, bpp, offset, length) {
-        debug4("unFilterNone:", "bpp:", bpp, "offset:", offset, "length:", length);
-        for (let i = 0, to = length; i < to; i++) {
-          pixels[offset + i] = scanline[i];
-        }
-        return pixels;
+        return unfilterScanline(0, pixels, scanline, bpp, offset, length);
       }
       /**
        * The Sub() filter transmits the difference between each byte and the value of the corresponding byte of the prior pixel.
        * Sub(x) = Raw(x) + Raw(x - bpp)
-       * @param {number[]|Uint8Array} pixels Pixels to update.
-       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
-       * @param {number} bpp - Bytes Per Pixel
-       * @param {number} offset Offset
-       * @param {number} length Length
-       * @returns {number[]|Uint8Array} Pixels
+       * @param pixels Pixels to update.
+       * @param scanline Scanline to search for pixels in.
+       * @param bpp Bytes Per Pixel
+       * @param offset Offset
+       * @param length Length
+       * @returns Pixels
        */
       static unFilterSub(pixels, scanline, bpp, offset, length) {
-        debug4("unFilterSub:", "bpp:", bpp, "offset:", offset, "length:", length);
-        let i = 0;
-        for (; i < bpp; i++) {
-          pixels[offset + i] = scanline[i];
-        }
-        for (; i < length; i++) {
-          pixels[offset + i] = scanline[i] + pixels[offset + i - bpp] & 255;
-        }
-        return pixels;
+        return unfilterScanline(1, pixels, scanline, bpp, offset, length);
       }
       /**
        * The Up() filter is just like the Sub() filter except that the pixel immediately above the current pixel, rather than just to its left, is used as the predictor.
        * Up(x) = Raw(x) + Prior(x)
-       * @param {number[]|Uint8Array} pixels Pixels to update.
-       * @param {number[]|Uint8Array} scanline - Scanline to search for pixels in.
-       * @param {number} _bpp Bytes Per Pixel, Unused
-       * @param {number} offset Offset
-       * @param {number} length Length
-       * @returns {number[]|Uint8Array} Pixels
+       * @param pixels Pixels to update.
+       * @param scanline - Scanline to search for pixels in.
+       * @param bpp Bytes Per Pixel
+       * @param offset Offset
+       * @param length Length
+       * @returns Pixels
        */
-      static unFilterUp(pixels, scanline, _bpp, offset, length) {
-        debug4("unFilterUp:", "offset:", offset, "length:", length);
-        let i = 0;
-        let byte;
-        let prev;
-        if (offset - length < 0) {
-          for (; i < length; i++) {
-            pixels[offset + i] = scanline[i];
-          }
-        } else {
-          for (; i < length; i++) {
-            byte = scanline[i];
-            prev = pixels[offset + i - length];
-            pixels[offset + i] = byte + prev & 255;
-          }
-        }
-        return pixels;
+      static unFilterUp(pixels, scanline, bpp, offset, length) {
+        return unfilterScanline(2, pixels, scanline, bpp, offset, length);
       }
       /**
        * The Average() filter uses the average of the two neighboring pixels (left and above) to predict the value of a pixel.
        * Average(x) = Raw(x) + floor((Raw(x-bpp)+Prior(x))/2)
-       * @param {number[]|Uint8Array} pixels Pixels to update.
-       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
-       * @param {number} bpp Bytes Per Pixel
-       * @param {number} offset Offset
-       * @param {number} length Length
-       * @returns {number[]|Uint8Array} Pixels
+       * @param pixels Pixels to update.
+       * @param scanline Scanline to search for pixels in.
+       * @param bpp Bytes Per Pixel
+       * @param offset Offset
+       * @param length Length
+       * @returns Pixels
        */
       static unFilterAverage(pixels, scanline, bpp, offset, length) {
-        debug4("unFilterAverage:", "bpp:", bpp, "offset:", offset, "length:", length);
-        let i = 0;
-        let byte;
-        let prev;
-        let prior;
-        if (offset - length < 0) {
-          for (; i < bpp; i++) {
-            pixels[offset + i] = scanline[i];
-          }
-          for (; i < length; i++) {
-            pixels[offset + i] = scanline[i] + (pixels[offset + i - bpp] >> 1) & 255;
-          }
-        } else {
-          for (; i < bpp; i++) {
-            pixels[offset + i] = scanline[i] + (pixels[offset - length + i] >> 1) & 255;
-          }
-          for (; i < length; i++) {
-            byte = scanline[i];
-            prev = pixels[offset + i - bpp];
-            prior = pixels[offset + i - length];
-            pixels[offset + i] = byte + (prev + prior >> 1) & 255;
-          }
-        }
-        return pixels;
+        return unfilterScanline(3, pixels, scanline, bpp, offset, length);
       }
       /**
        * The Paeth() filter computes a simple linear function of the three neighboring pixels (left, above, upper left), then chooses as predictor the neighboring pixel closest to the computed value.
@@ -18318,2987 +20604,56 @@ var init_data_image_png = __esm({
        * else if pb <= pc then return b
        * else return c
        * end
-       * @param {number[]|Uint8Array} pixels Pixels to update.
-       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
-       * @param {number} bpp Bytes Per Pixel
-       * @param {number} offset Offset
-       * @param {number} length Length
-       * @returns {number[]|Uint8Array} Pixels
+       * @param pixels Pixels to update.
+       * @param scanline Scanline to search for pixels in.
+       * @param bpp Bytes Per Pixel
+       * @param offset Offset
+       * @param length Length
+       * @returns Pixels
        */
       static unFilterPaeth(pixels, scanline, bpp, offset, length) {
-        debug4("unFilterPaeth:", "bpp:", bpp, "offset:", offset, "length:", length);
-        let i = 0;
-        let raw;
-        let a = 0;
-        let b = 0;
-        let c = 0;
-        let p;
-        let pa = 0;
-        let pb = 0;
-        let pc = 0;
-        let pr = 0;
-        if (offset - length < 0) {
-          for (; i < bpp; i++) {
-            pixels[offset + i] = scanline[i];
-          }
-          for (; i < length; i++) {
-            pixels[offset + i] = scanline[i] + pixels[offset + i - bpp] & 255;
-          }
-        } else {
-          for (; i < bpp; i++) {
-            pixels[offset + i] = scanline[i] + pixels[offset + i - length] & 255;
-          }
-          for (; i < length; i++) {
-            raw = scanline[i];
-            a = pixels[offset + i - bpp];
-            b = pixels[offset + i - length];
-            c = pixels[offset + i - length - bpp];
-            p = a + b - c;
-            pa = Math.abs(p - a);
-            pb = Math.abs(p - b);
-            pc = Math.abs(p - c);
-            if (pa <= pb && pa <= pc) pr = a;
-            else if (pb <= pc) pr = b;
-            else pr = c;
-            pixels[offset + i] = raw + pr & 255;
-          }
-        }
-        return pixels;
+        return unfilterScanline(4, pixels, scanline, bpp, offset, length);
       }
     };
     data_image_png_default = ImagePNG;
   }
 });
 
-// packages/assets/node_modules/pako/dist/pako.mjs
-function zero$12(buf) {
-  let len = buf.length;
-  while (--len >= 0) buf[len] = 0;
-}
-function inflate_fast2(strm, start) {
-  let _in;
-  let last;
-  let _out;
-  let beg;
-  let end;
-  let dmax;
-  let wsize;
-  let whave;
-  let wnext;
-  let s_window;
-  let hold;
-  let bits;
-  let lcode;
-  let dcode;
-  let lmask;
-  let dmask;
-  let here;
-  let op2;
-  let len;
-  let dist;
-  let from;
-  let from_source;
-  let input, output;
-  const state = strm.state;
-  _in = strm.next_in;
-  input = strm.input;
-  last = _in + (strm.avail_in - 5);
-  _out = strm.next_out;
-  output = strm.output;
-  beg = _out - (start - strm.avail_out);
-  end = _out + (strm.avail_out - 257);
-  dmax = state.dmax;
-  wsize = state.wsize;
-  whave = state.whave;
-  wnext = state.wnext;
-  s_window = state.window;
-  hold = state.hold;
-  bits = state.bits;
-  lcode = state.lencode;
-  dcode = state.distcode;
-  lmask = (1 << state.lenbits) - 1;
-  dmask = (1 << state.distbits) - 1;
-  top: do {
-    if (bits < 15) {
-      hold += input[_in++] << bits;
-      bits += 8;
-      hold += input[_in++] << bits;
-      bits += 8;
-    }
-    here = lcode[hold & lmask];
-    dolen: for (; ; ) {
-      op2 = here >>> 24;
-      hold >>>= op2;
-      bits -= op2;
-      op2 = here >>> 16 & 255;
-      if (op2 === 0) output[_out++] = here & 65535;
-      else if (op2 & 16) {
-        len = here & 65535;
-        op2 &= 15;
-        if (op2) {
-          if (bits < op2) {
-            hold += input[_in++] << bits;
-            bits += 8;
-          }
-          len += hold & (1 << op2) - 1;
-          hold >>>= op2;
-          bits -= op2;
-        }
-        if (bits < 15) {
-          hold += input[_in++] << bits;
-          bits += 8;
-          hold += input[_in++] << bits;
-          bits += 8;
-        }
-        here = dcode[hold & dmask];
-        dodist: for (; ; ) {
-          op2 = here >>> 24;
-          hold >>>= op2;
-          bits -= op2;
-          op2 = here >>> 16 & 255;
-          if (op2 & 16) {
-            dist = here & 65535;
-            op2 &= 15;
-            if (bits < op2) {
-              hold += input[_in++] << bits;
-              bits += 8;
-              if (bits < op2) {
-                hold += input[_in++] << bits;
-                bits += 8;
-              }
-            }
-            dist += hold & (1 << op2) - 1;
-            if (dist > dmax) {
-              strm.msg = "invalid distance too far back";
-              state.mode = BAD$12;
-              break top;
-            }
-            hold >>>= op2;
-            bits -= op2;
-            op2 = _out - beg;
-            if (dist > op2) {
-              op2 = dist - op2;
-              if (op2 > whave) {
-                if (state.sane) {
-                  strm.msg = "invalid distance too far back";
-                  state.mode = BAD$12;
-                  break top;
-                }
-              }
-              from = 0;
-              from_source = s_window;
-              if (wnext === 0) {
-                from += wsize - op2;
-                if (op2 < len) {
-                  len -= op2;
-                  do
-                    output[_out++] = s_window[from++];
-                  while (--op2);
-                  from = _out - dist;
-                  from_source = output;
-                }
-              } else if (wnext < op2) {
-                from += wsize + wnext - op2;
-                op2 -= wnext;
-                if (op2 < len) {
-                  len -= op2;
-                  do
-                    output[_out++] = s_window[from++];
-                  while (--op2);
-                  from = 0;
-                  if (wnext < len) {
-                    op2 = wnext;
-                    len -= op2;
-                    do
-                      output[_out++] = s_window[from++];
-                    while (--op2);
-                    from = _out - dist;
-                    from_source = output;
-                  }
-                }
-              } else {
-                from += wnext - op2;
-                if (op2 < len) {
-                  len -= op2;
-                  do
-                    output[_out++] = s_window[from++];
-                  while (--op2);
-                  from = _out - dist;
-                  from_source = output;
-                }
-              }
-              while (len > 2) {
-                output[_out++] = from_source[from++];
-                output[_out++] = from_source[from++];
-                output[_out++] = from_source[from++];
-                len -= 3;
-              }
-              if (len) {
-                output[_out++] = from_source[from++];
-                if (len > 1) output[_out++] = from_source[from++];
-              }
-            } else {
-              from = _out - dist;
-              do {
-                output[_out++] = output[from++];
-                output[_out++] = output[from++];
-                output[_out++] = output[from++];
-                len -= 3;
-              } while (len > 2);
-              if (len) {
-                output[_out++] = output[from++];
-                if (len > 1) output[_out++] = output[from++];
-              }
-            }
-          } else if ((op2 & 64) === 0) {
-            here = dcode[(here & 65535) + (hold & (1 << op2) - 1)];
-            continue dodist;
-          } else {
-            strm.msg = "invalid distance code";
-            state.mode = BAD$12;
-            break top;
-          }
-          break;
-        }
-      } else if ((op2 & 64) === 0) {
-        here = lcode[(here & 65535) + (hold & (1 << op2) - 1)];
-        continue dolen;
-      } else if (op2 & 32) {
-        state.mode = TYPE$12;
-        break top;
-      } else {
-        strm.msg = "invalid literal/length code";
-        state.mode = BAD$12;
-        break top;
-      }
-      break;
-    }
-  } while (_in < last && _out < end);
-  len = bits >> 3;
-  _in -= len;
-  bits -= len << 3;
-  hold &= (1 << bits) - 1;
-  strm.next_in = _in;
-  strm.next_out = _out;
-  strm.avail_in = _in < last ? 5 + (last - _in) : 5 - (_in - last);
-  strm.avail_out = _out < end ? 257 + (end - _out) : 257 - (_out - end);
-  state.hold = hold;
-  state.bits = bits;
-}
-var Z_FIXED2, Z_BINARY2, Z_TEXT2, Z_UNKNOWN2, STORED_BLOCK2, STATIC_TREES2, DYN_TREES2, LENGTH_CODES2, LITERALS2, L_CODES2, D_CODES2, BL_CODES2, HEAP_SIZE$12, MAX_BITS2, Buf_size2, END_BLOCK2, REP_3_62, REPZ_3_102, REPZ_11_1382, extra_lbits2, extra_dbits2, extra_blbits2, bl_order2, DIST_CODE_LEN2, static_ltree2, static_dtree2, _dist_code2, _length_code2, base_length2, base_dist2, d_code2, put_short2, send_bits2, send_code2, bi_reverse2, gen_bitlen2, gen_codes2, init_block2, bi_windup2, smaller2, pqdownheap2, compress_block2, build_tree2, scan_tree2, send_tree2, build_bl_tree2, send_all_trees2, detect_data_type2, _tr_stored_block2, _tr_flush_block2, _tr_tally2, adler322, makeTable2, crcTable3, crc322, messages_default2, MIN_MATCH2, MAX_MATCH2, MIN_LOOKAHEAD2, BS_NEED_MORE2, BS_BLOCK_DONE2, BS_FINISH_STARTED2, BS_FINISH_DONE2, slide_hash2, HASH2, INSERT_STRING2, flush_pending2, flush_block_only2, read_buf2, longest_match2, fill_window2, deflate_stored2, deflate_fast2, deflate_slow2, Config2, configuration_table2, BAD$12, TYPE$12, MAXBITS2, ENOUGH_LENS$12, ENOUGH_DISTS$12, CODES$12, LENS$12, DISTS$12, lbase2, lext2, dbase2, dext2, inflate_table2, CODES2, LENS2, DISTS2, HEAD2, FLAGS2, TIME2, OS2, EXLEN2, EXTRA2, NAME2, COMMENT2, HCRC2, DICTID2, DICT2, TYPE2, TYPEDO2, STORED2, COPY_2, COPY2, TABLE2, LENLENS2, CODELENS2, LEN_2, LEN2, LENEXT2, DIST2, DISTEXT2, MATCH2, LIT2, CHECK2, LENGTH2, DONE2, BAD2, MEM2, SYNC2, ENOUGH_LENS2, ENOUGH_DISTS2, zswap322, InflateState2, inflateStateCheck2, inflateResetKeep2, inflateReset3, inflateReset22, inflateInit22, virgin2, lenfix2, distfix2, fixedtables2, updatewindow2, inflate$12, inflateEnd2, inflateSetDictionary2, ZStream2, flattenChunks2, toString2, defaultOptions2, Inflate2;
-var init_pako2 = __esm({
-  "packages/assets/node_modules/pako/dist/pako.mjs"() {
-    Z_FIXED2 = 4;
-    Z_BINARY2 = 0;
-    Z_TEXT2 = 1;
-    Z_UNKNOWN2 = 2;
-    STORED_BLOCK2 = 0;
-    STATIC_TREES2 = 1;
-    DYN_TREES2 = 2;
-    LENGTH_CODES2 = 29;
-    LITERALS2 = 256;
-    L_CODES2 = 286;
-    D_CODES2 = 30;
-    BL_CODES2 = 19;
-    HEAP_SIZE$12 = 573;
-    MAX_BITS2 = 15;
-    Buf_size2 = 16;
-    END_BLOCK2 = 256;
-    REP_3_62 = 16;
-    REPZ_3_102 = 17;
-    REPZ_11_1382 = 18;
-    extra_lbits2 = new Uint8Array([
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      1,
-      1,
-      2,
-      2,
-      2,
-      2,
-      3,
-      3,
-      3,
-      3,
-      4,
-      4,
-      4,
-      4,
-      5,
-      5,
-      5,
-      5,
-      0
-    ]);
-    extra_dbits2 = new Uint8Array([
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
-      4,
-      4,
-      5,
-      5,
-      6,
-      6,
-      7,
-      7,
-      8,
-      8,
-      9,
-      9,
-      10,
-      10,
-      11,
-      11,
-      12,
-      12,
-      13,
-      13
-    ]);
-    extra_blbits2 = new Uint8Array([
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      2,
-      3,
-      7
-    ]);
-    bl_order2 = new Uint8Array([
-      16,
-      17,
-      18,
-      0,
-      8,
-      7,
-      9,
-      6,
-      10,
-      5,
-      11,
-      4,
-      12,
-      3,
-      13,
-      2,
-      14,
-      1,
-      15
-    ]);
-    DIST_CODE_LEN2 = 512;
-    static_ltree2 = new Array(288 * 2);
-    zero$12(static_ltree2);
-    static_dtree2 = new Array(D_CODES2 * 2);
-    zero$12(static_dtree2);
-    _dist_code2 = new Array(DIST_CODE_LEN2);
-    zero$12(_dist_code2);
-    _length_code2 = new Array(256);
-    zero$12(_length_code2);
-    base_length2 = new Array(LENGTH_CODES2);
-    zero$12(base_length2);
-    base_dist2 = new Array(D_CODES2);
-    zero$12(base_dist2);
-    d_code2 = (dist) => {
-      return dist < 256 ? _dist_code2[dist] : _dist_code2[256 + (dist >>> 7)];
-    };
-    put_short2 = (s, w) => {
-      s.pending_buf[s.pending++] = w & 255;
-      s.pending_buf[s.pending++] = w >>> 8 & 255;
-    };
-    send_bits2 = (s, value, length) => {
-      if (s.bi_valid > Buf_size2 - length) {
-        s.bi_buf |= value << s.bi_valid & 65535;
-        put_short2(s, s.bi_buf);
-        s.bi_buf = value >> Buf_size2 - s.bi_valid;
-        s.bi_valid += length - Buf_size2;
-      } else {
-        s.bi_buf |= value << s.bi_valid & 65535;
-        s.bi_valid += length;
-      }
-    };
-    send_code2 = (s, c, tree) => {
-      send_bits2(s, tree[c * 2], tree[c * 2 + 1]);
-    };
-    bi_reverse2 = (code, len) => {
-      let res = 0;
-      do {
-        res |= code & 1;
-        code >>>= 1;
-        res <<= 1;
-      } while (--len > 0);
-      return res >>> 1;
-    };
-    gen_bitlen2 = (s, desc) => {
-      const tree = desc.dyn_tree;
-      const max_code = desc.max_code;
-      const stree = desc.stat_desc.static_tree;
-      const has_stree = desc.stat_desc.has_stree;
-      const extra = desc.stat_desc.extra_bits;
-      const base = desc.stat_desc.extra_base;
-      const max_length = desc.stat_desc.max_length;
-      let h;
-      let n, m;
-      let bits;
-      let xbits;
-      let f;
-      let overflow = 0;
-      for (bits = 0; bits <= MAX_BITS2; bits++) s.bl_count[bits] = 0;
-      tree[s.heap[s.heap_max] * 2 + 1] = 0;
-      for (h = s.heap_max + 1; h < HEAP_SIZE$12; h++) {
-        n = s.heap[h];
-        bits = tree[tree[n * 2 + 1] * 2 + 1] + 1;
-        if (bits > max_length) {
-          bits = max_length;
-          overflow++;
-        }
-        tree[n * 2 + 1] = bits;
-        if (n > max_code) continue;
-        s.bl_count[bits]++;
-        xbits = 0;
-        if (n >= base) xbits = extra[n - base];
-        f = tree[n * 2];
-        s.opt_len += f * (bits + xbits);
-        if (has_stree) s.static_len += f * (stree[n * 2 + 1] + xbits);
-      }
-      if (overflow === 0) return;
-      do {
-        bits = max_length - 1;
-        while (s.bl_count[bits] === 0) bits--;
-        s.bl_count[bits]--;
-        s.bl_count[bits + 1] += 2;
-        s.bl_count[max_length]--;
-        overflow -= 2;
-      } while (overflow > 0);
-      for (bits = max_length; bits !== 0; bits--) {
-        n = s.bl_count[bits];
-        while (n !== 0) {
-          m = s.heap[--h];
-          if (m > max_code) continue;
-          if (tree[m * 2 + 1] !== bits) {
-            s.opt_len += (bits - tree[m * 2 + 1]) * tree[m * 2];
-            tree[m * 2 + 1] = bits;
-          }
-          n--;
-        }
-      }
-    };
-    gen_codes2 = (tree, max_code, bl_count) => {
-      const next_code = new Array(16);
-      let code = 0;
-      let bits;
-      let n;
-      for (bits = 1; bits <= MAX_BITS2; bits++) {
-        code = code + bl_count[bits - 1] << 1;
-        next_code[bits] = code;
-      }
-      for (n = 0; n <= max_code; n++) {
-        let len = tree[n * 2 + 1];
-        if (len === 0) continue;
-        tree[n * 2] = bi_reverse2(next_code[len]++, len);
-      }
-    };
-    init_block2 = (s) => {
-      let n;
-      for (n = 0; n < L_CODES2; n++) s.dyn_ltree[n * 2] = 0;
-      for (n = 0; n < D_CODES2; n++) s.dyn_dtree[n * 2] = 0;
-      for (n = 0; n < BL_CODES2; n++) s.bl_tree[n * 2] = 0;
-      s.dyn_ltree[END_BLOCK2 * 2] = 1;
-      s.opt_len = s.static_len = 0;
-      s.sym_next = s.matches = 0;
-    };
-    bi_windup2 = (s) => {
-      if (s.bi_valid > 8) put_short2(s, s.bi_buf);
-      else if (s.bi_valid > 0) s.pending_buf[s.pending++] = s.bi_buf;
-      s.bi_buf = 0;
-      s.bi_valid = 0;
-    };
-    smaller2 = (tree, n, m, depth) => {
-      const _n2 = n * 2;
-      const _m2 = m * 2;
-      return tree[_n2] < tree[_m2] || tree[_n2] === tree[_m2] && depth[n] <= depth[m];
-    };
-    pqdownheap2 = (s, tree, k) => {
-      const v = s.heap[k];
-      let j = k << 1;
-      while (j <= s.heap_len) {
-        if (j < s.heap_len && smaller2(tree, s.heap[j + 1], s.heap[j], s.depth)) j++;
-        if (smaller2(tree, v, s.heap[j], s.depth)) break;
-        s.heap[k] = s.heap[j];
-        k = j;
-        j <<= 1;
-      }
-      s.heap[k] = v;
-    };
-    compress_block2 = (s, ltree, dtree) => {
-      let dist;
-      let lc;
-      let sx = 0;
-      let code;
-      let extra;
-      if (s.sym_next !== 0) do {
-        dist = s.pending_buf[s.sym_buf + sx++] & 255;
-        dist += (s.pending_buf[s.sym_buf + sx++] & 255) << 8;
-        lc = s.pending_buf[s.sym_buf + sx++];
-        if (dist === 0) send_code2(s, lc, ltree);
-        else {
-          code = _length_code2[lc];
-          send_code2(s, code + LITERALS2 + 1, ltree);
-          extra = extra_lbits2[code];
-          if (extra !== 0) {
-            lc -= base_length2[code];
-            send_bits2(s, lc, extra);
-          }
-          dist--;
-          code = d_code2(dist);
-          send_code2(s, code, dtree);
-          extra = extra_dbits2[code];
-          if (extra !== 0) {
-            dist -= base_dist2[code];
-            send_bits2(s, dist, extra);
-          }
-        }
-      } while (sx < s.sym_next);
-      send_code2(s, END_BLOCK2, ltree);
-    };
-    build_tree2 = (s, desc) => {
-      const tree = desc.dyn_tree;
-      const stree = desc.stat_desc.static_tree;
-      const has_stree = desc.stat_desc.has_stree;
-      const elems = desc.stat_desc.elems;
-      let n, m;
-      let max_code = -1;
-      let node;
-      s.heap_len = 0;
-      s.heap_max = HEAP_SIZE$12;
-      for (n = 0; n < elems; n++) if (tree[n * 2] !== 0) {
-        s.heap[++s.heap_len] = max_code = n;
-        s.depth[n] = 0;
-      } else tree[n * 2 + 1] = 0;
-      while (s.heap_len < 2) {
-        node = s.heap[++s.heap_len] = max_code < 2 ? ++max_code : 0;
-        tree[node * 2] = 1;
-        s.depth[node] = 0;
-        s.opt_len--;
-        if (has_stree) s.static_len -= stree[node * 2 + 1];
-      }
-      desc.max_code = max_code;
-      for (n = s.heap_len >> 1; n >= 1; n--) pqdownheap2(s, tree, n);
-      node = elems;
-      do {
-        n = s.heap[1];
-        s.heap[1] = s.heap[s.heap_len--];
-        pqdownheap2(s, tree, 1);
-        m = s.heap[1];
-        s.heap[--s.heap_max] = n;
-        s.heap[--s.heap_max] = m;
-        tree[node * 2] = tree[n * 2] + tree[m * 2];
-        s.depth[node] = (s.depth[n] >= s.depth[m] ? s.depth[n] : s.depth[m]) + 1;
-        tree[n * 2 + 1] = tree[m * 2 + 1] = node;
-        s.heap[1] = node++;
-        pqdownheap2(s, tree, 1);
-      } while (s.heap_len >= 2);
-      s.heap[--s.heap_max] = s.heap[1];
-      gen_bitlen2(s, desc);
-      gen_codes2(tree, max_code, s.bl_count);
-    };
-    scan_tree2 = (s, tree, max_code) => {
-      let n;
-      let prevlen = -1;
-      let curlen;
-      let nextlen = tree[1];
-      let count = 0;
-      let max_count = 7;
-      let min_count = 4;
-      if (nextlen === 0) {
-        max_count = 138;
-        min_count = 3;
-      }
-      tree[(max_code + 1) * 2 + 1] = 65535;
-      for (n = 0; n <= max_code; n++) {
-        curlen = nextlen;
-        nextlen = tree[(n + 1) * 2 + 1];
-        if (++count < max_count && curlen === nextlen) continue;
-        else if (count < min_count) s.bl_tree[curlen * 2] += count;
-        else if (curlen !== 0) {
-          if (curlen !== prevlen) s.bl_tree[curlen * 2]++;
-          s.bl_tree[REP_3_62 * 2]++;
-        } else if (count <= 10) s.bl_tree[REPZ_3_102 * 2]++;
-        else s.bl_tree[REPZ_11_1382 * 2]++;
-        count = 0;
-        prevlen = curlen;
-        if (nextlen === 0) {
-          max_count = 138;
-          min_count = 3;
-        } else if (curlen === nextlen) {
-          max_count = 6;
-          min_count = 3;
-        } else {
-          max_count = 7;
-          min_count = 4;
-        }
-      }
-    };
-    send_tree2 = (s, tree, max_code) => {
-      let n;
-      let prevlen = -1;
-      let curlen;
-      let nextlen = tree[1];
-      let count = 0;
-      let max_count = 7;
-      let min_count = 4;
-      if (nextlen === 0) {
-        max_count = 138;
-        min_count = 3;
-      }
-      for (n = 0; n <= max_code; n++) {
-        curlen = nextlen;
-        nextlen = tree[(n + 1) * 2 + 1];
-        if (++count < max_count && curlen === nextlen) continue;
-        else if (count < min_count) do
-          send_code2(s, curlen, s.bl_tree);
-        while (--count !== 0);
-        else if (curlen !== 0) {
-          if (curlen !== prevlen) {
-            send_code2(s, curlen, s.bl_tree);
-            count--;
-          }
-          send_code2(s, REP_3_62, s.bl_tree);
-          send_bits2(s, count - 3, 2);
-        } else if (count <= 10) {
-          send_code2(s, REPZ_3_102, s.bl_tree);
-          send_bits2(s, count - 3, 3);
-        } else {
-          send_code2(s, REPZ_11_1382, s.bl_tree);
-          send_bits2(s, count - 11, 7);
-        }
-        count = 0;
-        prevlen = curlen;
-        if (nextlen === 0) {
-          max_count = 138;
-          min_count = 3;
-        } else if (curlen === nextlen) {
-          max_count = 6;
-          min_count = 3;
-        } else {
-          max_count = 7;
-          min_count = 4;
-        }
-      }
-    };
-    build_bl_tree2 = (s) => {
-      let max_blindex;
-      scan_tree2(s, s.dyn_ltree, s.l_desc.max_code);
-      scan_tree2(s, s.dyn_dtree, s.d_desc.max_code);
-      build_tree2(s, s.bl_desc);
-      for (max_blindex = BL_CODES2 - 1; max_blindex >= 3; max_blindex--) if (s.bl_tree[bl_order2[max_blindex] * 2 + 1] !== 0) break;
-      s.opt_len += 3 * (max_blindex + 1) + 5 + 5 + 4;
-      return max_blindex;
-    };
-    send_all_trees2 = (s, lcodes, dcodes, blcodes) => {
-      let rank;
-      send_bits2(s, lcodes - 257, 5);
-      send_bits2(s, dcodes - 1, 5);
-      send_bits2(s, blcodes - 4, 4);
-      for (rank = 0; rank < blcodes; rank++) send_bits2(s, s.bl_tree[bl_order2[rank] * 2 + 1], 3);
-      send_tree2(s, s.dyn_ltree, lcodes - 1);
-      send_tree2(s, s.dyn_dtree, dcodes - 1);
-    };
-    detect_data_type2 = (s) => {
-      let block_mask = 4093624447;
-      let n;
-      for (n = 0; n <= 31; n++, block_mask >>>= 1) if (block_mask & 1 && s.dyn_ltree[n * 2] !== 0) return Z_BINARY2;
-      if (s.dyn_ltree[18] !== 0 || s.dyn_ltree[20] !== 0 || s.dyn_ltree[26] !== 0) return Z_TEXT2;
-      for (n = 32; n < LITERALS2; n++) if (s.dyn_ltree[n * 2] !== 0) return Z_TEXT2;
-      return Z_BINARY2;
-    };
-    _tr_stored_block2 = (s, buf, stored_len, last) => {
-      send_bits2(s, (STORED_BLOCK2 << 1) + (last ? 1 : 0), 3);
-      bi_windup2(s);
-      put_short2(s, stored_len);
-      put_short2(s, ~stored_len);
-      if (stored_len) s.pending_buf.set(s.window.subarray(buf, buf + stored_len), s.pending);
-      s.pending += stored_len;
-    };
-    _tr_flush_block2 = (s, buf, stored_len, last) => {
-      let opt_lenb, static_lenb;
-      let max_blindex = 0;
-      if (s.level > 0) {
-        if (s.strm.data_type === Z_UNKNOWN2) s.strm.data_type = detect_data_type2(s);
-        build_tree2(s, s.l_desc);
-        build_tree2(s, s.d_desc);
-        max_blindex = build_bl_tree2(s);
-        opt_lenb = s.opt_len + 3 + 7 >>> 3;
-        static_lenb = s.static_len + 3 + 7 >>> 3;
-        if (static_lenb <= opt_lenb || s.strategy === Z_FIXED2) opt_lenb = static_lenb;
-      } else opt_lenb = static_lenb = stored_len + 5;
-      if (stored_len + 4 <= opt_lenb && buf !== -1) _tr_stored_block2(s, buf, stored_len, last);
-      else if (s.strategy === Z_FIXED2 || static_lenb === opt_lenb) {
-        send_bits2(s, (STATIC_TREES2 << 1) + (last ? 1 : 0), 3);
-        compress_block2(s, static_ltree2, static_dtree2);
-      } else {
-        send_bits2(s, (DYN_TREES2 << 1) + (last ? 1 : 0), 3);
-        send_all_trees2(s, s.l_desc.max_code + 1, s.d_desc.max_code + 1, max_blindex + 1);
-        compress_block2(s, s.dyn_ltree, s.dyn_dtree);
-      }
-      init_block2(s);
-      if (last) bi_windup2(s);
-    };
-    _tr_tally2 = (s, dist, lc) => {
-      s.pending_buf[s.sym_buf + s.sym_next++] = dist;
-      s.pending_buf[s.sym_buf + s.sym_next++] = dist >> 8;
-      s.pending_buf[s.sym_buf + s.sym_next++] = lc;
-      if (dist === 0) s.dyn_ltree[lc * 2]++;
-      else {
-        s.matches++;
-        dist--;
-        s.dyn_ltree[(_length_code2[lc] + LITERALS2 + 1) * 2]++;
-        s.dyn_dtree[d_code2(dist) * 2]++;
-      }
-      return s.sym_next === s.sym_end;
-    };
-    adler322 = (adler, buf, len, pos) => {
-      let s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
-      while (len !== 0) {
-        n = len > 2e3 ? 2e3 : len;
-        len -= n;
-        do {
-          s1 = s1 + buf[pos++] | 0;
-          s2 = s2 + s1 | 0;
-        } while (--n);
-        s1 %= 65521;
-        s2 %= 65521;
-      }
-      return s1 | s2 << 16 | 0;
-    };
-    makeTable2 = () => {
-      let c, table = [];
-      for (var n = 0; n < 256; n++) {
-        c = n;
-        for (var k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
-        table[n] = c;
-      }
-      return table;
-    };
-    crcTable3 = new Uint32Array(makeTable2());
-    crc322 = (crc, buf, len, pos) => {
-      const t = crcTable3;
-      const end = pos + len;
-      crc ^= -1;
-      for (let i = pos; i < end; i++) crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
-      return crc ^ -1;
-    };
-    messages_default2 = {
-      2: "need dictionary",
-      1: "stream end",
-      0: "",
-      "-1": "file error",
-      "-2": "stream error",
-      "-3": "data error",
-      "-4": "insufficient memory",
-      "-5": "buffer error",
-      "-6": "incompatible version"
-    };
-    MIN_MATCH2 = 3;
-    MAX_MATCH2 = 258;
-    MIN_LOOKAHEAD2 = 262;
-    BS_NEED_MORE2 = 1;
-    BS_BLOCK_DONE2 = 2;
-    BS_FINISH_STARTED2 = 3;
-    BS_FINISH_DONE2 = 4;
-    slide_hash2 = (s) => {
-      let n, m;
-      let p;
-      let wsize = s.w_size;
-      n = s.hash_size;
-      p = n;
-      do {
-        m = s.head[--p];
-        s.head[p] = m >= wsize ? m - wsize : 0;
-      } while (--n);
-      n = wsize;
-      p = n;
-      do {
-        m = s.prev[--p];
-        s.prev[p] = m >= wsize ? m - wsize : 0;
-      } while (--n);
-    };
-    HASH2 = (s, prev, data) => (prev << s.hash_shift ^ data) & s.hash_mask;
-    INSERT_STRING2 = (s, str) => {
-      let h;
-      if (s.legacy_hash) h = s.ins_h = HASH2(s, s.ins_h, s.window[str + MIN_MATCH2 - 1]);
-      else {
-        const w = s.window;
-        const value = w[str] | w[str + 1] << 8 | w[str + 2] << 16 | w[str + 3] << 24;
-        h = s.ins_h = Math.imul(value, 66521) + 66521 >>> 16 & s.hash_mask;
-      }
-      const hash_head = s.prev[str & s.w_mask] = s.head[h];
-      s.head[h] = str;
-      return hash_head;
-    };
-    flush_pending2 = (strm) => {
-      const s = strm.state;
-      let len = s.pending;
-      if (len > strm.avail_out) len = strm.avail_out;
-      if (len === 0) return;
-      strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len), strm.next_out);
-      strm.next_out += len;
-      s.pending_out += len;
-      strm.total_out += len;
-      strm.avail_out -= len;
-      s.pending -= len;
-      if (s.pending === 0) s.pending_out = 0;
-    };
-    flush_block_only2 = (s, last) => {
-      _tr_flush_block2(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
-      s.block_start = s.strstart;
-      flush_pending2(s.strm);
-    };
-    read_buf2 = (strm, buf, start, size) => {
-      let len = strm.avail_in;
-      if (len > size) len = size;
-      if (len === 0) return 0;
-      strm.avail_in -= len;
-      buf.set(strm.input.subarray(strm.next_in, strm.next_in + len), start);
-      if (strm.state.wrap === 1) strm.adler = adler322(strm.adler, buf, len, start);
-      else if (strm.state.wrap === 2) strm.adler = crc322(strm.adler, buf, len, start);
-      strm.next_in += len;
-      strm.total_in += len;
-      return len;
-    };
-    longest_match2 = (s, cur_match) => {
-      let chain_length = s.max_chain_length;
-      let scan = s.strstart;
-      let match;
-      let len;
-      let best_len = s.prev_length;
-      let nice_match = s.nice_match;
-      const limit = s.strstart > s.w_size - MIN_LOOKAHEAD2 ? s.strstart - (s.w_size - MIN_LOOKAHEAD2) : 0;
-      const _win = s.window;
-      const wmask = s.w_mask;
-      const prev = s.prev;
-      const strend = s.strstart + MAX_MATCH2;
-      let scan_end1 = _win[scan + best_len - 1];
-      let scan_end = _win[scan + best_len];
-      if (s.prev_length >= s.good_match) chain_length >>= 2;
-      if (nice_match > s.lookahead) nice_match = s.lookahead;
-      do {
-        match = cur_match;
-        if (_win[match + best_len] !== scan_end || _win[match + best_len - 1] !== scan_end1 || _win[match] !== _win[scan] || _win[++match] !== _win[scan + 1]) continue;
-        scan += 2;
-        match++;
-        do
-          ;
-        while (_win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && scan < strend);
-        len = MAX_MATCH2 - (strend - scan);
-        scan = strend - MAX_MATCH2;
-        if (len > best_len) {
-          s.match_start = cur_match;
-          best_len = len;
-          if (len >= nice_match) break;
-          scan_end1 = _win[scan + best_len - 1];
-          scan_end = _win[scan + best_len];
-        }
-      } while ((cur_match = prev[cur_match & wmask]) > limit && --chain_length !== 0);
-      if (best_len <= s.lookahead) return best_len;
-      return s.lookahead;
-    };
-    fill_window2 = (s) => {
-      const _w_size = s.w_size;
-      let n, more, str;
-      do {
-        more = s.window_size - s.lookahead - s.strstart;
-        if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD2)) {
-          s.window.set(s.window.subarray(_w_size, _w_size + _w_size - more), 0);
-          s.match_start -= _w_size;
-          s.strstart -= _w_size;
-          s.block_start -= _w_size;
-          if (s.insert > s.strstart) s.insert = s.strstart;
-          slide_hash2(s);
-          more += _w_size;
-        }
-        if (s.strm.avail_in === 0) break;
-        n = read_buf2(s.strm, s.window, s.strstart + s.lookahead, more);
-        s.lookahead += n;
-        if (!s.legacy_hash) {
-          if (s.lookahead + s.insert > MIN_MATCH2) {
-            str = s.strstart - s.insert;
-            while (s.insert) {
-              INSERT_STRING2(s, str);
-              str++;
-              s.insert--;
-              if (s.lookahead + s.insert <= MIN_MATCH2) break;
-            }
-          }
-        } else if (s.lookahead + s.insert >= MIN_MATCH2) {
-          str = s.strstart - s.insert;
-          s.ins_h = s.window[str];
-          s.ins_h = HASH2(s, s.ins_h, s.window[str + 1]);
-          while (s.insert) {
-            INSERT_STRING2(s, str);
-            str++;
-            s.insert--;
-            if (s.lookahead + s.insert < MIN_MATCH2) break;
-          }
-        }
-      } while (s.lookahead < MIN_LOOKAHEAD2 && s.strm.avail_in !== 0);
-    };
-    deflate_stored2 = (s, flush) => {
-      let min_block = s.pending_buf_size - 5 > s.w_size ? s.w_size : s.pending_buf_size - 5;
-      let len, left, have, last = 0;
-      let used = s.strm.avail_in;
-      do {
-        len = 65535;
-        have = s.bi_valid + 42 >> 3;
-        if (s.strm.avail_out < have) break;
-        have = s.strm.avail_out - have;
-        left = s.strstart - s.block_start;
-        if (len > left + s.strm.avail_in) len = left + s.strm.avail_in;
-        if (len > have) len = have;
-        if (len < min_block && (len === 0 && flush !== 4 || flush === 0 || len !== left + s.strm.avail_in)) break;
-        last = flush === 4 && len === left + s.strm.avail_in ? 1 : 0;
-        _tr_stored_block2(s, 0, 0, last);
-        s.pending_buf[s.pending - 4] = len;
-        s.pending_buf[s.pending - 3] = len >> 8;
-        s.pending_buf[s.pending - 2] = ~len;
-        s.pending_buf[s.pending - 1] = ~len >> 8;
-        flush_pending2(s.strm);
-        if (left) {
-          if (left > len) left = len;
-          s.strm.output.set(s.window.subarray(s.block_start, s.block_start + left), s.strm.next_out);
-          s.strm.next_out += left;
-          s.strm.avail_out -= left;
-          s.strm.total_out += left;
-          s.block_start += left;
-          len -= left;
-        }
-        if (len) {
-          read_buf2(s.strm, s.strm.output, s.strm.next_out, len);
-          s.strm.next_out += len;
-          s.strm.avail_out -= len;
-          s.strm.total_out += len;
-        }
-      } while (last === 0);
-      used -= s.strm.avail_in;
-      if (used) {
-        if (used >= s.w_size) {
-          s.matches = 2;
-          s.window.set(s.strm.input.subarray(s.strm.next_in - s.w_size, s.strm.next_in), 0);
-          s.strstart = s.w_size;
-          s.insert = s.strstart;
-        } else {
-          if (s.window_size - s.strstart <= used) {
-            s.strstart -= s.w_size;
-            s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
-            if (s.matches < 2) s.matches++;
-            if (s.insert > s.strstart) s.insert = s.strstart;
-          }
-          s.window.set(s.strm.input.subarray(s.strm.next_in - used, s.strm.next_in), s.strstart);
-          s.strstart += used;
-          s.insert += used > s.w_size - s.insert ? s.w_size - s.insert : used;
-        }
-        s.block_start = s.strstart;
-      }
-      if (s.high_water < s.strstart) s.high_water = s.strstart;
-      if (last) return BS_FINISH_DONE2;
-      if (flush !== 0 && flush !== 4 && s.strm.avail_in === 0 && s.strstart === s.block_start) return BS_BLOCK_DONE2;
-      have = s.window_size - s.strstart;
-      if (s.strm.avail_in > have && s.block_start >= s.w_size) {
-        s.block_start -= s.w_size;
-        s.strstart -= s.w_size;
-        s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
-        if (s.matches < 2) s.matches++;
-        have += s.w_size;
-        if (s.insert > s.strstart) s.insert = s.strstart;
-      }
-      if (have > s.strm.avail_in) have = s.strm.avail_in;
-      if (have) {
-        read_buf2(s.strm, s.window, s.strstart, have);
-        s.strstart += have;
-        s.insert += have > s.w_size - s.insert ? s.w_size - s.insert : have;
-      }
-      if (s.high_water < s.strstart) s.high_water = s.strstart;
-      have = s.bi_valid + 42 >> 3;
-      have = s.pending_buf_size - have > 65535 ? 65535 : s.pending_buf_size - have;
-      min_block = have > s.w_size ? s.w_size : have;
-      left = s.strstart - s.block_start;
-      if (left >= min_block || (left || flush === 4) && flush !== 0 && s.strm.avail_in === 0 && left <= have) {
-        len = left > have ? have : left;
-        last = flush === 4 && s.strm.avail_in === 0 && len === left ? 1 : 0;
-        _tr_stored_block2(s, s.block_start, len, last);
-        s.block_start += len;
-        flush_pending2(s.strm);
-      }
-      return last ? BS_FINISH_STARTED2 : BS_NEED_MORE2;
-    };
-    deflate_fast2 = (s, flush) => {
-      let hash_head;
-      let bflush;
-      for (; ; ) {
-        if (s.lookahead < MIN_LOOKAHEAD2) {
-          fill_window2(s);
-          if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
-          if (s.lookahead === 0) break;
-        }
-        hash_head = 0;
-        if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
-        if (hash_head !== 0 && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) s.match_length = longest_match2(s, hash_head);
-        if (s.match_length >= MIN_MATCH2) {
-          bflush = _tr_tally2(s, s.strstart - s.match_start, s.match_length - MIN_MATCH2);
-          s.lookahead -= s.match_length;
-          if (s.match_length <= s.max_lazy_match && s.lookahead >= MIN_MATCH2) {
-            s.match_length--;
-            do {
-              s.strstart++;
-              hash_head = INSERT_STRING2(s, s.strstart);
-            } while (--s.match_length !== 0);
-            s.strstart++;
-          } else {
-            s.strstart += s.match_length;
-            s.match_length = 0;
-            if (s.legacy_hash) {
-              s.ins_h = s.window[s.strstart];
-              s.ins_h = HASH2(s, s.ins_h, s.window[s.strstart + 1]);
-            }
-          }
-        } else {
-          bflush = _tr_tally2(s, 0, s.window[s.strstart]);
-          s.lookahead--;
-          s.strstart++;
-        }
-        if (bflush) {
-          flush_block_only2(s, false);
-          if (s.strm.avail_out === 0) return BS_NEED_MORE2;
-        }
-      }
-      s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
-      if (flush === 4) {
-        flush_block_only2(s, true);
-        if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
-        return BS_FINISH_DONE2;
-      }
-      if (s.sym_next) {
-        flush_block_only2(s, false);
-        if (s.strm.avail_out === 0) return BS_NEED_MORE2;
-      }
-      return BS_BLOCK_DONE2;
-    };
-    deflate_slow2 = (s, flush) => {
-      let hash_head;
-      let bflush;
-      let max_insert;
-      for (; ; ) {
-        if (s.lookahead < MIN_LOOKAHEAD2) {
-          fill_window2(s);
-          if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
-          if (s.lookahead === 0) break;
-        }
-        hash_head = 0;
-        if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
-        s.prev_length = s.match_length;
-        s.prev_match = s.match_start;
-        s.match_length = MIN_MATCH2 - 1;
-        if (hash_head !== 0 && s.prev_length < s.max_lazy_match && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) {
-          s.match_length = longest_match2(s, hash_head);
-          if (s.match_length <= 5 && (s.strategy === 1 || s.match_length === MIN_MATCH2 && s.strstart - s.match_start > 4096)) s.match_length = MIN_MATCH2 - 1;
-        }
-        if (s.prev_length >= MIN_MATCH2 && s.match_length <= s.prev_length) {
-          max_insert = s.strstart + s.lookahead - MIN_MATCH2;
-          bflush = _tr_tally2(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH2);
-          s.lookahead -= s.prev_length - 1;
-          s.prev_length -= 2;
-          do
-            if (++s.strstart <= max_insert) hash_head = INSERT_STRING2(s, s.strstart);
-          while (--s.prev_length !== 0);
-          s.match_available = 0;
-          s.match_length = MIN_MATCH2 - 1;
-          s.strstart++;
-          if (bflush) {
-            flush_block_only2(s, false);
-            if (s.strm.avail_out === 0) return BS_NEED_MORE2;
-          }
-        } else if (s.match_available) {
-          bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
-          if (bflush)
-            flush_block_only2(s, false);
-          s.strstart++;
-          s.lookahead--;
-          if (s.strm.avail_out === 0) return BS_NEED_MORE2;
-        } else {
-          s.match_available = 1;
-          s.strstart++;
-          s.lookahead--;
-        }
-      }
-      if (s.match_available) {
-        bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
-        s.match_available = 0;
-      }
-      s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
-      if (flush === 4) {
-        flush_block_only2(s, true);
-        if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
-        return BS_FINISH_DONE2;
-      }
-      if (s.sym_next) {
-        flush_block_only2(s, false);
-        if (s.strm.avail_out === 0) return BS_NEED_MORE2;
-      }
-      return BS_BLOCK_DONE2;
-    };
-    Config2 = class {
-      constructor(good_length, max_lazy, nice_length, max_chain, func) {
-        this.good_length = good_length;
-        this.max_lazy = max_lazy;
-        this.nice_length = nice_length;
-        this.max_chain = max_chain;
-        this.func = func;
-      }
-    };
-    configuration_table2 = [
-      new Config2(0, 0, 0, 0, deflate_stored2),
-      new Config2(4, 4, 8, 4, deflate_fast2),
-      new Config2(4, 5, 16, 8, deflate_fast2),
-      new Config2(4, 6, 32, 32, deflate_fast2),
-      new Config2(4, 4, 16, 16, deflate_slow2),
-      new Config2(8, 16, 32, 32, deflate_slow2),
-      new Config2(8, 16, 128, 128, deflate_slow2),
-      new Config2(8, 32, 128, 256, deflate_slow2),
-      new Config2(32, 128, 258, 1024, deflate_slow2),
-      new Config2(32, 258, 258, 4096, deflate_slow2)
-    ];
-    BAD$12 = 16209;
-    TYPE$12 = 16191;
-    MAXBITS2 = 15;
-    ENOUGH_LENS$12 = 852;
-    ENOUGH_DISTS$12 = 592;
-    CODES$12 = 0;
-    LENS$12 = 1;
-    DISTS$12 = 2;
-    lbase2 = new Uint16Array([
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      13,
-      15,
-      17,
-      19,
-      23,
-      27,
-      31,
-      35,
-      43,
-      51,
-      59,
-      67,
-      83,
-      99,
-      115,
-      131,
-      163,
-      195,
-      227,
-      258,
-      0,
-      0
-    ]);
-    lext2 = new Uint8Array([
-      16,
-      16,
-      16,
-      16,
-      16,
-      16,
-      16,
-      16,
-      17,
-      17,
-      17,
-      17,
-      18,
-      18,
-      18,
-      18,
-      19,
-      19,
-      19,
-      19,
-      20,
-      20,
-      20,
-      20,
-      21,
-      21,
-      21,
-      21,
-      16,
-      199,
-      75
-    ]);
-    dbase2 = new Uint16Array([
-      1,
-      2,
-      3,
-      4,
-      5,
-      7,
-      9,
-      13,
-      17,
-      25,
-      33,
-      49,
-      65,
-      97,
-      129,
-      193,
-      257,
-      385,
-      513,
-      769,
-      1025,
-      1537,
-      2049,
-      3073,
-      4097,
-      6145,
-      8193,
-      12289,
-      16385,
-      24577,
-      0,
-      0
-    ]);
-    dext2 = new Uint8Array([
-      16,
-      16,
-      16,
-      16,
-      17,
-      17,
-      18,
-      18,
-      19,
-      19,
-      20,
-      20,
-      21,
-      21,
-      22,
-      22,
-      23,
-      23,
-      24,
-      24,
-      25,
-      25,
-      26,
-      26,
-      27,
-      27,
-      28,
-      28,
-      29,
-      29,
-      64,
-      64
-    ]);
-    inflate_table2 = (type, lens, lens_index, codes, table, table_index, work, opts) => {
-      const bits = opts.bits;
-      let len = 0;
-      let sym = 0;
-      let min = 0, max = 0;
-      let root = 0;
-      let curr = 0;
-      let drop = 0;
-      let left = 0;
-      let used = 0;
-      let huff = 0;
-      let incr;
-      let fill;
-      let low;
-      let mask;
-      let next;
-      let base = null;
-      let match;
-      const count = /* @__PURE__ */ new Uint16Array(16);
-      const offs = /* @__PURE__ */ new Uint16Array(16);
-      let extra = null;
-      let here_bits, here_op, here_val;
-      for (len = 0; len <= MAXBITS2; len++) count[len] = 0;
-      for (sym = 0; sym < codes; sym++) count[lens[lens_index + sym]]++;
-      root = bits;
-      for (max = MAXBITS2; max >= 1; max--) if (count[max] !== 0) break;
-      if (root > max) root = max;
-      if (max === 0) {
-        table[table_index++] = 20971520;
-        table[table_index++] = 20971520;
-        opts.bits = 1;
-        return 0;
-      }
-      for (min = 1; min < max; min++) if (count[min] !== 0) break;
-      if (root < min) root = min;
-      left = 1;
-      for (len = 1; len <= MAXBITS2; len++) {
-        left <<= 1;
-        left -= count[len];
-        if (left < 0) return -1;
-      }
-      if (left > 0 && (type === CODES$12 || max !== 1)) return -1;
-      offs[1] = 0;
-      for (len = 1; len < MAXBITS2; len++) offs[len + 1] = offs[len] + count[len];
-      for (sym = 0; sym < codes; sym++) if (lens[lens_index + sym] !== 0) work[offs[lens[lens_index + sym]]++] = sym;
-      if (type === CODES$12) {
-        base = extra = work;
-        match = 20;
-      } else if (type === LENS$12) {
-        base = lbase2;
-        extra = lext2;
-        match = 257;
-      } else {
-        base = dbase2;
-        extra = dext2;
-        match = 0;
-      }
-      huff = 0;
-      sym = 0;
-      len = min;
-      next = table_index;
-      curr = root;
-      drop = 0;
-      low = -1;
-      used = 1 << root;
-      mask = used - 1;
-      if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
-      for (; ; ) {
-        here_bits = len - drop;
-        if (work[sym] + 1 < match) {
-          here_op = 0;
-          here_val = work[sym];
-        } else if (work[sym] >= match) {
-          here_op = extra[work[sym] - match];
-          here_val = base[work[sym] - match];
-        } else {
-          here_op = 96;
-          here_val = 0;
-        }
-        incr = 1 << len - drop;
-        fill = 1 << curr;
-        min = fill;
-        do {
-          fill -= incr;
-          table[next + (huff >> drop) + fill] = here_bits << 24 | here_op << 16 | here_val | 0;
-        } while (fill !== 0);
-        incr = 1 << len - 1;
-        while (huff & incr) incr >>= 1;
-        if (incr !== 0) {
-          huff &= incr - 1;
-          huff += incr;
-        } else huff = 0;
-        sym++;
-        if (--count[len] === 0) {
-          if (len === max) break;
-          len = lens[lens_index + work[sym]];
-        }
-        if (len > root && (huff & mask) !== low) {
-          if (drop === 0) drop = root;
-          next += min;
-          curr = len - drop;
-          left = 1 << curr;
-          while (curr + drop < max) {
-            left -= count[curr + drop];
-            if (left <= 0) break;
-            curr++;
-            left <<= 1;
-          }
-          used += 1 << curr;
-          if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
-          low = huff & mask;
-          table[low] = root << 24 | curr << 16 | next - table_index | 0;
-        }
-      }
-      if (huff !== 0) table[next + huff] = len - drop << 24 | 4194304;
-      opts.bits = root;
-      return 0;
-    };
-    CODES2 = 0;
-    LENS2 = 1;
-    DISTS2 = 2;
-    HEAD2 = 16180;
-    FLAGS2 = 16181;
-    TIME2 = 16182;
-    OS2 = 16183;
-    EXLEN2 = 16184;
-    EXTRA2 = 16185;
-    NAME2 = 16186;
-    COMMENT2 = 16187;
-    HCRC2 = 16188;
-    DICTID2 = 16189;
-    DICT2 = 16190;
-    TYPE2 = 16191;
-    TYPEDO2 = 16192;
-    STORED2 = 16193;
-    COPY_2 = 16194;
-    COPY2 = 16195;
-    TABLE2 = 16196;
-    LENLENS2 = 16197;
-    CODELENS2 = 16198;
-    LEN_2 = 16199;
-    LEN2 = 16200;
-    LENEXT2 = 16201;
-    DIST2 = 16202;
-    DISTEXT2 = 16203;
-    MATCH2 = 16204;
-    LIT2 = 16205;
-    CHECK2 = 16206;
-    LENGTH2 = 16207;
-    DONE2 = 16208;
-    BAD2 = 16209;
-    MEM2 = 16210;
-    SYNC2 = 16211;
-    ENOUGH_LENS2 = 852;
-    ENOUGH_DISTS2 = 592;
-    zswap322 = (q) => {
-      return (q >>> 24 & 255) + (q >>> 8 & 65280) + ((q & 65280) << 8) + ((q & 255) << 24);
-    };
-    InflateState2 = class {
-      constructor() {
-        this.strm = null;
-        this.mode = 0;
-        this.last = false;
-        this.wrap = 0;
-        this.havedict = false;
-        this.flags = 0;
-        this.dmax = 0;
-        this.check = 0;
-        this.total = 0;
-        this.head = null;
-        this.wbits = 0;
-        this.wsize = 0;
-        this.whave = 0;
-        this.wnext = 0;
-        this.window = null;
-        this.hold = 0;
-        this.bits = 0;
-        this.length = 0;
-        this.offset = 0;
-        this.extra = 0;
-        this.lencode = null;
-        this.distcode = null;
-        this.lenbits = 0;
-        this.distbits = 0;
-        this.ncode = 0;
-        this.nlen = 0;
-        this.ndist = 0;
-        this.have = 0;
-        this.next = null;
-        this.lens = /* @__PURE__ */ new Uint16Array(320);
-        this.work = /* @__PURE__ */ new Uint16Array(288);
-        this.lendyn = null;
-        this.distdyn = null;
-        this.sane = 0;
-        this.back = 0;
-        this.was = 0;
-      }
-    };
-    inflateStateCheck2 = (strm) => {
-      if (!strm) return 1;
-      const state = strm.state;
-      if (!state || state.strm !== strm || state.mode < HEAD2 || state.mode > SYNC2) return 1;
-      return 0;
-    };
-    inflateResetKeep2 = (strm) => {
-      if (inflateStateCheck2(strm)) return -2;
-      const state = strm.state;
-      strm.total_in = strm.total_out = state.total = 0;
-      strm.msg = "";
-      if (state.wrap) strm.adler = state.wrap & 1;
-      state.mode = HEAD2;
-      state.last = 0;
-      state.havedict = 0;
-      state.flags = -1;
-      state.dmax = 32768;
-      state.head = null;
-      state.hold = 0;
-      state.bits = 0;
-      state.lencode = state.lendyn = new Int32Array(ENOUGH_LENS2);
-      state.distcode = state.distdyn = new Int32Array(ENOUGH_DISTS2);
-      state.sane = 1;
-      state.back = -1;
-      return 0;
-    };
-    inflateReset3 = (strm) => {
-      if (inflateStateCheck2(strm)) return -2;
-      const state = strm.state;
-      state.wsize = 0;
-      state.whave = 0;
-      state.wnext = 0;
-      return inflateResetKeep2(strm);
-    };
-    inflateReset22 = (strm, windowBits) => {
-      let wrap;
-      if (inflateStateCheck2(strm)) return -2;
-      const state = strm.state;
-      if (windowBits < 0) {
-        wrap = 0;
-        windowBits = -windowBits;
-      } else {
-        wrap = (windowBits >> 4) + 5;
-        if (windowBits < 48) windowBits &= 15;
-      }
-      if (windowBits && (windowBits < 8 || windowBits > 15)) return -2;
-      if (state.window !== null && state.wbits !== windowBits) state.window = null;
-      state.wrap = wrap;
-      state.wbits = windowBits;
-      return inflateReset3(strm);
-    };
-    inflateInit22 = (strm, windowBits) => {
-      if (!strm) return -2;
-      const state = new InflateState2();
-      strm.state = state;
-      state.strm = strm;
-      state.window = null;
-      state.mode = HEAD2;
-      const ret = inflateReset22(strm, windowBits);
-      if (ret !== 0) strm.state = null;
-      return ret;
-    };
-    virgin2 = true;
-    fixedtables2 = (state) => {
-      if (virgin2) {
-        lenfix2 = /* @__PURE__ */ new Int32Array(512);
-        distfix2 = /* @__PURE__ */ new Int32Array(32);
-        let sym = 0;
-        while (sym < 144) state.lens[sym++] = 8;
-        while (sym < 256) state.lens[sym++] = 9;
-        while (sym < 280) state.lens[sym++] = 7;
-        while (sym < 288) state.lens[sym++] = 8;
-        inflate_table2(LENS2, state.lens, 0, 288, lenfix2, 0, state.work, { bits: 9 });
-        sym = 0;
-        while (sym < 32) state.lens[sym++] = 5;
-        inflate_table2(DISTS2, state.lens, 0, 32, distfix2, 0, state.work, { bits: 5 });
-        virgin2 = false;
-      }
-      state.lencode = lenfix2;
-      state.lenbits = 9;
-      state.distcode = distfix2;
-      state.distbits = 5;
-    };
-    updatewindow2 = (strm, src, end, copy) => {
-      let dist;
-      const state = strm.state;
-      if (state.window === null) state.window = new Uint8Array(1 << state.wbits);
-      if (state.wsize === 0) {
-        state.wsize = 1 << state.wbits;
-        state.wnext = 0;
-        state.whave = 0;
-      }
-      if (copy >= state.wsize) {
-        state.window.set(src.subarray(end - state.wsize, end), 0);
-        state.wnext = 0;
-        state.whave = state.wsize;
-      } else {
-        dist = state.wsize - state.wnext;
-        if (dist > copy) dist = copy;
-        state.window.set(src.subarray(end - copy, end - copy + dist), state.wnext);
-        copy -= dist;
-        if (copy) {
-          state.window.set(src.subarray(end - copy, end), 0);
-          state.wnext = copy;
-          state.whave = state.wsize;
-        } else {
-          state.wnext += dist;
-          if (state.wnext === state.wsize) state.wnext = 0;
-          if (state.whave < state.wsize) state.whave += dist;
-        }
-      }
-      return 0;
-    };
-    inflate$12 = (strm, flush) => {
-      let state;
-      let input, output;
-      let next;
-      let put;
-      let have, left;
-      let hold;
-      let bits;
-      let _in, _out;
-      let copy;
-      let from;
-      let from_source;
-      let here = 0;
-      let here_bits, here_op, here_val;
-      let last_bits, last_op, last_val;
-      let len;
-      let ret;
-      const hbuf = /* @__PURE__ */ new Uint8Array(4);
-      let opts;
-      let n;
-      const order = new Uint8Array([
-        16,
-        17,
-        18,
-        0,
-        8,
-        7,
-        9,
-        6,
-        10,
-        5,
-        11,
-        4,
-        12,
-        3,
-        13,
-        2,
-        14,
-        1,
-        15
-      ]);
-      if (inflateStateCheck2(strm) || !strm.output || !strm.input && strm.avail_in !== 0) return -2;
-      state = strm.state;
-      if (state.mode === TYPE2) state.mode = TYPEDO2;
-      put = strm.next_out;
-      output = strm.output;
-      left = strm.avail_out;
-      next = strm.next_in;
-      input = strm.input;
-      have = strm.avail_in;
-      hold = state.hold;
-      bits = state.bits;
-      _in = have;
-      _out = left;
-      ret = 0;
-      inf_leave: for (; ; ) switch (state.mode) {
-        case HEAD2:
-          if (state.wrap === 0) {
-            state.mode = TYPEDO2;
-            break;
-          }
-          while (bits < 16) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          if (state.wrap & 2 && hold === 35615) {
-            if (state.wbits === 0) state.wbits = 15;
-            state.check = 0;
-            hbuf[0] = hold & 255;
-            hbuf[1] = hold >>> 8 & 255;
-            state.check = crc322(state.check, hbuf, 2, 0);
-            hold = 0;
-            bits = 0;
-            state.mode = FLAGS2;
-            break;
-          }
-          if (state.head) state.head.done = false;
-          if (!(state.wrap & 1) || (((hold & 255) << 8) + (hold >> 8)) % 31) {
-            strm.msg = "incorrect header check";
-            state.mode = BAD2;
-            break;
-          }
-          if ((hold & 15) !== 8) {
-            strm.msg = "unknown compression method";
-            state.mode = BAD2;
-            break;
-          }
-          hold >>>= 4;
-          bits -= 4;
-          len = (hold & 15) + 8;
-          if (state.wbits === 0) state.wbits = len;
-          if (len > 15 || len > state.wbits) {
-            strm.msg = "invalid window size";
-            state.mode = BAD2;
-            break;
-          }
-          state.dmax = 1 << state.wbits;
-          state.flags = 0;
-          strm.adler = state.check = 1;
-          state.mode = hold & 512 ? DICTID2 : TYPE2;
-          hold = 0;
-          bits = 0;
-          break;
-        case FLAGS2:
-          while (bits < 16) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          state.flags = hold;
-          if ((state.flags & 255) !== 8) {
-            strm.msg = "unknown compression method";
-            state.mode = BAD2;
-            break;
-          }
-          if (state.flags & 57344) {
-            strm.msg = "unknown header flags set";
-            state.mode = BAD2;
-            break;
-          }
-          if (state.head) state.head.text = hold >> 8 & 1;
-          if (state.flags & 512 && state.wrap & 4) {
-            hbuf[0] = hold & 255;
-            hbuf[1] = hold >>> 8 & 255;
-            state.check = crc322(state.check, hbuf, 2, 0);
-          }
-          hold = 0;
-          bits = 0;
-          state.mode = TIME2;
-        case TIME2:
-          while (bits < 32) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          if (state.head) state.head.time = hold >>> 0;
-          if (state.flags & 512 && state.wrap & 4) {
-            hbuf[0] = hold & 255;
-            hbuf[1] = hold >>> 8 & 255;
-            hbuf[2] = hold >>> 16 & 255;
-            hbuf[3] = hold >>> 24 & 255;
-            state.check = crc322(state.check, hbuf, 4, 0);
-          }
-          hold = 0;
-          bits = 0;
-          state.mode = OS2;
-        case OS2:
-          while (bits < 16) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          if (state.head) {
-            state.head.xflags = hold & 255;
-            state.head.os = hold >> 8;
-          }
-          if (state.flags & 512 && state.wrap & 4) {
-            hbuf[0] = hold & 255;
-            hbuf[1] = hold >>> 8 & 255;
-            state.check = crc322(state.check, hbuf, 2, 0);
-          }
-          hold = 0;
-          bits = 0;
-          state.mode = EXLEN2;
-        case EXLEN2:
-          if (state.flags & 1024) {
-            while (bits < 16) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            state.length = hold;
-            if (state.head) state.head.extra_len = hold;
-            if (state.flags & 512 && state.wrap & 4) {
-              hbuf[0] = hold & 255;
-              hbuf[1] = hold >>> 8 & 255;
-              state.check = crc322(state.check, hbuf, 2, 0);
-            }
-            hold = 0;
-            bits = 0;
-          } else if (state.head) state.head.extra = null;
-          state.mode = EXTRA2;
-        case EXTRA2:
-          if (state.flags & 1024) {
-            copy = state.length;
-            if (copy > have) copy = have;
-            if (copy) {
-              if (state.head) {
-                len = state.head.extra_len - state.length;
-                if (!state.head.extra) state.head.extra = new Uint8Array(state.head.extra_len);
-                state.head.extra.set(input.subarray(next, next + copy), len);
-              }
-              if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input, copy, next);
-              have -= copy;
-              next += copy;
-              state.length -= copy;
-            }
-            if (state.length) break inf_leave;
-          }
-          state.length = 0;
-          state.mode = NAME2;
-        case NAME2:
-          if (state.flags & 2048) {
-            if (have === 0) break inf_leave;
-            copy = 0;
-            do {
-              len = input[next + copy++];
-              if (state.head && len && state.length < 65536) state.head.name += String.fromCharCode(len);
-            } while (len && copy < have);
-            if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input, copy, next);
-            have -= copy;
-            next += copy;
-            if (len) break inf_leave;
-          } else if (state.head) state.head.name = null;
-          state.length = 0;
-          state.mode = COMMENT2;
-        case COMMENT2:
-          if (state.flags & 4096) {
-            if (have === 0) break inf_leave;
-            copy = 0;
-            do {
-              len = input[next + copy++];
-              if (state.head && len && state.length < 65536) state.head.comment += String.fromCharCode(len);
-            } while (len && copy < have);
-            if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input, copy, next);
-            have -= copy;
-            next += copy;
-            if (len) break inf_leave;
-          } else if (state.head) state.head.comment = null;
-          state.mode = HCRC2;
-        case HCRC2:
-          if (state.flags & 512) {
-            while (bits < 16) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            if (state.wrap & 4 && hold !== (state.check & 65535)) {
-              strm.msg = "header crc mismatch";
-              state.mode = BAD2;
-              break;
-            }
-            hold = 0;
-            bits = 0;
-          }
-          if (state.head) {
-            state.head.hcrc = state.flags >> 9 & 1;
-            state.head.done = true;
-          }
-          strm.adler = state.check = 0;
-          state.mode = TYPE2;
-          break;
-        case DICTID2:
-          while (bits < 32) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          strm.adler = state.check = zswap322(hold);
-          hold = 0;
-          bits = 0;
-          state.mode = DICT2;
-        case DICT2:
-          if (state.havedict === 0) {
-            strm.next_out = put;
-            strm.avail_out = left;
-            strm.next_in = next;
-            strm.avail_in = have;
-            state.hold = hold;
-            state.bits = bits;
-            return 2;
-          }
-          strm.adler = state.check = 1;
-          state.mode = TYPE2;
-        case TYPE2:
-          if (flush === 5 || flush === 6) break inf_leave;
-        case TYPEDO2:
-          if (state.last) {
-            hold >>>= bits & 7;
-            bits -= bits & 7;
-            state.mode = CHECK2;
-            break;
-          }
-          while (bits < 3) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          state.last = hold & 1;
-          hold >>>= 1;
-          bits -= 1;
-          switch (hold & 3) {
-            case 0:
-              state.mode = STORED2;
-              break;
-            case 1:
-              fixedtables2(state);
-              state.mode = LEN_2;
-              if (flush === 6) {
-                hold >>>= 2;
-                bits -= 2;
-                break inf_leave;
-              }
-              break;
-            case 2:
-              state.mode = TABLE2;
-              break;
-            case 3:
-              strm.msg = "invalid block type";
-              state.mode = BAD2;
-          }
-          hold >>>= 2;
-          bits -= 2;
-          break;
-        case STORED2:
-          hold >>>= bits & 7;
-          bits -= bits & 7;
-          while (bits < 32) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          if ((hold & 65535) !== (hold >>> 16 ^ 65535)) {
-            strm.msg = "invalid stored block lengths";
-            state.mode = BAD2;
-            break;
-          }
-          state.length = hold & 65535;
-          hold = 0;
-          bits = 0;
-          state.mode = COPY_2;
-          if (flush === 6) break inf_leave;
-        case COPY_2:
-          state.mode = COPY2;
-        case COPY2:
-          copy = state.length;
-          if (copy) {
-            if (copy > have) copy = have;
-            if (copy > left) copy = left;
-            if (copy === 0) break inf_leave;
-            output.set(input.subarray(next, next + copy), put);
-            have -= copy;
-            next += copy;
-            left -= copy;
-            put += copy;
-            state.length -= copy;
-            break;
-          }
-          state.mode = TYPE2;
-          break;
-        case TABLE2:
-          while (bits < 14) {
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          state.nlen = (hold & 31) + 257;
-          hold >>>= 5;
-          bits -= 5;
-          state.ndist = (hold & 31) + 1;
-          hold >>>= 5;
-          bits -= 5;
-          state.ncode = (hold & 15) + 4;
-          hold >>>= 4;
-          bits -= 4;
-          if (state.nlen > 286 || state.ndist > 30) {
-            strm.msg = "too many length or distance symbols";
-            state.mode = BAD2;
-            break;
-          }
-          state.have = 0;
-          state.mode = LENLENS2;
-        case LENLENS2:
-          while (state.have < state.ncode) {
-            while (bits < 3) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            state.lens[order[state.have++]] = hold & 7;
-            hold >>>= 3;
-            bits -= 3;
-          }
-          while (state.have < 19) state.lens[order[state.have++]] = 0;
-          state.lencode = state.lendyn;
-          state.lenbits = 7;
-          opts = { bits: state.lenbits };
-          ret = inflate_table2(CODES2, state.lens, 0, 19, state.lencode, 0, state.work, opts);
-          state.lenbits = opts.bits;
-          if (ret) {
-            strm.msg = "invalid code lengths set";
-            state.mode = BAD2;
-            break;
-          }
-          state.have = 0;
-          state.mode = CODELENS2;
-        case CODELENS2:
-          while (state.have < state.nlen + state.ndist) {
-            for (; ; ) {
-              here = state.lencode[hold & (1 << state.lenbits) - 1];
-              here_bits = here >>> 24;
-              here_op = here >>> 16 & 255;
-              here_val = here & 65535;
-              if (here_bits <= bits) break;
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            if (here_val < 16) {
-              hold >>>= here_bits;
-              bits -= here_bits;
-              state.lens[state.have++] = here_val;
-            } else {
-              if (here_val === 16) {
-                n = here_bits + 2;
-                while (bits < n) {
-                  if (have === 0) break inf_leave;
-                  have--;
-                  hold += input[next++] << bits;
-                  bits += 8;
-                }
-                hold >>>= here_bits;
-                bits -= here_bits;
-                if (state.have === 0) {
-                  strm.msg = "invalid bit length repeat";
-                  state.mode = BAD2;
-                  break;
-                }
-                len = state.lens[state.have - 1];
-                copy = 3 + (hold & 3);
-                hold >>>= 2;
-                bits -= 2;
-              } else if (here_val === 17) {
-                n = here_bits + 3;
-                while (bits < n) {
-                  if (have === 0) break inf_leave;
-                  have--;
-                  hold += input[next++] << bits;
-                  bits += 8;
-                }
-                hold >>>= here_bits;
-                bits -= here_bits;
-                len = 0;
-                copy = 3 + (hold & 7);
-                hold >>>= 3;
-                bits -= 3;
-              } else {
-                n = here_bits + 7;
-                while (bits < n) {
-                  if (have === 0) break inf_leave;
-                  have--;
-                  hold += input[next++] << bits;
-                  bits += 8;
-                }
-                hold >>>= here_bits;
-                bits -= here_bits;
-                len = 0;
-                copy = 11 + (hold & 127);
-                hold >>>= 7;
-                bits -= 7;
-              }
-              if (state.have + copy > state.nlen + state.ndist) {
-                strm.msg = "invalid bit length repeat";
-                state.mode = BAD2;
-                break;
-              }
-              while (copy--) state.lens[state.have++] = len;
-            }
-          }
-          if (state.mode === BAD2) break;
-          if (state.lens[256] === 0) {
-            strm.msg = "invalid code -- missing end-of-block";
-            state.mode = BAD2;
-            break;
-          }
-          state.lenbits = 9;
-          opts = { bits: state.lenbits };
-          ret = inflate_table2(LENS2, state.lens, 0, state.nlen, state.lencode, 0, state.work, opts);
-          state.lenbits = opts.bits;
-          if (ret) {
-            strm.msg = "invalid literal/lengths set";
-            state.mode = BAD2;
-            break;
-          }
-          state.distbits = 6;
-          state.distcode = state.distdyn;
-          opts = { bits: state.distbits };
-          ret = inflate_table2(DISTS2, state.lens, state.nlen, state.ndist, state.distcode, 0, state.work, opts);
-          state.distbits = opts.bits;
-          if (ret) {
-            strm.msg = "invalid distances set";
-            state.mode = BAD2;
-            break;
-          }
-          state.mode = LEN_2;
-          if (flush === 6) break inf_leave;
-        case LEN_2:
-          state.mode = LEN2;
-        case LEN2:
-          if (have >= 6 && left >= 258) {
-            strm.next_out = put;
-            strm.avail_out = left;
-            strm.next_in = next;
-            strm.avail_in = have;
-            state.hold = hold;
-            state.bits = bits;
-            inflate_fast2(strm, _out);
-            put = strm.next_out;
-            output = strm.output;
-            left = strm.avail_out;
-            next = strm.next_in;
-            input = strm.input;
-            have = strm.avail_in;
-            hold = state.hold;
-            bits = state.bits;
-            if (state.mode === TYPE2) state.back = -1;
-            break;
-          }
-          state.back = 0;
-          for (; ; ) {
-            here = state.lencode[hold & (1 << state.lenbits) - 1];
-            here_bits = here >>> 24;
-            here_op = here >>> 16 & 255;
-            here_val = here & 65535;
-            if (here_bits <= bits) break;
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          if (here_op && (here_op & 240) === 0) {
-            last_bits = here_bits;
-            last_op = here_op;
-            last_val = here_val;
-            for (; ; ) {
-              here = state.lencode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
-              here_bits = here >>> 24;
-              here_op = here >>> 16 & 255;
-              here_val = here & 65535;
-              if (last_bits + here_bits <= bits) break;
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            hold >>>= last_bits;
-            bits -= last_bits;
-            state.back += last_bits;
-          }
-          hold >>>= here_bits;
-          bits -= here_bits;
-          state.back += here_bits;
-          state.length = here_val;
-          if (here_op === 0) {
-            state.mode = LIT2;
-            break;
-          }
-          if (here_op & 32) {
-            state.back = -1;
-            state.mode = TYPE2;
-            break;
-          }
-          if (here_op & 64) {
-            strm.msg = "invalid literal/length code";
-            state.mode = BAD2;
-            break;
-          }
-          state.extra = here_op & 15;
-          state.mode = LENEXT2;
-        case LENEXT2:
-          if (state.extra) {
-            n = state.extra;
-            while (bits < n) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            state.length += hold & (1 << state.extra) - 1;
-            hold >>>= state.extra;
-            bits -= state.extra;
-            state.back += state.extra;
-          }
-          state.was = state.length;
-          state.mode = DIST2;
-        case DIST2:
-          for (; ; ) {
-            here = state.distcode[hold & (1 << state.distbits) - 1];
-            here_bits = here >>> 24;
-            here_op = here >>> 16 & 255;
-            here_val = here & 65535;
-            if (here_bits <= bits) break;
-            if (have === 0) break inf_leave;
-            have--;
-            hold += input[next++] << bits;
-            bits += 8;
-          }
-          if ((here_op & 240) === 0) {
-            last_bits = here_bits;
-            last_op = here_op;
-            last_val = here_val;
-            for (; ; ) {
-              here = state.distcode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
-              here_bits = here >>> 24;
-              here_op = here >>> 16 & 255;
-              here_val = here & 65535;
-              if (last_bits + here_bits <= bits) break;
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            hold >>>= last_bits;
-            bits -= last_bits;
-            state.back += last_bits;
-          }
-          hold >>>= here_bits;
-          bits -= here_bits;
-          state.back += here_bits;
-          if (here_op & 64) {
-            strm.msg = "invalid distance code";
-            state.mode = BAD2;
-            break;
-          }
-          state.offset = here_val;
-          state.extra = here_op & 15;
-          state.mode = DISTEXT2;
-        case DISTEXT2:
-          if (state.extra) {
-            n = state.extra;
-            while (bits < n) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            state.offset += hold & (1 << state.extra) - 1;
-            hold >>>= state.extra;
-            bits -= state.extra;
-            state.back += state.extra;
-          }
-          if (state.offset > state.dmax) {
-            strm.msg = "invalid distance too far back";
-            state.mode = BAD2;
-            break;
-          }
-          state.mode = MATCH2;
-        case MATCH2:
-          if (left === 0) break inf_leave;
-          copy = _out - left;
-          if (state.offset > copy) {
-            copy = state.offset - copy;
-            if (copy > state.whave) {
-              if (state.sane) {
-                strm.msg = "invalid distance too far back";
-                state.mode = BAD2;
-                break;
-              }
-            }
-            if (copy > state.wnext) {
-              copy -= state.wnext;
-              from = state.wsize - copy;
-            } else from = state.wnext - copy;
-            if (copy > state.length) copy = state.length;
-            from_source = state.window;
-          } else {
-            from_source = output;
-            from = put - state.offset;
-            copy = state.length;
-          }
-          if (copy > left) copy = left;
-          left -= copy;
-          state.length -= copy;
-          do
-            output[put++] = from_source[from++];
-          while (--copy);
-          if (state.length === 0) state.mode = LEN2;
-          break;
-        case LIT2:
-          if (left === 0) break inf_leave;
-          output[put++] = state.length;
-          left--;
-          state.mode = LEN2;
-          break;
-        case CHECK2:
-          if (state.wrap) {
-            while (bits < 32) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold |= input[next++] << bits;
-              bits += 8;
-            }
-            _out -= left;
-            strm.total_out += _out;
-            state.total += _out;
-            if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc322(state.check, output, _out, put - _out) : adler322(state.check, output, _out, put - _out);
-            _out = left;
-            if (state.wrap & 4 && (state.flags ? hold : zswap322(hold)) !== state.check) {
-              strm.msg = "incorrect data check";
-              state.mode = BAD2;
-              break;
-            }
-            hold = 0;
-            bits = 0;
-          }
-          state.mode = LENGTH2;
-        case LENGTH2:
-          if (state.wrap && state.flags) {
-            while (bits < 32) {
-              if (have === 0) break inf_leave;
-              have--;
-              hold += input[next++] << bits;
-              bits += 8;
-            }
-            if (state.wrap & 4 && hold !== (state.total & 4294967295)) {
-              strm.msg = "incorrect length check";
-              state.mode = BAD2;
-              break;
-            }
-            hold = 0;
-            bits = 0;
-          }
-          state.mode = DONE2;
-        case DONE2:
-          ret = 1;
-          break inf_leave;
-        case BAD2:
-          ret = -3;
-          break inf_leave;
-        case MEM2:
-          return -4;
-        case SYNC2:
-        default:
-          return -2;
-      }
-      strm.next_out = put;
-      strm.avail_out = left;
-      strm.next_in = next;
-      strm.avail_in = have;
-      state.hold = hold;
-      state.bits = bits;
-      if (state.wsize || _out !== strm.avail_out && state.mode < BAD2 && (state.mode < CHECK2 || flush !== 4)) {
-        if (updatewindow2(strm, strm.output, strm.next_out, _out - strm.avail_out)) {
-          state.mode = MEM2;
-          return -4;
-        }
-      }
-      _in -= strm.avail_in;
-      _out -= strm.avail_out;
-      strm.total_in += _in;
-      strm.total_out += _out;
-      state.total += _out;
-      if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc322(state.check, output, _out, strm.next_out - _out) : adler322(state.check, output, _out, strm.next_out - _out);
-      strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE2 ? 128 : 0) + (state.mode === LEN_2 || state.mode === COPY_2 ? 256 : 0);
-      if ((_in === 0 && _out === 0 || flush === 4) && ret === 0) ret = -5;
-      return ret;
-    };
-    inflateEnd2 = (strm) => {
-      if (inflateStateCheck2(strm)) return -2;
-      let state = strm.state;
-      if (state.window) state.window = null;
-      strm.state = null;
-      return 0;
-    };
-    inflateSetDictionary2 = (strm, dictionary) => {
-      const dictLength = dictionary.length;
-      let state;
-      let dictid;
-      let ret;
-      if (inflateStateCheck2(strm)) return -2;
-      state = strm.state;
-      if (state.wrap !== 0 && state.mode !== DICT2) return -2;
-      if (state.mode === DICT2) {
-        dictid = 1;
-        dictid = adler322(dictid, dictionary, dictLength, 0);
-        if (dictid !== state.check) return -3;
-      }
-      ret = updatewindow2(strm, dictionary, dictLength, dictLength);
-      if (ret) {
-        state.mode = MEM2;
-        return -4;
-      }
-      state.havedict = 1;
-      return 0;
-    };
-    ZStream2 = class {
-      constructor() {
-        this.input = null;
-        this.next_in = 0;
-        this.avail_in = 0;
-        this.total_in = 0;
-        this.output = null;
-        this.next_out = 0;
-        this.avail_out = 0;
-        this.total_out = 0;
-        this.msg = "";
-        this.state = null;
-        this.data_type = 2;
-        this.adler = 0;
-      }
-    };
-    flattenChunks2 = (chunks) => {
-      const result = new Uint8Array(chunks.reduce((len, chunk) => len + chunk.length, 0));
-      let pos = 0;
-      for (const chunk of chunks) {
-        result.set(chunk, pos);
-        pos += chunk.length;
-      }
-      return result;
-    };
-    toString2 = Object.prototype.toString;
-    defaultOptions2 = {
-      chunkSize: 1024 * 64,
-      windowBits: 15,
-      raw: false,
-      dictionary: /* @__PURE__ */ new Uint8Array(0)
-    };
-    Inflate2 = class {
-      options;
-      /**
-      * Error code after inflate finishes. {@link Z_OK} on success.
-      * Should be checked when broken data is possible.
-      */
-      err;
-      /** Error message, if {@link Inflate.err} is not {@link Z_OK}. */
-      msg;
-      /**
-      * `true` once the compressed stream has ended. A stream may end before the
-      * caller's data does (trailing bytes), so check this to know when to stop
-      * pushing - further {@link Inflate.push} calls are no-ops.
-      */
-      ended;
-      started;
-      /**
-      * Chunks of output data, if {@link Inflate.onData} not overridden.
-      * @internal
-      */
-      chunks;
-      strm;
-      /**
-      * Uncompressed result, generated by default {@link Inflate.onData}
-      * and {@link Inflate.onEnd} handlers. Filled after you push last chunk
-      * (call {@link Inflate.push} with {@link Z_FINISH} / `true` param).
-      */
-      result;
-      /**
-      * Creates a new inflator instance with the specified params. Throws an
-      * exception on bad params. See {@link InflateOptions} for the list of
-      * supported options.
-      *
-      * By default, when no options are set, the deflate/gzip data format is
-      * autodetected via the wrapper header.
-      *
-      * @example
-      * ```javascript
-      * import { Inflate } from 'pako'
-      *
-      * const chunk1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
-      * const chunk2 = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
-      *
-      * const inflate = new Inflate({ level: 3 })
-      *
-      * inflate.push(chunk1, false)
-      * inflate.push(chunk2, true)  // true -> last chunk
-      *
-      * if (inflate.err) throw new Error(inflate.err)
-      *
-      * console.log(inflate.result)
-      * ```
-      */
-      constructor(options = {}) {
-        this.options = Object.assign({}, defaultOptions2, options);
-        const opt = this.options;
-        if (opt.raw && opt.windowBits >= 0 && opt.windowBits < 16) {
-          opt.windowBits = -opt.windowBits;
-          if (opt.windowBits === 0) opt.windowBits = -15;
-        }
-        if (opt.windowBits >= 0 && opt.windowBits < 16 && !options.windowBits) opt.windowBits += 32;
-        if (opt.windowBits > 15 && opt.windowBits < 48) {
-          if ((opt.windowBits & 15) === 0) opt.windowBits |= 15;
-        }
-        this.err = 0;
-        this.msg = "";
-        this.ended = false;
-        this.started = false;
-        this.chunks = [];
-        this.result = /* @__PURE__ */ new Uint8Array(0);
-        this.strm = new ZStream2();
-        this.strm.avail_out = 0;
-        let status = inflateInit22(this.strm, opt.windowBits);
-        if (status !== 0) throw new Error(messages_default2[status]);
-        if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") opt.dictionary = new Uint8Array(opt.dictionary);
-        const dictionary = opt.dictionary;
-        if (opt.raw && dictionary.length) {
-          status = inflateSetDictionary2(this.strm, dictionary);
-          if (status !== 0) throw new Error(messages_default2[status]);
-        }
-      }
-      /**
-      * Sends input data to the inflate pipe, generating {@link Inflate.onData} calls
-      * with new output chunks. Returns `true` on success. If end of stream is
-      * detected, {@link Inflate.onEnd} will be called.
-      *
-      * `flush_mode` is not needed for normal operation, because end of stream
-      * is detected automatically. Pass {@link Z_SYNC_FLUSH} to force the decoder
-      * to emit all currently available output — handy when you need to decode
-      * data frame-by-frame from a long-running stream.
-      *
-      * On failure, calls {@link Inflate.onEnd} with the error code and returns false.
-      *
-      * Once the stream has ended (a compressed stream may end before your data
-      * does), further `push` calls are no-ops and return whether the decode
-      * finished successfully. The final outcome is in {@link Inflate.result},
-      * {@link Inflate.err} and {@link Inflate.msg}.
-      *
-      * @param flush_mode 0..6 for corresponding {@link Z_NO_FLUSH}..{@link Z_TREES}
-      *   flush modes. See constants. Skipped or `false` means {@link Z_NO_FLUSH},
-      *   `true` means {@link Z_FINISH}.
-      *
-      * @example
-      * ```javascript
-      * push(chunk, false) // push one of data chunks
-      * ...
-      * push(chunk, true)  // push last chunk
-      * ```
-      */
-      push(data, flush_mode = false) {
-        const strm = this.strm;
-        const chunkSize = this.options.chunkSize;
-        let status;
-        let _flush_mode;
-        let last_avail_out;
-        if (this.ended) return this.err === 0;
-        if (typeof flush_mode === "number") _flush_mode = flush_mode;
-        else _flush_mode = flush_mode === true ? 4 : 0;
-        if (toString2.call(data) === "[object ArrayBuffer]") strm.input = new Uint8Array(data);
-        else strm.input = data;
-        strm.next_in = 0;
-        strm.avail_in = strm.input.length;
-        if (!this.started) {
-          this.started = true;
-          this.onStart(strm);
-        }
-        for (; ; ) {
-          if (strm.avail_out === 0) {
-            strm.output = new Uint8Array(chunkSize);
-            strm.next_out = 0;
-            strm.avail_out = chunkSize;
-          }
-          status = inflate$12(strm, _flush_mode);
-          if (status === 2) {
-            const dictionary = this.options.dictionary;
-            if (dictionary.length) {
-              status = inflateSetDictionary2(strm, dictionary);
-              if (status === 0) status = inflate$12(strm, _flush_mode);
-              else if (status === -3) status = 2;
-            }
-          }
-          while (strm.avail_in > 0 && status === 1 && strm.state.wrap & 2 && strm.state.flags !== 0 && strm.input[strm.next_in] !== 0) {
-            inflateReset3(strm);
-            status = inflate$12(strm, _flush_mode);
-          }
-          if (status === -2 || status === -3 || status === 2 || status === -4) break;
-          last_avail_out = strm.avail_out;
-          if (strm.next_out) {
-            if (strm.avail_out === 0 || status === 1 || _flush_mode > 0) {
-              this.onData(strm.output.length === strm.next_out ? strm.output : strm.output.subarray(0, strm.next_out));
-              strm.avail_out = 0;
-              strm.next_out = 0;
-            }
-          }
-          if ((status === 0 || status === -5) && last_avail_out === 0) continue;
-          if (status === 1) {
-            status = inflateEnd2(this.strm);
-            break;
-          }
-          if (strm.avail_in === 0) {
-            if (_flush_mode === 4) {
-              status = inflateEnd2(this.strm);
-              if (status === 0) status = -5;
-              break;
-            }
-            return true;
-          }
-        }
-        this.err = status;
-        this.msg = strm.msg || messages_default2[status];
-        this.ended = true;
-        this.onEnd(status);
-        return status === 0;
-      }
-      /**
-      * Called once before the first low-level inflate call.
-      *
-      * Override this handler to attach low-level inflate state, for example to read
-      * gzip header metadata:
-      *
-      * ```javascript
-      * import { Inflate, GZheader, zlibInflateGetHeader } from 'pako'
-      *
-      * const inflator = new Inflate()
-      *
-      * inflator.onStart = function (strm) {
-      *   this.header = new GZheader()
-      *   zlibInflateGetHeader(strm, this.header)
-      * }
-      *
-      * inflator.push(data, true)
-      * console.log(inflator.header.name)
-      * ```
-      */
-      onStart(strm) {
-      }
-      /**
-      * By default, stores data blocks in the {@link Inflate.chunks} property and glues
-      * them in {@link Inflate.onEnd}. Override this handler if you need another behaviour.
-      *
-      * @param chunk output data.
-      */
-      onData(chunk) {
-        this.chunks.push(chunk);
-      }
-      /**
-      * Called after you tell inflate that the input stream is
-      * complete ({@link Z_FINISH}). By default, joins the collected {@link Inflate.chunks},
-      * frees memory and fills the {@link Inflate.result} property.
-      *
-      * @param status inflate status. {@link Z_OK} on success, other if not.
-      */
-      onEnd(status) {
-        if (status === 0) this.result = flattenChunks2(this.chunks);
-        this.chunks = [];
-      }
-    };
-  }
-});
-
 // packages/assets/src/png.ts
-function validatePng(bytes) {
-  if (bytes.length < 8 || bytes.length > MAX_INPUT_BYTES || !PNG_SIGNATURE.every((byte, index) => bytes[index] === byte)) {
-    throw new Error("Invalid PNG signature or input size.");
-  }
-  let offset = 8;
-  let header;
-  let paletteSeen = false;
-  let transparencySeen = false;
-  let dataSeen = false;
-  let dataEnded = false;
-  let endSeen = false;
-  while (offset < bytes.length) {
-    if (offset + 12 > bytes.length) {
-      throw new Error("Truncated PNG chunk header.");
-    }
-    const length = u32be(bytes, offset);
-    const end = offset + 12 + length;
-    if (!Number.isSafeInteger(end) || end > bytes.length) {
-      throw new Error("Truncated PNG chunk payload.");
-    }
-    const type = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
-    const expectedCrc = u32be(bytes, end - 4);
-    const actualCrc = Number.parseInt(data_hash_crc32_default.of(bytes.subarray(offset + 4, end - 4)), 16);
-    if (expectedCrc !== actualCrc) {
-      throw new Error(`PNG ${type} CRC mismatch.`);
-    }
-    if (!header && type !== "IHDR") {
-      throw new Error("PNG IHDR must be first.");
-    }
-    if (type === "IHDR") {
-      if (header || length !== 13) {
-        throw new Error("PNG requires one 13-byte IHDR.");
-      }
-      const width = u32be(bytes, offset + 8);
-      const height = u32be(bytes, offset + 12);
-      const depth = bytes[offset + 16];
-      const colorType = bytes[offset + 17];
-      const interlace = bytes[offset + 20];
-      if (width === 0 || height === 0 || width * height > MAX_PIXELS) {
-        throw new RangeError(`PNG dimensions ${width}\xD7${height} exceed the pixel limit.`);
-      }
-      if (bytes[offset + 18] !== 0 || bytes[offset + 19] !== 0 || interlace > 1) {
-        throw new Error("Unsupported PNG compression, filter, or interlace method.");
-      }
-      const indexed = colorType === 3 && [1, 2, 4, 8].includes(depth);
-      const gray = colorType === 0 && [1, 2, 4, 8].includes(depth);
-      const byteChannels = [2, 4, 6].includes(colorType) && depth === 8;
-      if (!indexed && !gray && !byteChannels) {
-        throw new Error(
-          `Unsupported PNG color type ${colorType} at ${depth} bits; 16-bit samples are not supported.`
-        );
-      }
-      header = { width, height, depth, colorType, interlace };
-    } else if (type === "PLTE") {
-      if (paletteSeen || dataSeen || length === 0 || length % 3 !== 0 || length > 768) {
-        throw new Error("Invalid PNG PLTE chunk.");
-      }
-      paletteSeen = true;
-    } else if (type === "tRNS") {
-      if (transparencySeen || dataSeen || header?.colorType === 3 && (!paletteSeen || length === 0) || header?.colorType === 0 && length !== 2 || header?.colorType === 2 && length !== 6 || header?.colorType !== 0 && header?.colorType !== 2 && header?.colorType !== 3) {
-        throw new Error("Invalid PNG tRNS chunk.");
-      }
-      transparencySeen = true;
-    } else if (type === "IDAT") {
-      if (dataEnded || header?.colorType === 3 && !paletteSeen) {
-        throw new Error("PNG IDAT chunks must be contiguous and follow PLTE.");
-      }
-      dataSeen = true;
-    } else if (type === "IEND") {
-      if (!dataSeen || length !== 0 || end !== bytes.length) {
-        throw new Error("Invalid PNG IEND chunk.");
-      }
-      endSeen = true;
-      break;
-    } else if ((bytes[offset + 4] & 32) === 0) {
-      throw new Error(`Unsupported critical PNG chunk '${type}'.`);
-    }
-    if (dataSeen && type !== "IDAT") {
-      dataEnded = true;
-    }
-    offset = end;
-  }
-  if (!header || !endSeen) {
-    throw new Error("PNG is missing IHDR or IEND.");
-  }
-  return header;
+function readAssetPng(bytes) {
+  return data_image_png_default.fromFile(bytes, ASSET_PNG_OPTIONS);
 }
-function decodeSamples(image, header) {
-  const channels = channelsFor(header.colorType);
-  const bitsPerPixel = channels * header.depth;
-  const passes = header.interlace === 1 ? PASS_STEPS : [[0, 0, 1, 1]];
-  let expected = 0;
-  for (const [sx, sy, dx, dy] of passes) {
-    const width = passLength(header.width, sx, dx);
-    const height = passLength(header.height, sy, dy);
-    if (width > 0 && height > 0) {
-      expected += height * (1 + Math.ceil(width * bitsPerPixel / 8));
-    }
-  }
-  const inflator = new Inflate2({ windowBits: 15, chunkSize: 16 * 1024 });
-  const inflated = new Uint8Array(expected);
-  let written = 0;
-  inflator.onData = (chunk) => {
-    if (written + chunk.length > expected) {
-      throw new Error("PNG inflated data exceeds declared dimensions.");
-    }
-    inflated.set(chunk, written);
-    written += chunk.length;
-  };
-  const compressedLength = image.dataChunks.reduce((size, chunk) => size + chunk.length, 0);
-  const compressed = new Uint8Array(compressedLength);
-  let compressedOffset = 0;
-  for (const chunk of image.dataChunks) {
-    compressed.set(chunk, compressedOffset);
-    compressedOffset += chunk.length;
-  }
-  if (!inflator.push(compressed, true) || inflator.err || written !== expected) {
-    throw new Error(`Invalid PNG image data: ${inflator.msg || "scanline length mismatch"}.`);
-  }
-  const samples = new Uint8Array(header.width * header.height * channels);
-  let cursor = 0;
-  const filterStride = Math.max(1, Math.ceil(bitsPerPixel / 8));
-  for (const [sx, sy, dx, dy] of passes) {
-    const width = passLength(header.width, sx, dx);
-    const height = passLength(header.height, sy, dy);
-    if (width === 0 || height === 0) {
-      continue;
-    }
-    const rowBytes = Math.ceil(width * bitsPerPixel / 8);
-    let previous = new Uint8Array(rowBytes);
-    for (let row = 0; row < height; row++) {
-      const filter = inflated[cursor++];
-      if (filter > 4) {
-        throw new Error(`Invalid PNG scanline filter ${filter}.`);
-      }
-      const current = inflated.slice(cursor, cursor + rowBytes);
-      cursor += rowBytes;
-      for (let index = 0; index < rowBytes; index++) {
-        const left = index >= filterStride ? current[index - filterStride] : 0;
-        const above = previous[index];
-        const upperLeft = index >= filterStride ? previous[index - filterStride] : 0;
-        let predictor = 0;
-        if (filter === 1) {
-          predictor = left;
-        }
-        if (filter === 2) {
-          predictor = above;
-        }
-        if (filter === 3) {
-          predictor = Math.floor((left + above) / 2);
-        }
-        if (filter === 4) {
-          predictor = paeth(left, above, upperLeft);
-        }
-        current[index] = current[index] + predictor & 255;
-      }
-      for (let x = 0; x < width; x++) {
-        const destination = ((sy + row * dy) * header.width + sx + x * dx) * channels;
-        if (header.depth === 8) {
-          samples.set(current.subarray(x * channels, (x + 1) * channels), destination);
-        } else {
-          const bit2 = x * header.depth;
-          const mask = (1 << header.depth) - 1;
-          samples[destination] = current[bit2 >> 3] >> 8 - header.depth - (bit2 & 7) & mask;
-        }
-      }
-      previous = current;
-    }
-  }
-  return samples;
-}
-var PNG_SIGNATURE, MAX_INPUT_BYTES, MAX_PIXELS, PASS_STEPS, u32be, passLength, paeth, channelsFor, pngImporter;
+var ASSET_PNG_OPTIONS, pngImporter;
 var init_png = __esm({
   async "packages/assets/src/png.ts"() {
     "use strict";
-    await init_data_hash_crc32();
     await init_data_image_png();
-    init_pako2();
-    PNG_SIGNATURE = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
-    MAX_INPUT_BYTES = 16 * 1024 * 1024;
-    MAX_PIXELS = 1024 * 1024;
-    PASS_STEPS = [
-      [0, 0, 8, 8],
-      [4, 0, 8, 8],
-      [0, 4, 4, 8],
-      [2, 0, 4, 4],
-      [0, 2, 2, 4],
-      [1, 0, 2, 2],
-      [0, 1, 1, 2]
-    ];
-    u32be = (bytes, offset) => bytes[offset] * 16777216 + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3] >>> 0;
-    passLength = (size, start, step) => size <= start ? 0 : Math.ceil((size - start) / step);
-    paeth = (a, b, c) => {
-      const target = a + b - c;
-      const da = Math.abs(target - a);
-      const db = Math.abs(target - b);
-      const dc = Math.abs(target - c);
-      if (da <= db && da <= dc) {
-        return a;
-      }
-      if (db <= dc) {
-        return b;
-      }
-      return c;
-    };
-    channelsFor = (colorType) => {
-      if (colorType === 2) {
-        return 3;
-      }
-      if (colorType === 4) {
-        return 2;
-      }
-      if (colorType === 6) {
-        return 4;
-      }
-      return 1;
-    };
+    ASSET_PNG_OPTIONS = Object.freeze({
+      maxInputBytes: 16 * 1024 * 1024,
+      maxPixels: 1024 * 1024,
+      maxInflatedBytes: 5 * 1024 * 1024,
+      maxOutputBytes: 16 * 1024 * 1024,
+      maxChunks: 16384,
+      allow16Bit: false,
+      animation: "reject",
+      copyInput: false
+    });
     pngImporter = Object.freeze({
       id: "uttori.import.png",
-      version: "1.0.0",
+      version: "2.0.0",
       mediaTypes: ["image/png"],
       import: (input) => {
-        const header = validatePng(input.bytes);
-        const image = data_image_png_default.fromFile(input.bytes);
-        const samples = decodeSamples(image, header);
-        if (header.colorType === 0 && image.transparency.length === 2) {
-          const transparent = image.transparency[0] << 8 | image.transparency[1];
-          if (transparent >= 2 ** header.depth) {
-            throw new Error("PNG grayscale tRNS sample exceeds bit depth.");
-          }
-        }
-        if (header.colorType === 2 && image.transparency.length === 6 && (image.transparency[0] !== 0 || image.transparency[2] !== 0 || image.transparency[4] !== 0)) {
-          throw new Error("PNG RGB8 tRNS sample exceeds bit depth.");
-        }
-        if (header.colorType === 3) {
-          const paletteBytes = image.palette;
-          const count = paletteBytes.length / 3;
-          if (!Number.isInteger(count) || count === 0 || count > 2 ** header.depth || image.transparency.length > count) {
-            throw new Error("PNG palette size or transparency length is invalid.");
-          }
-          const palette = Array.from(
-            { length: count },
-            (_, index) => [
-              paletteBytes[index * 3],
-              paletteBytes[index * 3 + 1],
-              paletteBytes[index * 3 + 2],
-              image.transparency[index] ?? 255
-            ]
-          );
-          for (const index of samples) {
-            if (index >= count) {
-              throw new Error(`PNG palette index ${index} is out of range.`);
-            }
-          }
-          const value2 = {
-            kind: "indexed-image",
-            width: header.width,
-            height: header.height,
-            indexes: samples,
-            palette,
-            sourceBitDepth: header.depth
-          };
+        const image = readAssetPng(input.bytes);
+        if (image.colorType === 3) {
+          const value2 = image.toIndexed({ copy: false });
           return { kind: value2.kind, value: value2 };
         }
-        const rgba = new Uint8Array(header.width * header.height * 4);
-        const maxGray = 2 ** header.depth - 1;
-        const transparentGray = image.transparency.length === 2 ? image.transparency[0] << 8 | image.transparency[1] : void 0;
-        const transparentRgb = image.transparency.length === 6 ? [image.transparency[1], image.transparency[3], image.transparency[5]] : void 0;
-        for (let pixel = 0; pixel < header.width * header.height; pixel++) {
-          const source = pixel * channelsFor(header.colorType);
-          const output = pixel * 4;
-          if (header.colorType === 0 || header.colorType === 4) {
-            const gray = Math.round(samples[source] * 255 / maxGray);
-            rgba[output] = gray;
-            rgba[output + 1] = gray;
-            rgba[output + 2] = gray;
-            let alpha = 255;
-            if (header.colorType === 4) {
-              alpha = samples[source + 1];
-            } else if (samples[source] === transparentGray) {
-              alpha = 0;
-            }
-            rgba[output + 3] = alpha;
-          } else {
-            rgba.set(samples.subarray(source, source + 3), output);
-            const isTransparent = transparentRgb?.every(
-              (channel, index) => channel === samples[source + index]
-            );
-            let alpha = 255;
-            if (header.colorType === 6) {
-              alpha = samples[source + 3];
-            } else if (isTransparent) {
-              alpha = 0;
-            }
-            rgba[output + 3] = alpha;
-          }
-        }
+        const surface = image.toRGBA({ copy: false });
         const value = {
           kind: "rgba-image",
-          width: header.width,
-          height: header.height,
-          rgba
+          width: surface.width,
+          height: surface.height,
+          rgba: surface.rgba
         };
         return { kind: value.kind, value };
       }
@@ -21339,9 +20694,9 @@ function selectPalette(image, options, resources, capacity) {
       });
       indexes = Uint8Array.from(image.indexes, (index) => sourceToNative[index]);
       if (external.transparentIndex !== 0) {
-        const zero = colors[0];
+        const zero2 = colors[0];
         colors[0] = colors[external.transparentIndex];
-        colors[external.transparentIndex] = zero;
+        colors[external.transparentIndex] = zero2;
         const swap = (index) => {
           if (index === 0) {
             return external.transparentIndex;
@@ -21393,9 +20748,9 @@ function selectPalette(image, options, resources, capacity) {
       const external = externalPalette(resource);
       colors = external.colors;
       if (external.transparentIndex !== 0) {
-        const zero = colors[0];
+        const zero2 = colors[0];
         colors[0] = colors[external.transparentIndex];
-        colors[external.transparentIndex] = zero;
+        colors[external.transparentIndex] = zero2;
       }
       const lookup = /* @__PURE__ */ new Map();
       colors.forEach((color, index) => {
@@ -21434,15 +20789,15 @@ function selectPalette(image, options, resources, capacity) {
   }
   return { colors, indexes, sourceToNative };
 }
-function tileCoordinates(width, height, layout) {
+function tileCoordinates(width, height, layout2) {
   const result = [];
-  if (layout.tileOrder === "row-major") {
+  if (layout2.tileOrder === "row-major") {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         result.push([x, y]);
       }
     }
-  } else if (layout.tileOrder === "column-major") {
+  } else if (layout2.tileOrder === "column-major") {
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
         result.push([x, y]);
@@ -21453,13 +20808,13 @@ function tileCoordinates(width, height, layout) {
       throw new Error("2\xD72 block layout requires complete tile blocks.");
     }
     const blockY = Array.from({ length: height / 2 }, (_, index) => index);
-    if (layout.blockRows === "bottom-to-top") {
+    if (layout2.blockRows === "bottom-to-top") {
       blockY.reverse();
     }
-    if (layout.blockOrder === "row-major") {
+    if (layout2.blockOrder === "row-major") {
       for (const by of blockY) {
         for (let bx = 0; bx < width / 2; bx++) {
-          for (const quadrant of layout.withinBlock) {
+          for (const quadrant of layout2.withinBlock) {
             result.push([bx * 2 + quadrant % 2, by * 2 + Math.floor(quadrant / 2)]);
           }
         }
@@ -21467,7 +20822,7 @@ function tileCoordinates(width, height, layout) {
     } else {
       for (let bx = 0; bx < width / 2; bx++) {
         for (const by of blockY) {
-          for (const quadrant of layout.withinBlock) {
+          for (const quadrant of layout2.withinBlock) {
             result.push([bx * 2 + quadrant % 2, by * 2 + Math.floor(quadrant / 2)]);
           }
         }
@@ -21476,8 +20831,8 @@ function tileCoordinates(width, height, layout) {
   }
   return result;
 }
-function mapOrder(width, height, layout) {
-  if (layout === "row-major") {
+function mapOrder(width, height, layout2) {
+  if (layout2 === "row-major") {
     return Array.from({ length: width * height }, (_, index) => index);
   }
   if (![32, 64].includes(width) || ![32, 64].includes(height)) {
@@ -24101,70 +23456,6 @@ var init_processor_source_export = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
-var builtins, SNES_HEURISTIC_RULE_IDS;
-var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
-    "use strict";
-    builtins = [
-      {
-        id: "apu-io",
-        role: "audio.communication",
-        addresses: [8512, 8513, 8514, 8515],
-        access: "write",
-        confidence: "medium"
-      },
-      {
-        id: "vram-write",
-        role: "graphics.vram-write",
-        addresses: [8472, 8473],
-        access: "write",
-        confidence: "high"
-      },
-      {
-        id: "palette-write",
-        role: "graphics.palette-write",
-        addresses: [8482],
-        access: "write",
-        confidence: "high"
-      },
-      {
-        id: "oam-write",
-        role: "graphics.oam-write",
-        addresses: [8452],
-        access: "write",
-        confidence: "high"
-      },
-      {
-        id: "controller-read",
-        role: "input.controller-read",
-        addresses: [16406, 16407, 16920, 16921, 16922, 16923, 16924, 16925, 16926, 16927],
-        access: "read",
-        confidence: "high"
-      },
-      {
-        id: "math-result",
-        role: "math.hardware-result",
-        addresses: [16916, 16917, 16918, 16919, 8500, 8501, 8502],
-        access: "read",
-        confidence: "high"
-      }
-    ];
-    SNES_HEURISTIC_RULE_IDS = [
-      ...builtins.map((rule) => rule.id),
-      "observed-access",
-      "apu-handshake",
-      "apu-upload",
-      "vblank-wait",
-      "dma-destination",
-      "display-fade",
-      "mode7-setup",
-      "block-copy",
-      "wrapper"
-    ];
-  }
-});
-
 // packages/plugin-snes/src/disassembler/runtime-code.ts
 var init_runtime_code = __esm({
   "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
@@ -24294,7 +23585,6 @@ var init_src3 = __esm({
     init_spc();
     init_address_space();
     init_instruction_catalog2();
-    init_function_heuristics();
     init_runtime_code();
     init_modification_assets();
     init_modification_operations();
@@ -24541,19 +23831,6 @@ var validateCapturePosition = (value, session, scope) => {
   }
   return p;
 };
-var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
-  let crc = byte;
-  for (let bit2 = 0; bit2 < 8; bit2++) {
-    crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
-  }
-  return crc >>> 0;
-});
-var crcSlices = [crcTable];
-for (let slice = 1; slice < 8; slice++) {
-  crcSlices.push(
-    Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
-  );
-}
 
 // packages/debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
@@ -26391,7 +25668,7 @@ var isEvenHex = (value) => {
   }
   return true;
 };
-var littleEndian = (hex2) => {
+var littleEndian2 = (hex2) => {
   const bytes = hex2.match(/../g);
   if (!bytes || bytes.join("") !== hex2) {
     throw new Error("Malformed little-endian register data.");
@@ -26404,16 +25681,16 @@ var parseRegisters = (payload) => {
     throw new Error(`Expected 16 bytes of ares 65816 registers, received ${payload.length / 2}.`);
   }
   return {
-    a: littleEndian(payload.slice(0, 4)),
-    x: littleEndian(payload.slice(4, 8)),
-    y: littleEndian(payload.slice(8, 12)),
-    s: littleEndian(payload.slice(12, 16)),
-    d: littleEndian(payload.slice(16, 20)),
-    db: littleEndian(payload.slice(20, 22)),
-    pb: littleEndian(payload.slice(22, 24)),
-    pc: littleEndian(payload.slice(24, 28)),
-    p: littleEndian(payload.slice(28, 30)),
-    e: littleEndian(payload.slice(30, 32))
+    a: littleEndian2(payload.slice(0, 4)),
+    x: littleEndian2(payload.slice(4, 8)),
+    y: littleEndian2(payload.slice(8, 12)),
+    s: littleEndian2(payload.slice(12, 16)),
+    d: littleEndian2(payload.slice(16, 20)),
+    db: littleEndian2(payload.slice(20, 22)),
+    pb: littleEndian2(payload.slice(22, 24)),
+    pc: littleEndian2(payload.slice(24, 28)),
+    p: littleEndian2(payload.slice(28, 30)),
+    e: littleEndian2(payload.slice(30, 32))
   };
 };
 var logicalPc = (registers2) => (registers2.pb << 16 | registers2.pc) & 16777215;

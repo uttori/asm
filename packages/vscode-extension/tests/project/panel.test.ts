@@ -142,15 +142,13 @@ const harness = (options?: {
 };
 
 test.serial(
-  "Disassembly loads external CSP-scoped assets and routes disassembly, heuristics and capture actions",
+  "Disassembly loads external CSP-scoped assets and routes disassembly and capture actions",
   async (t) => {
     const h = harness({ disassembly: true });
     h.receive({ type: "ready" });
     const routes = {
       editAnnotation: "asm.disassembly.editAnnotation",
       regenerateDisassembly: "asm.disassembly.regenerate",
-      configureHeuristics: "asm.heuristics.configure",
-      previewHeuristics: "asm.heuristics.preview",
       startExecutionCapture: "asm.trace.start",
       stopExecutionCapture: "asm.trace.stopAnalyze",
       disassemblyStatus: "asm.disassembly.status",
@@ -192,22 +190,22 @@ test.serial(
           finish = resolve;
         }),
     );
-    const pending = h.provider.onMessage({ type: "previewHeuristics" });
-    await h.provider.onMessage({ type: "previewHeuristics" });
+    const pending = h.provider.onMessage({ type: "disassemblyStatus" });
+    await h.provider.onMessage({ type: "disassemblyStatus" });
     t.is(host.calls.length, 1);
     finish();
     await pending;
     h.setExecute(async () => {
       throw new Error("Save the rules before running.");
     });
-    await h.provider.onMessage({ type: "previewHeuristics" });
+    await h.provider.onMessage({ type: "disassemblyStatus" });
     t.is(h.sent.at(-1)?.error, "Save the rules before running.");
     t.is(host.calls.length, 2, "a completed or failed action can be retried");
     h.setExecute(async () => {
       // oxlint-disable-next-line typescript/only-throw-error
       throw "offline";
     });
-    await h.provider.onMessage({ type: "previewHeuristics" });
+    await h.provider.onMessage({ type: "disassemblyStatus" });
     t.is(h.sent.at(-1)?.error, "offline");
     await h.provider.onMessage({} as { type?: string });
     await h.provider.onMessage({ type: "noop" });

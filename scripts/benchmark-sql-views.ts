@@ -122,7 +122,7 @@ try {
     target: "node26",
     logLevel: "silent",
   });
-  for (const operation of ["coverage", "graph", "heuristics"] as const) {
+  for (const operation of ["coverage"] as const) {
     try {
       await measure(operation + "Cold", () => client.request(projectDirectory, operation));
       await measure(operation + "Warm", () => client.request(projectDirectory, operation));

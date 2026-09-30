@@ -1,3 +1,4 @@
+import { crc32cBytes } from "@uttori/data-tools/data-hash-crc32";
 const maxU64 = (1n << 64n) - 1n;
 /**
  * Validate the explicit stream dictionary. Callers choose the instruction default only on omission.
@@ -261,51 +262,13 @@ export const validateCapturePosition = (value, session, scope) => {
     }
     return p;
 };
-const crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
-    let crc = byte;
-    for (let bit = 0; bit < 8; bit++) {
-        crc = (crc >>> 1) ^ (crc & 1 ? 0x82f63b78 : 0);
-    }
-    return crc >>> 0;
-});
-// Fixed 8 KiB slicing tables process eight bytes per dependency chain. No native
-// addon is required in either the extension host or the offline worker.
-const crcSlices = [crcTable];
-for (let slice = 1; slice < 8; slice++) {
-    crcSlices.push(Uint32Array.from(crcSlices[slice - 1], (crc) => (crc >>> 8) ^ crcTable[crc & 255]));
-}
 /**
- * CRC-32C Castagnoli, including the canonical 123456789 test vector.
- * @param {Uint8Array} bytes Bytes to checksum.
- * @param {boolean} zeroChecksum Treat the ACT2 checksum field as zero.
- * @returns {number} Unsigned checksum.
+ * CRC-32C of an ACT2 envelope or archive JSON frame, without changing caller storage.
+ * @param {Uint8Array} bytes Byte view; checksum positions are relative to this view.
+ * @param {boolean} zeroChecksum Treat ACT2 bytes 56–59 as zero. Defaults to false for JSON frames.
+ * @returns {number} Unsigned Castagnoli checksum.
  */
-export const captureCrc32c = (bytes, zeroChecksum = false) => {
-    let crc = 0xffffffff;
-    let i = 0;
-    for (; i + 8 <= bytes.length; i += 8) {
-        // The checksum occupies aligned bytes 56–59. Treat only that word as zero.
-        // never mutate the caller's shared buffer while validating an ACT2 chunk.
-        let low = bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24);
-        if (zeroChecksum && i === 56) {
-            low = 0;
-        }
-        const a = crc ^ low;
-        crc =
-            crcSlices[7][a & 255] ^
-                crcSlices[6][(a >>> 8) & 255] ^
-                crcSlices[5][(a >>> 16) & 255] ^
-                crcSlices[4][a >>> 24] ^
-                crcSlices[3][bytes[i + 4]] ^
-                crcSlices[2][bytes[i + 5]] ^
-                crcSlices[1][bytes[i + 6]] ^
-                crcSlices[0][bytes[i + 7]];
-    }
-    for (; i < bytes.length; i++) {
-        crc = (crc >>> 8) ^ crcTable[(crc ^ (zeroChecksum && i >= 56 && i < 60 ? 0 : bytes[i])) & 0xff];
-    }
-    return (crc ^ 0xffffffff) >>> 0;
-};
+export const captureCrc32c = (bytes, zeroChecksum = false) => crc32cBytes(bytes, zeroChecksum);
 /**
  * Common ordering fields without converting bus accesses into instruction records.
  * @param {CaptureChunkV2} chunk Validated nonempty chunk.

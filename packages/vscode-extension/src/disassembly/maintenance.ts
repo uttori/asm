@@ -10,16 +10,11 @@ import {
   inspectSourceExportFiles,
   loadSourceExportManifest,
   parseAnalysisProjectManifest,
-  validateSourceExportFiles,
   validateSourceExportInputs,
   type AnalysisProjectManifest,
   type SourceExportManifest,
 } from "@uttori/asm-disassembler";
-import {
-  SNES_RAM_MAP_SOURCE,
-  loadSnesRamMap,
-  type SnesFunctionRole,
-} from "@uttori/asm-plugin-snes";
+import { SNES_RAM_MAP_SOURCE, loadSnesRamMap } from "@uttori/asm-plugin-snes";
 import {
   ProgressLocation,
   Uri,
@@ -31,8 +26,6 @@ import {
   type LogOutputChannel,
 } from "vscode";
 
-import { analysisWorker } from "../analysis/worker-client.js";
-import { informationHex } from "../editor-info/format.js";
 import { DisassemblyMaintenanceClient, type MaintenanceRunOptions } from "./maintenance-client.js";
 import {
   fileChanges,
@@ -51,9 +44,7 @@ export type {
 
 import { findAnalysisProjectDirectories } from "../analysis/coverage-tree.js";
 import { rememberedSnesRom, rememberSnesRom } from "../project/snes-rom-bindings.js";
-import { createEditorRuntimeBusSource } from "../runtime/bus-source.js";
 import { renderBusTraceReport } from "../runtime/bus-trace-report.js";
-import { createEditorRuntimeTraceSource } from "../runtime/trace-source.js";
 import type { MaintenanceJobs, TraceImportSummary } from "./maintenance-jobs.js";
 import { renderDisassemblyStorage } from "./storage-report.js";
 import { DisassemblyTimings, renderMaintenanceTimings } from "./timings.js";
@@ -68,17 +59,6 @@ export const IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
 export const IMPORT_BUS_TRACE_COMMAND = "asm.trace.importBus";
 /** Open the user-owned RAM map consumed by source regeneration. */
 export const OPEN_RAM_MAP_COMMAND = "asm.ramMap.open";
-/**
- * Command ID for opening the selected project's heuristic settings, creating defaults when
- * needed.
- */
-export const CONFIGURE_HEURISTICS_COMMAND = "asm.heuristics.configure";
-/**
- * Command ID for displaying bounded routine-role suggestions from current analysis without
- * persisting label changes.
- */
-export const PREVIEW_HEURISTICS_COMMAND = "asm.heuristics.preview";
-
 /**
  * Format report sizes as binary MiB/KiB with fixed precision, or exact bytes for sizes below one
  * KiB.
@@ -112,14 +92,6 @@ const percent = (part: number, total: number): string =>
   total === 0 ? "0.00%" : `${((part / total) * 100).toFixed(2)}%`;
 
 /**
- * Escape pipe delimiters and flatten newlines so project text cannot split a Markdown table cell
- * or row.
- * @param {string} value Unescaped path, label, or explanation.
- * @returns {string} Single-row table text with escaped pipe separators.
- */
-const markdownCell = (value: string): string => value.replaceAll("|", "\\|").replaceAll("\n", " ");
-
-/**
  * Renders a human-readable, testable before/after regeneration report.
  * @param {DisassemblyRegenerationSummary} summary Verified workflow measurements.
  * @returns {string} Markdown report with code and file deltas.
@@ -146,7 +118,7 @@ export const renderDisassemblyRegenerationReport = (
     ...(summary.analysis
       ? [
           `- Runtime code seeds used: ${summary.analysis.runtimeSeeds} (${summary.entrySeeds} explicitly selected; ${summary.analysis.omittedRuntimeSeeds} omitted by the safety bound)`,
-          `- Captured instruction variants: ${summary.analysis.capturedInstructions}. Observed PCs without decoded code: ${summary.analysis.runtimePcsWithoutCode}. Heuristic findings: ${summary.analysis.heuristicRoles}`,
+          `- Captured instruction variants: ${summary.analysis.capturedInstructions}. Observed PCs without decoded code: ${summary.analysis.runtimePcsWithoutCode}`,
         ]
       : ["- Refresh mode: saved analysis reused for all pending presentation edits"]),
     `- RAM variables mapped: ${summary.ramVariables}`,
@@ -580,6 +552,8 @@ const maintenanceStepNames: Record<keyof MaintenanceJobs, string> = {
   refresh: "Refresh source from saved analysis",
   revision: "Check final project revision",
   verify: "Assemble and verify every ROM byte",
+  traceIdentity: "Read trace identity",
+  busIdentity: "Read bus capture identity",
   import: "Parse trace and import into SQLite",
   importBus: "Parse bus capture and import into SQLite",
 };
@@ -1031,105 +1005,6 @@ export const registerDisassemblyMaintenance = (
           );
         }, target?.projectDirectory ?? target?.sourceDirectory),
     ),
-    commands.registerCommand(
-      CONFIGURE_HEURISTICS_COMMAND,
-      (target?: DisassemblyMaintenanceTarget) =>
-        run(async () => {
-          if (!workspace.isTrusted) {
-            throw new Error("Editing heuristic rules requires a trusted workspace.");
-          }
-          const selected = await chooseProject(target?.projectDirectory);
-          if (!selected) {
-            throw new Error("No native analysis project was found in the workspace.");
-          }
-          if (selected.manifest.target !== "snes.sfc") {
-            throw new Error("Function heuristics require a SNES analysis project.");
-          }
-          const file = path.join(selected.directory, "heuristics.json");
-          try {
-            await fs.promises.writeFile(
-              file,
-              JSON.stringify(
-                {
-                  enabled: true,
-                  minimumConfidence: "medium",
-                  disabledRules: [],
-                  registerRules: [],
-                },
-                null,
-                2,
-              ) + "\n",
-              { flag: "wx" },
-            );
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-              throw error;
-            }
-          }
-          await window.showTextDocument(Uri.file(file), { preview: false });
-        }),
-    ),
-    commands.registerCommand(PREVIEW_HEURISTICS_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
-      run(async () => {
-        const selected = await chooseProject(target?.projectDirectory);
-        if (!selected) {
-          throw new Error("No native analysis project was found in the workspace.");
-        }
-        const file = path.join(selected.directory, "heuristics.json");
-        if (
-          workspace.textDocuments.some(
-            (document) => document.uri.fsPath === file && document.isDirty,
-          )
-        ) {
-          throw new Error("Save heuristics.json before previewing its rules.");
-        }
-        const result = await window.withProgress(
-          {
-            location: ProgressLocation.Notification,
-            title: "Running SNES heuristics",
-            cancellable: false,
-          },
-          () =>
-            analysisWorker().request<{
-              enabled: boolean;
-              total: number;
-              roles: readonly SnesFunctionRole[];
-            }>(selected.directory, "heuristics"),
-        );
-        await showMarkdown(
-          [
-            "# Heuristic findings",
-            "",
-            `Project: ${markdownCell(selected.directory)}`,
-            "",
-            result.enabled
-              ? `${result.total} findings from the current saved analysis and heuristic rules.`
-              : "Heuristics are disabled in heuristics.json.",
-            "",
-            "This preview leaves project files unchanged. Run **Analyze and Regenerate Disassembly** to apply the saved rules and include their comments in generated source.",
-            "",
-            "| Address | Role | Confidence | Evidence |",
-            "| --- | --- | --- | --- |",
-            ...result.roles.map(
-              (role) =>
-                `| ${role.addressSpace} ${informationHex(role.address, 6)} | ${markdownCell(role.role)}${role.relationship === "delegated" ? " (via call)" : ""} | ${role.confidence} | ${markdownCell(role.explanation)} |`,
-            ),
-            ...(result.total > result.roles.length
-              ? [
-                  "",
-                  `Showing the first ${result.roles.length} of ${result.total} findings. Raise minimumConfidence or disable rules to narrow the preview.`,
-                ]
-              : []),
-            ...(!result.total && result.enabled
-              ? [
-                  "",
-                  "No rules matched. Analyze the project or import a runtime trace to provide more instruction evidence.",
-                ]
-              : []),
-          ].join("\n"),
-        );
-      }),
-    ),
     commands.registerCommand(OPEN_RAM_MAP_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
       run(async () => {
         if (!workspace.isTrusted) {
@@ -1164,9 +1039,11 @@ export const registerDisassemblyMaintenance = (
           return;
         }
         // Read bounded identity before selecting the project whose configured byte budget applies.
-        const { metadata } = await createEditorRuntimeBusSource(traceFile, {
-          maxBytes: Number.MAX_SAFE_INTEGER,
-        });
+        const metadata = await withMaintenanceProgress(
+          "Assembly: preparing bus capture import",
+          (options) => client.run("busIdentity", { traceFile }, options),
+          traceFile,
+        );
         const selected = await chooseProject(undefined, metadata.romContentSha256);
         if (!selected) {
           void window.showInformationMessage(
@@ -1211,16 +1088,15 @@ export const registerDisassemblyMaintenance = (
         }
         const timings = new DisassemblyTimings();
         // Read only the identity to select the project whose size setting applies.
-        const { metadata: trace } = await timings.measure("Read trace identity", () =>
-          createEditorRuntimeTraceSource(traceFile, { maxBytes: Number.MAX_SAFE_INTEGER }),
+        const trace = await withMaintenanceProgress(
+          "Assembly: preparing runtime trace import",
+          (options) => runTimedJob(timings, client, "traceIdentity", { traceFile }, options),
+          traceFile,
         );
         const resolved = await resolveTarget(context, {}, trace.romContentSha256);
         if (!resolved) {
           return;
         }
-        await timings.measure("Validate generated files before import", () =>
-          validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest),
-        );
         const maxBytes = traceImportMaxBytes(resolved.sourceDirectory);
         const imported = await withMaintenanceProgress(
           "Assembly: importing runtime trace",

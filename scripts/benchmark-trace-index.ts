@@ -8,8 +8,9 @@ import {
   createRuntimeInstructionTraceImporter,
   type RuntimeInstructionTraceChunk,
   type RuntimeTraceIndexMode,
-} from "../packages/disassembler/src/runtime-trace.js";
-import { SqliteAnalysisStore } from "../packages/disassembler/src/sqlite-store.js";
+  SqliteAnalysisStore,
+} from "@uttori/asm-disassembler";
+
 import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src/runtime/trace-source.js";
 
 /** Read a named option without accepting another flag as its value.

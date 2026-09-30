@@ -8,7 +8,6 @@ import { analyzeSnes65816 } from "./65816-analysis.js";
 import { createSnesAddressContext, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, } from "./address-identities.js";
 import { lostCodeRanges } from "./code-preservation.js";
 import { importDizRaw } from "./dizraw-import.js";
-import { analyzeSnesFunctionRoles, validateSnesHeuristicConfiguration, } from "./function-heuristics.js";
 import { snesHardwareDefines } from "./hardware-registers.js";
 import { detectSnesRom, SNES_MAPPERS, } from "./rom-header.js";
 import { analyzeSnesRuntimeCode } from "./runtime-code.js";
@@ -301,11 +300,19 @@ export const analyzeSnesProject = (options) => {
                         ...store.runtimeMemoryAtAddresses(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, addresses),
                     ],
                 };
-                // Reanalysis consumes decoder variants, seed totals and MMIO roles. All original facts stay
+                // Reanalysis consumes decoder variants, seed totals and MMIO observations. All original facts stay
                 // authoritative in SQLite and are excluded from the metadata-only commit below.
                 store.validateView(view);
                 previousCode = store.codeRanges();
-                return { manifest, view, revision };
+                const retiredIds = view.evidence
+                    .filter((record) => record.sourceId === "snes.function-roles.v1")
+                    .map((record) => record.id);
+                return {
+                    manifest,
+                    view,
+                    revision,
+                    retainedRuntimeEvidence: store.runtimeEvidenceReferences(retiredIds),
+                };
             }, false);
         }
         finally {
@@ -320,9 +327,6 @@ export const analyzeSnesProject = (options) => {
     if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
     }
-    const heuristicFile = path.join(projectDirectory, "heuristics.json");
-    const heuristicConfig = validateSnesHeuristicConfiguration(options.heuristics ??
-        (fs.existsSync(heuristicFile) ? JSON.parse(fs.readFileSync(heuristicFile, "utf8")) : {}));
     const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
     const editableRecords = loaded.view.analysis.filter((record) => record.kind === "target-override" || record.kind === "target-set");
     const targetOverrides = editableRecords.filter((record) => record.kind === "target-override");
@@ -437,27 +441,38 @@ export const analyzeSnesProject = (options) => {
                 "Increase the analysis limits or narrow the entry points before regenerating source.");
         }
     }
-    report(options, "analyze", "Inferring function roles from static and captured code.");
-    const heuristicResult = analyzeSnesFunctionRoles({ ...loaded.view, analysis: analysisRecords }, heuristicConfig);
     const annotations = [
         ...loaded.view.annotations.filter((annotation) => !annotation.id.startsWith("static:65816:")),
         ...result.annotations,
     ];
+    // Only reserved detector-owned comments are removed. Manual wording is never an ownership signal.
+    const comments = loaded.view.comments.filter((comment) => !comment.id.startsWith("heuristic:snes:"));
+    const retainedEvidence = new Set(loaded.retainedRuntimeEvidence);
+    for (const records of [
+        loaded.view.labels,
+        comments,
+        annotations,
+        loaded.view.regions,
+        analysisRecords,
+    ]) {
+        for (const record of records) {
+            for (const id of record.evidence) {
+                retainedEvidence.add(id);
+            }
+        }
+    }
     const evidence = [
         ...loaded.view.evidence.filter((record) => record.sourceId !== "snes.65816.static-v1" &&
-            record.sourceId !== "snes.function-roles.v1" &&
+            // User records may have adopted old detector provenance. Keep those references valid.
+            (record.sourceId !== "snes.function-roles.v1" || retainedEvidence.has(record.id)) &&
             !record.id.startsWith("detector:vector:")),
         ...result.evidenceRecords,
-        ...heuristicResult.evidence,
     ];
     report(options, "commit", "Publishing analysis after checking for concurrent edits.");
     throwIfCancelled(options.signal);
     const written = commitAnalysisProjectViewUpdate(projectDirectory, loaded, {
         analysis: analysisRecords,
-        comments: [
-            ...loaded.view.comments.filter((comment) => !comment.id.startsWith("heuristic:snes:")),
-            ...heuristicResult.comments,
-        ],
+        comments,
         annotations,
         evidence,
     }).manifest;
@@ -473,7 +488,6 @@ export const analyzeSnesProject = (options) => {
                 .map((record) => record.address));
             return rankedRuntime.filter((record) => !covered.has(record.address)).length;
         })(),
-        heuristicRoles: heuristicResult.roles.length,
         functions: analysisRecords.filter((record) => record.kind === "function").length,
         conflicts: analysisRecords.filter((record) => record.kind === "conflict").length,
         unresolved: analysisRecords.filter((record) => record.kind === "unresolved").length,

@@ -1,24 +1,8 @@
-import CRC32 from "@uttori/data-tools/data-hash-crc32";
-import { deflate } from "pako";
+import ImagePNG from "@uttori/data-tools/image/data-image-png";
+import { RgbaSurface } from "@uttori/data-tools/image/rgba-surface";
 import { integer } from "./validation.js";
-const signature = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
-const be32 = (value) => Uint8Array.of(value >>> 24, value >>> 16, value >>> 8, value);
-const concat = (parts) => {
-    const result = new Uint8Array(parts.reduce((size, part) => size + part.length, 0));
-    let cursor = 0;
-    for (const part of parts) {
-        result.set(part, cursor);
-        cursor += part.length;
-    }
-    return result;
-};
-const chunk = (name, payload) => {
-    const body = concat([Uint8Array.from(name, (character) => character.charCodeAt(0)), payload]);
-    const crc = Number.parseInt(CRC32.of(body), 16);
-    return concat([be32(payload.length), body, be32(crc)]);
-};
 /** Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
- * @param {Uint8Array} rgba Exact row-major RGBA8 pixels.
+ * @param {Uint8Array | Uint8ClampedArray} rgba Exact row-major RGBA8 pixels, including Canvas buffers.
  * @param {number} width Original pixel width.
  * @param {number} height Original pixel height.
  * @param {number} maxEdge Longest displayed edge in pixels, at most 1024.
@@ -33,26 +17,20 @@ export function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
     if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
         throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
     }
-    const scale = Math.min(1, maxEdge / Math.max(width, height));
-    const outputWidth = Math.max(1, Math.floor(width * scale));
-    const outputHeight = Math.max(1, Math.floor(height * scale));
-    const scanlines = new Uint8Array(outputHeight * (1 + outputWidth * 4));
-    for (let y = 0; y < outputHeight; y++) {
-        for (let x = 0; x < outputWidth; x++) {
-            const sourceX = Math.min(width - 1, Math.floor(x / scale));
-            const sourceY = Math.min(height - 1, Math.floor(y / scale));
-            const input = (sourceY * width + sourceX) * 4;
-            scanlines.set(rgba.subarray(input, input + 4), y * (1 + outputWidth * 4) + 1 + x * 4);
-        }
-    }
-    const header = concat([be32(outputWidth), be32(outputHeight), Uint8Array.of(8, 6, 0, 0, 0)]);
-    const compressed = deflate(scanlines);
-    return concat([
-        signature,
-        chunk("IHDR", header),
-        chunk("IDAT", compressed),
-        chunk("IEND", new Uint8Array()),
-    ]);
+    // Aspect fitting uses a shared scale on both axes; independent-axis resizing
+    // would choose different pixels when the floored dimensions change the aspect ratio.
+    // Canvas exposes clamped bytes. Normalize the view without copying pixels so
+    // the surface receives its strict Uint8Array contract, retaining any source offset.
+    const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+    const surface = new RgbaSurface(width, height, bytes, {
+        copy: false,
+        maxPixels: 2048 * 2048,
+    }).fitNearest(maxEdge);
+    return ImagePNG.encodeRGBA(surface, {
+        filter: "none",
+        level: 6,
+        maxPixels: 1024 * 1024,
+    });
 }
 /** Draw bounded min/max PCM buckets without changing the audio used for playback.
  * @param {Int16Array} samples Signed source or decoded PCM16 frames.

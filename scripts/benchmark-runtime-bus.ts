@@ -80,13 +80,13 @@ const source: RuntimeBusTraceSource = {
 };
 const sources: Record<string, string> = {};
 for (const file of [
-  "packages/disassembler/src/runtime-bus-trace.ts",
-  "packages/disassembler/src/runtime-bus-project.ts",
-  "packages/disassembler/src/runtime-bus-types.ts",
-  "packages/disassembler/src/trace-cache.ts",
-  "packages/disassembler/src/sqlite-runtime-storage.ts",
-  "packages/disassembler/src/sqlite-records.ts",
-  "packages/disassembler/src/sqlite-store.ts",
+  "packages/disassembler/src/runtime/runtime-bus-trace.ts",
+  "packages/disassembler/src/project/runtime-bus-project.ts",
+  "packages/disassembler/src/model/runtime-bus-types.ts",
+  "packages/disassembler/src/internal/trace-cache.ts",
+  "packages/disassembler/src/storage/sqlite-runtime-storage.ts",
+  "packages/disassembler/src/storage/sqlite-records.ts",
+  "packages/disassembler/src/storage/sqlite-store.ts",
   "packages/debug-adapter/src/capture-file.ts",
   "packages/debug-adapter/src/capture-file-reader.ts",
   "packages/debug-adapter/src/capture-v2.ts",

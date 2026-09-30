@@ -18,7 +18,7 @@ import {
 } from "vscode";
 
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
-import type { AnalysisGraphNavigationTarget } from "./graph-tree.js";
+import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import type { AnalysisSourceCatalogProjection } from "./sources-data.js";
 import { analysisWorker } from "./worker-client.js";
 
@@ -326,7 +326,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
         { sourceId: target.source.id, sourceGroup: group, offset: start },
       );
       return entries.map((entry) => {
-        const navigation: AnalysisGraphNavigationTarget | undefined =
+        const navigation: AnalysisNavigationTarget | undefined =
           entry.address !== undefined && entry.addressSpace
             ? {
                 projectDirectory: target.directory,

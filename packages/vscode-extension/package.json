@@ -137,12 +137,6 @@
         "category": "Assembly"
       },
       {
-        "command": "asm.analysisGraph.refresh",
-        "title": "Refresh Functions & Calls",
-        "icon": "$(refresh)",
-        "category": "Assembly"
-      },
-      {
         "command": "asm.sources.refresh",
         "title": "Refresh Sources",
         "icon": "$(refresh)",
@@ -239,17 +233,6 @@
       {
         "command": "asm.analysis.showOutput",
         "title": "Show Analysis Output",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.heuristics.configure",
-        "title": "Configure SNES Heuristic Rules",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.heuristics.preview",
-        "title": "Preview SNES Heuristic Findings",
         "category": "Assembly"
       },
       {
@@ -573,9 +556,6 @@
           "command": "asm.coverage.refresh"
         },
         {
-          "command": "asm.analysisGraph.refresh"
-        },
-        {
           "command": "asm.analysis.navigate",
           "when": "false"
         },
@@ -640,11 +620,6 @@
           "group": "navigation"
         },
         {
-          "command": "asm.analysisGraph.refresh",
-          "when": "view == uttori-asm.analysisGraph",
-          "group": "navigation"
-        },
-        {
           "command": "asm.coverage.undo",
           "when": "view == uttori-asm.analysisCoverage && asm.coverage.canUndo",
           "group": "navigation@2"
@@ -676,11 +651,6 @@
         }
       ],
       "view/item/context": [
-        {
-          "command": "asm.analysis.navigate",
-          "when": "view == uttori-asm.analysisGraph && viewItem == analysisGraphLocation",
-          "group": "inline"
-        },
         {
           "command": "asm.coverage.classifyRange",
           "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
@@ -1140,12 +1110,6 @@
           "type": "tree",
           "id": "uttori-asm.analysisCoverage",
           "name": "Analysis Coverage"
-        },
-        {
-          "type": "tree",
-          "id": "uttori-asm.analysisGraph",
-          "name": "Functions & Calls",
-          "visibility": "hidden"
         }
       ]
     },
@@ -1157,10 +1121,6 @@
       {
         "view": "uttori-asm.analysisCoverage",
         "contents": "No native analysis project found. Set `asm.analysisProject` or create an `analysis.json` project with the CLI."
-      },
-      {
-        "view": "uttori-asm.analysisGraph",
-        "contents": "No native analysis graph found. Run analysis with control-flow enabled, then refresh this view."
       },
       {
         "view": "uttori-asm.sources",
@@ -1472,10 +1432,6 @@
       }
     },
     "jsonValidation": [
-      {
-        "fileMatch": "**/analysis/heuristics.json",
-        "url": "./schemas/snes-heuristics.schema.json"
-      },
       {
         "fileMatch": "**/modification.json",
         "url": "./modification.schema.json"

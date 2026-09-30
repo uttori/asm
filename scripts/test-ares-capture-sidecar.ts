@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { createRuntimeBusTraceImporter } from "@uttori/asm-disassembler";
+
 import {
   DebugAdapterSession,
   DebugSidecarClient,
@@ -26,7 +28,6 @@ import {
   RomImage,
   publishAnalysisProject,
 } from "../packages/disassembler/src/index.js";
-import { createRuntimeBusTraceImporter } from "../packages/disassembler/src/runtime-bus-trace.js";
 import { createEditorRuntimeBusSource } from "../packages/vscode-extension/src/runtime/bus-source.js";
 import { LiveBusAnalysis } from "../packages/vscode-extension/src/runtime/live-bus-analysis.js";
 

@@ -6,6 +6,9 @@ import {
   RomImage,
   openAnalysisProjectStore,
   publishAnalysisProject,
+  sourceExportSha256,
+  validateSourceExportFiles,
+  validateSourceExportInputs,
   type AnalysisProject,
   type AnalysisFunctionRecord,
   type IntervalAnnotation,
@@ -101,6 +104,30 @@ const fixture = (
 
 const options = { sourceProjectSha256: "a".repeat(64) };
 
+test("edited build configuration regenerates without force and verifies the exact ROM", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-config-input-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture();
+  const sourceDirectory = path.join(directory, "source");
+  const first = exportSnes65816Source(project, rom, sourceDirectory, options);
+  const file = path.join(sourceDirectory, first.buildConfiguration);
+  const config = JSON.parse(fs.readFileSync(file, "utf8"));
+  config.includePaths.push("./extra-includes");
+  const edited = `${JSON.stringify(config)}\n`;
+  fs.writeFileSync(file, edited);
+  t.throws(() => validateSourceExportInputs(sourceDirectory), { message: /config.json.*changed/ });
+  const regenerated = exportSnes65816Source(project, rom, sourceDirectory, options);
+  t.deepEqual(regenerated.files, first.files);
+  t.is(fs.readFileSync(file, "utf8"), edited);
+  t.notThrows(() => validateSourceExportFiles(sourceDirectory));
+  const romFile = path.join(directory, "original.sfc");
+  fs.writeFileSync(romFile, rom.bytes());
+  t.true(
+    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+      .equal,
+  );
+});
+
 test("project asset includes survive export and split native raw spans at exact bounds", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-includes-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -140,6 +167,14 @@ test("project asset includes survive export and split native raw spans at exact 
   fs.writeFileSync(path.join(sourceDirectory, "uttori-asm.config.json"), customConfiguration);
 
   const first = exportSnes65816Source(annotated, rom, sourceDirectory, options);
+  t.false(first.files.some((file) => file.path === first.buildConfiguration));
+  t.like(
+    first.inputs?.find((input) => input.path === first.buildConfiguration),
+    {
+      kind: "configuration",
+      sha256: sourceExportSha256(customConfiguration),
+    },
+  );
   const bank = fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8");
   t.true(bank.includes(directive));
   t.regex(
@@ -162,8 +197,18 @@ test("project asset includes survive export and split native raw spans at exact 
       analysis: analyzeSnesRuntimeCode(annotated.shards, rom, "lorom"),
     },
   };
+  const editedConfiguration = `${customConfiguration}\n`;
+  fs.writeFileSync(path.join(sourceDirectory, first.buildConfiguration), editedConfiguration);
+  t.notThrows(() => validateSourceExportFiles(sourceDirectory));
+  t.throws(() => validateSourceExportInputs(sourceDirectory), { message: /config.json.*changed/ });
   const second = exportSnes65816Source(reanalyzed, rom, sourceDirectory, options);
   t.deepEqual(second.files, first.files);
+  t.is(
+    fs.readFileSync(path.join(sourceDirectory, first.buildConfiguration), "utf8"),
+    editedConfiguration,
+  );
+  t.notThrows(() => validateSourceExportFiles(sourceDirectory));
+  t.notThrows(() => validateSourceExportInputs(sourceDirectory));
   t.is(fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8"), bank);
 });
 

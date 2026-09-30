@@ -41,10 +41,6 @@ await build({
   logLevel: "info",
 });
 mkdirSync(path.join(here, "schemas"), { recursive: true });
-cpSync(
-  path.resolve(here, "../plugin-snes/heuristics.schema.json"),
-  path.join(here, "schemas/snes-heuristics.schema.json"),
-);
 
 await build({
   entryPoints: [path.join(here, "src/analysis/worker.ts")],

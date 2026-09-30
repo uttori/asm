@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { Assembler, NodeAssemblyFileProvider, createDebugMap, validateDebugMap, CRC32, } from "@uttori/asm-core";
+import { crc32 } from "node:zlib";
+import { Assembler, NodeAssemblyFileProvider, createDebugMap, validateDebugMap, } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { acquireFileLease, durableReplace, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, sourceExportSha256, sourceGenerationIdentity, assertSourceGeneration, RomImage, } from "@uttori/asm-disassembler";
 import { createSnesAssemblerEnvironment } from "../assembler.js";
@@ -470,7 +471,7 @@ export const buildModifiedRom = async (options) => {
                             id: 0,
                             path: input,
                             size: source.length,
-                            crc32: CRC32.compute(source),
+                            crc32: crc32(source),
                             sha256: sourceExportSha256(source),
                             kind: "binary",
                         },
@@ -549,7 +550,7 @@ export const buildModifiedRom = async (options) => {
                             ...mapping.fileList[index],
                             name: input,
                             size: bytes.length,
-                            crc: CRC32.compute(bytes),
+                            crc: crc32(bytes),
                             sha256: sourceExportSha256(bytes),
                         };
                     }

@@ -1552,8 +1552,9 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     // Rewriting its build configuration would leave regenerated includes unassemblable.
     const configuration = fs.existsSync(configurationPath)
         ? fs.readFileSync(configurationPath)
-        : defaultConfiguration;
-    writeFile(directory, "uttori-asm.config.json", configuration, "configuration", files);
+        : Buffer.from(defaultConfiguration);
+    // Seed a default for a new export, then keep this editable file as a freshness-tracked input.
+    fs.writeFileSync(configurationPath, configuration);
     writeFile(directory, SOURCE_OWNERSHIP_FILE, canonicalJson({
         format: "uttori-asm-source-ownership",
         sourceProjectSha256: options.sourceProjectSha256,
@@ -1575,6 +1576,12 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         checksumPolicy: "preserve",
         ownershipFile: SOURCE_OWNERSHIP_FILE,
         inputs: [
+            {
+                path: "uttori-asm.config.json",
+                kind: "configuration",
+                size: configuration.length,
+                sha256: sourceExportSha256(configuration),
+            },
             ...(assetIncludes
                 ? [
                     {
@@ -1611,6 +1618,10 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         spans: spans.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)),
     };
     const currentPaths = new Set(manifest.files.map((file) => file.path));
+    // Cleanup owns obsolete outputs; it must never delete an authoritative input.
+    for (const input of manifest.inputs ?? []) {
+        currentPaths.add(input.path);
+    }
     for (const stale of previousManifest?.files ?? []) {
         if (currentPaths.has(stale.path)) {
             continue;

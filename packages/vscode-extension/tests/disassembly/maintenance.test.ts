@@ -131,7 +131,6 @@ const analysis = {
   instructions: 8,
   capturedInstructions: 1,
   runtimePcsWithoutCode: 0,
-  heuristicRoles: 1,
   functions: 1,
   conflicts: 0,
   unresolved: 0,
@@ -239,7 +238,7 @@ test.serial("chooseLiveBusProject requires trust and matches ROM identity", asyn
 });
 
 test.serial(
-  "registerDisassemblyMaintenance rejects untrusted regenerate and writes heuristics.json",
+  "registerDisassemblyMaintenance rejects untrusted regenerate and exposes analysis output",
   async (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-register-"));
     t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -272,14 +271,12 @@ test.serial(
       }
     });
     t.true(host.commands.has("asm.disassembly.regenerate"));
-    t.true(host.commands.has("asm.heuristics.configure"));
+    t.false(host.commands.has("asm.heuristics.configure"));
+    t.false(host.commands.has("asm.heuristics.preview"));
     t.true(host.commands.has("asm.analysis.showOutput"));
     await host.commands.get("asm.disassembly.regenerate")?.();
     t.true(host.errors.some((message) => /trusted workspace/.test(message)));
     host.trusted = true;
-    await host.commands.get("asm.heuristics.configure")?.({ projectDirectory: directory });
-    t.true(fs.existsSync(path.join(directory, "heuristics.json")));
-    t.true(host.shown.some((file) => file.endsWith("heuristics.json")));
     await host.commands.get("asm.analysis.showOutput")?.();
     t.is(host.outputShown, 1);
   },

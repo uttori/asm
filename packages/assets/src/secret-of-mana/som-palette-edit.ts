@@ -1,5 +1,6 @@
 import { rewriteIndexedPng } from "@uttori/asm-assets/image";
 
+import { readAssetPng } from "../png.js";
 import type { AssetInput } from "../registry.js";
 import { convertBossImage } from "./som-asset-plugin.js";
 import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atlas.js";
@@ -142,13 +143,11 @@ function nativeBytes(
  */
 export function frameAtlasPreservedChunks(atlas: SpriteAtlasSource, catalog: SpritePaletteCatalog) {
   const bytes = atlas.source.bytes;
-  // Whole-atlas inspection validates PNG framing and CRCs before chunk traversal.
+  // Validate the game-specific palette/layout contract before allowing native retention.
   inspectFrameAtlas(atlas.source, atlas.layout, catalog, { whole: true });
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const image = readAssetPng(bytes);
   const names: string[] = [];
-  for (let offset = 8; offset < bytes.length;) {
-    const size = view.getUint32(offset);
-    const name = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
+  for (const { type: name } of image.chunks) {
     if (/^soM[A-Z]$/.test(name)) {
       const segment = Object.keys(atlas.layout.segments)[name.charCodeAt(3) - 65];
       if (!segment || !atlas.nativeOptions?.[segment]) {
@@ -157,7 +156,6 @@ export function frameAtlasPreservedChunks(atlas: SpriteAtlasSource, catalog: Spr
       nativeBytes(atlas, atlas.source, catalog, segment);
       names.push(name);
     }
-    offset += size + 12;
   }
   return names;
 }

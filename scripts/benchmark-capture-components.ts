@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
-import type { RuntimeBusAccess } from "../packages/disassembler/src/runtime-bus-types.js";
-import { createRuntimeGraphicsAccumulator } from "../packages/disassembler/src/runtime-graphics.js";
+import type { RuntimeBusAccess } from "@uttori/asm-disassembler";
+
 import {
   normalizeRuntimePPUEffect,
   type RuntimePPUEffect,
-} from "../packages/disassembler/src/runtime-ppu.js";
+} from "../packages/disassembler/src/model/runtime-ppu-effect.js";
+import { createRuntimeGraphicsAccumulator } from "../packages/disassembler/src/runtime/runtime-graphics.js";
 
 const output = process.argv[2];
 if (!output) throw new Error("Usage: benchmark-capture-components.ts OUTPUT");
@@ -170,8 +171,8 @@ for (const scenario of effectCases) {
 const sources: Record<string, string> = {};
 for (const file of [
   "scripts/benchmark-capture-components.ts",
-  "packages/disassembler/src/runtime-graphics.ts",
-  "packages/disassembler/src/runtime-ppu.ts",
+  "packages/disassembler/src/runtime/runtime-graphics.ts",
+  "packages/disassembler/src/model/runtime-ppu-effect.ts",
 ])
   sources[file] = createHash("sha256")
     .update(await readFile(file))

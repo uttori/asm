@@ -9,15 +9,15 @@ import type { DebugMapRange } from "@uttori/asm-core/debug-map";
 import {
   buildInstructionAnalysisAnnotations,
   type AnalysisProjectManifest,
+  registerRuntimeHistory,
 } from "@uttori/asm-disassembler";
 
 import {
   annotationQueryIndexesReady,
   readInstructionExecutionSummary,
   readSqliteAnnotationView,
-} from "../packages/disassembler/src/sqlite-annotation-query.js";
-import { parseSqlitePayload } from "../packages/disassembler/src/sqlite-payload.js";
-import { registerRuntimeHistory } from "../packages/disassembler/src/sqlite-runtime-history.js";
+} from "../packages/disassembler/src/storage/sqlite-annotation-query.js";
+import { parseSqlitePayload } from "../packages/disassembler/src/storage/sqlite-payload.js";
 import {
   createInstructionAnnotationIndex,
   instructionAnnotationsForDebugRange,

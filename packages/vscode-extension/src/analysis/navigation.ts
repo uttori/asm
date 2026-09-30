@@ -10,8 +10,8 @@ import {
   currentAnalysisSourcePath,
   findAnalysisDebugMapCandidates,
 } from "./debug-maps.js";
-import type { AnalysisGraphNavigationTarget } from "./graph-tree.js";
 import type { AnalysisNavigationProjection } from "./navigation-data.js";
+import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import { analysisWorker } from "./worker-client.js";
 
 /**
@@ -48,11 +48,11 @@ const sortedUnique = (values: readonly string[]): readonly string[] =>
 /**
  * Find exact ROM-matched source ranges, exclude missing or changed source files, and retain
  * architecture hints for disassembly fallback.
- * @param {AnalysisGraphNavigationTarget} target Exact analysis location and ROM identity.
+ * @param {AnalysisNavigationTarget} target Exact analysis location and ROM identity.
  * @returns {Promise<DebugMapSearchResult>} Verified source mappings, architecture hints, and stale-range count.
  */
 const findDebugMapSources = async (
-  target: AnalysisGraphNavigationTarget,
+  target: AnalysisNavigationTarget,
 ): Promise<DebugMapSearchResult> => {
   const locations: CurrentSourceLocation[] = [];
   const architectures: string[] = [...target.architectureHints];
@@ -166,14 +166,14 @@ const chooseArchitecture = async (
  * Ask the active Uttori debugger for 32 instructions and display them in an untitled preview.
  * Returns false when no compatible session/architecture exists, selection is cancelled, or the
  * request fails or returns no rows.
- * @param {AnalysisGraphNavigationTarget} target Qualified location requested from the debugger.
+ * @param {AnalysisNavigationTarget} target Qualified location requested from the debugger.
  * @param {readonly string[]} architectures Persisted architecture candidates for disambiguation.
  * @returns {Promise<boolean>} Whether a nonempty live disassembly preview was opened.
  * @see https://code.visualstudio.com/api/references/vscode-api#DebugSession.customRequest
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.openTextDocument
  */
 const openLiveDisassembly = async (
-  target: AnalysisGraphNavigationTarget,
+  target: AnalysisNavigationTarget,
   architectures: readonly string[],
 ): Promise<boolean> => {
   const session = debug.activeDebugSession;
@@ -221,13 +221,13 @@ const openLiveDisassembly = async (
 /**
  * Display accepted analysis rows in an untitled preview and select the target address when
  * present; missing bytes remain unknown.
- * @param {AnalysisGraphNavigationTarget} target Qualified location to reveal in the preview.
+ * @param {AnalysisNavigationTarget} target Qualified location to reveal in the preview.
  * @param {AnalysisNavigationProjection} projection Bounded rows prepared by the analysis worker.
  * @returns {Promise<void>} Completion after opening and selecting the persisted view.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.openTextDocument
  */
 const openPersistedDisassembly = async (
-  target: AnalysisGraphNavigationTarget,
+  target: AnalysisNavigationTarget,
   projection: AnalysisNavigationProjection,
 ): Promise<void> => {
   const lines = projection.lines;
@@ -252,11 +252,11 @@ const openPersistedDisassembly = async (
 
 /**
  * Opens an exact current source line, live virtual disassembly, or persisted CFG view in that order.
- * @param {AnalysisGraphNavigationTarget} target Qualified native analysis location.
+ * @param {AnalysisNavigationTarget} target Qualified native analysis location.
  * @returns {Promise<void>} Resolves after an editor is opened or navigation is cancelled.
  */
 export const navigateToAnalysisLocation = async (
-  target: AnalysisGraphNavigationTarget,
+  target: AnalysisNavigationTarget,
 ): Promise<void> => {
   try {
     const manifest = await analysisWorker().request<AnalysisProjectManifest>(

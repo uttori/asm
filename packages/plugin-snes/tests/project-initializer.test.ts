@@ -7,6 +7,7 @@ import {
   importRuntimeInstructionTrace,
   loadAnalysisProjectSnapshot,
   mergeRuntimeEvidence,
+  openAnalysisProjectStore,
   RomImage,
   validateSourceExportFiles,
 } from "@uttori/asm-disassembler";
@@ -39,6 +40,111 @@ const fixtureRom = (): Uint8Array => {
   bytes[0x7ffd] = 0x80;
   return bytes;
 };
+
+test("reanalysis retires role comments while preserving adopted metadata and runtime provenance", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-role-retirement-"));
+  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
+  const romFile = path.join(temporary, "fixture.sfc");
+  const outputDirectory = path.join(temporary, "workspace");
+  await fs.writeFile(romFile, fixtureRom());
+  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  const projectDirectory = path.join(outputDirectory, "analysis");
+  const before = loadAnalysisProjectSnapshot(projectDirectory);
+  const roleIds = ["unused-role", "adopted-role", "runtime-role"];
+  commitAnalysisProjectTransaction(projectDirectory, before.revision, {
+    manifest: before.manifest,
+    shards: {
+      ...before.shards,
+      evidence: [
+        ...before.shards.evidence,
+        ...roleIds.map((id) => ({
+          id,
+          source: "detector" as const,
+          sourceId: "snes.function-roles.v1",
+          confidence: "medium" as const,
+        })),
+      ],
+      comments: [
+        ...before.shards.comments,
+        {
+          id: "heuristic:snes:unused",
+          addressSpace: "snes.cpu",
+          address: 0x8000,
+          text: "old generated role",
+          evidence: ["unused-role"],
+        },
+        {
+          id: "manual-role-comment",
+          addressSpace: "snes.cpu",
+          address: 0x8000,
+          text: "[medium heuristic: graphics] user note",
+          evidence: ["adopted-role"],
+        },
+      ],
+      runtime: [
+        ...before.shards.runtime,
+        {
+          id: "retained-runtime-role",
+          kind: "runtime-execution",
+          architecture: "snes.65816",
+          addressSpace: "snes.cpu",
+          address: 0x8000,
+          count: 1,
+          evidence: ["runtime-role"],
+        },
+      ],
+    },
+  });
+  const config = path.join(projectDirectory, "heuristics.json");
+  await fs.writeFile(config, "malformed inert configuration");
+  const staged = loadAnalysisProjectSnapshot(projectDirectory);
+  const cancelled = new AbortController();
+  t.throws(
+    () =>
+      analyzeSnesProject({
+        projectDirectory,
+        romFile,
+        signal: cancelled.signal,
+        onProgress: ({ stage }) => {
+          if (stage === "commit") {
+            cancelled.abort();
+          }
+        },
+      }),
+    { instanceOf: SnesProjectInitializationCancelledError },
+  );
+  t.is(
+    loadAnalysisProjectSnapshot(projectDirectory).revision.manifestSha256,
+    staged.revision.manifestSha256,
+  );
+
+  const result = analyzeSnesProject({ projectDirectory, romFile });
+  t.false("heuristicRoles" in result);
+  const cleaned = loadAnalysisProjectSnapshot(projectDirectory);
+  t.false(cleaned.shards.comments.some(({ id }) => id.startsWith("heuristic:snes:")));
+  t.true(cleaned.shards.comments.some(({ id }) => id === "manual-role-comment"));
+  t.false(cleaned.shards.evidence.some(({ id }) => id === "unused-role"));
+  t.true(cleaned.shards.evidence.some(({ id }) => id === "adopted-role"));
+  t.true(cleaned.shards.evidence.some(({ id }) => id === "runtime-role"));
+  t.true(cleaned.shards.runtime.some(({ id }) => id === "retained-runtime-role"));
+  t.is(await fs.readFile(config, "utf8"), "malformed inert configuration");
+  analyzeSnesProject({ projectDirectory, romFile });
+  t.deepEqual(
+    loadAnalysisProjectSnapshot(projectDirectory).shards.comments,
+    cleaned.shards.comments,
+  );
+  const store = openAnalysisProjectStore(projectDirectory);
+  try {
+    t.true(store.callGraph().functions.length > 0);
+  } finally {
+    store.close();
+  }
+  exportSnesProject({ projectDirectory, sourceDirectory: outputDirectory, romFile });
+  t.true(
+    (await verifySnesProjectRoundTrip({ sourceDirectory: outputDirectory, romFile })).comparison
+      .equal,
+  );
+});
 
 test("shared initializer commits a verified workspace with analysis and editor files", async (t) => {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-init-"));
@@ -181,6 +287,32 @@ test("background reanalysis does not overwrite an edit published while it was ru
   await fs.writeFile(romFile, bytes);
   await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
   const projectDirectory = path.join(outputDirectory, "analysis");
+  const legacy = loadAnalysisProjectSnapshot(projectDirectory);
+  commitAnalysisProjectTransaction(projectDirectory, legacy.revision, {
+    manifest: legacy.manifest,
+    shards: {
+      ...legacy.shards,
+      evidence: [
+        ...legacy.shards.evidence,
+        {
+          id: "legacy-role",
+          source: "detector",
+          sourceId: "snes.function-roles.v1",
+          confidence: "medium",
+        },
+      ],
+      comments: [
+        ...legacy.shards.comments,
+        {
+          id: "heuristic:snes:legacy",
+          addressSpace: "snes.cpu",
+          address: 0x8000,
+          text: "legacy role",
+          evidence: ["legacy-role"],
+        },
+      ],
+    },
+  });
   let publishedRevision: ReturnType<typeof loadAnalysisProjectSnapshot>["revision"] | undefined;
   t.throws(
     () =>
@@ -217,6 +349,8 @@ test("background reanalysis does not overwrite an edit published while it was ru
   const saved = loadAnalysisProjectSnapshot(projectDirectory);
   t.deepEqual(saved.revision, publishedRevision);
   t.true(saved.shards.labels.some((label) => label.name === "KeepConcurrentEdit"));
+  t.true(saved.shards.comments.some(({ id }) => id === "heuristic:snes:legacy"));
+  t.true(saved.shards.evidence.some(({ id }) => id === "legacy-role"));
 });
 
 test("source export rejects code loss even with net gains or force, unless explicitly allowed", async (t) => {

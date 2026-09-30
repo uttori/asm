@@ -129,10 +129,10 @@ export declare const validateCaptureCapabilities: (value: unknown, scope?: Captu
  */
 export declare const validateCapturePosition: (value: unknown, session?: string, scope?: CaptureScopeV2) => CapturePositionV2;
 /**
- * CRC-32C Castagnoli, including the canonical 123456789 test vector.
- * @param {Uint8Array} bytes Bytes to checksum.
- * @param {boolean} zeroChecksum Treat the ACT2 checksum field as zero.
- * @returns {number} Unsigned checksum.
+ * CRC-32C of an ACT2 envelope or archive JSON frame, without changing caller storage.
+ * @param {Uint8Array} bytes Byte view; checksum positions are relative to this view.
+ * @param {boolean} zeroChecksum Treat ACT2 bytes 56–59 as zero. Defaults to false for JSON frames.
+ * @returns {number} Unsigned Castagnoli checksum.
  */
 export declare const captureCrc32c: (bytes: Uint8Array, zeroChecksum?: boolean) => number;
 export interface CaptureInstructionV2 {

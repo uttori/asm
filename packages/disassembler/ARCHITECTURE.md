@@ -43,21 +43,52 @@ code, and processor state can be undecidable from ROM bytes alone.
 
 The arrows show composition, not permission to leak lower-layer types upward.
 
-| Package/workspace                | Owns                                                                                                                           | Must not own                                             |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| `@uttori/asm-core`               | parsing, expressions, stages, symbols, diagnostics, plugin contracts, decoder-neutral types, debug maps                        | SNES opcodes, mappers, project storage, emulator APIs    |
-| `@uttori/asm-disassembler`       | ROM identity, project schema/storage, transactions, generic analysis, evidence, coverage, call graph, assets, export manifests | SNES mapping/opcodes, Diz fields, DAP, emulator commands |
-| `@uttori/asm-plugin-snes`        | 65816/SPC700/SuperFX specifications, state transfer, SNES mapping/detection, Diz import, native source rendering               | VS Code UI, DAP, native process lifecycle                |
-| `@uttori/asm-plugin-65xx`        | other 65xx-family specifications and targets                                                                                   | SNES-specific behavior                                   |
-| `@uttori/asm-plugin-loader-node` | trusted Node plugin discovery and configuration                                                                                | plugin semantics                                         |
-| `@uttori/asm-cli`                | command parsing and explicit workflow orchestration                                                                            | duplicate analysis or mapper algorithms                  |
-| `@uttori/asm-debug-adapter`      | neutral backend, replay, conformance, framing, DAP translation                                                                 | emulator SDK/command types, project mutation             |
-| ares sidecar                     | native transport translation, runtime validation, child lifecycle                                                              | DAP, VS Code models, project format                      |
-| language server                  | editor protocol and workspace analysis over the plugin environment                                                             | independent opcode catalogs                              |
-| VS Code extension                | commands, views, trust policy, navigation, DAP host                                                                            | analysis inference or emulator implementation            |
+| Package/workspace                | Owns                                                                                                                                       | Must not own                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `@uttori/asm-core`               | parsing, expressions, stages, symbols, diagnostics, plugin contracts, decoder-neutral types, debug maps                                    | SNES opcodes, mappers, project storage, emulator APIs    |
+| `@uttori/asm-disassembler`       | ROM identity, project schema/storage, transactions, generic analysis, evidence, coverage, call graph, asset declarations, export manifests | SNES mapping/opcodes, Diz fields, DAP, emulator commands |
+| `@uttori/asm-plugin-snes`        | 65816/SPC700/SuperFX specifications, state transfer, SNES mapping/detection, Diz import, native source rendering                           | VS Code UI, DAP, native process lifecycle                |
+| `@uttori/asm-plugin-65xx`        | other 65xx-family specifications and targets                                                                                               | SNES-specific behavior                                   |
+| `@uttori/asm-plugin-loader-node` | trusted Node plugin discovery and configuration                                                                                            | plugin semantics                                         |
+| `@uttori/asm-cli`                | command parsing and explicit workflow orchestration                                                                                        | duplicate analysis or mapper algorithms                  |
+| `@uttori/asm-debug-adapter`      | neutral backend, replay, conformance, framing, DAP translation                                                                             | emulator SDK/command types, project mutation             |
+| ares sidecar                     | native transport translation, runtime validation, child lifecycle                                                                          | DAP, VS Code models, project format                      |
+| language server                  | editor protocol and workspace analysis over the plugin environment                                                                         | independent opcode catalogs                              |
+| VS Code extension                | commands, views, trust policy, navigation, DAP host                                                                                        | analysis inference or emulator implementation            |
 
 `npm run check:boundaries` checks critical dependency and forbidden-identifier rules. A boundary that
 needs target behavior receives an explicit target/plugin callback or descriptor.
+
+## Internal module boundaries
+
+`src/index.ts` is the public facade. Implementations import concrete files; they do not import the
+facade or create directory barrels. `npm run check:boundaries` checks area dependencies for runtime
+and type imports, in addition to package ownership rules.
+
+| Area       | Owns                                                                                | Allowed lower areas                                            |
+| ---------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `internal` | Bounded indexes/caches, temporary uniqueness sets, durable filesystem primitives    | None                                                           |
+| `model`    | Record contracts, ROM identity, semantic validation, bus/PPU effect validation      | `internal`                                                     |
+| `analysis` | Static worklist, coverage, instruction/source/call contracts, evidence explanations | `model`, `internal`                                            |
+| `edits`    | Proposed metadata/annotation changes and conditional undo                           | `model`, `analysis/project-evidence`, `internal`               |
+| `runtime`  | Trace parsing, evidence reduction, transfer/graphics/PPU accumulation               | `model`, `edits`, `internal`                                   |
+| `storage`  | Connection lifecycle, physical codecs, queries, invalidation, retention             | `model`, `analysis`, `runtime`, `internal`                     |
+| `project`  | Validated snapshots, revision-checked commits, durable trace imports                | `model`, `analysis`, `edits`, `runtime`, `storage`, `internal` |
+| `source`   | Generated manifests, ownership, integrity, recovery/publication                     | `model`, `internal`                                            |
+
+`RecordIdSet` owns a temporary disk-backed SQLite set and its disposal; it never opens the project
+database. `RomImage` performs explicit file I/O. Model contracts retain existing SNES capture
+semantics. Type-only references within those contracts do not introduce executable cycles.
+
+SQLite remains behind the connection-owning `SqliteAnalysisStore` facade. Read-only evidence
+explanations are shared with edit/undo logic, so storage does not import editing workflows. PPU
+effect validation is a model operation; capture accumulation is a runtime operation. Project
+orchestration owns commit/revision policy, while source publication accepts already verified trees
+and relies on its caller to hold the project/source lease.
+
+Tests mirror these areas. Shared SQLite setup lives under `tests/helpers`; schema fixtures remain
+under `tests/fixtures`. Compiler output mirrors source directories and must be cleaned before
+rebuilding moved modules.
 
 ## Assembly and reversible instruction path
 
@@ -103,7 +134,7 @@ An analysis project contains `analysis.sqlite` and an `analysis.json` watcher po
 stores the semantic manifest, monotonic revision, seven metadata collections, and columnar runtime
 facts. SchemaVersion remains 3. Legacy JSON/shard containers and manifest migrations are removed.
 Small user configuration, debug maps and capture interchange formats keep their JSON contracts.
-SQLite's separate physical format version is 3. Globally shared runtime facts hold coordinates and
+SQLite's separate physical format version is 4. Globally shared runtime facts hold coordinates and
 payloads. Compact observations retain source IDs, exact counts and provenance. Exact instruction/state
 pairs share physical storage and expose virtual CPU-state records through a SQL view. Canonical hash
 suffixes are interned once and referenced by integers, including both sides of a paired observation.

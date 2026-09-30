@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
-
-import CRC32 from "@uttori/data-tools/data-hash-crc32";
+import { crc32 } from "node:zlib";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -39,7 +38,7 @@ function withChunk(bytes: Uint8Array, name: string): Uint8Array {
     4,
   );
   chunk[8] = 17;
-  new DataView(chunk.buffer).setUint32(9, Number.parseInt(CRC32.of(chunk.subarray(4, 9)), 16));
+  new DataView(chunk.buffer).setUint32(9, crc32(chunk.subarray(4, 9)));
   return Uint8Array.from([...bytes.subarray(0, -12), ...chunk, ...bytes.subarray(-12)]);
 }
 

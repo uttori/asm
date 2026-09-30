@@ -208,7 +208,7 @@ test("PNG rejects bad CRC, truncated chunks, unrepresentable alpha/colors, and d
   t.throws(() => image("malformed-crc.png"), { message: /CRC mismatch/ });
   t.throws(() => image("malformed-truncated.png"), { message: /Truncated/ });
   t.throws(() => image("malformed-huge-dimensions.png"), { message: /pixel limit/ });
-  t.throws(() => image("rgb16-unsupported.png"), { message: /16-bit samples are not supported/ });
+  t.throws(() => image("rgb16-unsupported.png"), { message: /16-bit PNG samples are disabled/ });
   t.throws(() => image("bad-dimensions.png", "snes.tile.4bpp", { palette: "auto" }), {
     message: /divisible by 8/,
   });

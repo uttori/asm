@@ -8,6 +8,9 @@ import { test } from "../ava-helper.js";
 type PackageBoundaryViolationCode =
   | "CORE_IMPORTS_PLUGIN"
   | "DISASSEMBLER_IMPORTS_PLUGIN"
+  | "DISASSEMBLER_AREA_DEPENDENCY"
+  | "DISASSEMBLER_INTERNAL_FACADE"
+  | "DISASSEMBLER_UNKNOWN_AREA"
   | "PLUGIN_IMPORTS_CORE_INTERNAL"
   | "CORE_CONTAINS_SNES_IDENTIFIER"
   | "LSP_PROVIDER_IMPORTS_STATIC_CATALOG";
@@ -45,6 +48,18 @@ const STATIC_CATALOG_IMPORTS = new Set([
   "spc700Catalog",
   "superFxCatalog",
 ]);
+
+/** Internal imports follow semantic ownership, including type-only imports and re-exports. */
+const DISASSEMBLER_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
+  internal: [],
+  model: ["internal"],
+  analysis: ["model", "internal"],
+  edits: ["model", "analysis", "internal"],
+  runtime: ["model", "edits", "internal"],
+  storage: ["model", "analysis", "runtime", "internal"],
+  project: ["model", "analysis", "edits", "runtime", "storage", "internal"],
+  source: ["model", "internal"],
+};
 
 /** Scan implementation files only. Generated declarations do not own dependencies. */
 const listTypeScriptFiles = (directory: string): string[] => {
@@ -236,10 +251,57 @@ function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundary
 
   for (const file of listTypeScriptFiles(disassemblerSource)) {
     const sourceFile = sourceFileFor(file);
+    const relative = path.relative(disassemblerSource, file);
+    const area = relative.split(path.sep)[0];
+    const facade = relative === "index.ts";
+    if (!facade && !Object.hasOwn(DISASSEMBLER_DEPENDENCIES, area)) {
+      violations.push({
+        code: "DISASSEMBLER_UNKNOWN_AREA",
+        file: path.relative(resolvedRoot, file),
+        line: 1,
+        message: `disassembler implementation has no declared owner: '${relative}'`,
+      });
+    }
     for (const imported of importSpecifiers(sourceFile)) {
       const resolvedImport = imported.module.startsWith(".")
         ? path.resolve(path.dirname(file), imported.module)
         : undefined;
+      const internalTarget =
+        resolvedImport !== undefined && isWithin(resolvedImport, disassemblerSource);
+      const reachesFacade =
+        internalTarget &&
+        (resolvedImport === disassemblerSource ||
+          path.relative(disassemblerSource, resolvedImport).replace(/\.[cm]?[jt]s$/u, "") ===
+            "index");
+      if (
+        !facade &&
+        (reachesFacade ||
+          imported.module === "@uttori/asm-disassembler" ||
+          imported.module.startsWith("@uttori/asm-disassembler/"))
+      ) {
+        violations.push({
+          code: "DISASSEMBLER_INTERNAL_FACADE",
+          file: path.relative(resolvedRoot, file),
+          line: lineFor(sourceFile, imported.position),
+          message: `internal disassembler module imports its public facade '${imported.module}'`,
+        });
+      } else if (!facade && internalTarget) {
+        const destination = path.relative(disassemblerSource, resolvedImport).split(path.sep)[0];
+        const allowed = DISASSEMBLER_DEPENDENCIES[area] ?? [];
+        // Editing depends only on the shared evidence projection, never the static analysis engine.
+        const evidenceProjection =
+          area !== "edits" ||
+          destination !== "analysis" ||
+          path.basename(resolvedImport).replace(/\.[cm]?[jt]s$/u, "") === "project-evidence";
+        if ((destination !== area && !allowed.includes(destination)) || !evidenceProjection) {
+          violations.push({
+            code: "DISASSEMBLER_AREA_DEPENDENCY",
+            file: path.relative(resolvedRoot, file),
+            line: lineFor(sourceFile, imported.position),
+            message: `disassembler '${area}' cannot import '${imported.module}'`,
+          });
+        }
+      }
       if (
         imported.module.startsWith("@uttori/asm-plugin-") ||
         (resolvedImport !== undefined &&
@@ -376,5 +438,42 @@ test("package boundary checker rejects static catalogs in LSP providers", (t) =>
   t.deepEqual(
     collectPackageBoundaryViolations(root).map((violation) => violation.code),
     ["LSP_PROVIDER_IMPORTS_STATIC_CATALOG"],
+  );
+});
+
+test("disassembler boundaries reject upward type imports and internal facade imports", (t) => {
+  const root = boundaryFixture();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const write = (file: string, contents: string): void => {
+    const destination = path.join(root, "packages/disassembler/src", file);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, contents);
+  };
+  write("model/invalid.ts", 'import type { Store } from "../storage/sqlite-store.js";\n');
+  write("storage/invalid.ts", 'export { commit } from "../project/project-transaction.js";\n');
+  write("runtime/invalid.ts", 'import "../index.js";\n');
+  write("analysis/invalid.ts", 'import("@uttori/asm-disassembler");\n');
+  write("edits/invalid.ts", 'import { engine } from "../analysis/static-analysis.js";\n');
+  const codes = collectPackageBoundaryViolations(root).map(({ code }) => code);
+  t.is(codes.filter((code) => code === "DISASSEMBLER_AREA_DEPENDENCY").length, 3);
+  t.is(codes.filter((code) => code === "DISASSEMBLER_INTERNAL_FACADE").length, 2);
+});
+
+test("disassembler boundaries permit evidence inspection for edits and reject unowned files", (t) => {
+  const root = boundaryFixture();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, "packages/disassembler/src/edits"));
+  fs.writeFileSync(
+    path.join(root, "packages/disassembler/src/edits/valid.ts"),
+    'import { evidenceReferences } from "../analysis/project-evidence.js";\n',
+  );
+  t.deepEqual(collectPackageBoundaryViolations(root), []);
+  fs.writeFileSync(
+    path.join(root, "packages/disassembler/src/unowned.ts"),
+    "export const value = 1;\n",
+  );
+  t.deepEqual(
+    collectPackageBoundaryViolations(root).map(({ code }) => code),
+    ["DISASSEMBLER_UNKNOWN_AREA"],
   );
 });

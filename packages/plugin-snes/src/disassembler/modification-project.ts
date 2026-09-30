@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { crc32 } from "node:zlib";
 
 import {
   Assembler,
   NodeAssemblyFileProvider,
   createDebugMap,
   validateDebugMap,
-  CRC32,
   type DebugMap,
 } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
@@ -706,7 +706,7 @@ export const buildModifiedRom = async (
               id: 0,
               path: input,
               size: source.length,
-              crc32: CRC32.compute(source),
+              crc32: crc32(source),
               sha256: sourceExportSha256(source),
               kind: "binary",
             },
@@ -791,7 +791,7 @@ export const buildModifiedRom = async (
               ...mapping.fileList[index],
               name: input,
               size: bytes.length,
-              crc: CRC32.compute(bytes),
+              crc: crc32(bytes),
               sha256: sourceExportSha256(bytes),
             };
           }

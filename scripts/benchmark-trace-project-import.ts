@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync, backup } from "node:sqlite";
 
-import { importRuntimeTraceSourceIntoProject } from "../packages/disassembler/src/runtime-trace-project.js";
+import { importRuntimeTraceSourceIntoProject } from "@uttori/asm-disassembler";
+
 import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src/runtime/trace-source.js";
 
 /** Required path arguments are resolved before creating any temporary project data.

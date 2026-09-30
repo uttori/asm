@@ -344,12 +344,12 @@ try {
     ["@uttori/asm-core/dist/plugin/manager.d.ts", "Each plugin commits independently"],
     ["@uttori/asm-plugin-loader-node/dist/loader.d.ts", "Serialize load/dispose calls"],
     ["@uttori/asm-plugin-loader-node/dist/types.d.ts", "Shallow merge:"],
-    ["@uttori/asm-disassembler/dist/sqlite-store.d.ts", "Run a synchronous unit"],
-    ["@uttori/asm-disassembler/dist/project-types.d.ts", "Never publish"],
-    ["@uttori/asm-disassembler/dist/project-transaction.d.ts", "Each supplied array"],
+    ["@uttori/asm-disassembler/dist/storage/sqlite-store.d.ts", "Run a synchronous unit"],
+    ["@uttori/asm-disassembler/dist/model/project-types.d.ts", "Never publish"],
+    ["@uttori/asm-disassembler/dist/project/project-transaction.d.ts", "Each supplied array"],
     ["@uttori/asm-cli/dist/index.d.ts", "No AbortSignal or signal handlers"],
-    ["@uttori/asm-disassembler/dist/runtime-trace-project.d.ts", "A pointer-file error"],
-    ["@uttori/asm-disassembler/dist/runtime-trace-file.d.ts", "2 GiB"],
+    ["@uttori/asm-disassembler/dist/project/runtime-trace-project.d.ts", "A pointer-file error"],
+    ["@uttori/asm-disassembler/dist/runtime/runtime-trace-file.d.ts", "2 GiB"],
     ["@uttori/asm-debug-adapter/dist/sidecar-client.d.ts", "Starts when queued"],
   ]) {
     assert.ok(

@@ -9,11 +9,16 @@ import {
   SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_SCHEMA_VERSION,
   publishAnalysisProject,
+  sourceExportSha256,
   type AnalysisProject,
   type SourceExportManifest,
 } from "@uttori/asm-disassembler";
 
 import { test } from "../../../../tests/ava-helper.js";
+import {
+  captureFixtureHeader,
+  writeCaptureFixture,
+} from "../../../../tests/helpers/capture-archive.js";
 import type {
   ResolvedProjectSource,
   ResolvedTarget,
@@ -167,6 +172,89 @@ test("prepare reports coverage and empty entry points for a fixture project", as
   t.is(result.before.instructions, 0);
   t.is(result.before.contentBytes, 256);
   t.deepEqual(result.entryPoints, []);
+});
+
+test("identity discovery returns only metadata and reports progress before scanning JSON", async (t) => {
+  const { target } = tempTarget(t);
+  const archive = path.join(target.sourceDirectory, "capture.act2");
+  await writeCaptureFixture(archive, 0);
+  const progress: MaintenanceProgress[] = [];
+  const identity = await runMaintenanceJob(
+    { operation: "traceIdentity", input: { traceFile: archive } },
+    new AbortController().signal,
+    (value) => progress.push(value),
+  );
+  t.like(identity, { romContentSha256: captureFixtureHeader.romContentSha256 });
+  t.false(Object.hasOwn(identity as object, "read"));
+  const json = path.join(target.sourceDirectory, "capture.json");
+  fs.writeFileSync(
+    json,
+    JSON.stringify({
+      chunks: Array.from({ length: 2000 }, (_, index) => ({
+        sequenceStart: index + 1,
+        addresses: [index],
+      })),
+      ...(identity as object),
+    }),
+  );
+  progress.length = 0;
+  t.deepEqual(
+    await runMaintenanceJob(
+      { operation: "traceIdentity", input: { traceFile: json } },
+      new AbortController().signal,
+      (value) => progress.push(value),
+    ),
+    identity,
+  );
+  t.is(progress.find((value) => value.message)?.message, "Reading capture identity…");
+  t.true(progress.some((value) => (value.bytesRead ?? 0) > 0));
+});
+
+test("import worker rejects generated source drift before reading or mutating trace evidence", async (t) => {
+  const { target } = tempTarget(t);
+  const original = "db $42\n";
+  const guarded = {
+    ...target,
+    sourceManifest: {
+      ...target.sourceManifest,
+      files: [
+        {
+          path: "main.asm",
+          kind: "source" as const,
+          size: original.length,
+          sha256: sourceExportSha256(original),
+        },
+      ],
+    },
+  };
+  fs.writeFileSync(path.join(target.sourceDirectory, "main.asm"), "edited source");
+  fs.writeFileSync(
+    path.join(target.sourceDirectory, "generated-files.json"),
+    JSON.stringify(guarded.sourceManifest),
+  );
+  const progress: MaintenanceProgress[] = [];
+  await t.throwsAsync(
+    runMaintenanceJob(
+      {
+        operation: "import",
+        input: {
+          target: guarded,
+          traceFile: path.join(target.sourceDirectory, "missing.act2"),
+          maxBytes: 1024,
+          architecture: "snes.65816",
+          addressSpace: "snes.cpu",
+        },
+      },
+      new AbortController().signal,
+      (value) => progress.push(value),
+    ),
+    { message: /main.asm.*Regeneration stopped/s },
+  );
+  t.is(
+    progress.find((value) => value.message)?.message,
+    "Validating generated source before import…",
+  );
+  t.false(progress.some((value) => value.message === "Opening and validating trace metadata"));
 });
 
 const loadProcess = (instance: string) =>

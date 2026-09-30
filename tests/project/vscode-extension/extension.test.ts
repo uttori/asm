@@ -61,7 +61,6 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.openPanel",
       "asm.outline.refresh",
       "asm.coverage.refresh",
-      "asm.analysisGraph.refresh",
       "asm.sources.refresh",
       "asm.analysis.navigate",
       "asm.coverage.classifyRange",
@@ -78,8 +77,6 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.trace.importBus",
       "asm.trace.importRegenerate",
       "asm.analysis.showOutput",
-      "asm.heuristics.configure",
-      "asm.heuristics.preview",
       "asm.ramMap.open",
       "asm.disassembly.status",
       "asm.disassembly.regenerate",
@@ -265,22 +262,20 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     "asm.configFile",
     "asm.plugins",
   ]);
-  t.is(manifest.contributes.viewsContainers.activitybar[0]?.id, "uttori-asm");
-  t.is(manifest.contributes.views["uttori-asm"]?.[0]?.id, "uttori-asm.projectPanel");
-  t.is(manifest.contributes.views["uttori-asm"]?.[0]?.type, "webview");
-  t.is(manifest.contributes.views["uttori-asm"]?.[1]?.id, "uttori-asm.projectOutline");
-  t.is(manifest.contributes.views["uttori-asm"]?.[1]?.type, "tree");
-  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.id, "uttori-asm.disassemblyPanel");
-  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.type, "webview");
-  t.is(manifest.contributes.views["uttori-asm"]?.[3]?.id, "uttori-asm.sources");
-  t.is(manifest.contributes.views["uttori-asm"]?.[3]?.type, "tree");
-  t.is(manifest.contributes.views["uttori-asm"]?.[4]?.id, "uttori-asm.analysisCoverage");
-  t.is(manifest.contributes.views["uttori-asm"]?.[4]?.type, "tree");
-  t.is(manifest.contributes.views["uttori-asm"]?.[5]?.id, "uttori-asm.analysisGraph");
-  t.is(manifest.contributes.views["uttori-asm"]?.[5]?.type, "tree");
-  t.is(manifest.contributes.viewsWelcome?.[0]?.view, "uttori-asm.projectOutline");
-  t.is(manifest.contributes.viewsWelcome?.[1]?.view, "uttori-asm.analysisCoverage");
-  t.is(manifest.contributes.viewsWelcome?.[2]?.view, "uttori-asm.analysisGraph");
+  t.true(manifest.contributes.viewsContainers.activitybar.some(({ id }) => id === "uttori-asm"));
+  const views = manifest.contributes.views["uttori-asm"] ?? [];
+  t.deepEqual(Object.fromEntries(views.map(({ id, type }) => [id, type])), {
+    "uttori-asm.projectPanel": "webview",
+    "uttori-asm.projectOutline": "tree",
+    "uttori-asm.disassemblyPanel": "webview",
+    "uttori-asm.sources": "tree",
+    "uttori-asm.analysisCoverage": "tree",
+  });
+  t.deepEqual(manifest.contributes.viewsWelcome?.map(({ view }) => view).sort(), [
+    "uttori-asm.analysisCoverage",
+    "uttori-asm.projectOutline",
+    "uttori-asm.sources",
+  ]);
 });
 
 test("65xx grammar covers CPU mnemonics and omits SNES coprocessors", (t) => {
@@ -387,10 +382,9 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("ProjectPanelProvider"));
   t.true(source.includes("ProjectOutlineProvider"));
   t.true(source.includes("AnalysisCoverageProvider"));
-  t.true(source.includes("AnalysisGraphProvider"));
+  t.false(source.includes("AnalysisGraphProvider"));
   t.true(source.includes("AnalysisProjectEditor"));
   t.true(source.includes("asm.coverage.refresh"));
-  t.true(source.includes("asm.analysisGraph.refresh"));
   t.true(source.includes("asm.analysis.navigate"));
   t.true(source.includes("navigateToAnalysisLocation"));
   t.true(source.includes("asm.coverage.classifyRange"));
@@ -473,9 +467,9 @@ test("VS Code disassembly maintenance makes trace-to-source changes explicit and
   t.true(source.includes("renderTraceImportReport(imported, traceFile)"));
 });
 
-test("analysis graph preserves identity and navigates source-first", (t) => {
+test("analysis navigation preserves identity and navigates source-first", (t) => {
   const tree = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis/graph-tree.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/navigation-target.ts"),
     "utf8",
   );
   const navigation = fs.readFileSync(
@@ -486,10 +480,6 @@ test("analysis graph preserves identity and navigates source-first", (t) => {
     path.join(root, "packages/vscode-extension/src/analysis/debug-maps.ts"),
     "utf8",
   );
-  t.true(tree.includes('analysisWorker().request<GraphProjection>(directory, "graph")'));
-  t.false(tree.includes("loadAnalysisProject"));
-  t.true(tree.includes("loadChildren"));
-  t.true(tree.includes("const PAGE_SIZE = 200"));
   t.true(tree.includes("romContentSha256"));
   t.true(tree.includes("addressSpace"));
   t.true(maps.includes("validateDebugMap"));

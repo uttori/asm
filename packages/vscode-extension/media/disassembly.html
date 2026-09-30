@@ -20,8 +20,7 @@
           Analyze & Regenerate
         </button>
         <p class="hint">
-          Update source from saved annotations, rules, and trace evidence. Verify the ROM round
-          trip.
+          Update source from saved annotations and trace evidence. Verify the ROM round trip.
         </p>
         <div class="button-grid">
           <button data-cmd="editAnnotation" data-trusted>Edit Annotation</button>
@@ -29,20 +28,6 @@
         </div>
         <button class="quiet" data-cmd="disassemblyStatus">Check Source Status</button>
       </section>
-
-      <details id="heuristicsSection" open>
-        <summary>Heuristics <span class="detail-hint">Find Routine Roles</span></summary>
-        <div class="section-content">
-          <p class="hint">
-            Preview role suggestions from existing analysis, then regenerate to apply their
-            comments.
-          </p>
-          <div class="button-grid">
-            <button data-cmd="configureHeuristics" data-trusted>Edit Rules</button>
-            <button data-cmd="previewHeuristics">Run Preview</button>
-          </div>
-        </div>
-      </details>
 
       <details id="captureSection">
         <summary>Runtime Capture</summary>

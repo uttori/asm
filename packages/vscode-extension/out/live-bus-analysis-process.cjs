@@ -75,6 +75,50 @@ var canonicalEquals = (left, right) => left === right || canonicalJsonCompact(le
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
+// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+var CRC32_POLYNOMIAL = 3988292384;
+var CRC32C_POLYNOMIAL = 2197175160;
+var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
+  let crc = index;
+  for (let bit = 0; bit < 8; bit++) {
+    crc = crc & 1 ? polynomial ^ crc >>> 1 : crc >>> 1;
+  }
+  return crc >>> 0;
+});
+var sliceTable = (table) => {
+  const slices = [Uint32Array.from(table)];
+  for (let width = 1; width < 8; width++) {
+    const previous = slices[width - 1];
+    slices.push(Uint32Array.from(previous, (crc) => crc >>> 8 ^ table[crc & 255]));
+  }
+  return [slices[0], slices[1], slices[2], slices[3], slices[4], slices[5], slices[6], slices[7]];
+};
+var CRC32_TABLE = /* @__PURE__ */ reflectedTable(CRC32_POLYNOMIAL);
+var CRC32C_TABLE = /* @__PURE__ */ reflectedTable(CRC32C_POLYNOMIAL);
+var crc32Slices = /* @__PURE__ */ sliceTable(CRC32_TABLE);
+var crc32cSlices = /* @__PURE__ */ sliceTable(CRC32C_TABLE);
+var [i0, i1, i2, i3, i4, i5, i6, i7] = crc32Slices;
+var [c0, c1, c2, c3, c4, c5, c6, c7] = crc32cSlices;
+var crc32cBytes = (bytes, zeroChecksum = false) => {
+  let crc = -1;
+  let index = 0;
+  const length = bytes.length;
+  const blockEnd = length - 7;
+  for (; index < blockEnd; index += 8) {
+    let low = bytes[index] | bytes[index + 1] << 8 | bytes[index + 2] << 16 | bytes[index + 3] << 24;
+    if (zeroChecksum && index === 56) {
+      low = 0;
+    }
+    const mixed = crc ^ low;
+    crc = c7[mixed & 255] ^ c6[mixed >>> 8 & 255] ^ c5[mixed >>> 16 & 255] ^ c4[mixed >>> 24] ^ c3[bytes[index + 4]] ^ c2[bytes[index + 5]] ^ c1[bytes[index + 6]] ^ c0[bytes[index + 7]];
+  }
+  for (; index < length; index++) {
+    const byte = zeroChecksum && index >= 56 && index < 60 ? 0 : bytes[index];
+    crc = crc >>> 8 ^ c0[(crc ^ byte) & 255];
+  }
+  return ~crc >>> 0;
+};
+
 // packages/debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
@@ -145,35 +189,7 @@ var validateCapturePosition = (value, session, scope) => {
   }
   return p;
 };
-var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
-  let crc = byte;
-  for (let bit = 0; bit < 8; bit++) {
-    crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
-  }
-  return crc >>> 0;
-});
-var crcSlices = [crcTable];
-for (let slice = 1; slice < 8; slice++) {
-  crcSlices.push(
-    Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
-  );
-}
-var captureCrc32c = (bytes, zeroChecksum = false) => {
-  let crc = 4294967295;
-  let i = 0;
-  for (; i + 8 <= bytes.length; i += 8) {
-    let low = bytes[i] | bytes[i + 1] << 8 | bytes[i + 2] << 16 | bytes[i + 3] << 24;
-    if (zeroChecksum && i === 56) {
-      low = 0;
-    }
-    const a = crc ^ low;
-    crc = crcSlices[7][a & 255] ^ crcSlices[6][a >>> 8 & 255] ^ crcSlices[5][a >>> 16 & 255] ^ crcSlices[4][a >>> 24] ^ crcSlices[3][bytes[i + 4]] ^ crcSlices[2][bytes[i + 5]] ^ crcSlices[1][bytes[i + 6]] ^ crcSlices[0][bytes[i + 7]];
-  }
-  for (; i < bytes.length; i++) {
-    crc = crc >>> 8 ^ crcTable[(crc ^ (zeroChecksum && i >= 56 && i < 60 ? 0 : bytes[i])) & 255];
-  }
-  return (crc ^ 4294967295) >>> 0;
-};
+var captureCrc32c = (bytes, zeroChecksum = false) => crc32cBytes(bytes, zeroChecksum);
 var captureChunkRecords = (chunk) => {
   if (chunk.scope === "snes.65816.instructions") {
     return chunk.instructions;
@@ -765,13 +781,132 @@ var nativePosition = (value, session, scope) => {
   return position;
 };
 
-// packages/disassembler/src/sqlite-store.ts
-var import_node_crypto3 = require("node:crypto");
-var import_node_fs3 = __toESM(require("node:fs"), 1);
-var import_node_path2 = __toESM(require("node:path"), 1);
-var import_node_sqlite2 = require("node:sqlite");
+// packages/disassembler/src/model/project-types.ts
+var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
+var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
+var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/analysis-sources.ts
+// packages/disassembler/src/model/project-labels.ts
+var validateSourceLabelName = (name) => {
+  if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
+    throw new Error(
+      "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+    );
+  }
+};
+
+// packages/disassembler/src/model/trace-detail.ts
+var isArray = (value) => Array.isArray(value);
+var validateRuntimeInstructionDetails = (value, count) => {
+  if (!Array.isArray(value) || value.length !== count) {
+    throw new Error("Trace details must align one-to-one with instruction addresses.");
+  }
+  return value.map((detail) => {
+    if (!detail || !isArray(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)) {
+      throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
+    }
+    if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
+      ([key3, entry]) => !key3 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
+    )) {
+      throw new Error("Trace instruction state contains an invalid register value.");
+    }
+    if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
+      throw new Error("Trace memory loss must be a non-negative safe integer.");
+    }
+    if (detail.memoryAccesses !== void 0 && (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
+      throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
+    }
+    const memoryAccesses = detail.memoryAccesses?.map((access) => {
+      if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isSafeInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
+        throw new Error("Trace contains an invalid bus operation.");
+      }
+      return { ...access };
+    });
+    return {
+      bytes: [...detail.bytes],
+      state: { ...detail.state },
+      ...memoryAccesses === void 0 ? {} : { memoryAccesses },
+      ...detail.droppedMemoryAccesses === void 0 ? {} : { droppedMemoryAccesses: detail.droppedMemoryAccesses }
+    };
+  });
+};
+
+// packages/disassembler/src/model/runtime-ppu-effect.ts
+var normalizeRuntimePPUEffect = (effect, access) => {
+  const port = access.address & 65535;
+  let target = "vram";
+  if (port === 8452) {
+    target = "oam";
+  }
+  if (port === 8482) {
+    target = "cgram";
+  }
+  if (!effect || access.direction !== "write" || access.address & 4194304 || ![8452, 8472, 8473, 8482].includes(port) || effect.target !== target || !["written", "blocked", "latched"].includes(effect.outcome) || typeof effect.forcedBlank !== "boolean" || typeof effect.renderingRestricted !== "boolean" || effect.forcedBlank && effect.renderingRestricted || !["accurate", "performance"].includes(effect.implementation) || (target === "vram" ? ![65536, 131072].includes(effect.vramBytes ?? 0) : effect.vramBytes !== null) || !Array.isArray(effect.bytes) || effect.bytes.length > 2) {
+    throw new Error("Invalid native PPU effect identity or flags.");
+  }
+  const count = effect.bytes.length;
+  if (effect.outcome === "written" && (count === 0 || target === "vram" && count !== 1 || target === "cgram" && count !== 2) || effect.outcome !== "written" && count !== 0 || effect.outcome === "blocked" && (target !== "vram" || !effect.renderingRestricted) || effect.outcome === "latched" && (target === "vram" || effect.renderingRestricted)) {
+    throw new Error("Invalid native PPU outcome or write count.");
+  }
+  let bound = effect.vramBytes ?? 0;
+  if (target === "cgram") {
+    bound = 512;
+  }
+  if (target === "oam") {
+    bound = 544;
+  }
+  const bytes = effect.bytes.map((byte, i) => {
+    if (!byte || !Number.isInteger(byte.address) || byte.address < 0 || byte.address >= bound || !Number.isInteger(byte.value) || byte.value < 0 || byte.value > 255 || target === "vram" && ((byte.address & 1) !== (port & 1) || byte.value !== access.value) || target === "cgram" && (i === 0 ? (byte.address & 1) !== 0 : byte.address !== effect.bytes[0].address + 1 || byte.value !== (access.value & 127)) || target === "oam" && i === count - 1 && byte.value !== access.value) {
+      throw new Error("Invalid native PPU byte destination or value.");
+    }
+    return { address: byte.address, value: byte.value };
+  });
+  return {
+    target: effect.target,
+    outcome: effect.outcome,
+    forcedBlank: effect.forcedBlank,
+    renderingRestricted: effect.renderingRestricted,
+    implementation: effect.implementation,
+    vramBytes: effect.vramBytes,
+    bytes
+  };
+};
+
+// packages/disassembler/src/model/runtime-bus-types.ts
+var validateRuntimeBusFact = (fact) => {
+  if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
+    throw new Error("Invalid bus access coordinates, value, direction or context.");
+  }
+  if (fact.actor === "cpu") {
+    if (fact.channel !== null || fact.phase !== "cpu") {
+      throw new Error("CPU bus accesses require a null channel and CPU phase.");
+    }
+  } else {
+    if (!Number.isInteger(fact.channel) || fact.channel === null || fact.channel < 0 || fact.channel > 7) {
+      throw new Error("DMA/HDMA bus accesses require a channel in [0, 7].");
+    }
+    if (fact.actor === "dma") {
+      if (fact.phase !== "dma") {
+        throw new Error("DMA bus access has an invalid phase.");
+      }
+    } else if (fact.actor === "hdma") {
+      if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase)) {
+        throw new Error("HDMA bus access has an invalid phase.");
+      }
+      if (fact.phase !== "hdma-transfer" && fact.direction !== "read") {
+        throw new Error("HDMA table and indirect phases must be reads.");
+      }
+    } else {
+      throw new Error("Unknown bus access actor.");
+    }
+  }
+  if (fact.ppu !== void 0) {
+    return normalizeRuntimePPUEffect(fact.ppu, fact);
+  }
+  return void 0;
+};
+
+// packages/disassembler/src/analysis/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].sort();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -827,16 +962,44 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/project-labels.ts
-var validateSourceLabelName = (name) => {
-  if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
-    throw new Error(
-      "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
-    );
+// packages/disassembler/src/analysis/project-evidence.ts
+var evidenceReferences = (shards, evidenceId) => [
+  ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
+  ...shards.annotations.filter((record) => record.evidence.includes(evidenceId)).map((record) => `annotations:${record.id}`),
+  ...shards.labels.filter((record) => record.evidence.includes(evidenceId)).map((record) => `labels:${record.id}`),
+  ...shards.comments.filter((record) => record.evidence.includes(evidenceId)).map((record) => `comments:${record.id}`),
+  ...shards.regions.filter((record) => record.evidence.includes(evidenceId)).map((record) => `regions:${record.id}`),
+  ...shards.runtime.filter((record) => record.evidence.includes(evidenceId)).map((record) => `runtime:${record.id}`)
+];
+var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+var explainProjectEvidence = (shards, shard, recordId) => {
+  const records = shards[shard];
+  const record = records.find(({ id }) => id === recordId);
+  if (!record) {
+    throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
   }
+  let evidenceIds = [];
+  if (shard === "evidence") {
+    evidenceIds = [record.id];
+  } else if ("evidence" in record) {
+    evidenceIds = record.evidence;
+  }
+  const evidence = evidenceIds.map((id) => {
+    const found = shards.evidence.find((entry) => entry.id === id);
+    if (!found) {
+      throw new Error(`Analysis record '${recordId}' refers to missing evidence '${id}'.`);
+    }
+    return found;
+  });
+  const referencedBy = sortedUnique(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));
+  const evidenceSet = new Set(evidenceIds);
+  const conflicts = shards.analysis.filter(
+    (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
+  ).sort((left, right) => left.id.localeCompare(right.id));
+  return { shard, record, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/metadata-validation.ts
+// packages/disassembler/src/model/metadata-validation.ts
 var validateEditableMetadataRecord = (shard, record) => {
   if (!record || typeof record.id !== "string" || !/^\w[\w./:-]*$/.test(record.id) || !Array.isArray(record.evidence) || record.evidence.some((id) => typeof id !== "string")) {
     throw new Error("Metadata needs a stable record ID and evidence list.");
@@ -943,12 +1106,7 @@ var validateMetadataReceipt = (receipt) => {
   }
 };
 
-// packages/disassembler/src/project-types.ts
-var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
-var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
-var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
-
-// packages/disassembler/src/record-id-set.ts
+// packages/disassembler/src/internal/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
@@ -1011,170 +1169,7 @@ var RecordIdSet = class {
   }
 };
 
-// packages/disassembler/src/runtime-ppu.ts
-var normalizeRuntimePPUEffect = (effect, access) => {
-  const port = access.address & 65535;
-  let target = "vram";
-  if (port === 8452) {
-    target = "oam";
-  }
-  if (port === 8482) {
-    target = "cgram";
-  }
-  if (!effect || access.direction !== "write" || access.address & 4194304 || ![8452, 8472, 8473, 8482].includes(port) || effect.target !== target || !["written", "blocked", "latched"].includes(effect.outcome) || typeof effect.forcedBlank !== "boolean" || typeof effect.renderingRestricted !== "boolean" || effect.forcedBlank && effect.renderingRestricted || !["accurate", "performance"].includes(effect.implementation) || (target === "vram" ? ![65536, 131072].includes(effect.vramBytes ?? 0) : effect.vramBytes !== null) || !Array.isArray(effect.bytes) || effect.bytes.length > 2) {
-    throw new Error("Invalid native PPU effect identity or flags.");
-  }
-  const count = effect.bytes.length;
-  if (effect.outcome === "written" && (count === 0 || target === "vram" && count !== 1 || target === "cgram" && count !== 2) || effect.outcome !== "written" && count !== 0 || effect.outcome === "blocked" && (target !== "vram" || !effect.renderingRestricted) || effect.outcome === "latched" && (target === "vram" || effect.renderingRestricted)) {
-    throw new Error("Invalid native PPU outcome or write count.");
-  }
-  let bound = effect.vramBytes ?? 0;
-  if (target === "cgram") {
-    bound = 512;
-  }
-  if (target === "oam") {
-    bound = 544;
-  }
-  const bytes = effect.bytes.map((byte, i) => {
-    if (!byte || !Number.isInteger(byte.address) || byte.address < 0 || byte.address >= bound || !Number.isInteger(byte.value) || byte.value < 0 || byte.value > 255 || target === "vram" && ((byte.address & 1) !== (port & 1) || byte.value !== access.value) || target === "cgram" && (i === 0 ? (byte.address & 1) !== 0 : byte.address !== effect.bytes[0].address + 1 || byte.value !== (access.value & 127)) || target === "oam" && i === count - 1 && byte.value !== access.value) {
-      throw new Error("Invalid native PPU byte destination or value.");
-    }
-    return { address: byte.address, value: byte.value };
-  });
-  return {
-    target: effect.target,
-    outcome: effect.outcome,
-    forcedBlank: effect.forcedBlank,
-    renderingRestricted: effect.renderingRestricted,
-    implementation: effect.implementation,
-    vramBytes: effect.vramBytes,
-    bytes
-  };
-};
-var createRuntimePPUAccumulator = () => {
-  let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;
-  const writes = [];
-  return {
-    push: (access) => {
-      if (!access.ppu) {
-        return;
-      }
-      const effect = access.ppu;
-      portWrites++;
-      if (effect.outcome === "written") {
-        written++;
-      }
-      if (effect.outcome === "blocked") {
-        blocked++;
-      }
-      if (effect.outcome === "latched") {
-        latched++;
-      }
-      if (!Number.isSafeInteger(byteWrites + effect.bytes.length)) {
-        throw new Error("PPU byte count exceeds safe integer range.");
-      }
-      byteWrites += effect.bytes.length;
-      if (effect.renderingRestricted) {
-        renderingRestricted++;
-      }
-      if (writes.length < 64) {
-        writes.push({
-          sequence: access.sequence,
-          actor: access.actor,
-          channel: access.channel,
-          port: access.address & 65535,
-          ppu: {
-            ...normalizeRuntimePPUEffect(effect, access),
-            hcounter: effect.hcounter,
-            vcounter: effect.vcounter
-          }
-        });
-      }
-    },
-    finish: () => ({
-      portWrites,
-      written,
-      blocked,
-      latched,
-      byteWrites,
-      renderingRestricted,
-      omittedWrites: portWrites - writes.length,
-      writes
-    })
-  };
-};
-
-// packages/disassembler/src/runtime-bus-types.ts
-var validateRuntimeBusFact = (fact) => {
-  if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
-    throw new Error("Invalid bus access coordinates, value, direction or context.");
-  }
-  if (fact.actor === "cpu") {
-    if (fact.channel !== null || fact.phase !== "cpu") {
-      throw new Error("CPU bus accesses require a null channel and CPU phase.");
-    }
-  } else {
-    if (!Number.isInteger(fact.channel) || fact.channel === null || fact.channel < 0 || fact.channel > 7) {
-      throw new Error("DMA/HDMA bus accesses require a channel in [0, 7].");
-    }
-    if (fact.actor === "dma") {
-      if (fact.phase !== "dma") {
-        throw new Error("DMA bus access has an invalid phase.");
-      }
-    } else if (fact.actor === "hdma") {
-      if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase)) {
-        throw new Error("HDMA bus access has an invalid phase.");
-      }
-      if (fact.phase !== "hdma-transfer" && fact.direction !== "read") {
-        throw new Error("HDMA table and indirect phases must be reads.");
-      }
-    } else {
-      throw new Error("Unknown bus access actor.");
-    }
-  }
-  if (fact.ppu !== void 0) {
-    return normalizeRuntimePPUEffect(fact.ppu, fact);
-  }
-  return void 0;
-};
-
-// packages/disassembler/src/trace-detail.ts
-var isArray = (value) => Array.isArray(value);
-var validateRuntimeInstructionDetails = (value, count) => {
-  if (!Array.isArray(value) || value.length !== count) {
-    throw new Error("Trace details must align one-to-one with instruction addresses.");
-  }
-  return value.map((detail) => {
-    if (!detail || !isArray(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)) {
-      throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
-    }
-    if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
-      ([key3, entry]) => !key3 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-    )) {
-      throw new Error("Trace instruction state contains an invalid register value.");
-    }
-    if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
-      throw new Error("Trace memory loss must be a non-negative safe integer.");
-    }
-    if (detail.memoryAccesses !== void 0 && (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
-      throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
-    }
-    const memoryAccesses = detail.memoryAccesses?.map((access) => {
-      if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isSafeInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
-        throw new Error("Trace contains an invalid bus operation.");
-      }
-      return { ...access };
-    });
-    return {
-      bytes: [...detail.bytes],
-      state: { ...detail.state },
-      ...memoryAccesses === void 0 ? {} : { memoryAccesses },
-      ...detail.droppedMemoryAccesses === void 0 ? {} : { droppedMemoryAccesses: detail.droppedMemoryAccesses }
-    };
-  });
-};
-
-// packages/disassembler/src/project-validation.ts
+// packages/disassembler/src/model/project-validation.ts
 var validateAnalysisProjectManifest = (manifest) => {
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
@@ -1619,49 +1614,12 @@ var validateLoadedShards = (shards, project) => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/metadata-edit.ts
+// packages/disassembler/src/edits/metadata-edit.ts
 var manuallyOwnedMetadata = (shards) => new Set(
   shards.analysis.filter((record) => record.kind === "metadata-edit").flatMap((receipt) => receipt.changes.map((change) => `${change.shard}:${change.id}`))
 );
 
-// packages/disassembler/src/project-edit.ts
-var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
-var evidenceReferences = (shards, evidenceId) => [
-  ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
-  ...shards.annotations.filter((record) => record.evidence.includes(evidenceId)).map((record) => `annotations:${record.id}`),
-  ...shards.labels.filter((record) => record.evidence.includes(evidenceId)).map((record) => `labels:${record.id}`),
-  ...shards.comments.filter((record) => record.evidence.includes(evidenceId)).map((record) => `comments:${record.id}`),
-  ...shards.regions.filter((record) => record.evidence.includes(evidenceId)).map((record) => `regions:${record.id}`),
-  ...shards.runtime.filter((record) => record.evidence.includes(evidenceId)).map((record) => `runtime:${record.id}`)
-];
-var explainProjectEvidence = (shards, shard, recordId) => {
-  const records = shards[shard];
-  const record = records.find(({ id }) => id === recordId);
-  if (!record) {
-    throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
-  }
-  let evidenceIds = [];
-  if (shard === "evidence") {
-    evidenceIds = [record.id];
-  } else if ("evidence" in record) {
-    evidenceIds = record.evidence;
-  }
-  const evidence = evidenceIds.map((id) => {
-    const found = shards.evidence.find((entry) => entry.id === id);
-    if (!found) {
-      throw new Error(`Analysis record '${recordId}' refers to missing evidence '${id}'.`);
-    }
-    return found;
-  });
-  const referencedBy = sortedUnique(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));
-  const evidenceSet = new Set(evidenceIds);
-  const conflicts = shards.analysis.filter(
-    (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
-  ).sort((left, right) => left.id.localeCompare(right.id));
-  return { shard, record, evidence, referencedBy, conflicts };
-};
-
-// packages/disassembler/src/runtime-evidence.ts
+// packages/disassembler/src/runtime/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1914,11 +1872,946 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/sqlite-payload.ts
+// packages/disassembler/src/runtime/runtime-bus-trace.ts
+var import_node_crypto = require("node:crypto");
+
+// packages/disassembler/src/internal/trace-cache.ts
+var TraceCache = class {
+  #entries = /* @__PURE__ */ new Map();
+  /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
+  #keys = [];
+  #metrics;
+  #random = 2654435769;
+  constructor(metrics) {
+    this.#metrics = metrics;
+  }
+  /** Look up a value. Undefined is reserved for misses.
+   * @param {string} key Complete semantic key, never a lossy coordinate projection.
+   * @returns {T | undefined} Retained value, or a cache miss.
+   */
+  get(key3) {
+    const value = this.#entries.get(key3);
+    if (this.#metrics) {
+      if (value === void 0) {
+        this.#metrics.misses++;
+      } else {
+        this.#metrics.hits++;
+      }
+    }
+    return value;
+  }
+  /** Insert a missing key, returning the displaced entry so its owner can flush it.
+   * Existing keys must be updated through their caller-owned mutable value instead.
+   * @param {string} key Previously missing semantic key.
+   * @param {T} value Defined value whose ownership stays with the caller.
+   * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
+   */
+  insert(key3, value) {
+    let displaced;
+    if (this.#keys.length === 4096) {
+      let random = this.#random;
+      random ^= random << 13;
+      random ^= random >>> 17;
+      random ^= random << 5;
+      this.#random = random;
+      const slot = random & 4095;
+      const victim = this.#keys[slot];
+      displaced = { key: victim, value: this.#entries.get(victim) };
+      this.#entries.delete(victim);
+      this.#keys[slot] = key3;
+      if (this.#metrics) {
+        this.#metrics.evictions++;
+      }
+    } else {
+      this.#keys.push(key3);
+      if (this.#metrics) {
+        this.#metrics.peakEntries = Math.max(this.#metrics.peakEntries, this.#keys.length);
+      }
+    }
+    this.#entries.set(key3, value);
+    return displaced;
+  }
+  /** Iterate the retained working set, for a final durable delta flush.
+   * @returns {MapIterator} Live entries. Do not insert while iterating.
+   */
+  entries() {
+    return this.#entries.entries();
+  }
+  /** Drop retained values after a flush or failed import. Diagnostics remain cumulative. */
+  clear() {
+    this.#entries.clear();
+    this.#keys.length = 0;
+    this.#random = 2654435769;
+  }
+};
+
+// packages/disassembler/src/runtime/runtime-graphics.ts
+var mapVram = (address, mapping) => {
+  if (mapping === 0) {
+    return address;
+  }
+  const bits = mapping + 4;
+  const lowMask = (1 << bits) - 1;
+  const blockMask = (1 << bits + 3) - 1;
+  return address & ~blockMask | (address & lowMask) << 3 | address >> bits & 7;
+};
+var createRuntimeGraphicsAccumulator = () => {
+  let forcedBlank = null;
+  let vmain = null;
+  let vramAddress = 0;
+  let vramKnown = 0;
+  let cgramAddress = null;
+  let cgramHigh = null;
+  let cgramLatch = {
+    value: null,
+    sourceSequence: null
+  };
+  let oamBase = 0;
+  let oamKnown = 1;
+  let oamAddress = null;
+  let oamLatch = {
+    value: null,
+    sourceSequence: null
+  };
+  const activity = /* @__PURE__ */ new Map();
+  const writes = [];
+  let omittedWrites = 0;
+  const advanceVram = (byte) => {
+    if (vmain === null) {
+      vramKnown = 0;
+    } else if (byte === vmain >> 7) {
+      if (vramKnown === 65535) {
+        vramAddress = vramAddress + [1, 32, 128, 128][vmain & 3] & 65535;
+      } else {
+        vramKnown = 0;
+      }
+    }
+  };
+  const advanceCgram = () => {
+    if (cgramHigh === null) {
+      cgramAddress = null;
+    } else {
+      if (cgramHigh && cgramAddress !== null) {
+        cgramAddress = cgramAddress + 1 & 255;
+      }
+      cgramHigh = !cgramHigh;
+    }
+  };
+  const record = (write) => {
+    const key3 = `${write.actor}:${write.channel}:${write.target}`;
+    let group = activity.get(key3);
+    if (!group) {
+      group = {
+        actor: write.actor,
+        channel: write.channel,
+        target: write.target,
+        portWrites: 0,
+        addressed: 0,
+        latched: 0,
+        unknown: 0,
+        byteTargets: 0,
+        knownValueTargets: 0
+      };
+      activity.set(key3, group);
+    }
+    group.portWrites++;
+    group[write.status]++;
+    group.byteTargets += write.bytes.length;
+    group.knownValueTargets += write.bytes.filter((byte) => byte.value !== null).length;
+    if (!Number.isSafeInteger(group.byteTargets)) {
+      throw new Error("Graphics byte count exceeds the safe range.");
+    }
+    if (writes.length < 64) {
+      writes.push(write);
+    } else {
+      omittedWrites++;
+    }
+  };
+  const push = (access) => {
+    if ((access.address & 4194304) !== 0) {
+      return;
+    }
+    const port = access.address & 65535;
+    if (port < 8448 || port > 8511) {
+      return;
+    }
+    const { value } = access;
+    if (access.direction === "read") {
+      if (port === 8505 || port === 8506) {
+        advanceVram(port - 8505);
+      } else if (port === 8507) {
+        advanceCgram();
+      } else if (port === 8504 && oamAddress !== null) {
+        oamAddress = oamAddress + 1 & 1023;
+      }
+      return;
+    }
+    switch (port) {
+      case 8448:
+        forcedBlank = (value & 128) !== 0;
+        oamAddress = null;
+        return;
+      case 8450:
+      case 8451:
+        if (port === 8450) {
+          oamBase = oamBase & 512 | value << 1;
+          oamKnown |= 510;
+        } else {
+          oamBase = oamBase & 511 | (value & 1) << 9;
+          oamKnown |= 512;
+        }
+        oamAddress = forcedBlank === true && oamKnown === 1023 ? oamBase : null;
+        return;
+      case 8469:
+        vmain = value;
+        return;
+      case 8470:
+        vramAddress = vramAddress & 65280 | value;
+        vramKnown |= 255;
+        return;
+      case 8471:
+        vramAddress = vramAddress & 255 | value << 8;
+        vramKnown |= 65280;
+        return;
+      case 8481:
+        cgramAddress = value;
+        cgramHigh = false;
+        return;
+    }
+    if (port !== 8472 && port !== 8473 && port !== 8482 && port !== 8452) {
+      return;
+    }
+    const data = { value, sourceSequence: access.sequence };
+    const base = {
+      sequence: access.sequence,
+      actor: access.actor,
+      channel: access.channel,
+      port,
+      value,
+      forcedBlank
+    };
+    if (port === 8472 || port === 8473) {
+      const byte = port - 8472;
+      if (vmain !== null && vramKnown === 65535) {
+        const address = mapVram(vramAddress, vmain >> 2 & 3) * 2 + byte;
+        record({ ...base, target: "vram", status: "addressed", bytes: [{ address, ...data }] });
+      } else {
+        record({
+          ...base,
+          target: "vram",
+          status: "unknown",
+          reason: "missing-vram-registers",
+          bytes: []
+        });
+      }
+      advanceVram(byte);
+    } else if (port === 8482) {
+      if (cgramHigh === false) {
+        cgramLatch = data;
+        record({ ...base, target: "cgram", status: "latched", bytes: [] });
+      } else if (cgramHigh === true && cgramAddress !== null) {
+        record({
+          ...base,
+          target: "cgram",
+          status: "addressed",
+          bytes: [
+            { address: cgramAddress * 2, ...cgramLatch },
+            { address: cgramAddress * 2 + 1, ...data, value: value & 127 }
+          ]
+        });
+      } else {
+        cgramLatch = { value: null, sourceSequence: null };
+        record({
+          ...base,
+          target: "cgram",
+          status: "unknown",
+          reason: "missing-cgram-state",
+          bytes: []
+        });
+      }
+      advanceCgram();
+    } else if (oamAddress === null) {
+      oamLatch = { value: null, sourceSequence: null };
+      record({ ...base, target: "oam", status: "unknown", reason: "missing-oam-state", bytes: [] });
+    } else {
+      const address = oamAddress;
+      oamAddress = address + 1 & 1023;
+      if ((address & 1) === 0) {
+        oamLatch = data;
+      }
+      if (address & 512) {
+        record({
+          ...base,
+          target: "oam",
+          status: "addressed",
+          bytes: [{ address: 512 | address & 31, ...data }]
+        });
+      } else if (address & 1) {
+        record({
+          ...base,
+          target: "oam",
+          status: "addressed",
+          bytes: [
+            { address: address - 1, ...oamLatch },
+            { address, ...data }
+          ]
+        });
+      } else {
+        record({ ...base, target: "oam", status: "latched", bytes: [] });
+      }
+    }
+  };
+  return {
+    push,
+    finish: () => ({
+      model: "snes-ppu-ports-v1",
+      activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, group]) => group),
+      writes,
+      omittedWrites
+    })
+  };
+};
+
+// packages/disassembler/src/runtime/runtime-ppu.ts
+var createRuntimePPUAccumulator = () => {
+  let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;
+  const writes = [];
+  return {
+    push: (access) => {
+      if (!access.ppu) {
+        return;
+      }
+      const effect = access.ppu;
+      portWrites++;
+      if (effect.outcome === "written") {
+        written++;
+      }
+      if (effect.outcome === "blocked") {
+        blocked++;
+      }
+      if (effect.outcome === "latched") {
+        latched++;
+      }
+      if (!Number.isSafeInteger(byteWrites + effect.bytes.length)) {
+        throw new Error("PPU byte count exceeds safe integer range.");
+      }
+      byteWrites += effect.bytes.length;
+      if (effect.renderingRestricted) {
+        renderingRestricted++;
+      }
+      if (writes.length < 64) {
+        writes.push({
+          sequence: access.sequence,
+          actor: access.actor,
+          channel: access.channel,
+          port: access.address & 65535,
+          ppu: {
+            ...normalizeRuntimePPUEffect(effect, access),
+            hcounter: effect.hcounter,
+            vcounter: effect.vcounter
+          }
+        });
+      }
+    },
+    finish: () => ({
+      portWrites,
+      written,
+      blocked,
+      latched,
+      byteWrites,
+      renderingRestricted,
+      omittedWrites: portWrites - writes.length,
+      writes
+    })
+  };
+};
+
+// packages/disassembler/src/runtime/runtime-transfer.ts
+var validateRuntimeTransferBoundary = (marker) => {
+  const { configuration: c } = marker;
+  if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
+    throw new Error("Invalid transfer boundary attribution or count.");
+  }
+  for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"]) {
+    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255) {
+      throw new Error("Invalid transfer byte register.");
+    }
+  }
+  for (const field of ["a1t", "das", "a2a"]) {
+    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535) {
+      throw new Error("Invalid transfer word register.");
+    }
+  }
+  if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15) {
+    throw new Error("Invalid transfer channel flags.");
+  }
+  if (marker.boundary === "begin") {
+    if (marker.transferId !== marker.sequence || marker.transferred !== 0) {
+      throw new Error("Invalid transfer begin identity.");
+    }
+  } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1) {
+    throw new Error("Invalid transfer end identity.");
+  }
+  if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4)) {
+    throw new Error("Invalid HDMA payload-burst boundary.");
+  }
+  return {
+    kind: "transfer",
+    sequence: marker.sequence,
+    ordinal: marker.ordinal,
+    cycle: marker.cycle,
+    transferId: marker.transferId,
+    pc: marker.pc,
+    boundary: marker.boundary,
+    actor: marker.actor,
+    channel: marker.channel,
+    context: marker.context,
+    hcounter: marker.hcounter,
+    vcounter: marker.vcounter,
+    transferred: marker.transferred,
+    configuration: {
+      dmap: c.dmap,
+      bbad: c.bbad,
+      a1t: c.a1t,
+      a1b: c.a1b,
+      das: c.das,
+      dasb: c.dasb,
+      a2a: c.a2a,
+      ntlr: c.ntlr,
+      flags: c.flags
+    }
+  };
+};
+var createRuntimeTransferAccumulator = () => {
+  const open2 = /* @__PURE__ */ new Map();
+  const activity = /* @__PURE__ */ new Map();
+  const windows = [];
+  let omittedWindows = 0;
+  const retain = (window) => {
+    const key3 = `${window.actor}:${window.channel}`;
+    let group = activity.get(key3);
+    if (!group) {
+      group = {
+        actor: window.actor,
+        channel: window.channel,
+        complete: 0,
+        interrupted: 0,
+        leadingPartial: 0,
+        trailingPartial: 0,
+        bothPartial: 0,
+        attemptedSlots: 0,
+        reads: 0,
+        writes: 0
+      };
+      activity.set(key3, group);
+    }
+    const fields = {
+      complete: "complete",
+      interrupted: "interrupted",
+      "leading-partial": "leadingPartial",
+      "trailing-partial": "trailingPartial",
+      "both-partial": "bothPartial"
+    };
+    group[fields[window.status]]++;
+    group.reads += window.reads;
+    group.writes += window.writes;
+    if (window.begin && window.end) {
+      group.attemptedSlots += window.end.transferred;
+    }
+    if (!Number.isSafeInteger(group.attemptedSlots)) {
+      throw new Error("Transfer slot total exceeds the safe integer range.");
+    }
+    if (windows.length < 64) {
+      windows.push(window);
+    } else {
+      omittedWindows++;
+    }
+  };
+  return {
+    /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
+     * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
+     */
+    push: (event) => {
+      if (event.actor === "cpu") {
+        return;
+      }
+      const marker = "kind" in event;
+      if (!marker && event.phase !== "dma" && event.phase !== "hdma-transfer") {
+        return;
+      }
+      const key3 = `${event.actor}:${event.channel}`;
+      let current = open2.get(key3);
+      if (marker && event.boundary === "begin") {
+        if (current) {
+          throw new Error("Transfer began before the previous channel window ended.");
+        }
+        open2.set(key3, {
+          actor: event.actor,
+          channel: event.channel,
+          begin: event,
+          reads: 0,
+          writes: 0
+        });
+        return;
+      }
+      if (!current) {
+        current = { actor: event.actor, channel: event.channel, reads: 0, writes: 0 };
+        open2.set(key3, current);
+      }
+      if (!marker) {
+        if (event.direction === "read") {
+          current.reads++;
+        } else {
+          current.writes++;
+        }
+        const maximum = event.actor === "dma" ? 65536 : 4;
+        if (current.reads > maximum || current.writes > maximum) {
+          throw new Error("Transfer window exceeds the native payload bound.");
+        }
+        return;
+      }
+      const expectedId = current.begin?.transferId ?? "0";
+      if (event.transferId !== expectedId) {
+        throw new Error("Transfer end does not match its observed begin.");
+      }
+      if (current.reads > event.transferred || current.writes > event.transferred) {
+        throw new Error("Transfer contains more observed accesses than attempted byte slots.");
+      }
+      if (current.begin) {
+        if (current.reads + current.writes < event.transferred) {
+          throw new Error("Transfer is missing bus accesses inside its observed boundaries.");
+        }
+        const configuration = current.begin.configuration;
+        let expected = configuration.das || 65536;
+        if (event.actor === "hdma") {
+          expected = [1, 2, 2, 4, 4, 4, 2, 4][configuration.dmap & 7];
+        }
+        if (event.boundary === "complete" && event.transferred !== expected || event.transferred > expected) {
+          throw new Error("Transfer completion disagrees with its starting configuration.");
+        }
+      }
+      let status = "leading-partial";
+      if (current.begin) {
+        status = event.boundary === "complete" ? "complete" : "interrupted";
+      }
+      retain({ ...current, end: event, status });
+      open2.delete(key3);
+    },
+    /** Close remaining windows without claiming completion or an attempted slot count.
+     * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
+     */
+    finish: () => {
+      for (const current of open2.values()) {
+        retain({ ...current, status: current.begin ? "trailing-partial" : "both-partial" });
+      }
+      open2.clear();
+      return {
+        activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
+        windows,
+        omittedWindows
+      };
+    }
+  };
+};
+
+// packages/disassembler/src/runtime/runtime-bus-trace.ts
+var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
+var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
+var unsigned = (value) => {
+  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value)) {
+    throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
+  }
+  if (value.length <= 15) {
+    return Number(value);
+  }
+  const number = BigInt(value);
+  if (number > 0xffffffffffffffffn) {
+    throw new Error("Bus trace integer exceeds u64.");
+  }
+  if (number <= BigInt(Number.MAX_SAFE_INTEGER)) {
+    return Number(number);
+  }
+  return number;
+};
+var validateRuntimeBusTraceMetadata = (value) => {
+  const meta = value;
+  if (!meta || meta.format !== RUNTIME_BUS_TRACE_FORMAT || meta.schemaVersion !== 1 || meta.scope !== "snes.cpu-bus" && meta.scope !== "snes.cpu-bus-transfers" && meta.scope !== "snes.cpu-bus-ppu" || meta.architecture !== "snes.65816" || meta.addressSpace !== "snes.cpu" || typeof meta.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(meta.romContentSha256) || typeof meta.session !== "string" || !/^[\da-f]{32}$/.test(meta.session) || typeof meta.producer?.id !== "string" || !meta.producer.id || typeof meta.producer?.revision !== "string" || !meta.producer.revision || meta.clock?.id !== "snes.master") {
+    throw new Error("Invalid SNES bus trace metadata.");
+  }
+  if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0) {
+    throw new Error("Bus trace clock frequency must be positive.");
+  }
+  return {
+    format: RUNTIME_BUS_TRACE_FORMAT,
+    schemaVersion: 1,
+    scope: meta.scope,
+    architecture: "snes.65816",
+    addressSpace: "snes.cpu",
+    romContentSha256: meta.romContentSha256,
+    producer: { id: meta.producer.id, revision: meta.producer.revision },
+    session: meta.session,
+    clock: {
+      id: "snes.master",
+      numerator: meta.clock.numerator,
+      denominator: meta.clock.denominator
+    }
+  };
+};
+var createRuntimeBusTraceImporter = (metadata, context, storage) => {
+  const meta = validateRuntimeBusTraceMetadata(metadata);
+  if (meta.romContentSha256 !== context.projectRomContentSha256) {
+    throw new Error("ROM/project mismatch: bus capture does not match the destination ROM.");
+  }
+  if (typeof context.sourceName !== "string" || !context.sourceName) {
+    throw new Error("Bus capture source name must not be empty.");
+  }
+  const limit = context.maxIndexRecords ?? 2e6;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 8e6) {
+    throw new Error("Bus trace fact budget must be in [1, 8000000].");
+  }
+  const memory = /* @__PURE__ */ new Map();
+  const index = storage?.index ?? {
+    add: (key3, create) => {
+      const current = memory.get(key3);
+      if (current) {
+        current.count++;
+        return false;
+      }
+      memory.set(key3, { fact: create(), count: 1 });
+      return true;
+    },
+    values: () => memory.values(),
+    clear: () => memory.clear()
+  };
+  const hash = (0, import_node_crypto.createHash)("sha256").update(`uttori-bus-index-v1
+${JSON.stringify(meta)}
+`);
+  const factKeys = new TraceCache(context.cacheMetrics?.facts);
+  const activity = /* @__PURE__ */ new Map();
+  const contexts = {
+    unattributed: 0,
+    instruction: 0,
+    interrupt: 0,
+    wait: 0,
+    stop: 0
+  };
+  const transfers = meta.scope !== "snes.cpu-bus" ? createRuntimeTransferAccumulator() : void 0;
+  const graphics = createRuntimeGraphicsAccumulator();
+  const ppu = meta.scope === "snes.cpu-bus-ppu" ? createRuntimePPUAccumulator() : void 0;
+  let streamEvents = 0;
+  let markerEvents = 0;
+  let observed = 0;
+  let facts = 0;
+  let previousCycle = 0;
+  let firstCycle = null;
+  let lastOrdinal = 0;
+  let lastPc = 0;
+  let finished = false;
+  let failed = false;
+  const push = (chunk) => {
+    if (finished || failed) {
+      throw new Error("Bus trace importer is no longer writable.");
+    }
+    try {
+      const accesses = chunk?.accesses;
+      if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095) {
+        throw new Error("Bus trace chunks require 1\u20134095 accesses.");
+      }
+      const hashLines = [];
+      for (const item of accesses) {
+        if (!item || typeof item !== "object") {
+          throw new Error("Invalid bus trace event.");
+        }
+        const access = item;
+        const sequence = unsigned(access.sequence);
+        const ordinal = unsigned(access.ordinal);
+        const cycle = unsigned(access.cycle);
+        if (streamEvents === Number.MAX_SAFE_INTEGER || sequence !== streamEvents + 1) {
+          throw new Error(
+            "Bus trace event sequence is not contiguous or exceeds the safe count range."
+          );
+        }
+        if (cycle < previousCycle) {
+          throw new Error("Bus trace master clock moved backwards.");
+        }
+        const hasOwner = ordinal > 0;
+        if (hasOwner !== (access.context === "instruction")) {
+          throw new Error("Bus trace instruction context and ordinal disagree.");
+        }
+        if (ordinal > 0 && (ordinal < lastOrdinal || ordinal === lastOrdinal && access.pc !== lastPc)) {
+          throw new Error("Bus trace instruction ownership moved backwards or changed PC.");
+        }
+        if (!Number.isInteger(access.hcounter) || access.hcounter < 0 || access.hcounter >= 1368 || !Number.isInteger(access.vcounter) || access.vcounter < 0 || access.vcounter >= 313) {
+          throw new Error("Bus trace raster position is out of range.");
+        }
+        previousCycle = cycle;
+        firstCycle ??= access.cycle;
+        if (ordinal > 0) {
+          lastOrdinal = ordinal;
+          lastPc = access.pc;
+        }
+        streamEvents++;
+        if ("kind" in access) {
+          if (!transfers || access.kind !== "transfer") {
+            throw new Error("Transfer markers require the negotiated transfer scope.");
+          }
+          const marker = validateRuntimeTransferBoundary(access);
+          transfers.push(marker);
+          markerEvents++;
+          hashLines.push(JSON.stringify(marker) + "\n");
+          continue;
+        }
+        const port = access.address & 65535;
+        const dataPort = access.direction === "write" && !(access.address & 4194304) && [8452, 8472, 8473, 8482].includes(port);
+        if (access.ppu !== void 0 !== Boolean(ppu && dataPort)) {
+          throw new Error("Missing or out-of-scope native PPU effect.");
+        }
+        const effect = access.ppu;
+        if (access.ppu && (!Number.isInteger(access.ppu.hcounter) || access.ppu.hcounter < 0 || access.ppu.hcounter >= 1368 || !Number.isInteger(access.ppu.vcounter) || access.ppu.vcounter < 0 || access.ppu.vcounter >= 313)) {
+          throw new Error("Invalid PPU decision raster.");
+        }
+        const fact = {
+          // Presence is not truthiness: null/false/zero annotations must reach
+          // validation and fail, rather than masquerade as an omitted effect.
+          ...effect !== void 0 ? { ppu: effect } : {},
+          addressSpace: meta.addressSpace,
+          address: access.address,
+          pc: access.pc,
+          value: access.value,
+          direction: access.direction,
+          actor: access.actor,
+          channel: access.channel,
+          phase: access.phase,
+          context: access.context
+        };
+        const normalizedEffect = validateRuntimeBusFact(fact);
+        if (normalizedEffect) {
+          fact.ppu = normalizedEffect;
+        }
+        transfers?.push(access);
+        if (ppu) {
+          ppu.push(access);
+        } else {
+          graphics.push(access);
+        }
+        const factJson = JSON.stringify(fact);
+        let key3 = factKeys.get(factJson);
+        if (key3 === void 0) {
+          key3 = (0, import_node_crypto.createHash)("sha256").update(factJson).digest("hex");
+          factKeys.insert(factJson, key3);
+        }
+        if (index.add(key3, () => ({
+          kind: "memory",
+          record: {
+            ...fact,
+            id: key3,
+            kind: "runtime-bus-access",
+            architecture: meta.architecture,
+            count: 1,
+            evidence: []
+          }
+        }))) {
+          facts++;
+          if (facts > limit) {
+            throw new Error(`Bus trace exceeds the ${limit} distinct-fact budget.`);
+          }
+        }
+        let line = `["${access.sequence}","${access.ordinal}","${access.cycle}",${factJson},${access.hcounter},${access.vcounter}`;
+        if (access.ppu) {
+          line += `,${access.ppu.hcounter},${access.ppu.vcounter}`;
+        }
+        hashLines.push(line + "]\n");
+        observed++;
+        contexts[access.context]++;
+        const groupKey = `${access.actor}:${access.channel}:${access.phase}`;
+        let group = activity.get(groupKey);
+        if (!group) {
+          group = {
+            actor: access.actor,
+            channel: access.channel,
+            phase: access.phase,
+            reads: 0,
+            writes: 0,
+            unowned: 0,
+            firstSequence: access.sequence,
+            lastSequence: access.sequence,
+            firstCycle: access.cycle,
+            lastCycle: access.cycle
+          };
+          activity.set(groupKey, group);
+        }
+        if (access.direction === "read") {
+          group.reads++;
+        } else {
+          group.writes++;
+        }
+        if (ordinal === 0) {
+          group.unowned++;
+        }
+        group.lastSequence = access.sequence;
+        group.lastCycle = access.cycle;
+      }
+      hash.update(hashLines.join(""));
+      if (context.onProgress) {
+        const summary = ppu?.finish();
+        const counts = summary ? {
+          portWrites: summary.portWrites,
+          written: summary.written,
+          blocked: summary.blocked,
+          latched: summary.latched,
+          byteWrites: summary.byteWrites,
+          renderingRestricted: summary.renderingRestricted,
+          omittedWrites: summary.omittedWrites
+        } : void 0;
+        context.onProgress({
+          streamEvents,
+          busEvents: observed,
+          distinctFacts: facts,
+          transferMarkers: markerEvents,
+          firstCycle,
+          lastCycle: firstCycle === null ? null : String(previousCycle),
+          ...counts ? { ppu: counts } : {},
+          activity: [...activity.values()].map((group) => ({ ...group }))
+        });
+      }
+    } catch (error) {
+      failed = true;
+      index.clear();
+      throw error;
+    }
+  };
+  const finish = () => {
+    if (finished || failed) {
+      throw new Error("Bus trace importer cannot be finalized again or after failure.");
+    }
+    finished = true;
+    try {
+      const sourceSha256 = hash.digest("hex");
+      storage?.onSource?.(sourceSha256, RUNTIME_BUS_INDEX_PROFILE);
+      const evidenceId = `evidence:bus-trace:${sourceSha256}`;
+      const runtime = [];
+      for (const { fact, count } of index.values()) {
+        if (fact.kind !== "memory" || fact.record.kind !== "runtime-bus-access") {
+          throw new Error("Bus trace index contains an unexpected fact kind.");
+        }
+        const record = {
+          ...fact.record,
+          id: `runtime:bus-trace:${sourceSha256}:${fact.record.id}`,
+          count,
+          evidence: [evidenceId]
+        };
+        if (storage?.onRecord) {
+          storage.onRecord(record);
+        } else {
+          runtime.push(record);
+        }
+      }
+      const transferSummary = transfers?.finish();
+      const graphicsSummary = graphics.finish();
+      const ppuSummary = ppu?.finish();
+      const transferCounts = {};
+      if (ppuSummary) {
+        for (const key3 of [
+          "portWrites",
+          "written",
+          "blocked",
+          "latched",
+          "byteWrites",
+          "renderingRestricted"
+        ]) {
+          transferCounts[`ppu.${key3}`] = ppuSummary[key3];
+        }
+      }
+      if (transferSummary) {
+        transferCounts.streamEvents = streamEvents;
+        transferCounts.transferMarkers = markerEvents;
+        for (const group of transferSummary.activity) {
+          for (const field of [
+            "complete",
+            "interrupted",
+            "leadingPartial",
+            "trailingPartial",
+            "bothPartial",
+            "attemptedSlots",
+            "reads",
+            "writes"
+          ]) {
+            transferCounts[`${group.actor}${group.channel}.${field}`] = group[field];
+          }
+        }
+      }
+      const report = {
+        id: `import:bus-trace:${sourceSha256}`,
+        format: RUNTIME_BUS_TRACE_FORMAT,
+        indexProfile: RUNTIME_BUS_INDEX_PROFILE,
+        sourceName: context.sourceName,
+        sourceSha256,
+        sourceVersion: `v1@${meta.producer.id}:${meta.producer.revision}`,
+        imported: {
+          ...transferCounts,
+          busEvents: observed,
+          busRecords: facts,
+          unownedEvents: observed - contexts.instruction
+        },
+        unsupported: [],
+        warnings: [
+          "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
+          transfers ? "Transfer totals use explicit native boundaries. Partial windows stay explicit. Full configuration and ordered history require the capture archive." : "Activity counts describe observed bus accesses. Transfer boundaries, register setup and source instructions are not inferred."
+        ]
+      };
+      return {
+        report,
+        sourceSha256,
+        observedEvents: observed,
+        droppedEvents: 0,
+        summary: {
+          ...transferSummary ? { transfers: transferSummary } : {},
+          ...ppuSummary ? { ppu: ppuSummary } : {},
+          ...graphicsSummary.activity.length ? { graphics: graphicsSummary } : {},
+          clock: meta.clock,
+          firstCycle,
+          lastCycle: firstCycle === null ? null : String(previousCycle),
+          contexts,
+          activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
+        },
+        batch: {
+          ...storage?.onRecord ? {} : { runtime: runtime.sort((a, b) => a.id.localeCompare(b.id)) },
+          evidence: [
+            {
+              id: evidenceId,
+              source: "runtime",
+              sourceId: `${meta.producer.id}:${meta.producer.revision}`,
+              confidence: "certain",
+              detail: `${observed} lossless bus accesses. ${observed - contexts.instruction} without an owning instruction.`,
+              artifact: {
+                format: RUNTIME_BUS_TRACE_FORMAT,
+                formatVersion: "1",
+                sha256: sourceSha256,
+                romContentSha256: meta.romContentSha256
+              }
+            }
+          ],
+          imports: [report]
+        }
+      };
+    } finally {
+      index.clear();
+    }
+  };
+  return { push, finish };
+};
+
+// packages/disassembler/src/storage/sqlite-store.ts
+var import_node_crypto4 = require("node:crypto");
+var import_node_fs3 = __toESM(require("node:fs"), 1);
+var import_node_path2 = __toESM(require("node:path"), 1);
+var import_node_sqlite2 = require("node:sqlite");
+
+// packages/disassembler/src/storage/sqlite-payload.ts
 var import_node_util = require("node:util");
 var import_node_zlib2 = require("node:zlib");
 
-// packages/disassembler/src/sqlite-runtime-payload.ts
+// packages/disassembler/src/storage/sqlite-runtime-payload.ts
 var import_node_zlib = require("node:zlib");
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
@@ -2021,7 +2914,7 @@ var decodePackedRuntimePayload = (bytes) => {
   return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
 };
 
-// packages/disassembler/src/sqlite-payload.ts
+// packages/disassembler/src/storage/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
 var HEADER_BYTES2 = 8;
@@ -2111,7 +3004,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/sqlite-records.ts
+// packages/disassembler/src/storage/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -2390,7 +3283,7 @@ var analysisAddress = (record) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/sqlite-annotation-query.ts
+// packages/disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 var decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
 var runtimeSelect = (pairedState = false) => {
@@ -2810,7 +3703,7 @@ var readInstructionExecutionSummary = (database, manifest, ranges) => {
   });
 };
 
-// packages/disassembler/src/sqlite-query-cache.ts
+// packages/disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var installQueryCache = (db, key3, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key3)) {
@@ -2857,7 +3750,7 @@ var writeQueryCache = (db, key3, signature, value) => {
   );
 };
 
-// packages/disassembler/src/sqlite-coverage-query.ts
+// packages/disassembler/src/storage/sqlite-coverage-query.ts
 var decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
 var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 var cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
@@ -3193,7 +4086,7 @@ var coveragePage = (db, kind, offset) => {
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
 
-// packages/disassembler/src/sqlite-graph-query.ts
+// packages/disassembler/src/storage/sqlite-graph-query.ts
 var decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
 var unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 var numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
@@ -3373,7 +4266,7 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/sqlite-runtime-facts.ts
+// packages/disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS = [
   "kind",
   "architecture",
@@ -3462,7 +4355,7 @@ WHEN EXISTS(SELECT 1 FROM runtime_identities
 BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
 `;
 
-// packages/disassembler/src/sqlite-runtime-history.ts
+// packages/disassembler/src/storage/sqlite-runtime-history.ts
 var import_node_util2 = require("node:util");
 var import_node_zlib3 = require("node:zlib");
 var MAGIC2 = Buffer.from([85, 72, 66, 1]);
@@ -3636,8 +4529,8 @@ var collectRuntimeHistory = (db) => {
       SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
 };
 
-// packages/disassembler/src/sqlite-runtime-storage.ts
-var import_node_crypto = require("node:crypto");
+// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+var import_node_crypto2 = require("node:crypto");
 var RUNTIME_RECORD_STREAM_SQL = [true, false].map(
   (paired) => `
   SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
@@ -3792,7 +4685,7 @@ var SqliteRuntimeWriter = class {
       }
     }
     const payload = columns2.payload;
-    const fingerprint = (0, import_node_crypto.createHash)("sha256").update(
+    const fingerprint = (0, import_node_crypto2.createHash)("sha256").update(
       // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
       // per row. Nulls, two-space indentation and the trailing newline preserve
       // persisted fact fingerprints. Changing the layout would duplicate retained facts.
@@ -3869,8 +4762,8 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/sqlite-runtime-summary.ts
-var import_node_crypto2 = require("node:crypto");
+// packages/disassembler/src/storage/sqlite-runtime-summary.ts
+var import_node_crypto3 = require("node:crypto");
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
 var INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
@@ -3979,7 +4872,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
     });
   }
   if (!isCurrent(db, signature)) {
-    const pending = `pending:${(0, import_node_crypto2.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
     let incremental = false;
     transaction(() => {
       incremental = readQueryCache(db, KEY, signature) !== void 0;
@@ -4068,7 +4961,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
   })();
 };
 
-// packages/disassembler/src/sqlite-source-query.ts
+// packages/disassembler/src/storage/sqlite-source-query.ts
 var collections = ["labels", "comments", "annotations", "regions"];
 var sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
@@ -4210,7 +5103,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/sqlite-storage-policy.ts
+// packages/disassembler/src/storage/sqlite-storage-policy.ts
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var DEFAULT_ANALYSIS_STORAGE_POLICY = {
   cacheMaxBytes: 256 * 1024 ** 2,
@@ -4289,14 +5182,55 @@ var CACHES = [
       "query_runtime_variant_pending"
     ]
   },
-  { key: "runtime_architectures", tables: ["query_runtime_architectures"] },
   { key: "evidence_links", tables: ["query_evidence_links"] }
 ];
+var RETIRED_CACHES = [
+  { key: "snes_roles", tables: [] },
+  { key: "runtime_architectures", tables: ["query_runtime_architectures"] }
+];
+var retireStorageCaches = (db) => {
+  const removed = [];
+  const dependencies = [
+    "analysis",
+    "annotations",
+    "labels",
+    "comments",
+    "regions",
+    "imports",
+    "evidence",
+    "runtime_fact_rows",
+    "runtime_observations",
+    "runtime_identities"
+  ];
+  for (const cache of RETIRED_CACHES) {
+    let found = Boolean(db.prepare("SELECT 1 FROM query_cache WHERE name=?").get(cache.key));
+    for (const table of dependencies) {
+      for (const event of ["INSERT", "UPDATE", "DELETE"]) {
+        const name = `cache_${cache.key}_${table}_${event}`;
+        found ||= Boolean(
+          db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' AND name=?").get(name)
+        );
+        db.exec(`DROP TRIGGER IF EXISTS ${name}`);
+      }
+    }
+    for (const table of cache.tables) {
+      found ||= Boolean(
+        db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name=?").get(table)
+      );
+      db.exec(`DROP TABLE IF EXISTS ${table}`);
+    }
+    db.prepare("DELETE FROM query_cache WHERE name=?").run(cache.key);
+    if (found) {
+      removed.push(cache.key);
+    }
+  }
+  return removed;
+};
 var cacheTableBytes = (db, table) => {
   const allocation = db.prepare("SELECT COALESCE(SUM(pgsize),0) AS bytes FROM dbstat WHERE name=?");
   return db.prepare("SELECT name FROM sqlite_schema WHERE tbl_name=? AND type IN ('table','index')").all(table).reduce((bytes, row) => bytes + Number(allocation.get(row.name).bytes), 0);
 };
-var optionalCacheBytes = (db) => CACHES.reduce(
+var optionalCacheBytes = (db) => [...CACHES, ...RETIRED_CACHES].reduce(
   (bytes, cache) => bytes + cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0),
   cacheTableBytes(db, "query_cache")
 );
@@ -4305,12 +5239,12 @@ var maintainStorageCaches = (db) => {
     return { evicted: [], cacheBytes: 0 };
   }
   const budget = readStoragePolicy(db).cacheMaxBytes;
+  const evicted = retireStorageCaches(db);
   const entries = CACHES.map((cache) => ({
     ...cache,
     bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0)
   }));
   let cacheBytes = entries.reduce((n, cache) => n + cache.bytes, 0) + cacheTableBytes(db, "query_cache");
-  const evicted = [];
   for (const cache of entries) {
     const token = db.prepare("SELECT signature FROM query_cache WHERE name=?").get(cache.key);
     const summaryBuilder = cache.key === "instruction_variants" && db.prepare("SELECT 1 FROM query_cache WHERE name='instruction_variants_build'").get();
@@ -4337,77 +5271,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/trace-cache.ts
-var TraceCache = class {
-  #entries = /* @__PURE__ */ new Map();
-  /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
-  #keys = [];
-  #metrics;
-  #random = 2654435769;
-  constructor(metrics) {
-    this.#metrics = metrics;
-  }
-  /** Look up a value. Undefined is reserved for misses.
-   * @param {string} key Complete semantic key, never a lossy coordinate projection.
-   * @returns {T | undefined} Retained value, or a cache miss.
-   */
-  get(key3) {
-    const value = this.#entries.get(key3);
-    if (this.#metrics) {
-      if (value === void 0) {
-        this.#metrics.misses++;
-      } else {
-        this.#metrics.hits++;
-      }
-    }
-    return value;
-  }
-  /** Insert a missing key, returning the displaced entry so its owner can flush it.
-   * Existing keys must be updated through their caller-owned mutable value instead.
-   * @param {string} key Previously missing semantic key.
-   * @param {T} value Defined value whose ownership stays with the caller.
-   * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
-   */
-  insert(key3, value) {
-    let displaced;
-    if (this.#keys.length === 4096) {
-      let random = this.#random;
-      random ^= random << 13;
-      random ^= random >>> 17;
-      random ^= random << 5;
-      this.#random = random;
-      const slot = random & 4095;
-      const victim = this.#keys[slot];
-      displaced = { key: victim, value: this.#entries.get(victim) };
-      this.#entries.delete(victim);
-      this.#keys[slot] = key3;
-      if (this.#metrics) {
-        this.#metrics.evictions++;
-      }
-    } else {
-      this.#keys.push(key3);
-      if (this.#metrics) {
-        this.#metrics.peakEntries = Math.max(this.#metrics.peakEntries, this.#keys.length);
-      }
-    }
-    this.#entries.set(key3, value);
-    return displaced;
-  }
-  /** Iterate the retained working set, for a final durable delta flush.
-   * @returns {MapIterator} Live entries. Do not insert while iterating.
-   */
-  entries() {
-    return this.#entries.entries();
-  }
-  /** Drop retained values after a flush or failed import. Diagnostics remain cumulative. */
-  clear() {
-    this.#entries.clear();
-    this.#keys.length = 0;
-    this.#random = 2654435769;
-  }
-};
-
-// packages/disassembler/src/sqlite-store.ts
+// packages/disassembler/src/storage/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 var SCHEMA = `
@@ -5279,6 +6143,22 @@ var SqliteAnalysisStore = class {
     }
     return shards;
   }
+  /** Find candidate evidence IDs still owned by retained runtime observations.
+   * Reads the small provenance dictionary and physical observation rows without decoding histories.
+   * Caller holds the same read snapshot as the metadata being used for a replacement publication.
+   * @param {readonly string[]} ids Evidence candidates; empty input performs no query.
+   * @returns {string[]} Referenced candidate IDs in stable order, bounded by the input size.
+   */
+  runtimeEvidenceReferences(ids) {
+    if (ids.length === 0) {
+      return [];
+    }
+    return this.#database.prepare(`SELECT DISTINCT ref.value AS id
+      FROM runtime_evidence AS sets, json_each(sets.value) AS ref
+      WHERE ref.value IN (SELECT value FROM json_each(?))
+        AND EXISTS (SELECT 1 FROM runtime_observations WHERE evidence_id=sets.id)
+      ORDER BY ref.value`).all(JSON.stringify(ids)).map((row) => String(row.id));
+  }
   /** Explain one record with an exact reference count and a bounded reverse-reference preview.
    * @param {ShardKind} kind Selected collection.
    * @param {string} id Stable semantic record ID.
@@ -5419,7 +6299,7 @@ var SqliteAnalysisStore = class {
     if (cached !== void 0) {
       return cached;
     }
-    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
     this.transaction(() => {
       installQueryCache(this.#database, key3, dependencies);
       writeQueryCache(this.#database, key3, pending, null);
@@ -5432,41 +6312,6 @@ var SqliteAnalysisStore = class {
       }
     });
     return result;
-  }
-  /** CPU architectures at one PC from indexed scalar columns. Register payloads are untouched.
-   * @param {string} space Exact logical address space.
-   * @param {number} address Instruction address.
-   * @returns {string[]} Distinct observed architecture IDs.
-   */
-  runtimeArchitecturesAt(space, address) {
-    return this.#database.prepare(
-      "SELECT architecture FROM query_runtime_architectures WHERE address_space=? AND address=? ORDER BY architecture"
-    ).all(space, address).map((row) => String(row.architecture));
-  }
-  /** Build distinct processor/location hints once instead of rescanning hot-PC register rows per function. */
-  prepareRuntimeArchitectures() {
-    try {
-      this.cachedProjection(
-        "runtime_architectures",
-        "2",
-        ["runtime"],
-        () => {
-          this.#database.exec(`CREATE TEMP TABLE runtime_architectures_pending(address_space TEXT,address INTEGER,architecture TEXT,PRIMARY KEY(address_space,address,architecture)) WITHOUT ROWID;
-          INSERT OR IGNORE INTO temp.runtime_architectures_pending SELECT address_space,address,architecture FROM runtime NOT INDEXED WHERE kind IN ('runtime-execution','runtime-instruction','runtime-cpu-state');`);
-          return true;
-        },
-        () => {
-          this.#database.exec(`CREATE TABLE IF NOT EXISTS query_runtime_architectures(address_space TEXT,address INTEGER,architecture TEXT,PRIMARY KEY(address_space,address,architecture)) WITHOUT ROWID;
-          DELETE FROM query_runtime_architectures;
-          INSERT INTO query_runtime_architectures SELECT * FROM temp.runtime_architectures_pending;`);
-        }
-      );
-      if (!readQueryCache(this.#database, "runtime_architectures", "2")) {
-        throw new Error("Runtime changed while building processor hints. Refresh the view.");
-      }
-    } finally {
-      this.#database.exec("DROP TABLE IF EXISTS temp.runtime_architectures_pending");
-    }
   }
   /** Select a bounded CFG navigation window through its address index.
    * @param {string} space Exact logical address space.
@@ -5798,7 +6643,7 @@ var SqliteAnalysisStore = class {
    * @param {string} directory Project root for the watcher hint.
    */
   writePointer(directory) {
-    const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto3.randomUUID)()}.tmp`);
+    const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto4.randomUUID)()}.tmp`);
     try {
       this.transaction(() => {
         import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
@@ -5915,7 +6760,7 @@ var SqliteAnalysisStore = class {
   }
 };
 
-// packages/disassembler/src/project-store.ts
+// packages/disassembler/src/project/project-store.ts
 var fs4 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 var parseAnalysisProjectManifest = (input) => {
@@ -5941,8 +6786,8 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/project-transaction.ts
-var import_node_crypto4 = require("node:crypto");
+// packages/disassembler/src/project/project-transaction.ts
+var import_node_crypto5 = require("node:crypto");
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 var ANALYSIS_PROJECT_REVISION_VERSION = 1;
 var AnalysisProjectStaleError = class extends Error {
@@ -5960,7 +6805,7 @@ var AnalysisProjectStaleError = class extends Error {
 var analysisProjectRevision = (manifest) => ({
   format: ANALYSIS_PROJECT_REVISION_FORMAT,
   version: ANALYSIS_PROJECT_REVISION_VERSION,
-  manifestSha256: (0, import_node_crypto4.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+  manifestSha256: (0, import_node_crypto5.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
 });
 var assertAnalysisProjectRevision = (store, expected) => {
   const actual = analysisProjectRevision(store.manifest());
@@ -5969,812 +6814,7 @@ var assertAnalysisProjectRevision = (store, expected) => {
   }
 };
 
-// packages/disassembler/src/runtime-bus-trace.ts
-var import_node_crypto5 = require("node:crypto");
-
-// packages/disassembler/src/runtime-graphics.ts
-var mapVram = (address, mapping) => {
-  if (mapping === 0) {
-    return address;
-  }
-  const bits = mapping + 4;
-  const lowMask = (1 << bits) - 1;
-  const blockMask = (1 << bits + 3) - 1;
-  return address & ~blockMask | (address & lowMask) << 3 | address >> bits & 7;
-};
-var createRuntimeGraphicsAccumulator = () => {
-  let forcedBlank = null;
-  let vmain = null;
-  let vramAddress = 0;
-  let vramKnown = 0;
-  let cgramAddress = null;
-  let cgramHigh = null;
-  let cgramLatch = {
-    value: null,
-    sourceSequence: null
-  };
-  let oamBase = 0;
-  let oamKnown = 1;
-  let oamAddress = null;
-  let oamLatch = {
-    value: null,
-    sourceSequence: null
-  };
-  const activity = /* @__PURE__ */ new Map();
-  const writes = [];
-  let omittedWrites = 0;
-  const advanceVram = (byte) => {
-    if (vmain === null) {
-      vramKnown = 0;
-    } else if (byte === vmain >> 7) {
-      if (vramKnown === 65535) {
-        vramAddress = vramAddress + [1, 32, 128, 128][vmain & 3] & 65535;
-      } else {
-        vramKnown = 0;
-      }
-    }
-  };
-  const advanceCgram = () => {
-    if (cgramHigh === null) {
-      cgramAddress = null;
-    } else {
-      if (cgramHigh && cgramAddress !== null) {
-        cgramAddress = cgramAddress + 1 & 255;
-      }
-      cgramHigh = !cgramHigh;
-    }
-  };
-  const record = (write) => {
-    const key3 = `${write.actor}:${write.channel}:${write.target}`;
-    let group = activity.get(key3);
-    if (!group) {
-      group = {
-        actor: write.actor,
-        channel: write.channel,
-        target: write.target,
-        portWrites: 0,
-        addressed: 0,
-        latched: 0,
-        unknown: 0,
-        byteTargets: 0,
-        knownValueTargets: 0
-      };
-      activity.set(key3, group);
-    }
-    group.portWrites++;
-    group[write.status]++;
-    group.byteTargets += write.bytes.length;
-    group.knownValueTargets += write.bytes.filter((byte) => byte.value !== null).length;
-    if (!Number.isSafeInteger(group.byteTargets)) {
-      throw new Error("Graphics byte count exceeds the safe range.");
-    }
-    if (writes.length < 64) {
-      writes.push(write);
-    } else {
-      omittedWrites++;
-    }
-  };
-  const push = (access) => {
-    if ((access.address & 4194304) !== 0) {
-      return;
-    }
-    const port = access.address & 65535;
-    if (port < 8448 || port > 8511) {
-      return;
-    }
-    const { value } = access;
-    if (access.direction === "read") {
-      if (port === 8505 || port === 8506) {
-        advanceVram(port - 8505);
-      } else if (port === 8507) {
-        advanceCgram();
-      } else if (port === 8504 && oamAddress !== null) {
-        oamAddress = oamAddress + 1 & 1023;
-      }
-      return;
-    }
-    switch (port) {
-      case 8448:
-        forcedBlank = (value & 128) !== 0;
-        oamAddress = null;
-        return;
-      case 8450:
-      case 8451:
-        if (port === 8450) {
-          oamBase = oamBase & 512 | value << 1;
-          oamKnown |= 510;
-        } else {
-          oamBase = oamBase & 511 | (value & 1) << 9;
-          oamKnown |= 512;
-        }
-        oamAddress = forcedBlank === true && oamKnown === 1023 ? oamBase : null;
-        return;
-      case 8469:
-        vmain = value;
-        return;
-      case 8470:
-        vramAddress = vramAddress & 65280 | value;
-        vramKnown |= 255;
-        return;
-      case 8471:
-        vramAddress = vramAddress & 255 | value << 8;
-        vramKnown |= 65280;
-        return;
-      case 8481:
-        cgramAddress = value;
-        cgramHigh = false;
-        return;
-    }
-    if (port !== 8472 && port !== 8473 && port !== 8482 && port !== 8452) {
-      return;
-    }
-    const data = { value, sourceSequence: access.sequence };
-    const base = {
-      sequence: access.sequence,
-      actor: access.actor,
-      channel: access.channel,
-      port,
-      value,
-      forcedBlank
-    };
-    if (port === 8472 || port === 8473) {
-      const byte = port - 8472;
-      if (vmain !== null && vramKnown === 65535) {
-        const address = mapVram(vramAddress, vmain >> 2 & 3) * 2 + byte;
-        record({ ...base, target: "vram", status: "addressed", bytes: [{ address, ...data }] });
-      } else {
-        record({
-          ...base,
-          target: "vram",
-          status: "unknown",
-          reason: "missing-vram-registers",
-          bytes: []
-        });
-      }
-      advanceVram(byte);
-    } else if (port === 8482) {
-      if (cgramHigh === false) {
-        cgramLatch = data;
-        record({ ...base, target: "cgram", status: "latched", bytes: [] });
-      } else if (cgramHigh === true && cgramAddress !== null) {
-        record({
-          ...base,
-          target: "cgram",
-          status: "addressed",
-          bytes: [
-            { address: cgramAddress * 2, ...cgramLatch },
-            { address: cgramAddress * 2 + 1, ...data, value: value & 127 }
-          ]
-        });
-      } else {
-        cgramLatch = { value: null, sourceSequence: null };
-        record({
-          ...base,
-          target: "cgram",
-          status: "unknown",
-          reason: "missing-cgram-state",
-          bytes: []
-        });
-      }
-      advanceCgram();
-    } else if (oamAddress === null) {
-      oamLatch = { value: null, sourceSequence: null };
-      record({ ...base, target: "oam", status: "unknown", reason: "missing-oam-state", bytes: [] });
-    } else {
-      const address = oamAddress;
-      oamAddress = address + 1 & 1023;
-      if ((address & 1) === 0) {
-        oamLatch = data;
-      }
-      if (address & 512) {
-        record({
-          ...base,
-          target: "oam",
-          status: "addressed",
-          bytes: [{ address: 512 | address & 31, ...data }]
-        });
-      } else if (address & 1) {
-        record({
-          ...base,
-          target: "oam",
-          status: "addressed",
-          bytes: [
-            { address: address - 1, ...oamLatch },
-            { address, ...data }
-          ]
-        });
-      } else {
-        record({ ...base, target: "oam", status: "latched", bytes: [] });
-      }
-    }
-  };
-  return {
-    push,
-    finish: () => ({
-      model: "snes-ppu-ports-v1",
-      activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, group]) => group),
-      writes,
-      omittedWrites
-    })
-  };
-};
-
-// packages/disassembler/src/runtime-transfer.ts
-var validateRuntimeTransferBoundary = (marker) => {
-  const { configuration: c } = marker;
-  if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
-    throw new Error("Invalid transfer boundary attribution or count.");
-  }
-  for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"]) {
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255) {
-      throw new Error("Invalid transfer byte register.");
-    }
-  }
-  for (const field of ["a1t", "das", "a2a"]) {
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535) {
-      throw new Error("Invalid transfer word register.");
-    }
-  }
-  if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15) {
-    throw new Error("Invalid transfer channel flags.");
-  }
-  if (marker.boundary === "begin") {
-    if (marker.transferId !== marker.sequence || marker.transferred !== 0) {
-      throw new Error("Invalid transfer begin identity.");
-    }
-  } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1) {
-    throw new Error("Invalid transfer end identity.");
-  }
-  if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4)) {
-    throw new Error("Invalid HDMA payload-burst boundary.");
-  }
-  return {
-    kind: "transfer",
-    sequence: marker.sequence,
-    ordinal: marker.ordinal,
-    cycle: marker.cycle,
-    transferId: marker.transferId,
-    pc: marker.pc,
-    boundary: marker.boundary,
-    actor: marker.actor,
-    channel: marker.channel,
-    context: marker.context,
-    hcounter: marker.hcounter,
-    vcounter: marker.vcounter,
-    transferred: marker.transferred,
-    configuration: {
-      dmap: c.dmap,
-      bbad: c.bbad,
-      a1t: c.a1t,
-      a1b: c.a1b,
-      das: c.das,
-      dasb: c.dasb,
-      a2a: c.a2a,
-      ntlr: c.ntlr,
-      flags: c.flags
-    }
-  };
-};
-var createRuntimeTransferAccumulator = () => {
-  const open2 = /* @__PURE__ */ new Map();
-  const activity = /* @__PURE__ */ new Map();
-  const windows = [];
-  let omittedWindows = 0;
-  const retain = (window) => {
-    const key3 = `${window.actor}:${window.channel}`;
-    let group = activity.get(key3);
-    if (!group) {
-      group = {
-        actor: window.actor,
-        channel: window.channel,
-        complete: 0,
-        interrupted: 0,
-        leadingPartial: 0,
-        trailingPartial: 0,
-        bothPartial: 0,
-        attemptedSlots: 0,
-        reads: 0,
-        writes: 0
-      };
-      activity.set(key3, group);
-    }
-    const fields = {
-      complete: "complete",
-      interrupted: "interrupted",
-      "leading-partial": "leadingPartial",
-      "trailing-partial": "trailingPartial",
-      "both-partial": "bothPartial"
-    };
-    group[fields[window.status]]++;
-    group.reads += window.reads;
-    group.writes += window.writes;
-    if (window.begin && window.end) {
-      group.attemptedSlots += window.end.transferred;
-    }
-    if (!Number.isSafeInteger(group.attemptedSlots)) {
-      throw new Error("Transfer slot total exceeds the safe integer range.");
-    }
-    if (windows.length < 64) {
-      windows.push(window);
-    } else {
-      omittedWindows++;
-    }
-  };
-  return {
-    /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
-     * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
-     */
-    push: (event) => {
-      if (event.actor === "cpu") {
-        return;
-      }
-      const marker = "kind" in event;
-      if (!marker && event.phase !== "dma" && event.phase !== "hdma-transfer") {
-        return;
-      }
-      const key3 = `${event.actor}:${event.channel}`;
-      let current = open2.get(key3);
-      if (marker && event.boundary === "begin") {
-        if (current) {
-          throw new Error("Transfer began before the previous channel window ended.");
-        }
-        open2.set(key3, {
-          actor: event.actor,
-          channel: event.channel,
-          begin: event,
-          reads: 0,
-          writes: 0
-        });
-        return;
-      }
-      if (!current) {
-        current = { actor: event.actor, channel: event.channel, reads: 0, writes: 0 };
-        open2.set(key3, current);
-      }
-      if (!marker) {
-        if (event.direction === "read") {
-          current.reads++;
-        } else {
-          current.writes++;
-        }
-        const maximum = event.actor === "dma" ? 65536 : 4;
-        if (current.reads > maximum || current.writes > maximum) {
-          throw new Error("Transfer window exceeds the native payload bound.");
-        }
-        return;
-      }
-      const expectedId = current.begin?.transferId ?? "0";
-      if (event.transferId !== expectedId) {
-        throw new Error("Transfer end does not match its observed begin.");
-      }
-      if (current.reads > event.transferred || current.writes > event.transferred) {
-        throw new Error("Transfer contains more observed accesses than attempted byte slots.");
-      }
-      if (current.begin) {
-        if (current.reads + current.writes < event.transferred) {
-          throw new Error("Transfer is missing bus accesses inside its observed boundaries.");
-        }
-        const configuration = current.begin.configuration;
-        let expected = configuration.das || 65536;
-        if (event.actor === "hdma") {
-          expected = [1, 2, 2, 4, 4, 4, 2, 4][configuration.dmap & 7];
-        }
-        if (event.boundary === "complete" && event.transferred !== expected || event.transferred > expected) {
-          throw new Error("Transfer completion disagrees with its starting configuration.");
-        }
-      }
-      let status = "leading-partial";
-      if (current.begin) {
-        status = event.boundary === "complete" ? "complete" : "interrupted";
-      }
-      retain({ ...current, end: event, status });
-      open2.delete(key3);
-    },
-    /** Close remaining windows without claiming completion or an attempted slot count.
-     * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
-     */
-    finish: () => {
-      for (const current of open2.values()) {
-        retain({ ...current, status: current.begin ? "trailing-partial" : "both-partial" });
-      }
-      open2.clear();
-      return {
-        activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
-        windows,
-        omittedWindows
-      };
-    }
-  };
-};
-
-// packages/disassembler/src/runtime-bus-trace.ts
-var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
-var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
-var unsigned = (value) => {
-  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value)) {
-    throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
-  }
-  if (value.length <= 15) {
-    return Number(value);
-  }
-  const number = BigInt(value);
-  if (number > 0xffffffffffffffffn) {
-    throw new Error("Bus trace integer exceeds u64.");
-  }
-  if (number <= BigInt(Number.MAX_SAFE_INTEGER)) {
-    return Number(number);
-  }
-  return number;
-};
-var validateRuntimeBusTraceMetadata = (value) => {
-  const meta = value;
-  if (!meta || meta.format !== RUNTIME_BUS_TRACE_FORMAT || meta.schemaVersion !== 1 || meta.scope !== "snes.cpu-bus" && meta.scope !== "snes.cpu-bus-transfers" && meta.scope !== "snes.cpu-bus-ppu" || meta.architecture !== "snes.65816" || meta.addressSpace !== "snes.cpu" || typeof meta.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(meta.romContentSha256) || typeof meta.session !== "string" || !/^[\da-f]{32}$/.test(meta.session) || typeof meta.producer?.id !== "string" || !meta.producer.id || typeof meta.producer?.revision !== "string" || !meta.producer.revision || meta.clock?.id !== "snes.master") {
-    throw new Error("Invalid SNES bus trace metadata.");
-  }
-  if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0) {
-    throw new Error("Bus trace clock frequency must be positive.");
-  }
-  return {
-    format: RUNTIME_BUS_TRACE_FORMAT,
-    schemaVersion: 1,
-    scope: meta.scope,
-    architecture: "snes.65816",
-    addressSpace: "snes.cpu",
-    romContentSha256: meta.romContentSha256,
-    producer: { id: meta.producer.id, revision: meta.producer.revision },
-    session: meta.session,
-    clock: {
-      id: "snes.master",
-      numerator: meta.clock.numerator,
-      denominator: meta.clock.denominator
-    }
-  };
-};
-var createRuntimeBusTraceImporter = (metadata, context, storage) => {
-  const meta = validateRuntimeBusTraceMetadata(metadata);
-  if (meta.romContentSha256 !== context.projectRomContentSha256) {
-    throw new Error("ROM/project mismatch: bus capture does not match the destination ROM.");
-  }
-  if (typeof context.sourceName !== "string" || !context.sourceName) {
-    throw new Error("Bus capture source name must not be empty.");
-  }
-  const limit = context.maxIndexRecords ?? 2e6;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 8e6) {
-    throw new Error("Bus trace fact budget must be in [1, 8000000].");
-  }
-  const memory = /* @__PURE__ */ new Map();
-  const index = storage?.index ?? {
-    add: (key3, create) => {
-      const current = memory.get(key3);
-      if (current) {
-        current.count++;
-        return false;
-      }
-      memory.set(key3, { fact: create(), count: 1 });
-      return true;
-    },
-    values: () => memory.values(),
-    clear: () => memory.clear()
-  };
-  const hash = (0, import_node_crypto5.createHash)("sha256").update(`uttori-bus-index-v1
-${JSON.stringify(meta)}
-`);
-  const factKeys = new TraceCache(context.cacheMetrics?.facts);
-  const activity = /* @__PURE__ */ new Map();
-  const contexts = {
-    unattributed: 0,
-    instruction: 0,
-    interrupt: 0,
-    wait: 0,
-    stop: 0
-  };
-  const transfers = meta.scope !== "snes.cpu-bus" ? createRuntimeTransferAccumulator() : void 0;
-  const graphics = createRuntimeGraphicsAccumulator();
-  const ppu = meta.scope === "snes.cpu-bus-ppu" ? createRuntimePPUAccumulator() : void 0;
-  let streamEvents = 0;
-  let markerEvents = 0;
-  let observed = 0;
-  let facts = 0;
-  let previousCycle = 0;
-  let firstCycle = null;
-  let lastOrdinal = 0;
-  let lastPc = 0;
-  let finished = false;
-  let failed = false;
-  const push = (chunk) => {
-    if (finished || failed) {
-      throw new Error("Bus trace importer is no longer writable.");
-    }
-    try {
-      const accesses = chunk?.accesses;
-      if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095) {
-        throw new Error("Bus trace chunks require 1\u20134095 accesses.");
-      }
-      const hashLines = [];
-      for (const item of accesses) {
-        if (!item || typeof item !== "object") {
-          throw new Error("Invalid bus trace event.");
-        }
-        const access = item;
-        const sequence = unsigned(access.sequence);
-        const ordinal = unsigned(access.ordinal);
-        const cycle = unsigned(access.cycle);
-        if (streamEvents === Number.MAX_SAFE_INTEGER || sequence !== streamEvents + 1) {
-          throw new Error(
-            "Bus trace event sequence is not contiguous or exceeds the safe count range."
-          );
-        }
-        if (cycle < previousCycle) {
-          throw new Error("Bus trace master clock moved backwards.");
-        }
-        const hasOwner = ordinal > 0;
-        if (hasOwner !== (access.context === "instruction")) {
-          throw new Error("Bus trace instruction context and ordinal disagree.");
-        }
-        if (ordinal > 0 && (ordinal < lastOrdinal || ordinal === lastOrdinal && access.pc !== lastPc)) {
-          throw new Error("Bus trace instruction ownership moved backwards or changed PC.");
-        }
-        if (!Number.isInteger(access.hcounter) || access.hcounter < 0 || access.hcounter >= 1368 || !Number.isInteger(access.vcounter) || access.vcounter < 0 || access.vcounter >= 313) {
-          throw new Error("Bus trace raster position is out of range.");
-        }
-        previousCycle = cycle;
-        firstCycle ??= access.cycle;
-        if (ordinal > 0) {
-          lastOrdinal = ordinal;
-          lastPc = access.pc;
-        }
-        streamEvents++;
-        if ("kind" in access) {
-          if (!transfers || access.kind !== "transfer") {
-            throw new Error("Transfer markers require the negotiated transfer scope.");
-          }
-          const marker = validateRuntimeTransferBoundary(access);
-          transfers.push(marker);
-          markerEvents++;
-          hashLines.push(JSON.stringify(marker) + "\n");
-          continue;
-        }
-        const port = access.address & 65535;
-        const dataPort = access.direction === "write" && !(access.address & 4194304) && [8452, 8472, 8473, 8482].includes(port);
-        if (access.ppu !== void 0 !== Boolean(ppu && dataPort)) {
-          throw new Error("Missing or out-of-scope native PPU effect.");
-        }
-        const effect = access.ppu;
-        if (access.ppu && (!Number.isInteger(access.ppu.hcounter) || access.ppu.hcounter < 0 || access.ppu.hcounter >= 1368 || !Number.isInteger(access.ppu.vcounter) || access.ppu.vcounter < 0 || access.ppu.vcounter >= 313)) {
-          throw new Error("Invalid PPU decision raster.");
-        }
-        const fact = {
-          // Presence is not truthiness: null/false/zero annotations must reach
-          // validation and fail, rather than masquerade as an omitted effect.
-          ...effect !== void 0 ? { ppu: effect } : {},
-          addressSpace: meta.addressSpace,
-          address: access.address,
-          pc: access.pc,
-          value: access.value,
-          direction: access.direction,
-          actor: access.actor,
-          channel: access.channel,
-          phase: access.phase,
-          context: access.context
-        };
-        const normalizedEffect = validateRuntimeBusFact(fact);
-        if (normalizedEffect) {
-          fact.ppu = normalizedEffect;
-        }
-        transfers?.push(access);
-        if (ppu) {
-          ppu.push(access);
-        } else {
-          graphics.push(access);
-        }
-        const factJson = JSON.stringify(fact);
-        let key3 = factKeys.get(factJson);
-        if (key3 === void 0) {
-          key3 = (0, import_node_crypto5.createHash)("sha256").update(factJson).digest("hex");
-          factKeys.insert(factJson, key3);
-        }
-        if (index.add(key3, () => ({
-          kind: "memory",
-          record: {
-            ...fact,
-            id: key3,
-            kind: "runtime-bus-access",
-            architecture: meta.architecture,
-            count: 1,
-            evidence: []
-          }
-        }))) {
-          facts++;
-          if (facts > limit) {
-            throw new Error(`Bus trace exceeds the ${limit} distinct-fact budget.`);
-          }
-        }
-        let line = `["${access.sequence}","${access.ordinal}","${access.cycle}",${factJson},${access.hcounter},${access.vcounter}`;
-        if (access.ppu) {
-          line += `,${access.ppu.hcounter},${access.ppu.vcounter}`;
-        }
-        hashLines.push(line + "]\n");
-        observed++;
-        contexts[access.context]++;
-        const groupKey = `${access.actor}:${access.channel}:${access.phase}`;
-        let group = activity.get(groupKey);
-        if (!group) {
-          group = {
-            actor: access.actor,
-            channel: access.channel,
-            phase: access.phase,
-            reads: 0,
-            writes: 0,
-            unowned: 0,
-            firstSequence: access.sequence,
-            lastSequence: access.sequence,
-            firstCycle: access.cycle,
-            lastCycle: access.cycle
-          };
-          activity.set(groupKey, group);
-        }
-        if (access.direction === "read") {
-          group.reads++;
-        } else {
-          group.writes++;
-        }
-        if (ordinal === 0) {
-          group.unowned++;
-        }
-        group.lastSequence = access.sequence;
-        group.lastCycle = access.cycle;
-      }
-      hash.update(hashLines.join(""));
-      if (context.onProgress) {
-        const summary = ppu?.finish();
-        const counts = summary ? {
-          portWrites: summary.portWrites,
-          written: summary.written,
-          blocked: summary.blocked,
-          latched: summary.latched,
-          byteWrites: summary.byteWrites,
-          renderingRestricted: summary.renderingRestricted,
-          omittedWrites: summary.omittedWrites
-        } : void 0;
-        context.onProgress({
-          streamEvents,
-          busEvents: observed,
-          distinctFacts: facts,
-          transferMarkers: markerEvents,
-          firstCycle,
-          lastCycle: firstCycle === null ? null : String(previousCycle),
-          ...counts ? { ppu: counts } : {},
-          activity: [...activity.values()].map((group) => ({ ...group }))
-        });
-      }
-    } catch (error) {
-      failed = true;
-      index.clear();
-      throw error;
-    }
-  };
-  const finish = () => {
-    if (finished || failed) {
-      throw new Error("Bus trace importer cannot be finalized again or after failure.");
-    }
-    finished = true;
-    try {
-      const sourceSha256 = hash.digest("hex");
-      storage?.onSource?.(sourceSha256, RUNTIME_BUS_INDEX_PROFILE);
-      const evidenceId = `evidence:bus-trace:${sourceSha256}`;
-      const runtime = [];
-      for (const { fact, count } of index.values()) {
-        if (fact.kind !== "memory" || fact.record.kind !== "runtime-bus-access") {
-          throw new Error("Bus trace index contains an unexpected fact kind.");
-        }
-        const record = {
-          ...fact.record,
-          id: `runtime:bus-trace:${sourceSha256}:${fact.record.id}`,
-          count,
-          evidence: [evidenceId]
-        };
-        if (storage?.onRecord) {
-          storage.onRecord(record);
-        } else {
-          runtime.push(record);
-        }
-      }
-      const transferSummary = transfers?.finish();
-      const graphicsSummary = graphics.finish();
-      const ppuSummary = ppu?.finish();
-      const transferCounts = {};
-      if (ppuSummary) {
-        for (const key3 of [
-          "portWrites",
-          "written",
-          "blocked",
-          "latched",
-          "byteWrites",
-          "renderingRestricted"
-        ]) {
-          transferCounts[`ppu.${key3}`] = ppuSummary[key3];
-        }
-      }
-      if (transferSummary) {
-        transferCounts.streamEvents = streamEvents;
-        transferCounts.transferMarkers = markerEvents;
-        for (const group of transferSummary.activity) {
-          for (const field of [
-            "complete",
-            "interrupted",
-            "leadingPartial",
-            "trailingPartial",
-            "bothPartial",
-            "attemptedSlots",
-            "reads",
-            "writes"
-          ]) {
-            transferCounts[`${group.actor}${group.channel}.${field}`] = group[field];
-          }
-        }
-      }
-      const report = {
-        id: `import:bus-trace:${sourceSha256}`,
-        format: RUNTIME_BUS_TRACE_FORMAT,
-        indexProfile: RUNTIME_BUS_INDEX_PROFILE,
-        sourceName: context.sourceName,
-        sourceSha256,
-        sourceVersion: `v1@${meta.producer.id}:${meta.producer.revision}`,
-        imported: {
-          ...transferCounts,
-          busEvents: observed,
-          busRecords: facts,
-          unownedEvents: observed - contexts.instruction
-        },
-        unsupported: [],
-        warnings: [
-          "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
-          transfers ? "Transfer totals use explicit native boundaries. Partial windows stay explicit. Full configuration and ordered history require the capture archive." : "Activity counts describe observed bus accesses. Transfer boundaries, register setup and source instructions are not inferred."
-        ]
-      };
-      return {
-        report,
-        sourceSha256,
-        observedEvents: observed,
-        droppedEvents: 0,
-        summary: {
-          ...transferSummary ? { transfers: transferSummary } : {},
-          ...ppuSummary ? { ppu: ppuSummary } : {},
-          ...graphicsSummary.activity.length ? { graphics: graphicsSummary } : {},
-          clock: meta.clock,
-          firstCycle,
-          lastCycle: firstCycle === null ? null : String(previousCycle),
-          contexts,
-          activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
-        },
-        batch: {
-          ...storage?.onRecord ? {} : { runtime: runtime.sort((a, b) => a.id.localeCompare(b.id)) },
-          evidence: [
-            {
-              id: evidenceId,
-              source: "runtime",
-              sourceId: `${meta.producer.id}:${meta.producer.revision}`,
-              confidence: "certain",
-              detail: `${observed} lossless bus accesses. ${observed - contexts.instruction} without an owning instruction.`,
-              artifact: {
-                format: RUNTIME_BUS_TRACE_FORMAT,
-                formatVersion: "1",
-                sha256: sourceSha256,
-                romContentSha256: meta.romContentSha256
-              }
-            }
-          ],
-          imports: [report]
-        }
-      };
-    } finally {
-      index.clear();
-    }
-  };
-  return { push, finish };
-};
-
-// packages/disassembler/src/runtime-bus-project.ts
+// packages/disassembler/src/project/runtime-bus-project.ts
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var captureFileIdentity = (file) => {
   const stat = import_node_fs4.default.statSync(file, { bigint: true });

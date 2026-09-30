@@ -7,7 +7,6 @@ import { rgbaPreviewPng } from "@uttori/asm-assets/preview";
 import * as vscode from "vscode";
 
 import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
-import { AnalysisGraphProvider } from "../src/analysis/graph-tree.js";
 import { AnalysisSourcesProvider } from "../src/analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
@@ -62,14 +61,11 @@ const REQUIRED_COMMANDS = [
   "asm.configureEmulatorRuntime",
   "asm.outline.refresh",
   "asm.coverage.refresh",
-  "asm.analysisGraph.refresh",
   "asm.sources.refresh",
   "asm.trace.start",
   "asm.trace.stop",
   "asm.trace.stopAnalyze",
   "asm.trace.importRegenerate",
-  "asm.heuristics.configure",
-  "asm.heuristics.preview",
   "asm.ramMap.open",
   "asm.disassembly.status",
   "asm.disassembly.regenerate",
@@ -506,7 +502,6 @@ export async function run(): Promise<void> {
 
   await vscode.commands.executeCommand("asm.outline.refresh");
   await vscode.commands.executeCommand("asm.coverage.refresh");
-  await vscode.commands.executeCommand("asm.analysisGraph.refresh");
   const worker = initializeAnalysisWorker(extension.extensionPath);
   try {
     const coverage = new AnalysisCoverageProvider();
@@ -522,16 +517,6 @@ export async function run(): Promise<void> {
     const pages = await coverage.getChildren(segments);
     assert.equal(pages.length, 3);
     assert.equal((await coverage.getChildren(pages[0])).length, 200);
-    const graph = new AnalysisGraphProvider();
-    const graphRoots = await graph.getChildren();
-    const graphGroups = await graph.getChildren(graphRoots[0]);
-    const functions = graphGroups.find(({ label }) => label === "Functions");
-    assert.ok(functions);
-    const functionPages = await graph.getChildren(functions);
-    assert.equal(functionPages.length, 3);
-    const functionsOnPage = await graph.getChildren(functionPages[0]);
-    assert.equal(functionsOnPage.length, 200);
-    assert.equal((await graph.getChildren(functionsOnPage[0])).length, 3);
     const sources = new AnalysisSourcesProvider();
     try {
       const sourceRoots = await sources.getChildren();

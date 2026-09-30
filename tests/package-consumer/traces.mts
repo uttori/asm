@@ -12,7 +12,7 @@ import {
   importRuntimeTraceSourceIntoProject,
   loadAnalysisProjectSnapshot,
   validateRuntimeInstructionTraceMetadata,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "@uttori/asm-disassembler";
 
@@ -20,7 +20,7 @@ const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-trace-consumer-"))
 try {
   const directory = path.join(scratch, "analysis");
   const rom = new RomImage(new Uint8Array(0x8000));
-  writeAnalysisProject(directory, {
+  publishAnalysisProject(directory, {
     manifest: {
       format: "uttori-asm-analysis",
       schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
