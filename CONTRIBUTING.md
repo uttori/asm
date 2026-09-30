@@ -167,6 +167,31 @@ that editor's own API declarations and checks SQLite in the real Extension Host.
 Do not weaken a conservative result to make generated output look cleaner. Unknown, ambiguous,
 unreached, conflicting, or unsupported bytes must remain visible and round-trip through raw data.
 
+## Repository scripts
+
+Keep `scripts/` for maintained build, CI, release, fixture-regeneration, and validation tooling.
+One-off benchmarks, profiling experiments, private-project migrations, and obsolete runners belong
+in the gitignored `Local Only/scripts/` directory. Local tools are not available in fresh clones and
+must not be imported by tracked code or required by package commands, tests, or CI. Preserve their
+inputs and adjust relative imports when moving them; run local tools from the repository root.
+
+The supported benchmark entry points are `npm run benchmark`, `npm run benchmark:disassembler`, and
+`npm run benchmark:lsp-indexing`. Forward flags after `--` instead of adding package aliases for each
+fixture, operation, repetition count, or machine-specific budget. For example:
+
+```sh
+npm run benchmark -- --fast
+npm run benchmark -- --fast --fixture chou --isolate --no-instrumentation --max-median-ms 30000
+npm run benchmark:disassembler -- --fast --fixture synthetic-512k --operation source-export
+npm run benchmark:lsp-indexing -- --fast
+```
+
+Retain shared benchmark reports, goldens, and budget evaluation helpers with their maintained
+runners. Use `scripts/derive-disassembler-budgets.ts` directly with an explicitly reviewed input
+report and output policy; baseline paths and host-specific flags belong in the performance guide.
+Historical research under `docs/performance/` may describe archived local tools. Those commands
+require the local archive and are not portable repository checks.
+
 ## Tests
 
 AVA is the test runner. A focused test is the fastest development loop:

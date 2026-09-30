@@ -4,7 +4,7 @@ Run benchmark commands from the repository root. The default suite creates deter
 512 KiB, 2 MiB, and 4 MiB LoROM fixtures in memory. No game data is required.
 
 ```sh
-npm run benchmark:disassembler:fast
+npm run benchmark:disassembler -- --fast
 npm run benchmark:disassembler -- --json /tmp/disassembler-local.json
 ```
 
@@ -29,7 +29,7 @@ baseline/end RSS and heap measurements, signed deltas, and the larger boundary s
 ## Release budgets
 
 ```sh
-npm run benchmark:disassembler:check
+npm run benchmark:disassembler -- --warmups 0 --repetitions 3 --budgets docs/performance/disassembler-budgets-macos-arm64.json --summary-only
 ```
 
 The release gate uses a versioned policy and three measured repetitions. It rejects a different
@@ -39,7 +39,7 @@ another. A new supported benchmark host needs its own retained report and review
 After reviewing and accepting a new baseline, regenerate the policy with:
 
 ```sh
-npm run benchmark:disassembler:derive-budgets
+node --conditions=uttori-source --import=tsx scripts/derive-disassembler-budgets.ts docs/performance/disassembler-macos-arm64-2026-09-03.json docs/performance/disassembler-budgets-macos-arm64.json
 ```
 
 Wall-time budgets use the greater of baseline p95 plus 50% or p95 plus 20 ms, rounded up to a
@@ -55,7 +55,7 @@ for correctness and release expectations.
 
 ## Optional local ROM probe
 
-`npm run benchmark:disassembler:som` uses the locally supplied Secret of Mana ROM and `.dizraw`
+`npm run benchmark:disassembler -- --fast --fixture secret-of-mana` uses the locally supplied Secret of Mana ROM and `.dizraw`
 fixtures. It validates expected size/hash, creates temporary project/source data under the OS
 temporary directory, and removes it after each operation. Reports exclude the private inputs,
 their paths, and content hashes. This probe is separate from redistributable release fixtures.
