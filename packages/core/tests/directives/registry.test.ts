@@ -63,6 +63,8 @@ test("directive registry dispatches struct and incbin directives", (t) => {
   const readFileSpy = stub(assembler.includeSource, "readFile").returns(
     new Uint8Array([0x01, 0x02]),
   );
+  // This dispatch fixture supplies bytes directly, so source provenance must use the same stub.
+  const sliceSpy = stub(assembler.includeSource, "recordBinarySlice");
   stub(assembler, "write1");
   stub(assembler, "recordCurrentAddress");
 
@@ -81,6 +83,7 @@ test("directive registry dispatches struct and incbin directives", (t) => {
   t.true(handledIncbin);
   t.true(structSpy.calledOnceWithExactly(["struct", "Sprite"]));
   t.true(readFileSpy.calledOnceWithExactly("test.bin"));
+  t.true(sliceSpy.calledOnceWithExactly("test.bin", 0, 2, new Uint8Array([0x01, 0x02])));
 });
 
 test("normalized dispatch routes extracted directives through the registry", (t) => {

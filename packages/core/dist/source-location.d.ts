@@ -36,6 +36,10 @@ export declare function createSourceSpan(start: number, end: number, line?: numb
  * @returns {SourceSpan} The full-line span.
  */
 export declare function createLineSpan(text: string, line?: number): SourceSpan;
+/** Map a token's UTF-16 offsets in a continued command to its physical source line and columns. */
+export declare function createTextSpan(text: string, start: number, end: number, line: number, lineStarts?: number[]): SourceSpan;
+/** Index physical lines once for large record literals; per-token prefix scans are quadratic. */
+export declare function sourceLineStarts(text: string): number[];
 /**
  * Shifts a span by a column offset.
  * @param {SourceSpan} span The span to shift.

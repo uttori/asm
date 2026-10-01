@@ -12,6 +12,8 @@ import {
 } from "@uttori/asm-core/debug-map";
 import { Uri, debug, workspace } from "vscode";
 
+import { findSourceRoot } from "../source/project-path.js";
+
 /**
  * Workspace-search glob that omits dependencies, Git internals, and local-only copies from
  * automatic debug-map discovery.
@@ -171,9 +173,47 @@ export const discoverAnalysisDebugMapFiles = async (): Promise<
         )
       : active?.workspaceFolder?.uri.fsPath;
   const discovered = await workspace.findFiles("**/*.debug.json", DEBUG_MAP_EXCLUDE, 64);
+  const sourceRoots = [
+    ...new Set(
+      (
+        await Promise.all(
+          (workspace.workspaceFolders ?? []).map(({ uri }) => findSourceRoot(uri.fsPath)),
+        )
+      ).filter((root): root is string => !!root),
+    ),
+  ];
+  const selected: string[] = [];
+  for (const root of sourceRoots) {
+    try {
+      const directory = path.join(root, ".uttori-local/builds");
+      const receiptFile = path.join(directory, "current.json");
+      if ((await fs.promises.stat(receiptFile)).size > 1024 * 1024) {
+        continue;
+      }
+      const receipt = JSON.parse(await fs.promises.readFile(receiptFile, "utf8")) as {
+        inputSha256: string;
+        debugMapFile: string;
+      };
+      if (!/^[\da-f]{64}$/.test(receipt.inputSha256)) {
+        continue;
+      }
+      const file = path.join(directory, receipt.inputSha256, "program.sfc.debug.json");
+      if (receipt.debugMapFile === file) {
+        selected.push(file);
+      }
+    } catch {
+      /* A new project has no successful build until the user builds once. */
+    }
+  }
   const files = sortedUnique([
     ...(configuredMap ? [configuredMap] : []),
-    ...discovered.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => fsPath),
+    ...selected,
+    ...discovered
+      .filter(
+        ({ scheme, fsPath }) =>
+          scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path.sep)),
+      )
+      .map(({ fsPath }) => fsPath),
   ]);
   return files.map((file) => {
     const containingWorkspace = workspace.getWorkspaceFolder(Uri.file(file));
@@ -192,6 +232,7 @@ export const discoverAnalysisDebugMapFiles = async (): Promise<
       file,
       sourceRoots: sortedUnique([
         ...(file === configuredMap && configuredRoot ? [configuredRoot] : []),
+        ...sourceRoots.filter((root) => file.startsWith(root + path.sep)),
         ...(workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
         ...ancestors,
       ]),

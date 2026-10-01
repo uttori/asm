@@ -37,7 +37,7 @@ const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
 
 const render = (
-  name: "annotation" | "panel" | "disassembly",
+  name: "palette" | "panel" | "indexed-png",
   options: {
     root?: string;
     cspSource?: string;
@@ -71,7 +71,7 @@ const nonce = (html: string): string => {
 };
 
 test("packaged templates fill CSP, shared nonce and media URLs", (t) => {
-  for (const name of ["annotation", "panel", "disassembly"] as const) {
+  for (const name of ["palette", "panel", "indexed-png"] as const) {
     const { html, assets } = render(name);
     t.false(html.includes("{{"));
     t.true(html.includes("style-src https://webview.example"));
@@ -88,15 +88,15 @@ test("packaged templates fill CSP, shared nonce and media URLs", (t) => {
 });
 
 test("attribute metacharacters in CSP and asset URLs are escaped", (t) => {
-  const { html } = render("annotation", {
+  const { html } = render("palette", {
     cspSource: 'https://a.example/x?a=1&b=2<"',
     asWebviewUri: (value) => ({
       toString: () => `https://webview.example/${path.basename(value.fsPath)}?v=1&w=2<"`,
     }),
   });
   t.true(html.includes("style-src https://a.example/x?a=1&amp;b=2&lt;&quot;"));
-  t.true(html.includes('href="https://webview.example/annotation.css?v=1&amp;w=2&lt;&quot;"'));
-  t.true(html.includes('src="https://webview.example/annotation.js?v=1&amp;w=2&lt;&quot;"'));
+  t.true(html.includes('href="https://webview.example/palette.css?v=1&amp;w=2&lt;&quot;"'));
+  t.true(html.includes('src="https://webview.example/palette.js?v=1&amp;w=2&lt;&quot;"'));
   t.false(html.includes("{{"));
 });
 

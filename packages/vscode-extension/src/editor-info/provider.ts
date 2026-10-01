@@ -27,6 +27,12 @@ export interface EditorInformationHost {
   ): Promise<T>;
 }
 
+/** UI-facing queries expose only visible facts; implementations may keep full maps in a worker. */
+export type EditorInformationService = Pick<
+  EditorInformationProvider,
+  "buildCompleted" | "configurationChanged" | "invalidate" | "tracks" | "diagnostics" | "lines"
+> & { dispose?(): void };
+
 interface Artifact {
   readonly file: string;
   readonly map: DebugMap;
@@ -71,6 +77,7 @@ export class EditorInformationProvider {
   readonly #details = new Map<string, readonly InstructionAnalysisAnnotation[]>();
   readonly #pending = new Map<string, Promise<unknown>>();
   readonly #trackedFiles = new Set<string>();
+  #trackedRevision = 0;
 
   constructor(readonly host: EditorInformationHost) {}
 
@@ -81,8 +88,22 @@ export class EditorInformationProvider {
    */
   buildCompleted(mapFile: string, sourceRoot: string): void {
     const file = path.resolve(mapFile);
+    // A source root has one selected build. Historical receipts stay on disk, not in the live UI index.
+    for (const [previous, roots] of this.#extraMaps) {
+      if (roots.includes(sourceRoot)) {
+        this.#extraMaps.delete(previous);
+        this.#currentConfigurationMaps?.delete(previous);
+      }
+    }
     this.#currentConfigurationMaps?.add(file);
     this.#extraMaps.set(file, [sourceRoot]);
+    // Discovery covers open workspace roots. Keep only a bounded set of recent explicit build
+    // hints so opening and closing many standalone projects cannot retain all historical paths.
+    while (this.#extraMaps.size > 16) {
+      const oldest = this.#extraMaps.keys().next().value!;
+      this.#extraMaps.delete(oldest);
+      this.#currentConfigurationMaps?.delete(oldest);
+    }
     this.invalidate();
   }
 
@@ -111,6 +132,16 @@ export class EditorInformationProvider {
     return this.#trackedFiles.has(path.resolve(file)) || file.endsWith(".debug.json");
   }
 
+  /** Worker responses publish dependency paths so the UI watcher can invalidate without reading maps. */
+  trackedFiles(): readonly string[] {
+    return [...this.#trackedFiles];
+  }
+
+  /** Advances only when a complete current discovery snapshot replaces the watched dependency set. */
+  trackedRevision(): number {
+    return this.#trackedRevision;
+  }
+
   /**
    * Coalesce identical work while allowing newer generations to replace invalidated requests.
    * @param {string} key Complete artifact/project, range, and request identity.
@@ -134,6 +165,8 @@ export class EditorInformationProvider {
   }
 
   async #loadArtifacts(dirtyFiles: ReadonlySet<string>): Promise<ArtifactSnapshot> {
+    const epoch = this.#epoch;
+    const tracked = new Set<string>();
     const discovered = await this.host.discoverMaps();
     const candidates = new Map(
       discovered.map((entry) => [path.resolve(entry.file), entry.sourceRoots]),
@@ -146,6 +179,9 @@ export class EditorInformationProvider {
     const seen = new Set<string>();
     // Bound concurrent reads: a project may contain thousands of dependency files.
     for (const [file, roots] of candidates) {
+      if (epoch !== this.#epoch) {
+        return { artifacts: [], rejected: [] };
+      }
       const sourceFiles = new Set<string>();
       const reasons: string[] = [];
       const reject = (reason: string): void => {
@@ -160,7 +196,11 @@ export class EditorInformationProvider {
         continue;
       }
       try {
-        this.#trackedFiles.add(file);
+        tracked.add(file);
+        if ((await stat(file)).size > 64 * 1024 * 1024) {
+          reject("Debug map exceeds the 64 MiB inspection budget.");
+          continue;
+        }
         const map = JSON.parse(await readFile(file, "utf8")) as DebugMap;
         const errors = validateDebugMap(map);
         if (errors.length) {
@@ -178,23 +218,29 @@ export class EditorInformationProvider {
         // Record every dependency before validation: a failure early in the source list must
         // still explain why other source editors in this build have no annotations.
         for (const source of map.sources) {
+          if (epoch !== this.#epoch) {
+            return { artifacts: [], rejected: [] };
+          }
           const paths = path.isAbsolute(source.path)
             ? [source.path]
             : resolutionRoots.map((root) => path.resolve(root, source.path));
           for (const candidate of paths) {
             sourceFiles.add(candidate);
-            this.#trackedFiles.add(candidate);
+            tracked.add(candidate);
           }
         }
         let current = true;
         for (const source of map.sources) {
+          if (epoch !== this.#epoch) {
+            return { artifacts: [], rejected: [] };
+          }
           const paths = path.isAbsolute(source.path)
             ? [source.path]
             : [...new Set(resolutionRoots.map((root) => path.resolve(root, source.path)))];
           let resolved: string | undefined;
           let failure = `Source missing or unreadable: ${source.path}. Searched: ${paths.join(", ")}.`;
           for (const candidate of paths) {
-            this.#trackedFiles.add(candidate);
+            tracked.add(candidate);
             try {
               const metadata = await stat(candidate);
               if (!metadata.isFile()) {
@@ -238,7 +284,7 @@ export class EditorInformationProvider {
         let output: Uint8Array | undefined;
         const outputFile = file.replace(/\.debug\.json$/, "");
         if (outputFile !== file) {
-          this.#trackedFiles.add(outputFile);
+          tracked.add(outputFile);
           try {
             const bytes = await readFile(outputFile);
             if (bytes.length === map.output.size && hash(bytes) === map.output.sha256) {
@@ -289,6 +335,14 @@ export class EditorInformationProvider {
         }
       }
     }
+    if (epoch !== this.#epoch) {
+      return { artifacts: [], rejected: [] };
+    }
+    this.#trackedFiles.clear();
+    for (const file of tracked) {
+      this.#trackedFiles.add(file);
+    }
+    this.#trackedRevision++;
     return { artifacts, rejected };
   }
 

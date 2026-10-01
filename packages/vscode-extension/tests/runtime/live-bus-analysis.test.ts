@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { createRuntimeBusCaptureSource } from "@uttori/asm-disassembler";
 import { build } from "esbuild";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -24,7 +25,6 @@ import {
   createRuntimeBusTraceImporter,
   type AnalysisProject,
 } from "../../../disassembler/src/index.js";
-import { createEditorRuntimeBusSource } from "../../src/runtime/bus-source.js";
 import { LiveBusAnalysis, type LiveBusProgress } from "../../src/runtime/live-bus-analysis.js";
 
 const project: AnalysisProject = {
@@ -127,7 +127,7 @@ test("live worker stages provisional facts, then publishes the same result as of
   } finally {
     store.close();
   }
-  const source = await createEditorRuntimeBusSource(file);
+  const source = await createRuntimeBusCaptureSource(file);
   const importer = createRuntimeBusTraceImporter(source.metadata, {
     sourceName: "success.act2",
     projectRomContentSha256: project.manifest.rom.contentSha256,

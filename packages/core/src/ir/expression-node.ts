@@ -1,4 +1,4 @@
-import { createSourceSpan, type SourceSpan } from "../source-location.js";
+import { createSourceSpan, createTextSpan, type SourceSpan } from "../source-location.js";
 
 type ExpressionNodeBase = {
   span?: SourceSpan;
@@ -130,8 +130,11 @@ function attachRootSpan(node: ExpressionNode, text: string): ExpressionNode {
  * @param {string} input The expression source text.
  * @returns {ExpressionNode} The parsed expression node.
  */
-export function parseExpressionNode(input: string): ExpressionNode {
+export function parseExpressionNode(input: string, source?: ExpressionSource): ExpressionNode {
   const trimmed = input.trim();
+  if (source) {
+    source = { ...source, offset: source.offset + input.length - input.trimStart().length };
+  }
   if (!trimmed) {
     return { type: "raw", value: "", span: createSourceSpan(0, 0) };
   }
@@ -139,7 +142,10 @@ export function parseExpressionNode(input: string): ExpressionNode {
   // Immediate addressing (`#label`, `#label>>8`) is not part of the
   // expression language. Strip it so the inner expression still parses.
   if (trimmed.startsWith("#") && trimmed.length > 1) {
-    return parseExpressionNode(trimmed.slice(1));
+    return parseExpressionNode(
+      trimmed.slice(1),
+      source && { ...source, offset: source.offset + 1 },
+    );
   }
 
   const rangeIndex = findTopLevelRange(trimmed);
@@ -147,15 +153,18 @@ export function parseExpressionNode(input: string): ExpressionNode {
     return attachRootSpan(
       {
         type: "range",
-        start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
-        end: parseExpressionNode(trimmed.slice(rangeIndex + 2)),
+        start: parseExpressionNode(trimmed.slice(0, rangeIndex), source),
+        end: parseExpressionNode(
+          trimmed.slice(rangeIndex + 2),
+          source && { ...source, offset: source.offset + rangeIndex + 2 },
+        ),
       },
       trimmed,
     );
   }
 
   try {
-    const tokens = tokenizeExpression(trimmed);
+    const tokens = tokenizeExpression(trimmed, source);
     const parser = new ExpressionParser(tokens);
     const expression = parser.parseExpression();
     if (!parser.isAtEnd()) {
@@ -438,12 +447,19 @@ function skipWhitespace(input: string, index: number): number {
   return current;
 }
 
-/**
- * Splits function-call arguments without breaking nested calls or quoted strings.
- * @param {string} input The function argument list.
- * @returns {string[]} The split argument expressions.
- */
-type Token =
+/** Optional physical provenance for identifier references in a continued expression. */
+export type ExpressionSource = {
+  /** Original command, with physical newlines and indentation preserved. */
+  text: string;
+  /** UTF-16 offset where the input expression starts within text. */
+  offset: number;
+  /** Zero-based physical line where text starts. */
+  line: number;
+  /** Reused physical-line offsets for every value in one large record. */
+  lineStarts?: number[];
+};
+
+type Token = { span?: SourceSpan } & (
   | { type: "identifier"; value: string }
   | { type: "literal"; value: string }
   | { type: "string"; value: string; quote: '"' | "'" }
@@ -454,7 +470,8 @@ type Token =
   | { type: "comma" }
   | { type: "dot" }
   | { type: "lbracket" }
-  | { type: "rbracket" };
+  | { type: "rbracket" }
+);
 
 const binaryPrecedence: Record<BinaryOperator, number> = {
   "||": 0,
@@ -508,9 +525,23 @@ const binaryOperators = [
  * @param {string} input The expression source text.
  * @returns {Token[]} The list of tokens.
  */
-function tokenizeExpression(input: string): Token[] {
+function tokenizeExpression(input: string, source?: ExpressionSource): Token[] {
   const tokens: Token[] = [];
   let index = 0;
+  // Only editor callers request token spans; ordinary evaluation avoids the
+  // allocation and retains the compact expression trees used by assembler passes.
+  const provenance = (end: number): { span?: SourceSpan } =>
+    source
+      ? {
+          span: createTextSpan(
+            source.text,
+            source.offset + index,
+            source.offset + end,
+            source.line,
+            source.lineStarts,
+          ),
+        }
+      : {};
 
   while (index < input.length) {
     const char = input[index];
@@ -534,7 +565,7 @@ function tokenizeExpression(input: string): Token[] {
       continue;
     }
     if (char === ".") {
-      tokens.push({ type: "dot" });
+      tokens.push({ type: "dot", ...provenance(index + 1) });
       index++;
       continue;
     }
@@ -565,14 +596,14 @@ function tokenizeExpression(input: string): Token[] {
     }
     if (char === "!") {
       const { token, nextIndex } = readDefineReference(input, index);
-      tokens.push(token);
+      tokens.push({ ...token, ...provenance(nextIndex) });
       index = nextIndex;
       continue;
     }
 
     if (char === "@" || /[A-Z_a-z]/.test(char)) {
       const { value, nextIndex } = readIdentifier(input, index);
-      tokens.push({ type: "identifier", value });
+      tokens.push({ type: "identifier", value, ...provenance(nextIndex) });
       index = nextIndex;
       continue;
     }
@@ -581,7 +612,7 @@ function tokenizeExpression(input: string): Token[] {
       if (!match) {
         throw new Error("Invalid hex literal");
       }
-      tokens.push({ type: "literal", value: match[0] });
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
       index += match[0].length;
       continue;
     }
@@ -590,7 +621,7 @@ function tokenizeExpression(input: string): Token[] {
       if (!match) {
         throw new Error("Invalid binary literal");
       }
-      tokens.push({ type: "literal", value: match[0] });
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
       index += match[0].length;
       continue;
     }
@@ -600,7 +631,7 @@ function tokenizeExpression(input: string): Token[] {
       if (!match) {
         throw new Error("Invalid numeric literal");
       }
-      tokens.push({ type: "literal", value: match[0] });
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
       index += match[0].length;
       continue;
     }
@@ -750,16 +781,29 @@ class ExpressionParser {
 
   parsePrimary(): ExpressionNode {
     if (this.peek()?.type === "dot") {
+      const firstSpan = this.peek()?.span;
       let name = "";
       while (this.match({ type: "dot" })) {
         name += ".";
       }
       const token = this.consume();
       if (token?.type === "identifier") {
-        return { type: "identifier", name: name + token.value };
+        return {
+          type: "identifier",
+          name: name + token.value,
+          ...(firstSpan && {
+            span: createSourceSpan(firstSpan.start, token.span!.end, firstSpan.line),
+          }),
+        };
       }
       if (token?.type === "literal" && /^\d+$/.test(token.value)) {
-        return { type: "identifier", name: name + token.value };
+        return {
+          type: "identifier",
+          name: name + token.value,
+          ...(firstSpan && {
+            span: createSourceSpan(firstSpan.start, token.span!.end, firstSpan.line),
+          }),
+        };
       }
       throw new Error("Expected label name after '.'");
     }
@@ -774,10 +818,20 @@ class ExpressionParser {
         return { type: "string", value: token.value, quote: token.quote };
       case "defineReference":
         return token.braced
-          ? { type: "defineReference", content: token.content, braced: true }
-          : { type: "defineReference", name: token.name, braced: false };
+          ? {
+              type: "defineReference",
+              content: token.content,
+              braced: true,
+              ...(token.span && { span: token.span }),
+            }
+          : {
+              type: "defineReference",
+              name: token.name,
+              braced: false,
+              ...(token.span && { span: token.span }),
+            };
       case "identifier":
-        return { type: "identifier", name: token.value };
+        return { type: "identifier", name: token.value, ...(token.span && { span: token.span }) };
       case "lparen": {
         const expression = this.parseExpression();
         this.expect("rparen");
@@ -813,7 +867,11 @@ class ExpressionParser {
         current = {
           type: "member",
           object: current,
-          property: { type: "identifier", name: property.value },
+          property: {
+            type: "identifier",
+            name: property.value,
+            ...(property.span && { span: property.span }),
+          },
         };
         continue;
       }

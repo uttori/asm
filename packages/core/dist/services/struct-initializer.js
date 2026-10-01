@@ -49,34 +49,81 @@ export function splitInitializerList(text) {
     } // One trailing comma is allowed.
     return entries;
 }
+/** Locate the record's physical opening brace, skipping index expressions and braced defines. */
+export function structInitializerStart(text) {
+    let depth = 0;
+    let quote = "";
+    for (let index = 0; index < text.length; index++) {
+        const char = text[index];
+        if (quote) {
+            if (char === "\\") {
+                index++;
+            }
+            else if (char === quote) {
+                quote = "";
+            }
+            continue;
+        }
+        if (char === '"' || char === "'") {
+            quote = char;
+        }
+        else if (char === "{" && depth === 0 && text[index - 1] !== "!") {
+            return index;
+        }
+        else if ("([{".includes(char)) {
+            depth++;
+        }
+        else if (")]}".includes(char)) {
+            depth--;
+        }
+    }
+    throw new Error("dataStruct requires a brace-delimited initializer.");
+}
 /**
  * Parse field names and scalar/array shapes without evaluating assembler expressions.
  * @param {string} text One brace-delimited record literal.
  * @returns {Map<string, string | string[]>} Unique names and unevaluated values.
  */
 export function parseStructInitializer(text) {
+    return new Map(parseStructInitializerEntries(text).map((field) => [field.name, field.value]));
+}
+/** Parse the same record grammar as emission while retaining exact editor locations. */
+export function parseStructInitializerEntries(text) {
     const trimmed = text.trim();
     if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
         throw new Error("dataStruct requires a named initializer: { field = value }.");
     }
-    const fields = new Map();
+    const fields = [];
+    const names = new Set();
+    let cursor = text.indexOf("{") + 1;
     for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
+        const start = text.indexOf(entry, cursor);
+        cursor = start + entry.length;
         const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
         if (!match) {
             throw new Error(`Expected 'field = value' in initializer: ${entry}`);
         }
         const [, name, value] = match;
-        if (fields.has(name)) {
+        if (names.has(name)) {
             throw new Error(`Duplicate initializer field '${name}'.`);
         }
+        names.add(name);
+        const valueStart = start + entry.length - value.length;
         if (value.startsWith("[")) {
             if (!value.endsWith("]")) {
                 throw new Error(`Unclosed array initializer '${name}'.`);
             }
-            fields.set(name, splitInitializerList(value.slice(1, -1)));
+            let elementCursor = valueStart + 1;
+            const values = splitInitializerList(value.slice(1, -1));
+            const expressions = values.map((expression) => {
+                const expressionStart = text.indexOf(expression, elementCursor);
+                elementCursor = expressionStart + expression.length;
+                return { text: expression, start: expressionStart };
+            });
+            fields.push({ name, value: values, start, expressions });
         }
         else {
-            fields.set(name, value);
+            fields.push({ name, value, start, expressions: [{ text: value, start: valueStart }] });
         }
     }
     return fields;

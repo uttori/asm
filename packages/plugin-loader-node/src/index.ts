@@ -7,6 +7,7 @@ export {
   type LoadedConfigurationFile,
 } from "./configuration.js";
 export { NodePluginLoader, loadProjectEnvironment, isPluginPathSpecifier } from "./loader.js";
+export { fingerprintNodeToolchain, type ToolchainFingerprint } from "./toolchain.js";
 export type {
   PluginModuleRequest,
   ProjectConfiguration,

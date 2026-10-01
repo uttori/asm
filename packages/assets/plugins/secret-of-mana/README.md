@@ -27,8 +27,14 @@ The cartridge's WAVE files contain standard mono PCM16 at a nominal 32 kHz previ
 rate. An `sBRR` RIFF chunk holds the original encoded BRR blocks. The plugin checks
 every PCM sample against the shared BRR decoder before emitting those blocks, which
 preserves the original ROM bytes. The segment format uses one WAVE on both sides of
-the violin's bank boundary. Editing the PCM requires a reviewed BRR re-encode; a
-stale native chunk is rejected.
+the violin's bank boundary. Edited PCM re-encodes with the shared deterministic BRR
+encoder after the recipe declares `loop: false`, `loop: "source"` for a WAVE `smpl`
+loop, or `loop: { start, end }` in sample frames (exclusive end, aligned to sixteen).
+The BRR flag cannot reveal the external loop-pointer table, so the plugin refuses
+to guess that policy. Review playback, peak/RMS error and loop-replay error accompany
+the encoded bytes. Ordinary editors may strip the native chunk; the explicit policy
+still works. A split stream then also requires `fullByteLength`, and its complete
+encoded size must remain fixed so new tail samples cannot silently disappear.
 Asset Preview shows the source waveform and offers playback of both the authored
 WAVE and the verified decoded BRR. For `som.brr.segment`, the byte count is the
 selected bank slice while playback covers the complete stream, since the split
@@ -38,10 +44,24 @@ Legacy native-order boss PNGs can keep the original compressed stream in a priva
 plugin verifies that its decoded tiles match the visible indexed pixels, then emits
 those original bytes for an exact ROM rebuild. After a pixel edit, it re-encodes the
 two-byte-history mask stream and optional `som.lz` stage, then keeps the declared ROM
-span fixed. An edit that cannot fit the original span fails assembly. The boss frame
+span fixed by default. Set `sizePolicy: "encoded"` on a declared movable asset to
+expose its actual encoded length to layout checks and relocation; `byteLength` still
+identifies the preserved original stream. Fixed-size edits that do not fit fail;
+encoded sizing never allocates space or repairs pointers by itself. The boss frame
 atlases carry the same native streams in `soMA`, `soMB`, etc., one per segment in layout
 order. Frame records supply positions and flips; each atlas retains a representative
 verified source palette, while the game may select a different runtime palette.
+
+For ordinary PNG editors, declare `native: "../assets/native/boss-1ae598.bin"`
+on each `som.boss.graphics` include. This small original compressed resource takes
+precedence over private PNG chunks, which external editors commonly discard.
+The plugin checks its original byte length and decodes it before reuse. Unchanged
+logical tiles retain the exact original stream; changed tiles are encoded and
+round-trip checked. Each segment has its own resource, so changing one segment
+does not unnecessarily recompress the others. Git source generation can admit
+these resources through `pristineAssets` entries with a SHA-256 and a `romRange`
+of half-open, headerless original-ROM file offsets. Candidate generation extracts
+and verifies those original bytes instead of trusting the working asset file.
 
 ## Frame-aware sprite atlases
 
@@ -272,7 +292,7 @@ before publication. All expected swatch files must already exist.
 
 Both authoring commands accept `--export /path/to/staged-export` or
 `--project /path/to/project` (whose export is `disassembly`). They snapshot read
-sources and reject concurrent changes, refuse manifest-owned generated outputs, stage
+sources and reject concurrent changes, stage
 all replacements and recover earlier writes on ordinary publication failures. Recovery
 is not crash-atomic and intermediate files are visible to readers; avoid concurrent
 assembly while publishing. A recovery conflict retains backups for manual reconciliation.
@@ -300,7 +320,7 @@ result includes updated raw frame bytes but does not yet install ROM frame inclu
 
 Save dependencies at the beginning of an external editing session, then require the
 same baseline on import. The baseline includes atlas PNGs/layouts, palette catalogue
-and swatches, include sources/map and the generated-file manifest. It is relocatable;
+and swatches, and include sources/map. It is relocatable;
 its identity includes the adapter revision and reference ROM hash.
 
 ```sh
@@ -312,26 +332,21 @@ rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/edit
 The snapshot command refuses to overwrite an existing baseline. Authoring commands
 check it before planning and retain their command-lifetime concurrency checks.
 
-`sprite-source-stage.mjs` exposes `createSpriteSourceStage` and
-`publishSpriteSourceStage` for new source files and regenerated exports. Stages exclude
-`analysis` and `captures`; publication retains their live directory contents. The host
-must supply a build callback that enforces exact no-edit ROM equality or an approved
-edit diff. Generated-file integrity, source audit and unchanged verification inputs
-are mandatory gates around that callback. Use the exporter to regenerate staged
-banks/manifests; this API does not authorize hand-editing them. Publication is offline,
-recoverable on ordinary failures, and retains the previous source tree; it is not a
-crash-atomic transaction or a replacement for analysis-database transactions.
+Source and asset changes are ordinary Git edits. Build with `source build`; use
+`source prepare`, `source preview`, a Git checkpoint, `source apply` and `source finish`
+for regeneration. Pure generation checks establish original-ROM equality; edited builds
+validate placement and references against their exact source snapshot.
 
 ## Verification against selected exports
 
 ```sh
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-generated-export.mjs --export /path/to/export
+rtk proxy node packages/cli/out/cli.mjs source build /path/to/project
 rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --source-only
 rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/build-palette-previews.mjs --export /path/to/export --check
 rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --rom /path/to/rebuilt.sfc
 ```
 
-The integrity command reuses the generic disassembler manifest inspector. The sprite
+The build command validates the selected Git source snapshot. The sprite
 check discovers banks and includes, checks exact native ownership spans and dependencies,
 and audits indexed PNG palettes, source extraction and catalogue users. `--source-only`
 allows intentional edits without comparing them to the original ROM; it is not an

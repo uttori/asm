@@ -24,6 +24,8 @@ export * from "./ir/expression-node.js";
 export * from "./ir/normalized-command.js";
 export * from "./ir/asset-call.js";
 export * from "./services/assembly-front-end-service.js";
+export { isOpenStructInitializer } from "./services/struct-initializer.js";
+export { removeInlineComment } from "./services/command-text-service.js";
 export * from "./services/command-lowering-service.js";
 export { ProgramModelBuilder } from "./services/program-model-builder.js";
 export * from "./lsp/index.js";

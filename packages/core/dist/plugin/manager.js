@@ -455,6 +455,8 @@ export class PluginManager {
                     typeof record.value.createDecoder !== "function") ||
                 typeof record.value.classifyOperand !== "function" ||
                 typeof record.value.splitOperands !== "function" ||
+                (record.value.referenceExpressions !== undefined &&
+                    typeof record.value.referenceExpressions !== "function") ||
                 !isArray(record.value.instructions)) {
                 throw new PluginError(`Architecture '${record.contributionId}' is malformed.`, {
                     code: "PLUGIN_CONFIGURATION_INVALID",

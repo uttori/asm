@@ -53,12 +53,12 @@ source or retain its chunks.
 
 ## Limits and retained data
 
-| Limit                                         | Default                   | Meaning                                                                           |
-| --------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
-| File `maxBytes`                               | 2 GiB                     | Whole input file, positive safe integer                                           |
-| SQLite project `maxIndexRecords` | `Number.MAX_SAFE_INTEGER` | No fixed record ceiling; storage and input budgets still apply              |
-| In-memory `maxIndexRecords`, full profile     | 8,000,000                 | Distinct aggregate index records                                                  |
-| Explicit `maxIndexRecords`                    | Caller supplied           | Positive safe integer; maximum 8M when counters or final records remain in memory |
+| Limit                                     | Default                   | Meaning                                                                           |
+| ----------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
+| File `maxBytes`                           | 2 GiB                     | Whole input file, positive safe integer                                           |
+| SQLite project `maxIndexRecords`          | `Number.MAX_SAFE_INTEGER` | No fixed record ceiling; storage and input budgets still apply                    |
+| In-memory `maxIndexRecords`, full profile | 8,000,000                 | Distinct aggregate index records                                                  |
+| Explicit `maxIndexRecords`                | Caller supplied           | Positive safe integer; maximum 8M when counters or final records remain in memory |
 
 Records are derived facts, not input instructions: each distinct PC counts once, each joint
 PC/bytes/state variant counts twice (instruction and CPU-state records), and each distinct bus

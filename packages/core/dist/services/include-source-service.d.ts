@@ -17,6 +17,8 @@ export interface IncludeSourceHost {
     readonly programModelBuilder: ProgramModelBuilder;
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
     recordIncludeEdge(fromFile: string, toFile: string): void;
+    /** Final-pass hosts record which raw input bytes reach output for orphaned-edit validation. */
+    recordBinarySlice?(file: string, start: number, end: number, bytes: Uint8Array): void;
     /** When false, include directives record an edge without parsing the target. */
     readonly followIncludes: boolean;
 }
@@ -43,6 +45,8 @@ export declare class IncludeSourceService {
      * @returns {Uint8Array | string} The file contents.
      */
     readFile(filePath: string, encoding?: BufferEncoding): Uint8Array | string;
+    /** Resolve the same include path used to read bytes, then attribute its exact consumed slice. */
+    recordBinarySlice(filename: string, start: number, end: number, bytes: Uint8Array): void;
     /**
      * Resolves a source include target.
      * @param {string} filename The target filename.

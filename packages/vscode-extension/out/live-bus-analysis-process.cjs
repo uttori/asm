@@ -5,6 +5,14 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -27,178 +35,155 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/vscode-extension/src/runtime/live-bus-analysis-process.ts
-var live_bus_analysis_process_exports = {};
-__export(live_bus_analysis_process_exports, {
-  handleLiveBusProcessMessage: () => handleLiveBusProcessMessage,
-  runLiveBusAnalysis: () => runLiveBusAnalysis
+// ../debug-adapter/src/contracts.ts
+var init_contracts = __esm({
+  "../debug-adapter/src/contracts.ts"() {
+    "use strict";
+  }
 });
-module.exports = __toCommonJS(live_bus_analysis_process_exports);
-var import_promises3 = require("node:timers/promises");
 
-// packages/core/src/canonical-json.ts
-var compareKeys = (a, b) => a.localeCompare(b);
-var canonicalValue = (value) => {
-  if (typeof value !== "object" || value === null) {
-    return value;
+// ../debug-adapter/src/conformance.ts
+var DEBUG_BACKEND_CONFORMANCE_SCENARIOS;
+var init_conformance = __esm({
+  "../debug-adapter/src/conformance.ts"() {
+    "use strict";
+    DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
+      "protocol-and-capabilities",
+      "connect-and-inspect",
+      "exact-instruction-step",
+      "continue-to-breakpoint",
+      "reconnect-without-reset",
+      "request-bounds"
+    ]);
   }
-  if (Array.isArray(value)) {
-    return value.map(canonicalValue);
+});
+
+// ../debug-adapter/src/debug-expression.ts
+var MAX_MAGNITUDE, binaryPrecedence;
+var init_debug_expression = __esm({
+  "../debug-adapter/src/debug-expression.ts"() {
+    "use strict";
+    MAX_MAGNITUDE = (1n << 256n) - 1n;
+    binaryPrecedence = Object.freeze({
+      "||": 0,
+      "&&": 1,
+      "=": 2,
+      "==": 2,
+      "!=": 2,
+      "<": 2,
+      ">": 2,
+      "<=": 2,
+      ">=": 2,
+      "<<": 3,
+      ">>": 3,
+      "&": 3,
+      "|": 3,
+      "^": 3,
+      "+": 4,
+      "-": 4,
+      "*": 5,
+      "/": 5,
+      "%": 5,
+      "**": 6
+    });
   }
-  const input = value;
-  const result = {};
-  const keys = Object.keys(input);
-  if (keys.length > 1) {
-    keys.sort(compareKeys);
-  }
-  for (const key3 of keys) {
-    const entry = input[key3];
-    if (entry === void 0) {
-      continue;
-    }
-    const normalized = typeof entry === "object" && entry !== null ? canonicalValue(entry) : entry;
-    if (key3 === "__proto__") {
-      Object.defineProperty(result, key3, {
-        value: normalized,
-        enumerable: true,
-        writable: true,
-        configurable: true
-      });
-    } else {
-      result[key3] = normalized;
-    }
-  }
-  return result;
-};
-var canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
-var canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
-var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
+});
+
+// ../core/src/canonical-json.ts
+var compareKeys, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
+var init_canonical_json = __esm({
+  "../core/src/canonical-json.ts"() {
+    "use strict";
+    compareKeys = (a, b) => a.localeCompare(b);
+    canonicalValue = (value) => {
+      if (typeof value !== "object" || value === null) {
+        return value;
+      }
+      if (Array.isArray(value)) {
+        return value.map(canonicalValue);
+      }
+      const input = value;
+      const result = {};
+      const keys = Object.keys(input);
+      if (keys.length > 1) {
+        keys.sort(compareKeys);
+      }
+      for (const key3 of keys) {
+        const entry = input[key3];
+        if (entry === void 0) {
+          continue;
+        }
+        const normalized = typeof entry === "object" && entry !== null ? canonicalValue(entry) : entry;
+        if (key3 === "__proto__") {
+          Object.defineProperty(result, key3, {
+            value: normalized,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key3] = normalized;
+        }
+      }
+      return result;
+    };
+    canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+    canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
+    canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
-
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
-var CRC32_POLYNOMIAL = 3988292384;
-var CRC32C_POLYNOMIAL = 2197175160;
-var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
-  let crc = index;
-  for (let bit = 0; bit < 8; bit++) {
-    crc = crc & 1 ? polynomial ^ crc >>> 1 : crc >>> 1;
   }
-  return crc >>> 0;
 });
-var sliceTable = (table) => {
-  const slices = [Uint32Array.from(table)];
-  for (let width = 1; width < 8; width++) {
-    const previous = slices[width - 1];
-    slices.push(Uint32Array.from(previous, (crc) => crc >>> 8 ^ table[crc & 255]));
-  }
-  return [slices[0], slices[1], slices[2], slices[3], slices[4], slices[5], slices[6], slices[7]];
-};
-var CRC32_TABLE = /* @__PURE__ */ reflectedTable(CRC32_POLYNOMIAL);
-var CRC32C_TABLE = /* @__PURE__ */ reflectedTable(CRC32C_POLYNOMIAL);
-var crc32Slices = /* @__PURE__ */ sliceTable(CRC32_TABLE);
-var crc32cSlices = /* @__PURE__ */ sliceTable(CRC32C_TABLE);
-var [i0, i1, i2, i3, i4, i5, i6, i7] = crc32Slices;
-var [c0, c1, c2, c3, c4, c5, c6, c7] = crc32cSlices;
-var crc32cBytes = (bytes, zeroChecksum = false) => {
-  let crc = -1;
-  let index = 0;
-  const length = bytes.length;
-  const blockEnd = length - 7;
-  for (; index < blockEnd; index += 8) {
-    let low = bytes[index] | bytes[index + 1] << 8 | bytes[index + 2] << 16 | bytes[index + 3] << 24;
-    if (zeroChecksum && index === 56) {
-      low = 0;
-    }
-    const mixed = crc ^ low;
-    crc = c7[mixed & 255] ^ c6[mixed >>> 8 & 255] ^ c5[mixed >>> 16 & 255] ^ c4[mixed >>> 24] ^ c3[bytes[index + 4]] ^ c2[bytes[index + 5]] ^ c1[bytes[index + 6]] ^ c0[bytes[index + 7]];
-  }
-  for (; index < length; index++) {
-    const byte = zeroChecksum && index >= 56 && index < 60 ? 0 : bytes[index];
-    crc = crc >>> 8 ^ c0[(crc ^ byte) & 255];
-  }
-  return ~crc >>> 0;
-};
 
-// packages/debug-adapter/src/capture-v2.ts
-var maxU64 = (1n << 64n) - 1n;
-var captureScope = (value) => {
-  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
-    throw new Error("Unsupported capture scope.");
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+var CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, crc32cBytes;
+var init_data_hash_crc32 = __esm({
+  "../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+    CRC32_POLYNOMIAL = 3988292384;
+    CRC32C_POLYNOMIAL = 2197175160;
+    reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
+      let crc = index;
+      for (let bit = 0; bit < 8; bit++) {
+        crc = crc & 1 ? polynomial ^ crc >>> 1 : crc >>> 1;
+      }
+      return crc >>> 0;
+    });
+    sliceTable = (table) => {
+      const slices = [Uint32Array.from(table)];
+      for (let width = 1; width < 8; width++) {
+        const previous = slices[width - 1];
+        slices.push(Uint32Array.from(previous, (crc) => crc >>> 8 ^ table[crc & 255]));
+      }
+      return [slices[0], slices[1], slices[2], slices[3], slices[4], slices[5], slices[6], slices[7]];
+    };
+    CRC32_TABLE = /* @__PURE__ */ reflectedTable(CRC32_POLYNOMIAL);
+    CRC32C_TABLE = /* @__PURE__ */ reflectedTable(CRC32C_POLYNOMIAL);
+    crc32Slices = /* @__PURE__ */ sliceTable(CRC32_TABLE);
+    crc32cSlices = /* @__PURE__ */ sliceTable(CRC32C_TABLE);
+    [i0, i1, i2, i3, i4, i5, i6, i7] = crc32Slices;
+    [c0, c1, c2, c3, c4, c5, c6, c7] = crc32cSlices;
+    crc32cBytes = (bytes, zeroChecksum = false) => {
+      let crc = -1;
+      let index = 0;
+      const length = bytes.length;
+      const blockEnd = length - 7;
+      for (; index < blockEnd; index += 8) {
+        let low = bytes[index] | bytes[index + 1] << 8 | bytes[index + 2] << 16 | bytes[index + 3] << 24;
+        if (zeroChecksum && index === 56) {
+          low = 0;
+        }
+        const mixed = crc ^ low;
+        crc = c7[mixed & 255] ^ c6[mixed >>> 8 & 255] ^ c5[mixed >>> 16 & 255] ^ c4[mixed >>> 24] ^ c3[bytes[index + 4]] ^ c2[bytes[index + 5]] ^ c1[bytes[index + 6]] ^ c0[bytes[index + 7]];
+      }
+      for (; index < length; index++) {
+        const byte = zeroChecksum && index >= 56 && index < 60 ? 0 : bytes[index];
+        crc = crc >>> 8 ^ c0[(crc ^ byte) & 255];
+      }
+      return ~crc >>> 0;
+    };
   }
-  return value;
-};
-var captureU64 = (value) => {
-  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
-    throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
-  }
-  return BigInt(value);
-};
-var captureSession = (value) => {
-  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
-    throw new Error("Invalid capture session identity.");
-  }
-  return value;
-};
-var validateCapturePosition = (value, session, scope) => {
-  if (!value || typeof value !== "object") {
-    throw new Error("Invalid capture position.");
-  }
-  const p = value;
-  captureSession(p.session);
-  if (session !== void 0 && p.session !== session) {
-    throw new Error("Capture session changed.");
-  }
-  if (p.scope !== void 0) {
-    captureScope(p.scope);
-  }
-  if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
-    throw new Error("Capture scope changed or was not confirmed by the producer.");
-  }
-  if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
-    p.state
-  )) {
-    throw new Error("Invalid capture state.");
-  }
-  const bounds = [
-    p.releasedThrough,
-    p.durableThrough,
-    p.acceptedThrough,
-    p.deliveredThrough,
-    p.producedThrough
-  ].map(captureU64);
-  if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
-    throw new Error("Capture ownership boundaries are inconsistent.");
-  }
-  if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
-    throw new Error("Capture chunk boundary is inconsistent.");
-  }
-  captureU64(p.throttleCount);
-  if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
-    throw new Error("Invalid capture clock domain.");
-  }
-  if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
-    throw new Error("Capture integrity failed.");
-  }
-  if (![p.bufferedBytes, p.allocatedBytes].every(
-    (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-  ) || p.bufferedBytes > p.allocatedBytes) {
-    throw new Error("Capture allocation exceeds its bounds.");
-  }
-  if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
-    throw new Error("Capture terminal totals do not reconcile.");
-  }
-  return p;
-};
-var captureCrc32c = (bytes, zeroChecksum = false) => crc32cBytes(bytes, zeroChecksum);
-var captureChunkRecords = (chunk) => {
-  if (chunk.scope === "snes.65816.instructions") {
-    return chunk.instructions;
-  }
-  if (chunk.scope === "snes.cpu-bus") {
-    return chunk.accesses;
-  }
-  return chunk.events;
-};
+});
+
+// ../debug-adapter/src/capture-v2.ts
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
@@ -299,494 +284,732 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
     instructions
   };
 }
-var decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
-  if (!transfers && b.length !== 64 + count * 64) {
-    throw new Error("Invalid bus record payload length.");
-  }
-  const accesses = [];
-  const actors = ["cpu", "dma", "hdma"];
-  const phases = ["cpu", "dma", "hdma-table", "hdma-indirect", "hdma-transfer"];
-  const contexts = ["unattributed", "instruction", "interrupt", "wait", "stop"];
-  let lastCycle = 0n;
-  let offset = 64;
-  for (let i = 0; i < count; i++) {
-    if (offset + 64 > b.length) {
-      throw new Error("Truncated bus/transfer record.");
-    }
-    if (transfers && b.readUInt16LE(offset) === 3) {
-      const marker = decodeTransfer(b, offset, first + BigInt(i));
-      if (BigInt(marker.cycle) < lastCycle) {
-        throw new Error("Capture clock moved backwards.");
+var maxU64, captureScope, captureU64, captureSession, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
+var init_capture_v2 = __esm({
+  "../debug-adapter/src/capture-v2.ts"() {
+    "use strict";
+    init_data_hash_crc32();
+    maxU64 = (1n << 64n) - 1n;
+    captureScope = (value) => {
+      if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
+        throw new Error("Unsupported capture scope.");
       }
-      lastCycle = BigInt(marker.cycle);
-      accesses.push(marker);
-      offset += 80;
-      continue;
-    }
-    const extended = ppu && b.readUInt16LE(offset + 2) === 2;
-    const length = extended ? 88 : 64;
-    if (b.readUInt16LE(offset) !== 2 || b.readUInt16LE(offset + 2) !== (extended ? 2 : 1) || b.readUInt32LE(offset + 4) !== length || offset + length > b.length || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt16LE(offset + 62) !== 0) {
-      throw new Error("Unsupported required bus capture record.");
-    }
-    const event = first + BigInt(i);
-    const cycle = b.readBigUInt64LE(offset + 24);
-    const ordinal = b.readBigUInt64LE(offset + 32);
-    const address = b.readBigUInt64LE(offset + 40);
-    const pc = b.readUInt32LE(offset + 48);
-    const direction = b[offset + 53], actor = b[offset + 54], channel = b[offset + 55];
-    const phase = b[offset + 56], context = b[offset + 57];
-    const hcounter = b.readUInt16LE(offset + 58), vcounter = b.readUInt16LE(offset + 60);
-    if (b.readBigUInt64LE(offset + 8) !== event || address > 0xffffffn || pc > 16777215) {
-      throw new Error("Bus identity disagrees with capture scope.");
-    }
-    const expectedActor = phase === 0 ? 0 : 2;
-    const phaseActor = phase === 1 ? 1 : expectedActor;
-    if (direction > 1 || phase >= phases.length || actor !== phaseActor || (actor === 0 ? channel !== 255 : channel > 7) || (phase === 2 || phase === 3) && direction !== 0 || context >= contexts.length || ordinal !== 0n !== (context === 1) || hcounter >= 1368 || vcounter >= 313) {
-      throw new Error("Invalid bus attribution or timing fields.");
-    }
-    if (cycle < lastCycle) {
-      throw new Error("Capture clock moved backwards.");
-    }
-    lastCycle = cycle;
-    const port = Number(address) & 65535;
-    const dataPort = direction === 1 && !(Number(address) & 4194304) && [8452, 8472, 8473, 8482].includes(port);
-    if (ppu && extended !== dataPort) {
-      throw new Error("Missing or misplaced PPU effect.");
-    }
-    accesses.push({
-      ...extended ? { ppu: decodePPUEffect(b, offset, port) } : {},
-      sequence: String(event),
-      ordinal: String(ordinal),
-      cycle: String(cycle),
-      address: Number(address),
-      pc,
-      value: b[offset + 52],
-      direction: direction === 0 ? "read" : "write",
-      actor: actors[actor],
-      channel: actor === 0 ? null : channel,
-      phase: phases[phase],
-      context: contexts[context],
-      hcounter,
-      vcounter
+      return value;
+    };
+    captureU64 = (value) => {
+      if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
+        throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
+      }
+      return BigInt(value);
+    };
+    captureSession = (value) => {
+      if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
+        throw new Error("Invalid capture session identity.");
+      }
+      return value;
+    };
+    validateCapturePosition = (value, session, scope) => {
+      if (!value || typeof value !== "object") {
+        throw new Error("Invalid capture position.");
+      }
+      const p = value;
+      captureSession(p.session);
+      if (session !== void 0 && p.session !== session) {
+        throw new Error("Capture session changed.");
+      }
+      if (p.scope !== void 0) {
+        captureScope(p.scope);
+      }
+      if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
+        throw new Error("Capture scope changed or was not confirmed by the producer.");
+      }
+      if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
+        p.state
+      )) {
+        throw new Error("Invalid capture state.");
+      }
+      const bounds = [
+        p.releasedThrough,
+        p.durableThrough,
+        p.acceptedThrough,
+        p.deliveredThrough,
+        p.producedThrough
+      ].map(captureU64);
+      if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
+        throw new Error("Capture ownership boundaries are inconsistent.");
+      }
+      if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
+        throw new Error("Capture chunk boundary is inconsistent.");
+      }
+      captureU64(p.throttleCount);
+      if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
+        throw new Error("Invalid capture clock domain.");
+      }
+      if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
+        throw new Error("Capture integrity failed.");
+      }
+      if (![p.bufferedBytes, p.allocatedBytes].every(
+        (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
+      ) || p.bufferedBytes > p.allocatedBytes) {
+        throw new Error("Capture allocation exceeds its bounds.");
+      }
+      if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
+        throw new Error("Capture terminal totals do not reconcile.");
+      }
+      return p;
+    };
+    captureCrc32c = (bytes, zeroChecksum = false) => crc32cBytes(bytes, zeroChecksum);
+    captureChunkRecords = (chunk) => {
+      if (chunk.scope === "snes.65816.instructions") {
+        return chunk.instructions;
+      }
+      if (chunk.scope === "snes.cpu-bus") {
+        return chunk.accesses;
+      }
+      return chunk.events;
+    };
+    decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
+      if (!transfers && b.length !== 64 + count * 64) {
+        throw new Error("Invalid bus record payload length.");
+      }
+      const accesses = [];
+      const actors = ["cpu", "dma", "hdma"];
+      const phases = ["cpu", "dma", "hdma-table", "hdma-indirect", "hdma-transfer"];
+      const contexts = ["unattributed", "instruction", "interrupt", "wait", "stop"];
+      let lastCycle = 0n;
+      let offset = 64;
+      for (let i = 0; i < count; i++) {
+        if (offset + 64 > b.length) {
+          throw new Error("Truncated bus/transfer record.");
+        }
+        if (transfers && b.readUInt16LE(offset) === 3) {
+          const marker = decodeTransfer(b, offset, first + BigInt(i));
+          if (BigInt(marker.cycle) < lastCycle) {
+            throw new Error("Capture clock moved backwards.");
+          }
+          lastCycle = BigInt(marker.cycle);
+          accesses.push(marker);
+          offset += 80;
+          continue;
+        }
+        const extended = ppu && b.readUInt16LE(offset + 2) === 2;
+        const length = extended ? 88 : 64;
+        if (b.readUInt16LE(offset) !== 2 || b.readUInt16LE(offset + 2) !== (extended ? 2 : 1) || b.readUInt32LE(offset + 4) !== length || offset + length > b.length || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt16LE(offset + 62) !== 0) {
+          throw new Error("Unsupported required bus capture record.");
+        }
+        const event = first + BigInt(i);
+        const cycle = b.readBigUInt64LE(offset + 24);
+        const ordinal = b.readBigUInt64LE(offset + 32);
+        const address = b.readBigUInt64LE(offset + 40);
+        const pc = b.readUInt32LE(offset + 48);
+        const direction = b[offset + 53], actor = b[offset + 54], channel = b[offset + 55];
+        const phase = b[offset + 56], context = b[offset + 57];
+        const hcounter = b.readUInt16LE(offset + 58), vcounter = b.readUInt16LE(offset + 60);
+        if (b.readBigUInt64LE(offset + 8) !== event || address > 0xffffffn || pc > 16777215) {
+          throw new Error("Bus identity disagrees with capture scope.");
+        }
+        const expectedActor = phase === 0 ? 0 : 2;
+        const phaseActor = phase === 1 ? 1 : expectedActor;
+        if (direction > 1 || phase >= phases.length || actor !== phaseActor || (actor === 0 ? channel !== 255 : channel > 7) || (phase === 2 || phase === 3) && direction !== 0 || context >= contexts.length || ordinal !== 0n !== (context === 1) || hcounter >= 1368 || vcounter >= 313) {
+          throw new Error("Invalid bus attribution or timing fields.");
+        }
+        if (cycle < lastCycle) {
+          throw new Error("Capture clock moved backwards.");
+        }
+        lastCycle = cycle;
+        const port = Number(address) & 65535;
+        const dataPort = direction === 1 && !(Number(address) & 4194304) && [8452, 8472, 8473, 8482].includes(port);
+        if (ppu && extended !== dataPort) {
+          throw new Error("Missing or misplaced PPU effect.");
+        }
+        accesses.push({
+          ...extended ? { ppu: decodePPUEffect(b, offset, port) } : {},
+          sequence: String(event),
+          ordinal: String(ordinal),
+          cycle: String(cycle),
+          address: Number(address),
+          pc,
+          value: b[offset + 52],
+          direction: direction === 0 ? "read" : "write",
+          actor: actors[actor],
+          channel: actor === 0 ? null : channel,
+          phase: phases[phase],
+          context: contexts[context],
+          hcounter,
+          vcounter
+        });
+        offset += length;
+      }
+      if (offset !== b.length) {
+        throw new Error("Capture record count does not consume the payload exactly.");
+      }
+      return accesses;
+    };
+    decodeTransfer = (b, offset, event) => {
+      if (offset + 80 > b.length || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 4) !== 80 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt32LE(offset + 76) !== 0) {
+        throw new Error("Unsupported transfer capture record.");
+      }
+      const sequence = b.readBigUInt64LE(offset + 8), ordinal = b.readBigUInt64LE(offset + 32), transferId = b.readBigUInt64LE(offset + 40), pc = b.readUInt32LE(offset + 48);
+      const boundary = b[offset + 52], actor = b[offset + 53], channel = b[offset + 54], context = b[offset + 55];
+      const hcounter = b.readUInt16LE(offset + 56), vcounter = b.readUInt16LE(offset + 58), transferred = b.readUInt32LE(offset + 72);
+      const owned = ordinal !== 0n;
+      if (sequence !== event || pc > 16777215 || boundary > 2 || actor !== 1 && actor !== 2 || channel > 7 || context > 4 || owned !== (context === 1) || hcounter >= 1368 || vcounter >= 313 || b[offset + 71] > 15 || boundary === 0 && (transferId !== event || transferred !== 0) || boundary !== 0 && (transferId >= event || transferred < 1 || transferred > 65536) || actor === 2 && (boundary === 2 || transferred > 4)) {
+        throw new Error("Invalid transfer boundary identity, attribution or counters.");
+      }
+      return {
+        kind: "transfer",
+        sequence: String(sequence),
+        ordinal: String(ordinal),
+        cycle: String(b.readBigUInt64LE(offset + 24)),
+        transferId: String(transferId),
+        pc,
+        boundary: ["begin", "complete", "interrupted"][boundary],
+        actor: actor === 1 ? "dma" : "hdma",
+        channel,
+        context: ["unattributed", "instruction", "interrupt", "wait", "stop"][context],
+        hcounter,
+        vcounter,
+        transferred,
+        configuration: {
+          dmap: b[offset + 60],
+          bbad: b[offset + 61],
+          a1t: b.readUInt16LE(offset + 62),
+          a1b: b[offset + 64],
+          dasb: b[offset + 65],
+          das: b.readUInt16LE(offset + 66),
+          a2a: b.readUInt16LE(offset + 68),
+          ntlr: b[offset + 70],
+          flags: b[offset + 71]
+        }
+      };
+    };
+    decodePPUEffect = (b, offset, port) => {
+      const target = b[offset + 64], outcome = b[offset + 65], count = b[offset + 66], flags = b[offset + 67];
+      const hcounter = b.readUInt16LE(offset + 68), vcounter = b.readUInt16LE(offset + 70);
+      let expectedTarget = 1;
+      if (port === 8482) {
+        expectedTarget = 2;
+      }
+      if (port === 8452) {
+        expectedTarget = 3;
+      }
+      if (target !== expectedTarget || outcome > 2 || count > 2 || flags > 15 || (flags & 3) === 3 || target !== 1 && flags & 8 || hcounter >= 1368 || vcounter >= 313 || b.readUInt32LE(offset + 82) !== 0 || b.readUInt16LE(offset + 86) !== 0) {
+        throw new Error("Invalid PPU effect identity, flags or raster.");
+      }
+      if (outcome === 0 && (count === 0 || target === 1 && count !== 1 || target === 2 && count !== 2) || outcome !== 0 && count !== 0 || outcome === 1 && (target !== 1 || !(flags & 2)) || outcome === 2 && (target === 1 || flags & 2)) {
+        throw new Error("Invalid PPU effect outcome or byte count.");
+      }
+      const bytes = [];
+      const vramBytes = flags & 8 ? 131072 : 65536;
+      for (let i = 0; i < 2; i++) {
+        const address = b.readUInt32LE(offset + 72 + i * 4), value = b[offset + 80 + i];
+        if (i >= count) {
+          if (address || value) {
+            throw new Error("Nonzero unused PPU effect slot.");
+          }
+          continue;
+        }
+        let bound = vramBytes;
+        if (target === 2) {
+          bound = 512;
+        }
+        if (target === 3) {
+          bound = 544;
+        }
+        if (address >= bound || target === 1 && ((address & 1) !== (port & 1) || value !== b[offset + 52]) || target === 2 && (i === 0 ? (address & 1) !== 0 : address !== bytes[0].address + 1 || value !== (b[offset + 52] & 127)) || target === 3 && i === count - 1 && value !== b[offset + 52]) {
+          throw new Error("Invalid PPU physical byte address or value.");
+        }
+        bytes.push({ address, value });
+      }
+      return {
+        target: ["vram", "cgram", "oam"][target - 1],
+        outcome: ["written", "blocked", "latched"][outcome],
+        forcedBlank: Boolean(flags & 1),
+        renderingRestricted: Boolean(flags & 2),
+        implementation: flags & 4 ? "accurate" : "performance",
+        vramBytes: target === 1 ? vramBytes : null,
+        bytes,
+        hcounter,
+        vcounter
+      };
+    };
+  }
+});
+
+// ../debug-adapter/src/dap.ts
+var init_dap = __esm({
+  "../debug-adapter/src/dap.ts"() {
+    "use strict";
+  }
+});
+
+// ../debug-adapter/src/mock-script.ts
+var init_mock_script = __esm({
+  "../debug-adapter/src/mock-script.ts"() {
+    "use strict";
+  }
+});
+
+// ../debug-adapter/src/sidecar-protocol.ts
+var DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS;
+var init_sidecar_protocol = __esm({
+  "../debug-adapter/src/sidecar-protocol.ts"() {
+    "use strict";
+    DEBUG_SIDECAR_COMMANDS = Object.freeze([
+      "initialize",
+      "connect",
+      "disconnect",
+      "pause",
+      "continue",
+      "step",
+      "threads",
+      "stackFrames",
+      "registers",
+      "readMemory",
+      "setBreakpoints",
+      "disassemble",
+      "startTrace",
+      "readTrace",
+      "stopTrace",
+      "capture",
+      "ping",
+      "shutdown"
+    ]);
+    DEBUG_SIDECAR_EVENTS = Object.freeze([
+      "stopped",
+      "continued",
+      "terminated",
+      "breakpoint",
+      "output"
+    ]);
+    DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
+      maxFrameBytes: 1048576,
+      maxBufferedBytes: 2097152,
+      maxMemoryReadBytes: 1048576,
+      maxDisassemblyInstructions: 4096,
+      maxBreakpoints: 4096,
+      maxTraceBatchEvents: 4096,
+      maxQueuedMessages: 1024,
+      maxQueuedBytes: 8388608
     });
-    offset += length;
   }
-  if (offset !== b.length) {
-    throw new Error("Capture record count does not consume the payload exactly.");
-  }
-  return accesses;
-};
-var decodeTransfer = (b, offset, event) => {
-  if (offset + 80 > b.length || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 4) !== 80 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt32LE(offset + 76) !== 0) {
-    throw new Error("Unsupported transfer capture record.");
-  }
-  const sequence = b.readBigUInt64LE(offset + 8), ordinal = b.readBigUInt64LE(offset + 32), transferId = b.readBigUInt64LE(offset + 40), pc = b.readUInt32LE(offset + 48);
-  const boundary = b[offset + 52], actor = b[offset + 53], channel = b[offset + 54], context = b[offset + 55];
-  const hcounter = b.readUInt16LE(offset + 56), vcounter = b.readUInt16LE(offset + 58), transferred = b.readUInt32LE(offset + 72);
-  const owned = ordinal !== 0n;
-  if (sequence !== event || pc > 16777215 || boundary > 2 || actor !== 1 && actor !== 2 || channel > 7 || context > 4 || owned !== (context === 1) || hcounter >= 1368 || vcounter >= 313 || b[offset + 71] > 15 || boundary === 0 && (transferId !== event || transferred !== 0) || boundary !== 0 && (transferId >= event || transferred < 1 || transferred > 65536) || actor === 2 && (boundary === 2 || transferred > 4)) {
-    throw new Error("Invalid transfer boundary identity, attribution or counters.");
-  }
-  return {
-    kind: "transfer",
-    sequence: String(sequence),
-    ordinal: String(ordinal),
-    cycle: String(b.readBigUInt64LE(offset + 24)),
-    transferId: String(transferId),
-    pc,
-    boundary: ["begin", "complete", "interrupted"][boundary],
-    actor: actor === 1 ? "dma" : "hdma",
-    channel,
-    context: ["unattributed", "instruction", "interrupt", "wait", "stop"][context],
-    hcounter,
-    vcounter,
-    transferred,
-    configuration: {
-      dmap: b[offset + 60],
-      bbad: b[offset + 61],
-      a1t: b.readUInt16LE(offset + 62),
-      a1b: b[offset + 64],
-      dasb: b[offset + 65],
-      das: b.readUInt16LE(offset + 66),
-      a2a: b.readUInt16LE(offset + 68),
-      ntlr: b[offset + 70],
-      flags: b[offset + 71]
-    }
-  };
-};
-var decodePPUEffect = (b, offset, port) => {
-  const target = b[offset + 64], outcome = b[offset + 65], count = b[offset + 66], flags = b[offset + 67];
-  const hcounter = b.readUInt16LE(offset + 68), vcounter = b.readUInt16LE(offset + 70);
-  let expectedTarget = 1;
-  if (port === 8482) {
-    expectedTarget = 2;
-  }
-  if (port === 8452) {
-    expectedTarget = 3;
-  }
-  if (target !== expectedTarget || outcome > 2 || count > 2 || flags > 15 || (flags & 3) === 3 || target !== 1 && flags & 8 || hcounter >= 1368 || vcounter >= 313 || b.readUInt32LE(offset + 82) !== 0 || b.readUInt16LE(offset + 86) !== 0) {
-    throw new Error("Invalid PPU effect identity, flags or raster.");
-  }
-  if (outcome === 0 && (count === 0 || target === 1 && count !== 1 || target === 2 && count !== 2) || outcome !== 0 && count !== 0 || outcome === 1 && (target !== 1 || !(flags & 2)) || outcome === 2 && (target === 1 || flags & 2)) {
-    throw new Error("Invalid PPU effect outcome or byte count.");
-  }
-  const bytes = [];
-  const vramBytes = flags & 8 ? 131072 : 65536;
-  for (let i = 0; i < 2; i++) {
-    const address = b.readUInt32LE(offset + 72 + i * 4), value = b[offset + 80 + i];
-    if (i >= count) {
-      if (address || value) {
-        throw new Error("Nonzero unused PPU effect slot.");
-      }
-      continue;
-    }
-    let bound = vramBytes;
-    if (target === 2) {
-      bound = 512;
-    }
-    if (target === 3) {
-      bound = 544;
-    }
-    if (address >= bound || target === 1 && ((address & 1) !== (port & 1) || value !== b[offset + 52]) || target === 2 && (i === 0 ? (address & 1) !== 0 : address !== bytes[0].address + 1 || value !== (b[offset + 52] & 127)) || target === 3 && i === count - 1 && value !== b[offset + 52]) {
-      throw new Error("Invalid PPU physical byte address or value.");
-    }
-    bytes.push({ address, value });
-  }
-  return {
-    target: ["vram", "cgram", "oam"][target - 1],
-    outcome: ["written", "blocked", "latched"][outcome],
-    forcedBlank: Boolean(flags & 1),
-    renderingRestricted: Boolean(flags & 2),
-    implementation: flags & 4 ? "accurate" : "performance",
-    vramBytes: target === 1 ? vramBytes : null,
-    bytes,
-    hcounter,
-    vcounter
-  };
-};
+});
 
-// packages/debug-adapter/src/capture-file.ts
-var import_promises = require("node:fs/promises");
-var import_promises2 = require("node:timers/promises");
+// ../debug-adapter/src/node-stdio-transport.ts
+var init_node_stdio_transport = __esm({
+  "../debug-adapter/src/node-stdio-transport.ts"() {
+    "use strict";
+  }
+});
 
-// packages/debug-adapter/src/capture-file-reader.ts
-var CaptureFrameReader = class {
-  #read;
-  #windowBytes;
-  #buffer = Buffer.alloc(0);
-  #start = 0;
-  #valid = 0;
-  /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
-   * The cap amortizes small metadata reads without loading an entire archive.
-   */
-  constructor(read, windowBytes = 1048576) {
-    if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576) {
-      throw new Error("Invalid capture read-ahead window.");
-    }
-    this.#read = read;
-    this.#windowBytes = windowBytes;
+// ../debug-adapter/src/trace-buffer.ts
+var init_trace_buffer = __esm({
+  "../debug-adapter/src/trace-buffer.ts"() {
+    "use strict";
   }
-  /** Read one validated component (at most 256 KiB), bounded by a snapshot or
-   * durable watermark. Short I/O is retried. Premature EOF is always an error.
-   * @param {number} length Component bytes, no larger than the read window.
-   * @param {number} offset Absolute nonnegative file position.
-   * @param {number} limit Exclusive snapshot/durable byte boundary.
-   * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
-   */
-  async read(length, offset, limit) {
-    if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
-      throw new Error("Torn capture frame or invalid component length.");
-    }
-    const relative = offset - this.#start;
-    let available = 0;
-    if (relative >= 0 && relative <= this.#valid) {
-      available = Math.min(this.#valid - relative, limit - offset);
-    }
-    if (available >= length) {
-      return Buffer.from(this.#buffer.subarray(relative, relative + length));
-    }
-    const nextLength = Math.min(this.#windowBytes, limit - offset);
-    const next = this.#buffer.length >= nextLength ? this.#buffer : Buffer.allocUnsafe(nextLength);
-    if (available) {
-      this.#buffer.copy(next, 0, relative, relative + available);
-    }
-    this.#buffer = next;
-    this.#valid = 0;
-    let got = available;
-    while (got < nextLength) {
-      const { bytesRead } = await this.#read(this.#buffer, got, nextLength - got, offset + got);
-      if (!bytesRead) {
-        throw new Error("Torn capture frame.");
-      }
-      got += bytesRead;
-    }
-    this.#start = offset;
-    this.#valid = got;
-    return Buffer.from(this.#buffer.subarray(0, length));
-  }
-};
+});
 
-// packages/debug-adapter/src/capture-file.ts
-var metadataValid = (m) => {
-  if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
-    throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+// ../debug-adapter/src/replay-backend.ts
+var init_replay_backend = __esm({
+  "../debug-adapter/src/replay-backend.ts"() {
+    "use strict";
   }
-};
-var checkCaptureSize = (size, options) => {
-  const limit = options.maxBytes ?? Number.MAX_SAFE_INTEGER;
-  if (!Number.isSafeInteger(limit) || limit < 1) {
-    throw new Error("Capture maximum bytes must be a positive safe integer.");
+});
+
+// ../debug-adapter/src/sidecar-backend.ts
+var init_sidecar_backend = __esm({
+  "../debug-adapter/src/sidecar-backend.ts"() {
+    "use strict";
   }
-  if (size > limit) {
-    throw new Error(
-      "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
-    );
+});
+
+// ../debug-adapter/src/sidecar-client.ts
+var init_sidecar_client = __esm({
+  "../debug-adapter/src/sidecar-client.ts"() {
+    "use strict";
   }
-};
-var validateCaptureFileHeader = (value) => {
-  if (!value || typeof value !== "object") {
-    throw new Error("Missing capture session header.");
+});
+
+// ../debug-adapter/src/sidecar-server.ts
+var init_sidecar_server = __esm({
+  "../debug-adapter/src/sidecar-server.ts"() {
+    "use strict";
   }
-  const header = value;
-  metadataValid(header);
-  captureSession(header.session);
-  captureScope(header.scope);
-  if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator)) {
-    throw new Error("Invalid session clock domain.");
+});
+
+// ../debug-adapter/src/capture-context.ts
+var init_capture_context = __esm({
+  "../debug-adapter/src/capture-context.ts"() {
+    "use strict";
   }
-  if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024) {
-    throw new Error("Unsupported capture session contract.");
-  }
-  return header;
-};
-var readCaptureBytes = async (handle, length, offset) => {
-  const bytes = Buffer.allocUnsafe(length);
-  let got = 0;
-  while (got < length) {
-    const result = await handle.read(bytes, got, length - got, offset + got);
-    if (!result.bytesRead) {
-      throw new Error("Torn capture frame.");
-    }
-    got += result.bytesRead;
-  }
-  return bytes;
-};
-var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
-  header;
-  #handle;
-  #options;
-  #identity;
-  #offset;
-  #chunk = 0n;
-  #event = 0n;
-  #cycle = 0n;
-  #watermark = 0;
-  #failed = false;
-  #complete = false;
-  constructor(handle, header, offset, identity, options) {
-    this.#handle = handle;
-    this.header = header;
-    this.#offset = offset;
-    this.#identity = identity;
-    this.#options = options;
-  }
-  /** Open a prepared native partial file, or a completed archive for replay tests.
-   * @param {string} file Native-owned append-only file path.
-   * @param {CaptureFileReadOptions} options Byte budget and cancellation.
-   * @returns {Promise<NativeCaptureFileCursor>} Cursor pinning the checksummed session header and inode.
-   */
-  static async open(file, options = {}) {
-    options.signal?.throwIfAborted();
-    const handle = await (0, import_promises.open)(file, "r");
-    try {
-      const identity = await handle.stat();
-      const prefix = await readCaptureBytes(handle, 12, 0);
-      const length = prefix.readUInt32LE(4);
-      if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536) {
-        throw new Error("Invalid native capture header.");
-      }
-      checkCaptureSize(12 + length, options);
-      const body = await readCaptureBytes(handle, length, 12);
-      if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
-        throw new Error("Capture metadata checksum mismatch.");
-      }
-      const header = validateCaptureFileHeader(
-        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body))
-      );
-      return new _NativeCaptureFileCursor(handle, header, 12 + length, identity, options);
-    } catch (error) {
-      await handle.close();
-      throw error;
-    }
-  }
-  /** Byte offset includes only the header and consumed, checkpointed chunks.
-   * @returns {number} Consumed file bytes, for bounded backlog accounting.
-   */
-  get readBytes() {
-    return this.#offset;
-  }
-  get observedEvents() {
-    return String(this.#event);
-  }
-  get complete() {
-    return this.#complete;
-  }
-  /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
-   * that durable watermark is ignored even if an unsynced ACK2 is already visible.
-   * A failure permanently poisons the cursor. Callers must discard staged facts.
-   * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-   * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
-   * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
-   * @param {string} publishedFile Final path whose inode must agree before completion.
-   * @returns {Promise<void>} Settlement of one bounded read slice.
-   */
-  async readThrough(value, accept, maxChunks = 16, publishedFile) {
-    if (this.#failed) {
-      throw new Error("Native capture cursor failed previously.");
-    }
-    try {
-      this.#options.signal?.throwIfAborted();
-      const position = nativePosition(value, this.header.session, this.header.scope);
-      const bytes = Number(captureU64(position.fileBytes));
-      if (!Number.isSafeInteger(bytes) || bytes < this.#watermark || bytes < this.#offset || !Number.isSafeInteger(maxChunks) || maxChunks < 1 || maxChunks > 256) {
-        throw new Error("Native capture watermark or chunk budget is invalid.");
-      }
-      checkCaptureSize(bytes, this.#options);
-      if (position.fileState === "incomplete") {
-        throw new Error("Native capture was interrupted.");
-      }
-      if (this.#complete) {
-        if (bytes !== this.#watermark || position.fileState !== "complete") {
-          throw new Error("Completed native capture changed.");
+});
+
+// ../debug-adapter/src/capture-file-reader.ts
+var CaptureFrameReader;
+var init_capture_file_reader = __esm({
+  "../debug-adapter/src/capture-file-reader.ts"() {
+    "use strict";
+    CaptureFrameReader = class {
+      #read;
+      #windowBytes;
+      #buffer = Buffer.alloc(0);
+      #start = 0;
+      #valid = 0;
+      /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
+       * The cap amortizes small metadata reads without loading an entire archive.
+       */
+      constructor(read, windowBytes = 1048576) {
+        if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576) {
+          throw new Error("Invalid capture read-ahead window.");
         }
-        return;
+        this.#read = read;
+        this.#windowBytes = windowBytes;
       }
-      this.#watermark = bytes;
-      const before = await this.#handle.stat();
-      if (before.size < bytes) {
-        throw new Error("Native capture is shorter than its durable watermark.");
-      }
-      const reader = new CaptureFrameReader(
-        (buffer, start, length, offset) => {
-          this.#options.signal?.throwIfAborted();
-          return this.#handle.read(buffer, start, length, offset);
-        },
-        Math.min(1048576, maxChunks * 262144)
-      );
-      const read = async (length) => {
-        this.#options.signal?.throwIfAborted();
-        if (this.#offset + length > bytes) {
-          throw new Error("Native durable watermark splits a frame.");
+      /** Read one validated component (at most 256 KiB), bounded by a snapshot or
+       * durable watermark. Short I/O is retried. Premature EOF is always an error.
+       * @param {number} length Component bytes, no larger than the read window.
+       * @param {number} offset Absolute nonnegative file position.
+       * @param {number} limit Exclusive snapshot/durable byte boundary.
+       * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
+       */
+      async read(length, offset, limit) {
+        if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
+          throw new Error("Torn capture frame or invalid component length.");
         }
-        const result = await reader.read(length, this.#offset, bytes);
-        this.#offset += length;
-        return result;
-      };
-      const json = async (prefix) => {
-        const length = prefix.readUInt32LE(4);
-        if (length > 65536) {
-          throw new Error("Capture metadata exceeds bounds.");
+        const relative = offset - this.#start;
+        let available = 0;
+        if (relative >= 0 && relative <= this.#valid) {
+          available = Math.min(this.#valid - relative, limit - offset);
         }
-        const body = await read(length);
-        if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
-          throw new Error("Capture metadata checksum mismatch.");
+        if (available >= length) {
+          return Buffer.from(this.#buffer.subarray(relative, relative + length));
         }
-        return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
-      };
-      for (let count = 0; this.#offset < bytes && count < maxChunks; count++) {
-        const prefix = await read(12);
-        const magic = prefix.toString("ascii", 0, 4);
-        if (magic === "END2") {
-          const terminal = validateCapturePosition(
-            await json(prefix),
-            this.header.session,
-            this.header.scope
-          );
-          if (terminal.state !== "complete" || position.fileState !== "complete" || captureU64(terminal.producedThrough) !== this.#event || captureU64(terminal.producedChunks) !== this.#chunk || position.producedThrough !== terminal.producedThrough || position.producedChunks !== terminal.producedChunks || this.#offset !== bytes) {
-            throw new Error("Native capture terminal disagrees with the consumed prefix.");
+        const nextLength = Math.min(this.#windowBytes, limit - offset);
+        const next = this.#buffer.length >= nextLength ? this.#buffer : Buffer.allocUnsafe(nextLength);
+        if (available) {
+          this.#buffer.copy(next, 0, relative, relative + available);
+        }
+        this.#buffer = next;
+        this.#valid = 0;
+        let got = available;
+        while (got < nextLength) {
+          const { bytesRead } = await this.#read(this.#buffer, got, nextLength - got, offset + got);
+          if (!bytesRead) {
+            throw new Error("Torn capture frame.");
           }
-          const after = await this.#handle.stat();
-          if (after.size !== bytes || before.size !== after.size || before.mtimeMs !== after.mtimeMs) {
-            throw new Error("Native capture changed during final validation.");
-          }
-          if (publishedFile) {
-            const published = await (0, import_promises.lstat)(publishedFile);
-            if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino) {
-              throw new Error("Native capture publication replaced the opened file.");
-            }
-          }
-          this.#complete = true;
-          break;
+          got += bytesRead;
         }
-        if (magic !== "ACT2") {
-          throw new Error("Native capture expected an ACT2 chunk.");
-        }
-        const envelope = Buffer.concat([prefix, await read(52)]);
-        const length = envelope.readUInt32LE(48);
-        if (length > 262144 - 64) {
-          throw new Error("Capture chunk exceeds its bound.");
-        }
-        const chunk = decodeCaptureChunk(
-          Buffer.concat([envelope, await read(length)]),
-          this.header.session,
-          this.header.scope
+        this.#start = offset;
+        this.#valid = got;
+        return Buffer.from(this.#buffer.subarray(0, length));
+      }
+    };
+  }
+});
+
+// ../debug-adapter/src/capture-file.ts
+var import_promises, import_promises2, metadataValid, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, NativeCaptureFileCursor, nativePosition;
+var init_capture_file = __esm({
+  "../debug-adapter/src/capture-file.ts"() {
+    "use strict";
+    import_promises = require("node:fs/promises");
+    import_promises2 = require("node:timers/promises");
+    init_capture_file_reader();
+    init_capture_v2();
+    metadataValid = (m) => {
+      if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
+        throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+      }
+    };
+    checkCaptureSize = (size, options) => {
+      const limit = options.maxBytes ?? Number.MAX_SAFE_INTEGER;
+      if (!Number.isSafeInteger(limit) || limit < 1) {
+        throw new Error("Capture maximum bytes must be a positive safe integer.");
+      }
+      if (size > limit) {
+        throw new Error(
+          "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
         );
-        const records = captureChunkRecords(chunk);
-        if (captureU64(chunk.sequence) !== this.#chunk + 1n || captureU64(chunk.first) !== this.#event + 1n || captureU64(records[0].cycle) < this.#cycle || captureU64(chunk.through) > captureU64(position.durableThrough)) {
-          throw new Error("Noncontiguous native capture history.");
-        }
-        const ackPrefix = await read(12);
-        if (ackPrefix.toString("ascii", 0, 4) !== "ACK2") {
-          throw new Error("Native capture chunk has no checkpoint.");
-        }
-        const ack = await json(ackPrefix);
-        if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
-          throw new Error("Native checkpoint disagrees with its chunk.");
-        }
-        accept(chunk);
-        this.#chunk = captureU64(chunk.sequence);
-        this.#event = captureU64(chunk.through);
-        this.#cycle = captureU64(records.at(-1).cycle);
-        await (0, import_promises2.setImmediate)(void 0, { signal: this.#options.signal });
       }
-      if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
-        throw new Error("Completed native capture has no terminal frame.");
+    };
+    validateCaptureFileHeader = (value) => {
+      if (!value || typeof value !== "object") {
+        throw new Error("Missing capture session header.");
       }
-      this.#options.onProgress?.(this.#offset, bytes);
-    } catch (error) {
-      this.#failed = true;
-      throw error;
-    }
+      const header = value;
+      metadataValid(header);
+      captureSession(header.session);
+      captureScope(header.scope);
+      if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator)) {
+        throw new Error("Invalid session clock domain.");
+      }
+      if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024) {
+        throw new Error("Unsupported capture session contract.");
+      }
+      return header;
+    };
+    readCaptureBytes = async (handle, length, offset) => {
+      const bytes = Buffer.allocUnsafe(length);
+      let got = 0;
+      while (got < length) {
+        const result = await handle.read(bytes, got, length - got, offset + got);
+        if (!result.bytesRead) {
+          throw new Error("Torn capture frame.");
+        }
+        got += result.bytesRead;
+      }
+      return bytes;
+    };
+    NativeCaptureFileCursor = class _NativeCaptureFileCursor {
+      header;
+      #handle;
+      #options;
+      #identity;
+      #offset;
+      #chunk = 0n;
+      #event = 0n;
+      #cycle = 0n;
+      #watermark = 0;
+      #failed = false;
+      #complete = false;
+      constructor(handle, header, offset, identity, options) {
+        this.#handle = handle;
+        this.header = header;
+        this.#offset = offset;
+        this.#identity = identity;
+        this.#options = options;
+      }
+      /** Open a prepared native partial file, or a completed archive for replay tests.
+       * @param {string} file Native-owned append-only file path.
+       * @param {CaptureFileReadOptions} options Byte budget and cancellation.
+       * @returns {Promise<NativeCaptureFileCursor>} Cursor pinning the checksummed session header and inode.
+       */
+      static async open(file, options = {}) {
+        options.signal?.throwIfAborted();
+        const handle = await (0, import_promises.open)(file, "r");
+        try {
+          const identity = await handle.stat();
+          const prefix = await readCaptureBytes(handle, 12, 0);
+          const length = prefix.readUInt32LE(4);
+          if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536) {
+            throw new Error("Invalid native capture header.");
+          }
+          checkCaptureSize(12 + length, options);
+          const body = await readCaptureBytes(handle, length, 12);
+          if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
+            throw new Error("Capture metadata checksum mismatch.");
+          }
+          const header = validateCaptureFileHeader(
+            JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body))
+          );
+          return new _NativeCaptureFileCursor(handle, header, 12 + length, identity, options);
+        } catch (error) {
+          await handle.close();
+          throw error;
+        }
+      }
+      /** Byte offset includes only the header and consumed, checkpointed chunks.
+       * @returns {number} Consumed file bytes, for bounded backlog accounting.
+       */
+      get readBytes() {
+        return this.#offset;
+      }
+      get observedEvents() {
+        return String(this.#event);
+      }
+      get complete() {
+        return this.#complete;
+      }
+      /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
+       * that durable watermark is ignored even if an unsynced ACK2 is already visible.
+       * A failure permanently poisons the cursor. Callers must discard staged facts.
+       * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
+       * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
+       * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
+       * @param {string} publishedFile Final path whose inode must agree before completion.
+       * @returns {Promise<void>} Settlement of one bounded read slice.
+       */
+      async readThrough(value, accept, maxChunks = 16, publishedFile) {
+        if (this.#failed) {
+          throw new Error("Native capture cursor failed previously.");
+        }
+        try {
+          this.#options.signal?.throwIfAborted();
+          const position = nativePosition(value, this.header.session, this.header.scope);
+          const bytes = Number(captureU64(position.fileBytes));
+          if (!Number.isSafeInteger(bytes) || bytes < this.#watermark || bytes < this.#offset || !Number.isSafeInteger(maxChunks) || maxChunks < 1 || maxChunks > 256) {
+            throw new Error("Native capture watermark or chunk budget is invalid.");
+          }
+          checkCaptureSize(bytes, this.#options);
+          if (position.fileState === "incomplete") {
+            throw new Error("Native capture was interrupted.");
+          }
+          if (this.#complete) {
+            if (bytes !== this.#watermark || position.fileState !== "complete") {
+              throw new Error("Completed native capture changed.");
+            }
+            return;
+          }
+          this.#watermark = bytes;
+          const before = await this.#handle.stat();
+          if (before.size < bytes) {
+            throw new Error("Native capture is shorter than its durable watermark.");
+          }
+          const reader = new CaptureFrameReader(
+            (buffer, start, length, offset) => {
+              this.#options.signal?.throwIfAborted();
+              return this.#handle.read(buffer, start, length, offset);
+            },
+            Math.min(1048576, maxChunks * 262144)
+          );
+          const read = async (length) => {
+            this.#options.signal?.throwIfAborted();
+            if (this.#offset + length > bytes) {
+              throw new Error("Native durable watermark splits a frame.");
+            }
+            const result = await reader.read(length, this.#offset, bytes);
+            this.#offset += length;
+            return result;
+          };
+          const json = async (prefix) => {
+            const length = prefix.readUInt32LE(4);
+            if (length > 65536) {
+              throw new Error("Capture metadata exceeds bounds.");
+            }
+            const body = await read(length);
+            if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
+              throw new Error("Capture metadata checksum mismatch.");
+            }
+            return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
+          };
+          for (let count = 0; this.#offset < bytes && count < maxChunks; count++) {
+            const prefix = await read(12);
+            const magic = prefix.toString("ascii", 0, 4);
+            if (magic === "END2") {
+              const terminal = validateCapturePosition(
+                await json(prefix),
+                this.header.session,
+                this.header.scope
+              );
+              if (terminal.state !== "complete" || position.fileState !== "complete" || captureU64(terminal.producedThrough) !== this.#event || captureU64(terminal.producedChunks) !== this.#chunk || position.producedThrough !== terminal.producedThrough || position.producedChunks !== terminal.producedChunks || this.#offset !== bytes) {
+                throw new Error("Native capture terminal disagrees with the consumed prefix.");
+              }
+              const after = await this.#handle.stat();
+              if (after.size !== bytes || before.size !== after.size || before.mtimeMs !== after.mtimeMs) {
+                throw new Error("Native capture changed during final validation.");
+              }
+              if (publishedFile) {
+                const published = await (0, import_promises.lstat)(publishedFile);
+                if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino) {
+                  throw new Error("Native capture publication replaced the opened file.");
+                }
+              }
+              this.#complete = true;
+              break;
+            }
+            if (magic !== "ACT2") {
+              throw new Error("Native capture expected an ACT2 chunk.");
+            }
+            const envelope = Buffer.concat([prefix, await read(52)]);
+            const length = envelope.readUInt32LE(48);
+            if (length > 262144 - 64) {
+              throw new Error("Capture chunk exceeds its bound.");
+            }
+            const chunk = decodeCaptureChunk(
+              Buffer.concat([envelope, await read(length)]),
+              this.header.session,
+              this.header.scope
+            );
+            const records = captureChunkRecords(chunk);
+            if (captureU64(chunk.sequence) !== this.#chunk + 1n || captureU64(chunk.first) !== this.#event + 1n || captureU64(records[0].cycle) < this.#cycle || captureU64(chunk.through) > captureU64(position.durableThrough)) {
+              throw new Error("Noncontiguous native capture history.");
+            }
+            const ackPrefix = await read(12);
+            if (ackPrefix.toString("ascii", 0, 4) !== "ACK2") {
+              throw new Error("Native capture chunk has no checkpoint.");
+            }
+            const ack = await json(ackPrefix);
+            if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
+              throw new Error("Native checkpoint disagrees with its chunk.");
+            }
+            accept(chunk);
+            this.#chunk = captureU64(chunk.sequence);
+            this.#event = captureU64(chunk.through);
+            this.#cycle = captureU64(records.at(-1).cycle);
+            await (0, import_promises2.setImmediate)(void 0, { signal: this.#options.signal });
+          }
+          if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
+            throw new Error("Completed native capture has no terminal frame.");
+          }
+          this.#options.onProgress?.(this.#offset, bytes);
+        } catch (error) {
+          this.#failed = true;
+          throw error;
+        }
+      }
+      /** Close the pinned inode. Pending analysis remains caller-owned and provisional. */
+      async close() {
+        await this.#handle.close();
+      }
+    };
+    nativePosition = (value, session, scope) => {
+      const position = validateCapturePosition(value, session, scope);
+      if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
+        throw new Error("Invalid native file state.");
+      }
+      captureU64(position.fileBytes);
+      captureU64(position.fileBatches);
+      if (position.fileProfile) {
+        for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"]) {
+          captureU64(position.fileProfile[field]);
+        }
+      }
+      if (position.state === "complete" !== (position.fileState === "complete")) {
+        throw new Error("Native file publication and producer completion disagree.");
+      }
+      return position;
+    };
   }
-  /** Close the pinned inode. Pending analysis remains caller-owned and provisional. */
-  async close() {
-    await this.#handle.close();
-  }
-};
-var nativePosition = (value, session, scope) => {
-  const position = validateCapturePosition(value, session, scope);
-  if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
-    throw new Error("Invalid native file state.");
-  }
-  captureU64(position.fileBytes);
-  captureU64(position.fileBatches);
-  if (position.fileProfile) {
-    for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"]) {
-      captureU64(position.fileProfile[field]);
-    }
-  }
-  if (position.state === "complete" !== (position.fileState === "complete")) {
-    throw new Error("Native file publication and producer completion disagree.");
-  }
-  return position;
-};
+});
 
-// packages/disassembler/src/model/project-types.ts
+// ../debug-adapter/src/index.ts
+var init_src = __esm({
+  "../debug-adapter/src/index.ts"() {
+    "use strict";
+    init_conformance();
+    init_contracts();
+    init_debug_expression();
+    init_dap();
+    init_mock_script();
+    init_node_stdio_transport();
+    init_replay_backend();
+    init_sidecar_backend();
+    init_sidecar_client();
+    init_sidecar_protocol();
+    init_sidecar_server();
+    init_trace_buffer();
+    init_capture_v2();
+    init_capture_file();
+    init_capture_context();
+  }
+});
+
+// src/runtime/live-bus-analysis-process.ts
+var live_bus_analysis_process_exports = {};
+__export(live_bus_analysis_process_exports, {
+  handleLiveBusProcessMessage: () => handleLiveBusProcessMessage,
+  runLiveBusAnalysis: () => runLiveBusAnalysis
+});
+module.exports = __toCommonJS(live_bus_analysis_process_exports);
+var import_promises3 = require("node:timers/promises");
+init_src();
+
+// ../disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/model/project-labels.ts
+// ../disassembler/src/model/project-labels.ts
 var validateSourceLabelName = (name) => {
   if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
     throw new Error(
@@ -795,7 +1018,7 @@ var validateSourceLabelName = (name) => {
   }
 };
 
-// packages/disassembler/src/model/trace-detail.ts
+// ../disassembler/src/model/trace-detail.ts
 var isArray = (value) => Array.isArray(value);
 var validateRuntimeInstructionDetails = (value, count) => {
   if (!Array.isArray(value) || value.length !== count) {
@@ -831,7 +1054,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
   });
 };
 
-// packages/disassembler/src/model/runtime-ppu-effect.ts
+// ../disassembler/src/model/runtime-ppu-effect.ts
 var normalizeRuntimePPUEffect = (effect, access) => {
   const port = access.address & 65535;
   let target = "vram";
@@ -872,7 +1095,7 @@ var normalizeRuntimePPUEffect = (effect, access) => {
   };
 };
 
-// packages/disassembler/src/model/runtime-bus-types.ts
+// ../disassembler/src/model/runtime-bus-types.ts
 var validateRuntimeBusFact = (fact) => {
   if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
     throw new Error("Invalid bus access coordinates, value, direction or context.");
@@ -906,7 +1129,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// packages/disassembler/src/analysis/analysis-sources.ts
+// ../disassembler/src/analysis/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].sort();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -962,7 +1185,7 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/analysis/project-evidence.ts
+// ../disassembler/src/analysis/project-evidence.ts
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
   ...shards.annotations.filter((record) => record.evidence.includes(evidenceId)).map((record) => `annotations:${record.id}`),
@@ -999,627 +1222,8 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/model/metadata-validation.ts
-var validateEditableMetadataRecord = (shard, record) => {
-  if (!record || typeof record.id !== "string" || !/^\w[\w./:-]*$/.test(record.id) || !Array.isArray(record.evidence) || record.evidence.some((id) => typeof id !== "string")) {
-    throw new Error("Metadata needs a stable record ID and evidence list.");
-  }
-  if ("address" in record && (!Number.isSafeInteger(record.address) || record.address < 0)) {
-    throw new Error("Metadata needs a nonnegative integer address.");
-  }
-  if (typeof record.addressSpace !== "string") {
-    throw new Error("Metadata needs a named address space.");
-  }
-  if (shard === "labels") {
-    if (!("name" in record) || typeof record.name !== "string" || !record.name || !("address" in record) || "kind" in record) {
-      throw new Error("Invalid label metadata.");
-    }
-    const label = record;
-    if (label.sourceName !== void 0) {
-      validateSourceLabelName(label.sourceName);
-    }
-    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
-      throw new Error("Invalid label suppression flag.");
-    }
-    for (const value of [label.comment, label.inlineComment]) {
-      if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
-        throw new Error("Invalid label comment.");
-      }
-    }
-  } else if (shard === "comments") {
-    if (!("text" in record) || typeof record.text !== "string" || !record.text.trim() || record.text.includes("\0") || !("address" in record) || "kind" in record) {
-      throw new Error("A standalone comment needs nonempty text.");
-    }
-  } else if (shard === "annotations") {
-    if (!("classification" in record) || ![
-      "unreached",
-      "opcode",
-      "operand",
-      "data8",
-      "data16",
-      "data24",
-      "data32",
-      "pointer16",
-      "pointer24",
-      "pointer32",
-      "graphics",
-      "music",
-      "compressed",
-      "asset",
-      "empty",
-      "text"
-    ].includes(record.classification) || typeof record.architecture !== "string" || !record.architecture) {
-      throw new Error("Invalid classification metadata.");
-    }
-    if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
-      throw new Error("Classification bounds must describe a nonempty half-open interval.");
-    }
-    for (const [field, value] of Object.entries(record.state ?? {})) {
-      if (["e", "m", "x", "carry"].includes(field)) {
-        if (typeof value !== "boolean") {
-          throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
-        }
-      } else {
-        const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
-        if (!["programBank", "dataBank", "directPage", "stackPointer"].includes(field) || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
-          throw new Error(`Invalid state field '${field}'.`);
-        }
-      }
-    }
-    if (record.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
-      throw new Error("Invalid entry-point metadata.");
-    }
-  } else if (shard === "analysis") {
-    if (!("kind" in record) || !["target-override", "target-set"].includes(record.kind) || !Array.isArray(record.targets) || record.targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
-      throw new Error("Only target overrides and target sets are editable analysis records.");
-    }
-    if (record.kind === "target-set" && (typeof record.name !== "string" || !record.name.trim())) {
-      throw new Error("A target set needs a name.");
-    }
-    if (record.kind === "target-override" && !Number.isSafeInteger(record.address)) {
-      throw new Error("A target override needs an instruction anchor.");
-    }
-  } else {
-    throw new Error("This collection is not editable metadata.");
-  }
-};
-var validateMetadataReceipt = (receipt) => {
-  if (!Number.isSafeInteger(receipt.sequence) || receipt.sequence < 1 || typeof receipt.description !== "string" || !Array.isArray(receipt.changes) || !receipt.changes.length || receipt.changes.length > 1e3) {
-    throw new Error("Invalid metadata edit receipt.");
-  }
-  const seen = /* @__PURE__ */ new Set();
-  for (const change of receipt.changes) {
-    const key3 = `${change.shard}:${change.id}`;
-    if (seen.has(key3) || !change.before && !change.after) {
-      throw new Error("Invalid repeated or empty metadata change.");
-    }
-    seen.add(key3);
-    for (const record of [change.before, change.after]) {
-      if (!record) {
-        continue;
-      }
-      validateEditableMetadataRecord(change.shard, record);
-      if (record.id !== change.id || record.evidence.some((id) => !receipt.evidence.includes(id))) {
-        throw new Error("Receipt record identity or retained evidence is inconsistent.");
-      }
-    }
-  }
-};
-
-// packages/disassembler/src/internal/record-id-set.ts
-var import_node_fs = __toESM(require("node:fs"), 1);
-var import_node_os = __toESM(require("node:os"), 1);
-var import_node_path = __toESM(require("node:path"), 1);
-var import_node_sqlite = require("node:sqlite");
-var RecordIdSet = class {
-  #ids = /* @__PURE__ */ new Set();
-  #characters = 0;
-  #directory;
-  #database;
-  #insert;
-  /**
-   * Claim an ID while keeping the in-memory prefix small.
-   * @param {string} id Complete record identity.
-   * @returns {boolean} False only for an exact duplicate.
-   */
-  add(id) {
-    if (this.#insert) {
-      return this.#insert.run(id).changes !== 0;
-    }
-    if (this.#ids.has(id)) {
-      return false;
-    }
-    this.#ids.add(id);
-    this.#characters += id.length;
-    if (this.#characters > 4 * 1024 * 1024) {
-      this.#spill();
-    }
-    return true;
-  }
-  #spill() {
-    this.#directory = import_node_fs.default.mkdtempSync(import_node_path.default.join(import_node_os.default.tmpdir(), "uttori-record-ids-"));
-    try {
-      this.#database = new import_node_sqlite.DatabaseSync(import_node_path.default.join(this.#directory, "ids.sqlite"));
-      this.#database.exec(
-        "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-4096; CREATE TABLE ids (id TEXT PRIMARY KEY) WITHOUT ROWID; BEGIN;"
-      );
-      this.#insert = this.#database.prepare("INSERT OR IGNORE INTO ids VALUES (?)");
-      for (const id of this.#ids) {
-        this.#insert.run(id);
-      }
-      this.#ids.clear();
-    } catch (error) {
-      this.close();
-      throw error;
-    }
-  }
-  /** Release both memory and any disposable database, including after a failed validation. */
-  close() {
-    try {
-      this.#database?.close();
-    } finally {
-      this.#database = void 0;
-      this.#insert = void 0;
-      this.#ids.clear();
-      if (this.#directory) {
-        import_node_fs.default.rmSync(this.#directory, { recursive: true, force: true });
-      }
-      this.#directory = void 0;
-    }
-  }
-};
-
-// packages/disassembler/src/model/project-validation.ts
-var validateAnalysisProjectManifest = (manifest) => {
-  if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
-    throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
-  }
-  if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
-    throw new Error(
-      `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
-    );
-  }
-  if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) {
-    throw new Error("Invalid ROM SHA-256.");
-  }
-  if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
-    throw new Error("Invalid ROM content SHA-256.");
-  }
-  const addressSpaceIds = /* @__PURE__ */ new Set();
-  for (const addressSpace of manifest.addressSpaces) {
-    if (addressSpace.id === "" || addressSpace.name === "") {
-      throw new Error("Analysis address spaces require non-empty ids and names.");
-    }
-    if (addressSpaceIds.has(addressSpace.id)) {
-      throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
-    }
-    if (!Number.isSafeInteger(addressSpace.addressBits) || addressSpace.addressBits <= 0 || addressSpace.addressBits > 53) {
-      throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
-    }
-    addressSpaceIds.add(addressSpace.id);
-  }
-  if (manifest.db !== void 0 && manifest.db !== "analysis.sqlite") {
-    throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
-  }
-  if (manifest.revision !== void 0 && (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0)) {
-    throw new Error("Invalid analysis sqlite revision.");
-  }
-  if (manifest.shards.length !== 0) {
-    throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
-  }
-};
-var FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
-var assertNoRomPayload = (value, location) => {
-  if (Array.isArray(value)) {
-    for (let index = 0; index < value.length; index++) {
-      const entry = value[index];
-      if (entry && typeof entry === "object") {
-        assertNoRomPayload(entry, `${location}[${index}]`);
-      }
-    }
-    return;
-  }
-  if (!value || typeof value !== "object") {
-    return;
-  }
-  const record = value;
-  for (const key3 in record) {
-    if (!Object.hasOwn(record, key3)) {
-      continue;
-    }
-    if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
-      throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
-    }
-    const entry = record[key3];
-    if (entry && typeof entry === "object") {
-      assertNoRomPayload(entry, `${location}.${key3}`);
-    }
-  }
-};
-var isStableId = (id) => {
-  const isAlphaNumeric = (character) => {
-    const code = character.charCodeAt(0);
-    return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-  };
-  if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
-    return false;
-  }
-  for (const character of id) {
-    if (!isAlphaNumeric(character) && !"._:/-".includes(character)) {
-      return false;
-    }
-  }
-  return true;
-};
-var assertCodecReference = (reference, location) => {
-  if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
-    throw new Error(`${location} has an invalid codec id.`);
-  }
-  if (typeof reference.codecVersion !== "string" || reference.codecVersion.trim() === "") {
-    throw new Error(`${location} has no codec version.`);
-  }
-  if (reference.provider) {
-    if (typeof reference.provider.pluginId !== "string" || !isStableId(reference.provider.pluginId)) {
-      throw new Error(`${location} has an invalid provider plugin id.`);
-    }
-    if (typeof reference.provider.pluginVersion !== "string" || reference.provider.pluginVersion.trim() === "") {
-      throw new Error(`${location} has no provider plugin version.`);
-    }
-  }
-  const visitJson = (value, current) => {
-    if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
-      return;
-    }
-    if (Array.isArray(value)) {
-      value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
-      return;
-    }
-    if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-      Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
-      return;
-    }
-    throw new Error(`${current} is not a JSON-safe codec option.`);
-  };
-  if (reference.options !== void 0) {
-    visitJson(reference.options, `${location} options`);
-  }
-};
-var createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
-  const ids = checkDuplicateIds ? new RecordIdSet() : void 0;
-  const evidenceIds = new Set(evidence.map((record) => record.id));
-  const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
-  const validate = (record) => {
-    if (!record || typeof record.id !== "string" || record.id === "") {
-      throw new Error("Analysis shard 'runtime' contains a record without an id.");
-    }
-    if (ids && !ids.add(record.id)) {
-      throw new Error(`Analysis shard 'runtime' contains duplicate id '${record.id}'.`);
-    }
-    for (const id of record.evidence ?? []) {
-      if (!evidenceIds.has(id)) {
-        throw new Error(`Analysis record '${record.id}' refers to missing evidence '${id}'.`);
-      }
-    }
-    if (!Number.isSafeInteger(record.count) || record.count <= 0) {
-      throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
-    }
-    if (record.kind === "runtime-coverage") {
-      if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
-        throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
-      }
-    }
-    if (record.kind === "runtime-bus-access") {
-      if (record.architecture !== "snes.65816") {
-        throw new Error("Bus facts require the SNES 65816 architecture.");
-      }
-      validateRuntimeBusFact(record);
-    }
-    if (record.kind === "runtime-memory-access") {
-      if (record.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record.actor) || record.channel !== void 0 && (!Number.isInteger(record.channel) || record.channel < 0 || record.channel > 7 || !["dma", "hdma"].includes(record.actor ?? "cpu"))) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
-      }
-      if (!Number.isSafeInteger(record.width) || record.width <= 0) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
-      }
-      if (record.value !== void 0 && (!Number.isSafeInteger(record.value) || record.value < 0)) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
-      }
-    }
-    if (record.kind === "runtime-execution") {
-      if (record.size !== void 0 && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
-      }
-      if (record.opcode !== void 0 && (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 255)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
-      }
-      if (record.fileOffset !== void 0 && (!Number.isSafeInteger(record.fileOffset) || record.fileOffset < 0 || record.fileOffset >= project.rom.contentSize)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
-      }
-    }
-    if (record.kind === "runtime-instruction") {
-      validateRuntimeInstructionDetails([{ bytes: record.bytes, state: record.state }], 1);
-    }
-    if (record.kind === "runtime-cpu-state") {
-      for (const [name, value] of Object.entries(record.state)) {
-        if (name === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
-          throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
-        }
-      }
-    }
-    if ("addressSpace" in record) {
-      const space = addressSpaceById.get(record.addressSpace);
-      if (!space) {
-        throw new Error(
-          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
-        );
-      }
-      const addresses2 = record.kind === "runtime-coverage" ? [record.start, record.end - 1] : [record.address];
-      if (addresses2.some(
-        (address) => !Number.isSafeInteger(address) || address < 0 || address >= 2 ** space.addressBits
-      )) {
-        throw new Error(
-          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
-        );
-      }
-    }
-    let addresses = [];
-    if (record.kind === "runtime-memory-access") {
-      addresses = [
-        [record.instructionAddressSpace, record.instructionAddress],
-        [record.accessedAddressSpace, record.accessedAddress]
-      ];
-    } else if (record.kind === "runtime-bus-access") {
-      addresses = [[record.addressSpace, record.pc]];
-    } else if (record.kind === "runtime-control-target") {
-      addresses = [
-        [record.fromAddressSpace, record.fromAddress],
-        [record.toAddressSpace, record.toAddress]
-      ];
-    }
-    for (const [spaceId, address] of addresses) {
-      const addressSpace = addressSpaceById.get(spaceId);
-      if (!addressSpace) {
-        throw new Error(
-          `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`
-        );
-      }
-      if (!Number.isSafeInteger(address) || address < 0 || address >= 2 ** addressSpace.addressBits) {
-        throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
-      }
-    }
-    assertNoRomPayload(record, `shards.runtime.${record.id}`);
-  };
-  return Object.assign(validate, { close: () => ids?.close() });
-};
-var validateRuntimeRecords = (records, project, evidence) => {
-  const validate = createRuntimeRecordValidator(project, evidence);
-  try {
-    for (const record of records) {
-      validate(record);
-    }
-  } finally {
-    validate.close();
-  }
-};
-var validateLoadedShards = (shards, project) => {
-  const { addressSpaces } = project;
-  const evidenceIds = new Set(shards.evidence.map((record) => record.id));
-  for (const [kind, records] of Object.entries(shards)) {
-    if (kind === "runtime") {
-      continue;
-    }
-    const ids = /* @__PURE__ */ new Set();
-    for (const record of records) {
-      if (!record || typeof record.id !== "string" || record.id === "") {
-        throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
-      }
-      if (ids.has(record.id)) {
-        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
-      }
-      ids.add(record.id);
-      for (const evidence of record.evidence ?? []) {
-        if (!evidenceIds.has(evidence)) {
-          throw new Error(
-            `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
-          );
-        }
-      }
-    }
-  }
-  for (const evidence of shards.evidence) {
-    if (!evidence.artifact) {
-      continue;
-    }
-    if (evidence.artifact.format === "" || !/^[\da-f]{64}$/.test(evidence.artifact.sha256) || !/^[\da-f]{64}$/.test(evidence.artifact.romContentSha256)) {
-      throw new Error(`Evidence '${evidence.id}' has an invalid artifact identity.`);
-    }
-    if (evidence.artifact.romContentSha256 !== project.rom.contentSha256) {
-      throw new Error(`Evidence '${evidence.id}' belongs to a different ROM.`);
-    }
-    if (evidence.artifact.mapper && evidence.artifact.mapper !== project.mapping.mapper) {
-      throw new Error(`Evidence '${evidence.id}' belongs to a different mapper.`);
-    }
-  }
-  for (const interval of [...shards.annotations, ...shards.regions]) {
-    if (!Number.isSafeInteger(interval.start) || !Number.isSafeInteger(interval.end) || interval.start < 0 || interval.end <= interval.start) {
-      throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
-    }
-  }
-  for (const annotation of shards.annotations) {
-    if (!annotation.asset) {
-      continue;
-    }
-    if (!["asset", "compressed", "graphics", "music", "text"].includes(annotation.classification)) {
-      throw new Error(
-        `Analysis annotation '${annotation.id}' cannot attach an asset codec to '${annotation.classification}'.`
-      );
-    }
-    assertCodecReference(annotation.asset, `Analysis annotation '${annotation.id}' asset codec`);
-    const compression = annotation.asset.compression;
-    if (!compression) {
-      continue;
-    }
-    assertCodecReference(compression, `Analysis annotation '${annotation.id}' compression codec`);
-    const rangeSize = annotation.end - annotation.start;
-    const maximumSize = compression.maximumSize ?? rangeSize;
-    if (!Number.isSafeInteger(maximumSize) || maximumSize <= 0 || maximumSize > rangeSize) {
-      throw new Error(
-        `Analysis annotation '${annotation.id}' compression maximumSize must be within its range.`
-      );
-    }
-    const hasBankStart = compression.bankStart !== void 0;
-    const hasBankEnd = compression.bankEnd !== void 0;
-    if (hasBankStart !== hasBankEnd) {
-      throw new Error(
-        `Analysis annotation '${annotation.id}' compression bank bounds must be supplied together.`
-      );
-    }
-    const bankStart = compression.bankStart;
-    const bankEnd = compression.bankEnd;
-    if (hasBankStart && (typeof bankStart !== "number" || typeof bankEnd !== "number" || !Number.isSafeInteger(bankStart) || !Number.isSafeInteger(bankEnd) || bankStart < 0 || bankEnd <= bankStart || annotation.start < bankStart || annotation.end > bankEnd)) {
-      throw new Error(
-        `Analysis annotation '${annotation.id}' has invalid compression bank bounds.`
-      );
-    }
-    if (compression.fillByte !== void 0 && (!Number.isInteger(compression.fillByte) || compression.fillByte < 0 || compression.fillByte > 255)) {
-      throw new Error(
-        `Analysis annotation '${annotation.id}' has an invalid compression fillByte.`
-      );
-    }
-  }
-  for (const conflict of shards.analysis) {
-    if (conflict.kind !== "conflict" || conflict.end === void 0) {
-      continue;
-    }
-    if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
-      throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
-    }
-  }
-  const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
-  for (const region of shards.regions) {
-    if (!region.parentRegion) {
-      continue;
-    }
-    const parent = regionsById.get(region.parentRegion);
-    if (!parent) {
-      throw new Error(
-        `Analysis region '${region.id}' refers to missing parent region '${region.parentRegion}'.`
-      );
-    }
-    const visited = /* @__PURE__ */ new Set([region.id]);
-    let ancestor = parent;
-    while (ancestor.parentRegion) {
-      if (visited.has(ancestor.id)) {
-        throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
-      }
-      visited.add(ancestor.id);
-      const next = regionsById.get(ancestor.parentRegion);
-      if (!next) {
-        break;
-      }
-      ancestor = next;
-    }
-    if (visited.has(ancestor.id)) {
-      throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
-    }
-    if (parent.addressSpace === region.addressSpace && (region.start < parent.start || region.end > parent.end)) {
-      throw new Error(
-        `Analysis region '${region.id}' is not contained by parent region '${parent.id}'.`
-      );
-    }
-  }
-  for (const addressed of [...shards.labels, ...shards.comments]) {
-    if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
-      throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
-    }
-  }
-  for (const receipt of shards.analysis) {
-    if (receipt.kind === "metadata-edit") {
-      validateMetadataReceipt(receipt);
-    }
-  }
-  for (const label of shards.labels) {
-    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
-      throw new Error(`Analysis label '${label.id}' has an invalid suppression flag.`);
-    }
-    if (label.sourceName !== void 0 && (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName))) {
-      throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
-    }
-    if (label.inlineComment !== void 0 && (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment))) {
-      throw new Error(`Analysis label '${label.id}' requires a single-line inline comment.`);
-    }
-    if (label.analysisEntryPoint !== void 0 && typeof label.analysisEntryPoint !== "boolean") {
-      throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
-    }
-  }
-  for (const comment of shards.comments) {
-    if (comment.placement !== void 0 && !["before", "inline-instruction"].includes(comment.placement)) {
-      throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
-    }
-    if (comment.placement === "inline-instruction" && (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text))) {
-      throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
-    }
-  }
-  const addressSpaceById = new Map(
-    addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
-  );
-  const outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
-  for (const records of [
-    shards.annotations,
-    shards.labels,
-    shards.comments,
-    shards.regions,
-    shards.analysis
-  ]) {
-    for (const record of records) {
-      if (!("addressSpace" in record)) {
-        continue;
-      }
-      const addressSpace = addressSpaceById.get(record.addressSpace);
-      if (!addressSpace) {
-        throw new Error(
-          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
-        );
-      }
-      const maximum = 2 ** addressSpace.addressBits;
-      let invalid = false;
-      if ("start" in record) {
-        invalid = outsideSpace(record.start, maximum) || outsideSpace(record.end - 1, maximum);
-      } else if ("address" in record) {
-        invalid = outsideSpace(record.address, maximum);
-        if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
-          invalid ||= outsideSpace(record.end - 1, maximum);
-        }
-      } else {
-        if ("fromAddress" in record) {
-          invalid = outsideSpace(record.fromAddress, maximum);
-        }
-        if ("toAddress" in record && record.toAddress !== void 0) {
-          invalid ||= outsideSpace(record.toAddress, maximum);
-        }
-        if ("targets" in record) {
-          for (const target of record.targets) {
-            invalid ||= outsideSpace(target, maximum);
-          }
-        }
-      }
-      if (invalid) {
-        throw new Error(
-          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
-        );
-      }
-    }
-  }
-  validateRuntimeRecords(shards.runtime, project, shards.evidence);
-  assertNoRomPayload({ ...shards, runtime: [] }, "shards");
-};
-
-// packages/disassembler/src/edits/metadata-edit.ts
-var manuallyOwnedMetadata = (shards) => new Set(
-  shards.analysis.filter((record) => record.kind === "metadata-edit").flatMap((receipt) => receipt.changes.map((change) => `${change.shard}:${change.id}`))
-);
-
-// packages/disassembler/src/runtime/runtime-evidence.ts
+// ../disassembler/src/runtime/runtime-evidence.ts
+init_canonical_json();
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1802,7 +1406,6 @@ var mergeRuntimeEvidence = (shards, batch) => {
     }
     traceProfiles.set(report.sourceSha256, report.indexProfile);
   }
-  const owned = manuallyOwnedMetadata(shards);
   const added = emptyCounts();
   const updated = emptyCounts();
   const existing = emptyCounts();
@@ -1810,7 +1413,7 @@ var mergeRuntimeEvidence = (shards, batch) => {
     analysis: mergeRecords(
       "analysis",
       shards.analysis,
-      (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)),
+      batch.analysis ?? [],
       added,
       updated,
       existing
@@ -1818,23 +1421,16 @@ var mergeRuntimeEvidence = (shards, batch) => {
     annotations: mergeRecords(
       "annotations",
       shards.annotations,
-      (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)),
+      batch.annotations ?? [],
       added,
       updated,
       existing
     ),
-    labels: mergeRecords(
-      "labels",
-      shards.labels,
-      (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)),
-      added,
-      updated,
-      existing
-    ),
+    labels: mergeRecords("labels", shards.labels, batch.labels ?? [], added, updated, existing),
     comments: mergeRecords(
       "comments",
       shards.comments,
-      (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)),
+      batch.comments ?? [],
       added,
       updated,
       existing
@@ -1872,10 +1468,10 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 var import_node_crypto = require("node:crypto");
 
-// packages/disassembler/src/internal/trace-cache.ts
+// ../disassembler/src/internal/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
@@ -1945,7 +1541,7 @@ var TraceCache = class {
   }
 };
 
-// packages/disassembler/src/runtime/runtime-graphics.ts
+// ../disassembler/src/runtime/runtime-graphics.ts
 var mapVram = (address, mapping) => {
   if (mapping === 0) {
     return address;
@@ -2172,7 +1768,7 @@ var createRuntimeGraphicsAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-ppu.ts
+// ../disassembler/src/runtime/runtime-ppu.ts
 var createRuntimePPUAccumulator = () => {
   let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;
   const writes = [];
@@ -2226,7 +1822,7 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-transfer.ts
+// ../disassembler/src/runtime/runtime-transfer.ts
 var validateRuntimeTransferBoundary = (marker) => {
   const { configuration: c } = marker;
   if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
@@ -2414,7 +2010,7 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
 var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 var unsigned = (value) => {
@@ -2801,17 +2397,746 @@ ${JSON.stringify(meta)}
   return { push, finish };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
-var import_node_crypto4 = require("node:crypto");
+// ../disassembler/src/storage/sqlite-store.ts
+var import_node_crypto5 = require("node:crypto");
 var import_node_fs3 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
+init_canonical_json();
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/internal/record-id-set.ts
+var import_node_fs = __toESM(require("node:fs"), 1);
+var import_node_os = __toESM(require("node:os"), 1);
+var import_node_path = __toESM(require("node:path"), 1);
+var import_node_sqlite = require("node:sqlite");
+var RecordIdSet = class {
+  #ids = /* @__PURE__ */ new Set();
+  #characters = 0;
+  #directory;
+  #database;
+  #insert;
+  /**
+   * Claim an ID while keeping the in-memory prefix small.
+   * @param {string} id Complete record identity.
+   * @returns {boolean} False only for an exact duplicate.
+   */
+  add(id) {
+    if (this.#insert) {
+      return this.#insert.run(id).changes !== 0;
+    }
+    if (this.#ids.has(id)) {
+      return false;
+    }
+    this.#ids.add(id);
+    this.#characters += id.length;
+    if (this.#characters > 4 * 1024 * 1024) {
+      this.#spill();
+    }
+    return true;
+  }
+  #spill() {
+    this.#directory = import_node_fs.default.mkdtempSync(import_node_path.default.join(import_node_os.default.tmpdir(), "uttori-record-ids-"));
+    try {
+      this.#database = new import_node_sqlite.DatabaseSync(import_node_path.default.join(this.#directory, "ids.sqlite"));
+      this.#database.exec(
+        "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-4096; CREATE TABLE ids (id TEXT PRIMARY KEY) WITHOUT ROWID; BEGIN;"
+      );
+      this.#insert = this.#database.prepare("INSERT OR IGNORE INTO ids VALUES (?)");
+      for (const id of this.#ids) {
+        this.#insert.run(id);
+      }
+      this.#ids.clear();
+    } catch (error) {
+      this.close();
+      throw error;
+    }
+  }
+  /** Release both memory and any disposable database, including after a failed validation. */
+  close() {
+    try {
+      this.#database?.close();
+    } finally {
+      this.#database = void 0;
+      this.#insert = void 0;
+      this.#ids.clear();
+      if (this.#directory) {
+        import_node_fs.default.rmSync(this.#directory, { recursive: true, force: true });
+      }
+      this.#directory = void 0;
+    }
+  }
+};
+
+// ../disassembler/src/model/analysis-ownership.ts
+function validateAnalysisOwnership(records, scope = "complete") {
+  if (!records.some(
+    (record) => record.kind === "cfg-node" && (record.functionEntry !== void 0 || record.evidencePredecessor !== void 0)
+  )) {
+    return;
+  }
+  const nodes = /* @__PURE__ */ new Map();
+  for (const record of records) {
+    if (record.kind === "cfg-node") {
+      nodes.set(record.id, record);
+    }
+  }
+  const complete = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.functionEntry === void 0) {
+      if (node.evidencePredecessor !== void 0) {
+        throw new Error(`Analysis node '${node.id}' has a predecessor without function ownership.`);
+      }
+      continue;
+    }
+    const entry = nodes.get(node.functionEntry);
+    if (!entry && scope === "complete" || entry && (entry.functionEntry !== entry.id || entry.addressSpace !== node.addressSpace)) {
+      throw new Error(`Analysis node '${node.id}' has an invalid function entry.`);
+    }
+    const visiting = /* @__PURE__ */ new Set();
+    let current = node;
+    while (!complete.has(current.id)) {
+      if (visiting.has(current.id)) {
+        throw new Error(`Analysis node '${current.id}' has a cyclic evidence predecessor.`);
+      }
+      visiting.add(current.id);
+      const predecessor = current.evidencePredecessor;
+      if (predecessor === void 0) {
+        if (current.id !== node.functionEntry) {
+          throw new Error(`Analysis node '${current.id}' does not lead to its function entry.`);
+        }
+        break;
+      }
+      const previous = nodes.get(predecessor);
+      if (current.id === node.functionEntry || !previous && scope === "complete" || previous && (previous.functionEntry !== node.functionEntry || previous.addressSpace !== node.addressSpace)) {
+        throw new Error(`Analysis node '${current.id}' has an invalid evidence predecessor.`);
+      }
+      if (!previous) {
+        break;
+      }
+      current = previous;
+    }
+    for (const id of visiting) {
+      complete.add(id);
+    }
+  }
+}
+
+// ../disassembler/src/model/project-validation.ts
+var validateAnalysisProjectManifest = (manifest) => {
+  if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
+    throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
+  }
+  if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
+    );
+  }
+  if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) {
+    throw new Error("Invalid ROM SHA-256.");
+  }
+  if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
+    throw new Error("Invalid ROM content SHA-256.");
+  }
+  const addressSpaceIds = /* @__PURE__ */ new Set();
+  for (const addressSpace of manifest.addressSpaces) {
+    if (addressSpace.id === "" || addressSpace.name === "") {
+      throw new Error("Analysis address spaces require non-empty ids and names.");
+    }
+    if (addressSpaceIds.has(addressSpace.id)) {
+      throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
+    }
+    if (!Number.isSafeInteger(addressSpace.addressBits) || addressSpace.addressBits <= 0 || addressSpace.addressBits > 53) {
+      throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
+    }
+    addressSpaceIds.add(addressSpace.id);
+  }
+  if (manifest.db !== void 0 && manifest.db !== "analysis.sqlite") {
+    throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
+  }
+  if (manifest.revision !== void 0 && (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0)) {
+    throw new Error("Invalid analysis sqlite revision.");
+  }
+  if (manifest.shards.length !== 0) {
+    throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
+  }
+};
+var FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
+var assertNoRomPayload = (value, location) => {
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index++) {
+      const entry = value[index];
+      if (entry && typeof entry === "object") {
+        assertNoRomPayload(entry, `${location}[${index}]`);
+      }
+    }
+    return;
+  }
+  if (!value || typeof value !== "object") {
+    return;
+  }
+  const record = value;
+  for (const key3 in record) {
+    if (!Object.hasOwn(record, key3)) {
+      continue;
+    }
+    if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
+      throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
+    }
+    const entry = record[key3];
+    if (entry && typeof entry === "object") {
+      assertNoRomPayload(entry, `${location}.${key3}`);
+    }
+  }
+};
+var isStableId = (id) => {
+  const isAlphaNumeric = (character) => {
+    const code = character.charCodeAt(0);
+    return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+  };
+  if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
+    return false;
+  }
+  for (const character of id) {
+    if (!isAlphaNumeric(character) && !"._:/-".includes(character)) {
+      return false;
+    }
+  }
+  return true;
+};
+var assertCodecReference = (reference, location) => {
+  if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
+    throw new Error(`${location} has an invalid codec id.`);
+  }
+  if (typeof reference.codecVersion !== "string" || reference.codecVersion.trim() === "") {
+    throw new Error(`${location} has no codec version.`);
+  }
+  if (reference.provider) {
+    if (typeof reference.provider.pluginId !== "string" || !isStableId(reference.provider.pluginId)) {
+      throw new Error(`${location} has an invalid provider plugin id.`);
+    }
+    if (typeof reference.provider.pluginVersion !== "string" || reference.provider.pluginVersion.trim() === "") {
+      throw new Error(`${location} has no provider plugin version.`);
+    }
+  }
+  const visitJson = (value, current) => {
+    if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
+      return;
+    }
+    if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+      Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
+      return;
+    }
+    throw new Error(`${current} is not a JSON-safe codec option.`);
+  };
+  if (reference.options !== void 0) {
+    visitJson(reference.options, `${location} options`);
+  }
+};
+var createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
+  const ids = checkDuplicateIds ? new RecordIdSet() : void 0;
+  const evidenceIds = new Set(evidence.map((record) => record.id));
+  const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
+  const validate = (record) => {
+    if (!record || typeof record.id !== "string" || record.id === "") {
+      throw new Error("Analysis shard 'runtime' contains a record without an id.");
+    }
+    if (ids && !ids.add(record.id)) {
+      throw new Error(`Analysis shard 'runtime' contains duplicate id '${record.id}'.`);
+    }
+    for (const id of record.evidence ?? []) {
+      if (!evidenceIds.has(id)) {
+        throw new Error(`Analysis record '${record.id}' refers to missing evidence '${id}'.`);
+      }
+    }
+    if (!Number.isSafeInteger(record.count) || record.count <= 0) {
+      throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
+    }
+    if (record.kind === "runtime-coverage") {
+      if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
+        throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
+      }
+    }
+    if (record.kind === "runtime-bus-access") {
+      if (record.architecture !== "snes.65816") {
+        throw new Error("Bus facts require the SNES 65816 architecture.");
+      }
+      validateRuntimeBusFact(record);
+    }
+    if (record.kind === "runtime-memory-access") {
+      if (record.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record.actor) || record.channel !== void 0 && (!Number.isInteger(record.channel) || record.channel < 0 || record.channel > 7 || !["dma", "hdma"].includes(record.actor ?? "cpu"))) {
+        throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
+      }
+      if (!Number.isSafeInteger(record.width) || record.width <= 0) {
+        throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
+      }
+      if (record.value !== void 0 && (!Number.isSafeInteger(record.value) || record.value < 0)) {
+        throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
+      }
+    }
+    if (record.kind === "runtime-execution") {
+      if (record.size !== void 0 && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
+        throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
+      }
+      if (record.opcode !== void 0 && (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 255)) {
+        throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
+      }
+      if (record.fileOffset !== void 0 && (!Number.isSafeInteger(record.fileOffset) || record.fileOffset < 0 || record.fileOffset >= project.rom.contentSize)) {
+        throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
+      }
+    }
+    if (record.kind === "runtime-instruction") {
+      validateRuntimeInstructionDetails([{ bytes: record.bytes, state: record.state }], 1);
+    }
+    if (record.kind === "runtime-cpu-state") {
+      for (const [name, value] of Object.entries(record.state)) {
+        if (name === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
+          throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
+        }
+      }
+    }
+    if ("addressSpace" in record) {
+      const space = addressSpaceById.get(record.addressSpace);
+      if (!space) {
+        throw new Error(
+          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+        );
+      }
+      const addresses2 = record.kind === "runtime-coverage" ? [record.start, record.end - 1] : [record.address];
+      if (addresses2.some(
+        (address) => !Number.isSafeInteger(address) || address < 0 || address >= 2 ** space.addressBits
+      )) {
+        throw new Error(
+          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+        );
+      }
+    }
+    let addresses = [];
+    if (record.kind === "runtime-memory-access") {
+      addresses = [
+        [record.instructionAddressSpace, record.instructionAddress],
+        [record.accessedAddressSpace, record.accessedAddress]
+      ];
+    } else if (record.kind === "runtime-bus-access") {
+      addresses = [[record.addressSpace, record.pc]];
+    } else if (record.kind === "runtime-control-target") {
+      addresses = [
+        [record.fromAddressSpace, record.fromAddress],
+        [record.toAddressSpace, record.toAddress]
+      ];
+    }
+    for (const [spaceId, address] of addresses) {
+      const addressSpace = addressSpaceById.get(spaceId);
+      if (!addressSpace) {
+        throw new Error(
+          `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`
+        );
+      }
+      if (!Number.isSafeInteger(address) || address < 0 || address >= 2 ** addressSpace.addressBits) {
+        throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
+      }
+    }
+    assertNoRomPayload(record, `shards.runtime.${record.id}`);
+  };
+  return Object.assign(validate, { close: () => ids?.close() });
+};
+var validateRuntimeRecords = (records, project, evidence) => {
+  const validate = createRuntimeRecordValidator(project, evidence);
+  try {
+    for (const record of records) {
+      validate(record);
+    }
+  } finally {
+    validate.close();
+  }
+};
+var validateLoadedShards = (shards, project, analysisScope = "complete") => {
+  const { addressSpaces } = project;
+  const evidenceIds = new Set(shards.evidence.map((record) => record.id));
+  for (const [kind, records] of Object.entries(shards)) {
+    if (kind === "runtime") {
+      continue;
+    }
+    const ids = /* @__PURE__ */ new Set();
+    for (const record of records) {
+      if (!record || typeof record.id !== "string" || record.id === "") {
+        throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
+      }
+      if (ids.has(record.id)) {
+        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
+      }
+      ids.add(record.id);
+      for (const evidence of record.evidence ?? []) {
+        if (!evidenceIds.has(evidence)) {
+          throw new Error(
+            `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
+          );
+        }
+      }
+    }
+  }
+  for (const evidence of shards.evidence) {
+    if (!evidence.artifact) {
+      continue;
+    }
+    if (evidence.artifact.format === "" || !/^[\da-f]{64}$/.test(evidence.artifact.sha256) || !/^[\da-f]{64}$/.test(evidence.artifact.romContentSha256)) {
+      throw new Error(`Evidence '${evidence.id}' has an invalid artifact identity.`);
+    }
+    if (evidence.artifact.romContentSha256 !== project.rom.contentSha256) {
+      throw new Error(`Evidence '${evidence.id}' belongs to a different ROM.`);
+    }
+    if (evidence.artifact.mapper && evidence.artifact.mapper !== project.mapping.mapper) {
+      throw new Error(`Evidence '${evidence.id}' belongs to a different mapper.`);
+    }
+  }
+  for (const interval of [...shards.annotations, ...shards.regions]) {
+    if (!Number.isSafeInteger(interval.start) || !Number.isSafeInteger(interval.end) || interval.start < 0 || interval.end <= interval.start) {
+      throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
+    }
+  }
+  for (const annotation of shards.annotations) {
+    if (!annotation.asset) {
+      continue;
+    }
+    if (!["asset", "compressed", "graphics", "music", "text"].includes(annotation.classification)) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' cannot attach an asset codec to '${annotation.classification}'.`
+      );
+    }
+    assertCodecReference(annotation.asset, `Analysis annotation '${annotation.id}' asset codec`);
+    const compression = annotation.asset.compression;
+    if (!compression) {
+      continue;
+    }
+    assertCodecReference(compression, `Analysis annotation '${annotation.id}' compression codec`);
+    const rangeSize = annotation.end - annotation.start;
+    const maximumSize = compression.maximumSize ?? rangeSize;
+    if (!Number.isSafeInteger(maximumSize) || maximumSize <= 0 || maximumSize > rangeSize) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' compression maximumSize must be within its range.`
+      );
+    }
+    const hasBankStart = compression.bankStart !== void 0;
+    const hasBankEnd = compression.bankEnd !== void 0;
+    if (hasBankStart !== hasBankEnd) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' compression bank bounds must be supplied together.`
+      );
+    }
+    const bankStart = compression.bankStart;
+    const bankEnd = compression.bankEnd;
+    if (hasBankStart && (typeof bankStart !== "number" || typeof bankEnd !== "number" || !Number.isSafeInteger(bankStart) || !Number.isSafeInteger(bankEnd) || bankStart < 0 || bankEnd <= bankStart || annotation.start < bankStart || annotation.end > bankEnd)) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' has invalid compression bank bounds.`
+      );
+    }
+    if (compression.fillByte !== void 0 && (!Number.isInteger(compression.fillByte) || compression.fillByte < 0 || compression.fillByte > 255)) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' has an invalid compression fillByte.`
+      );
+    }
+  }
+  for (const conflict of shards.analysis) {
+    if (conflict.kind !== "conflict" || conflict.end === void 0) {
+      continue;
+    }
+    if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
+      throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
+    }
+  }
+  validateAnalysisOwnership(shards.analysis, analysisScope);
+  const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
+  for (const region of shards.regions) {
+    if (!region.parentRegion) {
+      continue;
+    }
+    const parent = regionsById.get(region.parentRegion);
+    if (!parent) {
+      throw new Error(
+        `Analysis region '${region.id}' refers to missing parent region '${region.parentRegion}'.`
+      );
+    }
+    const visited = /* @__PURE__ */ new Set([region.id]);
+    let ancestor = parent;
+    while (ancestor.parentRegion) {
+      if (visited.has(ancestor.id)) {
+        throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
+      }
+      visited.add(ancestor.id);
+      const next = regionsById.get(ancestor.parentRegion);
+      if (!next) {
+        break;
+      }
+      ancestor = next;
+    }
+    if (visited.has(ancestor.id)) {
+      throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
+    }
+    if (parent.addressSpace === region.addressSpace && (region.start < parent.start || region.end > parent.end)) {
+      throw new Error(
+        `Analysis region '${region.id}' is not contained by parent region '${parent.id}'.`
+      );
+    }
+  }
+  for (const addressed of [...shards.labels, ...shards.comments]) {
+    if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
+      throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
+    }
+  }
+  for (const label of shards.labels) {
+    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+      throw new Error(`Analysis label '${label.id}' has an invalid suppression flag.`);
+    }
+    if (label.sourceName !== void 0 && (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName))) {
+      throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
+    }
+    if (label.inlineComment !== void 0 && (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment))) {
+      throw new Error(`Analysis label '${label.id}' requires a single-line inline comment.`);
+    }
+    if (label.analysisEntryPoint !== void 0 && typeof label.analysisEntryPoint !== "boolean") {
+      throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
+    }
+  }
+  for (const comment of shards.comments) {
+    if (comment.placement !== void 0 && !["before", "inline-instruction"].includes(comment.placement)) {
+      throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
+    }
+    if (comment.placement === "inline-instruction" && (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text))) {
+      throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
+    }
+  }
+  const addressSpaceById = new Map(
+    addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
+  );
+  const outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
+  for (const records of [
+    shards.annotations,
+    shards.labels,
+    shards.comments,
+    shards.regions,
+    shards.analysis
+  ]) {
+    for (const record of records) {
+      if (!("addressSpace" in record)) {
+        continue;
+      }
+      const addressSpace = addressSpaceById.get(record.addressSpace);
+      if (!addressSpace) {
+        throw new Error(
+          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+        );
+      }
+      const maximum = 2 ** addressSpace.addressBits;
+      let invalid = false;
+      if ("start" in record) {
+        invalid = outsideSpace(record.start, maximum) || outsideSpace(record.end - 1, maximum);
+      } else if ("address" in record) {
+        invalid = outsideSpace(record.address, maximum);
+        if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
+          invalid ||= outsideSpace(record.end - 1, maximum);
+        }
+      } else {
+        if ("fromAddress" in record) {
+          invalid = outsideSpace(record.fromAddress, maximum);
+        }
+        if ("toAddress" in record && record.toAddress !== void 0) {
+          invalid ||= outsideSpace(record.toAddress, maximum);
+        }
+        if ("targets" in record) {
+          for (const target of record.targets) {
+            invalid ||= outsideSpace(target, maximum);
+          }
+        }
+      }
+      if (invalid) {
+        throw new Error(
+          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+        );
+      }
+    }
+  }
+  validateRuntimeRecords(shards.runtime, project, shards.evidence);
+  assertNoRomPayload({ ...shards, runtime: [] }, "shards");
+};
+
+// ../disassembler/src/research-inputs/inputs.ts
+init_canonical_json();
+
+// ../disassembler/src/internal/source-inputs.ts
+var import_node_crypto2 = require("node:crypto");
+var sourceContentHash = (value) => (0, import_node_crypto2.createHash)("sha256").update(value).digest("hex");
+
+// ../disassembler/src/model/metadata-validation.ts
+var validateEditableMetadataRecord = (shard, record) => {
+  if (!record || typeof record.id !== "string" || !/^\w[\w./:-]*$/.test(record.id) || !Array.isArray(record.evidence) || record.evidence.some((id) => typeof id !== "string")) {
+    throw new Error("Metadata needs a stable record ID and evidence list.");
+  }
+  if ("address" in record && (!Number.isSafeInteger(record.address) || record.address < 0)) {
+    throw new Error("Metadata needs a nonnegative integer address.");
+  }
+  if (typeof record.addressSpace !== "string") {
+    throw new Error("Metadata needs a named address space.");
+  }
+  if (shard === "labels") {
+    if (!("name" in record) || typeof record.name !== "string" || !record.name || !("address" in record) || "kind" in record) {
+      throw new Error("Invalid label metadata.");
+    }
+    const label = record;
+    if (label.sourceName !== void 0) {
+      validateSourceLabelName(label.sourceName);
+    }
+    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+      throw new Error("Invalid label suppression flag.");
+    }
+    for (const value of [label.comment, label.inlineComment]) {
+      if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
+        throw new Error("Invalid label comment.");
+      }
+    }
+  } else if (shard === "comments") {
+    if (!("text" in record) || typeof record.text !== "string" || !record.text.trim() || record.text.includes("\0") || !("address" in record) || "kind" in record) {
+      throw new Error("A standalone comment needs nonempty text.");
+    }
+  } else if (shard === "annotations") {
+    if (!("classification" in record) || ![
+      "unreached",
+      "opcode",
+      "operand",
+      "data8",
+      "data16",
+      "data24",
+      "data32",
+      "pointer16",
+      "pointer24",
+      "pointer32",
+      "graphics",
+      "music",
+      "compressed",
+      "asset",
+      "empty",
+      "text"
+    ].includes(record.classification) || typeof record.architecture !== "string" || !record.architecture) {
+      throw new Error("Invalid classification metadata.");
+    }
+    if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
+      throw new Error("Classification bounds must describe a nonempty half-open interval.");
+    }
+    for (const [field, value] of Object.entries(record.state ?? {})) {
+      if (["e", "m", "x", "carry"].includes(field)) {
+        if (typeof value !== "boolean") {
+          throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
+        }
+      } else {
+        const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
+        if (!["programBank", "dataBank", "directPage", "stackPointer"].includes(field) || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+          throw new Error(`Invalid state field '${field}'.`);
+        }
+      }
+    }
+    if (record.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
+      throw new Error("Invalid entry-point metadata.");
+    }
+  } else if (shard === "analysis") {
+    if (!("kind" in record) || !["target-override", "target-set"].includes(record.kind) || !Array.isArray(record.targets) || record.targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+      throw new Error("Only target overrides and target sets are editable analysis records.");
+    }
+    if (record.kind === "target-set" && (typeof record.name !== "string" || !record.name.trim())) {
+      throw new Error("A target set needs a name.");
+    }
+    if (record.kind === "target-override" && !Number.isSafeInteger(record.address)) {
+      throw new Error("A target override needs an instruction anchor.");
+    }
+  } else {
+    throw new Error("This collection is not editable metadata.");
+  }
+};
+
+// ../disassembler/src/research-inputs/inputs.ts
+var isArray2 = (value) => Array.isArray(value);
+var RESEARCH_COLLECTIONS = [
+  "labels",
+  "comments",
+  "annotations",
+  "regions",
+  "analysis",
+  "evidence"
+];
+function validateResearchSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot.project !== "string" || !/^[\w.-]+$/.test(snapshot.project) || typeof snapshot.romSha256 !== "string" || !/^[\da-f]{64}$/.test(snapshot.romSha256) || !isArray2(snapshot.decisions)) {
+    throw new Error("Invalid research snapshot identity.");
+  }
+  const keys = /* @__PURE__ */ new Set();
+  for (const decision of snapshot.decisions) {
+    validateResearchDecision(decision);
+    const key3 = `${decision.collection}:${decision.id}`;
+    if (keys.has(key3)) {
+      throw new Error(`Duplicate research decision: ${key3}`);
+    }
+    keys.add(key3);
+  }
+  const decisions = [...snapshot.decisions].sort(compareDecisions);
+  if (snapshot.hash !== sourceContentHash(
+    canonicalJson({ project: snapshot.project, romSha256: snapshot.romSha256, decisions })
+  )) {
+    throw new Error("Research snapshot content differs from its identity.");
+  }
+}
+var compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
+function validateResearchDecision(decision) {
+  if (!decision || !RESEARCH_COLLECTIONS.includes(decision.collection) || typeof decision.id !== "string" || !/^\w[\w./:-]*$/.test(decision.id)) {
+    throw new Error("Research decisions require a known collection and stable ID.");
+  }
+  const record = decision.value;
+  if (record === null) {
+    return;
+  }
+  if (!record || record.id !== decision.id) {
+    throw new Error(`Research record identity mismatch: ${decision.id}`);
+  }
+  if (decision.collection === "evidence") {
+    const evidence = record;
+    if (evidence.source !== "manual" || typeof evidence.sourceId !== "string" || !evidence.sourceId || !["certain", "high", "medium", "low", "unknown"].includes(evidence.confidence) || evidence.detail !== void 0 && typeof evidence.detail !== "string") {
+      throw new Error("Research files may author only valid manual evidence.");
+    }
+    return;
+  }
+  if (!("evidence" in record) || !isArray2(record.evidence) || record.evidence.some((id) => typeof id !== "string")) {
+    throw new Error(`Research record ${decision.id} needs an evidence list.`);
+  }
+  if (decision.collection === "regions") {
+    if (!("start" in record) || !("end" in record) || !("name" in record) || typeof record.name !== "string" || !record.name || !Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
+      throw new Error(`Invalid research region: ${decision.id}`);
+    }
+  } else {
+    validateEditableMetadataRecord(
+      decision.collection,
+      record
+    );
+  }
+  if (decision.collection === "labels") {
+    const label = record;
+    if (label.aliases !== void 0) {
+      if (!isArray2(label.aliases)) {
+        throw new Error("Symbol aliases must be an array.");
+      }
+      for (const alias of label.aliases) {
+        validateSourceLabelName(alias);
+      }
+      if (new Set(label.aliases).size !== label.aliases.length) {
+        throw new Error("Symbol aliases must be unique.");
+      }
+    }
+  }
+}
+
+// ../disassembler/src/storage/sqlite-payload.ts
 var import_node_util = require("node:util");
 var import_node_zlib2 = require("node:zlib");
 
-// packages/disassembler/src/storage/sqlite-runtime-payload.ts
+// ../disassembler/src/storage/sqlite-runtime-payload.ts
 var import_node_zlib = require("node:zlib");
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
@@ -2914,7 +3239,7 @@ var decodePackedRuntimePayload = (bytes) => {
   return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
 };
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
 var HEADER_BYTES2 = 8;
@@ -3004,7 +3329,8 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/storage/sqlite-records.ts
+// ../disassembler/src/storage/sqlite-records.ts
+init_canonical_json();
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -3283,7 +3609,7 @@ var analysisAddress = (record) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/storage/sqlite-annotation-query.ts
+// ../disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 var decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
 var runtimeSelect = (pairedState = false) => {
@@ -3703,7 +4029,7 @@ var readInstructionExecutionSummary = (database, manifest, ranges) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
+// ../disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var installQueryCache = (db, key3, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key3)) {
@@ -3750,7 +4076,7 @@ var writeQueryCache = (db, key3, signature, value) => {
   );
 };
 
-// packages/disassembler/src/storage/sqlite-coverage-query.ts
+// ../disassembler/src/storage/sqlite-coverage-query.ts
 var decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
 var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 var cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
@@ -4086,7 +4412,7 @@ var coveragePage = (db, kind, offset) => {
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
 
-// packages/disassembler/src/storage/sqlite-graph-query.ts
+// ../disassembler/src/storage/sqlite-graph-query.ts
 var decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
 var unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 var numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
@@ -4108,8 +4434,11 @@ var prepareGraph = (db) => {
     if (row.kind === "cfg-node") {
       const node = decode3(row.payload);
       const path4 = node.evidencePath.length ? node.evidencePath : [node.id];
-      let owner;
+      let owner = node.functionEntry;
       for (let i = path4.length - 1; i >= 0; i--) {
+        if (owner) {
+          break;
+        }
         if (entries.has(path4[i])) {
           owner = path4[i];
           break;
@@ -4266,7 +4595,120 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-facts.ts
+// ../disassembler/src/storage/sqlite-research-inputs.ts
+init_canonical_json();
+var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
+  collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
+  PRIMARY KEY(collection,id)
+) WITHOUT ROWID;`;
+var collectionName = (value) => {
+  if (typeof value !== "string" || !["labels", "comments", "annotations", "regions", "analysis", "evidence"].includes(value)) {
+    throw new Error("Invalid research projection collection.");
+  }
+  return value;
+};
+var recordValue = (payload) => payload == null ? null : JSON.parse(decodeSqlitePayload(payload));
+function analysisInput(collection, value) {
+  if (value === null || collection === "comments") {
+    return null;
+  }
+  const record = value;
+  if (collection === "labels") {
+    if (record.analysisEntryPoint === false) {
+      return null;
+    }
+    return {
+      id: record.id,
+      addressSpace: record.addressSpace,
+      address: record.address,
+      evidence: record.evidence
+    };
+  }
+  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record.kind))) {
+    return null;
+  }
+  return record;
+}
+function changesAnalysisInputs(database, snapshot) {
+  database.exec(SCHEMA);
+  const selected = new Map(
+    snapshot.decisions.map((decision) => [`${decision.collection}:${decision.id}`, decision])
+  );
+  const before = /* @__PURE__ */ new Map();
+  for (const row of database.prepare("SELECT collection,id,baseline FROM research_projection").iterate()) {
+    const collection = collectionName(row.collection);
+    const id = String(row.id);
+    before.set(`${collection}:${id}`, { collection, id, baseline: recordValue(row.baseline) });
+  }
+  for (const key3 of /* @__PURE__ */ new Set([...selected.keys(), ...before.keys()])) {
+    const decision = selected.get(key3);
+    const previous = before.get(key3);
+    const { collection, id } = decision ?? previous;
+    const current = recordValue(
+      database.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(id)?.payload
+    );
+    const next = decision ? decision.value : previous.baseline;
+    if (!canonicalEquals(analysisInput(collection, current), analysisInput(collection, next))) {
+      return true;
+    }
+  }
+  return false;
+}
+function clearResearchProjection(database, insert) {
+  database.exec(SCHEMA);
+  for (const row of database.prepare("SELECT * FROM research_projection ORDER BY collection,id").iterate()) {
+    const collection = collectionName(row.collection);
+    if (typeof row.id !== "string") {
+      throw new Error("Invalid research projection record identity.");
+    }
+    const current = database.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(row.id);
+    if (!canonicalEquals(recordValue(current?.payload), recordValue(row.projected))) {
+      throw new Error(
+        `Research index changed outside its authoring files: ${collection}:${row.id}. Reconcile the evidence writer before rebuilding the index.`
+      );
+    }
+    database.prepare(`DELETE FROM ${collection} WHERE id=?`).run(row.id);
+    const baseline = recordValue(row.baseline);
+    if (baseline !== null) {
+      insert(collection, baseline);
+    }
+  }
+  database.exec(
+    "DELETE FROM research_projection; DELETE FROM meta WHERE k IN ('research-inputs','research-index-revision')"
+  );
+}
+function projectResearchInputs(database, snapshot, insert) {
+  const changed = changesAnalysisInputs(database, snapshot);
+  clearResearchProjection(database, insert);
+  const remember = database.prepare("INSERT INTO research_projection VALUES (?,?,?,?)");
+  for (const decision of snapshot.decisions) {
+    const collection = collectionName(decision.collection);
+    const before = database.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(decision.id);
+    if (collection === "evidence" && before) {
+      const observation = recordValue(before.payload);
+      if (observation.source !== "manual") {
+        throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
+      }
+    }
+    const projected = decision.value === null ? null : encodeSqlitePayload(canonicalJson(decision.value));
+    remember.run(collection, decision.id, before?.payload ?? null, projected);
+    database.prepare(`DELETE FROM ${collection} WHERE id=?`).run(decision.id);
+    if (decision.value !== null) {
+      insert(collection, decision.value);
+    }
+  }
+  database.prepare("INSERT OR REPLACE INTO meta (k,v) VALUES ('research-inputs',?)").run(snapshot.hash);
+  if (changed) {
+    database.prepare("INSERT OR REPLACE INTO meta (k,v) VALUES ('analysis-dirty',?)").run(
+      "Research classification, entry points, targets or evidence changed. Analyze the selected inputs before regenerating or querying the derived graph."
+    );
+  }
+}
+
+// ../disassembler/src/storage/sqlite-runtime-batch.ts
+init_canonical_json();
+
+// ../disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS = [
   "kind",
   "architecture",
@@ -4355,10 +4797,11 @@ WHEN EXISTS(SELECT 1 FROM runtime_identities
 BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
 `;
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
-var import_node_crypto2 = require("node:crypto");
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
+var import_node_crypto3 = require("node:crypto");
+init_canonical_json();
 
-// packages/disassembler/src/storage/sqlite-runtime-history.ts
+// ../disassembler/src/storage/sqlite-runtime-history.ts
 var import_node_util2 = require("node:util");
 var import_node_zlib3 = require("node:zlib");
 var MAGIC2 = Buffer.from([85, 72, 66, 1]);
@@ -4532,8 +4975,8 @@ var collectRuntimeHistory = (db) => {
       SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
-var runtimeFactFingerprint = (record, columns2) => (0, import_node_crypto2.createHash)("sha256").update(
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
+var runtimeFactFingerprint = (record, columns2) => (0, import_node_crypto3.createHash)("sha256").update(
   JSON.stringify(
     {
       accessedAddress: columns2.accessedAddress,
@@ -4763,7 +5206,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+// ../disassembler/src/storage/sqlite-runtime-batch.ts
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
   INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
     SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
@@ -4912,8 +5355,8 @@ var SqliteRuntimeTraceBatch = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-summary.ts
-var import_node_crypto3 = require("node:crypto");
+// ../disassembler/src/storage/sqlite-runtime-summary.ts
+var import_node_crypto4 = require("node:crypto");
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
 var INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
@@ -4983,7 +5426,12 @@ var installSummary = (db) => {
 var runtimeSummaryInputSql = (incremental) => {
   const from = incremental ? `query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
-      CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
+      CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : (
+    // The address index visits the same compressed history blocks repeatedly, once per observed PC.
+    // A sequential physical scan trades coordinate filtering for bounded, reusable decoder buffers;
+    // payload decoding still happens only after the architecture/kind predicate. Appends stay indexed.
+    "runtime_observations o NOT INDEXED CROSS JOIN runtime_facts f ON f.fid=o.fact_id"
+  );
   return `SELECT f.address,analysis_instruction_variant(
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
       o.evidence_id AS evidence,o.count AS total,o.oid AS sample
@@ -5022,7 +5470,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
     });
   }
   if (!isCurrent(db, signature)) {
-    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
     let incremental = false;
     transaction(() => {
       incremental = readQueryCache(db, KEY, signature) !== void 0;
@@ -5111,13 +5559,15 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
   })();
 };
 
-// packages/disassembler/src/storage/sqlite-source-query.ts
+// ../disassembler/src/storage/sqlite-source-query.ts
 var collections = ["labels", "comments", "annotations", "regions"];
 var sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
   WHERE member.value IN (SELECT value FROM json_each(?)))`;
 var sourceRuntime = "r.evidence_id IN (SELECT id FROM source_evidence)";
-var instructionKinds = "r.kind IN ('runtime-execution','runtime-instruction')";
+var sourceObservations = "o.evidence_id IN (SELECT id FROM source_evidence)";
+var instructionKinds = "f.kind IN ('runtime-execution','runtime-instruction')";
+var observationLocations = "runtime_observations o JOIN runtime_fact_locations f ON f.fid=o.fact_id";
 var hex = (address) => `$${address.toString(16).toUpperCase().padStart(6, "0")}`;
 var sourceQueriesReady = (db) => Boolean(db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_source_rows'").get()) && !db.prepare("SELECT 1 FROM query_source_rows WHERE ready=0 LIMIT 1").get();
 var prepareSourceQueries = (db) => {
@@ -5168,12 +5618,13 @@ var readSourceSummary = (db, source) => {
   const evidence = JSON.stringify(source.evidenceIds);
   const instructionCount = Number(
     db.prepare(`${sourceEvidence} SELECT count(*) AS n FROM (
-    SELECT r.architecture,r.address_space,r.address FROM runtime r WHERE ${sourceRuntime} AND ${instructionKinds}
-    GROUP BY r.architecture,r.address_space,r.address)`).get(evidence)?.n ?? 0
+    SELECT f.architecture,f.address_space,f.address FROM ${observationLocations}
+    WHERE ${sourceObservations} AND ${instructionKinds}
+    GROUP BY f.architecture,f.address_space,f.address)`).get(evidence)?.n ?? 0
   );
   const memoryCount = Number(
-    db.prepare(`${sourceEvidence} SELECT count(*) AS n FROM runtime r
-    WHERE ${sourceRuntime} AND r.kind='runtime-memory-access'`).get(evidence)?.n ?? 0
+    db.prepare(`${sourceEvidence} SELECT count(*) AS n FROM ${observationLocations}
+    WHERE ${sourceObservations} AND f.kind='runtime-memory-access'`).get(evidence)?.n ?? 0
   );
   const contributionCount = Number(
     db.prepare(`SELECT count(*) AS n FROM (
@@ -5187,13 +5638,15 @@ var readSourcePage = (db, source, group, offset = 0) => {
   }
   const evidence = JSON.stringify(source.evidenceIds);
   if (group === "instructions") {
-    const rows = db.prepare(`${sourceEvidence} SELECT r.architecture,r.address_space,r.address,
-      SUM(CASE WHEN r.kind='runtime-execution' THEN r.count ELSE 0 END) AS executions
-      FROM runtime r WHERE ${sourceRuntime} AND ${instructionKinds}
-      GROUP BY r.architecture,r.address_space,r.address ORDER BY r.architecture,r.address_space,r.address LIMIT 200 OFFSET ?`).all(evidence, offset);
-    const offsets = db.prepare(`${sourceEvidence} SELECT DISTINCT q.file_offset FROM runtime r
-      JOIN query_execution_offsets q ON q.row_id=r.rowid WHERE ${sourceRuntime} AND r.kind='runtime-execution'
-      AND r.architecture=? AND r.address_space=? AND r.address=? AND q.file_offset IS NOT NULL ORDER BY q.file_offset`);
+    const rows = db.prepare(`${sourceEvidence} SELECT f.architecture,f.address_space,f.address,
+      SUM(CASE WHEN f.kind='runtime-execution' THEN o.count ELSE 0 END) AS executions
+      FROM ${observationLocations} WHERE ${sourceObservations} AND ${instructionKinds}
+      GROUP BY f.architecture,f.address_space,f.address ORDER BY f.architecture,f.address_space,f.address LIMIT 200 OFFSET ?`).all(evidence, offset);
+    const offsets = db.prepare(`${sourceEvidence} SELECT DISTINCT o.query_file_offset AS file_offset
+      FROM runtime_fact_locations f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+      WHERE ${sourceObservations} AND f.kind='runtime-execution'
+      AND f.architecture=? AND f.address_space=? AND f.address=?
+      AND o.query_file_offset IS NOT NULL ORDER BY o.query_file_offset`);
     return rows.map((row) => ({
       id: JSON.stringify([row.architecture, row.address_space, row.address]),
       label: hex(Number(row.address)),
@@ -5253,7 +5706,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-storage-policy.ts
+// ../disassembler/src/storage/sqlite-storage-policy.ts
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var DEFAULT_ANALYSIS_STORAGE_POLICY = {
   cacheMaxBytes: 256 * 1024 ** 2,
@@ -5421,10 +5874,10 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
-var SCHEMA = `
+var SCHEMA2 = `
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 PRAGMA foreign_keys=ON;
@@ -5542,6 +5995,8 @@ var SqliteAnalysisStore = class {
   /** Transaction-local cache: rollback or another writer cannot leave stale integer references here. */
   #dictionaryIds = /* @__PURE__ */ new Map();
   #dictionaryCacheBytes = 0;
+  /** An import must restore Git decisions in the same transaction before exposing observations. */
+  #researchSuspended = false;
   /**
    * Opens or creates a project database.
    * Opening validates physical format, not every semantic record, and may create SQLite journal files.
@@ -5568,7 +6023,7 @@ var SqliteAnalysisStore = class {
         this.#database.prepare("PRAGMA user_version").get()?.user_version
       );
       if (createSchema && empty && initialVersion === 0) {
-        this.#database.exec(SCHEMA);
+        this.#database.exec(SCHEMA2);
         for (const sql of SCHEMA_INDEX_STATEMENTS) {
           this.#database.exec(sql);
         }
@@ -5753,6 +6208,9 @@ var SqliteAnalysisStore = class {
     try {
       const revision = write ? this.revision() : 0;
       const result = action();
+      if (this.#researchSuspended) {
+        throw new Error("Reapply research inputs before publishing imported evidence.");
+      }
       if (result !== null && (typeof result === "object" || typeof result === "function") && "then" in result && typeof result.then === "function") {
         void Promise.resolve(result).catch(() => void 0);
         throw new TypeError("Analysis transactions require a synchronous callback, not a Promise.");
@@ -5768,6 +6226,7 @@ var SqliteAnalysisStore = class {
       return result;
     } catch (error) {
       this.rollback();
+      this.#researchSuspended = false;
       throw error;
     }
   }
@@ -5914,6 +6373,121 @@ var SqliteAnalysisStore = class {
       }
       this.validateRuntimeEvidence();
     }
+  }
+  /**
+   * Rebuild the selected Git research index, without loading runtime history or the CFG. A matching
+   * revision is a constant-time no-op. Call inside a transaction and publish the watcher afterward.
+   * Research files remain authoritative if the process exits before this cache is refreshed.
+   */
+  synchronizeResearchInputs(snapshot) {
+    this.#requireTransaction();
+    const manifest = this.manifest();
+    if (snapshot.romSha256 !== manifest.rom.contentSha256) {
+      throw new Error("Research inputs belong to another ROM.");
+    }
+    validateResearchSnapshot(snapshot);
+    const indexed = this.#database.prepare("SELECT v FROM meta WHERE k='research-inputs'").get()?.v;
+    const revision = this.#database.prepare("SELECT v FROM meta WHERE k='research-index-revision'").get()?.v;
+    if (indexed === snapshot.hash && revision === String(this.revision())) {
+      return false;
+    }
+    projectResearchInputs(
+      this.#database,
+      snapshot,
+      (kind, record) => this.#insertRecord(kind, record)
+    );
+    this.validateView({
+      labels: this.loadTable("labels"),
+      comments: this.loadTable("comments"),
+      regions: this.loadTable("regions"),
+      annotations: this.loadTable("annotations"),
+      evidence: this.loadTable("evidence"),
+      analysis: this.analysisByKinds(["target-override", "target-set"]),
+      imports: [],
+      runtime: []
+    });
+    this.validateRuntimeEvidence();
+    const published = this.publishManifest(manifest);
+    this.#database.prepare("INSERT OR REPLACE INTO meta (k,v) VALUES ('research-index-revision',?)").run(String(published.revision));
+    this.#researchSuspended = false;
+    return true;
+  }
+  /** Selected Git decision identity for callers pinning a consistent evidence/read snapshot. */
+  researchInputsIdentity() {
+    const value = this.#database.prepare("SELECT v FROM meta WHERE k='research-inputs'").get()?.v;
+    return typeof value === "string" ? value : void 0;
+  }
+  /** Cheap read-only cache check; callers recheck identity/revision after consuming query results. */
+  researchInputsAreCurrent(sha256) {
+    const revision = this.#database.prepare("SELECT v FROM meta WHERE k='research-index-revision'").get()?.v;
+    return this.researchInputsIdentity() === sha256 && revision === String(this.revision());
+  }
+  /** Observations stay usable while derived code is stale; generation and graph views require reanalysis. */
+  assertCurrentAnalysis() {
+    const reason = this.#database.prepare("SELECT v FROM meta WHERE k='analysis-dirty'").get()?.v;
+    if (typeof reason === "string") {
+      throw new Error(reason);
+    }
+  }
+  /** Invalidate derived code within the same transaction that adds new observations. */
+  invalidateAnalysis() {
+    this.#requireTransaction();
+    this.#database.prepare("INSERT OR REPLACE INTO meta (k,v) VALUES ('analysis-dirty',?)").run(
+      "Captured evidence changed. Analyze the selected inputs before regenerating or querying the derived graph."
+    );
+  }
+  /** Restore observations inside an import transaction; reapply the selected research before commit. */
+  suspendResearchInputs() {
+    this.#requireTransaction();
+    this.#researchSuspended = true;
+    clearResearchProjection(this.#database, (kind, record) => this.#insertRecord(kind, record));
+  }
+  /**
+   * Publish analyzer output computed from the projected view without adopting Git decisions as
+   * imported facts. Overridden IDs retain their observation shadows; removing a decision on a
+   * later branch therefore restores the original record. Return the exact projected replacements
+   * for validation without reparsing a million-row graph into a second set of JS objects.
+   */
+  replaceResearchAnalysis(snapshot, updates, onProgress) {
+    this.#requireTransaction();
+    if (this.researchInputsIdentity() !== snapshot.hash) {
+      throw new Error("Analysis publication requires the selected Git research snapshot.");
+    }
+    this.suspendResearchInputs();
+    const projected = {};
+    for (const collection of Object.keys(updates)) {
+      if (!["analysis", "annotations", "comments", "evidence"].includes(collection)) {
+        throw new Error("Analysis may only replace derived metadata collections.");
+      }
+      const protectedIds = new Set(
+        snapshot.decisions.filter((decision) => decision.collection === collection).map((decision) => decision.id)
+      );
+      const records = (updates[collection] ?? []).filter((record) => !protectedIds.has(record.id));
+      const current = [...records];
+      for (const decision of snapshot.decisions) {
+        if (decision.collection === collection && decision.value !== null) {
+          current.push(decision.value);
+        }
+      }
+      Object.assign(projected, { [collection]: current });
+      const find = this.#database.prepare(`SELECT payload FROM ${collection} WHERE id=?`);
+      for (const id of protectedIds) {
+        const row = find.get(id);
+        if (row) {
+          records.push(
+            JSON.parse(
+              decodeSqlitePayload(row.payload)
+            )
+          );
+        }
+      }
+      this.replaceTables({ [collection]: records });
+      onProgress?.(collection);
+    }
+    this.publishManifest(this.manifest());
+    this.synchronizeResearchInputs(snapshot);
+    this.#database.exec("DELETE FROM meta WHERE k='analysis-dirty'");
+    return projected;
   }
   /**
    * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
@@ -6111,9 +6685,12 @@ var SqliteAnalysisStore = class {
   /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
   validateRuntimeEvidence() {
     const missing = this.#database.prepare(`
-      SELECT ref.value AS evidence FROM runtime_evidence AS sets, json_each(sets.value) AS ref
-      LEFT JOIN evidence ON evidence.id=ref.value
-      WHERE evidence.id IS NULL AND EXISTS (SELECT 1 FROM runtime WHERE evidence_id=sets.id) LIMIT 1
+      WITH missing AS MATERIALIZED (
+        SELECT sets.id, ref.value AS evidence FROM runtime_evidence AS sets, json_each(sets.value) AS ref
+        LEFT JOIN evidence ON evidence.id=ref.value WHERE evidence.id IS NULL
+      )
+      SELECT evidence FROM missing
+      WHERE EXISTS (SELECT 1 FROM runtime_observations WHERE evidence_id=missing.id) LIMIT 1
     `).get();
     if (missing) {
       throw new Error(`Runtime history refers to missing evidence '${String(missing.evidence)}'.`);
@@ -6237,9 +6814,7 @@ var SqliteAnalysisStore = class {
       runtime: []
     };
     const ids = JSON.stringify((batch.analysis ?? []).map((record) => record.id));
-    const analysis = this.#database.prepare(
-      "SELECT payload FROM analysis WHERE kind='metadata-edit' OR id IN (SELECT value FROM json_each(?))"
-    ).all(ids).map((row) => parseRecord(row.payload));
+    const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => parseRecord(row.payload));
     const before = { ...base, analysis };
     const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
     this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
@@ -6461,16 +7036,17 @@ var SqliteAnalysisStore = class {
    * @returns {object} Functions, calls, unresolved sites, and ownership.
    */
   callGraph() {
+    this.assertCurrentAnalysis();
     let graph;
     try {
       graph = this.cachedProjection(
         "graph",
-        "2",
+        "3",
         ["analysis"],
         () => prepareGraph(this.#database),
         () => publishGraph(this.#database)
       );
-      const published = readQueryCache(this.#database, "graph", "2");
+      const published = readQueryCache(this.#database, "graph", "3");
       if (!published) {
         throw new Error("Analysis changed while building the graph. Refresh the view.");
       }
@@ -6504,7 +7080,7 @@ var SqliteAnalysisStore = class {
     if (cached !== void 0) {
       return cached;
     }
-    const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto5.randomUUID)()}`;
     this.transaction(() => {
       installQueryCache(this.#database, key3, dependencies);
       writeQueryCache(this.#database, key3, pending, null);
@@ -6586,21 +7162,33 @@ var SqliteAnalysisStore = class {
       onProgress
     );
   }
-  /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
+  /** Exact execution seed totals grouped by PC, without decoding execution payloads.
+   * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
+   * storage. Static seed selection needs their union, not millions of duplicate PC records.
    * @param {string} architecture Target processor.
    * @param {string} space Logical CPU address space.
    * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.
    */
   runtimeExecutionSeeds(architecture, space) {
-    return this.#database.prepare(`SELECT r.address,SUM(r.count) AS count,r.evidence_id,e.value AS evidence FROM runtime r JOIN runtime_evidence e ON e.id=r.evidence_id
-      WHERE r.kind='runtime-execution' AND r.architecture=? AND r.address_space=? GROUP BY r.address,r.evidence_id`).all(architecture, space).map((row) => ({
-      id: `query:execution:${String(row.address)}:${String(row.evidence_id)}`,
+    const seeds = /* @__PURE__ */ new Map();
+    for (const row of this.#database.prepare(`SELECT r.address,SUM(r.count) AS count,r.evidence_id,e.value AS evidence FROM runtime r JOIN runtime_evidence e ON e.id=r.evidence_id
+      WHERE r.kind='runtime-execution' AND r.architecture=? AND r.address_space=? GROUP BY r.address,r.evidence_id`).iterate(architecture, space)) {
+      const address = Number(row.address);
+      const seed = seeds.get(address) ?? { count: 0, evidence: /* @__PURE__ */ new Set() };
+      seed.count += Number(row.count);
+      for (const id of JSON.parse(String(row.evidence))) {
+        seed.evidence.add(id);
+      }
+      seeds.set(address, seed);
+    }
+    return [...seeds].sort(([a], [b]) => a - b).map(([address, seed]) => ({
+      id: `query:execution:${address}`,
       kind: "runtime-execution",
       architecture,
       addressSpace: space,
-      address: Number(row.address),
-      count: Number(row.count),
-      evidence: JSON.parse(String(row.evidence))
+      address,
+      count: seed.count,
+      evidence: [...seed.evidence].sort()
     }));
   }
   /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
@@ -6685,6 +7273,7 @@ var SqliteAnalysisStore = class {
    * @returns {object} Validated manifest, metadata, and an empty runtime collection.
    */
   sourceExportView() {
+    this.assertCurrentAnalysis();
     const manifest = this.manifest();
     const shards = {
       labels: this.loadTable("labels"),
@@ -6739,7 +7328,7 @@ var SqliteAnalysisStore = class {
   instructionAnnotationView(ranges) {
     const manifest = this.manifest();
     const result = readSqliteAnnotationView(this.#database, manifest, ranges);
-    validateLoadedShards(result.shards, manifest);
+    validateLoadedShards(result.shards, manifest, "partial");
     return result;
   }
   /**
@@ -6848,7 +7437,7 @@ var SqliteAnalysisStore = class {
    * @param {string} directory Project root for the watcher hint.
    */
   writePointer(directory) {
-    const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto4.randomUUID)()}.tmp`);
+    const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto5.randomUUID)()}.tmp`);
     try {
       this.transaction(() => {
         import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
@@ -6965,7 +7554,7 @@ var SqliteAnalysisStore = class {
   }
 };
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 var fs4 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 var parseAnalysisProjectManifest = (input) => {
@@ -6991,8 +7580,9 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/project/project-transaction.ts
-var import_node_crypto5 = require("node:crypto");
+// ../disassembler/src/project/project-transaction.ts
+var import_node_crypto6 = require("node:crypto");
+init_canonical_json();
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 var ANALYSIS_PROJECT_REVISION_VERSION = 1;
 var AnalysisProjectStaleError = class extends Error {
@@ -7010,7 +7600,7 @@ var AnalysisProjectStaleError = class extends Error {
 var analysisProjectRevision = (manifest) => ({
   format: ANALYSIS_PROJECT_REVISION_FORMAT,
   version: ANALYSIS_PROJECT_REVISION_VERSION,
-  manifestSha256: (0, import_node_crypto5.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+  manifestSha256: (0, import_node_crypto6.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
 });
 var assertAnalysisProjectRevision = (store, expected) => {
   const actual = analysisProjectRevision(store.manifest());
@@ -7019,7 +7609,7 @@ var assertAnalysisProjectRevision = (store, expected) => {
   }
 };
 
-// packages/disassembler/src/project/runtime-bus-project.ts
+// ../disassembler/src/project/runtime-bus-project.ts
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var captureFileIdentity = (file) => {
   const stat = import_node_fs4.default.statSync(file, { bigint: true });
@@ -7032,6 +7622,9 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   options.signal?.throwIfAborted();
   const store = openAnalysisProjectStore(directory);
   try {
+    if (store.researchInputsIdentity() !== options.research?.hash) {
+      throw new Error("Refresh the selected Git research index before importing evidence.");
+    }
     const before = store.storageSnapshot();
     const manifest = store.transaction(() => store.manifest(), false);
     const expected = analysisProjectRevision(manifest);
@@ -7082,6 +7675,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
     options.onStage?.("Publishing validated bus activity\u2026");
     options.signal?.throwIfAborted();
     const result = store.transaction(() => {
+      options.assertResearchCurrent?.();
       assertAnalysisProjectRevision(store, expected);
       let imported;
       try {
@@ -7104,12 +7698,24 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
         ...imported.report,
         sourceName: retained?.sourceName ?? imported.report.sourceName
       };
-      const merged = mergeRuntimeEvidence(base, { ...imported.batch, imports: [report] });
+      let merged = mergeRuntimeEvidence(base, { ...imported.batch, imports: [report] });
       validateLoadedShards(merged.shards, manifest);
       const changed = merged.changed || addedRuntime > 0;
       if (changed) {
+        if (options.research) {
+          store.suspendResearchInputs();
+          merged = mergeRuntimeEvidence(
+            { ...base, evidence: store.loadTable("evidence") },
+            { ...imported.batch, imports: [report] }
+          );
+          validateLoadedShards(merged.shards, manifest);
+        }
         store.replaceTables({ evidence: merged.shards.evidence, imports: merged.shards.imports });
         store.publishManifest(manifest);
+        if (options.research) {
+          store.synchronizeResearchInputs(options.research);
+          store.invalidateAnalysis();
+        }
       }
       if (options.storagePolicy) {
         store.setStoragePolicy(options.storagePolicy);
@@ -7160,7 +7766,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   }
 };
 
-// packages/vscode-extension/src/runtime/live-bus-analysis-process.ts
+// src/runtime/live-bus-analysis-process.ts
 var cancellation = new AbortController();
 var latest;
 var started = false;

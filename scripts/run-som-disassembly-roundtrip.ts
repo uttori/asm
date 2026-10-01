@@ -30,21 +30,11 @@ if (
 }
 
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-som-roundtrip-"));
-const project = path.join(temporary, "Secret-of-Mana.analysis");
 const source = path.join(temporary, "Secret-of-Mana.source");
 try {
   const commands: readonly (readonly string[])[] = [
-    [
-      "disassemble",
-      rom,
-      project,
-      `--mapper=${SECRET_OF_MANA_ANALYSIS_FIXTURE.mapper}`,
-      "--dizraw",
-      dizraw,
-    ],
-    ["analyze", project, "--rom", rom],
-    ["export", project, source, "--rom", rom],
-    ["verify-roundtrip", source, "--rom", rom],
+    ["source", "init", rom, source, "--mapper", SECRET_OF_MANA_ANALYSIS_FIXTURE.mapper, "--dizraw", dizraw],
+    ["source", "build", source],
   ];
   for (const command of commands) {
     const exitCode = await runCli(command);

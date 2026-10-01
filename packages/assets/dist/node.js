@@ -9,6 +9,5 @@ export async function readAssetFile(path, mediaType) {
     return { bytes: new Uint8Array(await readFile(path)), mediaType };
 }
 export { createAssetSourceBaseline, parseAssetSourceBaseline, assertAssetSourceBaseline, } from "./source-baseline.js";
-export { createAssetSourceStage, publishAssetSourceStage } from "./source-stage.js";
 export { assetSourcePath } from "./source-baseline.js";
 //# sourceMappingURL=node.js.map

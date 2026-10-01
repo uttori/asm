@@ -88,6 +88,7 @@ const installSummary = (db) => {
 };
 /** Stream compact keys, counts and representatives without a blocking sort or aggregate.
  * Pending IDs drive incremental joins so an append does not scan unrelated captures or shared facts.
+ * A full rebuild walks observation storage order to retain locality in compressed history blocks.
  * @param {boolean} incremental Whether to select pending observations instead of all history.
  * @returns {string} Input cursor SQL binding architecture and address space, in that order.
  */
@@ -96,7 +97,10 @@ export const runtimeSummaryInputSql = (incremental) => {
         ? `query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
       CROSS JOIN runtime_facts f ON f.fid=o.fact_id`
-        : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
+        : // The address index visits the same compressed history blocks repeatedly, once per observed PC.
+            // A sequential physical scan trades coordinate filtering for bounded, reusable decoder buffers;
+            // payload decoding still happens only after the architecture/kind predicate. Appends stay indexed.
+            "runtime_observations o NOT INDEXED CROSS JOIN runtime_facts f ON f.fid=o.fact_id";
     return `SELECT f.address,analysis_instruction_variant(
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
       o.evidence_id AS evidence,o.count AS total,o.oid AS sample

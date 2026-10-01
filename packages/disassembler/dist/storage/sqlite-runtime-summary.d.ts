@@ -15,6 +15,7 @@ type Transaction = (action: () => void, write?: boolean) => void;
 export declare const RUNTIME_SUMMARY_ROWS_SQL = "SELECT i.value AS id,f.kind,f.architecture,f.address_space,f.address,\n    grouped.total AS count,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,\n    p.value AS id_prefix,e.value AS evidence\n  FROM (SELECT s.sample,s.total FROM query_runtime_variant_sources s\n    JOIN query_runtime_variant_keys k ON k.id=s.variant\n    ORDER BY k.address,s.evidence,k.key LIMIT -1) grouped\n  CROSS JOIN runtime_observations o ON o.oid=grouped.sample\n  CROSS JOIN runtime_facts f ON f.fid=o.fact_id\n  LEFT JOIN runtime_identities i ON i.iid=o.identity_id\n  LEFT JOIN runtime_prefixes p ON p.id=o.prefix_id\n  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id";
 /** Stream compact keys, counts and representatives without a blocking sort or aggregate.
  * Pending IDs drive incremental joins so an append does not scan unrelated captures or shared facts.
+ * A full rebuild walks observation storage order to retain locality in compressed history blocks.
  * @param {boolean} incremental Whether to select pending observations instead of all history.
  * @returns {string} Input cursor SQL binding architecture and address space, in that order.
  */

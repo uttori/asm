@@ -17,8 +17,8 @@ test("VS Code contributes and activates the inline Uttori ASM debugger", (t) => 
         initialConfigurations: Array<Record<string, unknown>>;
         configurationAttributes: {
           launch: {
-            required: string[];
-            properties: { backend: { enum: string[] } };
+            required?: string[];
+            properties: { backend: { enum: string[] }; sourceProject: { type: string } };
           };
         };
         configurationSnippets: Array<{ body: Record<string, unknown> }>;
@@ -27,10 +27,12 @@ test("VS Code contributes and activates the inline Uttori ASM debugger", (t) => 
   };
   const debuggerContribution = manifest.contributes.debuggers[0];
   t.is(debuggerContribution?.type, "uttori-asm");
-  t.deepEqual(debuggerContribution?.configurationAttributes.launch.required, [
-    "program",
-    "debugMap",
-  ]);
+  // Git source launches obtain both paths from the successful build instead of static launch JSON.
+  t.is(debuggerContribution?.configurationAttributes.launch.required, undefined);
+  t.is(
+    debuggerContribution?.configurationAttributes.launch.properties.sourceProject.type,
+    "boolean",
+  );
   t.is(debuggerContribution?.initialConfigurations[0]?.request, "launch");
   t.deepEqual(debuggerContribution?.configurationAttributes.launch.properties.backend.enum, [
     "replay",

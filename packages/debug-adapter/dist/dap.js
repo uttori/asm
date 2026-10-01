@@ -148,6 +148,8 @@ export class DebugAdapterSession {
      */
     #eventContext = new AsyncLocalStorage();
     #configurationHandshake;
+    /** Run-only launches hide the backend's initial reset stop and resume without breakpoint configuration. */
+    #runWithoutDebug = false;
     #configurationDone;
     #cancelConfiguration;
     /** Needed because ares accepts breakpoint-table changes only while stopped. */
@@ -235,7 +237,8 @@ export class DebugAdapterSession {
             }
             if ((request.command === "launch" || request.command === "attach") &&
                 response.success &&
-                !this.#configurationHandshake) {
+                !this.#configurationHandshake &&
+                !this.#runWithoutDebug) {
                 pending.unshift({ type: "event", event: "initialized" });
             }
             const messages = [
@@ -289,18 +292,24 @@ export class DebugAdapterSession {
             case "initialize":
                 return this.#capabilities();
             case "launch":
-                if (this.#mapIssues.length > 0) {
-                    throw new Error(this.#mapIssues.join(" "));
-                }
-                await this.#backend.connect({ reset: true });
-                await this.#configure();
-                return {};
             case "attach":
                 if (this.#mapIssues.length > 0) {
                     throw new Error(this.#mapIssues.join(" "));
                 }
-                await this.#backend.connect({ reset: false });
-                await this.#configure();
+                this.#runWithoutDebug = args.noDebug === true;
+                await this.#backend.connect({ reset: command === "launch" });
+                if (this.#runWithoutDebug) {
+                    // A Run client need not send configurationDone or breakpoints. The
+                    // backend still connects at a coherent stop before native execution.
+                    const [thread] = await this.#backend.threads();
+                    if (!thread) {
+                        throw new Error("The backend has no execution thread to run.");
+                    }
+                    await this.#resumeExecution(() => this.#backend.continue(thread.id));
+                }
+                else {
+                    await this.#configure();
+                }
                 return {};
             case "configurationDone":
                 return {};
@@ -1179,6 +1188,9 @@ export class DebugAdapterSession {
             this.#variableContainers.clear();
             this.#virtualSources.clear();
             this.#virtualReferences.clear();
+            if (this.#runWithoutDebug && event.reason === "entry") {
+                return;
+            }
             const maintenance = this.#maintenancePause;
             if (maintenance) {
                 this.#maintenancePause = undefined;

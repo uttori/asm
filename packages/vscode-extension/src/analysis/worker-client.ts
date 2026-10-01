@@ -17,38 +17,36 @@ interface PendingProjection {
 /**
  * Resource limits and optional process isolation for projection requests.
  * Heap limits default to 4096 MiB and must be safe integers of at least 128; timeouts default to
- * 60 seconds and exclude source publication.
+ * 60 seconds.
  */
 export interface AnalysisWorkerOptions {
+  /** Evaluated per request so selecting a source worktree changes external evidence query context. */
+  readonly sourceRoot?: () => string | undefined;
   readonly maxMemoryMiB?: (directory: string) => number;
   readonly timeoutMs?: number;
-  /** Separate edits, viewport previews, and bulk views so one timeout cannot cancel unrelated work. */
+  /** Separate manifests, viewport previews, and bulk views so one timeout cannot cancel unrelated work. */
   readonly isolateAnnotations?: boolean;
 }
 
 /**
- * Manifest and edit operations routed to a dedicated worker when isolation is enabled, keeping
+ * Manifest operations routed to a dedicated worker when isolation is enabled, keeping
  * them out of bulk-view queues.
  */
 const interactiveOperations = new Set([
-  // ROM matching precedes overlays and form discovery. It must not queue behind bulk views either.
+  // ROM matching precedes overlays and must not queue behind bulk views.
   "manifest",
-  "annotationLookup",
-  "annotationSave",
-  "annotationRefresh",
-  "metadata",
 ]);
 /**
- * Read-only editor/DAP annotation requests routed separately from edits and bulk views when
+ * Read-only editor/DAP annotation requests routed separately from manifests and bulk views when
  * isolation is enabled.
  */
 const previewOperations = new Set(["annotations", "annotationSummary", "debugAnnotations"]);
 
 /** Shared projection process: fatal heap errors cannot terminate the extension host. */
 export class AnalysisWorkerClient {
-  /** Lazily allocated. Save and refresh share this process's guarded export snapshot. */
-  #annotations?: AnalysisWorkerClient;
-  /** Viewport requests are read-only and must never hold up a form, save, or project manifest. */
+  /** Lazily allocated manifest queries remain responsive while bulk views are loading. */
+  #manifests?: AnalysisWorkerClient;
+  /** Viewport requests must never hold up project identity queries. */
   #previews?: AnalysisWorkerClient;
   #worker?: ChildProcess;
   #memoryMiB = 0;
@@ -68,10 +66,6 @@ export class AnalysisWorkerClient {
       AnalysisWorkerRequest,
       | "offset"
       | "ranges"
-      | "annotationLookup"
-      | "annotationSave"
-      | "annotationRefresh"
-      | "metadata"
       | "sourceId"
       | "sourceGroup"
       | "navigationTarget"
@@ -80,11 +74,11 @@ export class AnalysisWorkerClient {
     > = {},
   ): Promise<T> {
     if (this.options.isolateAnnotations && interactiveOperations.has(operation)) {
-      this.#annotations ??= new AnalysisWorkerClient(this.workerFile, {
+      this.#manifests ??= new AnalysisWorkerClient(this.workerFile, {
         ...this.options,
         isolateAnnotations: false,
       });
-      return this.#annotations.request(directory, operation, options);
+      return this.#manifests.request(directory, operation, options);
     }
     if (this.options.isolateAnnotations && previewOperations.has(operation)) {
       this.#previews ??= new AnalysisWorkerClient(this.workerFile, {
@@ -93,7 +87,8 @@ export class AnalysisWorkerClient {
       });
       return this.#previews.request(directory, operation, options);
     }
-    const key = JSON.stringify({ directory, operation, ...options });
+    const sourceRoot = this.options.sourceRoot?.();
+    const key = JSON.stringify({ directory, operation, sourceRoot, ...options });
     const previous = this.#inflight.get(key);
     if (previous) {
       return previous as Promise<T>;
@@ -101,7 +96,7 @@ export class AnalysisWorkerClient {
     const id = ++this.#nextId;
     const promise = new Promise<T>((resolve, reject) => {
       this.#queue.push({
-        message: { id, directory, operation, ...options },
+        message: { id, directory, operation, sourceRoot, ...options },
         resolve: (value) => resolve(value as T),
         reject,
       });
@@ -144,19 +139,15 @@ export class AnalysisWorkerClient {
       }
       // Queueing behind another view does not consume this operation's execution budget.
       const timeoutMs = this.options.timeoutMs ?? 60_000;
-      // Source publication must finish its synchronous write phase before cancellation.
-      // killing this worker on a timer could leave a partially written generated tree.
-      if (pending.message.operation !== "annotationRefresh") {
-        pending.timer = setTimeout(
-          () =>
-            this.#fail(
-              new Error(
-                `Analysis ${pending.message.operation} process exceeded ${timeoutMs / 1000} seconds. Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Check project status before retrying an edit.`,
-              ),
+      pending.timer = setTimeout(
+        () =>
+          this.#fail(
+            new Error(
+              `Analysis ${pending.message.operation} process exceeded ${timeoutMs / 1000} seconds. Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Retry the query after checking its resource limits.`,
             ),
-          timeoutMs,
-        );
-      }
+          ),
+        timeoutMs,
+      );
       this.#worker!.send(pending.message, (error) => {
         if (error && this.#active === pending) {
           this.#fail(error);
@@ -218,7 +209,7 @@ export class AnalysisWorkerClient {
   }
 
   invalidate(): void {
-    this.#annotations?.invalidate();
+    this.#manifests?.invalidate();
     this.#previews?.invalidate();
     this.#inflight.clear();
     if (this.#worker) {
@@ -226,7 +217,7 @@ export class AnalysisWorkerClient {
     }
   }
   dispose(): void {
-    this.#annotations?.dispose();
+    this.#manifests?.dispose();
     this.#previews?.dispose();
     this.#fail(new Error("Analysis worker disposed."));
   }

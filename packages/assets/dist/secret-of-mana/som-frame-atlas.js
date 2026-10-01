@@ -43,6 +43,14 @@ export function validateFrameLayout(layout, { segmentName, whole = false } = {})
     if (layout.guideIndex !== layout.paletteRefs.length * 16) {
         throw new Error("Frame atlas guide index must follow the source palette groups.");
     }
+    if (layout.indexPalette !== undefined &&
+        (!Array.isArray(layout.indexPalette) ||
+            layout.indexPalette.length !== layout.guideIndex ||
+            layout.indexPalette.some((color) => !Array.isArray(color) ||
+                color.length !== 4 ||
+                color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)))) {
+        throw new Error("Frame atlas indexPalette must bind every native slot to an RGBA8 color.");
+    }
     for (const variant of layout.paletteVariants ?? []) {
         if (!Number.isInteger(variant.group) ||
             variant.group < 0 ||
@@ -171,6 +179,18 @@ export function validateFrameLayout(layout, { segmentName, whole = false } = {})
     }
     return layout;
 }
+/** Record an already verified PNG slot binding before making independent catalog color edits. */
+export function bindFrameAtlasPalette(source, layout, catalog) {
+    inspectFrameAtlas(source, layout, catalog, { whole: true });
+    // Rebinding an atlas after a catalog edit must not forget the colors still stored in its PNG.
+    if (layout.indexPalette) {
+        return { ...layout, indexPalette: layout.indexPalette.map((color) => [...color]) };
+    }
+    return {
+        ...layout,
+        indexPalette: layout.paletteRefs.flatMap((id) => spritePaletteColors(catalog, id)),
+    };
+}
 /** Parse and validate the authored pixels once, keeping SoM palette/group policy in this adapter.
  * @param {AssetInput} source Indexed PNG.
  * @param {FrameLayout} layout Frame atlas sidecar.
@@ -187,7 +207,7 @@ export function inspectFrameAtlas(source, layout, catalog, options = {}) {
         imported.kind !== "indexed-image") {
         throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
     }
-    const image = imported;
+    let image = imported;
     if (image.width !== layout.width || image.height !== layout.height) {
         throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
     }
@@ -198,12 +218,14 @@ export function inspectFrameAtlas(source, layout, catalog, options = {}) {
     for (const variant of layout.paletteVariants ?? []) {
         spritePaletteColors(catalog, variant.palette);
     }
-    for (let index = 0; index < colors.length; index++) {
-        if (!image.palette[index] ||
-            image.palette[index].some((component, channel) => component !== colors[index][channel])) {
-            throw new Error(`Frame atlas palette color ${index} no longer matches its layout.`);
-        }
+    const matches = (expected) => expected.every((color, index) => image.palette[index]?.length === 4 &&
+        color.every((component, channel) => component === image.palette[index][channel]));
+    if (!matches(colors) && (!layout.indexPalette || !matches(layout.indexPalette))) {
+        throw new Error("Frame atlas palette no longer matches its stable index binding. Restore the PNG palette order; edit shared colors in the palette catalog.");
     }
+    // PNG indexes author tiles; the catalog authors ROM colors. A verified original palette binds
+    // the same slots after a catalog edit, and previews use the current colors without rewriting PNGs.
+    image = { ...image, palette: [...colors, ...image.palette.slice(colors.length)] };
     const tiles = new Map();
     const names = options.whole ? Object.keys(layout.segments) : [options.segmentName ?? ""];
     for (const name of names) {

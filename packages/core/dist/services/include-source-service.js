@@ -43,6 +43,10 @@ export class IncludeSourceService {
             throw new Error(`Error reading file: ${filePath}`);
         }
     }
+    /** Resolve the same include path used to read bytes, then attribute its exact consumed slice. */
+    recordBinarySlice(filename, start, end, bytes) {
+        this.host.recordBinarySlice?.(this.resolveIncludePath(filename), start, end, bytes);
+    }
     /**
      * Resolves a source include target.
      * @param {string} filename The target filename.

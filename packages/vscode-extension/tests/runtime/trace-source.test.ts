@@ -2,6 +2,7 @@ import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { createRuntimeCaptureSource } from "@uttori/asm-disassembler";
 import test from "ava";
 
 import {
@@ -21,7 +22,6 @@ import {
   createRuntimeInstructionTraceImporter,
   importRuntimeInstructionTraceFile,
 } from "../../../disassembler/src/index.js";
-import { createEditorRuntimeTraceSource } from "../../src/runtime/trace-source.js";
 
 test("instruction import rejects a bus archive before yielding project evidence", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "uttori-act2-bus-source-"));
@@ -36,7 +36,7 @@ test("instruction import rejects a bus archive before yielding project evidence"
       busJsonFrame("END2", busPosition("1", "1", "complete")),
     ]),
   );
-  await t.throwsAsync(createEditorRuntimeTraceSource(file), {
+  await t.throwsAsync(createRuntimeCaptureSource(file), {
     message: /CPU\/DMA\/HDMA bus accesses/,
   });
 });
@@ -54,7 +54,7 @@ test("direct ACT2 consumption matches exported JSON facts, canonical identities"
       sourceName: "capture",
       indexMode: "full" as const,
     };
-    const source = await createEditorRuntimeTraceSource(archive);
+    const source = await createRuntimeCaptureSource(archive);
     const importer = createRuntimeInstructionTraceImporter(source.metadata, context);
     await source.read(importer.push);
     t.deepEqual(importer.finish(), await importRuntimeInstructionTraceFile(json, context));
@@ -62,8 +62,8 @@ test("direct ACT2 consumption matches exported JSON facts, canonical identities"
     const renamed = path.join(root, `${events}.unknown`);
     await writeFile(renamed, await readFile(archive));
     t.deepEqual(
-      (await createEditorRuntimeTraceSource(renamed)).metadata,
-      (await createEditorRuntimeTraceSource(json)).metadata,
+      (await createRuntimeCaptureSource(renamed)).metadata,
+      (await createRuntimeCaptureSource(json)).metadata,
     );
   }
 });
@@ -74,7 +74,7 @@ test("ACT2 sources reject invalid tails, changed identity, byte limits and cance
   const archive = path.join(root, "trace.act2");
   await writeCaptureFixture(archive, 2050);
   const bytes = await readFile(archive);
-  await t.throwsAsync(createEditorRuntimeTraceSource(archive, { maxBytes: 10 }), {
+  await t.throwsAsync(createRuntimeCaptureSource(archive, { maxBytes: 10 }), {
     message: /byte limit/,
   });
   for (const invalid of [
@@ -82,7 +82,7 @@ test("ACT2 sources reject invalid tails, changed identity, byte limits and cance
     Buffer.concat([bytes, Buffer.from("garbage")]),
   ]) {
     await writeFile(archive, invalid);
-    const source = await createEditorRuntimeTraceSource(archive);
+    const source = await createRuntimeCaptureSource(archive);
     await t.throwsAsync(
       source.read(() => {}),
       { message: /incomplete/ },
@@ -90,7 +90,7 @@ test("ACT2 sources reject invalid tails, changed identity, byte limits and cance
   }
   await writeFile(archive, bytes);
   const controller = new AbortController();
-  const source = await createEditorRuntimeTraceSource(archive, {
+  const source = await createRuntimeCaptureSource(archive, {
     signal: controller.signal,
     onProgress: () => controller.abort(),
   });
@@ -99,7 +99,7 @@ test("ACT2 sources reject invalid tails, changed identity, byte limits and cance
     { name: "AbortError" },
   );
   const consumerError = new Error("index budget failed");
-  const fresh = await createEditorRuntimeTraceSource(archive);
+  const fresh = await createRuntimeCaptureSource(archive);
   t.is(
     await t.throwsAsync(
       fresh.read(() => {

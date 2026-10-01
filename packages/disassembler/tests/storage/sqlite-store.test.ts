@@ -110,6 +110,31 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
   },
 });
 
+test("evidence validation rejects removal used by retained observations and permits unused dictionary entries", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-evidence-integrity-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(32768))));
+  const store = openAnalysisProjectStore(directory);
+  try {
+    t.throws(
+      () =>
+        store.transaction(() => {
+          store.replaceTables({ evidence: [] });
+          store.validateRuntimeEvidence();
+        }),
+      { message: /Runtime history refers to missing evidence 'manual-1'/ },
+    );
+    t.is(store.loadTable("evidence").length, 1);
+    store.transaction(() => {
+      store.replaceTables({ runtime: [], evidence: [] });
+      store.validateRuntimeEvidence();
+    });
+    t.is(store.loadTable("evidence").length, 0);
+  } finally {
+    store.close();
+  }
+});
+
 test("trace cache eviction retains exact counts and lazy payload creation for arbitrary keys", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -253,7 +278,20 @@ test("instruction variants avoid materializing the complete runtime history", (t
     plan.some((detail) => /MATERIALIZE runtime|AUTOMATIC.*INDEX/.test(detail)),
     plan.join("\n"),
   );
-  t.true(plan.some((detail) => /SEARCH o USING INDEX runtime_observation_fact/.test(detail)));
+  // Full reconstruction follows physical observation order to reuse compressed history blocks.
+  t.true(
+    plan.some((detail) => /^SCAN o$/.test(detail)),
+    plan.join("\n"),
+  );
+  db.exec("CREATE TEMP TABLE query_runtime_variant_pending (oid INTEGER PRIMARY KEY)");
+  const incremental = db
+    .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(true)}`)
+    .all("snes.65816", "snes.cpu")
+    .map((row) => String(row.detail));
+  t.true(
+    incremental.some((detail) => /SEARCH o USING INTEGER PRIMARY KEY/.test(detail)),
+    incremental.join("\n"),
+  );
 });
 
 test("instruction variants preserve shared facts, paired states, payload codecs and exact source counts", (t) => {

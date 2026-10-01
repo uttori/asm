@@ -32,11 +32,21 @@ This example demonstrates assembly. It is not a bootable game. For NES / 6502 pr
 - Runtime capture and evidence import when supported by the selected native runtime.
 - `includeAsset` format/option completion, path navigation, image thumbnails, and WAVE/BRR comparison previews.
 
-Run **Assembly: Create Disassembly Project from ROM** to start analysis. In generated source, use **Disassembly → Inspect Disassembly Ownership** to see the persistent record, owning project, address, and generation status. **Edit Owned Annotation** opens the native label/comment form; **Open Owning Input** opens the relevant RAM, structure, or asset map. Generated source is hash-checked. F2 rejects text-only renames involving generated files and points to these persistent editing paths.
+Run **Assembly Source: Create Git Source Project** (or **Create Git Source Project from Diz Research**).
+Use the **Source Project** tree to select a project, import captures, analyze evidence, prepare and
+preview regeneration, and apply it after a Git checkpoint. Resolve conflicts in VS Code's native
+Merge Editor and Source Control, then **Validate and Finish Merge**. Assembly and assets are ordinary
+editable files. F2 updates supported symbol uses and their tracked research identity. **Edit Symbol
+Research** and **Edit Analysis Research** open normal JSON documents with native undo, save and Git diffs.
 
 Hover a PNG `includeAsset` statement to inspect source and native sizes and its composed thumbnail. Open the restricted **Asset Preview** link for composed and native storage order. Hover a WAVE-to-BRR statement for a waveform and select **Play source PCM and decoded BRR** to open a player. Playback begins only when you press a player control and stops when the panel closes or hides. A missing, invalid, cancelled, or edited input does not reuse old media. Preview is available in trusted file workspaces; builds remain authoritative for custom converters, numeric expressions, and emitted addresses.
 
-Changing the generated source directly can block regeneration, edits should be made through the extension until disassembly is considered complete.
+For F5, set `"sourceProject": true` in an `uttori-asm` launch configuration and select the desired
+backend/runtime. The extension builds that workspace and supplies the verified ROM and debug map;
+fixed `program`/`debugMap` paths are unnecessary. A failed build cancels launch. Build & Run,
+Build & Debug and Watch use the same selected source workflow.
+
+Indexed PNG and palette custom editors share VS Code's save/undo/recovery lifecycle. Preview can include unsaved supported text and binary edits; merge application requires saving and committing a checkpoint.
 
 ## Editor Information
 

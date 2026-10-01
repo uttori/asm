@@ -227,6 +227,24 @@ test("failed live connection never announces initialized; cancelled configuratio
   t.false(messages.some((entry) => entry.type === "event" && entry.event === "stopped"));
 });
 
+test("Run without debugging resumes native execution without a configuration handshake or reset stop", async (t) => {
+  const messages: DapProtocolMessage[] = [];
+  const fixture = setup({
+    configurationHandshake: true,
+    onMessage: (message) => messages.push(message),
+  });
+  t.teardown(() => {
+    fixture.session.dispose();
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+  const result = await fixture.session.dispatch(request(1, "launch", { noDebug: true }));
+  t.true(response(result).success);
+  t.deepEqual(
+    messages.map((message) => (message.type === "event" ? message.event : message.command)),
+    ["launch", "continued", "terminated"],
+  );
+});
+
 test("DAP transcript negotiates capabilities and preserves response/event order", async (t) => {
   const fixture = setup();
   t.teardown(() => {

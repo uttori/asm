@@ -3,24 +3,17 @@ import os from "node:os";
 import path from "node:path";
 
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import {
-  loadAnalysisProjectSnapshot,
-  RomImage,
-  validateSourceExportFiles,
-  validateSourceExportInputs,
-} from "@uttori/asm-disassembler";
+import { loadAnalysisProjectSnapshot, RomImage } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
+import {
+  renderSourceFixture,
+  verifyRenderedFixture,
+  initializeAnalysisFixture,
+} from "../../../tests/helpers/source-render-fixture.js";
 import { Assembler } from "../../../tests/test-assembler.js";
 import { Cpu65816Decoder } from "../src/architectures/65816-decoder.js";
-import {
-  initializeSnesDisassemblyWorkspace,
-  verifySnesProjectRoundTrip,
-} from "../src/disassembler/project-initializer.js";
-import {
-  exportSnes65816Source,
-  formatSnes65816SourceInstruction,
-} from "../src/disassembler/source-export.js";
+import { formatSnes65816SourceInstruction } from "../src/disassembler/source-export.js";
 import {
   indexSnesStructFields,
   planSnesStructRomFields,
@@ -315,7 +308,7 @@ test("named data stays outside code and guide labels with configurable comment w
   bytes.fill(0, 0x7fe0);
   bytes.set([0x00, 0x80], 0x7ffc);
   fs.writeFileSync(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const before = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
   const project = {
     ...before,
@@ -384,7 +377,7 @@ test("named data stays outside code and guide labels with configurable comment w
   };
   fs.writeFileSync(path.join(outputDirectory, "struct-map.json"), JSON.stringify(input));
   const exportSource = () =>
-    exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+    renderSourceFixture(project, RomImage.load(romFile), outputDirectory, {
       sourceProjectSha256: "0".repeat(64),
     });
   const first = exportSource();
@@ -408,12 +401,11 @@ test("named data stays outside code and guide labels with configurable comment w
   );
   t.notRegex(bank, /^[\t ]+(?:dataStructs? |endDataStructs)/m);
   t.true(
-    (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
-      .equal,
+    (await verifyRenderedFixture({ romFile, sourceDirectory: outputDirectory })).comparison.equal,
   );
   t.deepEqual(exportSource(), first, "Formatting remains deterministic across regeneration.");
   for (const commentLineWidth of [60, 100]) {
-    exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+    renderSourceFixture(project, RomImage.load(romFile), outputDirectory, {
       sourceProjectSha256: "0".repeat(64),
       commentLineWidth,
     });
@@ -425,7 +417,7 @@ test("named data stays outside code and guide labels with configurable comment w
         .every((line) => line.length <= commentLineWidth),
     );
   }
-  exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+  renderSourceFixture(project, RomImage.load(romFile), outputDirectory, {
     sourceProjectSha256: "0".repeat(64),
     wrapComments: false,
   });
@@ -450,7 +442,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   bytes.fill(0, 0x7fe0);
   bytes.set([0x00, 0x80], 0x7ffc);
   fs.writeFileSync(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const before = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
   const project = {
     ...before,
@@ -482,7 +474,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
     }),
   );
   const exportSource = () =>
-    exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+    renderSourceFixture(project, RomImage.load(romFile), outputDirectory, {
       sourceProjectSha256: "0".repeat(64),
     });
   const first = exportSource();
@@ -509,14 +501,11 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
     24,
   );
   t.true(
-    (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
-      .equal,
+    (await verifyRenderedFixture({ romFile, sourceDirectory: outputDirectory })).comparison.equal,
   );
   t.deepEqual(exportSource(), first, "regeneration uses the same bindings and file ownership");
   fs.appendFileSync(filename, "\n");
-  t.throws(() => validateSourceExportInputs(outputDirectory), { message: /changed/ });
   exportSource();
-  t.notThrows(() => validateSourceExportInputs(outputDirectory));
 
   // Whole neighboring records form tables. A label/comment at a record start
   // stays outside the block. An interior comment still forces raw fragments.
@@ -552,7 +541,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
       ],
     },
   };
-  const grouped = exportSnes65816Source(boundaryProject, RomImage.load(romFile), outputDirectory, {
+  const grouped = renderSourceFixture(boundaryProject, RomImage.load(romFile), outputDirectory, {
     sourceProjectSha256: "0".repeat(64),
   });
   const groupedBank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
@@ -568,24 +557,22 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
     60,
   );
   t.true(
-    (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
-      .equal,
+    (await verifyRenderedFixture({ romFile, sourceDirectory: outputDirectory })).comparison.equal,
   );
   t.deepEqual(
-    exportSnes65816Source(boundaryProject, RomImage.load(romFile), outputDirectory, {
+    renderSourceFixture(boundaryProject, RomImage.load(romFile), outputDirectory, {
       sourceProjectSha256: "0".repeat(64),
     }),
     grouped,
   );
 
-  const manifest = fs.readFileSync(path.join(outputDirectory, "generated-files.json"));
+  const manifest = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"));
   const conflict = fixtureMap();
   conflict.bindings[1].address = 0x808000;
   conflict.bindings[1].fileOffset = 0;
   fs.writeFileSync(filename, JSON.stringify(conflict));
   t.throws(exportSource, { message: /overlaps decoded code/ });
-  t.deepEqual(fs.readFileSync(path.join(outputDirectory, "generated-files.json")), manifest);
-  t.notThrows(() => validateSourceExportFiles(outputDirectory));
+  t.deepEqual(fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm")), manifest);
 });
 
 test("explicit field types distinguish arrays from scalars and validate their byte size", (t) => {

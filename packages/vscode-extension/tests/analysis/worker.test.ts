@@ -8,6 +8,7 @@ import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
   publishAnalysisProject,
+  sourceGit,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
 
@@ -207,13 +208,8 @@ test.serial("analysis worker navigation, evidence and missing payloads throw clo
   t.is(typeof navigation.capturedRam, "boolean");
   t.truthy(request(directory, "evidenceChoices"));
   t.throws(() => request(directory, "explainEvidence"), { message: /Choose a record to explain/ });
-  t.throws(() => request(directory, "annotationLookup"), { message: /Missing annotation lookup/ });
-  t.throws(() => request(directory, "annotationSave"), { message: /Missing annotation edit/ });
   t.throws(() => request(directory, "sourceSummary"), { message: /Choose a source to inspect/ });
   t.throws(() => request(directory, "sourceEntries"), { message: /Choose a source to inspect/ });
-  t.throws(() => request(directory, "annotationRefresh"), {
-    message: /Missing annotation refresh/,
-  });
   t.throws(() => request(directory, "unknown" as never), {
     message: /Unknown analysis worker operation/,
   });
@@ -223,3 +219,112 @@ test.serial("analysis worker navigation, evidence and missing payloads throw clo
     });
   }
 });
+
+test.serial(
+  "worker queries follow terminal branch changes for an external evidence store",
+  async (t) => {
+    const directory = tempProject(t);
+    const root = path.join(directory, "source project");
+    fs.mkdirSync(path.join(root, ".uttori/research"), { recursive: true });
+    fs.mkdirSync(path.join(root, ".uttori-local"), { recursive: true });
+    const romSha256 = fixtureProject().manifest.rom.contentSha256;
+    fs.writeFileSync(
+      path.join(root, ".uttori/project.json"),
+      JSON.stringify({
+        format: "uttori-source-project",
+        version: 1,
+        id: "fixture",
+        target: "fixture",
+        romSha256,
+        sourceRoots: ["src"],
+        researchRoots: [".uttori/research"],
+        buildConfig: "src/config.json",
+        layout: ".uttori/layout.json",
+        captures: ".uttori/captures.json",
+      }),
+    );
+    fs.writeFileSync(
+      path.join(root, ".uttori-local/project.json"),
+      JSON.stringify({
+        format: "uttori-source-local",
+        version: 1,
+        rom: "../original.sfc",
+        evidence: directory,
+      }),
+    );
+    fs.writeFileSync(path.join(root, ".gitignore"), ".uttori-local/\n");
+    const names = path.join(root, ".uttori/research/names.json");
+    const writeName = (name: string) =>
+      fs.writeFileSync(
+        names,
+        JSON.stringify({
+          format: "uttori-research",
+          version: 1,
+          project: "fixture",
+          romSha256,
+          decisions: [
+            {
+              collection: "labels",
+              id: "entry",
+              value: {
+                id: "entry",
+                name,
+                sourceName: name,
+                addressSpace: "cpu",
+                address: 0,
+                analysisEntryPoint: false,
+                evidence: ["test"],
+              },
+            },
+          ],
+        }),
+      );
+    writeName("RandomByte");
+    await sourceGit(root, ["init", "-b", "main"]);
+    await sourceGit(root, ["config", "user.name", "Fixture"]);
+    await sourceGit(root, ["config", "user.email", "fixture@localhost"]);
+    await sourceGit(root, ["add", "."]);
+    await sourceGit(root, ["commit", "-m", "Name entry"]);
+    const readName = () => {
+      const result = request(directory, "evidenceChoices", {
+        sourceRoot: root,
+        evidenceSelection: { labels: ["entry"] },
+      }) as { shards: { labels: { sourceName: string }[] } };
+      return result.shards.labels[0].sourceName;
+    };
+    t.is(readName(), "RandomByte");
+    await sourceGit(root, ["switch", "-c", "alternate"]);
+    writeName("AlternateRandom");
+    await sourceGit(root, ["add", "."]);
+    await sourceGit(root, ["commit", "-m", "Alternative research"]);
+    t.is(readName(), "AlternateRandom");
+    await sourceGit(root, ["switch", "main"]);
+    t.is(readName(), "RandomByte");
+    const before = fs.readFileSync(names, "utf8");
+    const changed = JSON.parse(before);
+    changed.decisions[0].value.analysisEntryPoint = true;
+    fs.writeFileSync(names, JSON.stringify(changed));
+    t.is(readName(), "RandomByte", "Raw observations and their selected names remain queryable");
+    for (const operation of [
+      "coverage",
+      "segments",
+      "details",
+      "annotations",
+      "debugAnnotations",
+      "navigation",
+    ] as const) {
+      t.throws(() => request(directory, operation, { sourceRoot: root }), {
+        message: /Analyze the selected inputs/,
+      });
+    }
+    fs.writeFileSync(names, before);
+    t.throws(() => request(directory, "annotationSave" as never, { sourceRoot: root }), {
+      message: /Unknown analysis worker operation/,
+    });
+    t.throws(() => request(directory, "evidenceChoices"), {
+      message: /Select the Git source project/,
+    });
+    fs.writeFileSync(names, "{conflicted");
+    t.throws(readName);
+  },
+);

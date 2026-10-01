@@ -6,7 +6,7 @@ import { classify65816Operand, classifySpc700Operand, classifySuperFxOperand, } 
 import { Spc700Decoder } from "./architectures/spc700-decoder.js";
 import { spc700Specifications } from "./architectures/spc700-spec.js";
 import { ArchSPC700 } from "./architectures/spc700.js";
-import { splitCommaOperands, splitSingleOperand, splitTopLevelCommaOperands, } from "./architectures/split-operands.js";
+import { splitCommaOperands, splitSingleOperand, splitTopLevelCommaOperands, referenceExpressions65816, } from "./architectures/split-operands.js";
 import { SuperFxDecoder } from "./architectures/superfx-decoder.js";
 import { superFxSpecifications } from "./architectures/superfx-spec.js";
 import { ArchSuperFX } from "./architectures/superfx.js";
@@ -135,6 +135,9 @@ const targetOptions = (configured) => {
         checksumMode,
         checksumEnabled: value.checksumEnabled === undefined ? true : value.checksumEnabled === true,
         asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true,
+        onBankCrossing: typeof value.onBankCrossing === "function"
+            ? value.onBankCrossing
+            : undefined,
     };
 };
 /**
@@ -152,6 +155,7 @@ const createInitialState = (context) => {
         checksumEnabled: options.checksumEnabled,
         checksumMode: options.checksumMode,
         bankCrossMode: "full",
+        onBankCrossing: options.onBankCrossing,
         readFunctionsEnabled: false,
         optimizeDirectPage: false,
         asarSuperFxMoveShortAddress: options.asarSuperFxMoveShortAddress,
@@ -205,6 +209,7 @@ const plugin = definePlugin({
             displayName: "WDC 65C816",
             unknownInstructionBehavior: "throw",
             splitOperands: splitSingleOperand,
+            referenceExpressions: referenceExpressions65816,
             classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
             createEncoder: (factory) => new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
             createDecoder: () => new Cpu65816Decoder(),
@@ -269,6 +274,10 @@ const plugin = definePlugin({
                         // so $7Fxxxx and $FFxxxx are the same bank for this check.
                         const bankMask = targetState.bankCrossMode === "half" ? 0x7fff8000 : 0x7fff0000;
                         if (((start ^ end) & bankMask) !== 0) {
+                            if (targetState.onBankCrossing) {
+                                targetState.onBankCrossing(start, width);
+                                return;
+                            }
                             const errorAddress = (start + width) & 0xffffff;
                             throw new Error(`Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`);
                         }

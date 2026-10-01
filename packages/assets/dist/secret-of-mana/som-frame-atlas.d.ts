@@ -15,6 +15,8 @@ export interface InspectedFrameAtlas {
     layout: FrameLayout;
     tiles: Map<string, IndexedPixels[]>;
 }
+/** Record an already verified PNG slot binding before making independent catalog color edits. */
+export declare function bindFrameAtlasPalette(source: AssetInput, layout: FrameLayout, catalog: SpritePaletteCatalog): FrameLayout;
 /** Parse and validate the authored pixels once, keeping SoM palette/group policy in this adapter.
  * @param {AssetInput} source Indexed PNG.
  * @param {FrameLayout} layout Frame atlas sidecar.

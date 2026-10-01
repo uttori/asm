@@ -9,6 +9,8 @@ export interface DataStructHost {
         getnum(input: string): number;
     };
     outputWriter: Pick<OutputWriterService, "step" | "writeBytes">;
+    /** Final scalar attribution before record bytes are written; offsets are relative to the record. */
+    recordStructField?(reference: string, expression: string, offset: number, width: number): void;
 }
 /**
  * Emits complete records through the normal writer (mapper, trace and debug

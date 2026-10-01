@@ -5,11 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseCliArguments, type CliArguments } from "@uttori/asm-cli";
-import {
-  loadAnalysisProjectSnapshot,
-  loadSourceExportManifest,
-  sourceExportSha256,
-} from "@uttori/asm-disassembler";
+import { loadAnalysisProjectSnapshot, sourceGit } from "@uttori/asm-disassembler";
 
 const consumer = process.cwd();
 const executable = path.resolve(
@@ -116,7 +112,7 @@ try {
   ]) {
     assert.equal(String(invoke(args, 1).stdout), "");
   }
-  for (const command of ["analyze", "export", "verify-roundtrip"]) {
+  for (const command of ["analyze"]) {
     assert.match(String(invoke([command, "missing"], 1).stderr), /--rom is required/);
   }
 
@@ -189,76 +185,36 @@ try {
       "--max-call-depth=8",
     ]);
     const analyzed = loadAnalysisProjectSnapshot(project);
-    invoke(["export", project, "--rom", rom]);
-    invoke(["verify-roundtrip", exported, "--rom", rom]);
-    const exportManifest = loadSourceExportManifest(exported);
-    const rebuilt = path.join(exported, exportManifest.finalOutput);
-    assert.deepEqual(fs.readFileSync(rebuilt), fs.readFileSync(rom));
-
-    // A self-consistent export can still assemble to incorrect bytes. Exercise comparison itself.
-    const manifestFile = path.join(exported, "generated-files.json");
-    const manifestText = fs.readFileSync(manifestFile, "utf8");
-    const entryFile = path.join(exported, exportManifest.entrySource);
-    const entryText = fs.readFileSync(entryFile, "utf8");
-    const changedEntry = `${entryText}\nnorom\norg $000000\ndb $00\n`;
-    fs.writeFileSync(entryFile, changedEntry);
-    fs.writeFileSync(
-      manifestFile,
-      JSON.stringify({
-        ...exportManifest,
-        files: exportManifest.files.map((file) =>
-          file.path === exportManifest.entrySource
-            ? {
-                ...file,
-                size: Buffer.byteLength(changedEntry),
-                sha256: sourceExportSha256(changedEntry),
-              }
-            : file,
-        ),
-      }),
-    );
-    const mismatch = invoke(["verify-roundtrip", exported, "--rom", rom], 1);
-    assert.match(String(mismatch.stderr), /Round-trip mismatch:.*First difference at file offset/);
-    assert.deepEqual(fs.readFileSync(rebuilt), fs.readFileSync(rom));
-    fs.writeFileSync(entryFile, entryText);
-    fs.writeFileSync(manifestFile, manifestText);
-    const wrongRom = path.join(scratch, `wrong ${headerSize}.sfc`);
-    const wrong = fixtureRom(headerSize);
-    wrong[headerSize] ^= 1;
-    fs.writeFileSync(wrongRom, wrong);
-    for (const command of ["project-validate", "analyze", "export"]) {
-      assert.match(
-        String(invoke([command, project, "--rom", wrongRom], 1).stderr),
-        /ROM identity mismatch/,
-      );
-    }
-    assert.match(
-      String(invoke(["verify-roundtrip", exported, "--rom", wrongRom], 1).stderr),
-      /ROM identity mismatch/,
-    );
-    assert.deepEqual(loadAnalysisProjectSnapshot(project), analyzed);
-    assert.deepEqual(fs.readFileSync(rebuilt), fs.readFileSync(rom));
-
-    const input = path.join(exported, "ram-map.json");
-    fs.appendFileSync(input, "\n");
-    fs.writeFileSync(rebuilt, "previous rebuild");
-    assert.match(
-      String(invoke(["verify-roundtrip", exported, "--rom", rom], 1).stderr),
-      /changed after the last export/,
-    );
-    assert.equal(fs.readFileSync(rebuilt, "utf8"), "previous rebuild");
-    invoke(["export", project, exported, "--rom", rom]);
-    invoke(["verify-roundtrip", exported, "--rom", rom]);
-    const entry = path.join(exported, exportManifest.entrySource);
+    invoke(["source", "init", exported, rom, "--mapper", "lorom"]);
+    const build = JSON.parse(String(invoke(["source", "build", exported]).stdout));
+    assert.deepEqual(fs.readFileSync(build.outputFile), fs.readFileSync(rom).subarray(headerSize));
+    const entry = path.join(exported, "source/main.asm");
     fs.appendFileSync(entry, "; keep my local edit\n");
-    for (const flags of [[], ["--force=false"], ["--allow-code-regression"]]) {
-      invoke(["export", project, exported, "--rom", rom, ...flags], 1);
-      assert.ok(fs.readFileSync(entry, "utf8").endsWith("; keep my local edit\n"));
-    }
-    invoke(["verify-roundtrip", exported, "--rom", rom], 1);
-    invoke(["export", project, exported, "--rom", rom, "--force"]);
-    invoke(["verify-roundtrip", exported, "--rom", rom]);
-    assert.deepEqual(fs.readFileSync(rebuilt), fs.readFileSync(rom));
+    const prepared = JSON.parse(String(invoke(["source", "prepare", exported]).stdout));
+    invoke(["source", "preview", exported, prepared.generation.commit]);
+    invoke(["source", "apply", exported, prepared.generation.commit], 1);
+    assert.ok(fs.readFileSync(entry, "utf8").endsWith("; keep my local edit\n"));
+    await sourceGit(exported, ["add", "source/main.asm"]);
+    await sourceGit(exported, ["commit", "-m", "Checkpoint direct source edit"]);
+    invoke(["source", "apply", exported, prepared.generation.commit]);
+    invoke(["source", "finish", exported]);
+    assert.ok(fs.readFileSync(entry, "utf8").endsWith("; keep my local edit\n"));
+    const rebuilt = JSON.parse(String(invoke(["source", "build", exported]).stdout));
+    assert.deepEqual(
+      fs.readFileSync(rebuilt.outputFile),
+      fs.readFileSync(rom).subarray(headerSize),
+    );
+    const privateRom = path.join(exported, ".uttori-local/original.sfc");
+    const original = fs.readFileSync(privateRom);
+    const wrong = Buffer.from(original);
+    wrong[headerSize] ^= 1;
+    fs.writeFileSync(privateRom, wrong);
+    assert.match(
+      String(invoke(["source", "prepare", exported], 1).stderr),
+      /rom.*(identity|mismatch)|identity.*rom/i,
+    );
+    fs.writeFileSync(privateRom, original);
+    assert.deepEqual(loadAnalysisProjectSnapshot(project), analyzed);
   }
 
   const corrupt = path.join(scratch, "corrupt project");

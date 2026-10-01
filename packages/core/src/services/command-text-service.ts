@@ -75,28 +75,45 @@ export const preprocessBlockCommands = (
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     let line = lines[lineIndex];
+    const recordContinuation = /^(?:datastruct\b|\[)/i.test(nextCommandBuffer.trimStart());
     line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
     if (!line.trim()) {
+      if (recordContinuation) {
+        nextCommandBuffer += "\n";
+      }
       continue;
     }
 
     // Preserve the special test directive comment so downstream handling can
     // detect and execute fixture setup behavior.
-    if (line.trimStart().startsWith(";`+")) {
+    if (!recordContinuation && line.trimStart().startsWith(";`+")) {
       sourcedCommands.push({ text: line, line: lineIndex });
       continue;
     }
 
     line = removeInlineComment(line, syntaxProfile);
     if (!line.trim()) {
+      if (recordContinuation) {
+        nextCommandBuffer += "\n";
+      }
       continue;
+    }
+
+    // Record literals carry physical whitespace through normalization so editor
+    // references can point at fields and values on their own source lines.
+    const record = recordContinuation || /^(?:datastruct\b|\[)/i.test(line);
+    if (record) {
+      line = removeInlineComment(lines[lineIndex], {
+        ...syntaxProfile,
+        preserveLeadingWhitespace: true,
+      });
     }
 
     if (isOpenStructInitializer(nextCommandBuffer + line)) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
       }
-      nextCommandBuffer += `${line} `;
+      nextCommandBuffer += `${line}\n`;
     } else if (line.endsWith("\\")) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
@@ -132,6 +149,9 @@ export const preprocessBlockCommands = (
  * @returns {string[]} Statement fragments.
  */
 const splitOnInlineStatementSeparator = (command: string): string[] => {
+  if (/^(?:datastruct\b|\[)/i.test(command.trimStart())) {
+    return [command];
+  }
   const parts: string[] = [];
   let current = "";
   let quote = "";

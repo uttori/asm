@@ -6,6 +6,8 @@ export type ArchitectureDefinition = {
     instructions?: readonly InstructionDescriptor[];
     classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
     splitOperands: (operandText: string) => string[];
+    /** Architecture-owned lexical extraction preserves symbolic references hidden by addressing wrappers. */
+    referenceExpressions?: (operandText: string) => readonly string[];
     unknownInstructionBehavior: "throw" | "returnFalse";
 };
 export declare class ArchitectureRegistry {

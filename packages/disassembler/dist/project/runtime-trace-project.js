@@ -1,6 +1,6 @@
 import { createRuntimeRecordValidator, validateLoadedShards } from "../model/project-validation.js";
+import { createRuntimeCaptureSource } from "../runtime/capture-instruction-source.js";
 import { mergeRuntimeEvidence } from "../runtime/runtime-evidence.js";
-import { createRuntimeTraceFileSource, } from "../runtime/runtime-trace-file.js";
 import { createRuntimeInstructionTraceImporter, } from "../runtime/runtime-trace.js";
 import { openAnalysisProjectStore } from "./project-store.js";
 import { analysisProjectRevision, assertAnalysisProjectRevision, } from "./project-transaction.js";
@@ -17,7 +17,7 @@ import { analysisProjectRevision, assertAnalysisProjectRevision, } from "./proje
  * @returns {Promise<RuntimeTraceProjectImportResult>} Committed counts, execution seeds, and maintenance warnings.
  */
 export const importRuntimeTraceIntoProject = async (file, directory, context, options = {}) => {
-    const source = await createRuntimeTraceFileSource(file, options);
+    const source = await createRuntimeCaptureSource(file, options);
     return importRuntimeTraceSourceIntoProject(source, directory, context, options);
 };
 /**
@@ -36,6 +36,9 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
     options.signal?.throwIfAborted();
     const store = openAnalysisProjectStore(directory);
     try {
+        if (store.researchInputsIdentity() !== options.research?.hash) {
+            throw new Error("Refresh the selected Git research index before importing evidence.");
+        }
         if (options.storagePolicy) {
             store.transaction(() => store.setStoragePolicy(options.storagePolicy));
         }
@@ -103,6 +106,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         options.onStage?.("Validating destination revision before publication…");
         options.signal?.throwIfAborted();
         const result = store.transaction(() => {
+            options.assertResearchCurrent?.();
             assertAnalysisProjectRevision(store, expected);
             options.onStage?.("Finalizing and merging runtime facts into SQLite…");
             options.signal?.throwIfAborted();
@@ -129,13 +133,24 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                 evidence: store.loadTable("evidence"),
                 imports: store.loadTable("imports"),
             };
-            const merged = mergeRuntimeEvidence(base, retainedReport ? {} : imported.batch);
+            let merged = mergeRuntimeEvidence(base, retainedReport ? {} : imported.batch);
             validateLoadedShards(merged.shards, manifest);
             const changed = merged.changed || addedRuntime > 0;
             if (changed) {
+                if (options.research) {
+                    // Imported provenance belongs underneath Git decisions. Recompute against observations
+                    // after restoring the overlay, then reapply it in this same atomic transaction.
+                    store.suspendResearchInputs();
+                    merged = mergeRuntimeEvidence({ ...base, evidence: store.loadTable("evidence") }, retainedReport ? {} : imported.batch);
+                    validateLoadedShards(merged.shards, manifest);
+                }
                 options.onStage?.("Publishing runtime provenance and project revision…");
                 store.replaceTables({ evidence: merged.shards.evidence, imports: merged.shards.imports });
                 store.publishManifest(manifest);
+                if (options.research) {
+                    store.synchronizeResearchInputs(options.research);
+                    store.invalidateAnalysis();
+                }
             }
             store.recordCaptureReceipt(retainedReport ?? imported.report);
             options.signal?.throwIfAborted();

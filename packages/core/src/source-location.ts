@@ -51,6 +51,37 @@ export function createLineSpan(text: string, line?: number): SourceSpan {
   return createSourceSpan(0, text.length, line);
 }
 
+/** Map a token's UTF-16 offsets in a continued command to its physical source line and columns. */
+export function createTextSpan(
+  text: string,
+  start: number,
+  end: number,
+  line: number,
+  lineStarts = sourceLineStarts(text),
+): SourceSpan {
+  let low = 0;
+  let high = lineStarts.length;
+  while (low + 1 < high) {
+    const middle = (low + high) >>> 1;
+    if (lineStarts[middle] <= start) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  const column = start - lineStarts[low];
+  return createSourceSpan(column, column + end - start, line + low);
+}
+
+/** Index physical lines once for large record literals; per-token prefix scans are quadratic. */
+export function sourceLineStarts(text: string): number[] {
+  const starts = [0];
+  for (let at = text.indexOf("\n"); at >= 0; at = text.indexOf("\n", at + 1)) {
+    starts.push(at + 1);
+  }
+  return starts;
+}
+
 /**
  * Shifts a span by a column offset.
  * @param {SourceSpan} span The span to shift.

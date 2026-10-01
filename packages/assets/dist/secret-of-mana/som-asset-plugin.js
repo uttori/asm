@@ -1,6 +1,6 @@
 /** Game-specific asset formats; ROM pointer tables remain in the research tools. */
 import { AssetRegistry, convertAsset } from "@uttori/asm-assets";
-import { decodeBrrPcm, waveImporter } from "@uttori/asm-assets/audio";
+import { decodeBrrPcm, waveImporter, withAudioEncoder, resolveBrrAudioOptions, } from "@uttori/asm-assets/audio";
 import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { decodePlanarTiles, encodePlanarTiles, snesNativeEncoders } from "@uttori/asm-assets/snes";
 import { definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
@@ -14,6 +14,10 @@ import { decodeWorldRow, encodeWorldRow } from "./som-world-rle.js";
 const registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
     registry.registerEncoder(encoder);
+}
+const audioRegistry = new AssetRegistry().registerImporter(waveImporter);
+for (const encoder of withAudioEncoder(snesNativeEncoders)) {
+    audioRegistry.registerEncoder(encoder);
 }
 /** Read a private PNG chunk holding the exact native boss stream for one segment.
  * @param {Uint8Array} png PNG bytes.
@@ -60,21 +64,24 @@ function decodeBossStream(native, storage, size) {
     return { bytes: expanded.data, mode, unusedHeaderByte };
 }
 /**
- * Rebuild a fixed ROM span from previewable pixels. An unchanged PNG retains the
- * source's exact token choices; edited pixels use the two-stage encoder and pad
- * only after the decoder's complete stream, preserving later ROM addresses.
+ * Rebuild native graphics from previewable pixels. An unchanged PNG retains its exact
+ * token choices. Fixed sizing pads after the complete stream; encoded sizing exposes
+ * growth to the source layout/relocation service instead of truncating or allocating here.
  * @param {AssetInput} source Indexed PNG, optionally carrying a native chunk.
- * @param {Readonly<Record<string, unknown>>} options Storage, length, and optional atlas resources.
+ * @param {Readonly<Record<string, unknown>>} options Storage, original byteLength, optional native resource, sizePolicy (fixed by default or encoded), and atlas resources.
  * @param {Readonly<Record<string, AssetInput>>} [resources] Layout and palette sidecars.
- * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Fixed-span native bytes.
+ * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Independently decoded native bytes.
  */
 export function convertBossImage(source, options, resources = {}) {
-    const { storage, byteLength, mode, unusedHeaderByte = 0 } = options;
+    const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
     if (storage !== "lz-rle" && storage !== "rle") {
         throw new Error("Boss storage must be lz-rle or rle.");
     }
     if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
         throw new Error("Boss byteLength must be a positive integer.");
+    }
+    if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
+        throw new Error("Boss sizePolicy must be fixed or encoded.");
     }
     // Frame atlases invert their recorded tile placements before the boss codecs.
     // Older native-order sheets remain supported for existing callers.
@@ -96,10 +103,21 @@ export function convertBossImage(source, options, resources = {}) {
         throw new Error("Boss atlas supports at most 26 native segments.");
     }
     const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
-    const original = nativeBossChunk(source.bytes, chunkName);
+    let original;
+    if (options.native !== undefined) {
+        if (typeof options.native !== "string" || !options.native || !resources[options.native]) {
+            throw new Error("Boss native data requires an explicit original compressed resource.");
+        }
+        // A Git-tracked original stream survives ordinary PNG tools dropping private
+        // chunks. It remains a compression reference, never a replacement for edited pixels.
+        original = resources[options.native].bytes;
+    }
+    else {
+        original = nativeBossChunk(source.bytes, chunkName);
+    }
     if (original) {
         if (original.length !== byteLength) {
-            throw new Error("Boss PNG native chunk has the wrong byte length.");
+            throw new Error("Boss native data has the wrong byte length.");
         }
         const decoded = decodeBossStream(original, storage, pixels.length);
         if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
@@ -116,12 +134,15 @@ export function convertBossImage(source, options, resources = {}) {
             unusedHeaderByte: selectedHeaderByte,
         });
     }
-    if (encoded.length > byteLength) {
-        throw new Error("Edited boss graphics exceed their fixed ROM span.");
+    if (sizePolicy === "fixed" && encoded.length > byteLength) {
+        throw new Error("Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object.");
     }
     const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
     if (verified.some((byte, index) => byte !== pixels[index])) {
         throw new Error("Boss graphics inverse failed.");
+    }
+    if (sizePolicy === "encoded") {
+        return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
     }
     const padded = new Uint8Array(byteLength);
     padded.set(encoded);
@@ -136,8 +157,21 @@ export function convertBossImage(source, options, resources = {}) {
  * @returns {Uint8Array} Exact complete BRR stream owned by the caller.
  */
 export function verifiedBrrFromWave(source) {
+    const { audio, native } = readBrrWave(source);
+    if (!native) {
+        throw new Error("SoM WAVE is missing its native sBRR chunk.");
+    }
+    const decoded = decodeBrrPcm(native);
+    if (decoded.length !== audio.samples.length ||
+        decoded.some((sample, index) => sample !== audio.samples[index])) {
+        throw new Error("SoM WAVE PCM no longer matches its native BRR blocks.");
+    }
+    return native;
+}
+/** Read optional native bytes after the strict WAVE importer has checked every RIFF extent. */
+function readBrrWave(source) {
     const document = waveImporter.import(source);
-    const pcm = document.value.samples;
+    const audio = document.value;
     const bytes = source.bytes;
     if (bytes.length < 12 ||
         String.fromCharCode(...bytes.subarray(0, 4)) !== "RIFF" ||
@@ -167,14 +201,59 @@ export function verifiedBrrFromWave(source) {
         }
         offset = end + (length & 1);
     }
-    if (!native) {
-        throw new Error("SoM WAVE is missing its native sBRR chunk.");
+    return { audio, native };
+}
+/** Preserve unchanged BRR exactly; edited PCM uses the shared lossy encoder and review metadata.
+ * Re-encoding requires an explicit loop policy because BRR flags do not contain the game's loop pointer.
+ * Split streams retain their full byte count so a newly authored tail cannot disappear between bank slices.
+ */
+export function convertBrrWave(source, options = {}) {
+    const { audio, native } = readBrrWave(source);
+    const decoded = native ? decodeBrrPcm(native) : undefined;
+    const unchanged = decoded?.length === audio.samples.length &&
+        decoded.every((sample, index) => sample === audio.samples[index]);
+    let loop;
+    if (options.loop !== undefined) {
+        loop = resolveBrrAudioOptions({ loop: options.loop, padding: options.padding }, audio).loop;
     }
-    const decoded = decodeBrrPcm(native);
-    if (decoded.length !== pcm.length || decoded.some((sample, index) => sample !== pcm[index])) {
-        throw new Error("SoM WAVE PCM no longer matches its native BRR blocks.");
+    const nativeLoop = native ? Boolean(native[native.length - 9] & 2) : false;
+    let output;
+    if (native && unchanged && (loop === undefined || Boolean(loop) === nativeLoop)) {
+        output = {
+            bytes: native,
+            mediaType: "application/octet-stream",
+            metadata: {
+                nativePreserved: true,
+                sourceSamples: audio.samples.length,
+                sampleRate: audio.sampleRate,
+            },
+        };
     }
-    return native;
+    else {
+        if (options.loop === undefined) {
+            throw new Error("SoM WAVE PCM no longer matches native BRR (or its chunk was removed). Declare loop: false, 'source', or { start, end } in sample frames to review re-encoding.");
+        }
+        const result = convertAsset(audioRegistry, {
+            source,
+            format: "snes.brr",
+            options: { loop: options.loop, padding: options.padding },
+        });
+        output = {
+            ...result.outputs.brr,
+            metadata: {
+                ...result.outputs.brr.metadata,
+                nativePreserved: false,
+                fidelity: result.fidelity.kind,
+            },
+        };
+    }
+    if (options.startByte !== undefined) {
+        const fullByteLength = options.fullByteLength ?? native?.length;
+        if (!Number.isSafeInteger(fullByteLength) || output.bytes.length !== fullByteLength) {
+            throw new Error("Split BRR editing requires the exact fullByteLength; resize the complete stream and repair both bank slices before changing its length.");
+        }
+    }
+    return { primaryOutput: "brr", outputs: { brr: output } };
 }
 /**
  * Select the ROM-owned part of a verified stream after decoding the complete WAVE.
@@ -325,11 +404,9 @@ const plugin = definePlugin({
         });
         context.registerAssetFormat({
             id: "som.boss.graphics",
-            version: "1.0.0",
+            version: "1.1.0",
             targets: ["snes.sfc"],
-            resourcePaths: (options) => typeof options.layout === "string"
-                ? [options.layout, options.palettes].filter((path) => typeof path === "string")
-                : [],
+            resourcePaths: (options) => [options.layout, options.palettes, options.native].filter((path) => typeof path === "string"),
             convert: convertBossImage,
         });
         context.registerAssetFormat({
@@ -384,24 +461,19 @@ const plugin = definePlugin({
             id: "som.brr.pcm",
             version: "1.0.0",
             targets: ["snes.sfc"],
-            convert(source) {
-                return {
-                    primaryOutput: "brr",
-                    outputs: { brr: { bytes: verifiedBrrFromWave(source) } },
-                };
-            },
+            convert: convertBrrWave,
         });
         context.registerAssetFormat({
             id: "som.brr.segment",
             version: "1.0.0",
             targets: ["snes.sfc"],
             convert(source, options) {
-                const brr = verifiedBrrFromWave(source);
+                const brr = convertBrrWave(source, options).outputs.brr;
                 // The violin stream crosses a ROM bank inside one nine-byte BRR block.
                 // Slice only after native encoding so both banks share one editable source.
                 return {
                     primaryOutput: "brr",
-                    outputs: { brr: { bytes: sliceBrrSegment(brr, options) } },
+                    outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } },
                 };
             },
         });

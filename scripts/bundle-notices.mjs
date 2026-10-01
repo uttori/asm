@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Wrap esbuild so each shipped bundle carries the exact licenses of its bundled npm dependencies.
+ * Wrap esbuild so each shipped bundle carries the license text of its bundled npm dependencies.
  * Missing license files fail the build instead of silently producing an incomplete archive.
  * @param {typeof import("esbuild").build} build The package's installed esbuild function.
  * @returns {(options: import("esbuild").BuildOptions & { outfile: string }) => Promise<import("esbuild").BuildResult>} Builder that also writes OUTFILE.licenses.txt.
@@ -13,7 +13,7 @@ export const withBundleNotices = (build) => async (options) => {
     throw new Error("Bundle notices require esbuild output metadata.");
   }
   const base = options.absWorkingDir ?? process.cwd();
-  /** @type {Map<string, string>} Exact license text grouped by package and installed version. */
+  /** @type {Map<string, string>} License text grouped by package and installed version. */
   const packages = new Map();
   // Use output contributions rather than all parsed inputs to exclude tree-shaken dependencies.
   for (const output of Object.values(result.metafile.outputs)) {
@@ -84,8 +84,14 @@ export const withBundleNotices = (build) => async (options) => {
   }
   const sections = [...packages]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, license]) => `${name}\n${"=".repeat(name.length)}\n\n${license}`);
-  const header = "Bundled npm dependency notices. License text is reproduced unchanged.\n";
+    // Normalize line endings only; preserve every word and all upstream attribution. Mixed CRLF/LF
+    // notices otherwise introduce whitespace errors into reproducibly generated bundle artifacts.
+    .map(
+      ([name, license]) =>
+        `${name}\n${"=".repeat(name.length)}\n\n${license.replace(/\r\n?/g, "\n")}`,
+    );
+  const header =
+    "Bundled npm dependency notices. License text is reproduced with normalized line endings.\n";
   fs.writeFileSync(`${options.outfile}.licenses.txt`, header + "\n" + sections.join("\n\n"));
   return result;
 };

@@ -19,6 +19,7 @@ await build({
   platform: "node",
   format: "esm",
   target: "node26",
+  define: { UTTORI_SOURCE_BUNDLED: "true" },
   banner: { js: "#!/usr/bin/env node" },
   logLevel: "info",
 });

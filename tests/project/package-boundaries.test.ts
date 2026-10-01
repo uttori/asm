@@ -54,10 +54,11 @@ const DISASSEMBLER_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   internal: [],
   model: ["internal"],
   analysis: ["model", "internal"],
-  edits: ["model", "analysis", "internal"],
-  runtime: ["model", "edits", "internal"],
-  storage: ["model", "analysis", "runtime", "internal"],
-  project: ["model", "analysis", "edits", "runtime", "storage", "internal"],
+  "research-inputs": ["model", "internal"],
+  "source-project": ["model", "internal", "research-inputs", "project"],
+  runtime: ["model", "internal"],
+  storage: ["model", "analysis", "runtime", "research-inputs", "internal"],
+  project: ["model", "analysis", "research-inputs", "runtime", "storage", "internal"],
   source: ["model", "internal"],
 };
 
@@ -288,12 +289,7 @@ function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundary
       } else if (!facade && internalTarget) {
         const destination = path.relative(disassemblerSource, resolvedImport).split(path.sep)[0];
         const allowed = DISASSEMBLER_DEPENDENCIES[area] ?? [];
-        // Editing depends only on the shared evidence projection, never the static analysis engine.
-        const evidenceProjection =
-          area !== "edits" ||
-          destination !== "analysis" ||
-          path.basename(resolvedImport).replace(/\.[cm]?[jt]s$/u, "") === "project-evidence";
-        if ((destination !== area && !allowed.includes(destination)) || !evidenceProjection) {
+        if (destination !== area && !allowed.includes(destination)) {
           violations.push({
             code: "DISASSEMBLER_AREA_DEPENDENCY",
             file: path.relative(resolvedRoot, file),
@@ -453,19 +449,19 @@ test("disassembler boundaries reject upward type imports and internal facade imp
   write("storage/invalid.ts", 'export { commit } from "../project/project-transaction.js";\n');
   write("runtime/invalid.ts", 'import "../index.js";\n');
   write("analysis/invalid.ts", 'import("@uttori/asm-disassembler");\n');
-  write("edits/invalid.ts", 'import { engine } from "../analysis/static-analysis.js";\n');
+  write("research-inputs/invalid.ts", 'import { engine } from "../analysis/static-analysis.js";\n');
   const codes = collectPackageBoundaryViolations(root).map(({ code }) => code);
   t.is(codes.filter((code) => code === "DISASSEMBLER_AREA_DEPENDENCY").length, 3);
   t.is(codes.filter((code) => code === "DISASSEMBLER_INTERNAL_FACADE").length, 2);
 });
 
-test("disassembler boundaries permit evidence inspection for edits and reject unowned files", (t) => {
+test("disassembler boundaries keep research independent from orchestration and reject unowned files", (t) => {
   const root = boundaryFixture();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, "packages/disassembler/src/edits"));
+  fs.mkdirSync(path.join(root, "packages/disassembler/src/research-inputs"));
   fs.writeFileSync(
-    path.join(root, "packages/disassembler/src/edits/valid.ts"),
-    'import { evidenceReferences } from "../analysis/project-evidence.js";\n',
+    path.join(root, "packages/disassembler/src/research-inputs/valid.ts"),
+    'import { validateSourceLabelName } from "../model/project-labels.js";\n',
   );
   t.deepEqual(collectPackageBoundaryViolations(root), []);
   fs.writeFileSync(

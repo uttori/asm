@@ -278,7 +278,7 @@ endDataStructs`,
     writes.map(({ line }) => line),
     [1, 1, 2, 2],
   );
-  t.true(writes[0].raw.startsWith("[0]"));
+  t.true(writes[0].raw.startsWith("  [0]"));
   t.true(
     assembler.symbolReferences.some(
       (ref) => ref.name === "value" && ref.containerName === "Record",
@@ -287,6 +287,14 @@ endDataStructs`,
   t.true(
     assembler.symbolReferences.some((ref) => ref.name === "Later" && ref.location.file === records),
   );
+  const later = assembler.symbolReferences.find(
+    (ref) => ref.name === "Later" && ref.location.file === records,
+  )!;
+  t.is(later.location.line, 3);
+  t.deepEqual(later.location.range, {
+    start: { line: 3, character: 12 },
+    end: { line: 3, character: 17 },
+  });
 });
 
 test("failed records do not partially write earlier fields", (t) => {
@@ -317,6 +325,37 @@ test("incremental multiline records keep their opening source line", (t) => {
     [7],
   );
 });
+
+for (const row of [
+  "dataStruct Record[!{Row_!Index}], {value = $1234}",
+  "  [!{Row_!Index}] = {value = $1234}",
+]) {
+  test(`braced defines in record indexes preserve physical field locations: ${row}`, (t) => {
+    const assembler = new Assembler(undefined, { collectSourceMetadata: true });
+    const array = row.trimStart().startsWith("[");
+    const lines = [
+      ...header.split("\n"),
+      "!Index = 0",
+      "!Row_0 = 0",
+      ...(array ? ["dataStructs Record"] : []),
+      row,
+      ...(array ? ["endDataStructs"] : []),
+    ];
+    const program = assembler.buildProgramModel(lines.join("\n"), "records.asm");
+    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+      assembler.runStage(stage, program);
+    }
+    t.deepEqual([...assembler.getBinaryOutput()], [0x34, 0x12]);
+    const reference = assembler.symbolReferences.find(
+      (item) => item.name === "value" && item.containerName === "Record",
+    );
+    t.truthy(reference);
+    t.deepEqual(reference?.location.range, {
+      start: { line: lines.indexOf(row), character: row.indexOf("value") },
+      end: { line: lines.indexOf(row), character: row.indexOf("value") + 5 },
+    });
+  });
+}
 
 test("typed members coexist with Asar extensions and aligned index arithmetic", (t) => {
   const assembler = assemble(`lorom

@@ -3,6 +3,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { createRuntimeBusCaptureSource } from "@uttori/asm-disassembler";
+
 import { test } from "../../../tests/ava-helper.js";
 import { captureFixtureHeader } from "../../../tests/helpers/capture-archive.js";
 import { busJsonFrame } from "../../../tests/helpers/capture-bus.js";
@@ -14,7 +16,6 @@ import {
   importRuntimeBusTraceSourceIntoProject,
   createRuntimeBusTraceImporter,
 } from "../../disassembler/src/index.js";
-import { createEditorRuntimeBusSource } from "../../vscode-extension/src/runtime/bus-source.js";
 import { renderBusTraceReport } from "../../vscode-extension/src/runtime/bus-trace-report.js";
 import { recoverCaptureFile } from "../src/capture-file.js";
 import {
@@ -108,7 +109,7 @@ test("native PPU effects survive framing, SQL import, duplicate import", async (
   frames.push(busJsonFrame("END2", terminal));
   await writeFile(file, Buffer.concat(frames));
   t.true((await recoverCaptureFile(file)).complete);
-  const source = await createEditorRuntimeBusSource(file);
+  const source = await createRuntimeBusCaptureSource(file);
   const importer = createRuntimeBusTraceImporter(source.metadata, {
     projectRomContentSha256: rom.contentSha256,
     sourceName: "native.act2",

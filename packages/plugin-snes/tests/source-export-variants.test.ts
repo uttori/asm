@@ -12,9 +12,11 @@ import {
 } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
-import { verifySnesProjectRoundTrip } from "../src/disassembler/project-initializer.js";
+import {
+  renderSourceFixture,
+  verifyRenderedFixture,
+} from "../../../tests/helpers/source-render-fixture.js";
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
-import { exportSnes65816Source } from "../src/disassembler/source-export.js";
 
 /** A capture supplies only the state needed to reproduce data-address-dependent symbol names. */
 const capture = (
@@ -81,6 +83,83 @@ const structMap = {
   structures: [{ id: "StateRecord", size: 1, fields: [{ name: "value", offset: 0, size: 1 }] }],
   bindings: [{ name: "State", structure: "StateRecord", address: 0x7e0100, count: 1 }],
 };
+
+test("immutable rendering reads recipes without publishing ownership or touching edited source", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-pure-render-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(directory, "ram-map.json"), JSON.stringify(ramMap));
+  fs.writeFileSync(path.join(directory, "main.asm"), "; Uncommitted user work\n");
+  fs.writeFileSync(path.join(directory, "generated-files.json"), "old manifest must not be read");
+  const names = fs.readdirSync(directory).sort();
+  const original = new Uint8Array(0x8000).fill(0xea);
+  const rom = new RomImage(original, { headerSize: 0 });
+  const project = projectFor(rom, [capture("observed", [0xea], {})]);
+  const rendered = new Map<string, Uint8Array>();
+  renderSourceFixture(
+    { manifest: { ...project.manifest, shards: [] }, shards: project.shards },
+    rom,
+    directory,
+    {
+      sourceProjectSha256: "1".repeat(64),
+      emitFile: (file) => rendered.set(file.path, file.bytes),
+    },
+  );
+  t.deepEqual(fs.readdirSync(directory).sort(), names);
+  t.is(fs.readFileSync(path.join(directory, "main.asm"), "utf8"), "; Uncommitted user work\n");
+  t.false(rendered.has("source-ownership.json"));
+  t.false(rendered.has("generated-files.json"));
+  t.true(rendered.has("banks/bank-000.asm"));
+  t.true(
+    Buffer.from(rendered.get("main.asm")!).toString().includes("Edit and commit source normally"),
+  );
+});
+
+test("newly observed calls use the persistent preferred name at the original symbol identity", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-regeneration-rename-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(directory, "ram-map.json"), JSON.stringify(ramMap));
+  const bytes = new Uint8Array(0x8000).fill(0xea);
+  bytes.set([0x20, 0x10, 0x80], 0);
+  bytes.set([0x20, 0x10, 0x80], 8);
+  const rom = new RomImage(bytes, { headerSize: 0 });
+  const project = projectFor(rom, [
+    capture("call-one", [0x20, 0x10, 0x80], {}),
+    capture("call-two", [0x20, 0x10, 0x80], {}, 0x808008),
+    capture("entry", [0xea], {}, 0x808010),
+  ]);
+  const rendered = new Map<string, Uint8Array>();
+  renderSourceFixture(
+    {
+      manifest: { ...project.manifest, shards: [] },
+      shards: {
+        ...project.shards,
+        labels: [
+          {
+            id: "symbol:snes.cpu:808010",
+            addressSpace: "snes.cpu",
+            address: 0x808010,
+            name: "RandomByte",
+            sourceName: "RandomByte",
+            aliases: ["Fn_808010"],
+            analysisEntryPoint: false,
+            evidence: ["entry"],
+          },
+        ],
+      },
+    },
+    rom,
+    directory,
+    {
+      sourceProjectSha256: "2".repeat(64),
+      emitFile: (file) => rendered.set(file.path, file.bytes),
+    },
+  );
+  const bank = Buffer.from(rendered.get("banks/bank-000.asm")!).toString();
+  // A near call keeps the label's bus bank out of its encoded 16-bit operand.
+  t.is((bank.match(/JSR\.w \(RandomByte & \$F{4}\)/g) ?? []).length, 2);
+  t.true(bank.includes("RandomByte:"));
+  t.false(bank.includes("Fn_808010"));
+});
 
 for (const scenario of [
   {
@@ -163,7 +242,7 @@ for (const scenario of [
       },
     };
     const options = { sourceProjectSha256: "b".repeat(64) };
-    const exported = exportSnes65816Source(project, rom, directory, options);
+    const exported = renderSourceFixture(project, rom, directory, options);
     const bank = path.join(directory, "banks/bank-000.asm");
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.symbolic));
     t.true(
@@ -177,7 +256,7 @@ for (const scenario of [
     );
     t.true(
       (
-        await verifySnesProjectRoundTrip({
+        await verifyRenderedFixture({
           sourceDirectory: directory,
           romFile,
           emitDebugMap: false,
@@ -186,7 +265,7 @@ for (const scenario of [
     );
 
     const reordered = { ...project, shards: { ...project.shards, analysis: [observed, unknown] } };
-    t.deepEqual(exportSnes65816Source(reordered, rom, directory, options), exported);
+    t.deepEqual(renderSourceFixture(reordered, rom, directory, options), exported);
     const analysisDirectory = path.join(workspace, "analysis");
     publishAnalysisProject(analysisDirectory, project);
     const store = openAnalysisProjectStore(analysisDirectory);
@@ -194,7 +273,7 @@ for (const scenario of [
       store.prepareAnnotationQueries();
       const streamed = store.transaction(
         () =>
-          exportSnes65816Source(store.sourceExportView(), rom, directory, {
+          renderSourceFixture(store.sourceExportView(), rom, directory, {
             ...options,
             instructionGroups: store.instructionExportGroups(),
           }),
@@ -214,7 +293,7 @@ for (const scenario of [
     const conflicting = conflictingProject.shards.analysis.find(
       (record): record is AnalysisControlFlowNodeRecord => record.kind === "cfg-node",
     )!;
-    exportSnes65816Source(
+    renderSourceFixture(
       {
         ...project,
         shards: {
@@ -229,7 +308,7 @@ for (const scenario of [
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
 
     // An unresolved runtime observation is different from an unresolved static guess.
-    exportSnes65816Source(
+    renderSourceFixture(
       {
         ...project,
         shards: {
@@ -244,7 +323,7 @@ for (const scenario of [
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
 
     // Inherited runtime evidence alone cannot promote a static node into an observation.
-    exportSnes65816Source(
+    renderSourceFixture(
       {
         ...project,
         shards: { ...project.shards, analysis: [{ ...observed, id: "static:cfg:known" }, unknown] },
@@ -269,7 +348,7 @@ for (const scenario of [
     fs.writeFileSync(romFile, bytes);
     const options = { sourceProjectSha256: "a".repeat(64) };
     const baseline = capture("old", scenario.bytes, scenario.state);
-    exportSnes65816Source(projectFor(rom, [baseline]), rom, sourceDirectory, options);
+    renderSourceFixture(projectFor(rom, [baseline]), rom, sourceDirectory, options);
     const bank = path.join(sourceDirectory, "banks/bank-000.asm");
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.symbolic));
 
@@ -278,7 +357,7 @@ for (const scenario of [
       capture("new-state", scenario.bytes, {}),
       capture("new-code", [0xea], {}, 0x808010),
     ]);
-    const exported = exportSnes65816Source(project, rom, sourceDirectory, options);
+    const exported = renderSourceFixture(project, rom, sourceDirectory, options);
     const preserved = exported.spans.find((span) => span.start === 0);
     t.is(preserved?.role, "code");
     t.is(preserved?.end, scenario.bytes.length);
@@ -286,15 +365,15 @@ for (const scenario of [
     t.is(exported.spans.find((span) => span.start === 0x10)?.role, "code");
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
     t.true(
-      (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false }))
-        .comparison.equal,
+      (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+        .equal,
     );
 
     const reordered = {
       ...project,
       shards: { ...project.shards, analysis: [...project.shards.analysis].reverse() },
     };
-    t.deepEqual(exportSnes65816Source(reordered, rom, sourceDirectory, options), exported);
+    t.deepEqual(renderSourceFixture(reordered, rom, sourceDirectory, options), exported);
     const analysisDirectory = path.join(directory, "analysis");
     const evidence = [...new Set(project.shards.runtime.flatMap((record) => record.evidence))].map(
       (id) => ({
@@ -313,7 +392,7 @@ for (const scenario of [
       store.prepareAnnotationQueries();
       const streamed = store.transaction(
         () =>
-          exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+          renderSourceFixture(store.sourceExportView(), rom, sourceDirectory, {
             ...options,
             instructionGroups: store.instructionExportGroups(),
           }),
@@ -330,7 +409,7 @@ for (const scenario of [
   });
 }
 
-test("export still rejects incompatible instruction widths after a new capture", (t) => {
+test("pure rendering excludes incompatible instruction widths after a new capture", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-export-widths-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const bytes = new Uint8Array(0x8000).fill(0xea);
@@ -338,14 +417,13 @@ test("export still rejects incompatible instruction widths after a new capture",
   const rom = new RomImage(bytes, { headerSize: 0 });
   const baseline = capture("eight-bit", [0xa9, 0x01], { p: 0x20 });
   const options = { sourceProjectSha256: "a".repeat(64) };
-  exportSnes65816Source(projectFor(rom, [baseline]), rom, directory, options);
+  renderSourceFixture(projectFor(rom, [baseline]), rom, directory, options);
   const candidate = projectFor(rom, [
     baseline,
     capture("sixteen-bit", [0xa9, 0x01, 0x02], { p: 0 }),
   ]);
-  t.throws(() => exportSnes65816Source(candidate, rom, directory, options), {
-    message: /replace 2 previously emitted code byte/,
-  });
+  const rendered = renderSourceFixture(candidate, rom, directory, options);
+  t.false(rendered.spans.some((span) => span.start === 0 && span.role === "code"));
 });
 
 test("explicit instruction widths round trip and ignore unrelated captured M/X changes", async (t) => {
@@ -379,7 +457,7 @@ test("explicit instruction widths round trip and ignore unrelated captured M/X c
   const romFile = path.join(directory, "rom.sfc");
   fs.writeFileSync(romFile, bytes);
   const options = { sourceProjectSha256: "a".repeat(64) };
-  const first = exportSnes65816Source(projectFor(rom, runtime), rom, sourceDirectory, options);
+  const first = renderSourceFixture(projectFor(rom, runtime), rom, sourceDirectory, options);
   const bank = path.join(sourceDirectory, "banks/bank-000.asm");
   const text = fs.readFileSync(bank, "utf8");
   t.notRegex(text, /^\.[ai](?:8|16)\b/m);
@@ -387,13 +465,13 @@ test("explicit instruction widths round trip and ignore unrelated captured M/X c
     t.true(text.includes(source), source);
   }
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+    (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,
   );
   const changed = runtime.map((record) =>
     record.bytes.length === 1 ? { ...record, state: { ...record.state, p: 0 } } : record,
   );
-  const second = exportSnes65816Source(projectFor(rom, changed), rom, sourceDirectory, options);
+  const second = renderSourceFixture(projectFor(rom, changed), rom, sourceDirectory, options);
   t.is(
     fs.readFileSync(bank, "utf8"),
     text,
@@ -401,7 +479,7 @@ test("explicit instruction widths round trip and ignore unrelated captured M/X c
   );
   t.deepEqual(second.files, first.files);
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+    (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,
   );
 });

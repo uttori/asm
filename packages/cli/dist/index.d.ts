@@ -1,7 +1,8 @@
 import { type AnalysisStoragePolicy } from "@uttori/asm-disassembler";
 import { type SnesMapper } from "@uttori/asm-plugin-snes";
+export { executeSourceOperation, type SourceAction, type SourceOperation } from "./source.js";
 /** Explicit subcommands. An invocation without one defaults to assemble. */
-export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "project-compact" | "project-storage" | "project-validate" | "verify-roundtrip";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "project-compact" | "project-storage" | "project-validate";
 /** Parsed values only: no filesystem access, configuration loading, or path resolution has occurred. */
 export interface CliArguments {
     readonly command: CliCommand;
@@ -34,18 +35,9 @@ export interface CliArguments {
     readonly entryPoints: readonly number[];
     /** Positive work-item limit. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS}. */
     readonly maxWorkItems?: number;
-    /** Preferred exported dataStruct width in columns; integer >= 40, defaults to 100. */
-    readonly structLineWidth?: number;
-    /** Optional export-only comment wrapping override; omitted uses the enabled default. */
-    readonly wrapComments?: boolean;
-    /** Preferred comment columns including indentation and semicolon. */
-    readonly commentLineWidth?: number;
     /** Nonnegative call-context depth. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}. */
     readonly maxCallDepth?: number;
     readonly verbose: boolean;
-    readonly force: boolean;
-    /** Separate permission to replace previously exported code with raw bytes. */
-    readonly allowCodeRegression: boolean;
     readonly help: boolean;
 }
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */

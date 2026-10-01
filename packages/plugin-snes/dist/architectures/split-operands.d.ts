@@ -11,6 +11,11 @@
  */
 export declare const splitSingleOperand: (text: string) => string[];
 /**
+ * Extract symbolic expressions without resolving them. The expression grammar cannot parse the
+ * comma in `((Table & $FFFF),x)`, so navigation must remove only 65816 addressing wrappers first.
+ */
+export declare function referenceExpressions65816(operand: string, depth?: number): string[];
+/**
  * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
  * @param {string} text Rest-of-line operand text.
  * @returns {string[]} Trimmed operands. Empty input yields `[]`.

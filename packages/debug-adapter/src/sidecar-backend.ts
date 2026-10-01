@@ -440,16 +440,12 @@ export class SidecarDebugBackend implements DebugBackend {
 
   /** @inheritdoc */
   async pause(threadId?: number): Promise<void> {
-    await this.#requireConnected().request("pause", {
-      ...(threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") }),
-    });
+    await this.#requireConnected().request("pause", (threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") }));
   }
 
   /** @inheritdoc */
   async continue(threadId?: number): Promise<void> {
-    await this.#requireConnected().request("continue", {
-      ...(threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") }),
-    });
+    await this.#requireConnected().request("continue", (threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") }));
   }
 
   /** @inheritdoc */

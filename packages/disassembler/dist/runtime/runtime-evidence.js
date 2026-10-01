@@ -1,5 +1,4 @@
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
-import { manuallyOwnedMetadata } from "../edits/metadata-edit.js";
 const emptyCounts = () => ({
     analysis: 0,
     annotations: 0,
@@ -209,17 +208,16 @@ export const mergeRuntimeEvidence = (shards, batch) => {
         }
         traceProfiles.set(report.sourceSha256, report.indexProfile);
     }
-    // Manual corrections and removals pin stable imported IDs. Import receipts/evidence still merge,
-    // while the original record remains inspectable in the saved metadata edit receipt.
-    const owned = manuallyOwnedMetadata(shards);
+    // Research-aware storage restores observation shadows before import and reapplies selected Git
+    // decisions afterward. This merge handles only evidence and never infers authorship from history.
     const added = emptyCounts();
     const updated = emptyCounts();
     const existing = emptyCounts();
     const merged = {
-        analysis: mergeRecords("analysis", shards.analysis, (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)), added, updated, existing),
-        annotations: mergeRecords("annotations", shards.annotations, (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)), added, updated, existing),
-        labels: mergeRecords("labels", shards.labels, (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)), added, updated, existing),
-        comments: mergeRecords("comments", shards.comments, (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)), added, updated, existing),
+        analysis: mergeRecords("analysis", shards.analysis, batch.analysis ?? [], added, updated, existing),
+        annotations: mergeRecords("annotations", shards.annotations, batch.annotations ?? [], added, updated, existing),
+        labels: mergeRecords("labels", shards.labels, batch.labels ?? [], added, updated, existing),
+        comments: mergeRecords("comments", shards.comments, batch.comments ?? [], added, updated, existing),
         regions: mergeRecords("regions", shards.regions, batch.regions ?? [], added, updated, existing),
         runtime: mergeRecords("runtime", shards.runtime, batch.runtime ?? [], added, updated, existing),
         evidence: mergeRecords("evidence", shards.evidence, batch.evidence ?? [], added, updated, existing),

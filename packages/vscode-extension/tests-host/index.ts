@@ -10,44 +10,29 @@ import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
 import { AnalysisSourcesProvider } from "../src/analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
+import { runAssetRecoverySmoke } from "./asset-recovery.js";
+import { runBinaryPreviewSmoke } from "./binary-preview.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
-import { metadataSmokeHtml, assertMetadataSmoke } from "./metadata.js";
-import { runModificationSmoke } from "./modification.js";
-import { runOwnershipSmoke } from "./ownership.js";
+import { runPaletteEditorSmoke } from "./palette-editor.js";
+import { runPngEditorSmoke } from "./png-editor.js";
 import { runReleaseAcceptance } from "./release-acceptance.js";
-import { romWorkbenchSmokeHtml, assertRomWorkbenchSmoke } from "./rom-workbench.js";
+import { runSourceGitUiSmoke } from "./source-git-ui.js";
+import { runSourceLaunchSmoke } from "./source-launch.js";
+import { runSourceWorkflowSmoke } from "./source-workflow.js";
 
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
-  "asm.modification.edit",
-  "asm.asset.edit",
-  "asm.metadata.migrate",
-  "asm.retention.manage",
-  "asm.asset.extract",
-  "asm.asset.import",
-  "asm.asset.openExternal",
-  "asm.modification.openInput",
-  "asm.modification.remove",
-  "asm.allocation.review",
-  "asm.allocation.apply",
-  "asm.rebase.refresh",
-  "asm.rebase.review",
-  "asm.rebase.accept",
-  "asm.source.restore",
-  "asm.source.review",
-  "asm.source.import",
-  "asm.source.detach",
-  "asm.buildTarget.select",
-  "asm.baseline.verify",
-  "asm.modification.create",
-  "asm.modification.add",
-  "asm.modification.open",
-  "asm.modification.build",
-  "asm.modification.run",
-  "asm.modification.debug",
-  "asm.modification.watch",
-  "asm.modification.derive",
-
+  "asm.source.init",
+  "asm.source.initDiz",
+  "asm.source.select",
+  "asm.source.prepare",
+  "asm.source.preview",
+  "asm.source.apply",
+  "asm.source.finish",
+  "asm.source.abort",
+  "asm.source.build",
+  "asm.source.editResearch",
+  "asm.source.editAnalysis",
   "asm.build",
   "asm.assetPreview.open",
   "asm.analysis.toggleAnnotations",
@@ -65,22 +50,6 @@ const REQUIRED_COMMANDS = [
   "asm.trace.start",
   "asm.trace.stop",
   "asm.trace.stopAnalyze",
-  "asm.trace.importRegenerate",
-  "asm.ramMap.open",
-  "asm.disassembly.status",
-  "asm.disassembly.regenerate",
-  "asm.disassembly.editAnnotation",
-  "asm.disassembly.inspectOwnership",
-  "asm.disassembly.editOwnedAnnotation",
-  "asm.disassembly.openOwningInput",
-  "asm.disassembly.showOwnedStatus",
-  "asm.disassembly.regenerateOwned",
-  "asm.disassembly.editMetadata",
-  "asm.disassembly.removeLabel",
-  "asm.disassembly.resetLabel",
-  "asm.disassembly.editComments",
-  "asm.disassembly.editClassification",
-  "asm.disassembly.editTargets",
 ];
 
 /**
@@ -419,6 +388,26 @@ export async function run(): Promise<void> {
   }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
+  if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
+    if (process.env.UTTORI_VSCODE_SOURCE_LAUNCH === "1") {
+      return runSourceLaunchSmoke(folder);
+    }
+    if (process.env.UTTORI_VSCODE_GIT_UI === "1") {
+      return runSourceGitUiSmoke(folder);
+    }
+    if (process.env.UTTORI_VSCODE_BINARY_PREVIEW === "1") {
+      return runBinaryPreviewSmoke(folder, extension.extensionUri);
+    }
+    if (process.env.UTTORI_VSCODE_ASSET_RECOVERY_PHASE) {
+      return runAssetRecoverySmoke(folder, process.env.UTTORI_VSCODE_ASSET_RECOVERY_PHASE);
+    }
+    await runPaletteEditorSmoke(folder, extension.extensionUri);
+    await runPngEditorSmoke(folder, extension.extensionUri);
+    if (process.env.UTTORI_VSCODE_SOURCE_ASSETS_ONLY === "1") {
+      return;
+    }
+    return runSourceWorkflowSmoke(folder);
+  }
   if (["reopen", "restricted"].includes(process.env.UTTORI_VSCODE_RELEASE_PHASE ?? "")) {
     await runReleaseAcceptance(extension, folder);
     return;
@@ -439,12 +428,10 @@ export async function run(): Promise<void> {
   await vscode.window.showTextDocument(document);
   assert.equal(document.languageId, "uttori-snes", "Assembly language association is missing.");
   await waitForLanguageServer(sourceUri);
-  await runOwnershipSmoke(folder);
-  await runModificationSmoke(folder);
   await vscode.window.showTextDocument(document);
 
   // Exercise packaged external HTML/CSS/JS under a real webview CSP, not a DOM mock.
-  for (const name of ["annotation", "panel", "disassembly", "metadata", "rom-editor"] as const) {
+  for (const name of ["panel"] as const) {
     const view = vscode.window.createWebviewPanel(
       "uttori.webviewSmoke",
       "Webview smoke",
@@ -461,14 +448,7 @@ export async function run(): Promise<void> {
       const ready = new Promise<void>((resolve, reject) => {
         subscription = view.webview.onDidReceiveMessage((message: { type?: string }) => {
           messages.push(message);
-          let readyType = "ready";
-          if (name === "metadata") {
-            readyType = "metadata-smoke-complete";
-          }
-          if (name === "rom-editor") {
-            readyType = "rom-workbench-smoke-complete";
-          }
-          if (message.type === readyType) {
+          if (message.type === "ready") {
             resolve();
           }
         });
@@ -477,22 +457,8 @@ export async function run(): Promise<void> {
           10_000,
         );
       });
-      const html = renderWebviewTemplate(view.webview, extension.extensionUri, name);
-      let testedHtml = html;
-      if (name === "metadata") {
-        testedHtml = metadataSmokeHtml(html);
-      }
-      if (name === "rom-editor") {
-        testedHtml = romWorkbenchSmokeHtml(html);
-      }
-      view.webview.html = testedHtml;
+      view.webview.html = renderWebviewTemplate(view.webview, extension.extensionUri, name);
       await ready;
-      if (name === "metadata") {
-        assertMetadataSmoke(messages);
-      }
-      if (name === "rom-editor") {
-        assertRomWorkbenchSmoke(messages);
-      }
     } finally {
       clearTimeout(timer);
       subscription?.dispose();

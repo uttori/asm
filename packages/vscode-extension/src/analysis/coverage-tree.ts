@@ -6,6 +6,7 @@ import * as path from "node:path";
 
 import {
   ANALYSIS_PROJECT_MANIFEST,
+  readSourceProjectLocalInputs,
   type AnalysisProjectManifest,
   type RomCoverageMap,
   type RomCoverageSegment,
@@ -18,6 +19,7 @@ import {
   Uri,
   workspace,
   type Event,
+  type Disposable,
   type TreeDataProvider,
 } from "vscode";
 
@@ -31,6 +33,21 @@ const PAGE_SIZE = 200;
  * from automatic discovery.
  */
 const ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
+
+/** The selected source worktree owns evidence binding even when the database lives outside it. */
+let selectedSourceRoot: (() => string | undefined) | undefined;
+
+/** Bind all evidence discovery consumers to the active source target for this extension lifetime. */
+export function initializeAnalysisProjectDiscovery(root: () => string | undefined): Disposable {
+  selectedSourceRoot = root;
+  return {
+    dispose() {
+      if (selectedSourceRoot === root) {
+        selectedSourceRoot = undefined;
+      }
+    },
+  };
+}
 
 /** Compact diagnostic row returned by the analysis worker for display in the coverage tree. */
 type CoverageDetail = {
@@ -339,6 +356,12 @@ const segmentNode = (
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.findFiles
  */
 export const findAnalysisProjectDirectories = async (): Promise<string[]> => {
+  const source = selectedSourceRoot?.();
+  if (source) {
+    // A copied workspace setting can point at an absent or foreign database. Never override the
+    // selected worktree's explicit local binding, or silently fall back when that binding is broken.
+    return [readSourceProjectLocalInputs(source).evidence];
+  }
   const configured = workspace.getConfiguration("asm").get<string>("analysisProject", "").trim();
   if (configured !== "") {
     const folders = workspace.workspaceFolders ?? [];

@@ -2,6 +2,7 @@ import { type AnalysisSourceGroup } from "../analysis/analysis-sources.js";
 import { type ProjectEvidenceExplanation } from "../analysis/project-evidence.js";
 import { type TraceIndexMetrics } from "../internal/trace-cache.js";
 import { type AnalysisProjectManifest, type AnalysisProjectShards, type AnalysisRecord, type ImportReport, type RuntimeEvidenceRecord, type ShardKind } from "../model/project-types.js";
+import { type ResearchSnapshot } from "../research-inputs/inputs.js";
 import { type RuntimeEvidenceBatch, type RuntimeEvidenceConflict } from "../runtime/runtime-evidence.js";
 import type { RuntimeTraceFactIndex } from "../runtime/runtime-trace.js";
 import { type InstructionExecutionSummaryRow, type AnnotationQueryRange, type SqliteAnnotationView, type InstructionExportRecord } from "./sqlite-annotation-query.js";
@@ -73,6 +74,29 @@ export declare class SqliteAnalysisStore {
      * @param {AnalysisProjectShards} after Edited selected view.
      */
     patchMetadata(before: AnalysisProjectShards, after: AnalysisProjectShards): void;
+    /**
+     * Rebuild the selected Git research index, without loading runtime history or the CFG. A matching
+     * revision is a constant-time no-op. Call inside a transaction and publish the watcher afterward.
+     * Research files remain authoritative if the process exits before this cache is refreshed.
+     */
+    synchronizeResearchInputs(snapshot: ResearchSnapshot): boolean;
+    /** Selected Git decision identity for callers pinning a consistent evidence/read snapshot. */
+    researchInputsIdentity(): string | undefined;
+    /** Cheap read-only cache check; callers recheck identity/revision after consuming query results. */
+    researchInputsAreCurrent(sha256: string): boolean;
+    /** Observations stay usable while derived code is stale; generation and graph views require reanalysis. */
+    assertCurrentAnalysis(): void;
+    /** Invalidate derived code within the same transaction that adds new observations. */
+    invalidateAnalysis(): void;
+    /** Restore observations inside an import transaction; reapply the selected research before commit. */
+    suspendResearchInputs(): void;
+    /**
+     * Publish analyzer output computed from the projected view without adopting Git decisions as
+     * imported facts. Overridden IDs retain their observation shadows; removing a decision on a
+     * later branch therefore restores the original record. Return the exact projected replacements
+     * for validation without reparsing a million-row graph into a second set of JS objects.
+     */
+    replaceResearchAnalysis(snapshot: ResearchSnapshot, updates: Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">>, onProgress?: (collection: string) => void): Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">>;
     /**
      * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
      * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
@@ -275,7 +299,9 @@ export declare class SqliteAnalysisStore {
         readonly max: number;
         readonly mask: number;
     }>>, onProgress?: (observations: number) => void): IterableIterator<RuntimeEvidenceRecord>;
-    /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
+    /** Exact execution seed totals grouped by PC, without decoding execution payloads.
+     * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
+     * storage. Static seed selection needs their union, not millions of duplicate PC records.
      * @param {string} architecture Target processor.
      * @param {string} space Logical CPU address space.
      * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.

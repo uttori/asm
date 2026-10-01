@@ -8,21 +8,18 @@ import {
   loadAnalysisProjectSnapshot,
   mergeRuntimeEvidence,
   openAnalysisProjectStore,
-  RomImage,
-  validateSourceExportFiles,
 } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
-  SnesProjectInitializationCancelledError,
+  initializeAnalysisFixture,
+  renderAnalysisFixture,
+  verifyRenderedFixture,
+} from "../../../tests/helpers/source-render-fixture.js";
+import {
   analyzeSnesProject,
-  exportSnesProject,
-  exportSnes65816Source,
-  analyzeSnes65816,
-  initializeSnesDisassemblyWorkspace,
+  SnesProjectInitializationCancelledError,
   probeSnesProject,
-  snesHardwareDefineRecords,
-  verifySnesProjectRoundTrip,
 } from "../src/index.js";
 
 const fixtureRom = (): Uint8Array => {
@@ -47,7 +44,7 @@ test("reanalysis retires role comments while preserving adopted metadata and run
   const romFile = path.join(temporary, "fixture.sfc");
   const outputDirectory = path.join(temporary, "workspace");
   await fs.writeFile(romFile, fixtureRom());
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const projectDirectory = path.join(outputDirectory, "analysis");
   const before = loadAnalysisProjectSnapshot(projectDirectory);
   const roleIds = ["unused-role", "adopted-role", "runtime-role"];
@@ -139,113 +136,18 @@ test("reanalysis retires role comments while preserving adopted metadata and run
   } finally {
     store.close();
   }
-  exportSnesProject({ projectDirectory, sourceDirectory: outputDirectory, romFile });
+  renderAnalysisFixture({ projectDirectory, sourceDirectory: outputDirectory, romFile });
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory: outputDirectory, romFile })).comparison
-      .equal,
+    (await verifyRenderedFixture({ sourceDirectory: outputDirectory, romFile })).comparison.equal,
   );
 });
 
-test("shared initializer commits a verified workspace with analysis and editor files", async (t) => {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-init-"));
+test("probe reports ambiguous mapping without selecting a mapper", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-probe-"));
+  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
   const romFile = path.join(temporary, "fixture.sfc");
-  const outputDirectory = path.join(temporary, "workspace");
-  const stages: string[] = [];
-  try {
-    await fs.writeFile(romFile, fixtureRom());
-    await fs.mkdir(outputDirectory);
-    const result = await initializeSnesDisassemblyWorkspace({
-      romFile,
-      outputDirectory,
-      mapper: "lorom",
-      workspaceFiles: [
-        { path: ".vscode/settings.json", contents: '{"asm.entryPoints":["main.asm"]}\n' },
-      ],
-      onProgress: ({ stage }) => stages.push(stage),
-    });
-    t.true(result.roundTrip.comparison.equal);
-    t.is(result.project.manifest.mapping.mapper, "lorom");
-    t.true(result.analysis.instructions > 0);
-    t.true(stages.includes("commit"));
-    await fs.stat(path.join(outputDirectory, "main.asm"));
-    const main = await fs.readFile(path.join(outputDirectory, "main.asm"), "utf8");
-    t.regex(main, /incsrc "defines\.asm"/);
-    const defines = await fs.readFile(path.join(outputDirectory, "defines.asm"), "utf8");
-    t.regex(defines, /^INIDISP = \$2100 ; Display control:/m);
-    t.regex(defines, /^DMAP7 = \$4370 ; DMA\/HDMA channel 7:/m);
-    t.regex(defines, /^OBJSEL = \$2101 ; Object size/m);
-    t.regex(defines, /^OBSEL = \$2101 ; Legacy alias for OBJSEL/m);
-    t.regex(defines, /^M7HOFS = \$210D ; Mode 7 horizontal scroll/m);
-    t.regex(defines, /^JOYOUT = \$4016 ; Joypad latch output/m);
-    t.regex(defines, /^A1T0L = \$4302 ; DMA\/HDMA channel 0:/m);
-    t.regex(defines, /^; Legacy alias for A1T0L[^\n]*\nA1TL0 = \$4302$/m);
-    t.regex(defines, /^NLTR7 = \$437A ; DMA\/HDMA channel 7:/m);
-    t.regex(defines, /^UNUSED7_MIRROR = \$437F ; DMA\/HDMA channel 7:/m);
-    t.regex(defines, /^JOY_START = \$1000 ; Controller Start-button bit\.$/m);
-    const assignments = defines.split("\n").filter((line) => /^[A-Z][\dA-Z_]+ = \$/.test(line));
-    t.true(assignments.length > snesHardwareDefineRecords().length);
-    t.true(
-      defines
-        .split("\n")
-        .every(
-          (line, index, lines) =>
-            !/^[A-Z][\dA-Z_]+ = \$/.test(line) ||
-            / ; \S/.test(line) ||
-            /^; \S/.test(lines[index - 1] ?? ""),
-        ),
-      "every generated register and mask has its own hover comment",
-    );
-    const config = JSON.parse(
-      await fs.readFile(path.join(outputDirectory, "uttori-asm.config.json"), "utf8"),
-    );
-    t.deepEqual(config.entryPoints, ["main.asm"]);
-    const bankFiles = await fs.readdir(path.join(outputDirectory, "banks"));
-    const bank = await fs.readFile(path.join(outputDirectory, "banks", bankFiles[0]), "utf8");
-    t.is((bank.match(/^org /gm) ?? []).length, 1, "contiguous spans share one origin");
-    t.regex(bank, /  NOP\n  NOP\n  STP/);
-    t.regex(
-      bank,
-      /SNES_HEADER_TITLE:\n {2}db "FIXTURE ROM {10}" ; Cartridge title "FIXTURE ROM"\./,
-    );
-    t.regex(bank, /SNES_HEADER_MAP_MODE:\n  db \$20 ; SlowROM, LoROM map mode\./);
-    t.regex(bank, /SNES_HEADER_CHECKSUM:\n  dw \$1234 ; ROM checksum \(valid pair\)\./);
-    t.regex(bank, /SNES_VECTOR_NATIVE_NMI:\n  dw /);
-    t.regex(bank, /SNES_VECTOR_EMULATION_RESET:\n  dw \$8000 ; Emulation-mode RESET handler\./);
-    t.notRegex(bank, /incbin "\.\.\/assets\/(?:snes-header|vectors)-/);
-    await fs.stat(path.join(outputDirectory, "analysis", "analysis.json"));
-    await fs.stat(path.join(outputDirectory, "generated-files.json"));
-    await fs.stat(path.join(outputDirectory, "build", "rebuilt-content.sfc.debug.json"));
-    t.is(
-      await fs.readFile(path.join(outputDirectory, ".vscode", "settings.json"), "utf8"),
-      '{"asm.entryPoints":["main.asm"]}\n',
-    );
-  } finally {
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
-});
-
-test("probe reports ambiguity and initialization never merges into non-empty output", async (t) => {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-init-guard-"));
-  const romFile = path.join(temporary, "fixture.sfc");
-  const outputDirectory = path.join(temporary, "workspace");
-  try {
-    await fs.writeFile(romFile, new Uint8Array(0x8000));
-    const probe = probeSnesProject({ romFile });
-    t.true(probe.mapperSelectionRequired);
-    await fs.mkdir(outputDirectory);
-    await fs.writeFile(path.join(outputDirectory, "keep.txt"), "keep\n");
-    await t.throwsAsync(
-      initializeSnesDisassemblyWorkspace({
-        romFile,
-        outputDirectory,
-        mapper: "lorom",
-      }),
-      { message: /must be empty/ },
-    );
-    t.is(await fs.readFile(path.join(outputDirectory, "keep.txt"), "utf8"), "keep\n");
-  } finally {
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
+  await fs.writeFile(romFile, new Uint8Array(0x8000));
+  t.true(probeSnesProject({ romFile }).mapperSelectionRequired);
 });
 
 test("incomplete reanalysis preserves known code and the saved project", async (t) => {
@@ -257,7 +159,7 @@ test("incomplete reanalysis preserves known code and the saved project", async (
   bytes.fill(0, 0x7fe0);
   bytes.set([0x00, 0x80], 0x7ffc);
   await fs.writeFile(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const projectDirectory = path.join(outputDirectory, "analysis");
   const before = loadAnalysisProjectSnapshot(projectDirectory);
 
@@ -267,12 +169,11 @@ test("incomplete reanalysis preserves known code and the saved project", async (
   const after = loadAnalysisProjectSnapshot(projectDirectory);
   t.deepEqual(after.revision, before.revision);
   t.deepEqual(after.shards, before.shards);
-  t.notThrows(() => validateSourceExportFiles(outputDirectory));
   const retry = analyzeSnesProject({ projectDirectory, romFile, maxWorkItems: 1_000_000 });
   t.is(retry.status, "complete");
   t.true(
-    exportSnesProject({ projectDirectory, romFile, sourceDirectory: outputDirectory }).codeBytes >
-      0,
+    renderAnalysisFixture({ projectDirectory, romFile, sourceDirectory: outputDirectory })
+      .codeBytes > 0,
   );
 });
 
@@ -285,7 +186,7 @@ test("background reanalysis does not overwrite an edit published while it was ru
   bytes.fill(0, 0x7fe0);
   bytes.set([0, 0x80], 0x7ffc);
   await fs.writeFile(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const projectDirectory = path.join(outputDirectory, "analysis");
   const legacy = loadAnalysisProjectSnapshot(projectDirectory);
   commitAnalysisProjectTransaction(projectDirectory, legacy.revision, {
@@ -353,62 +254,6 @@ test("background reanalysis does not overwrite an edit published while it was ru
   t.true(saved.shards.evidence.some(({ id }) => id === "legacy-role"));
 });
 
-test("source export rejects code loss even with net gains or force, unless explicitly allowed", async (t) => {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-export-preserve-"));
-  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
-  const romFile = path.join(temporary, "fixture.sfc");
-  const outputDirectory = path.join(temporary, "workspace");
-  const bytes = fixtureRom();
-  bytes.fill(0, 0x7fe0);
-  bytes.set([0x00, 0x80], 0x7ffc);
-  bytes.set([0xea, 0xea, 0xea, 0xea, 0xdb], 0x10);
-  await fs.writeFile(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
-  const before = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
-  const rom = RomImage.load(romFile);
-  const expanded = analyzeSnes65816(rom, "lorom", {
-    entryPoints: [{ id: "new-code", address: 0x808010 }],
-  });
-  const candidate = {
-    ...before,
-    shards: {
-      ...before.shards,
-      analysis: expanded.records.filter(
-        (record) => record.kind !== "cfg-node" || record.fileOffset !== 1,
-      ),
-      annotations: expanded.annotations,
-    },
-  };
-  const manifestBefore = await fs.readFile(
-    path.join(outputDirectory, "generated-files.json"),
-    "utf8",
-  );
-  for (const force of [false, true]) {
-    t.throws(
-      () =>
-        exportSnes65816Source(candidate, rom, outputDirectory, {
-          sourceProjectSha256: "0".repeat(64),
-          force,
-        }),
-      {
-        message:
-          /replace 1 previously emitted code byte.*\$000001.*adds 5 new code byte.*net change of \+4 byte/s,
-      },
-    );
-    t.is(
-      await fs.readFile(path.join(outputDirectory, "generated-files.json"), "utf8"),
-      manifestBefore,
-    );
-    t.notThrows(() => validateSourceExportFiles(outputDirectory));
-  }
-  const permitted = exportSnes65816Source(candidate, rom, outputDirectory, {
-    sourceProjectSha256: "0".repeat(64),
-    allowCodeRegression: true,
-  });
-  t.is(permitted.spans.find((span) => span.start <= 1 && span.end > 1)?.role, "raw");
-  t.true(permitted.spans.some((span) => span.start === 0x10 && span.role === "code"));
-});
-
 test("runtime-observed PCs seed analysis and increase measurable native-source coverage", async (t) => {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-trace-update-"));
   const romFile = path.join(temporary, "fixture.sfc");
@@ -418,7 +263,7 @@ test("runtime-observed PCs seed analysis and increase measurable native-source c
     bytes.set([0xea, 0x8d, 0x00, 0x21, 0xdb], 0x10);
     await fs.writeFile(romFile, bytes);
     await fs.mkdir(outputDirectory);
-    const initialized = await initializeSnesDisassemblyWorkspace({
+    const initialized = await initializeAnalysisFixture({
       romFile,
       outputDirectory,
       mapper: "lorom",
@@ -465,7 +310,7 @@ test("runtime-observed PCs seed analysis and increase measurable native-source c
     });
     t.is(analyzed.runtimeSeeds, 3);
     t.is(analyzed.omittedRuntimeSeeds, 0);
-    const exported = exportSnesProject({
+    const exported = renderAnalysisFixture({
       projectDirectory: path.join(outputDirectory, "analysis"),
       sourceDirectory: outputDirectory,
       romFile,
@@ -483,13 +328,13 @@ test("runtime-observed PCs seed analysis and increase measurable native-source c
       romFile,
     });
     t.is(repeated.runtimeSeeds, 3, "persisted runtime facts remain analysis seeds");
-    const repeatedExport = exportSnesProject({
+    const repeatedExport = renderAnalysisFixture({
       projectDirectory: path.join(outputDirectory, "analysis"),
       sourceDirectory: outputDirectory,
       romFile,
     });
     t.is(repeatedExport.codeBytes, exported.codeBytes);
-    const verified = await verifySnesProjectRoundTrip({
+    const verified = await verifyRenderedFixture({
       sourceDirectory: outputDirectory,
       romFile,
     });
@@ -510,7 +355,7 @@ test("separate captures accumulate code and compatible CPU-state changes do not 
   bytes.set([0xa9, 1, 0xdb], 0x10);
   bytes.set([0xa9, 2, 0xdb], 0x20);
   await fs.writeFile(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({
+  await initializeAnalysisFixture({
     romFile,
     outputDirectory: sourceDirectory,
     mapper: "lorom",
@@ -557,7 +402,7 @@ test("separate captures accumulate code and compatible CPU-state changes do not 
       shards: merged.shards,
     });
     analyzeSnesProject({ projectDirectory, romFile });
-    const exported = exportSnesProject({ projectDirectory, sourceDirectory, romFile });
+    const exported = renderAnalysisFixture({ projectDirectory, sourceDirectory, romFile });
     t.true(exported.codeBytes >= previousCode);
     previousCode = exported.codeBytes;
     t.true(exported.manifest.spans.some((span) => span.role === "code" && span.start === 0x10));
@@ -572,7 +417,7 @@ test("separate captures accumulate code and compatible CPU-state changes do not 
       ),
     );
   }
-  t.true((await verifySnesProjectRoundTrip({ sourceDirectory, romFile })).comparison.equal);
+  t.true((await verifyRenderedFixture({ sourceDirectory, romFile })).comparison.equal);
 });
 
 test("RAM-map edits regenerate documented definitions and symbolic disassembly operands", async (t) => {
@@ -584,7 +429,7 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
     bytes.set([0xaf, 0x47, 0x18, 0x7e, 0xdb]);
     await fs.writeFile(romFile, bytes);
     await fs.mkdir(outputDirectory);
-    await initializeSnesDisassemblyWorkspace({
+    await initializeAnalysisFixture({
       romFile,
       outputDirectory,
       mapper: "lorom",
@@ -613,11 +458,12 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
         2,
       )}\n`,
     );
-    await t.throwsAsync(verifySnesProjectRoundTrip({ sourceDirectory: outputDirectory, romFile }), {
-      message: /ram-map\.json.*changed/,
-    });
+    // Ordinary builds remain valid while a research recipe waits for regeneration.
+    t.true(
+      (await verifyRenderedFixture({ sourceDirectory: outputDirectory, romFile })).comparison.equal,
+    );
 
-    const exported = exportSnesProject({
+    const exported = renderAnalysisFixture({
       projectDirectory: path.join(outputDirectory, "analysis"),
       sourceDirectory: outputDirectory,
       romFile,
@@ -634,7 +480,7 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
     t.regex(bank, /LDA\.l RAM_RING_MENU_MODE/);
     await fs.stat(path.join(outputDirectory, "ram-map.schema.json"));
 
-    const verified = await verifySnesProjectRoundTrip({
+    const verified = await verifyRenderedFixture({
       sourceDirectory: outputDirectory,
       romFile,
     });
@@ -644,7 +490,7 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
     const ramMap = JSON.parse(await fs.readFile(mapFile, "utf8"));
     ramMap.includeSourceInformation = true;
     await fs.writeFile(mapFile, JSON.stringify(ramMap));
-    exportSnesProject({
+    renderAnalysisFixture({
       projectDirectory: path.join(outputDirectory, "analysis"),
       sourceDirectory: outputDirectory,
       romFile,
@@ -655,8 +501,7 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
       /^; Menu — Selects the active ring-menu mode\. menu\.txt:L12\. Menu capture frame 42\.\nRAM_RING_MENU_MODE = \$7E1847$/m,
     );
     t.true(
-      (await verifySnesProjectRoundTrip({ sourceDirectory: outputDirectory, romFile })).comparison
-        .equal,
+      (await verifyRenderedFixture({ sourceDirectory: outputDirectory, romFile })).comparison.equal,
     );
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
@@ -684,30 +529,6 @@ test("shared probe accepts the local Secret of Mana DizRaw fixture when availabl
     t.is(probe.dizRaw?.mapping.mapper, "hirom");
     t.is(probe.dizRaw?.metadataBytes, 0x200000);
     t.false(probe.mapperSelectionRequired);
-  } finally {
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
-});
-
-test("an already-cancelled initialization leaves its selected destination empty", async (t) => {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-init-cancel-"));
-  const romFile = path.join(temporary, "fixture.sfc");
-  const outputDirectory = path.join(temporary, "workspace");
-  const cancellation = new AbortController();
-  try {
-    await fs.writeFile(romFile, fixtureRom());
-    await fs.mkdir(outputDirectory);
-    cancellation.abort();
-    const error = await t.throwsAsync(
-      initializeSnesDisassemblyWorkspace({
-        romFile,
-        outputDirectory,
-        mapper: "lorom",
-        signal: cancellation.signal,
-      }),
-    );
-    t.true(error instanceof SnesProjectInitializationCancelledError);
-    t.deepEqual(await fs.readdir(outputDirectory), []);
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
   }

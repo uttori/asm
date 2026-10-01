@@ -17,6 +17,110 @@ import {
 import { test } from "../../../tests/ava-helper.js";
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
 
+test("long captured routines retain lazy ownership paths without copying every prefix", (t) => {
+  const bytes = new Uint8Array(0x8000).fill(0xea);
+  bytes.set([0x20, 0x10, 0x80, 0xdb]);
+  bytes[0x1010] = 0x60;
+  const runtime: Extract<RuntimeEvidenceRecord, { kind: "runtime-instruction" }>[] = [
+    {
+      id: "call",
+      kind: "runtime-instruction",
+      architecture: "snes.65816",
+      addressSpace: "snes.cpu",
+      address: 0x808000,
+      count: 1,
+      bytes: [0x20, 0x10, 0x80],
+      state: { p: 0x30, e: 0 },
+      evidence: ["capture"],
+    },
+  ];
+  for (let offset = 0x10; offset <= 0x1010; offset++) {
+    runtime.push({
+      ...runtime[0],
+      id: `step:${offset}`,
+      address: 0x808000 + offset,
+      bytes: [bytes[offset]],
+    });
+  }
+  const records = analyzeSnesRuntimeCode(
+    {
+      analysis: [],
+      annotations: [],
+      labels: [],
+      comments: [],
+      regions: [],
+      imports: [],
+      evidence: [],
+      runtime,
+    },
+    new RomImage(bytes),
+    "lorom",
+  );
+  const nodes = records.filter((record) => record.kind === "cfg-node");
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const first = nodes.find((node) => node.address === 0x808010)!;
+  let current = nodes.find((node) => node.address === 0x809010)!;
+  t.is(current.functionEntry, first.id);
+  t.true(nodes.every((node) => node.evidencePath.length === 1));
+  let length = 0;
+  while (current.evidencePredecessor) {
+    current = byId.get(current.evidencePredecessor)!;
+    t.is(current.functionEntry, first.id);
+    if (++length > 0x1000) {
+      t.fail("Ownership path contains a cycle.");
+      break;
+    }
+  }
+  t.is(current.id, first.id);
+  t.is(length, 0x1000);
+});
+
+test("shared captured tails lose unique ownership through loops", (t) => {
+  const steps = [
+    [0x808000, [0x20, 0x10, 0x80]],
+    [0x808003, [0x20, 0x20, 0x80]],
+    [0x808010, [0x4c, 0x30, 0x80]],
+    [0x808020, [0x4c, 0x30, 0x80]],
+    [0x808030, [0xea]],
+    [0x808031, [0x80, 0xfd]],
+  ] as const;
+  const runtime: RuntimeEvidenceRecord[] = steps.map(([address, bytes]) => ({
+    id: `step:${address}`,
+    kind: "runtime-instruction",
+    architecture: "snes.65816",
+    addressSpace: "snes.cpu",
+    address,
+    bytes,
+    count: 1,
+    state: { p: 0x30, e: 0 },
+    evidence: ["capture"],
+  }));
+  const records = analyzeSnesRuntimeCode(
+    {
+      analysis: [],
+      annotations: [],
+      labels: [],
+      comments: [],
+      regions: [],
+      imports: [],
+      evidence: [],
+      runtime,
+    },
+    new RomImage(new Uint8Array(0x8000)),
+    "lorom",
+  );
+  const nodes = records.filter((record) => record.kind === "cfg-node");
+  for (const address of [0x808030, 0x808031]) {
+    const node = nodes.find((item) => item.address === address)!;
+    t.is(node.functionEntry, undefined);
+    t.is(node.evidencePredecessor, undefined);
+  }
+  for (const address of [0x808010, 0x808020]) {
+    const node = nodes.find((item) => item.address === address)!;
+    t.is(node.functionEntry, node.id);
+  }
+});
+
 test("runtime projections retain identical CFG variants, aliases, conflicts and trace provenance", (t) => {
   const runtime: RuntimeEvidenceRecord[] = [];
   const states: Readonly<Record<string, RuntimeStateValue>>[] = [

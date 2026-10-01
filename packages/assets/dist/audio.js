@@ -170,7 +170,8 @@ export function writePcmWave(samples, sampleRate) {
     samples.forEach((sample, index) => view.setInt16(44 + index * 2, sample, true));
     return bytes;
 }
-const audioOptions = (raw, source) => {
+/** Resolve source loops without encoding, so preserved native streams can validate the same policy. */
+export const resolveBrrAudioOptions = (raw, source) => {
     if (Object.keys(raw).some((key) => key !== "padding" && key !== "loop")) {
         throw new Error("Unknown WAVE-to-BRR option.");
     }
@@ -189,7 +190,7 @@ const audioOptions = (raw, source) => {
         if (!source.loop) {
             throw new Error("WAVE has no source loop.");
         }
-        return { padding, loop: "source" };
+        requested = source.loop;
     }
     if (!requested ||
         typeof requested !== "object" ||
@@ -200,6 +201,15 @@ const audioOptions = (raw, source) => {
         typeof requested.end !== "number" ||
         Object.keys(requested).some((key) => key !== "start" && key !== "end")) {
         throw new Error("loop must be false, 'source', or { start, end } in sample frames.");
+    }
+    if (!Number.isSafeInteger(requested.start) ||
+        !Number.isSafeInteger(requested.end) ||
+        requested.start < 0 ||
+        requested.start >= requested.end ||
+        requested.end !== source.samples.length ||
+        requested.start % 16 !== 0 ||
+        requested.end % 16 !== 0) {
+        throw new Error("BRR loop must start on a 16-sample boundary and end at the unpadded tail.");
     }
     return { padding, loop: { start: requested.start, end: requested.end } };
 };
@@ -233,7 +243,7 @@ export function withAudioEncoder(native) {
                     throw new Error("PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.");
                 }
                 const audio = document.value;
-                const options = audioOptions(rawOptions, audio);
+                const options = resolveBrrAudioOptions(rawOptions, audio);
                 const originalCount = audio.samples.length;
                 if (originalCount === 0) {
                     throw new Error("WAVE has no PCM samples.");
@@ -244,18 +254,7 @@ export function withAudioEncoder(native) {
                 }
                 const padded = new Int16Array(originalCount + paddingCount);
                 padded.set(audio.samples);
-                const loop = options.loop === "source" ? audio.loop : options.loop;
-                if (loop) {
-                    if (!Number.isSafeInteger(loop.start) ||
-                        !Number.isSafeInteger(loop.end) ||
-                        loop.start < 0 ||
-                        loop.start >= loop.end ||
-                        loop.end !== originalCount ||
-                        loop.start % 16 !== 0 ||
-                        loop.end % 16 !== 0) {
-                        throw new Error("BRR loop must start on a 16-sample boundary and end at the unpadded tail.");
-                    }
-                }
+                const loop = options.loop;
                 const brr = encodeBrrPcm(padded, Boolean(loop));
                 const loopOffset = loop ? (loop.start / 16) * 9 : undefined;
                 const decoded = decodeBrrPcm(brr, loopOffset);

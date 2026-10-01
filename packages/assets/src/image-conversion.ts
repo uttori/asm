@@ -490,7 +490,7 @@ export function decodeBgScreenMap(bytes: Uint8Array, width: number, height: numb
   if (encoded.length !== width * height) {
     throw new Error("BG screen map byte count is invalid.");
   }
-  const logical = new Array<BgMapEntry>(encoded.length);
+  const logical = Array.from({ length: encoded.length }, () => ({ tile: 0, palette: 0, priority: 0, horizontalFlip: 0, verticalFlip: 0 }));
   order.forEach((position, index) => {
     logical[position] = encoded[index];
   });
@@ -616,7 +616,7 @@ function encodeImage(
   const widthTiles = image.width / 8;
   const heightTiles = image.height / 8;
   const coordinates = tileCoordinates(widthTiles, heightTiles, options.layout);
-  const indexByCoordinate = new Array<number>(coordinates.length);
+  const indexByCoordinate = Array.from({ length: coordinates.length }, () => 0);
   const tiles: Tile[] = coordinates.map(([tx, ty], storageIndex) => {
     indexByCoordinate[ty * widthTiles + tx] = storageIndex;
     return Array.from({ length: 8 }, (_, row) =>

@@ -166,6 +166,9 @@ test("summary input yields after each decode instead of retaining a capture insi
       .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(incremental)}`)
       .all("snes.65816", "snes.cpu");
     t.false(plan.some((row) => /TEMP B-TREE|MATERIALIZE/.test(String(row.detail))));
+    if (!incremental) {
+      t.is(plan[0].detail, "SCAN o", "full rebuild preserves compressed-history locality");
+    }
   }
 });
 

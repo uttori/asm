@@ -61,6 +61,7 @@ export const analyzeSnesRuntimeCode = (
   rom: RomImage,
   mapper: SnesMapper,
   runtime: Iterable<RuntimeEvidenceRecord> = shards.runtime,
+  onProgress?: (message: string) => void,
 ): readonly AnalysisRecord[] => {
   const decoder = new Cpu65816Decoder();
   const context = createSnesAddressContext(mapper);
@@ -68,7 +69,11 @@ export const analyzeSnesRuntimeCode = (
   const nodes = new Map<string, AnalysisControlFlowNodeRecord>();
   const instructions = new Map<string, DecodedInstruction>();
   const records: AnalysisRecord[] = [];
+  let observations = 0;
   for (const sample of runtime) {
+    if (++observations % 10000 === 0) {
+      onProgress?.(`Decoded ${observations} instruction observations into ${nodes.size} variants.`);
+    }
     if (
       sample.kind !== "runtime-instruction" ||
       sample.architecture !== "snes.65816" ||
@@ -175,6 +180,7 @@ export const analyzeSnesRuntimeCode = (
     });
     instructions.set(id, instruction);
   }
+  onProgress?.(`Connecting ${nodes.size} captured instruction variants.`);
   const byAddress = new Map<number, AnalysisControlFlowNodeRecord[]>();
   for (const node of nodes.values()) {
     const entries = byAddress.get(node.address) ?? [];
@@ -224,29 +230,34 @@ export const analyzeSnesRuntimeCode = (
     list.push(edge);
     outgoing.set(edge.from, list);
   }
-  const ownership = new Map<string, string[]>();
+  // Propagate unique/ambiguous ownership through each node at most twice. Copying complete trail
+  // arrays for every queued path is quadratic on long routines and can exhaust a full-project heap.
+  const ownership = new Map<string, string | null>();
+  const predecessors = new Map<string, string>();
+  const queue = [...entries];
   for (const entry of entries) {
-    const queue: string[][] = [[entry]];
-    const visited = new Set<string>();
-    for (const trail of queue) {
-      const id = trail.at(-1)!;
-      if (visited.has(id)) {
+    ownership.set(entry, entry);
+  }
+  for (const id of queue) {
+    const owner = ownership.get(id)!;
+    for (const edge of outgoing.get(id) ?? []) {
+      if (!edge.to || edge.edgeKind === "call" || entries.has(edge.to)) {
         continue;
       }
-      visited.add(id);
-      const previous = ownership.get(id);
-      ownership.set(id, previous && previous[0] !== entry ? [] : (previous ?? trail));
-      for (const edge of outgoing.get(id) ?? []) {
-        if (
-          edge.to &&
-          edge.edgeKind !== "call" &&
-          (!entries.has(edge.to) || edge.to === entry) &&
-          !visited.has(edge.to)
-        ) {
-          queue.push([...trail, edge.to]);
+      if (!ownership.has(edge.to)) {
+        ownership.set(edge.to, owner);
+        if (owner) {
+          predecessors.set(edge.to, id);
         }
+        queue.push(edge.to);
+      } else if (ownership.get(edge.to) !== null && ownership.get(edge.to) !== owner) {
+        ownership.set(edge.to, null);
+        predecessors.delete(edge.to);
+        queue.push(edge.to);
       }
     }
+  }
+  for (const entry of entries) {
     const node = nodes.get(entry)!;
     records.push({
       id: `${entry}:function`,
@@ -259,9 +270,10 @@ export const analyzeSnesRuntimeCode = (
     });
   }
   for (const node of nodes.values()) {
+    const owner = ownership.get(node.id);
     records.push({
       ...node,
-      evidencePath: ownership.get(node.id)?.length ? ownership.get(node.id)! : [node.id],
+      ...(owner ? { functionEntry: owner, evidencePredecessor: predecessors.get(node.id) } : {}),
     });
   }
   // Large captures exceed V8's function-argument limit even when the arrays fit in memory.

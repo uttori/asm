@@ -89,6 +89,8 @@ export interface FrameLayout {
   height: number;
   segments: Record<string, FrameSegment>;
   paletteRefs: string[];
+  /** Stable PNG index colors at adoption. Catalog colors may change without rewriting pixel sources. */
+  indexPalette?: [number, number, number, number][];
   guideIndex: number;
   paletteVariants?: FramePaletteVariant[];
   tileSources?: "native-strip";

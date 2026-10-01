@@ -20,6 +20,16 @@ export declare const waveImporter: AssetImporter;
  * @returns {Uint8Array} Headered mono PCM16 RIFF/WAVE bytes.
  */
 export declare function writePcmWave(samples: Int16Array, sampleRate: number): Uint8Array;
+/** Validated block/padding and forward-loop policy, with an exclusive sample-frame end. */
+export interface AudioOptions {
+    readonly padding: "reject" | "zero";
+    readonly loop: false | Readonly<{
+        start: number;
+        end: number;
+    }>;
+}
+/** Resolve source loops without encoding, so preserved native streams can validate the same policy. */
+export declare const resolveBrrAudioOptions: (raw: Readonly<Record<string, unknown>>, source: PcmAudio) => AudioOptions;
 /** Extend the native `snes.brr` ID with its deliberate PCM-to-BRR lossy path.
  * @param {readonly AssetEncoder[]} native Native block model encoders.
  * @returns {readonly AssetEncoder[]} Combined format registrations.

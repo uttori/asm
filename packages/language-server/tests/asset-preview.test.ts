@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { waveImporter, writePcmWave, type PcmAudio } from "@uttori/asm-assets/audio";
+
 import { test } from "../../../tests/ava-helper.js";
 import { convertAssetPreview } from "../src/asset-preview-conversion.js";
 import { supportsPortableAssetPreview } from "../src/asset-preview-service.js";
@@ -66,6 +68,28 @@ test("SoM native BRR preview exposes its playable WAVE and exact ROM byte count"
   );
 });
 
+test("edited SoM WAVE preview exposes the same decoded audio and fidelity as assembly", (t) => {
+  const source = fs.readFileSync(
+    path.resolve("secret-of-mana/disassembly/assets/audio/brr/034784-waveform-01.wav"),
+  );
+  const pcm = waveImporter.import({ bytes: source, mediaType: "audio/wav" }).value as PcmAudio;
+  const samples = pcm.samples.slice();
+  samples[0] = 12000;
+  const changed = writePcmWave(samples, pcm.sampleRate);
+  const preview = convertAssetPreview({
+    source: { bytes: changed, mediaType: "audio/wav" },
+    resources: {},
+    format: "som.brr.pcm",
+    options: { loop: false },
+  });
+  t.is(preview.encodedBytes, 0x06e4);
+  t.is(preview.metadata?.nativePreserved, false);
+  t.is(preview.metadata?.fidelity, "lossy-audio");
+  t.is(typeof preview.metadata?.rmsError, "number");
+  t.deepEqual(Buffer.from(preview.sourceWavBase64 ?? "", "base64"), Buffer.from(changed));
+  t.truthy(preview.decodedWavBase64);
+});
+
 test("SoM BRR bank segment reports its slice while previewing the complete stream", (t) => {
   const source = fs.readFileSync(
     path.resolve("secret-of-mana/disassembly/assets/audio/brr/03fbcc-title-instrument-s13.wav"),
@@ -127,7 +151,7 @@ test("SoM frame preview validates a shared ROM palette and renders the authored 
           },
         },
       }),
-    { message: /palette color.*no longer matches/i },
+    { message: /palette no longer matches its stable index binding/i },
   );
 });
 

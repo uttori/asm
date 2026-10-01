@@ -1,4 +1,4 @@
-Bundled npm dependency notices. License text is reproduced unchanged.
+Bundled npm dependency notices. License text is reproduced with normalized line endings.
 
 @uttori/data-tools@5.0.0
 ========================

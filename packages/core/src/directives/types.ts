@@ -166,7 +166,8 @@ export type IncludeDirectiveContext = OperandDirectiveContext<
     includeSource: Pick<
       IncludeSourceService,
       "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"
-    >;
+    > &
+      Partial<Pick<IncludeSourceService, "recordBinarySlice">>;
   };
 
 export type StructDirectiveContext = SessionDirectiveContext<

@@ -10,12 +10,11 @@ import {
   openAnalysisProjectStore,
   buildInstructionAnalysisAnnotations,
   buildRomCoverageMap,
-  analysisProjectRevision,
-  commitAnalysisProjectSelectedEdit,
   type AnalysisProject,
   type AnalysisControlFlowNodeRecord,
   type RuntimeEvidenceRecord,
 } from "../../src/index.js";
+import { validateAnalysisOwnership } from "../../src/model/analysis-ownership.js";
 import {
   readSqliteAnnotationView,
   readInstructionExecutionSummary,
@@ -149,6 +148,54 @@ test("SQLite viewport joins match the complete projection for explicit logical/o
   t.is(view.executionCounts.get("cpu:256"), 12);
   t.deepEqual(store.manifest(), before, "query indexing does not publish a semantic edit");
   t.true(store.annotationNodesAt("cpu", 0x100, 0).every((record) => record.kind === "cfg-node"));
+});
+
+test("viewport ownership tolerates omitted ancestors while publication and visible relationships stay strict", (t) => {
+  const entry = { ...node("entry", 0x900, 900), functionEntry: "entry" };
+  const predecessor = {
+    ...node("predecessor", 0x800, 800),
+    functionEntry: "entry",
+    evidencePredecessor: "entry",
+  };
+  const visible = {
+    ...node("visible", 0x100, 0),
+    functionEntry: "entry",
+    evidencePredecessor: "predecessor",
+  };
+  const input = project();
+  const { store } = fixture(t, {
+    ...input,
+    shards: { ...input.shards, analysis: [entry, predecessor, visible] },
+  });
+  store.prepareAnnotationQueries();
+  const view = store.transaction(() => store.instructionAnnotationView(ranges), false);
+  t.deepEqual(
+    view.shards.analysis,
+    [visible],
+    "view does not fetch the function's omitted ancestry",
+  );
+  t.throws(() => validateAnalysisOwnership([visible]), { message: /invalid function entry/ });
+  t.throws(() => validateAnalysisOwnership([entry, visible]), {
+    message: /invalid evidence predecessor/,
+  });
+  t.notThrows(() => validateAnalysisOwnership([entry, visible], "partial"));
+  t.throws(
+    () =>
+      validateAnalysisOwnership([visible, { ...predecessor, functionEntry: "other" }], "partial"),
+    { message: /invalid evidence predecessor/ },
+  );
+  t.throws(
+    () =>
+      validateAnalysisOwnership(
+        [visible, { ...predecessor, evidencePredecessor: "visible" }],
+        "partial",
+      ),
+    { message: /cyclic evidence predecessor/ },
+  );
+  t.throws(
+    () => validateAnalysisOwnership([{ ...visible, evidencePredecessor: undefined }], "partial"),
+    { message: /does not lead to its function entry/ },
+  );
 });
 
 test("hot-PC previews remain bounded while SQL execution totals include omitted records", (t) => {
@@ -609,67 +656,6 @@ test("SQL call ownership preserves aliases, missing edges, and last-entry eviden
   t.deepEqual(renamed.functions.find(({ id }) => id === "f1")?.labels, [
     { id: "name", name: "New" },
   ]);
-});
-
-test("selected SQL edits preserve omitted CFG/runtime rows and reject undo with retained provenance", (t) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-selected-sql-edit-"));
-  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  publishAnalysisProject(directory, project());
-  const store = openAnalysisProjectStore(directory);
-  t.teardown(() => store.close());
-  const selected = store.annotationEditView();
-  const snapshot = { ...selected, revision: analysisProjectRevision(selected.manifest) };
-  const evidence = {
-    id: "manual:test",
-    source: "manual" as const,
-    sourceId: "test",
-    confidence: "certain" as const,
-  };
-  const edited = {
-    manifest: selected.manifest,
-    shards: {
-      ...selected.shards,
-      evidence: [evidence],
-      comments: [
-        ...selected.shards.comments,
-        {
-          id: "manual-comment",
-          addressSpace: "cpu",
-          address: 0x100,
-          text: "New",
-          evidence: [evidence.id],
-        },
-      ],
-    },
-  };
-  commitAnalysisProjectSelectedEdit(directory, snapshot, edited);
-  t.deepEqual(
-    store.analysisByKinds(["cfg-node"]),
-    [...project().shards.analysis].sort((a, b) => a.id.localeCompare(b.id)),
-  );
-  t.is([...store.runtimeRecords()].length, project().shards.runtime.length);
-  const after = store.annotationEditView();
-  store.transaction(() =>
-    store.insertRuntime({
-      id: "new-user",
-      kind: "runtime-execution",
-      architecture: "fixture.cpu",
-      addressSpace: "cpu",
-      address: 0x100,
-      count: 1,
-      evidence: [evidence.id],
-    }),
-  );
-  t.throws(
-    () =>
-      commitAnalysisProjectSelectedEdit(
-        directory,
-        { ...after, revision: analysisProjectRevision(after.manifest) },
-        selected,
-      ),
-    { message: /missing evidence/ },
-  );
-  t.true(store.loadTable("comments").some((record) => record.id === "manual-comment"));
 });
 
 test("SQL result caching publishes after unrelated writes and invalidates only declared inputs", (t) => {

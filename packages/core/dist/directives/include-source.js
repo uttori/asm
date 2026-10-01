@@ -327,6 +327,7 @@ export const handleIncbin = ({ session, includeSource, operandResolver, runtime,
         }
         session.setWritePosition(targetAddress);
     }
+    includeSource.recordBinarySlice?.(filename, startOffset, endOffset, fileData);
     for (const byte of incbinData) {
         session.write1(byte);
     }

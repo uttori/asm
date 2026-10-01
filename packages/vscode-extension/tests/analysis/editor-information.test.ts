@@ -25,6 +25,7 @@ import {
   EditorInformationProvider,
   type EditorInformationHost,
 } from "../../src/editor-info/provider.js";
+import { EditorInformationWorker } from "../../src/editor-info/worker-client.js";
 
 const fixture = (t: { teardown(callback: () => void): void }) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-information-"));
@@ -53,6 +54,49 @@ const fixture = (t: { teardown(callback: () => void): void }) => {
   fs.writeFileSync(mapFile, JSON.stringify(map));
   return { directory, file, output, map, mapFile, plainOutput };
 };
+
+test("real source information worker returns only requested lines and invalidates changed inputs", async (t) => {
+  const { directory, file, mapFile } = fixture(t);
+  let discoveredMaps = [{ file: mapFile, sourceRoots: [directory] }];
+  const worker = new EditorInformationWorker(
+    path.resolve("packages/vscode-extension/out/editor-information-worker.cjs"),
+    {
+      discoverMaps: async () => discoveredMaps,
+      projects: async () => [],
+      request: async () => {
+        throw new Error("This source-only build needs no evidence queries.");
+      },
+    },
+  );
+  t.teardown(() => worker.dispose());
+  const requirements = templateRequirements(
+    INFORMATION_PRESETS.authoring.parts.map(compileTemplate),
+  );
+  const rows = await worker.lines(file, [{ start: 4, end: 4 }], requirements, new Set());
+  t.is(rows.size, 1);
+  t.is(informationField("output_bytes", rows.get(4)![0]), "BD 2B 00");
+  t.true(worker.tracks(file));
+  t.is((await worker.lines(file, [{ start: 4, end: 4 }], requirements, new Set([file]))).size, 0);
+  fs.appendFileSync(file, "; changed outside the editor\n");
+  worker.invalidate();
+  t.is((await worker.lines(file, [{ start: 4, end: 4 }], requirements, new Set())).size, 0);
+  t.true(
+    (await worker.diagnostics(file, new Set())).some((reason) => reason.includes("Source differs")),
+  );
+  const replacement = fixture(t);
+  discoveredMaps = [{ file: replacement.mapFile, sourceRoots: [replacement.directory] }];
+  worker.invalidate();
+  t.is(
+    (await worker.lines(replacement.file, [{ start: 4, end: 4 }], requirements, new Set())).size,
+    1,
+  );
+  t.true(worker.tracks(replacement.file));
+  t.false(worker.tracks(file), "Historical map dependencies leave the watched path set");
+  worker.dispose();
+  await t.throwsAsync(worker.lines(file, [{ start: 4, end: 4 }], requirements, new Set()), {
+    message: /disposed/,
+  });
+});
 
 test("build snapshots supply bytes and the actual masked encoder value without a disassembly project", async (t) => {
   const { directory, file, mapFile, map, output, plainOutput } = fixture(t);

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';" />
+    <link href="{{styleUri}}" rel="stylesheet" />
+    <title>Indexed PNG</title>
+  </head>
+  <body>
+    <header>
+      <strong>Indexed PNG</strong><span id="size"></span
+      ><label
+        >Zoom
+        <select id="zoom">
+          <option>1</option>
+          <option>2</option>
+          <option selected>4</option>
+          <option>8</option>
+          <option>16</option>
+        </select></label
+      >
+    </header>
+    <label id="palette-group-label" hidden
+      >Palette group
+      <select id="palette-group"></select
+    ></label>
+    <div id="palette" role="group" aria-label="Palette slots"></div>
+    <p id="selection">Select a palette slot, then paint pixels. Save and undo normally.</p>
+    <p id="guidance" hidden>
+      Outlined tiles are encoded into the ROM. Other pixels are previews or padding. Shared poses
+      use the same tile on build; the PNG preview copies are unchanged.
+    </p>
+    <p id="tile" aria-live="polite"></p>
+    <div id="viewport">
+      <canvas id="image" aria-label="Indexed pixel canvas" tabindex="0"></canvas>
+    </div>
+    <p>
+      Indexes and duplicate colors stay distinct. Edit shared ROM colors in the palette JSON.
+      Format-specific PNG metadata is re-encoded on build after pixel edits.
+    </p>
+    <p id="error" role="alert"></p>
+    <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
+  </body>
+</html>

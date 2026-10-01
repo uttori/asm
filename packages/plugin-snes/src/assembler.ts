@@ -28,6 +28,7 @@ import {
   splitCommaOperands,
   splitSingleOperand,
   splitTopLevelCommaOperands,
+  referenceExpressions65816,
 } from "./architectures/split-operands.js";
 import { SuperFxDecoder } from "./architectures/superfx-decoder.js";
 import { superFxSpecifications } from "./architectures/superfx-spec.js";
@@ -86,6 +87,10 @@ export interface SnesTargetOptions extends Record<string, unknown> {
   readonly checksumEnabled: boolean;
   /** When true, Super FX auto-MOVE short RAM uses Asar's raw byte, not `addr >> 1`. */
   readonly asarSuperFxMoveShortAddress: boolean;
+  /** Optional diagnostic sink for unpublished layout measurement. Without it, a bank crossing throws.
+   * The caller must reject or reassemble the measured image before publishing; PC wrap rules are unchanged.
+   */
+  readonly onBankCrossing?: (address: number, width: number) => void;
 }
 
 /**
@@ -226,6 +231,10 @@ const targetOptions = (configured: unknown): SnesTargetOptions => {
     checksumMode,
     checksumEnabled: value.checksumEnabled === undefined ? true : value.checksumEnabled === true,
     asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true,
+    onBankCrossing:
+      typeof value.onBankCrossing === "function"
+        ? (value.onBankCrossing as SnesTargetOptions["onBankCrossing"])
+        : undefined,
   };
 };
 
@@ -246,6 +255,7 @@ const createInitialState = (context: {
     checksumEnabled: options.checksumEnabled,
     checksumMode: options.checksumMode,
     bankCrossMode: "full",
+    onBankCrossing: options.onBankCrossing,
     readFunctionsEnabled: false,
     optimizeDirectPage: false,
     asarSuperFxMoveShortAddress: options.asarSuperFxMoveShortAddress,
@@ -301,6 +311,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
       displayName: "WDC 65C816",
       unknownInstructionBehavior: "throw",
       splitOperands: splitSingleOperand,
+      referenceExpressions: referenceExpressions65816,
       classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
       createEncoder: (factory) =>
         new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
@@ -375,6 +386,10 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
             // so $7Fxxxx and $FFxxxx are the same bank for this check.
             const bankMask = targetState.bankCrossMode === "half" ? 0x7fff8000 : 0x7fff0000;
             if (((start ^ end) & bankMask) !== 0) {
+              if (targetState.onBankCrossing) {
+                targetState.onBankCrossing(start, width);
+                return;
+              }
               const errorAddress = (start + width) & 0xffffff;
               throw new Error(
                 `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`,

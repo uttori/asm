@@ -19,7 +19,6 @@ import {
   RUNTIME_INSTRUCTION_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
   RomImage,
-  applyRangeClassificationEdit,
   buildInstructionAnalysisAnnotations,
   buildRomCoverageMap,
   commitPreparedAnalysisProjectTransaction,
@@ -28,7 +27,6 @@ import {
   loadAnalysisProjectSnapshot,
   mergeRuntimeEvidence,
   prepareAnalysisProjectTransaction,
-  revertRangeClassificationEdit,
   sourceExportSha256,
   publishAnalysisProject,
   type AnalysisProject,
@@ -72,7 +70,6 @@ const OPERATION_IDS = [
   "instruction-annotation-projection",
   "transaction-prepare",
   "transaction-commit",
-  "edit-undo",
   "source-export",
   "trace-ingestion",
   "dap-event-flow",
@@ -413,18 +410,35 @@ const writeAndLoad = (directory: string, project: AnalysisProject): LoadedAnalys
   return loadAnalysisProject(directory);
 };
 
-const editLoadedProject = (loaded: LoadedAnalysisProject) =>
-  applyRangeClassificationEdit(loaded, {
-    annotationId: "benchmark.manual.range",
-    evidenceId: "benchmark.manual.evidence",
-    addressSpace: SNES_FILE_ADDRESS_SPACE,
-    start: loaded.manifest.rom.contentSize - 1,
-    end: loaded.manifest.rom.contentSize,
-    classification: "data8",
-    architecture: "snes.65816",
-    sourceId: "benchmark",
-    detail: "Reversible benchmark edit.",
-  });
+/** Supply a metadata delta to measure SQLite transactions without an authoring/undo layer. */
+const editLoadedProject = (loaded: LoadedAnalysisProject): AnalysisProject => ({
+  manifest: loaded.manifest,
+  shards: {
+    ...loaded.shards,
+    annotations: [
+      ...loaded.shards.annotations,
+      {
+        id: "benchmark.manual.range",
+        addressSpace: SNES_FILE_ADDRESS_SPACE,
+        start: loaded.manifest.rom.contentSize - 1,
+        end: loaded.manifest.rom.contentSize,
+        classification: "data8",
+        architecture: "snes.65816",
+        evidence: ["benchmark.manual.evidence"],
+      },
+    ],
+    evidence: [
+      ...loaded.shards.evidence,
+      {
+        id: "benchmark.manual.evidence",
+        source: "manual",
+        sourceId: "benchmark",
+        confidence: "certain",
+        detail: "Metadata transaction benchmark.",
+      },
+    ],
+  },
+});
 
 const traceArtifact = (
   fixture: Fixture,
@@ -687,7 +701,7 @@ const prepareOperation = (
     publishAnalysisProject(projectDirectory, project);
     const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
     const edited = editLoadedProject(snapshot);
-    const prepared = prepareAnalysisProjectTransaction(projectDirectory, edited.project);
+    const prepared = prepareAnalysisProjectTransaction(projectDirectory, edited);
     return () => {
       const committed = commitPreparedAnalysisProjectTransaction(
         projectDirectory,
@@ -701,23 +715,10 @@ const prepareOperation = (
     };
   }
   const loaded = writeAndLoad(projectDirectory, project);
-  if (operation === "edit-undo") {
-    const edited = editLoadedProject(loaded);
-    return () => {
-      const reverted = revertRangeClassificationEdit(edited.project, edited.inverse);
-      if (countRecords(reverted.shards) !== countRecords(loaded.shards)) {
-        throw new Error("Edit undo did not restore the original record count.");
-      }
-      return {
-        retained: reverted,
-        observation: { projectRecords: countRecords(reverted.shards), restored: true },
-      };
-    };
-  }
   if (operation === "transaction-prepare") {
     const edited = editLoadedProject(loaded);
     return () => {
-      const prepared = prepareAnalysisProjectTransaction(projectDirectory, edited.project);
+      const prepared = prepareAnalysisProjectTransaction(projectDirectory, edited);
       return {
         retained: prepared,
         observation: {
@@ -731,6 +732,11 @@ const prepareOperation = (
     return () => {
       const exported = exportSnes65816Source(loaded, rom, path.join(temporary, "source"), {
         sourceProjectSha256: sourceExportSha256(manifestBytes),
+        emitFile: (file) => {
+          const target = path.join(temporary, "source", file.path);
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          fs.writeFileSync(target, file.bytes);
+        },
       });
       if (exported.spans.reduce((total, span) => total + span.end - span.start, 0) < rom.length) {
         throw new Error("Source export did not cover the complete ROM.");

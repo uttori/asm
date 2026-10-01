@@ -1,4 +1,7 @@
+import fs from "node:fs";
 import { registerHooks } from "node:module";
+import os from "node:os";
+import path from "node:path";
 
 import { test } from "../../../../tests/ava-helper.js";
 
@@ -81,8 +84,11 @@ registerHooks({
   },
 });
 
-const { AnalysisCoverageProvider, findAnalysisProjectDirectories } =
-  await import("../../src/analysis/coverage-tree.js");
+const {
+  AnalysisCoverageProvider,
+  findAnalysisProjectDirectories,
+  initializeAnalysisProjectDiscovery,
+} = await import("../../src/analysis/coverage-tree.js");
 
 const SHA = "ab".repeat(32);
 const manifest = {
@@ -142,6 +148,36 @@ test.serial("findAnalysisProjectDirectories uses configured paths and discovery"
   ];
   t.deepEqual(await findAnalysisProjectDirectories(), ["/ws/alpha", "/ws/game"]);
 });
+
+test.serial(
+  "selected source binding wins over copied analysis settings and follows target changes",
+  async (t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-evidence-discovery-"));
+    let selected: string | undefined = root;
+    const discovery = initializeAnalysisProjectDiscovery(() => selected);
+    t.teardown(() => {
+      discovery.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+    fs.mkdirSync(path.join(root, ".uttori-local"));
+    const binding = path.join(root, ".uttori-local/project.json");
+    fs.writeFileSync(
+      binding,
+      JSON.stringify({
+        format: "uttori-source-local",
+        version: 1,
+        rom: "/private/game.sfc",
+        evidence: "/shared/evidence",
+      }),
+    );
+    host.analysisProject = "/copied/absent/database";
+    t.deepEqual(await findAnalysisProjectDirectories(), ["/shared/evidence"]);
+    fs.unlinkSync(binding);
+    await t.throwsAsync(findAnalysisProjectDirectories());
+    selected = undefined;
+    t.deepEqual(await findAnalysisProjectDirectories(), [host.analysisProject]);
+  },
+);
 
 test.serial(
   "AnalysisCoverageProvider loads roots, errors, summaries and paged segments",

@@ -47,8 +47,11 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
     if (row.kind === "cfg-node") {
       const node = decode<AnalysisControlFlowNodeRecord>(row.payload);
       const path = node.evidencePath.length ? node.evidencePath : [node.id];
-      let owner: string | undefined;
+      let owner = node.functionEntry;
       for (let i = path.length - 1; i >= 0; i--) {
+        if (owner) {
+          break;
+        }
         if (entries.has(path[i])) {
           owner = path[i];
           break;

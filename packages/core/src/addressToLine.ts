@@ -42,6 +42,8 @@ export interface InstructionSourceInfo {
   readonly architecture: string;
   readonly addressSpace: string;
   readonly address: number;
+  /** Actual emitted bytes, including bank wrapping. Absent in older retained debug maps. */
+  readonly size?: number;
   readonly outputOffset?: number;
   readonly operands: readonly ResolvedInstructionOperand[];
 }
@@ -57,6 +59,20 @@ export interface AssetEmissionInfo {
   readonly transforms: readonly string[];
   readonly address: number;
   readonly outputOffset?: number;
+  /** Exact half-open input slice for raw incbin; encoded assets use format-specific consumption. */
+  readonly inputStart?: number;
+  readonly inputEnd?: number;
+}
+
+/** One encoded scalar of a typed record; line identifies the containing initializer's opening line. */
+export interface StructFieldEmissionInfo {
+  readonly fileIdx: number;
+  readonly line: number;
+  /** Fully qualified record/field, including the element index for array fields. */
+  readonly reference: string;
+  readonly expression: string;
+  readonly size: number;
+  readonly outputOffset: number;
 }
 
 /** Portable representation used by debug-map writers and readers. */
@@ -100,6 +116,8 @@ export class AddressToLineMapping {
   instructions: InstructionSourceInfo[] = [];
   /** Successful final-pass asset emissions; binary files have no source lines. */
   assets: AssetEmissionInfo[] = [];
+  /** Field attribution supplements row-level ranges without inventing overlapping source writes. */
+  structFields: StructFieldEmissionInfo[] = [];
 
   /** Clears all stored mappings and file information. */
   reset(): void {
@@ -109,6 +127,7 @@ export class AddressToLineMapping {
     this.ranges = [];
     this.instructions = [];
     this.assets = [];
+    this.structFields = [];
   }
 
   /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.

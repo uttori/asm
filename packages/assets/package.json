@@ -96,6 +96,11 @@
       "uttori-source": "./src/secret-of-mana/som-sprite-palettes.ts",
       "types": "./dist/secret-of-mana/som-sprite-palettes.d.ts",
       "import": "./dist/secret-of-mana/som-sprite-palettes.js"
+    },
+    "./secret-of-mana/som-palette-edit": {
+      "uttori-source": "./src/secret-of-mana/som-palette-edit.ts",
+      "types": "./dist/secret-of-mana/som-palette-edit.d.ts",
+      "import": "./dist/secret-of-mana/som-palette-edit.js"
     }
   },
   "publishConfig": {

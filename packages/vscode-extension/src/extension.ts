@@ -34,13 +34,19 @@ import {
   AnalysisAnnotationController,
   TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
 } from "./analysis/annotation-controller.js";
-import { AnalysisCoverageProvider } from "./analysis/coverage-tree.js";
+import {
+  AnalysisCoverageProvider,
+  initializeAnalysisProjectDiscovery,
+} from "./analysis/coverage-tree.js";
+import { AnalysisEvidenceInspector } from "./analysis/evidence-inspector.js";
 import { parseAnalysisNavigationTarget } from "./analysis/navigation-target.js";
 import { navigateToAnalysisLocation } from "./analysis/navigation.js";
-import { AnalysisProjectEditor } from "./analysis/project-editor.js";
 import { AnalysisSourcesProvider } from "./analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "./analysis/worker-client.js";
 import { AssetPreviewController } from "./asset-preview-controller.js";
+import { BinaryDrafts } from "./assets/binary-drafts.js";
+import { registerPaletteEditor } from "./assets/palette-editor.js";
+import { registerPngEditor } from "./assets/png-editor.js";
 import {
   configureEmulatorRuntime,
   configuredEmulatorRuntime,
@@ -48,14 +54,9 @@ import {
   registerDebugging,
   type BuiltDebugArtifacts,
 } from "./debug/session.js";
-import { registerDisassemblyMaintenance } from "./disassembly/maintenance.js";
-import { DisassemblyMetadataController } from "./disassembly/metadata-controller.js";
-import { ModificationController } from "./disassembly/modification-controller.js";
-import { DisassemblyOwnershipController } from "./disassembly/ownership-controller.js";
-import { DisassemblyPanelProvider } from "./disassembly/panel.js";
 import { ProjectOutlineProvider } from "./project/outline-tree.js";
 import { ProjectPanelProvider } from "./project/panel.js";
-import { registerProjectWizards } from "./project/wizard.js";
+import { SourceController } from "./source/controller.js";
 
 /**
  * The result of a build request returned by the language server.
@@ -98,8 +99,8 @@ let outputChannel: LogOutputChannel | undefined;
  */
 let extensionContext: ExtensionContext | undefined;
 
-/** Whether build-on-save watch mode is currently enabled. */
-let modificationController: ModificationController | undefined;
+/** One source target supplies Build, Run, Debug and Watch artifact pairs. */
+let sourceController: SourceController | undefined;
 /** Watch epochs discard obsolete results after source saves or target changes. */
 let watchEpoch = 0;
 let watchBuildRunning = false;
@@ -164,7 +165,12 @@ function serverInitializationOptions(): Record<string, unknown> {
  */
 export function activate(context: ExtensionContext): void {
   extensionContext = context;
+  registerPaletteEditor(context);
+  const binaryDrafts = new BinaryDrafts();
+  context.subscriptions.push(binaryDrafts);
+  registerPngEditor(context, binaryDrafts);
   const worker = initializeAnalysisWorker(context.extensionPath, {
+    sourceRoot: () => sourceController?.root,
     maxMemoryMiB: (directory) =>
       workspace
         .getConfiguration("asm", Uri.file(directory))
@@ -195,6 +201,11 @@ export function activate(context: ExtensionContext): void {
   outputChannel = window.createOutputChannel("Uttori Assembly Language Server", {
     log: true,
   });
+  sourceController = new SourceController(context, outputChannel, binaryDrafts);
+  context.subscriptions.push(
+    sourceController,
+    initializeAnalysisProjectDiscovery(() => sourceController?.root),
+  );
   const clientOptions: LanguageClientOptions = {
     documentSelector: ASSEMBLY_LANGUAGE_IDS.map((language) => ({
       scheme: "file" as const,
@@ -257,12 +268,24 @@ export function activate(context: ExtensionContext): void {
     () => client,
     () => initConfig(),
   );
-  const disassemblyPanelProvider = new DisassemblyPanelProvider(context.extensionUri);
   const outlineProvider = new ProjectOutlineProvider(() => client);
   const coverageProvider = new AnalysisCoverageProvider();
   const sourcesProvider = new AnalysisSourcesProvider();
-  const analysisAnnotationController = new AnalysisAnnotationController();
+  const analysisAnnotationController = new AnalysisAnnotationController(
+    undefined,
+    context.asAbsolutePath("out/editor-information-worker.cjs"),
+  );
   editorInformationController = analysisAnnotationController;
+  context.subscriptions.push(
+    sourceController.onDidBuild(({ root, build }) =>
+      analysisAnnotationController.buildCompleted(build.debugMapFile, root),
+    ),
+    sourceController.onDidChangeSavedInput(scheduleWatchBuild),
+    sourceController.onDidSelectProject(() => {
+      stopWatch();
+      analysisAnnotationController.configurationChanged();
+    }),
+  );
   // Compare only non-display configuration so changing a template cannot trigger database refreshes.
   const analysisConfigurationIdentity = (): string =>
     JSON.stringify(
@@ -293,55 +316,23 @@ export function activate(context: ExtensionContext): void {
       analysisAnnotationController.invalidate();
     }, 150);
   };
-  const analysisProjectEditor = new AnalysisProjectEditor(
-    refreshAnalysisViews,
-    context.extensionUri,
-  );
-  context.subscriptions.push(analysisProjectEditor);
-  const metadataEditor = new DisassemblyMetadataController(context.extensionUri);
-  context.subscriptions.push(metadataEditor);
   context.subscriptions.push(
-    new DisassemblyOwnershipController((directory) =>
-      metadataEditor.open({ projectDirectory: directory }),
-    ),
+    sourceController.onDidChangeResearch(refreshAnalysisViews),
+    sourceController.onDidSelectProject(refreshAnalysisViews),
   );
+  const evidenceInspector = new AnalysisEvidenceInspector();
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
 
   const analysisOutputChannel = window.createOutputChannel("Uttori Analysis", { log: true });
-  modificationController = new ModificationController(
-    context,
-    outputChannel,
-    () => {
-      stopWatch();
-      editorInformationController?.configurationChanged();
-    },
-    (result) => {
-      if (result.debugMapPath) {
-        // Restrict editor facts to this build target; do not merge baseline execution counts into modified code.
-        editorInformationController?.configurationChanged();
-        editorInformationController?.buildCompleted(
-          result.debugMapPath,
-          path.dirname(result.outputPath!),
-        );
-      }
-    },
-    scheduleWatchBuild,
-  );
-  context.subscriptions.push(modificationController);
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath),
-    ...registerProjectWizards(context, outputChannel),
-    ...registerDisassemblyMaintenance(context, refreshAnalysisViews, analysisOutputChannel),
     analysisOutputChannel,
     outputChannel,
     statusItem,
     analysisAnnotationController,
     sourcesProvider,
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
-      webviewOptions: { retainContextWhenHidden: true },
-    }),
-    window.registerWebviewViewProvider(DisassemblyPanelProvider.viewId, disassemblyPanelProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
     window.createTreeView(ProjectOutlineProvider.viewId, {
@@ -422,51 +413,23 @@ export function activate(context: ExtensionContext): void {
         void navigateToAnalysisLocation(target);
       }
     }),
-    commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) => {
-      const target = coverageProvider.editTarget(element);
-      return metadataEditor.open({
-        projectDirectory: target?.projectDirectory,
-        shard: "annotations",
-        range: target ? { start: target.start, end: target.end } : undefined,
-        selectedId: target?.annotationIds[0],
-      });
-    }),
-    commands.registerCommand("asm.coverage.setStateEntryPoint", (element?: unknown) => {
-      const target = coverageProvider.editTarget(element);
-      return metadataEditor.open({
-        projectDirectory: target?.projectDirectory,
-        shard: "annotations",
-        range: target ? { start: target.start, end: target.end } : undefined,
-        selectedId: target?.annotationIds[0],
-      });
-    }),
-    commands.registerCommand("asm.coverage.resolveTarget", (element?: unknown) => {
-      const target = coverageProvider.editTarget(element);
-      return metadataEditor.open({
-        projectDirectory: target?.projectDirectory,
-        shard: "analysis",
-        range: target ? { start: target.start, end: target.end } : undefined,
-        selectedId: undefined,
-      });
-    }),
-    commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) => {
-      const target = coverageProvider.editTarget(element);
-      return metadataEditor.open({
-        projectDirectory: target?.projectDirectory,
-        shard: "labels",
-        range: target ? { start: target.start, end: target.end } : undefined,
-        selectedId: undefined,
-      });
-    }),
-    commands.registerCommand("asm.disassembly.editAnnotation", () => metadataEditor.open()),
-    commands.registerCommand("asm.coverage.explainEvidence", (element?: unknown) =>
-      analysisProjectEditor.explainEvidence(coverageProvider.editTarget(element)),
+    commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) =>
+      sourceController?.editEvidence("classification", coverageProvider.editTarget(element)),
     ),
-    commands.registerCommand("asm.coverage.undo", () => metadataEditor.open({ history: true })),
-    commands.registerCommand("asm.coverage.redo", () => metadataEditor.open({ history: true })),
+    commands.registerCommand("asm.coverage.setStateEntryPoint", (element?: unknown) =>
+      sourceController?.editEvidence("state", coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.resolveTarget", (element?: unknown) =>
+      sourceController?.editEvidence("targets", coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) =>
+      sourceController?.editEvidence("symbols", coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.explainEvidence", (element?: unknown) =>
+      evidenceInspector.explainEvidence(coverageProvider.editTarget(element)),
+    ),
     workspace.onDidGrantWorkspaceTrust(() => {
       void panelProvider.refresh();
-      disassemblyPanelProvider.refresh();
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions(),
@@ -512,6 +475,36 @@ export function activate(context: ExtensionContext): void {
       void client.setTrace(Trace.Verbose);
     }
     context.subscriptions.push(
+      client.onRequest("asm/researchBuffers", ({ root }: { root: string }) => {
+        // Include unsaved/new JSON documents in the same F2 transaction while leaving their language
+        // features with the JSON extension. The server filters these against the project's research roots.
+        const buffers = workspace.textDocuments
+          .filter((document) => {
+            const relative = path.relative(root, document.uri.fsPath);
+            return (
+              document.uri.scheme === "file" &&
+              document.uri.fsPath.endsWith(".json") &&
+              relative !== ".." &&
+              !relative.startsWith(`..${path.sep}`) &&
+              !path.isAbsolute(relative)
+            );
+          })
+          .map((document) => ({
+            uri: document.uri.toString(),
+            version: document.version,
+            text: document.getText(),
+          }));
+        if (
+          buffers.length > 512 ||
+          buffers.reduce((total, buffer) => total + Buffer.byteLength(buffer.text), 0) >
+            32 * 1024 * 1024
+        ) {
+          throw new Error(
+            "Open research buffers exceed the rename budget. Save or close unrelated JSON documents.",
+          );
+        }
+        return buffers;
+      }),
       client.onNotification("asm/indexUpdated", () => {
         void panelProvider.refresh();
         outlineProvider.refresh();
@@ -720,8 +713,8 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.joinPath
  */
 function resolveBuildEntryUri(): string | undefined {
-  if (modificationController?.target === "modified" && modificationController.configuredManifest) {
-    return Uri.file(modificationController.configuredManifest).toString();
+  if (sourceController?.buildUri) {
+    return sourceController.buildUri;
   }
   const activeUri = window.activeTextEditor?.document.uri;
   const entryPoints = workspace.getConfiguration("asm", activeUri).get<string[]>("entryPoints", []);
@@ -752,10 +745,12 @@ function resolveBuildEntryUri(): string | undefined {
  * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument
  */
 function onDocumentSaved(document: TextDocument): void {
-  const relevant =
-    modificationController?.target === "modified"
-      ? modificationController.watches(document.uri.fsPath)
-      : isAssemblyDocument(document);
+  // The source controller observes all saved inputs, including custom-editor
+  // assets and external tools. A second text-only path would race those builds.
+  if (sourceController?.root) {
+    return;
+  }
+  const relevant = isAssemblyDocument(document);
   if (relevant) {
     scheduleWatchBuild();
   }
@@ -918,8 +913,28 @@ async function runBuild(
 ): Promise<BuildResult | undefined> {
   outputChannel?.show(true);
   outputChannel?.info(transient ? "Watch rebuild requested" : "Build Binary requested");
-  if (modificationController && modificationController.target !== "configured") {
-    return modificationController.build();
+  if (sourceController?.root) {
+    try {
+      const built = await sourceController.build();
+      return {
+        ok: true,
+        outputPath: built.outputFile,
+        debugMapPath: built.debugMapFile,
+        outputSha256: built.verification.outputSha256,
+        debugMapFingerprint: built.debugMapFingerprint,
+        outputChanged: built.outputChanged,
+        debugMapChanged: built.debugMapChanged,
+        bytes: built.outputSize,
+        outputSize: built.outputSize,
+        target: "snes.sfc",
+        architecture: "snes.65816",
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      outputChannel?.error(message);
+      void window.showErrorMessage(`Source build: ${message}`);
+      return { ok: false, message };
+    }
   }
   if (!client) {
     const message = "Language server is not running.";

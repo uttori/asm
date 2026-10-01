@@ -5,15 +5,11 @@ import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-co
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   SOURCE_EXPORT_FORMAT,
-  SOURCE_EXPORT_MANIFEST,
   SOURCE_EXPORT_SCHEMA_VERSION,
-  SOURCE_OWNERSHIP_FILE,
   HalfOpenIntervalIndex,
-  loadSourceExportManifest,
   sourceExportSha256,
   projectSourceLabelNames,
   validateSourceLabelName,
-  validateSourceExportFiles,
   type InstructionExportRecord,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
@@ -23,7 +19,6 @@ import {
   type SourceExportManifest,
   type SourceExportSpan,
   type SourceExportSpanRole,
-  type SourceOwner,
 } from "@uttori/asm-disassembler";
 
 import {
@@ -37,7 +32,6 @@ import {
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
 } from "./address-identities.js";
-import { lostCodeRanges } from "./code-preservation.js";
 import {
   identifySnesHardwareRegister,
   renderSnesHardwareDefines,
@@ -60,7 +54,6 @@ import {
   omitAssemblyResearchReferences,
   wrapAssemblyComments,
 } from "./source-layout.js";
-import { SourceOwnershipBuilder } from "./source-ownership.js";
 import {
   applySnesStructInstructionOperand,
   indexSnesStructInstructionUses,
@@ -79,22 +72,23 @@ import {
   type SnesStructRomField,
   type SnesStructRomRecord,
 } from "./struct-map.js";
+import {
+  indexSnesTypedData,
+  snesTypedDataAt,
+  renderSnesTypedData,
+  type SnesTypedData,
+} from "./typed-data.js";
 
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
 export interface SnesSourceExportOptions {
+  /** Render immutable output to an owned sink. In this form directory supplies inputs only; no files are published or removed. */
+  readonly emitFile: (file: { readonly path: string; readonly bytes: Uint8Array }) => void;
   /** Preferred dataStruct/row width, including indentation. Integer >= 40; defaults to 100. */
   readonly structLineWidth?: number;
   /** Wrap generated assembly comments at word boundaries; defaults to true. */
   readonly wrapComments?: boolean;
   /** Preferred comment columns including indentation and semicolon, integer >= 20; default 100. */
   readonly commentLineWidth?: number;
-  /**
-   * Overwrite an existing export directory. Without this, a populated directory
-   * that is not a previous export, or a previous export whose files drifted, is rejected.
-   */
-  readonly force?: boolean;
-  /** Explicitly permit replacing previously emitted instructions with non-code spans. */
-  readonly allowCodeRegression?: boolean;
   /** SHA-256 of the analysis project that produced this export (provenance). */
   readonly sourceProjectSha256: string;
   /** Complete variants grouped in ascending explicit file-offset order. Consumed inside the caller's SQL read snapshot. */
@@ -345,8 +339,13 @@ interface StructuredRomLayout {
 }
 
 interface NamedLine {
-  /** Native owner retained through planning so source identity never depends on a decoded instruction. */
-  readonly owner?: SourceOwner;
+  /** Original research identity survives spelling changes and fresh decode variants. */
+  readonly identity?: {
+    readonly id: string;
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly evidence: readonly string[];
+  };
   /** Derived CFG entry marker; a surviving captured instruction can disprove its byte boundary. */
   readonly inferredFunction?: boolean;
   readonly name?: string;
@@ -848,31 +847,6 @@ const metadataLines = (
   names: ReadonlyMap<string, string>,
 ): ReadonlyMap<number, readonly NamedLine[]> => {
   const values = new Map<number, NamedLine[]>();
-  const owner = (
-    kind: SourceOwner["kind"],
-    record: { id: string; addressSpace: string; address: number; evidence: readonly string[] },
-    symbol?: string,
-  ): SourceOwner => {
-    const offset = toFileOffset(record.addressSpace, record.address, mapper, romSize);
-    return {
-      kind,
-      id: record.id,
-      addressSpace: record.addressSpace,
-      address: record.address,
-      evidence: record.evidence,
-      symbol,
-      ...(offset === undefined
-        ? {}
-        : {
-            outputStart: offset,
-            outputEnd: offset + 1,
-            emittedAddress: snesRomAddressSpace.fromOutputOffset(
-              offset,
-              createSnesAddressContext(mapper),
-            ),
-          }),
-    };
-  };
   const append = (offset: number | undefined, line: NamedLine): void => {
     if (offset === undefined) {
       return;
@@ -882,7 +856,7 @@ const metadataLines = (
   for (const label of [...shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
     append(toFileOffset(label.addressSpace, label.address, mapper, romSize), {
       name: names.get(label.id),
-      owner: { ...owner("label", label, names.get(label.id)), name: label.name },
+      identity: label,
       ...(label.comment ? { comment: label.comment } : {}),
       ...(label.inlineComment ? { inlineComment: label.inlineComment } : {}),
     });
@@ -903,28 +877,18 @@ const metadataLines = (
     append(offset, {
       name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
       inferredFunction: true,
-      owner: owner("function", fn, `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`),
+      identity: fn,
     });
   }
   for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
     append(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
       comment: `Region: ${region.name}${region.context ? ` (${region.context})` : ""}`,
-      owner: {
-        kind: "region",
-        id: region.id,
-        name: region.name,
-        addressSpace: region.addressSpace,
-        address: region.start,
-      },
     });
   }
   for (const comment of [...shards.comments].sort((a, b) => a.id.localeCompare(b.id))) {
-    append(toFileOffset(comment.addressSpace, comment.address, mapper, romSize), {
-      owner: owner("comment", comment),
-      ...(comment.placement === "inline-instruction"
+    append(toFileOffset(comment.addressSpace, comment.address, mapper, romSize), (comment.placement === "inline-instruction"
         ? { instructionComment: comment.text }
-        : { comment: comment.text }),
-    });
+        : { comment: comment.text }));
   }
   return values;
 };
@@ -934,14 +898,12 @@ const metadataLines = (
  * @param {readonly NamedLine[] | undefined} lines Native metadata at this exact address.
  * @param {boolean} [hasInstruction] Whether inline instruction comments will be emitted separately.
  * @param {string} [bodyIndent] Empty for named data; two spaces for instruction bodies.
- * @param {SourceOwnershipBuilder} ownership Export-time mapper, when persistent source ownership should be recorded.
  * @returns {string[]} Source lines preserving metadata order and label ownership.
  */
 const renderedMetadata = (
   lines: readonly NamedLine[] | undefined,
   hasInstruction = false,
   bodyIndent = "  ",
-  ownership?: SourceOwnershipBuilder,
 ): string[] => {
   if (!lines) {
     return [];
@@ -949,7 +911,6 @@ const renderedMetadata = (
   const output: string[] = [];
   const lastLabelIndex = lines.findLastIndex((line) => line.name);
   for (const [index, line] of lines.entries()) {
-    const start = output.length;
     // Label descriptions stay above their label. Comments after the last label or at an
     // unlabeled instruction belong to its body and must not terminate indentation folding.
     const indent = line.name || index < lastLabelIndex ? "" : bodyIndent;
@@ -968,12 +929,6 @@ const renderedMetadata = (
       output.push(
         `${indent}; [Instruction comment. Instruction unavailable] ${line.instructionComment}`,
       );
-    }
-    if (ownership && line.owner && output.length > start) {
-      const fragment = output.splice(start);
-      for (const marked of ownership.mark(line.owner, fragment)) {
-        output.push(marked);
-      }
     }
   }
   return output;
@@ -1339,6 +1294,7 @@ const planSpans = (
   annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
   structure: StructuredRomLayout | undefined,
   structFields: readonly SnesStructRomField[],
+  typedData?: HalfOpenIntervalIndex<SnesTypedData>,
 ): readonly PlannedSpan[] => {
   const bankSize =
     mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
@@ -1390,6 +1346,18 @@ const planSpans = (
     // Byte-wise imported data classifications need not fragment an explicitly typed field.
     // Labels, comments, and region boundaries still receive their own cuts above/below.
     for (const offset of [entry.start, entry.end]) {
+      // Generic byte classifications must not fragment an explicitly wider data element. Native
+      // labels/comments still cut it and render the affected partial elements as literal bytes.
+      const typed = typedData && snesTypedDataAt(typedData, offset, offset + 1);
+      if (
+        entry.classification === "data8" &&
+        typed &&
+        typed.width > 1 &&
+        offset > typed.start &&
+        offset < typed.end
+      ) {
+        continue;
+      }
       // Stale coverage can split an opcode from its operands. Once an instruction is accepted,
       // those negative-coverage boundaries cannot split it back into raw source spans.
       if (
@@ -1492,49 +1460,6 @@ const groupStructRecords = (
   return grouped;
 };
 
-const preflight = (directory: string, force: boolean): SourceExportManifest | undefined => {
-  if (!fs.existsSync(directory)) {
-    return undefined;
-  }
-  const manifestFile = path.join(directory, SOURCE_EXPORT_MANIFEST);
-  if (!fs.existsSync(manifestFile)) {
-    const unexpected = fs
-      .readdirSync(directory)
-      .filter(
-        (entry) =>
-          entry !== SNES_RAM_MAP_SOURCE &&
-          entry !== SNES_STRUCT_MAP_SOURCE &&
-          entry !== "asset-includes.json" &&
-          entry !== "uttori-asm.config.json",
-      );
-    if (!force && unexpected.length > 0) {
-      throw new Error(
-        `Export directory '${directory}' is not empty. Pass --force to write into it.`,
-      );
-    }
-    return undefined;
-  }
-  const manifest = loadSourceExportManifest(directory);
-  if (!force) {
-    validateSourceExportFiles(directory, manifest);
-  }
-  return manifest;
-};
-
-const writeFile = (
-  root: string,
-  relative: string,
-  bytes: string | Uint8Array,
-  kind: SourceExportFile["kind"],
-  files: SourceExportFile[],
-): void => {
-  const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
-  const destination = path.join(root, relative);
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.writeFileSync(destination, value);
-  files.push({ path: relative, kind, size: value.length, sha256: sourceExportSha256(value) });
-};
-
 const regionIdsFor = (
   start: number,
   end: number,
@@ -1557,7 +1482,7 @@ const regionIdsFor = (
     .sort();
 
 /**
- * Writes a deterministic 65816 source tree that can be reassembled with this plugin.
+ * Renders a deterministic 65816 source tree that can be reassembled with this plugin.
  * Confident CFG nodes become width-qualified instructions. Unknown bytes remain
  * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
  * bound ROM struct fields become native data source. An optional 512-byte copier
@@ -1565,9 +1490,9 @@ const regionIdsFor = (
  * Checksums are preserved, not recomputed.
  * @param {{ readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards }} project Loaded analysis project.
  * @param {RomImage} rom Immutable ROM used for asset bytes and copier-header extraction.
- * @param {string} directory Destination directory (`main.asm`, `banks/`, `assets/`, manifest).
- * @param {SnesSourceExportOptions} options Provenance hash and optional `--force`.
- * @returns {SourceExportManifest} Written file list, spans, and rebuild configuration.
+ * @param {string} directory Immutable input snapshot containing research recipes and build configuration.
+ * @param {SnesSourceExportOptions} options Provenance hash and required output sink. The renderer never publishes files.
+ * @returns {SourceExportManifest} Rendered file inventory, spans, and rebuild configuration.
  */
 export const exportSnes65816Source = (
   project: { readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards },
@@ -1575,6 +1500,17 @@ export const exportSnes65816Source = (
   directory: string,
   options: SnesSourceExportOptions,
 ): SourceExportManifest => {
+  const emitFile = (
+    _root: string,
+    relative: string,
+    bytes: string | Uint8Array,
+    kind: SourceExportFile["kind"],
+    files: SourceExportFile[],
+  ): void => {
+    const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
+    options.emitFile({ path: relative, bytes: value });
+    files.push({ path: relative, kind, size: value.length, sha256: sourceExportSha256(value) });
+  };
   const commentLineWidth = options.commentLineWidth ?? 100;
   if (!Number.isSafeInteger(commentLineWidth) || commentLineWidth < 20) {
     throw new Error("commentLineWidth must be an integer of at least 20 columns.");
@@ -1595,7 +1531,11 @@ export const exportSnes65816Source = (
   const mapper = project.manifest.mapping.mapper as SnesMapper;
   const context = createSnesAddressContext(mapper);
   const structure = structuredRomLayout(rom, mapper);
-  const previousManifest = preflight(directory, options.force ?? false);
+  // Pure rendering reads an explicit input snapshot. New-project initialization owns creation of
+  // the empty RAM map; a renderer must not mutate a user's inputs merely by inspecting them.
+  if (!fs.existsSync(path.join(directory, SNES_RAM_MAP_SOURCE))) {
+    throw new Error("Pure source rendering requires an explicit ram-map.json input.");
+  }
   const assetIncludes = loadAssetIncludeMap(directory);
   const ramMap = loadSnesRamMap(directory);
   const ramVariables = indexSnesRamMap(ramMap.variables);
@@ -1634,6 +1574,7 @@ export const exportSnes65816Source = (
       ({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE,
     ),
   );
+  const typedData = indexSnesTypedData(project.shards.annotations, project.shards.evidence);
   const instructions = planInstructions(
     rom,
     mapper,
@@ -1667,6 +1608,7 @@ export const exportSnes65816Source = (
     annotations,
     structure,
     structRomFields,
+    typedData,
   );
   const bankSize =
     mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
@@ -1688,28 +1630,76 @@ export const exportSnes65816Source = (
       emittedLabels.set(span.start, name);
     }
   }
-  if (previousManifest && !options.allowCodeRegression) {
-    const previousCode = previousManifest.spans.filter((span) => span.role === "code");
-    const proposedCode = planned.filter((span) => span.role === "code");
-    const lost = lostCodeRanges(previousCode, proposedCode);
-    if (lost.length > 0) {
-      const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
-      const added = lostCodeRanges(proposedCode, previousCode).reduce(
-        (total, range) => total + range.end - range.start,
-        0,
-      );
-      const net = added - bytes;
-      throw new Error(
-        `Source export would replace ${bytes} previously emitted code byte(s) with non-code spans, ` +
-          `starting at ROM offset ${hex(lost[0].start, 6)}. Generated source was preserved. ` +
-          `The proposal also adds ${added} new code byte(s), for a net change of ${net >= 0 ? "+" : ""}${net} byte(s). ` +
-          "Code absent from a capture is not evidence that it stopped being code. " +
-          "Resolve the analysis gaps or explicitly pass --allow-code-regression after reviewing the change.",
+  const files: SourceExportFile[] = [];
+  {
+    // Fixed original-ROM blocks keep binary identity independent of new code/data boundaries.
+    // Raw includes consume slices; build validation rejects edits to bytes no longer consumed.
+    const blockSize = 0x1000;
+    for (let start = 0; start < rom.length; start += blockSize) {
+      emitFile(
+        directory,
+        `assets/raw/${start.toString(16).padStart(6, "0")}.bin`,
+        rom.read(start, Math.min(blockSize, rom.length - start))!,
+        "asset",
+        files,
       );
     }
+    emitFile(
+      directory,
+      "source-raw.json",
+      canonicalJson({
+        format: "uttori-source-raw",
+        version: 1,
+        romSha256: rom.identity.contentSha256,
+        blockSize,
+      }),
+      "configuration",
+      files,
+    );
+    emitFile(
+      directory,
+      "source-code.json",
+      canonicalJson({
+        format: "uttori-source-code",
+        version: 1,
+        romSha256: rom.identity.contentSha256,
+        ranges: planned
+          .filter((span) => span.role === "code")
+          .map((span) => ({ start: span.start, end: span.end })),
+      }),
+      "configuration",
+      files,
+    );
+    // Stable symbol identity is deliberately smaller than a source ownership map. Editor renames
+    // need the original research key, not line ranges that become stale after ordinary text edits.
+    const symbols = planned.flatMap((span) =>
+      span.structured
+        ? []
+        : (metadata.get(span.start) ?? [])
+            .filter((line) => line.name && line.identity)
+            .map((line) => ({
+              id: line.inferredFunction
+                ? `symbol:${line.identity!.addressSpace}:${line.identity!.address.toString(16)}`
+                : line.identity!.id,
+              name: line.name!,
+              addressSpace: line.identity!.addressSpace,
+              address: line.identity!.address,
+              evidence: line.identity!.evidence ?? [],
+            })),
+    );
+    emitFile(
+      directory,
+      "source-symbols.json",
+      canonicalJson({
+        format: "uttori-source-symbols",
+        version: 1,
+        romSha256: rom.identity.contentSha256,
+        symbols,
+      }),
+      "configuration",
+      files,
+    );
   }
-  const files: SourceExportFile[] = [];
-  const ownership = new SourceOwnershipBuilder();
   const spans: SourceExportSpan[] = [];
   const banks = new Map<number, PlannedSpan[]>();
   for (const span of planned) {
@@ -1734,12 +1724,7 @@ export const exportSnes65816Source = (
       const spanMetadata = metadata.get(span.start);
       const named = span.structured
         ? []
-        : renderedMetadata(
-            spanMetadata,
-            Boolean(span.instruction),
-            span.structRecord ? "" : "  ",
-            ownership,
-          );
+        : renderedMetadata(spanMetadata, Boolean(span.instruction), span.structRecord ? "" : "  ");
       let closedTable = false;
       if (
         table &&
@@ -1771,7 +1756,6 @@ export const exportSnes65816Source = (
           lines.push(line);
         }
       }
-      const bodyStart = lines.length;
       if (span.instruction) {
         // Explicit operand-size suffixes fix the encoding. Emitting ambient M/X directives here
         // would make identical instructions churn whenever the preferred captured state changes.
@@ -1918,102 +1902,41 @@ export const exportSnes65816Source = (
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
         });
       } else {
-        // Filenames show the first and last included bytes. Spans and reads stay half-open.
-        const lastByte = span.end - 1;
-        const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${lastByte.toString(16).padStart(6, "0")}.bin`;
-        const bytes = rom.read(span.start, span.end - span.start)!;
-        writeFile(directory, assetPath, bytes, "asset", files);
-        lines.push(`  incbin "../${assetPath}"`);
-        spans.push({
-          id: `${span.role}:${span.start.toString(16).padStart(6, "0")}`,
-          source: "rom",
-          addressSpace: SNES_FILE_ADDRESS_SPACE,
-          start: span.start,
-          end: span.end,
-          role: span.role,
-          file: assetPath,
-          regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
-        });
-      }
-      const record = span.structRecord ?? span.structField?.record;
-      let kind: SourceOwner["kind"] = "data";
-      if (span.structured) {
-        kind = "hardware";
-      }
-      let id = `rom:${span.start.toString(16)}`;
-      let inputPath: string | undefined;
-      if (span.instruction) {
-        kind = "instruction";
-        // CFG variant IDs encode CPU state and change after captures. The native boundary is the
-        // stable annotation owner, independent of those transient decode variants.
-        id = `instruction:snes.cpu:${span.instruction.nativeAddress.toString(16)}`;
-      } else if (span.assetInclude) {
-        kind = "asset";
-        inputPath = "asset-includes.json";
-      } else if (record) {
-        kind = "binding";
-        id = record.binding.name;
-        inputPath = SNES_STRUCT_MAP_SOURCE;
-      }
-      const fragment = lines.splice(bodyStart);
-      // A field's layout owns its interpretation; the immutable ROM still supplies the value.
-      if (record) {
-        for (let index = fragment.length - 1; index >= 0; index--) {
-          const name = /^\s*(\w+)\s*=/.exec(fragment[index])?.[1];
-          const field = record.binding.structure.fields.find((entry) => entry.name === name);
-          if (!field) {
-            continue;
-          }
-          let end = index + 1;
-          while (end < fragment.length && /^\s+\$/.test(fragment[end])) {
-            end++;
-          }
-          fragment.splice(
-            index,
-            end - index,
-            ...ownership.mark(
-              {
-                kind: "field",
-                id: `${record.binding.structure.id}.${field.name}`,
-                name: field.name,
-                inputPath: SNES_STRUCT_MAP_SOURCE,
-                symbol: `${record.binding.name}[${record.index}].${field.name}`,
-                addressSpace: SNES_CPU_ADDRESS_SPACE,
-                address: address + field.offset,
-                emittedAddress: address + field.offset,
-                outputStart: record.start + field.offset,
-                outputEnd: record.start + field.offset + field.size,
-              },
-              fragment.slice(index, end),
-            ),
+        const typed = typedData && snesTypedDataAt(typedData, span.start, span.end);
+        if (typed) {
+          lines.push(
+            ...renderSnesTypedData(rom.read(span.start, span.end - span.start)!, span.start, typed),
           );
-        }
-      }
-      for (const line of ownership.mark(
-        {
-          kind,
-          id,
-          inputPath,
-          name: record?.binding.name,
-          addressSpace: SNES_CPU_ADDRESS_SPACE,
-          address: span.instruction?.nativeAddress ?? address,
-          emittedAddress: address,
-          outputStart: span.start,
-          outputEnd: span.end,
-        },
-        fragment,
-      )) {
-        lines.push(line);
-      }
-      if (span.instruction) {
-        // Inline comments share the instruction's final line; both owners remain inspectable.
-        for (const metadataLine of spanMetadata ?? []) {
-          if (metadataLine.instructionComment && metadataLine.owner) {
-            const last = lines.splice(bodyStart);
-            for (const line of ownership.mark(metadataLine.owner, last)) {
-              lines.push(line);
-            }
+          spans.push({
+            id: `data:${span.start.toString(16).padStart(6, "0")}`,
+            source: "analysis",
+            addressSpace: SNES_FILE_ADDRESS_SPACE,
+            start: span.start,
+            end: span.end,
+            role: "raw",
+            file: bankPath,
+            regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
+          });
+        } else {
+          const blockSize = 0x1000;
+          const assetPath = `assets/raw/${(Math.floor(span.start / blockSize) * blockSize).toString(16).padStart(6, "0")}.bin`;
+          for (let offset = span.start; offset < span.end;) {
+            const block = Math.floor(offset / blockSize) * blockSize;
+            const end = Math.min(span.end, block + blockSize);
+            const name = `assets/raw/${block.toString(16).padStart(6, "0")}.bin`;
+            lines.push(`  incbin "../${name}":${hex(offset - block, 4)}..${hex(end - block, 4)}`);
+            offset = end;
           }
+          spans.push({
+            id: `${span.role}:${span.start.toString(16).padStart(6, "0")}`,
+            source: "rom",
+            addressSpace: SNES_FILE_ADDRESS_SPACE,
+            start: span.start,
+            end: span.end,
+            role: span.role,
+            file: assetPath,
+            regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
+          });
         }
       }
       nextAddress = address + span.end - span.start;
@@ -2021,18 +1944,12 @@ export const exportSnes65816Source = (
     if (table) {
       lines.push("endDataStructs");
     }
-    writeFile(
-      directory,
-      bankPath,
-      ownership.render(bankPath, formatComments(`${lines.join("\n")}\n`)),
-      "source",
-      files,
-    );
+    emitFile(directory, bankPath, formatComments(`${lines.join("\n")}\n`), "source", files);
   }
 
   if (rom.identity.headerSize === 512) {
     const copier = "assets/copier-header.bin";
-    writeFile(directory, copier, rom.copierHeaderBytes(), "asset", files);
+    emitFile(directory, copier, rom.copierHeaderBytes(), "asset", files);
     spans.push({
       id: "copier-header:000000",
       source: "rom",
@@ -2046,7 +1963,7 @@ export const exportSnes65816Source = (
 
   const main = [
     "; Deterministic native source generated by Uttori ASM.",
-    "; Edit names/comments with Assembly: Edit Disassembly Annotation. See annotation-report.json for unresolved annotations.",
+    "; Edit and commit source normally. Regenerate through the project's Git history.",
     mapperDirective(mapper),
     "arch 65816",
     ".smart off",
@@ -2058,108 +1975,22 @@ export const exportSnes65816Source = (
     ...bankSources.map((source) => `incsrc "${source}"`),
     "",
   ].join("\n");
-  const definitions = new Map<string, SourceOwner>();
   const hardwareSource = formatComments(renderSnesHardwareDefines());
-  for (const match of hardwareSource.matchAll(/^(\w+)\s*=/gm)) {
-    definitions.set(match[1], { kind: "hardware", id: match[1], symbol: match[1], name: match[1] });
-  }
-  for (const variable of ramMap.variables) {
-    definitions.set(variable.name, {
-      kind: "ram",
-      id: variable.name,
-      name: variable.name,
-      symbol: variable.name,
-      inputPath: SNES_RAM_MAP_SOURCE,
-      addressSpace: SNES_CPU_ADDRESS_SPACE,
-      address: variable.address,
-    });
-  }
-  for (const constant of structMap?.constants ?? []) {
-    definitions.set(constant.name, {
-      kind: "constant",
-      id: constant.name,
-      symbol: constant.name,
-      name: constant.name,
-      inputPath: SNES_STRUCT_MAP_SOURCE,
-    });
-  }
-  for (const layout of structMap?.structures ?? []) {
-    definitions.set(layout.id, {
-      kind: "structure",
-      id: layout.id,
-      symbol: layout.id,
-      name: layout.id,
-      inputPath: SNES_STRUCT_MAP_SOURCE,
-    });
-    for (const field of layout.fields) {
-      const symbol = `${layout.id}.${field.name}`;
-      definitions.set(symbol, {
-        kind: "field",
-        id: symbol,
-        symbol,
-        name: field.name,
-        inputPath: SNES_STRUCT_MAP_SOURCE,
-      });
-    }
-  }
-  for (const binding of structMap?.bindings ?? []) {
-    definitions.set(binding.name, {
-      kind: "binding",
-      id: binding.name,
-      symbol: binding.name,
-      name: binding.name,
-      inputPath: SNES_STRUCT_MAP_SOURCE,
-      addressSpace: SNES_CPU_ADDRESS_SPACE,
-      address: binding.address,
-    });
-    for (const field of binding.structure.fields) {
-      const symbol = `${binding.name}.${field.name}`;
-      definitions.set(symbol, {
-        kind: "field",
-        id: `${binding.structure.id}.${field.name}`,
-        symbol,
-        name: field.name,
-        inputPath: SNES_STRUCT_MAP_SOURCE,
-        addressSpace: SNES_CPU_ADDRESS_SPACE,
-        address: binding.address + field.offset,
-      });
-    }
-  }
-  writeFile(
-    directory,
-    SNES_HARDWARE_DEFINES_SOURCE,
-    ownership.definitions(SNES_HARDWARE_DEFINES_SOURCE, hardwareSource, definitions),
-    "source",
-    files,
-  );
-  writeFile(
-    directory,
-    SNES_RAM_MAP_SCHEMA_SOURCE,
-    renderSnesRamMapSchema(),
-    "configuration",
-    files,
-  );
-  writeFile(
+  emitFile(directory, SNES_HARDWARE_DEFINES_SOURCE, hardwareSource, "source", files);
+  emitFile(directory, SNES_RAM_MAP_SCHEMA_SOURCE, renderSnesRamMapSchema(), "configuration", files);
+  emitFile(
     directory,
     SNES_RAM_DEFINES_SOURCE,
-    ownership.definitions(
-      SNES_RAM_DEFINES_SOURCE,
-      formatComments(renderSnesRamDefines(ramMap.variables, ramMap.file)),
-      definitions,
-    ),
+    formatComments(renderSnesRamDefines(ramMap.variables, ramMap.file)),
     "source",
     files,
   );
-  writeFile(directory, "main.asm", formatComments(main), "source", files);
+  emitFile(directory, "main.asm", formatComments(main), "source", files);
   if (structMap) {
-    writeFile(
+    emitFile(
       directory,
       SNES_STRUCT_DEFINES_SOURCE,
-      ownership.definitions(
-        SNES_STRUCT_DEFINES_SOURCE,
-        formatComments(renderSnesStructDefines(structMap)),
-        definitions,
-      ),
+      formatComments(renderSnesStructDefines(structMap)),
       "source",
       files,
     );
@@ -2187,7 +2018,7 @@ export const exportSnes65816Source = (
         : [];
     })
     .sort((left, right) => left.id.localeCompare(right.id));
-  writeFile(
+  emitFile(
     directory,
     "annotation-report.json",
     canonicalJson({ issues: annotationIssues }),
@@ -2214,21 +2045,6 @@ export const exportSnes65816Source = (
   const configuration = fs.existsSync(configurationPath)
     ? fs.readFileSync(configurationPath)
     : Buffer.from(defaultConfiguration);
-  // Seed a default for a new export, then keep this editable file as a freshness-tracked input.
-  fs.writeFileSync(configurationPath, configuration);
-  writeFile(
-    directory,
-    SOURCE_OWNERSHIP_FILE,
-    canonicalJson({
-      format: "uttori-asm-source-ownership",
-      sourceProjectSha256: options.sourceProjectSha256,
-      romSha256: rom.identity.contentSha256,
-      entries: ownership.entries,
-    }),
-    "configuration",
-    files,
-  );
-
   const manifest: SourceExportManifest = {
     format: SOURCE_EXPORT_FORMAT,
     schemaVersion: SOURCE_EXPORT_SCHEMA_VERSION,
@@ -2242,7 +2058,6 @@ export const exportSnes65816Source = (
     contentOutput: "build/rebuilt-content.sfc",
     finalOutput: "build/rebuilt.sfc",
     checksumPolicy: "preserve",
-    ownershipFile: SOURCE_OWNERSHIP_FILE,
     inputs: [
       {
         path: "uttori-asm.config.json",
@@ -2286,21 +2101,5 @@ export const exportSnes65816Source = (
     files: files.sort((left, right) => left.path.localeCompare(right.path)),
     spans: spans.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)),
   };
-  const currentPaths = new Set(manifest.files.map((file) => file.path));
-  // Cleanup owns obsolete outputs; it must never delete an authoritative input.
-  for (const input of manifest.inputs ?? []) {
-    currentPaths.add(input.path);
-  }
-  for (const stale of previousManifest?.files ?? []) {
-    if (currentPaths.has(stale.path)) {
-      continue;
-    }
-    const staleFile = path.join(directory, stale.path);
-    if (fs.existsSync(staleFile) && fs.statSync(staleFile).isFile()) {
-      fs.unlinkSync(staleFile);
-    }
-  }
-  fs.mkdirSync(directory, { recursive: true });
-  fs.writeFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), canonicalJson(manifest));
   return manifest;
 };

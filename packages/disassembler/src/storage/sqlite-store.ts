@@ -30,6 +30,11 @@ import {
 } from "../model/project-types.js";
 import { validateLoadedShards } from "../model/project-validation.js";
 import {
+  validateResearchSnapshot,
+  type ResearchSnapshot,
+  type ResearchCollection,
+} from "../research-inputs/inputs.js";
+import {
   mergeRuntimeEvidence,
   inspectRuntimeEvidence,
   type RuntimeEvidenceBatch,
@@ -62,6 +67,7 @@ import {
 } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds } from "./sqlite-records.js";
+import { projectResearchInputs, clearResearchProjection } from "./sqlite-research-inputs.js";
 import {
   assertTraceRecordNamespace,
   SqliteRuntimeTraceBatch,
@@ -263,6 +269,8 @@ export class SqliteAnalysisStore {
   /** Transaction-local cache: rollback or another writer cannot leave stale integer references here. */
   readonly #dictionaryIds = new Map<string, number>();
   #dictionaryCacheBytes = 0;
+  /** An import must restore Git decisions in the same transaction before exposing observations. */
+  #researchSuspended = false;
 
   /**
    * Opens or creates a project database.
@@ -485,6 +493,9 @@ export class SqliteAnalysisStore {
     try {
       const revision = write ? this.revision() : 0;
       const result = action();
+      if (this.#researchSuspended) {
+        throw new Error("Reapply research inputs before publishing imported evidence.");
+      }
       if (
         result !== null &&
         (typeof result === "object" || typeof result === "function") &&
@@ -507,6 +518,7 @@ export class SqliteAnalysisStore {
       return result;
     } catch (error) {
       this.rollback();
+      this.#researchSuspended = false;
       throw error;
     }
   }
@@ -686,6 +698,149 @@ export class SqliteAnalysisStore {
       }
       this.validateRuntimeEvidence();
     }
+  }
+
+  /**
+   * Rebuild the selected Git research index, without loading runtime history or the CFG. A matching
+   * revision is a constant-time no-op. Call inside a transaction and publish the watcher afterward.
+   * Research files remain authoritative if the process exits before this cache is refreshed.
+   */
+  synchronizeResearchInputs(snapshot: ResearchSnapshot): boolean {
+    this.#requireTransaction();
+    const manifest = this.manifest();
+    if (snapshot.romSha256 !== manifest.rom.contentSha256) {
+      throw new Error("Research inputs belong to another ROM.");
+    }
+    validateResearchSnapshot(snapshot);
+    const indexed = this.#database.prepare("SELECT v FROM meta WHERE k='research-inputs'").get()?.v;
+    const revision = this.#database
+      .prepare("SELECT v FROM meta WHERE k='research-index-revision'")
+      .get()?.v;
+    if (indexed === snapshot.hash && revision === String(this.revision())) {
+      return false;
+    }
+    projectResearchInputs(this.#database, snapshot, (kind, record) =>
+      this.#insertRecord(kind, record),
+    );
+    this.validateView({
+      labels: this.loadTable("labels"),
+      comments: this.loadTable("comments"),
+      regions: this.loadTable("regions"),
+      annotations: this.loadTable("annotations"),
+      evidence: this.loadTable("evidence"),
+      analysis: this.analysisByKinds(["target-override", "target-set"]),
+      imports: [],
+      runtime: [],
+    });
+    // A deleted manual provenance record must not leave references dangling in retained evidence.
+    this.validateRuntimeEvidence();
+    const published = this.publishManifest(manifest);
+    this.#database
+      .prepare("INSERT OR REPLACE INTO meta (k,v) VALUES ('research-index-revision',?)")
+      .run(String(published.revision));
+    this.#researchSuspended = false;
+    return true;
+  }
+
+  /** Selected Git decision identity for callers pinning a consistent evidence/read snapshot. */
+  researchInputsIdentity(): string | undefined {
+    const value = this.#database.prepare("SELECT v FROM meta WHERE k='research-inputs'").get()?.v;
+    return typeof value === "string" ? value : undefined;
+  }
+
+  /** Cheap read-only cache check; callers recheck identity/revision after consuming query results. */
+  researchInputsAreCurrent(sha256: string): boolean {
+    const revision = this.#database
+      .prepare("SELECT v FROM meta WHERE k='research-index-revision'")
+      .get()?.v;
+    return this.researchInputsIdentity() === sha256 && revision === String(this.revision());
+  }
+
+  /** Observations stay usable while derived code is stale; generation and graph views require reanalysis. */
+  assertCurrentAnalysis(): void {
+    const reason = this.#database.prepare("SELECT v FROM meta WHERE k='analysis-dirty'").get()?.v;
+    if (typeof reason === "string") {
+      throw new Error(reason);
+    }
+  }
+
+  /** Invalidate derived code within the same transaction that adds new observations. */
+  invalidateAnalysis(): void {
+    this.#requireTransaction();
+    this.#database
+      .prepare("INSERT OR REPLACE INTO meta (k,v) VALUES ('analysis-dirty',?)")
+      .run(
+        "Captured evidence changed. Analyze the selected inputs before regenerating or querying the derived graph.",
+      );
+  }
+
+  /** Restore observations inside an import transaction; reapply the selected research before commit. */
+  suspendResearchInputs(): void {
+    this.#requireTransaction();
+    this.#researchSuspended = true;
+    clearResearchProjection(this.#database, (kind, record) => this.#insertRecord(kind, record));
+  }
+
+  /**
+   * Publish analyzer output computed from the projected view without adopting Git decisions as
+   * imported facts. Overridden IDs retain their observation shadows; removing a decision on a
+   * later branch therefore restores the original record. Return the exact projected replacements
+   * for validation without reparsing a million-row graph into a second set of JS objects.
+   */
+  replaceResearchAnalysis(
+    snapshot: ResearchSnapshot,
+    updates: Partial<
+      Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">
+    >,
+    onProgress?: (collection: string) => void,
+  ): Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">> {
+    this.#requireTransaction();
+    if (this.researchInputsIdentity() !== snapshot.hash) {
+      throw new Error("Analysis publication requires the selected Git research snapshot.");
+    }
+    this.suspendResearchInputs();
+    const projected: Partial<
+      Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">
+    > = {};
+    for (const collection of Object.keys(updates) as (keyof typeof updates)[]) {
+      if (!["analysis", "annotations", "comments", "evidence"].includes(collection)) {
+        throw new Error("Analysis may only replace derived metadata collections.");
+      }
+      const protectedIds = new Set(
+        snapshot.decisions
+          .filter((decision) => decision.collection === collection)
+          .map((decision) => decision.id),
+      );
+      const records: AnalysisProjectShards[ResearchCollection][number][] = (
+        updates[collection] ?? []
+      ).filter((record) => !protectedIds.has(record.id));
+      const current = [...records];
+      for (const decision of snapshot.decisions) {
+        if (decision.collection === collection && decision.value !== null) {
+          current.push(decision.value);
+        }
+      }
+      Object.assign(projected, { [collection]: current });
+      const find = this.#database.prepare(`SELECT payload FROM ${collection} WHERE id=?`);
+      for (const id of protectedIds) {
+        const row = find.get(id);
+        if (row) {
+          records.push(
+            JSON.parse(
+              decodeSqlitePayload(row.payload),
+            ) as AnalysisProjectShards[ResearchCollection][number],
+          );
+        }
+      }
+      // The collection determines the record type; replaceTables retains byte-identical rows.
+      this.replaceTables({ [collection]: records });
+      onProgress?.(collection);
+    }
+    this.publishManifest(this.manifest());
+    this.synchronizeResearchInputs(snapshot);
+    // Publication used this exact selected snapshot. Reapplying its projection is not a new edit.
+    this.#database.exec("DELETE FROM meta WHERE k='analysis-dirty'");
+    return projected;
   }
 
   /**
@@ -905,11 +1060,16 @@ export class SqliteAnalysisStore {
 
   /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
   validateRuntimeEvidence(): void {
+    // Materialize only missing dictionary references first. Otherwise SQLite can build a covering
+    // index over the entire runtime view even when all referenced evidence IDs are present.
     const missing = this.#database
       .prepare(`
-      SELECT ref.value AS evidence FROM runtime_evidence AS sets, json_each(sets.value) AS ref
-      LEFT JOIN evidence ON evidence.id=ref.value
-      WHERE evidence.id IS NULL AND EXISTS (SELECT 1 FROM runtime WHERE evidence_id=sets.id) LIMIT 1
+      WITH missing AS MATERIALIZED (
+        SELECT sets.id, ref.value AS evidence FROM runtime_evidence AS sets, json_each(sets.value) AS ref
+        LEFT JOIN evidence ON evidence.id=ref.value WHERE evidence.id IS NULL
+      )
+      SELECT evidence FROM missing
+      WHERE EXISTS (SELECT 1 FROM runtime_observations WHERE evidence_id=missing.id) LIMIT 1
     `)
       .get();
     if (missing) {
@@ -1047,9 +1207,7 @@ export class SqliteAnalysisStore {
     };
     const ids = JSON.stringify((batch.analysis ?? []).map((record) => record.id));
     const analysis = this.#database
-      .prepare(
-        "SELECT payload FROM analysis WHERE kind='metadata-edit' OR id IN (SELECT value FROM json_each(?))",
-      )
+      .prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))")
       .all(ids)
       .map((row) => parseRecord<AnalysisRecord>(row.payload));
     const before = { ...base, analysis };
@@ -1299,16 +1457,17 @@ export class SqliteAnalysisStore {
    * @returns {object} Functions, calls, unresolved sites, and ownership.
    */
   callGraph() {
+    this.assertCurrentAnalysis();
     let graph;
     try {
       graph = this.cachedProjection(
         "graph",
-        "2",
+        "3",
         ["analysis"],
         () => prepareGraph(this.#database),
         () => publishGraph(this.#database),
       );
-      const published = readQueryCache<typeof graph>(this.#database, "graph", "2");
+      const published = readQueryCache<typeof graph>(this.#database, "graph", "3");
       if (!published) {
         throw new Error("Analysis changed while building the graph. Refresh the view.");
       }
@@ -1472,24 +1631,37 @@ export class SqliteAnalysisStore {
     );
   }
 
-  /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
+  /** Exact execution seed totals grouped by PC, without decoding execution payloads.
+   * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
+   * storage. Static seed selection needs their union, not millions of duplicate PC records.
    * @param {string} architecture Target processor.
    * @param {string} space Logical CPU address space.
    * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.
    */
   runtimeExecutionSeeds(architecture: string, space: string): RuntimeEvidenceRecord[] {
-    return this.#database
+    const seeds = new Map<number, { count: number; evidence: Set<string> }>();
+    for (const row of this.#database
       .prepare(`SELECT r.address,SUM(r.count) AS count,r.evidence_id,e.value AS evidence FROM runtime r JOIN runtime_evidence e ON e.id=r.evidence_id
       WHERE r.kind='runtime-execution' AND r.architecture=? AND r.address_space=? GROUP BY r.address,r.evidence_id`)
-      .all(architecture, space)
-      .map((row) => ({
-        id: `query:execution:${String(row.address)}:${String(row.evidence_id)}`,
+      .iterate(architecture, space)) {
+      const address = Number(row.address);
+      const seed = seeds.get(address) ?? { count: 0, evidence: new Set<string>() };
+      seed.count += Number(row.count);
+      for (const id of JSON.parse(String(row.evidence)) as string[]) {
+        seed.evidence.add(id);
+      }
+      seeds.set(address, seed);
+    }
+    return [...seeds]
+      .sort(([a], [b]) => a - b)
+      .map(([address, seed]) => ({
+        id: `query:execution:${address}`,
         kind: "runtime-execution",
         architecture,
         addressSpace: space,
-        address: Number(row.address),
-        count: Number(row.count),
-        evidence: JSON.parse(String(row.evidence)) as string[],
+        address,
+        count: seed.count,
+        evidence: [...seed.evidence].sort(),
       }));
   }
 
@@ -1584,6 +1756,7 @@ export class SqliteAnalysisStore {
    * @returns {object} Validated manifest, metadata, and an empty runtime collection.
    */
   sourceExportView(): { manifest: AnalysisProjectManifest; shards: AnalysisProjectShards } {
+    this.assertCurrentAnalysis();
     const manifest = this.manifest();
     const shards = {
       labels: this.loadTable("labels"),
@@ -1656,7 +1829,9 @@ export class SqliteAnalysisStore {
   instructionAnnotationView(ranges: readonly AnnotationQueryRange[]): SqliteAnnotationView {
     const manifest = this.manifest();
     const result = readSqliteAnnotationView(this.#database, manifest, ranges);
-    validateLoadedShards(result.shards, manifest);
+    // Viewports intentionally omit function entries and predecessor chains outside visible ranges.
+    // Keep all local/provenance checks without requiring another full-graph read on cursor movement.
+    validateLoadedShards(result.shards, manifest, "partial");
     return result;
   }
 

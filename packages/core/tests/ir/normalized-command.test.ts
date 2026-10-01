@@ -3,6 +3,7 @@ import { stub } from "sinon";
 import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
 import { handleIncbin } from "../../src/directives/include-source.js";
+import { MemoryAssemblyFileProvider } from "../../src/file-provider.js";
 import {
   isReferenceExpressionNode,
   parseLeadingReferenceExpression,
@@ -618,10 +619,13 @@ test("mathcore legacy string parsing routes compound references through the refe
 });
 
 test("incbin range evaluation adopts expression nodes for bounds", (t) => {
-  const assembler = new Assembler();
+  const assembler = new Assembler(undefined, {
+    fileProvider: new MemoryAssemblyFileProvider({
+      "test.bin": new Uint8Array([0x10, 0x20, 0x30, 0x40]),
+    }),
+  });
   const writtenBytes: number[] = [];
   stub(assembler, "addAddressToLine");
-  stub(assembler.includeSource, "readFile").returns(new Uint8Array([0x10, 0x20, 0x30, 0x40]));
   stub(assembler, "write1").callsFake((value: number) => {
     writtenBytes.push(value);
   });

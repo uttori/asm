@@ -1,5 +1,5 @@
 import { RecordIdSet } from "../internal/record-id-set.js";
-import { validateMetadataReceipt } from "./metadata-validation.js";
+import { validateAnalysisOwnership } from "./analysis-ownership.js";
 import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -351,10 +351,12 @@ export const validateRuntimeRecords = (
  * Validate metadata, runtime values, address bounds and provenance before publication.
  * @param {AnalysisProjectShards} shards Complete record collections, or metadata with empty runtime.
  * @param {object} project ROM identity, mapper and address-space bounds.
+ * @param {string} analysisScope Complete ownership at publication; partial only for bounded persisted views.
  */
 export const validateLoadedShards = (
   shards: AnalysisProjectShards,
   project: Pick<AnalysisProjectManifest, "addressSpaces" | "mapping" | "rom">,
+  analysisScope: "complete" | "partial" = "complete",
 ): void => {
   const { addressSpaces } = project;
   const evidenceIds = new Set(shards.evidence.map((record) => record.id));
@@ -478,6 +480,7 @@ export const validateLoadedShards = (
       throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
     }
   }
+  validateAnalysisOwnership(shards.analysis, analysisScope);
   const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
   for (const region of shards.regions) {
     if (!region.parentRegion) {
@@ -517,11 +520,6 @@ export const validateLoadedShards = (
   for (const addressed of [...shards.labels, ...shards.comments]) {
     if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
       throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
-    }
-  }
-  for (const receipt of shards.analysis) {
-    if (receipt.kind === "metadata-edit") {
-      validateMetadataReceipt(receipt);
     }
   }
   for (const label of shards.labels) {

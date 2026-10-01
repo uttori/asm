@@ -5,7 +5,11 @@ const sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
   WHERE member.value IN (SELECT value FROM json_each(?)))`;
 const sourceRuntime = "r.evidence_id IN (SELECT id FROM source_evidence)";
-const instructionKinds = "r.kind IN ('runtime-execution','runtime-instruction')";
+const sourceObservations = "o.evidence_id IN (SELECT id FROM source_evidence)";
+const instructionKinds = "f.kind IN ('runtime-execution','runtime-instruction')";
+// Source counts need physical observations only. The compatibility union also synthesizes paired
+// CPU states, which can force a scan of the entire captured register history for these projections.
+const observationLocations = "runtime_observations o JOIN runtime_fact_locations f ON f.fid=o.fact_id";
 const hex = (address) => `$${address.toString(16).toUpperCase().padStart(6, "0")}`;
 /** Whether source membership indexes exist and have no changed metadata to process.
  * @param {DatabaseSync} db Project connection.
@@ -69,12 +73,13 @@ export const readSourceSummary = (db, source) => {
     const evidence = JSON.stringify(source.evidenceIds);
     const instructionCount = Number(db
         .prepare(`${sourceEvidence} SELECT count(*) AS n FROM (
-    SELECT r.architecture,r.address_space,r.address FROM runtime r WHERE ${sourceRuntime} AND ${instructionKinds}
-    GROUP BY r.architecture,r.address_space,r.address)`)
+    SELECT f.architecture,f.address_space,f.address FROM ${observationLocations}
+    WHERE ${sourceObservations} AND ${instructionKinds}
+    GROUP BY f.architecture,f.address_space,f.address)`)
         .get(evidence)?.n ?? 0);
     const memoryCount = Number(db
-        .prepare(`${sourceEvidence} SELECT count(*) AS n FROM runtime r
-    WHERE ${sourceRuntime} AND r.kind='runtime-memory-access'`)
+        .prepare(`${sourceEvidence} SELECT count(*) AS n FROM ${observationLocations}
+    WHERE ${sourceObservations} AND f.kind='runtime-memory-access'`)
         .get(evidence)?.n ?? 0);
     const contributionCount = Number(db
         .prepare(`SELECT count(*) AS n FROM (
@@ -97,14 +102,18 @@ export const readSourcePage = (db, source, group, offset = 0) => {
     const evidence = JSON.stringify(source.evidenceIds);
     if (group === "instructions") {
         const rows = db
-            .prepare(`${sourceEvidence} SELECT r.architecture,r.address_space,r.address,
-      SUM(CASE WHEN r.kind='runtime-execution' THEN r.count ELSE 0 END) AS executions
-      FROM runtime r WHERE ${sourceRuntime} AND ${instructionKinds}
-      GROUP BY r.architecture,r.address_space,r.address ORDER BY r.architecture,r.address_space,r.address LIMIT 200 OFFSET ?`)
+            .prepare(`${sourceEvidence} SELECT f.architecture,f.address_space,f.address,
+      SUM(CASE WHEN f.kind='runtime-execution' THEN o.count ELSE 0 END) AS executions
+      FROM ${observationLocations} WHERE ${sourceObservations} AND ${instructionKinds}
+      GROUP BY f.architecture,f.address_space,f.address ORDER BY f.architecture,f.address_space,f.address LIMIT 200 OFFSET ?`)
             .all(evidence, offset);
-        const offsets = db.prepare(`${sourceEvidence} SELECT DISTINCT q.file_offset FROM runtime r
-      JOIN query_execution_offsets q ON q.row_id=r.rowid WHERE ${sourceRuntime} AND r.kind='runtime-execution'
-      AND r.architecture=? AND r.address_space=? AND r.address=? AND q.file_offset IS NOT NULL ORDER BY q.file_offset`);
+        // Probe the qualified PC before its observations. Joining two compatibility views materialized
+        // the global execution history once per row of a source page, even for a tiny capture.
+        const offsets = db.prepare(`${sourceEvidence} SELECT DISTINCT o.query_file_offset AS file_offset
+      FROM runtime_fact_locations f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+      WHERE ${sourceObservations} AND f.kind='runtime-execution'
+      AND f.architecture=? AND f.address_space=? AND f.address=?
+      AND o.query_file_offset IS NOT NULL ORDER BY o.query_file_offset`);
         return rows.map((row) => ({
             id: JSON.stringify([row.architecture, row.address_space, row.address]),
             label: hex(Number(row.address)),

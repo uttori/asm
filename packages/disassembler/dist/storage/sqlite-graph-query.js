@@ -27,8 +27,11 @@ export const prepareGraph = (db) => {
         if (row.kind === "cfg-node") {
             const node = decode(row.payload);
             const path = node.evidencePath.length ? node.evidencePath : [node.id];
-            let owner;
+            let owner = node.functionEntry;
             for (let i = path.length - 1; i >= 0; i--) {
+                if (owner) {
+                    break;
+                }
                 if (entries.has(path[i])) {
                     owner = path[i];
                     break;

@@ -5,13 +5,9 @@ import { fileURLToPath } from "node:url";
 
 import { validateDebugMap, type DebugMap } from "@uttori/asm-core";
 import {
-  applyDisassemblyAnnotationEdit,
-  commitAnalysisProjectTransaction,
   loadAnalysisProject,
-  loadAnalysisProjectSnapshot,
   openAnalysisProjectStore,
   RomImage,
-  sourceExportSha256,
   publishAnalysisProject,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
@@ -181,13 +177,13 @@ test("parseCliArguments: rejects malformed, incomplete, and inapplicable argumen
   t.throws(() => parseCliArguments(["analyze", "project", "ignored", "--rom", "rom.sfc"]), {
     message: /Unexpected positional argument 'ignored'/,
   });
-  t.throws(() => parseCliArguments(["export", "project", "--debug"]), {
-    message: /--debug.*not supported.*export/,
+  t.throws(() => parseCliArguments(["analyze", "project", "--debug"]), {
+    message: /--debug.*not supported.*analyze/,
   });
   t.throws(() => parseCliArguments(["disassemble", "game.sfc", "--verbose"]), {
     message: /--verbose.*not supported.*disassemble/,
   });
-  for (const flag of ["--force", "--allow-code-regression", "--debug", "--verbose", "--help"]) {
+  for (const flag of ["--debug", "--verbose", "--help"]) {
     t.throws(() => parseCliArguments(["main.asm", `${flag}=false`]), { message: /takes no value/ });
   }
 });
@@ -227,23 +223,6 @@ test("parseCliArguments: parses analysis project commands and validates mapper/h
   t.deepEqual(analyze.entryPoints, [0x808000, 0x818000, 16_711_680]);
   t.is(analyze.maxWorkItems, 123);
   t.is(analyze.maxCallDepth, 0);
-  const exportArguments = parseCliArguments([
-    "export",
-    "game.analysis",
-    "game.source",
-    "--rom=game.sfc",
-    "--force",
-  ]);
-  t.is(exportArguments.command, "export");
-  t.true(exportArguments.force);
-  t.false(exportArguments.allowCodeRegression);
-  t.true(
-    parseCliArguments(["export", "game.analysis", "--allow-code-regression"]).allowCodeRegression,
-  );
-  t.is(
-    parseCliArguments(["verify-roundtrip", "game.source", "--rom", "game.sfc"]).command,
-    "verify-roundtrip",
-  );
   t.throws(() => parseCliArguments(["disassemble", "game.sfc", "--header-size=1"]), {
     message: "--header-size must be 0 or 512.",
   });
@@ -878,10 +857,6 @@ test.serial(
     t.true(logs.stderr.join("\n").includes("Unsupported SNES mapper"));
     t.is(await runCli(["analyze", project]), 1);
     t.true(logs.stderr.join("\n").includes("Analysis failed: --rom is required"));
-    t.is(await runCli(["export", project]), 1);
-    t.true(logs.stderr.join("\n").includes("Export failed: --rom is required"));
-    t.is(await runCli(["verify-roundtrip", project]), 1);
-    t.true(logs.stderr.join("\n").includes("Round-trip verification failed: --rom is required"));
     t.is(await runCli(["evidence-report", path.join(temporary, "missing")]), 1);
   },
 );
@@ -976,8 +951,6 @@ test("E2E: runCli analyze persists conservative 65816 analysis without embedding
   t.true(records.some((record) => record.kind === "cfg-node" && record.mnemonic === "STP"));
   t.true(records.some((record) => record.kind === "summary"));
   t.false(JSON.stringify(records).includes("romBytes"));
-  t.is(await runCli(["export", project, "--rom", rom]), 0);
-  t.true((await fs.stat(path.join(temporary, "fixture.source", "main.asm"))).isFile());
 });
 
 test.serial(
@@ -1005,383 +978,3 @@ test.serial(
     t.is(await runCli(["analyze", project, "--rom", path.join(temporary, "missing.sfc")]), 1);
   },
 );
-
-test("E2E: runCli export writes deterministic native source and verifies a complete copier-header round trip", async (t) => {
-  const temporary = await temporaryDirectory(t, "uttori-asm-cli-export-");
-  const rom = path.join(temporary, "fixture.smc");
-  const project = path.join(temporary, "fixture.analysis");
-  const source = path.join(temporary, "fixture.source");
-  const secondSource = path.join(temporary, "fixture-second.source");
-  const bytes = new Uint8Array(0x8000 + 512).fill(0xff);
-  bytes.fill(0x5a, 0, 512);
-  bytes[512] = 0xa9;
-  bytes[513] = 0x42;
-  bytes[514] = 0xdb;
-  bytes[512 + 0x7ffc] = 0x00;
-  bytes[512 + 0x7ffd] = 0x80;
-  await fs.writeFile(rom, bytes);
-  t.is(await runCli(["disassemble", rom, project, "--mapper=lorom", "--header-size=512"]), 0);
-  t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-  const analyzed = loadAnalysisProject(project);
-  const { shards: ignoredShards, ...projectManifest } = analyzed.manifest;
-  void ignoredShards;
-  publishAnalysisProject(project, {
-    manifest: projectManifest,
-    shards: {
-      ...analyzed.shards,
-      labels: [
-        {
-          id: "test:entry-label",
-          addressSpace: "snes.cpu",
-          address: 0x008000,
-          name: "Entry Point!",
-          comment: "Synthetic reset entry",
-          evidence: [],
-        },
-      ],
-      comments: [
-        {
-          id: "test:stop-comment",
-          addressSpace: "rom.file",
-          address: 2,
-          text: "Stop after loading the fixture value.",
-          evidence: [],
-        },
-      ],
-    },
-  });
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-  t.is(await runCli(["export", project, secondSource, "--rom", rom]), 0);
-  t.is(
-    await fs.readFile(path.join(source, "generated-files.json"), "utf8"),
-    await fs.readFile(path.join(secondSource, "generated-files.json"), "utf8"),
-  );
-  const manifest = JSON.parse(
-    await fs.readFile(path.join(source, "generated-files.json"), "utf8"),
-  ) as {
-    readonly entrySource: string;
-    readonly files: ReadonlyArray<{
-      readonly path: string;
-      readonly size: number;
-      readonly sha256: string;
-    }>;
-    readonly spans: ReadonlyArray<{
-      readonly start: number;
-      readonly end: number;
-      readonly role: string;
-      readonly file?: string;
-    }>;
-  };
-  t.is(
-    manifest.spans
-      .filter((span) => span.role !== "copier-header")
-      .reduce((total, span) => total + span.end - span.start, 0),
-    0x8000,
-  );
-  t.true(manifest.spans.some((span) => span.role === "code"));
-  t.true(manifest.spans.some((span) => span.role === "snes-header"));
-  t.true(manifest.spans.some((span) => span.role === "vectors"));
-  const contentSpans = manifest.spans.filter((span) => span.role !== "copier-header");
-  for (let index = 0; index < contentSpans.length; index++) {
-    t.is(contentSpans[index]!.start, index === 0 ? 0 : contentSpans[index - 1]!.end);
-  }
-  const main = await fs.readFile(path.join(source, "main.asm"), "utf8");
-  const bank = await fs.readFile(path.join(source, "banks/bank-000.asm"), "utf8");
-  t.regex(main, /incsrc "defines\.asm"/);
-  t.true(manifest.files.some((file) => file.path === "defines.asm"));
-  t.regex(await fs.readFile(path.join(source, "defines.asm"), "utf8"), /^INIDISP = \$2100/m);
-  t.regex(main, /lorom\narch 65816\n\.smart off/);
-  t.regex(bank, /; Synthetic reset entry\nL_Entry_Point_:/);
-  t.regex(bank, /  LDA\.b #\$42/);
-  t.notRegex(bank, /^\.[ai](?:8|16)\b/m);
-  t.is((bank.match(/^org /gm) ?? []).length, 1);
-  t.regex(bank, /; Stop after loading the fixture value\./);
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
-  const rebuilt = await fs.readFile(path.join(source, "build/rebuilt.sfc"));
-  t.deepEqual(rebuilt, Buffer.from(bytes));
-
-  const ramMapFile = path.join(source, "ram-map.json");
-  const ramMap = await fs.readFile(ramMapFile, "utf8");
-  await fs.appendFile(ramMapFile, "\n");
-  await fs.writeFile(path.join(source, "build/rebuilt.sfc"), "previous rebuild");
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 1);
-  t.is(await fs.readFile(path.join(source, "build/rebuilt.sfc"), "utf8"), "previous rebuild");
-  await fs.writeFile(ramMapFile, ramMap);
-
-  await fs.appendFile(path.join(source, "main.asm"), "; local edit\n");
-  t.is(await runCli(["export", project, source, "--rom", rom]), 1);
-  t.is(await runCli(["export", project, source, "--rom", rom, "--force"]), 0);
-
-  const wrongRom = path.join(temporary, "wrong.smc");
-  const wrong = Uint8Array.from(bytes);
-  wrong[512] ^= 1;
-  await fs.writeFile(wrongRom, wrong);
-  t.is(await runCli(["verify-roundtrip", source, "--rom", wrongRom]), 1);
-
-  const entryFile = path.join(source, manifest.entrySource);
-  const entryText = await fs.readFile(entryFile, "utf8");
-  const broken = `${entryText}\nthis_is_not_an_instruction\n`;
-  await fs.writeFile(entryFile, broken);
-  const brokenManifest = {
-    ...manifest,
-    files: manifest.files.map((file) =>
-      file.path === manifest.entrySource
-        ? { ...file, size: Buffer.byteLength(broken), sha256: sourceExportSha256(broken) }
-        : file,
-    ),
-  };
-  await fs.writeFile(path.join(source, "generated-files.json"), JSON.stringify(brokenManifest));
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 1);
-  await fs.writeFile(entryFile, entryText);
-  await fs.writeFile(path.join(source, "generated-files.json"), JSON.stringify(manifest));
-});
-
-test.serial(
-  "E2E: runCli verify-roundtrip reports a copier-header mismatch without replacing the rebuilt image",
-  async (t) => {
-    const temporary = await temporaryDirectory(t, "uttori-cli-header-mismatch-");
-    const logs = captureConsole(t);
-    const rom = path.join(temporary, "fixture.smc");
-    const project = path.join(temporary, "fixture.analysis");
-    const source = path.join(temporary, "fixture.source");
-    const bytes = new Uint8Array(0x8000 + 512).fill(0xff);
-    bytes.fill(0x5a, 0, 512);
-    bytes[512] = 0xdb;
-    bytes[512 + 0x7ffc] = 0x00;
-    bytes[512 + 0x7ffd] = 0x80;
-    await fs.writeFile(rom, bytes);
-    t.is(await runCli(["disassemble", rom, project, "--mapper=lorom", "--header-size=512"]), 0);
-    t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-    t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-    t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
-    const manifest = JSON.parse(
-      await fs.readFile(path.join(source, "generated-files.json"), "utf8"),
-    ) as {
-      readonly files: ReadonlyArray<{
-        readonly path: string;
-        readonly size: number;
-        readonly sha256: string;
-      }>;
-      readonly spans: ReadonlyArray<{ readonly role: string; readonly file: string }>;
-    };
-    const bankFile = path.join(source, "banks/bank-000.asm");
-    const originalBank = await fs.readFile(bankFile, "utf8");
-    const patchedBank = originalBank.replace(/\bSTP\b/, "NOP");
-    t.not(patchedBank, originalBank);
-    await fs.writeFile(bankFile, patchedBank);
-    await fs.writeFile(
-      path.join(source, "generated-files.json"),
-      JSON.stringify({
-        ...manifest,
-        files: manifest.files.map((file) =>
-          file.path === "banks/bank-000.asm"
-            ? {
-                ...file,
-                size: Buffer.byteLength(patchedBank),
-                sha256: sourceExportSha256(patchedBank),
-              }
-            : file,
-        ),
-      }),
-    );
-    const rebuilt = path.join(source, "build/rebuilt.sfc");
-    await fs.writeFile(rebuilt, "previous rebuild");
-    t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 1);
-    t.true(logs.stderr.join("\n").includes("content offset"));
-    t.true(logs.stderr.join("\n").includes("CPU $"));
-    t.is(await fs.readFile(rebuilt, "utf8"), "previous rebuild");
-    await fs.writeFile(bankFile, originalBank);
-    await fs.writeFile(path.join(source, "generated-files.json"), JSON.stringify(manifest));
-
-    const headerSpan = manifest.spans.find((span) => span.role === "copier-header");
-    t.truthy(headerSpan);
-    const headerFile = path.join(source, headerSpan!.file);
-    const headerBytes = Buffer.from(await fs.readFile(headerFile));
-    headerBytes[0] ^= 0xff;
-    await fs.writeFile(headerFile, headerBytes);
-    const headerPath = path.relative(source, headerFile).split(path.sep).join("/");
-    const updated = {
-      ...manifest,
-      files: manifest.files.map((file) =>
-        file.path === headerSpan!.file || file.path === headerPath
-          ? { ...file, sha256: sourceExportSha256(headerBytes) }
-          : file,
-      ),
-    };
-    await fs.writeFile(path.join(source, "generated-files.json"), JSON.stringify(updated));
-    await fs.writeFile(rebuilt, "previous rebuild");
-    t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 1);
-    t.true(logs.stderr.join("\n").includes("copier header"));
-    t.is(await fs.readFile(rebuilt, "utf8"), "previous rebuild");
-  },
-);
-
-test("E2E: runCli round trips the redistributable SNES dummy-ROM fixture", async (t) => {
-  const temporary = await temporaryDirectory(t, "uttori-asm-cli-fixture-export-");
-  const rom = path.resolve("fixtures/asar/dummy_rom.sfc");
-  const project = path.join(temporary, "dummy.analysis");
-  const source = path.join(temporary, "dummy.source");
-  t.is(await runCli(["disassemble", rom, project, "--mapper=lorom"]), 0);
-  t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
-});
-
-test("E2E: runCli export keeps friendly function names and all comment placements across reanalysis", async (t) => {
-  const directory = await temporaryDirectory(t, "uttori-annotated-rom-");
-  const rom = path.join(directory, "fixture.sfc");
-  const project = path.join(directory, "analysis");
-  const source = path.join(directory, "source");
-  const bytes = new Uint8Array(0x40000).fill(0xff);
-  // HiROM RESET calls the exact routine from the annotation workflow.
-  bytes.set([0x22, 0x2c, 0x00, 0xc3, 0xdb], 0x8000);
-  bytes.set([0x8b, 0xab, 0x6b], 0x3002c);
-  bytes[0xfffc] = 0x00;
-  bytes[0xfffd] = 0x80;
-  await fs.writeFile(rom, bytes);
-  t.is(await runCli(["disassemble", rom, project, "--mapper=hirom", "--header-size=0"]), 0);
-  t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-  const bankFile = path.join(source, "banks/bank-003.asm");
-  t.regex(await fs.readFile(bankFile, "utf8"), /Fn_C3002C:/);
-  const snapshot = loadAnalysisProjectSnapshot(project);
-  t.false(snapshot.shards.labels.some((label) => label.address === 0xc3002c));
-  const applied = applyDisassemblyAnnotationEdit(snapshot, {
-    addressSpace: "snes.cpu",
-    address: 0xc3002c,
-    labelId: "manual.apu",
-    name: "APU_IPL_Bootstrap",
-    comment: "Initialize communication.\nPreserve caller state.",
-    inlineComment: "Bootstrap entry",
-    instructionCommentId: "manual.apu.phb",
-    instructionComment: "Save the data bank",
-    evidenceId: "manual.apu.evidence",
-    sourceId: "test.annotations",
-  });
-  commitAnalysisProjectTransaction(project, snapshot.revision, applied.project);
-  t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-  const bank = await fs.readFile(bankFile, "utf8");
-  t.regex(
-    bank,
-    /; Initialize communication\.\n; Preserve caller state\.\nAPU_IPL_Bootstrap: ; Bootstrap entry/,
-  );
-  t.regex(bank, /PHB ; Save the data bank/);
-  t.false(bank.includes("L_APU_IPL_Bootstrap:"));
-  t.false(bank.includes("Fn_C3002C:"));
-  t.regex(
-    await fs.readFile(path.join(source, "banks/bank-000.asm"), "utf8"),
-    /JSL\.l APU_IPL_Bootstrap/,
-  );
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
-  t.deepEqual(await fs.readFile(path.join(source, "build/rebuilt.sfc")), Buffer.from(bytes));
-  const first = await fs.readFile(path.join(source, "generated-files.json"), "utf8");
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-  t.is(await fs.readFile(path.join(source, "generated-files.json"), "utf8"), first);
-  t.deepEqual(JSON.parse(await fs.readFile(path.join(source, "annotation-report.json"), "utf8")), {
-    issues: [],
-  });
-  const current = loadAnalysisProjectSnapshot(project);
-  commitAnalysisProjectTransaction(project, current.revision, {
-    manifest: current.manifest,
-    shards: {
-      ...current.shards,
-      analysis: current.shards.analysis.filter(
-        (record) => record.kind !== "cfg-node" || record.address !== 0xc3002c,
-      ),
-      comments: [
-        ...current.shards.comments,
-        {
-          id: "unmapped",
-          addressSpace: "snes.cpu",
-          address: 0x7e0000,
-          text: "Keep this unmapped note",
-          evidence: [],
-        },
-      ],
-    },
-  });
-  // This scenario intentionally deletes a decoded instruction. Keep the code
-  // preservation guard covered before opting in to test the comment fallback.
-  t.is(await runCli(["export", project, source, "--rom", rom]), 1);
-  t.is(await runCli(["export", project, source, "--rom", rom, "--allow-code-regression"]), 0);
-  t.regex(
-    await fs.readFile(bankFile, "utf8"),
-    /; \[Instruction comment. Instruction unavailable] Save the data bank/,
-  );
-  const report = JSON.parse(
-    await fs.readFile(path.join(source, "annotation-report.json"), "utf8"),
-  ) as {
-    issues: Array<{ id: string; reason: string }>;
-  };
-  t.deepEqual(
-    report.issues.map(({ id }) => id),
-    ["manual.apu.phb", "unmapped"],
-  );
-  t.is(loadAnalysisProjectSnapshot(project).shards.comments.length, 2);
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
-});
-
-test("E2E: runCli export retains encoded widths for bank-local calls, jumps, and relative branches", async (t) => {
-  const directory = await temporaryDirectory(t, "uttori-annotation-widths-");
-  const rom = path.join(directory, "fixture.sfc");
-  const project = path.join(directory, "analysis");
-  const source = path.join(directory, "source");
-  const bytes = new Uint8Array(0x8000).fill(0xff);
-  bytes.set([0x20, 0x10, 0x80, 0xd0, 0xfb, 0x4c, 0x10, 0x80]);
-  bytes[0x10] = 0x60;
-  bytes[0x7ffc] = 0x00;
-  bytes[0x7ffd] = 0x80;
-  await fs.writeFile(rom, bytes);
-  t.is(await runCli(["disassemble", rom, project, "--mapper=lorom", "--header-size=0"]), 0);
-  t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-  for (const [address, name] of [
-    [0x008000, "MainLoop"],
-    [0x008010, "ReturnHelper"],
-  ] as const) {
-    const snapshot = loadAnalysisProjectSnapshot(project);
-    const applied = applyDisassemblyAnnotationEdit(snapshot, {
-      addressSpace: "snes.cpu",
-      address,
-      labelId: `manual.${name}`,
-      name,
-      evidenceId: `manual.evidence.${name}`,
-      sourceId: "test.annotations",
-    });
-    commitAnalysisProjectTransaction(project, snapshot.revision, applied.project);
-  }
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
-  const bank = await fs.readFile(path.join(source, "banks/bank-000.asm"), "utf8");
-  t.regex(bank, /JSR\.w .*ReturnHelper/);
-  t.regex(bank, /JMP\.w .*ReturnHelper/);
-  t.regex(bank, /BNE MainLoop/);
-  t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
-  t.deepEqual(await fs.readFile(path.join(source, "build/rebuilt.sfc")), Buffer.from(bytes));
-});
-
-test("export struct width accepts whole columns and rejects unsupported values or commands", (t) => {
-  t.is(
-    parseCliArguments(["export", "game.analysis", "--struct-line-width", "80"]).structLineWidth,
-    80,
-  );
-  for (const width of ["39", "0", "-1", "80.5", "NaN", "Infinity"]) {
-    t.throws(() => parseCliArguments(["export", "game.analysis", "--struct-line-width", width]), {
-      message: /at least 40/,
-    });
-  }
-  t.throws(() => parseCliArguments(["assemble", "main.asm", "--struct-line-width", "80"]));
-});
-test("export comment wrapping can be disabled or assigned a validated width", (t) => {
-  t.is(parseCliArguments(["export", "game.analysis"]).wrapComments, undefined);
-  t.is(parseCliArguments(["export", "game.analysis", "--no-wrap-comments"]).wrapComments, false);
-  t.is(
-    parseCliArguments(["export", "game.analysis", "--comment-line-width", "72"]).commentLineWidth,
-    72,
-  );
-  for (const width of ["0", "19", "1.5", "Infinity", "NaN"]) {
-    t.throws(() => parseCliArguments(["export", "game.analysis", "--comment-line-width", width]));
-  }
-  t.throws(() => parseCliArguments(["export", "game.analysis", "--no-wrap-comments=false"]));
-  t.throws(() => parseCliArguments(["assemble", "main.asm", "--no-wrap-comments"]));
-  t.throws(() => parseCliArguments(["assemble", "main.asm", "--comment-line-width", "72"]));
-});

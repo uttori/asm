@@ -44,101 +44,34 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     };
   };
 
-  t.deepEqual(
-    manifest.contributes.commands.map((entry) => entry.command),
-    [
-      "asm.createDisassemblyProject",
-      "asm.importDizProject",
-      "asm.build",
-      "asm.assetPreview.open",
-      "asm.analysis.toggleAnnotations",
-      "asm.toggleWatch",
-      "asm.runEmulator",
-      "asm.debugEmulator",
-      "asm.runAndWatch",
-      "asm.configureEmulatorRuntime",
-      "asm.initConfig",
-      "asm.openPanel",
-      "asm.outline.refresh",
-      "asm.coverage.refresh",
-      "asm.sources.refresh",
-      "asm.analysis.navigate",
-      "asm.coverage.classifyRange",
-      "asm.coverage.setStateEntryPoint",
-      "asm.coverage.resolveTarget",
-      "asm.coverage.renameLabel",
-      "asm.disassembly.editAnnotation",
-      "asm.coverage.explainEvidence",
-      "asm.coverage.undo",
-      "asm.coverage.redo",
-      "asm.trace.start",
-      "asm.trace.stop",
-      "asm.trace.stopAnalyze",
-      "asm.trace.importBus",
-      "asm.trace.importRegenerate",
-      "asm.analysis.showOutput",
-      "asm.ramMap.open",
-      "asm.disassembly.status",
-      "asm.disassembly.regenerate",
-      "asm.trace.cancelLiveAnalysis",
-      "asm.trace.mark",
-      "asm.trace.replay",
-      "asm.trace.restore",
-      "asm.editorInfo.choosePreset",
-      "asm.editorInfo.configureInline",
-      "asm.editorInfo.showStatus",
-      "asm.editorInfo.inspectLine",
-      "asm.disassembly.inspectOwnership",
-      "asm.disassembly.editOwnedAnnotation",
-      "asm.disassembly.openOwningInput",
-      "asm.disassembly.showOwnedStatus",
-      "asm.disassembly.regenerateOwned",
-      "asm.disassembly.editMetadata",
-      "asm.disassembly.removeLabel",
-      "asm.disassembly.resetLabel",
-      "asm.disassembly.editComments",
-      "asm.disassembly.editClassification",
-      "asm.disassembly.editTargets",
-      "asm.disassembly.recoverPublication",
-      "asm.buildTarget.select",
-      "asm.baseline.verify",
-      "asm.modification.create",
-      "asm.modification.add",
-      "asm.modification.open",
-      "asm.modification.build",
-      "asm.modification.run",
-      "asm.modification.debug",
-      "asm.modification.watch",
-      "asm.modification.derive",
-      "asm.modification.openInput",
-      "asm.modification.remove",
-      "asm.asset.extract",
-      "asm.asset.import",
-      "asm.allocation.review",
-      "asm.allocation.apply",
-      "asm.rebase.review",
-      "asm.rebase.accept",
-      "asm.source.review",
-      "asm.source.import",
-      "asm.source.detach",
-      "asm.asset.openExternal",
-      "asm.source.restore",
-      "asm.rebase.refresh",
-      "asm.modification.edit",
-      "asm.asset.edit",
-      "asm.metadata.migrate",
-      "asm.retention.manage",
-    ],
-  );
-  t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
+  const commands = new Set(manifest.contributes.commands.map((entry) => entry.command));
+  for (const command of [
+    "asm.source.init",
+    "asm.source.initDiz",
+    "asm.source.prepare",
+    "asm.source.preview",
+    "asm.source.apply",
+    "asm.source.finish",
+    "asm.source.abort",
+    "asm.source.editResearch",
+    "asm.source.editAnalysis",
+  ]) {
+    t.true(commands.has(command), command);
+  }
+  for (const command of commands) {
+    t.notRegex(
+      command,
+      /^asm\.(?:disassembly|modification|rebase|retention|metadata|allocation)\./,
+    );
+  }
   t.true(manifest.contributes.commands.some((entry) => entry.title === "Build Binary"));
   t.true(
-    manifest.contributes.commands.some(
-      (entry) => entry.title === "Create Disassembly Project from ROM",
-    ),
+    manifest.contributes.commands.some((entry) => entry.title === "Create Git Source Project"),
   );
   t.true(
-    manifest.contributes.commands.some((entry) => entry.title === "Import Diz Disassembly Project"),
+    manifest.contributes.commands.some(
+      (entry) => entry.title === "Create Git Source Project from Diz Research",
+    ),
   );
   t.deepEqual(
     manifest.contributes.languages.map((entry) => entry.id),
@@ -216,7 +149,6 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.trace.indexMode",
       "asm.baseImage",
       "asm.buildOutput",
-      "asm.buildTarget",
       "asm.configFile",
       "asm.debug.captureContext",
       "asm.debug.traceDetail",
@@ -236,7 +168,6 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.editorInfo.hover.rows",
       "asm.entryPoints",
       "asm.includePaths",
-      "asm.modificationProject",
       "asm.plugins",
       "asm.target",
       "uttoriAsmLanguageServer.trace.server",
@@ -267,7 +198,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.deepEqual(Object.fromEntries(views.map(({ id, type }) => [id, type])), {
     "uttori-asm.projectPanel": "webview",
     "uttori-asm.projectOutline": "tree",
-    "uttori-asm.disassemblyPanel": "webview",
+    "uttori-asm.sourceProject": "tree",
     "uttori-asm.sources": "tree",
     "uttori-asm.analysisCoverage": "tree",
   });
@@ -383,7 +314,7 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("ProjectOutlineProvider"));
   t.true(source.includes("AnalysisCoverageProvider"));
   t.false(source.includes("AnalysisGraphProvider"));
-  t.true(source.includes("AnalysisProjectEditor"));
+  t.true(source.includes("AnalysisEvidenceInspector"));
   t.true(source.includes("asm.coverage.refresh"));
   t.true(source.includes("asm.analysis.navigate"));
   t.true(source.includes("navigateToAnalysisLocation"));
@@ -392,79 +323,14 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("asm.coverage.resolveTarget"));
   t.true(source.includes("asm.coverage.renameLabel"));
   t.true(source.includes("asm.coverage.explainEvidence"));
-  t.true(source.includes("asm.coverage.undo"));
-  t.true(source.includes("asm.coverage.redo"));
+  t.false(source.includes("asm.coverage.undo"));
+  t.false(source.includes("asm.coverage.redo"));
   t.true(source.includes("**/analysis.json"));
   t.true(source.includes("**/analysis/**/*.json"));
   t.true(source.includes("asm/indexUpdated"));
   t.true(source.includes("resolveBuildEntryUri"));
   t.true(source.includes("outputChannel"));
   t.true(source.includes("Build Binary requested"));
-});
-
-test("VS Code disassembly wizard probes, initializes, verifies, and opens an isolated project", (t) => {
-  const extension = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/extension.ts"),
-    "utf8",
-  );
-  const wizard = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/project/wizard.ts"),
-    "utf8",
-  );
-  const bindings = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/project/snes-rom-bindings.ts"),
-    "utf8",
-  );
-  t.true(extension.includes("registerProjectWizards"));
-  t.true(wizard.includes("probeSnesProject"));
-  t.true(wizard.includes("initializeSnesDisassemblyWorkspace"));
-  t.true(wizard.includes("mapperSelectionRequired"));
-  t.true(wizard.includes("the selected output directory must be empty"));
-  t.true(wizard.includes('path: ".vscode/settings.json"'));
-  t.true(wizard.includes('path: ".vscode/launch.json"'));
-  t.true(wizard.includes('"asm.analysisProject": "analysis"'));
-  t.true(wizard.includes("roundTrip.comparison.actualSha256"));
-  t.true(wizard.includes('commands.executeCommand("vscode.openFolder"'));
-  t.true(wizard.includes("rememberSnesRom"));
-  t.true(bindings.includes("context.globalState.update"));
-  t.false(wizard.includes('"asm.romPath"'));
-});
-
-test("VS Code disassembly maintenance makes trace-to-source changes explicit and measurable", (t) => {
-  const source = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/disassembly/maintenance.ts"),
-    "utf8",
-  );
-  const jobs = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/disassembly/maintenance-jobs.ts"),
-    "utf8",
-  );
-  const publisher = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/disassembly/source-publisher.ts"),
-    "utf8",
-  );
-  const panel = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/media/disassembly.html"),
-    "utf8",
-  );
-  t.true(jobs.includes("importRuntimeTraceSourceIntoProject"));
-  t.true(jobs.includes("analyzeSnesProject"));
-  t.true(publisher.includes("exportSnesProject"));
-  t.true(jobs.includes("verifySnesProjectRoundTrip"));
-  t.false(source.includes("loadAnalysisProjectSnapshot"));
-  t.true(source.includes("DisassemblyMaintenanceClient"));
-  t.true(source.includes("Source status:"));
-  t.true(source.includes("Source emitted as code:"));
-  t.true(source.includes("validateSourceExportInputs"));
-  t.true(source.includes("RAM-map variables:"));
-  t.true(source.includes("A positive code-byte delta"));
-  t.true(panel.includes("RAM Map"));
-  t.true(panel.includes("Import Saved Trace"));
-  t.true(panel.includes("Analyze &amp; Regenerate") || panel.includes("Analyze & Regenerate"));
-  t.true(panel.includes("Stop &amp; Analyze") || panel.includes("Stop & Analyze"));
-  t.false(jobs.includes("createExecutionWindowAccumulator"));
-  t.false(source.includes("Executed routines (function candidates)"));
-  t.true(source.includes("renderTraceImportReport(imported, traceFile)"));
 });
 
 test("analysis navigation preserves identity and navigates source-first", (t) => {
@@ -539,28 +405,6 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
   );
   t.true(navigationData.includes("buildInstructionAnalysisAnnotations"));
   t.true(navigationData.includes("formatInstructionAnnotationSummary"));
-});
-
-test("analysis coverage editing is trusted, transactional, and reversible", (t) => {
-  const source = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis/project-editor.ts"),
-    "utf8",
-  );
-  t.true(source.includes("workspace.isTrusted"));
-  t.false(source.includes("loadAnalysisProjectSnapshot"));
-  t.true(source.includes("openAnalysisProjectStore"));
-  t.true(source.includes("commitAnalysisProjectSelectedEdit"));
-  t.true(source.includes("applyRangeClassificationEdit"));
-  t.true(source.includes("revertRangeClassificationEdit"));
-  t.true(source.includes("applyStateEntryPointEdit"));
-  t.true(source.includes("revertStateEntryPointEdit"));
-  t.true(source.includes("applyTargetResolutionEdit"));
-  t.true(source.includes("revertTargetResolutionEdit"));
-  t.true(source.includes("applyLabelRenameEdit"));
-  t.true(source.includes("revertLabelRenameEdit"));
-  t.true(source.includes('"explainEvidence"'));
-  t.true(source.includes("asm.coverage.canUndo"));
-  t.true(source.includes("asm.coverage.canRedo"));
 });
 
 test("project panel CSS uses VS Code workbench tokens", (t) => {

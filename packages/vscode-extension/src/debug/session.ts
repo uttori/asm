@@ -21,6 +21,7 @@ import {
 } from "@uttori/asm-debug-adapter";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
 import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
+import type { SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import {
   DebugAdapterInlineImplementation,
   EventEmitter,
@@ -45,7 +46,6 @@ import {
   type OutputChannel,
 } from "vscode";
 
-import { chooseLiveBusProject } from "../disassembly/maintenance.js";
 import { runtimeBindingFromLaunch } from "../runtime/binding.js";
 import { LiveBusAnalysis } from "../runtime/live-bus-analysis.js";
 import { acquireTraceLease } from "../runtime/trace-lease.js";
@@ -55,6 +55,7 @@ import {
   type EditorTraceBatch,
   type EditorTraceMetadata,
 } from "../runtime/trace-recorder.js";
+import { chooseLiveBusProject } from "../source/evidence-selection.js";
 import { createDebugInstructionAnnotation } from "./analysis-annotations.js";
 import { createSnesDebugAddressResolvers } from "./rom-addresses.js";
 import { resolveDebugSourceRoot } from "./source-root.js";
@@ -74,13 +75,7 @@ export const UTTORI_TRACE_STOP_ANALYZE_COMMAND = "asm.trace.stopAnalyze";
  * Maintenance command invoked after instruction capture to import execution evidence and
  * regenerate source.
  */
-const IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
-/**
- * Maintenance command invoked after bus capture to import access evidence without treating it as
- * instruction seeds.
- */
-const IMPORT_BUS_TRACE_COMMAND = "asm.trace.importBus";
-
+const IMPORT_CAPTURE_COMMAND = "asm.source.importCapture";
 /**
  * ROM and debug-map paths from the same successful build, with optional identities used to
  * detect changes before launch.
@@ -844,7 +839,7 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
       }
     }
     if (analyze) {
-      await commands.executeCommand(IMPORT_BUS_TRACE_COMMAND, Uri.file(summary.file));
+      await commands.executeCommand(IMPORT_CAPTURE_COMMAND, Uri.file(summary.file));
       return;
     }
     const action = await window.showInformationMessage(
@@ -852,7 +847,7 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
       "Import Bus Activity",
     );
     if (action === "Import Bus Activity") {
-      await commands.executeCommand(IMPORT_BUS_TRACE_COMMAND, Uri.file(summary.file));
+      await commands.executeCommand(IMPORT_CAPTURE_COMMAND, Uri.file(summary.file));
     }
     return;
   }
@@ -863,16 +858,13 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   const notify =
     summary.droppedEvents > 0 ? window.showWarningMessage : window.showInformationMessage;
   if (analyze) {
-    void notify(`Assembly: ${counts}. Updating the disassembly and identifying routines…`);
-    await commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, Uri.file(summary.file));
+    void notify(`Assembly: ${counts}. Importing evidence into the selected source project…`);
+    await commands.executeCommand(IMPORT_CAPTURE_COMMAND, Uri.file(summary.file));
     return;
   }
-  const action = await notify(
-    `Assembly: ${counts}. Wrote ${summary.file}.`,
-    "Import Trace and Update Disassembly",
-  );
-  if (action === "Import Trace and Update Disassembly") {
-    await commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, Uri.file(summary.file));
+  const action = await notify(`Assembly: ${counts}. Wrote ${summary.file}.`, "Import Capture");
+  if (action === "Import Capture") {
+    await commands.executeCommand(IMPORT_CAPTURE_COMMAND, Uri.file(summary.file));
   }
 };
 
@@ -1140,8 +1132,7 @@ class InlineDebugAdapter implements DebugAdapter {
 }
 
 /**
- * Supply replay-launch defaults for missing fields while preserving explicitly configured launch
- * values.
+ * Resolve opt-in Git source builds, or supply replay defaults while preserving explicit paths.
  * @see https://code.visualstudio.com/api/references/vscode-api#DebugConfigurationProvider
  */
 class UttoriDebugConfigurationProvider implements DebugConfigurationProvider {
@@ -1149,12 +1140,36 @@ class UttoriDebugConfigurationProvider implements DebugConfigurationProvider {
    * Supplies a usable map-backed replay launch when `launch.json` is initially empty.
    * @param {WorkspaceFolder | undefined} folder Selected workspace folder.
    * @param {DebugConfiguration} configuration Partial configuration.
-   * @returns {DebugConfiguration} Completed launch configuration.
+   * @returns Completed configuration, or undefined when the source build failed.
    */
-  resolveDebugConfiguration(
+  async resolveDebugConfiguration(
     folder: WorkspaceFolder | undefined,
     configuration: DebugConfiguration,
-  ): DebugConfiguration {
+  ): Promise<DebugConfiguration | undefined> {
+    // Resolve F5 from one successful build receipt, never from a legacy fixed output filename.
+    if (configuration.sourceProject === true) {
+      if (!folder || !workspace.isTrusted) {
+        throw new Error("Select and trust a Git source workspace before debugging it.");
+      }
+      const built = await commands.executeCommand<SnesSourceBuild | undefined>(
+        "asm.source.buildProject",
+        folder.uri,
+      );
+      if (!built) {
+        return undefined;
+      }
+      return {
+        ...configuration,
+        type: UTTORI_ASM_DEBUG_TYPE,
+        request: "launch",
+        name: configuration.name ?? "Debug Git Source",
+        program: built.outputFile,
+        debugMap: built.debugMapFile,
+        outputSha256: built.verification.outputSha256,
+        debugMapFingerprint: built.debugMapFingerprint,
+        sourceRoot: folder.uri.fsPath,
+      };
+    }
     const root = folder?.uri.fsPath ?? "${workspaceFolder}";
     const configuredProgram =
       typeof configuration.program === "string" ? configuration.program : undefined;

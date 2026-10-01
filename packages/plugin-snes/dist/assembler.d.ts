@@ -11,6 +11,10 @@ export interface SnesTargetOptions extends Record<string, unknown> {
     readonly checksumEnabled: boolean;
     /** When true, Super FX auto-MOVE short RAM uses Asar's raw byte, not `addr >> 1`. */
     readonly asarSuperFxMoveShortAddress: boolean;
+    /** Optional diagnostic sink for unpublished layout measurement. Without it, a bank crossing throws.
+     * The caller must reject or reassemble the measured image before publishing; PC wrap rules are unchanged.
+     */
+    readonly onBankCrossing?: (address: number, width: number) => void;
 }
 /**
  * SNES plugin: 65816 / SPC700 / Super FX, mapper address space, `.sfc` checksum

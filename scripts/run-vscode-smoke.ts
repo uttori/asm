@@ -83,7 +83,13 @@ const testInstalledArchive = async (
     }
     const archives: string[] = [];
     const npmEnvironment = { ...process.env, npm_config_cache: path.join(isolation, "npm-cache") };
-    for (const directory of ["packages/core", "node_modules/semver"]) {
+    // Include core's installed runtime dependencies so the empty-cache consumer stays fully offline.
+    for (const directory of [
+      "packages/core",
+      "node_modules/semver",
+      "node_modules/@uttori/data-tools",
+      "node_modules/@uttori/data-tools/node_modules/pako",
+    ]) {
       const packed = execFileSync(
         process.execPath,
         [npmCli, "pack", "--ignore-scripts", "--json", "--pack-destination", isolation],
@@ -251,21 +257,220 @@ const main = async (): Promise<void> => {
   const vscodeExecutablePath = process.env.UTTORI_VSCODE_TEST_EXECUTABLE
     ? path.resolve(process.env.UTTORI_VSCODE_TEST_EXECUTABLE)
     : await downloadAndUnzipVSCode(version);
+  if (!process.env.UTTORI_VSCODE_TEST_EXECUTABLE || process.env.UTTORI_VSCODE_TEST_VERSION) {
+    // Directory names and downloader markers are not runtime identity; a replaced cache must fail.
+    let resources = path.join(path.dirname(vscodeExecutablePath), "resources");
+    if (process.platform === "darwin") {
+      resources = path.resolve(path.dirname(vscodeExecutablePath), "../Resources");
+    }
+    const actual = (
+      JSON.parse(fs.readFileSync(path.join(resources, "app/package.json"), "utf8")) as {
+        version: string;
+      }
+    ).version;
+    if (actual !== version) {
+      throw new Error(
+        `Expected VS Code ${version}, found ${actual}. Replace the stale test cache.`,
+      );
+    }
+  }
   checkMinimumEditorApi(vscodeExecutablePath);
   if (process.env.UTTORI_VSCODE_LIVE_WORKSPACE) {
-    await runTests({
-      version,
-      vscodeExecutablePath,
-      extensionDevelopmentPath,
-      extensionTestsPath,
-      launchArgs: [
+    // Full-project checks may open and undo real source buffers. Isolate both extension state and
+    // hot-exit backups so a verification run cannot reuse or overwrite the user's editor session.
+    const isolation = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-vscode-live-"));
+    let completed = false;
+    try {
+      // VS Code resolves custom-editor providers only for contributed view types.
+      // Keep the driven test view in a disposable extension, outside the shipped manifest.
+      const developmentPaths = [extensionDevelopmentPath];
+      if (
+        process.env.UTTORI_VSCODE_BINARY_PREVIEW === "1" ||
+        process.env.UTTORI_VSCODE_SOURCE_LAUNCH === "1"
+      ) {
+        // Only the disposable manifest points at the instrumented test entry.
+        // Workers, resources and production composition come from the same build.
+        const instrumented = path.join(isolation, "instrumented-extension");
+        fs.mkdirSync(instrumented);
+        for (const entry of fs.readdirSync(extensionDevelopmentPath)) {
+          if (entry !== "package.json") {
+            fs.symlinkSync(
+              path.join(extensionDevelopmentPath, entry),
+              path.join(instrumented, entry),
+            );
+          }
+        }
+        const manifest = JSON.parse(
+          fs.readFileSync(path.join(extensionDevelopmentPath, "package.json"), "utf8"),
+        ) as Record<string, unknown>;
+        // VS Code assigns API ownership from the real module path; a symlinked
+        // entry would not own the debugger contribution in this disposable root.
+        fs.copyFileSync(
+          path.join(extensionDevelopmentPath, "tests-host/out/extension-driver.cjs"),
+          path.join(instrumented, "entry.cjs"),
+        );
+        manifest.main = "./entry.cjs";
+        fs.writeFileSync(path.join(instrumented, "package.json"), JSON.stringify(manifest));
+        developmentPaths[0] = instrumented;
+      }
+      if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
+        const driver = path.join(isolation, "asset-driver");
+        fs.mkdirSync(driver);
+        fs.writeFileSync(
+          path.join(driver, "package.json"),
+          JSON.stringify({
+            name: "uttori-asset-test-driver",
+            publisher: "uttori-tests",
+            version: "0.0.0",
+            engines: { vscode: "^1.128.0" },
+            main: process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1" ? "index.js" : undefined,
+            activationEvents:
+              process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1" ? ["onStartupFinished"] : undefined,
+            contributes: {
+              customEditors: [
+                {
+                  viewType: "uttori.paletteSmoke",
+                  displayName: "Palette smoke",
+                  selector: [{ filenamePattern: "**/rom-palettes.json" }],
+                  priority: "option",
+                },
+                {
+                  viewType: "uttori.pngSmoke",
+                  displayName: "PNG smoke",
+                  selector: [{ filenamePattern: "*.png" }],
+                  priority: "option",
+                },
+              ],
+            },
+          }),
+        );
+        if (process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1") {
+          fs.copyFileSync(
+            path.join(extensionDevelopmentPath, "tests-host/out/asset-recovery-driver.cjs"),
+            path.join(driver, "index.js"),
+          );
+        }
+        developmentPaths.push(driver);
+      }
+      const phases = process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1" ? ["draft", "recover"] : [""];
+      if (phases.length > 1) {
+        fs.mkdirSync(path.join(isolation, "profile/User"), { recursive: true });
+        fs.writeFileSync(
+          path.join(isolation, "profile/User/settings.json"),
+          JSON.stringify({
+            "files.hotExit": "onExitAndWindowClose",
+            "window.restoreWindows": "all",
+            "files.autoSave": "off",
+          }),
+        );
+        // Normal installed-extension windows receive a persistent text-backup path.
+        // Development windows can retain custom backup IDs while omitting text backups.
+        const installed = path.join(isolation, "extensions");
+        fs.mkdirSync(installed, { recursive: true });
+        fs.symlinkSync(
+          extensionDevelopmentPath,
+          path.join(installed, "matthewcallis.uttori-asm-vscode-1.0.0"),
+          "dir",
+        );
+        fs.symlinkSync(
+          path.join(isolation, "asset-driver"),
+          path.join(installed, "uttori-tests.uttori-asset-test-driver-0.0.0"),
+          "dir",
+        );
+      }
+      const launchArgs = [
         path.resolve(process.env.UTTORI_VSCODE_LIVE_WORKSPACE),
+        "--user-data-dir",
+        path.join(isolation, "profile"),
+        "--extensions-dir",
+        path.join(isolation, "extensions"),
+        "--shared-data-dir",
+        path.join(isolation, "shared"),
         "--disable-extensions",
         "--disable-gpu",
         "--disable-workspace-trust",
         "--skip-welcome",
-      ],
-    });
+        "--skip-release-notes",
+        "--disable-updates",
+      ];
+      for (const phase of phases) {
+        if (!phase) {
+          await runTests({
+            version,
+            vscodeExecutablePath,
+            extensionDevelopmentPath: developmentPaths,
+            extensionTestsPath,
+            launchArgs,
+          });
+          continue;
+        }
+        // Extension-test hosts intentionally use in-memory workbench storage.
+        // The disposable driver runs assertions in ordinary hosts for hot exit.
+        const resultFile = path.join(isolation, `recovery-${phase}.json`);
+        await new Promise<void>((resolve, reject) => {
+          const child = spawn(
+            vscodeExecutablePath,
+            launchArgs.filter((item) => item !== "--disable-extensions"),
+            {
+              stdio: "inherit",
+              env: {
+                ...process.env,
+                UTTORI_VSCODE_NATIVE_RECOVERY: "1",
+                UTTORI_VSCODE_ASSET_RECOVERY_PHASE: phase,
+                UTTORI_VSCODE_ASSET_RECOVERY_RESULT: resultFile,
+              },
+            },
+          );
+          const timer = setTimeout(() => {
+            child.kill("SIGTERM");
+            reject(new Error(`Asset recovery ${phase} timed out.`));
+          }, 120000);
+          child.once("error", (error) => {
+            clearTimeout(timer);
+            reject(error);
+          });
+          child.once("exit", (code) => {
+            clearTimeout(timer);
+            if (code !== 0) {
+              reject(new Error(`Asset recovery host exited ${code}.`));
+              return;
+            }
+            try {
+              const result = JSON.parse(fs.readFileSync(resultFile, "utf8")) as {
+                success: boolean;
+                phase: string;
+                error?: string;
+              };
+              if (!result.success || result.phase !== phase) {
+                throw new Error(result.error ?? "Asset recovery did not complete its phase.");
+              }
+              resolve();
+            } catch (error) {
+              reject(error instanceof Error ? error : new Error(String(error)));
+            }
+          });
+        });
+      }
+      completed = true;
+    } finally {
+      if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
+        const destination = path.join(
+          path.resolve(process.env.UTTORI_VSCODE_LIVE_WORKSPACE),
+          ".verification",
+          "editor-host-logs",
+        );
+        // Retain only this disposable host's diagnostics; never copy its profile or hot-exit state.
+        if (fs.existsSync(path.join(isolation, "profile/logs"))) {
+          fs.cpSync(path.join(isolation, "profile/logs"), destination, { recursive: true });
+        }
+        console.error(`Editor diagnostics retained at ${destination}`);
+      }
+      if (completed || process.env.UTTORI_VSCODE_ASSET_RECOVERY !== "1") {
+        fs.rmSync(isolation, { recursive: true, force: true });
+      } else {
+        console.error(`Failed hot-exit profile retained for inspection: ${isolation}`);
+      }
+    }
     return;
   }
   const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-vscode-smoke-"));
@@ -322,8 +527,7 @@ const main = async (): Promise<void> => {
         labels: [],
         comments: [],
         regions: [],
-        runtime: [
-          ...["a", "b"].flatMap((source) =>
+        runtime: ["a", "b"].flatMap((source) =>
             Array.from({ length: source === "a" ? 500 : 100 }, (_, index) => ({
               id: `pc:${source}:${index}`,
               kind: "runtime-execution" as const,
@@ -335,7 +539,6 @@ const main = async (): Promise<void> => {
               evidence: [source],
             })),
           ),
-        ],
         imports: ["a", "b"].map((id) => ({
           id: `import:${id}`,
           format: "trace",

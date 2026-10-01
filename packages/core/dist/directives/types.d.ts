@@ -104,7 +104,7 @@ export type IncludeDefineEngine = {
 };
 export type IncludeDirectiveContext = OperandDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> & Pick<DirectiveOutputCapability, "write1">> & RuntimeDirectiveContext & {
     defineEngine?: IncludeDefineEngine;
-    includeSource: Pick<IncludeSourceService, "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile">;
+    includeSource: Pick<IncludeSourceService, "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"> & Partial<Pick<IncludeSourceService, "recordBinarySlice">>;
 };
 export type StructDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "structEngine">>;
 //# sourceMappingURL=types.d.ts.map

@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
-const CACHE_VERSION = 3;
+// Older entries flattened multiline records and cannot safely supply rename ranges.
+const CACHE_VERSION = 4;
 /**
  * Disk-backed cache of full-pass workspace analysis artifacts.
  *

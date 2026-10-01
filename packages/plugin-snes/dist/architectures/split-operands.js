@@ -1,3 +1,4 @@
+import { parseExpressionNode } from "@uttori/asm-core";
 /**
  * Operand-list splitters used by architecture registration and encoders.
  * 65816 keeps the rest of the line as one operand. Super FX splits on every
@@ -10,6 +11,55 @@
  * @returns {string[]} One entry, or an empty list when `text` is empty.
  */
 export const splitSingleOperand = (text) => (text ? [text] : []);
+/**
+ * Extract symbolic expressions without resolving them. The expression grammar cannot parse the
+ * comma in `((Table & $FFFF),x)`, so navigation must remove only 65816 addressing wrappers first.
+ */
+export function referenceExpressions65816(operand, depth = 0) {
+    const text = operand.trim().replace(/^#\s*/, "");
+    if (!text || depth > 32 || /^[asxy]$/i.test(text)) {
+        return [];
+    }
+    if (parseExpressionNode(text).type !== "raw") {
+        return [text];
+    }
+    const parts = [];
+    let nesting = 0, start = 0, outerEnd = -1;
+    for (let index = 0; index < text.length; index++) {
+        const character = text[index];
+        // Quoted operands are data, not pointer expressions. Do not guess reference spans inside them.
+        if (character === '"' || character === "'") {
+            return [];
+        }
+        if (character === "(" || character === "[") {
+            nesting++;
+        }
+        if (character === ")" || character === "]") {
+            nesting--;
+            if (nesting === 0 && outerEnd === -1) {
+                outerEnd = index;
+            }
+            if (nesting < 0) {
+                return [];
+            }
+        }
+        if (character === "," && nesting === 0) {
+            parts.push(text.slice(start, index));
+            start = index + 1;
+        }
+    }
+    if (nesting !== 0) {
+        return [];
+    }
+    if (parts.length) {
+        parts.push(text.slice(start));
+        return parts.flatMap((part) => referenceExpressions65816(part, depth + 1));
+    }
+    const wrapped = (text.startsWith("(") && text.endsWith(")")) || (text.startsWith("[") && text.endsWith("]"));
+    return wrapped && outerEnd === text.length - 1
+        ? referenceExpressions65816(text.slice(1, -1), depth + 1)
+        : [];
+}
 /**
  * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
  * @param {string} text Rest-of-line operand text.

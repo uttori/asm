@@ -120,7 +120,7 @@ rolls back earlier writes without overwriting an intervening edit. Failed recove
 retains backups and reports their paths. This is **not crash-atomic**, and readers
 can see intermediate files. Creation, deletion, schema migrations and ROM allocation
 remain host responsibilities. Game-specific tools must also validate all read
-dependencies and generated-file ownership before calling it.
+dependencies before calling it.
 
 `createAssetSourceBaseline(identity, sources)` and `assertAssetSourceBaseline(root,
 baseline, expectedIdentity)` persist relative paths, sizes and SHA-256 fingerprints
@@ -128,17 +128,8 @@ across editing sessions. The host supplies a project/codec identity and validate
 complete dependency set; fingerprints do not discover missing dependencies themselves.
 Paths cannot escape the source root or traverse symlinks.
 
-For changes that add sources or regenerate an export, `createAssetSourceStage(root,
-identity, excludedDirectories?)` copies a bounded (one GiB) source tree to a sibling
-stage, including empty directories. External analysis/capture directories must be
-explicitly excluded by the host. `publishAssetSourceStage(root, stage, identity,
-validate)` requires a validation callback, checks the live baseline and file inventory,
-publishes the staged generation and retains the previous generation for recovery.
-Excluded directories move with their current contents; a stage cannot shadow them.
-This requires offline publication: directory renames are neither crash-atomic nor
-atomic to concurrent readers. Failed recovery reports retained source paths. Exporter
-regeneration, manifest integrity, assembly and approved ROM differences remain host
-policy; the generic helper does not assume a game or a generated-file format.
+New asset files are ordinary Git source inputs. Regeneration uses the shared source-project
+preview and native merge lifecycle; asset tools do not publish whole source directories.
 
 ## WAVE-to-BRR conversion
 

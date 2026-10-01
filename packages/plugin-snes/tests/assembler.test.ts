@@ -1,3 +1,4 @@
+import { MemoryAssemblyFileProvider } from "@uttori/asm-core";
 import sinon from "sinon";
 
 import { test } from "../../../tests/ava-helper.js";
@@ -2955,17 +2956,12 @@ test("setIncludePaths", (t) => {
 });
 
 test("handleIncbin", (t) => {
-  const assembler = new Assembler();
-  assembler.activateStage("emitProgram");
-
-  // Mock the readFile method
   const mockData = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
-  assembler.includeSource.readFile = (filename) => {
-    if (filename === "testfile.bin") {
-      return mockData;
-    }
-    return null;
-  };
+  // Reads and consumed-slice attribution resolve through the same virtual dependency identity.
+  const assembler = new Assembler(undefined, {
+    fileProvider: new MemoryAssemblyFileProvider({ "testfile.bin": mockData }),
+  });
+  assembler.activateStage("emitProgram");
 
   // Mock write1 method to track written bytes
   const writtenBytes: number[] = [];

@@ -35,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ms/index.js
+// ../../node_modules/ms/index.js
 var require_ms = __commonJS({
-  "node_modules/ms/index.js"(exports, module) {
+  "../../node_modules/ms/index.js"(exports, module) {
     var s = 1e3;
     var m = s * 60;
     var h = m * 60;
@@ -151,9 +151,9 @@ var require_ms = __commonJS({
   }
 });
 
-// node_modules/debug/src/common.js
+// ../../node_modules/debug/src/common.js
 var require_common = __commonJS({
-  "node_modules/debug/src/common.js"(exports, module) {
+  "../../node_modules/debug/src/common.js"(exports, module) {
     function setup(env) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -328,9 +328,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/debug/src/browser.js
+// ../../node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "node_modules/debug/src/browser.js"(exports, module) {
+  "../../node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -498,9 +498,9 @@ var require_browser = __commonJS({
   }
 });
 
-// node_modules/has-flag/index.js
+// ../../node_modules/has-flag/index.js
 var require_has_flag = __commonJS({
-  "node_modules/has-flag/index.js"(exports, module) {
+  "../../node_modules/has-flag/index.js"(exports, module) {
     "use strict";
     module.exports = (flag, argv = process.argv) => {
       const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
@@ -511,9 +511,9 @@ var require_has_flag = __commonJS({
   }
 });
 
-// node_modules/supports-color/index.js
+// ../../node_modules/supports-color/index.js
 var require_supports_color = __commonJS({
-  "node_modules/supports-color/index.js"(exports, module) {
+  "../../node_modules/supports-color/index.js"(exports, module) {
     "use strict";
     var os = __require("os");
     var tty = __require("tty");
@@ -613,9 +613,9 @@ var require_supports_color = __commonJS({
   }
 });
 
-// node_modules/debug/src/node.js
+// ../../node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "node_modules/debug/src/node.js"(exports, module) {
+  "../../node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util = __require("util");
     exports.init = init;
@@ -787,9 +787,9 @@ var require_node = __commonJS({
   }
 });
 
-// node_modules/debug/src/index.js
+// ../../node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "node_modules/debug/src/index.js"(exports, module) {
+  "../../node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -798,10 +798,10 @@ var require_src = __commonJS({
   }
 });
 
-// packages/language-server/src/asset-preview-worker.ts
+// ../language-server/src/asset-preview-worker.ts
 import { parentPort } from "node:worker_threads";
 
-// packages/assets/src/validation.ts
+// ../assets/src/validation.ts
 function integer(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -819,7 +819,7 @@ function isNamespacedId(id) {
   return parts.length > 1 && /^[a-z][\da-z-]*$/.test(parts[0]) && parts.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part));
 }
 
-// packages/assets/src/registry.ts
+// ../assets/src/registry.ts
 var AssetRegistry = class {
   #importers = /* @__PURE__ */ new Map();
   #encoders = /* @__PURE__ */ new Map();
@@ -900,7 +900,7 @@ function convertAsset(registry3, request) {
   };
 }
 
-// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -4338,7 +4338,7 @@ var Inflate = class {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/data-helpers.js
+// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -4430,7 +4430,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// node_modules/@uttori/data-tools/dist/underflow-error.js
+// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -4448,7 +4448,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// node_modules/@uttori/data-tools/dist/data-buffer.js
+// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -5693,7 +5693,7 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// node_modules/@uttori/data-tools/dist/audio/audio-wav.js
+// ../../node_modules/@uttori/data-tools/dist/audio/audio-wav.js
 var _a;
 var debug2 = (..._args) => {
 };
@@ -7663,7 +7663,7 @@ var AudioWAV = class extends data_buffer_default {
 _a = AudioWAV;
 var audio_wav_default = AudioWAV;
 
-// packages/assets/src/snes.ts
+// ../assets/src/snes.ts
 var planeOffset = (depth, plane, row) => {
   if (depth === 3 && plane === 2) {
     return 16 + row;
@@ -7918,7 +7918,7 @@ var snesNativeEncoders = Object.freeze(
   ].sort((left, right) => left.id.localeCompare(right.id))
 );
 
-// packages/assets/src/brr-codec.ts
+// ../assets/src/brr-codec.ts
 function decodeNibble(nibble, range, filter, state) {
   let value = range <= 12 ? nibble << range >> 1 : nibble & ~2047;
   const previous = state.previous;
@@ -8026,7 +8026,7 @@ function encodeBrrPcm(samples, loop) {
   return bytes;
 }
 
-// packages/assets/src/audio.ts
+// ../assets/src/audio.ts
 var MAX_WAVE_BYTES = 16 * 1024 * 1024;
 var MAX_SAMPLES = 1024 * 1024;
 var u16le = (bytes, offset) => bytes[offset] | bytes[offset + 1] << 8;
@@ -8162,7 +8162,7 @@ function writePcmWave(samples, sampleRate) {
   samples.forEach((sample, index) => view.setInt16(44 + index * 2, sample, true));
   return bytes;
 }
-var audioOptions = (raw, source) => {
+var resolveBrrAudioOptions = (raw, source) => {
   if (Object.keys(raw).some((key) => key !== "padding" && key !== "loop")) {
     throw new Error("Unknown WAVE-to-BRR option.");
   }
@@ -8181,10 +8181,13 @@ var audioOptions = (raw, source) => {
     if (!source.loop) {
       throw new Error("WAVE has no source loop.");
     }
-    return { padding, loop: "source" };
+    requested = source.loop;
   }
   if (!requested || typeof requested !== "object" || Array.isArray(requested) || !("start" in requested) || !("end" in requested) || typeof requested.start !== "number" || typeof requested.end !== "number" || Object.keys(requested).some((key) => key !== "start" && key !== "end")) {
     throw new Error("loop must be false, 'source', or { start, end } in sample frames.");
+  }
+  if (!Number.isSafeInteger(requested.start) || !Number.isSafeInteger(requested.end) || requested.start < 0 || requested.start >= requested.end || requested.end !== source.samples.length || requested.start % 16 !== 0 || requested.end % 16 !== 0) {
+    throw new Error("BRR loop must start on a 16-sample boundary and end at the unpadded tail.");
   }
   return { padding, loop: { start: requested.start, end: requested.end } };
 };
@@ -8206,7 +8209,7 @@ function withAudioEncoder(native) {
           );
         }
         const audio = document2.value;
-        const options = audioOptions(rawOptions, audio);
+        const options = resolveBrrAudioOptions(rawOptions, audio);
         const originalCount = audio.samples.length;
         if (originalCount === 0) {
           throw new Error("WAVE has no PCM samples.");
@@ -8219,14 +8222,7 @@ function withAudioEncoder(native) {
         }
         const padded = new Int16Array(originalCount + paddingCount);
         padded.set(audio.samples);
-        const loop = options.loop === "source" ? audio.loop : options.loop;
-        if (loop) {
-          if (!Number.isSafeInteger(loop.start) || !Number.isSafeInteger(loop.end) || loop.start < 0 || loop.start >= loop.end || loop.end !== originalCount || loop.start % 16 !== 0 || loop.end % 16 !== 0) {
-            throw new Error(
-              "BRR loop must start on a 16-sample boundary and end at the unpadded tail."
-            );
-          }
-        }
+        const loop = options.loop;
         const brr = encodeBrrPcm(padded, Boolean(loop));
         const loopOffset = loop ? loop.start / 16 * 9 : void 0;
         const decoded = decodeBrrPcm(brr, loopOffset);
@@ -8296,7 +8292,7 @@ function withAudioEncoder(native) {
   });
 }
 
-// packages/assets/src/data.ts
+// ../assets/src/data.ts
 var rawImporter = Object.freeze({
   id: "uttori.import.raw",
   version: "1.0.0",
@@ -8340,7 +8336,7 @@ var jsonImporter = Object.freeze({
   }
 });
 
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL = 3988292384;
 var CRC32C_POLYNOMIAL = 2197175160;
 var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -8379,7 +8375,7 @@ var computeBytes = (bytes) => {
   return ~crc >>> 0;
 };
 
-// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -8529,7 +8525,7 @@ function drawBitmapText(surface, text, x, y, color, options) {
   return metrics;
 }
 
-// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -8985,7 +8981,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug3 = () => {
 };
 if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
@@ -10625,7 +10621,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// packages/assets/src/png.ts
+// ../assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: 16 * 1024 * 1024,
   maxPixels: 1024 * 1024,
@@ -10660,7 +10656,7 @@ var pngImporter = Object.freeze({
   }
 });
 
-// packages/assets/src/indexed-edit.ts
+// ../assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
   integer(image.width, "Indexed width", 1, 1 << 20);
   integer(image.height, "Indexed height", 1, 1 << 20);
@@ -10739,7 +10735,7 @@ function expandIndexedGrid(block) {
   });
 }
 
-// packages/assets/src/image-conversion.ts
+// ../assets/src/image-conversion.ts
 var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 var readInteger = (value, label, minimum, maximum) => {
   if (typeof value !== "number") {
@@ -11247,7 +11243,7 @@ function withImageEncoders(native) {
   });
 }
 
-// packages/assets/src/preview.ts
+// ../assets/src/preview.ts
 function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
   integer(width, "Preview width", 1, 4096);
   integer(height, "Preview height", 1, 4096);
@@ -11289,13 +11285,13 @@ function waveformPreviewPng(samples) {
   return rgbaPreviewPng(rgba, width, height);
 }
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 1;
 function definePlugin(plugin2) {
   return plugin2;
 }
 
-// packages/assets/src/secret-of-mana/som-boss-graphics.ts
+// ../assets/src/secret-of-mana/som-boss-graphics.ts
 function expandBossGraphics(source, size) {
   if (!(source instanceof Uint8Array) || !Number.isInteger(size) || size <= 0 || size > 65535) {
     throw new Error("Boss graphics need bytes and a positive 16-bit output size.");
@@ -11346,7 +11342,7 @@ function encodeBossGraphics(data) {
   return encoded;
 }
 
-// packages/assets/src/secret-of-mana/som-body-frame.ts
+// ../assets/src/secret-of-mana/som-body-frame.ts
 function decodeBodyFrame(input) {
   if (!Array.isArray(input) && !(input instanceof Uint8Array) || input.length < 2 || input.length > 157 || [...input].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
     throw new Error("Invalid bounded body frame bytes.");
@@ -11396,7 +11392,7 @@ function decodeBodyFrame(input) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-frame-composition.ts
+// ../assets/src/secret-of-mana/som-frame-composition.ts
 function isSegmentTile(ref) {
   return Array.isArray(ref);
 }
@@ -11538,7 +11534,7 @@ function validateFrameComposition(layout2, frame) {
   return expected;
 }
 
-// packages/assets/src/secret-of-mana/som-sprite-palettes.ts
+// ../assets/src/secret-of-mana/som-sprite-palettes.ts
 function expandChannel(value) {
   return value << 3 | value >>> 2;
 }
@@ -11643,7 +11639,7 @@ function readSpritePaletteCatalog(options, resources) {
   return parseSpritePaletteCatalog(resource.bytes);
 }
 
-// packages/assets/src/secret-of-mana/som-frame-atlas.ts
+// ../assets/src/secret-of-mana/som-frame-atlas.ts
 function rectangle(bounds, width, height, label) {
   if (!Array.isArray(bounds) || bounds.length !== 4 || bounds.some((v) => !Number.isSafeInteger(v)) || bounds[0] < 0 || bounds[1] < 0 || bounds[2] < 1 || bounds[3] < 1 || bounds[0] + bounds[2] > width || bounds[1] + bounds[3] > height) {
     throw new Error(`Invalid ${label} bounds.`);
@@ -11658,6 +11654,11 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   if (layout2.guideIndex !== layout2.paletteRefs.length * 16) {
     throw new Error("Frame atlas guide index must follow the source palette groups.");
+  }
+  if (layout2.indexPalette !== void 0 && (!Array.isArray(layout2.indexPalette) || layout2.indexPalette.length !== layout2.guideIndex || layout2.indexPalette.some(
+    (color) => !Array.isArray(color) || color.length !== 4 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)
+  ))) {
+    throw new Error("Frame atlas indexPalette must bind every native slot to an RGBA8 color.");
   }
   for (const variant of layout2.paletteVariants ?? []) {
     if (!Number.isInteger(variant.group) || variant.group < 0 || variant.group >= layout2.paletteRefs.length) {
@@ -11780,7 +11781,7 @@ function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   if (!imported || typeof imported !== "object" || !("kind" in imported) || imported.kind !== "indexed-image") {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
-  const image = imported;
+  let image = imported;
   if (image.width !== layout2.width || image.height !== layout2.height) {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
@@ -11791,11 +11792,15 @@ function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   for (const variant of layout2.paletteVariants ?? []) {
     spritePaletteColors(catalog, variant.palette);
   }
-  for (let index = 0; index < colors.length; index++) {
-    if (!image.palette[index] || image.palette[index].some((component, channel) => component !== colors[index][channel])) {
-      throw new Error(`Frame atlas palette color ${index} no longer matches its layout.`);
-    }
+  const matches = (expected) => expected.every(
+    (color, index) => image.palette[index]?.length === 4 && color.every((component, channel) => component === image.palette[index][channel])
+  );
+  if (!matches(colors) && (!layout2.indexPalette || !matches(layout2.indexPalette))) {
+    throw new Error(
+      "Frame atlas palette no longer matches its stable index binding. Restore the PNG palette order; edit shared colors in the palette catalog."
+    );
   }
+  image = { ...image, palette: [...colors, ...image.palette.slice(colors.length)] };
   const tiles = /* @__PURE__ */ new Map();
   const names = options.whole ? Object.keys(layout2.segments) : [options.segmentName ?? ""];
   for (const name of names) {
@@ -11858,7 +11863,7 @@ function readFrameLayout(options, resources) {
   return layout2;
 }
 
-// packages/assets/src/secret-of-mana/som-lz.ts
+// ../assets/src/secret-of-mana/som-lz.ts
 import assert from "node:assert/strict";
 var LZ_HEADER_BYTES = 4;
 var LZ_COPY_FLAG = 128;
@@ -12036,7 +12041,7 @@ function encodeMode(source, mode, unusedHeaderByte) {
   return Uint8Array.from(output);
 }
 
-// packages/assets/src/secret-of-mana/som-room-assets.ts
+// ../assets/src/secret-of-mana/som-room-assets.ts
 import assert2 from "node:assert/strict";
 function integer2(value, maximum, name) {
   assert2(
@@ -12270,7 +12275,7 @@ function renderRoomAsset(room, preview, { layer, story } = {}) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-world-rle.ts
+// ../assets/src/secret-of-mana/som-world-rle.ts
 function decodeWorldRow(bytes, size = 512) {
   if (!Number.isSafeInteger(size) || size < 1 || size > 65536) {
     throw new Error("World row size must be 1..65536 tiles.");
@@ -12321,10 +12326,14 @@ function encodeWorldRow(bytes) {
   return Uint8Array.from(output);
 }
 
-// packages/assets/src/secret-of-mana/som-asset-plugin.ts
+// ../assets/src/secret-of-mana/som-asset-plugin.ts
 var registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry.registerEncoder(encoder);
+}
+var audioRegistry = new AssetRegistry().registerImporter(waveImporter);
+for (const encoder of withAudioEncoder(snesNativeEncoders)) {
+  audioRegistry.registerEncoder(encoder);
 }
 function nativeBossChunk(png, wanted = "soMz") {
   const image = readAssetPng(png);
@@ -12359,12 +12368,15 @@ function decodeBossStream(native, storage, size) {
   return { bytes: expanded.data, mode, unusedHeaderByte };
 }
 function convertBossImage(source, options, resources = {}) {
-  const { storage, byteLength, mode, unusedHeaderByte = 0 } = options;
+  const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
   if (storage !== "lz-rle" && storage !== "rle") {
     throw new Error("Boss storage must be lz-rle or rle.");
   }
   if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
     throw new Error("Boss byteLength must be a positive integer.");
+  }
+  if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
+    throw new Error("Boss sizePolicy must be fixed or encoded.");
   }
   const layout2 = options.layout ? readFrameLayout(options, resources) : void 0;
   let pixels;
@@ -12388,10 +12400,18 @@ function convertBossImage(source, options, resources = {}) {
     throw new Error("Boss atlas supports at most 26 native segments.");
   }
   const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
-  const original = nativeBossChunk(source.bytes, chunkName);
+  let original;
+  if (options.native !== void 0) {
+    if (typeof options.native !== "string" || !options.native || !resources[options.native]) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    original = resources[options.native].bytes;
+  } else {
+    original = nativeBossChunk(source.bytes, chunkName);
+  }
   if (original) {
     if (original.length !== byteLength) {
-      throw new Error("Boss PNG native chunk has the wrong byte length.");
+      throw new Error("Boss native data has the wrong byte length.");
     }
     const decoded = decodeBossStream(original, storage, pixels.length);
     if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
@@ -12408,12 +12428,17 @@ function convertBossImage(source, options, resources = {}) {
       unusedHeaderByte: selectedHeaderByte
     });
   }
-  if (encoded.length > byteLength) {
-    throw new Error("Edited boss graphics exceed their fixed ROM span.");
+  if (sizePolicy === "fixed" && encoded.length > byteLength) {
+    throw new Error(
+      "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
+    );
   }
   const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
   if (verified.some((byte, index) => byte !== pixels[index])) {
     throw new Error("Boss graphics inverse failed.");
+  }
+  if (sizePolicy === "encoded") {
+    return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
   }
   const padded = new Uint8Array(byteLength);
   padded.set(encoded);
@@ -12422,9 +12447,9 @@ function convertBossImage(source, options, resources = {}) {
   }
   return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
 }
-function verifiedBrrFromWave(source) {
+function readBrrWave(source) {
   const document2 = waveImporter.import(source);
-  const pcm = document2.value.samples;
+  const audio = document2.value;
   const bytes = source.bytes;
   if (bytes.length < 12 || String.fromCharCode(...bytes.subarray(0, 4)) !== "RIFF" || String.fromCharCode(...bytes.subarray(8, 12)) !== "WAVE") {
     throw new Error("SoM BRR asset requires a RIFF/WAVE file.");
@@ -12452,14 +12477,57 @@ function verifiedBrrFromWave(source) {
     }
     offset = end + (length & 1);
   }
-  if (!native) {
-    throw new Error("SoM WAVE is missing its native sBRR chunk.");
+  return { audio, native };
+}
+function convertBrrWave(source, options = {}) {
+  const { audio, native } = readBrrWave(source);
+  const decoded = native ? decodeBrrPcm(native) : void 0;
+  const unchanged = decoded?.length === audio.samples.length && decoded.every((sample, index) => sample === audio.samples[index]);
+  let loop;
+  if (options.loop !== void 0) {
+    loop = resolveBrrAudioOptions({ loop: options.loop, padding: options.padding }, audio).loop;
   }
-  const decoded = decodeBrrPcm(native);
-  if (decoded.length !== pcm.length || decoded.some((sample, index) => sample !== pcm[index])) {
-    throw new Error("SoM WAVE PCM no longer matches its native BRR blocks.");
+  const nativeLoop = native ? Boolean(native[native.length - 9] & 2) : false;
+  let output;
+  if (native && unchanged && (loop === void 0 || Boolean(loop) === nativeLoop)) {
+    output = {
+      bytes: native,
+      mediaType: "application/octet-stream",
+      metadata: {
+        nativePreserved: true,
+        sourceSamples: audio.samples.length,
+        sampleRate: audio.sampleRate
+      }
+    };
+  } else {
+    if (options.loop === void 0) {
+      throw new Error(
+        "SoM WAVE PCM no longer matches native BRR (or its chunk was removed). Declare loop: false, 'source', or { start, end } in sample frames to review re-encoding."
+      );
+    }
+    const result = convertAsset(audioRegistry, {
+      source,
+      format: "snes.brr",
+      options: { loop: options.loop, padding: options.padding }
+    });
+    output = {
+      ...result.outputs.brr,
+      metadata: {
+        ...result.outputs.brr.metadata,
+        nativePreserved: false,
+        fidelity: result.fidelity.kind
+      }
+    };
   }
-  return native;
+  if (options.startByte !== void 0) {
+    const fullByteLength = options.fullByteLength ?? native?.length;
+    if (!Number.isSafeInteger(fullByteLength) || output.bytes.length !== fullByteLength) {
+      throw new Error(
+        "Split BRR editing requires the exact fullByteLength; resize the complete stream and repair both bank slices before changing its length."
+      );
+    }
+  }
+  return { primaryOutput: "brr", outputs: { brr: output } };
 }
 function sliceBrrSegment(brr, options) {
   const { startByte, byteLength } = options;
@@ -12591,9 +12659,11 @@ var plugin = definePlugin({
     });
     context.registerAssetFormat({
       id: "som.boss.graphics",
-      version: "1.0.0",
+      version: "1.1.0",
       targets: ["snes.sfc"],
-      resourcePaths: (options) => typeof options.layout === "string" ? [options.layout, options.palettes].filter((path) => typeof path === "string") : [],
+      resourcePaths: (options) => [options.layout, options.palettes, options.native].filter(
+        (path) => typeof path === "string"
+      ),
       convert: convertBossImage
     });
     context.registerAssetFormat({
@@ -12650,22 +12720,17 @@ var plugin = definePlugin({
       id: "som.brr.pcm",
       version: "1.0.0",
       targets: ["snes.sfc"],
-      convert(source) {
-        return {
-          primaryOutput: "brr",
-          outputs: { brr: { bytes: verifiedBrrFromWave(source) } }
-        };
-      }
+      convert: convertBrrWave
     });
     context.registerAssetFormat({
       id: "som.brr.segment",
       version: "1.0.0",
       targets: ["snes.sfc"],
       convert(source, options) {
-        const brr = verifiedBrrFromWave(source);
+        const brr = convertBrrWave(source, options).outputs.brr;
         return {
           primaryOutput: "brr",
-          outputs: { brr: { bytes: sliceBrrSegment(brr, options) } }
+          outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
         };
       }
     });
@@ -12716,7 +12781,7 @@ var plugin = definePlugin({
   }
 });
 
-// packages/language-server/src/asset-preview-conversion.ts
+// ../language-server/src/asset-preview-conversion.ts
 var registry2 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(waveImporter);
 for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
   registry2.registerEncoder(encoder);
@@ -12873,12 +12938,13 @@ function convertSomBrrPreview(input) {
   if (input.output !== void 0 && input.output !== "brr") {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const native = verifiedBrrFromWave(input.source);
+  const converted = convertBrrWave(input.source, input.options).outputs.brr;
+  const native = converted.bytes;
   const sourceAudio = waveImporter.import(input.source).value;
   const segment = input.format === "som.brr.segment";
   const selected = segment ? sliceBrrSegment(native, input.options) : native;
   const decoded = decodeBrrPcm(native);
-  const metadata = { previewScope: "full-stream" };
+  const metadata = { ...converted.metadata, previewScope: "full-stream" };
   if (segment) {
     metadata.segmentStartByte = input.options.startByte;
     metadata.segmentByteLength = selected.length;
@@ -12963,7 +13029,7 @@ function convertAssetPreview(input) {
   return { ...common, kind: "binary" };
 }
 
-// packages/language-server/src/asset-preview-worker.ts
+// ../language-server/src/asset-preview-worker.ts
 if (!parentPort) {
   throw new Error("Asset preview worker requires a parent port.");
 }

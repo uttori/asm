@@ -36,7 +36,12 @@ import {
   templateRequirements,
 } from "../editor-info/format.js";
 import { informationOverlayGap } from "../editor-info/layout.js";
-import { EditorInformationProvider } from "../editor-info/provider.js";
+import {
+  EditorInformationProvider,
+  type EditorInformationService,
+  type EditorInformationHost,
+} from "../editor-info/provider.js";
+import { EditorInformationWorker } from "../editor-info/worker-client.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import { discoverAnalysisDebugMapFiles } from "./debug-maps.js";
 import { analysisWorker } from "./worker-client.js";
@@ -56,6 +61,7 @@ const configurationTarget = (uri: Uri | undefined): ConfigurationTarget =>
 
 /** Independent per-editor generations prevent late viewport work from repainting another editor. */
 export class AnalysisAnnotationController implements Disposable {
+  readonly provider: EditorInformationService;
   readonly #decoration: TextEditorDecorationType;
   readonly #disposables: Disposable[] = [];
   readonly #timers = new Map<TextEditor, ReturnType<typeof setTimeout>>();
@@ -66,8 +72,8 @@ export class AnalysisAnnotationController implements Disposable {
   readonly #explanations = new WeakMap<TextEditor, string>();
   #disposed = false;
 
-  constructor(
-    readonly provider = new EditorInformationProvider({
+  constructor(provider?: EditorInformationService, workerFile?: string) {
+    const host: EditorInformationHost = {
       discoverMaps: discoverAnalysisDebugMapFiles,
       projects: async () => {
         const projects: { directory: string; manifest: AnalysisProjectManifest }[] = [];
@@ -88,8 +94,12 @@ export class AnalysisAnnotationController implements Disposable {
       },
       request: (directory, operation, options) =>
         analysisWorker().request(directory, operation, options),
-    }),
-  ) {
+    };
+    this.provider =
+      provider ??
+      (workerFile
+        ? new EditorInformationWorker(workerFile, host)
+        : new EditorInformationProvider(host));
     this.#decoration = window.createTextEditorDecorationType({
       rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
@@ -568,6 +578,7 @@ export class AnalysisAnnotationController implements Disposable {
     }
     this.#timers.clear();
     this.provider.invalidate();
+    this.provider.dispose?.();
     for (const disposable of this.#disposables) {
       disposable.dispose();
     }

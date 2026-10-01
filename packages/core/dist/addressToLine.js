@@ -31,6 +31,8 @@ export class AddressToLineMapping {
     instructions = [];
     /** Successful final-pass asset emissions; binary files have no source lines. */
     assets = [];
+    /** Field attribution supplements row-level ranges without inventing overlapping source writes. */
+    structFields = [];
     /** Clears all stored mappings and file information. */
     reset() {
         this.fileList = [];
@@ -39,6 +41,7 @@ export class AddressToLineMapping {
         this.ranges = [];
         this.instructions = [];
         this.assets = [];
+        this.structFields = [];
     }
     /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
      * @param {string} filename Provider path.

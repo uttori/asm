@@ -19,7 +19,6 @@ import type {
   ParsedAssetCall,
   AssetValueNode,
 } from "@uttori/asm-core";
-import { findManagedSourceFile } from "@uttori/asm-disassembler";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -222,13 +221,29 @@ function lineFallbackRange(line: number): Range {
   return Range.create(safeLine, 0, safeLine, 0);
 }
 
-/**
- * Splits document text into lines, tolerating both `\n` and `\r\n`.
- * @param {string} text The document text.
- * @returns {string[]} The lines.
- */
-function splitLines(text: string): string[] {
-  return text.split(/\r?\n/);
+/** Exact text keys prevent stale ranges after edits; the small LRU avoids retaining every bank/version. */
+const lineCache = new Map<string, readonly string[]>();
+let cachedCharacters = 0;
+
+/** Reuse line splits across thousands of token ranges in one document; CRLF and LF retain their existing semantics. */
+function splitLines(text: string): readonly string[] {
+  const cached = lineCache.get(text);
+  if (cached) {
+    lineCache.delete(text);
+    lineCache.set(text, cached);
+    return cached;
+  }
+  const lines = text.split(/\r?\n/);
+  if (text.length <= 2 * 1024 * 1024) {
+    while (lineCache.size >= 8 || cachedCharacters + text.length > 4 * 1024 * 1024) {
+      const oldest = lineCache.keys().next().value!;
+      cachedCharacters -= oldest.length;
+      lineCache.delete(oldest);
+    }
+    lineCache.set(text, lines);
+    cachedCharacters += text.length;
+  }
+  return lines;
 }
 
 /**
@@ -256,6 +271,15 @@ function preciseRange(
   const rawLine = splitLines(text)[line];
   if (rawLine === undefined) {
     return fallback;
+  }
+  // A physical assembler span disambiguates repeated tokens on the same line.
+  // Verify its text before trusting it because older references have coarse spans.
+  const candidate = rawLine.slice(fallback.start.character, fallback.end.character);
+  if (fallback.start.line === line && candidate === name) {
+    return fallback;
+  }
+  if (fallback.start.line === line && candidate === `!${name}`) {
+    return Range.create(line, fallback.start.character + 1, line, fallback.end.character);
   }
   const direct = rangeForTokenOnLine(rawLine, name, line, fallback);
   if (direct !== fallback) {
@@ -852,7 +876,9 @@ function cursorReference(
   if (containing) {
     return containing;
   }
-  return onLine[0] ?? references.find((reference) => namesMatch(reference.name, word));
+  // A same-spelling reference elsewhere may belong to another struct or local scope. It cannot
+  // identify this cursor position, even when normalized columns need the on-line fallback.
+  return onLine[0];
 }
 
 /**
@@ -889,7 +915,7 @@ function cursorSymbol(
   if (containing) {
     return containing;
   }
-  return onLine[0] ?? symbols.find((symbol) => namesMatch(symbol.name, word));
+  return onLine[0];
 }
 
 /**
@@ -1459,10 +1485,6 @@ export function prepareRenameFor(
   file: string,
   position: Position,
 ): Range | null {
-  const target = renameTargetAt(index, file, position);
-  if (target) {
-    assertRenameIsUserOwned(index, file, target);
-  }
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference && isRenameableReference(reference)) {
@@ -1495,7 +1517,6 @@ export function renameEditsFor(
   if (!target) {
     return null;
   }
-  assertRenameIsUserOwned(index, file, target);
 
   const kind = target.symbol?.kind ?? target.reference?.kind;
   const effectiveName = kind === "define" && newName.startsWith("!") ? newName.slice(1) : newName;
@@ -1530,32 +1551,55 @@ export function renameEditsFor(
 }
 
 /**
- * Generated definitions and references must be renamed through their persistent owner. Check the
- * entire edit footprint, including a generated definition reached from a user-owned patch file.
- * This guard also runs without prepareRename, since not every LSP client calls it first.
- * @param {WorkspaceIndex} index Indexed source symbols and references.
- * @param {string} file Source file where rename was requested.
- * @param {RenameTarget} target Semantic symbol selected by the language service.
+ * Resolve the unique declaration for persistent research naming. Ambiguous references deliberately
+ * return no identity; callers may still provide ordinary text rename for those references.
  */
-function assertRenameIsUserOwned(index: WorkspaceIndex, file: string, target: RenameTarget): void {
-  const files = new Set([file]);
+export function renameDefinitionFor(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+): AssemblySymbolDefinition | undefined {
+  return renameTargetAt(index, file, position)?.symbol;
+}
+
+/** Rename a recipe field across its declared layout instances in one scan, preserving unrelated scopes. */
+export function renameStructFieldsFor(
+  index: WorkspaceIndex,
+  oldName: string,
+  newName: string,
+  containers: readonly string[],
+): WorkspaceEdit {
+  const owners = new Set(containers);
+  const changes: Record<string, TextEdit[]> = {};
+  const append = (file: string, range: Range): void => {
+    const uri = pathToUri(file);
+    const edits = changes[uri] ?? [];
+    edits.push(TextEdit.replace(range, newName));
+    changes[uri] = edits;
+  };
+  // A common layout can have hundreds of bindings. Repeating ordinary F2 for each binding would
+  // repeatedly scan the full project and make a simple field rename scale quadratically.
   for (const symbol of index.getAllSymbols()) {
-    if (symbolMatchesRenameTarget(symbol, target)) {
-      files.add(symbol.location.file);
+    if (
+      symbol.kind === "structMember" &&
+      symbol.name === oldName &&
+      symbol.containerName &&
+      owners.has(symbol.containerName)
+    ) {
+      append(symbol.location.file, bareDefinitionRange(index, symbol));
     }
   }
   for (const reference of index.getAllReferences()) {
-    if (referenceMatchesRenameTarget(reference, target)) {
-      files.add(reference.location.file);
+    if (
+      reference.kind === "label" &&
+      reference.name === oldName &&
+      reference.containerName &&
+      owners.has(reference.containerName)
+    ) {
+      append(reference.location.file, bareReferenceRange(index, reference));
     }
   }
-  for (const candidate of files) {
-    if (findManagedSourceFile(candidate)) {
-      throw new Error(
-        "This symbol belongs to generated disassembly. Use Assembly: Inspect Disassembly Ownership, then Edit Owned Annotation or Open Owning Input. Text-only Rename Symbol would be lost during regeneration.",
-      );
-    }
-  }
+  return { changes };
 }
 
 /**
@@ -1713,8 +1757,16 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
   for (const symbol of index.getSymbols(file)) {
     push(definitionRange(index, symbol), symbolTokenType(symbol.kind), definitionTokenModifier);
   }
+  // Resolve only same-name definitions. Scanning every project symbol for each reference makes
+  // a large struct file quadratic and delays unrelated queued requests such as F2.
+  const definitionsByName = new Map<string, AssemblySymbolDefinition[]>();
+  for (const symbol of index.getAllSymbols()) {
+    const definitions = definitionsByName.get(symbol.name) ?? [];
+    definitions.push(symbol);
+    definitionsByName.set(symbol.name, definitions);
+  }
   for (const reference of index.getReferences(file)) {
-    const type = resolvedReferenceTokenType(index, reference);
+    const type = resolvedReferenceTokenType(definitionsByName.get(reference.name) ?? [], reference);
     const line = locationRange(reference.location)?.start.line ?? reference.location.line;
     const segments = compoundSegmentRanges(index, file, line, reference.name);
     if (segments) {
@@ -1762,9 +1814,9 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
   const builder = new SemanticTokensBuilder();
   let previous: RawToken | undefined;
   for (const token of tokens) {
-    // Stable sorting leaves definitions first at the same position, preserving their modifier
-    // when analysis also records a reference there. Only identical starts are deduplicated.
-    if (previous && previous.line === token.line && previous.char === token.char) {
+    // Analysis may record both a structured definition and a reference inside its span.
+    // VS Code rejects overlapping tokens; keep the first span and its definition modifier.
+    if (previous && previous.line === token.line && token.char < previous.char + previous.length) {
       continue;
     }
     builder.push(token.line, token.char, token.length, token.type, token.modifiers);
@@ -1991,7 +2043,7 @@ function symbolAnnotation(
     leading.unshift(sourceLine.replace(/^\s*;\s?/, "").trimEnd());
   }
   const trailing = lineCommentText(lines[line] ?? "");
-  const parts = [...leading.filter((entry) => entry.length > 0)];
+  const parts = leading.filter((entry) => entry.length > 0);
   if (trailing) {
     parts.push(trailing);
   }
@@ -2176,12 +2228,12 @@ function symbolTokenType(kind: AssemblySymbolKind): number {
 /**
  * Resolves a reference to the most specific definition kind so `obj.timer`
  * colors the root as a struct and the field as a property.
- * @param {WorkspaceIndex} index The workspace index.
+ * @param {AssemblySymbolDefinition[]} candidates Definitions sharing the reference spelling.
  * @param {AssemblySymbolReference} reference The reference to classify.
  * @returns {number} The token type index.
  */
 function resolvedReferenceTokenType(
-  index: WorkspaceIndex,
+  candidates: AssemblySymbolDefinition[],
   reference: AssemblySymbolReference,
 ): number {
   if (
@@ -2191,7 +2243,7 @@ function resolvedReferenceTokenType(
   ) {
     return referenceTokenType(reference.kind);
   }
-  const definitions = resolveDefinition(reference, index.getAllSymbols());
+  const definitions = resolveDefinition(reference, candidates);
   if (definitions.length > 0) {
     const preferred =
       definitions.find(

@@ -7,23 +7,12 @@ import {
   ANALYSIS_PROJECT_SQLITE_FILE,
   SqliteAnalysisStore,
   buildInstructionAnalysisAnnotations,
-  analysisProjectRevision,
   openAnalysisProjectStore,
-  type AnalysisProjectSnapshot,
   type AnalysisSourceGroup,
   type ShardKind,
   type InstructionAnalysisAnnotation,
 } from "@uttori/asm-disassembler";
 
-import {
-  lookupDisassemblyAnnotation,
-  saveDisassemblyAnnotation,
-  type AnnotationLookup,
-  type AnnotationSave,
-  type AnnotationRefreshInput,
-} from "../disassembly/annotation-data.js";
-import { processMetadata, type MetadataWorkerInput } from "../disassembly/metadata-data.js";
-import { publishVerifiedSource } from "../disassembly/source-publisher.js";
 import { formatInstructionAnnotationSummary } from "../editor-info/format.js";
 import {
   createInstructionAnnotationIndex,
@@ -31,6 +20,7 @@ import {
 } from "./annotation-index.js";
 import { projectAnalysisNavigation } from "./navigation-data.js";
 import type { AnalysisNavigationTarget } from "./navigation-target.js";
+import { analysisResearchContext } from "./research-context.js";
 import { readAnalysisSourceCatalog } from "./sources-data.js";
 
 /**
@@ -40,6 +30,8 @@ import { readAnalysisSourceCatalog } from "./sources-data.js";
 export interface AnalysisWorkerRequest {
   readonly id: number;
   readonly directory: string;
+  /** Selected worktree, needed when a private evidence store lives outside that repository. */
+  readonly sourceRoot?: string;
   readonly operation:
     | "clear"
     | "manifest"
@@ -49,10 +41,6 @@ export interface AnalysisWorkerRequest {
     | "annotationSummary"
     | "annotations"
     | "debugAnnotations"
-    | "annotationLookup"
-    | "annotationSave"
-    | "annotationRefresh"
-    | "metadata"
     | "navigation"
     | "evidenceChoices"
     | "explainEvidence"
@@ -64,10 +52,6 @@ export interface AnalysisWorkerRequest {
   readonly evidenceSelection?: Partial<Record<ShardKind, readonly string[]>>;
   readonly evidenceRecord?: { kind: ShardKind; id: string };
   readonly sourceGroup?: AnalysisSourceGroup;
-  readonly annotationLookup?: AnnotationLookup;
-  readonly annotationSave?: AnnotationSave;
-  readonly annotationRefresh?: AnnotationRefreshInput;
-  readonly metadata?: MetadataWorkerInput;
   readonly offset?: number;
   readonly ranges?: readonly DebugMapRange[];
 }
@@ -93,21 +77,11 @@ const projectDatabase = (directory: string): SqliteAnalysisStore => {
 };
 
 /**
- * Label/comment editing needs names and selected instruction boundaries, not every CFG variant.
- * @param {SqliteAnalysisStore} store Connection inside a read transaction.
- * @returns {AnalysisProjectSnapshot} Validated editing view. Never substitute it for a full export snapshot.
- */
-const annotationEditSnapshot = (store: SqliteAnalysisStore): AnalysisProjectSnapshot => {
-  const { manifest, shards } = store.annotationEditView();
-  return { manifest, shards, revision: analysisProjectRevision(manifest) };
-};
-
-/**
  * Runs only in a worker: full native shards never cross into the extension UI heap.
  * @param {AnalysisWorkerRequest} message Bounded projection request.
  * @returns {unknown} Compact result without persisted shards.
  */
-const request = (message: AnalysisWorkerRequest): unknown => {
+const projectRequest = (message: AnalysisWorkerRequest): unknown => {
   if (message.operation === "clear") {
     return undefined;
   }
@@ -115,12 +89,6 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     return readAnalysisSourceCatalog(message.directory);
   }
   const store = projectDatabase(message.directory);
-  if (message.operation === "metadata") {
-    if (!message.metadata) {
-      throw new Error("Choose a metadata operation.");
-    }
-    return processMetadata(store, message.directory, message.metadata);
-  }
   if (message.operation === "evidenceChoices") {
     return store.transaction(
       () => ({
@@ -136,49 +104,6 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     }
     store.prepareSourceQueries();
     return store.explainEvidence(message.evidenceRecord.kind, message.evidenceRecord.id);
-  }
-  if (message.operation === "annotationLookup" || message.operation === "annotationSave") {
-    store.prepareAnnotationQueries();
-    const readNodes = (range: { addressSpace: string; start: number; outputStart?: number }) =>
-      store
-        .annotationNodesAt(range.addressSpace, range.start, range.outputStart)
-        .filter((record) => record.kind === "cfg-node");
-    if (message.operation === "annotationLookup") {
-      if (!message.annotationLookup) {
-        throw new Error("Missing annotation lookup.");
-      }
-      return store.transaction(
-        () =>
-          lookupDisassemblyAnnotation(
-            annotationEditSnapshot(store),
-            message.annotationLookup!,
-            readNodes,
-          ),
-        false,
-      );
-    }
-    if (!message.annotationSave) {
-      throw new Error("Missing annotation edit.");
-    }
-    const input = message.annotationSave;
-    const snapshot = store.transaction(() => {
-      const snapshot = annotationEditSnapshot(store);
-      const request = input.request;
-      const fileSpace = snapshot.manifest.addressSpaces.some(
-        (space) => space.id === request.addressSpace && space.kind === "file",
-      );
-      const nodes = readNodes({
-        addressSpace: request.addressSpace,
-        start: request.address,
-        ...(fileSpace ? { outputStart: request.address } : {}),
-      });
-      return {
-        ...snapshot,
-        shards: { ...snapshot.shards, analysis: [...snapshot.shards.analysis, ...nodes] },
-      };
-    }, false);
-    const saved = saveDisassemblyAnnotation(message.directory, snapshot, input);
-    return { ...saved.inverse, refresh: { after: saved.snapshot.revision.manifestSha256 } };
   }
   if (message.operation === "annotationSummary") {
     const ranges = message.ranges ?? [];
@@ -259,31 +184,6 @@ const request = (message: AnalysisWorkerRequest): unknown => {
       return store.sourcePage(message.sourceId!, message.sourceGroup, message.offset);
     }, false);
   }
-  if (message.operation === "annotationRefresh") {
-    if (!message.annotationRefresh) {
-      throw new Error("Missing annotation refresh.");
-    }
-    if (
-      path.resolve(message.annotationRefresh.target.projectDirectory) !==
-      path.resolve(message.directory)
-    ) {
-      throw new Error("Annotation refresh target differs from the loaded project.");
-    }
-    const { target, receipt } = message.annotationRefresh;
-    const revision = store.transaction(
-      () => analysisProjectRevision(store.manifest()).manifestSha256,
-      false,
-    );
-    if (revision !== receipt.after) {
-      return undefined;
-    }
-    return publishVerifiedSource(
-      target,
-      new AbortController().signal,
-      () => {},
-      receipt.after,
-    ).then((result) => result.exported);
-  }
   const manifest = store.transaction(() => store.manifest(), false);
   if (message.operation === "manifest") {
     return manifest;
@@ -339,6 +239,53 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     return store.coveragePage(message.operation, message.offset);
   }
   throw new Error("Unknown analysis worker operation.");
+};
+
+/**
+ * Project the selected saved research before every query. Check the input identity again before
+ * returning: another window may select a different branch over the same private evidence store.
+ * Failed or concurrent projections produce an error instead of names from the wrong branch.
+ */
+const request = (message: AnalysisWorkerRequest): unknown => {
+  if (message.operation === "clear") {
+    return undefined;
+  }
+  const store = projectDatabase(message.directory);
+  const research = analysisResearchContext(message.directory, message.sourceRoot);
+  if (!research) {
+    if (store.researchInputsIdentity()) {
+      throw new Error("Select the Git source project before querying its research index.");
+    }
+    return projectRequest(message);
+  }
+  // Visible-source requests are frequent. A matching projection only needs reads; opening a
+  // write transaction would also run evidence maintenance and compete with imports for the lock.
+  if (!store.researchInputsAreCurrent(research.snapshot.hash)) {
+    const changed = store.transaction(() => store.synchronizeResearchInputs(research.snapshot));
+    if (changed) {
+      store.writePointer(message.directory);
+    }
+  }
+  if (
+    ["coverage", "segments", "details", "annotations", "debugAnnotations", "navigation"].includes(
+      message.operation,
+    )
+  ) {
+    // Captured observations remain queryable while new classification/CPU/target declarations
+    // await analysis. Graph-derived views must not display an earlier branch's interpretation.
+    store.assertCurrentAnalysis();
+  }
+  const revision = store.revision();
+  const value = projectRequest(message);
+  const current = analysisResearchContext(message.directory, research.root);
+  if (
+    current?.snapshot.hash !== research.snapshot.hash ||
+    store.researchInputsIdentity() !== research.snapshot.hash ||
+    store.revision() !== revision
+  ) {
+    throw new Error("Research inputs changed during this query. Retry with the selected branch.");
+  }
+  return value;
 };
 
 /**

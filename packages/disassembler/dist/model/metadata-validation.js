@@ -119,35 +119,4 @@ export const validateEditableMetadataRecord = (shard, record) => {
         throw new Error("This collection is not editable metadata.");
     }
 };
-/**
- * Check saved receipts without recursively accepting arbitrary analysis payloads.
- * @param {AnalysisMetadataEditRecord} receipt Persisted manual decision.
- */
-export const validateMetadataReceipt = (receipt) => {
-    if (!Number.isSafeInteger(receipt.sequence) ||
-        receipt.sequence < 1 ||
-        typeof receipt.description !== "string" ||
-        !Array.isArray(receipt.changes) ||
-        !receipt.changes.length ||
-        receipt.changes.length > 1000) {
-        throw new Error("Invalid metadata edit receipt.");
-    }
-    const seen = new Set();
-    for (const change of receipt.changes) {
-        const key = `${change.shard}:${change.id}`;
-        if (seen.has(key) || (!change.before && !change.after)) {
-            throw new Error("Invalid repeated or empty metadata change.");
-        }
-        seen.add(key);
-        for (const record of [change.before, change.after]) {
-            if (!record) {
-                continue;
-            }
-            validateEditableMetadataRecord(change.shard, record);
-            if (record.id !== change.id || record.evidence.some((id) => !receipt.evidence.includes(id))) {
-                throw new Error("Receipt record identity or retained evidence is inconsistent.");
-            }
-        }
-    }
-};
 //# sourceMappingURL=metadata-validation.js.map

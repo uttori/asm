@@ -8,5 +8,5 @@ import type { SnesMapper } from "./rom-header.js";
  * @param {Iterable<RuntimeEvidenceRecord>} [runtime] SQL instruction-variant cursor, consumed within its read snapshot.
  * @returns {readonly AnalysisRecord[]} Captured CFG variants and explicit conflicts.
  */
-export declare const analyzeSnesRuntimeCode: (shards: AnalysisProjectShards, rom: RomImage, mapper: SnesMapper, runtime?: Iterable<RuntimeEvidenceRecord>) => readonly AnalysisRecord[];
+export declare const analyzeSnesRuntimeCode: (shards: AnalysisProjectShards, rom: RomImage, mapper: SnesMapper, runtime?: Iterable<RuntimeEvidenceRecord>, onProgress?: (message: string) => void) => readonly AnalysisRecord[];
 //# sourceMappingURL=runtime-code.d.ts.map

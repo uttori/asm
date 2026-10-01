@@ -1,4 +1,4 @@
-import { chmodSync, cpSync, mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,12 +12,53 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // VS Code 1.128 embeds Node 24. Standalone tools target Node 26. Every executable shipped
 // inside the VSIX is built separately for the editor's runtime, including forked workers.
 const editorRuntime = "node24";
+// These directories contain only build outputs. Clearing them prevents removed worker entry points
+// from surviving a rebuild and being shipped accidentally by the VSIX packager.
+for (const directory of ["out", "server", "sidecars", "tests-host/out"]) {
+  rmSync(path.join(here, directory), { recursive: true, force: true });
+}
 // Data Tools' optional debug branches use top-level await. Production workers keep logging
 // disabled, which lets their portable conversion code bundle into the required CJS hosts.
 const dataToolsDebugDisabled = {
   "process.env.UTTORI_DATA_DEBUG": "false",
   "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
 };
+await build({
+  entryPoints: [path.join(here, "src/assets/png-worker.ts")],
+  outfile: path.join(here, "out/png-worker.cjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "cjs",
+  target: editorRuntime,
+  define: dataToolsDebugDisabled,
+  logLevel: "info",
+});
+await build({
+  entryPoints: [path.join(here, "src/editor-info/worker.ts")],
+  outfile: path.join(here, "out/editor-information-worker.cjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "cjs",
+  target: editorRuntime,
+  logLevel: "info",
+});
+// Source operations need import.meta.url for content-based toolchain identity and plugin loading.
+await build({
+  entryPoints: [path.join(here, "src/source/process.ts")],
+  outfile: path.join(here, "out/source-process.mjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "esm",
+  target: editorRuntime,
+  define: { ...dataToolsDebugDisabled, UTTORI_SOURCE_BUNDLED: "true" },
+  banner: {
+    js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+  },
+  logLevel: "info",
+});
 // Worker sources live with their features; keep output names aligned with the process launchers.
 await build({
   entryPoints: [path.join(here, "src/runtime/live-bus-analysis-process.ts")],
@@ -27,17 +68,6 @@ await build({
   platform: "node",
   format: "cjs",
   target: editorRuntime,
-  logLevel: "info",
-});
-await build({
-  entryPoints: [path.join(here, "src/disassembly/maintenance-process.ts")],
-  outfile: path.join(here, "out/disassembly-maintenance-process.cjs"),
-  bundle: true,
-  conditions: ["uttori-source"],
-  platform: "node",
-  format: "cjs",
-  target: editorRuntime,
-  define: dataToolsDebugDisabled,
   logLevel: "info",
 });
 mkdirSync(path.join(here, "schemas"), { recursive: true });
@@ -71,6 +101,30 @@ await build({
 // Bundle the Extension Host smoke entry separately. VS Code loads test runners through CommonJS,
 // while keeping the TypeScript source in this workspace lets the same strict type/lint gates cover
 // the real-host assertions. `.vscodeignore` excludes the runner from the release VSIX.
+await build({
+  entryPoints: [path.join(here, "tests-host/extension-driver.ts")],
+  outfile: path.join(here, "tests-host/out/extension-driver.cjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "cjs",
+  target: editorRuntime,
+  external: ["vscode"],
+  define: dataToolsDebugDisabled,
+  logLevel: "info",
+});
+await build({
+  entryPoints: [path.join(here, "tests-host/asset-recovery-driver.ts")],
+  outfile: path.join(here, "tests-host/out/asset-recovery-driver.cjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "cjs",
+  target: editorRuntime,
+  external: ["vscode"],
+  define: dataToolsDebugDisabled,
+  logLevel: "info",
+});
 await build({
   entryPoints: [path.join(here, "tests-host/index.ts")],
   outfile: path.join(here, "tests-host/out/index.cjs"),

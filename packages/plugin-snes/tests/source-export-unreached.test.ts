@@ -7,8 +7,6 @@ import {
   openAnalysisProjectStore,
   publishAnalysisProject,
   sourceExportSha256,
-  validateSourceExportFiles,
-  validateSourceExportInputs,
   type AnalysisProject,
   type AnalysisFunctionRecord,
   type IntervalAnnotation,
@@ -16,9 +14,11 @@ import {
 } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
-import { verifySnesProjectRoundTrip } from "../src/disassembler/project-initializer.js";
+import {
+  renderSourceFixture,
+  verifyRenderedFixture,
+} from "../../../tests/helpers/source-render-fixture.js";
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
-import { exportSnes65816Source } from "../src/disassembler/source-export.js";
 
 /** Complete instruction observations. LoROM bank aliases intentionally share physical bytes. */
 const capture = (
@@ -109,21 +109,19 @@ test("edited build configuration regenerates without force and verifies the exac
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const { rom, project } = fixture();
   const sourceDirectory = path.join(directory, "source");
-  const first = exportSnes65816Source(project, rom, sourceDirectory, options);
+  const first = renderSourceFixture(project, rom, sourceDirectory, options);
   const file = path.join(sourceDirectory, first.buildConfiguration);
   const config = JSON.parse(fs.readFileSync(file, "utf8"));
   config.includePaths.push("./extra-includes");
   const edited = `${JSON.stringify(config)}\n`;
   fs.writeFileSync(file, edited);
-  t.throws(() => validateSourceExportInputs(sourceDirectory), { message: /config.json.*changed/ });
-  const regenerated = exportSnes65816Source(project, rom, sourceDirectory, options);
+  const regenerated = renderSourceFixture(project, rom, sourceDirectory, options);
   t.deepEqual(regenerated.files, first.files);
   t.is(fs.readFileSync(file, "utf8"), edited);
-  t.notThrows(() => validateSourceExportFiles(sourceDirectory));
   const romFile = path.join(directory, "original.sfc");
   fs.writeFileSync(romFile, rom.bytes());
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+    (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,
   );
 });
@@ -166,7 +164,7 @@ test("project asset includes survive export and split native raw spans at exact 
   const customConfiguration = '{"plugins":[{"module":"custom-asset-plugin"}]}\n';
   fs.writeFileSync(path.join(sourceDirectory, "uttori-asm.config.json"), customConfiguration);
 
-  const first = exportSnes65816Source(annotated, rom, sourceDirectory, options);
+  const first = renderSourceFixture(annotated, rom, sourceDirectory, options);
   t.false(first.files.some((file) => file.path === first.buildConfiguration));
   t.like(
     first.inputs?.find((input) => input.path === first.buildConfiguration),
@@ -199,16 +197,12 @@ test("project asset includes survive export and split native raw spans at exact 
   };
   const editedConfiguration = `${customConfiguration}\n`;
   fs.writeFileSync(path.join(sourceDirectory, first.buildConfiguration), editedConfiguration);
-  t.notThrows(() => validateSourceExportFiles(sourceDirectory));
-  t.throws(() => validateSourceExportInputs(sourceDirectory), { message: /config.json.*changed/ });
-  const second = exportSnes65816Source(reanalyzed, rom, sourceDirectory, options);
+  const second = renderSourceFixture(reanalyzed, rom, sourceDirectory, options);
   t.deepEqual(second.files, first.files);
   t.is(
     fs.readFileSync(path.join(sourceDirectory, first.buildConfiguration), "utf8"),
     editedConfiguration,
   );
-  t.notThrows(() => validateSourceExportFiles(sourceDirectory));
-  t.notThrows(() => validateSourceExportInputs(sourceDirectory));
   t.is(fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8"), bank);
 });
 
@@ -270,7 +264,7 @@ test("emitted fallback and imported labels resolve direct transfers without chan
     },
   };
   const sourceDirectory = path.join(directory, "source");
-  const exported = exportSnes65816Source(input, rom, sourceDirectory, options);
+  const exported = renderSourceFixture(input, rom, sourceDirectory, options);
   const source = fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8");
   t.regex(source, /BEQ Fn_808010/);
   t.regex(source, /BRL Fn_808020/);
@@ -282,7 +276,7 @@ test("emitted fallback and imported labels resolve direct transfers without chan
   const romFile = path.join(directory, "rom.sfc");
   fs.writeFileSync(romFile, rom.bytes());
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+    (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,
   );
   const analysisDirectory = path.join(directory, "analysis");
@@ -292,7 +286,7 @@ test("emitted fallback and imported labels resolve direct transfers without chan
     store.prepareAnnotationQueries();
     const streamed = store.transaction(
       () =>
-        exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+        renderSourceFixture(store.sourceExportView(), rom, sourceDirectory, {
           ...options,
           instructionGroups: store.instructionExportGroups(),
         }),
@@ -318,7 +312,7 @@ test("a branch to a suppressed operand-interior marker stays numeric", (t) => {
     ...project,
     shards: { ...project.shards, analysis: [...project.shards.analysis, inferredEntry(0x808003)] },
   };
-  exportSnes65816Source(input, rom, directory, options);
+  renderSourceFixture(input, rom, directory, options);
   const source = fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8");
   t.regex(source, /BNE \$808003/);
   t.notRegex(source, /Fn_808003/);
@@ -349,7 +343,7 @@ test("captured instruction extents supersede inferred operand entry markers in m
   };
   const original = structuredClone(input);
   const sourceDirectory = path.join(directory, "source");
-  const exported = exportSnes65816Source(input, rom, sourceDirectory, options);
+  const exported = renderSourceFixture(input, rom, sourceDirectory, options);
   t.deepEqual(
     exported.spans.filter((span) => span.role === "code").map(({ start, end }) => [start, end]),
     [[0, 3]],
@@ -363,7 +357,7 @@ test("captured instruction extents supersede inferred operand entry markers in m
   const romFile = path.join(directory, "rom.sfc");
   fs.writeFileSync(romFile, rom.bytes());
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+    (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,
   );
   const analysisDirectory = path.join(directory, "analysis");
@@ -373,7 +367,7 @@ test("captured instruction extents supersede inferred operand entry markers in m
     store.prepareAnnotationQueries();
     const streamed = store.transaction(
       () =>
-        exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+        renderSourceFixture(store.sourceExportView(), rom, sourceDirectory, {
           ...options,
           instructionGroups: store.instructionExportGroups(),
         }),
@@ -440,7 +434,7 @@ test("inferred entry precedence requires a surviving runtime proof and retains e
     overlap: { ...base, analysis: [...overlap.project.shards.analysis, marker] },
   })) {
     const output = path.join(directory, name);
-    const exported = exportSnes65816Source({ ...project, shards }, rom, output, options);
+    const exported = renderSourceFixture({ ...project, shards }, rom, output, options);
     t.false(
       exported.spans.some((span) => span.role === "code"),
       name,
@@ -476,7 +470,7 @@ test("captured ROM instructions supersede unreached in memory and SQL without pr
   };
   const original = structuredClone(input);
   const sourceDirectory = path.join(directory, "source");
-  const exported = exportSnes65816Source(input, rom, sourceDirectory, options);
+  const exported = renderSourceFixture(input, rom, sourceDirectory, options);
   t.deepEqual(
     exported.spans.filter((span) => span.role === "code").map(({ start, end }) => [start, end]),
     [
@@ -493,7 +487,7 @@ test("captured ROM instructions supersede unreached in memory and SQL without pr
   const romFile = path.join(directory, "rom.sfc");
   fs.writeFileSync(romFile, rom.bytes());
   t.true(
-    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+    (await verifyRenderedFixture({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,
   );
 
@@ -504,7 +498,7 @@ test("captured ROM instructions supersede unreached in memory and SQL without pr
     store.prepareAnnotationQueries();
     const streamed = store.transaction(
       () =>
-        exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+        renderSourceFixture(store.sourceExportView(), rom, sourceDirectory, {
           ...options,
           instructionGroups: store.instructionExportGroups(),
         }),
@@ -534,7 +528,7 @@ test("stale unreached interval boundaries cannot split an accepted instruction",
       ],
     },
   };
-  const exported = exportSnes65816Source(input, rom, directory, options);
+  const exported = renderSourceFixture(input, rom, directory, options);
   t.deepEqual(
     exported.spans.filter((span) => span.role === "code").map(({ start, end }) => [start, end]),
     [
@@ -570,7 +564,7 @@ test("observed code cannot override positive data classifications even inside an
         annotations: [...project.shards.annotations, annotation(classification, 2, 3)],
       },
     };
-    const result = exportSnes65816Source(input, rom, path.join(directory, classification), options);
+    const result = renderSourceFixture(input, rom, path.join(directory, classification), options);
     t.deepEqual(
       result.spans.filter((span) => span.role === "code").map(({ start, end }) => [start, end]),
       [[0, 1]],
@@ -583,7 +577,7 @@ test("unreached override still requires runtime provenance and ROM-matched captu
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-unreached-proof-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const { rom, project } = fixture([0xea], [capture("mismatch", 0x808000, [0x18])]);
-  const mismatch = exportSnes65816Source(project, rom, path.join(directory, "mismatch"), options);
+  const mismatch = renderSourceFixture(project, rom, path.join(directory, "mismatch"), options);
   t.false(mismatch.spans.some((span) => span.role === "code"));
   const matched = fixture();
   const noProof = {
@@ -596,7 +590,7 @@ test("unreached override still requires runtime provenance and ROM-matched captu
       })),
     },
   };
-  const unproven = exportSnes65816Source(
+  const unproven = renderSourceFixture(
     noProof,
     matched.rom,
     path.join(directory, "no-proof"),
@@ -615,7 +609,7 @@ test("unreached override cannot bypass incompatible captured widths or overlappi
       capture("long", 0x808000, [0xa9, 0x18, 0x60], 0),
     ],
   );
-  const conflictResult = exportSnes65816Source(
+  const conflictResult = renderSourceFixture(
     conflicting.project,
     conflicting.rom,
     path.join(directory, "widths"),
@@ -626,7 +620,7 @@ test("unreached override cannot bypass incompatible captured widths or overlappi
     [0xa9, 0x18],
     [capture("load", 0x808000, [0xa9, 0x18], 0x20), capture("overlap", 0x008001, [0x18])],
   );
-  const overlapResult = exportSnes65816Source(
+  const overlapResult = renderSourceFixture(
     overlap.project,
     overlap.rom,
     path.join(directory, "overlap"),

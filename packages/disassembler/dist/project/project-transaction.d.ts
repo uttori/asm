@@ -110,25 +110,6 @@ export declare const commitAnalysisProjectTransaction: (directory: string, expec
  */
 export declare const commitAnalysisProjectViewUpdate: (directory: string, snapshot: AnalysisProjectViewSnapshot, updates: Partial<Omit<AnalysisProjectShards, "runtime">>) => CommittedAnalysisProjectTransaction;
 /**
- * Publish label/comment edits without loading or revalidating unrelated analysis and runtime.
- * Existing provenance is immutable here, so retained records cannot lose evidence references.
- * @param {string} directory Existing project root.
- * @param {AnalysisProjectRevision} expected Revision on which the edit was based.
- * @param {object} updates Complete labels, comments and evidence tables. Evidence may only be appended.
- * @returns {CommittedAnalysisProjectTransaction} Atomically published identity. Failures roll back.
- */
-export declare const commitAnalysisProjectAnnotationUpdate: (directory: string, expected: AnalysisProjectRevision, updates: Pick<AnalysisProjectShards, "labels" | "comments" | "evidence">) => CommittedAnalysisProjectTransaction;
-/** Publish a reversible edit to a selected SQL view without replacing omitted records.
- * Include the original records and all evidence required by the edited selection. Both runtime
- * arrays must be empty. Changed/deleted records are compared by stable ID and original value.
- * The caller's manifest is not a manifest replacement.
- * @param {string} directory Existing project root.
- * @param {AnalysisProjectSnapshot} snapshot Selected original records and their revision.
- * @param {AnalysisProject} project Edited selected view.
- * @returns {CommittedAnalysisProjectTransaction} Atomically committed identity.
- */
-export declare const commitAnalysisProjectSelectedEdit: (directory: string, snapshot: AnalysisProjectSnapshot, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
-/**
  * Atomically create or replace every record, including runtime history.
  * Samples the current revision when called, so an edit built from an older caller snapshot is not
  * detected. A writer racing this call is rejected. Editing clients must use the explicit

@@ -83,6 +83,36 @@ test.serial("analysisSourceSha256 hashes the current file bytes", (t) => {
   t.is(analysisSourceSha256(file), createHash("sha256").update("lda #$01\n").digest("hex"));
 });
 
+test.serial("source projects select only their published build receipt", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-map-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  writeSource(path.join(root, ".uttori/project.json"), "{}");
+  const inputSha256 = "a".repeat(64);
+  const builds = path.join(root, ".uttori-local/builds");
+  const current = path.join(builds, inputSha256, "program.sfc.debug.json");
+  const historical = path.join(builds, "b".repeat(64), "program.sfc.debug.json");
+  writeSource(current, "{}");
+  writeSource(historical, "{}");
+  const receipt = path.join(builds, "current.json");
+  writeSource(receipt, JSON.stringify({ inputSha256, debugMapFile: current }));
+  // Opening an include directory still selects the repository's source project.
+  host.folders = [{ uri: { fsPath: path.join(root, "disassembly") } }];
+  host.files = [current, historical].map((fsPath) => ({ fsPath, scheme: "file" }));
+  const selected = await discoverAnalysisDebugMapFiles();
+  t.deepEqual(
+    selected.map(({ file }) => file),
+    [current],
+  );
+  t.true(selected[0].sourceRoots.includes(root));
+
+  writeSource(receipt, JSON.stringify({ inputSha256, debugMapFile: historical }));
+  t.deepEqual(await discoverAnalysisDebugMapFiles(), []);
+  writeSource(receipt, JSON.stringify({ inputSha256: "../../outside", debugMapFile: current }));
+  t.deepEqual(await discoverAnalysisDebugMapFiles(), []);
+  fs.rmSync(receipt);
+  t.deepEqual(await discoverAnalysisDebugMapFiles(), []);
+});
+
 test.serial(
   "currentAnalysisSourcePath resolves absolute, relative, mismatched and missing files",
   (t) => {

@@ -8163,7 +8163,7 @@ function writePcmWave(samples, sampleRate) {
   samples.forEach((sample, index) => view.setInt16(44 + index * 2, sample, true));
   return bytes;
 }
-var audioOptions = (raw, source) => {
+var resolveBrrAudioOptions = (raw, source) => {
   if (Object.keys(raw).some((key) => key !== "padding" && key !== "loop")) {
     throw new Error("Unknown WAVE-to-BRR option.");
   }
@@ -8182,10 +8182,13 @@ var audioOptions = (raw, source) => {
     if (!source.loop) {
       throw new Error("WAVE has no source loop.");
     }
-    return { padding, loop: "source" };
+    requested = source.loop;
   }
   if (!requested || typeof requested !== "object" || Array.isArray(requested) || !("start" in requested) || !("end" in requested) || typeof requested.start !== "number" || typeof requested.end !== "number" || Object.keys(requested).some((key) => key !== "start" && key !== "end")) {
     throw new Error("loop must be false, 'source', or { start, end } in sample frames.");
+  }
+  if (!Number.isSafeInteger(requested.start) || !Number.isSafeInteger(requested.end) || requested.start < 0 || requested.start >= requested.end || requested.end !== source.samples.length || requested.start % 16 !== 0 || requested.end % 16 !== 0) {
+    throw new Error("BRR loop must start on a 16-sample boundary and end at the unpadded tail.");
   }
   return { padding, loop: { start: requested.start, end: requested.end } };
 };
@@ -8207,7 +8210,7 @@ function withAudioEncoder(native) {
           );
         }
         const audio = document2.value;
-        const options = audioOptions(rawOptions, audio);
+        const options = resolveBrrAudioOptions(rawOptions, audio);
         const originalCount = audio.samples.length;
         if (originalCount === 0) {
           throw new Error("WAVE has no PCM samples.");
@@ -8220,14 +8223,7 @@ function withAudioEncoder(native) {
         }
         const padded = new Int16Array(originalCount + paddingCount);
         padded.set(audio.samples);
-        const loop = options.loop === "source" ? audio.loop : options.loop;
-        if (loop) {
-          if (!Number.isSafeInteger(loop.start) || !Number.isSafeInteger(loop.end) || loop.start < 0 || loop.start >= loop.end || loop.end !== originalCount || loop.start % 16 !== 0 || loop.end % 16 !== 0) {
-            throw new Error(
-              "BRR loop must start on a 16-sample boundary and end at the unpadded tail."
-            );
-          }
-        }
+        const loop = options.loop;
         const brr = encodeBrrPcm(padded, Boolean(loop));
         const loopOffset = loop ? loop.start / 16 * 9 : void 0;
         const decoded = decodeBrrPcm(brr, loopOffset);
@@ -11660,6 +11656,11 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   if (layout2.guideIndex !== layout2.paletteRefs.length * 16) {
     throw new Error("Frame atlas guide index must follow the source palette groups.");
   }
+  if (layout2.indexPalette !== void 0 && (!Array.isArray(layout2.indexPalette) || layout2.indexPalette.length !== layout2.guideIndex || layout2.indexPalette.some(
+    (color) => !Array.isArray(color) || color.length !== 4 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)
+  ))) {
+    throw new Error("Frame atlas indexPalette must bind every native slot to an RGBA8 color.");
+  }
   for (const variant of layout2.paletteVariants ?? []) {
     if (!Number.isInteger(variant.group) || variant.group < 0 || variant.group >= layout2.paletteRefs.length) {
       throw new Error("Frame atlas palette variant refers to an invalid source group.");
@@ -11781,7 +11782,7 @@ function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   if (!imported || typeof imported !== "object" || !("kind" in imported) || imported.kind !== "indexed-image") {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
-  const image = imported;
+  let image = imported;
   if (image.width !== layout2.width || image.height !== layout2.height) {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
@@ -11792,11 +11793,15 @@ function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   for (const variant of layout2.paletteVariants ?? []) {
     spritePaletteColors(catalog, variant.palette);
   }
-  for (let index = 0; index < colors.length; index++) {
-    if (!image.palette[index] || image.palette[index].some((component, channel) => component !== colors[index][channel])) {
-      throw new Error(`Frame atlas palette color ${index} no longer matches its layout.`);
-    }
+  const matches = (expected) => expected.every(
+    (color, index) => image.palette[index]?.length === 4 && color.every((component, channel) => component === image.palette[index][channel])
+  );
+  if (!matches(colors) && (!layout2.indexPalette || !matches(layout2.indexPalette))) {
+    throw new Error(
+      "Frame atlas palette no longer matches its stable index binding. Restore the PNG palette order; edit shared colors in the palette catalog."
+    );
   }
+  image = { ...image, palette: [...colors, ...image.palette.slice(colors.length)] };
   const tiles = /* @__PURE__ */ new Map();
   const names = options.whole ? Object.keys(layout2.segments) : [options.segmentName ?? ""];
   for (const name of names) {
@@ -12327,6 +12332,10 @@ var registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry.registerEncoder(encoder);
 }
+var audioRegistry = new AssetRegistry().registerImporter(waveImporter);
+for (const encoder of withAudioEncoder(snesNativeEncoders)) {
+  audioRegistry.registerEncoder(encoder);
+}
 function nativeBossChunk(png, wanted = "soMz") {
   const image = readAssetPng(png);
   let native;
@@ -12360,12 +12369,15 @@ function decodeBossStream(native, storage, size) {
   return { bytes: expanded.data, mode, unusedHeaderByte };
 }
 function convertBossImage(source, options, resources = {}) {
-  const { storage, byteLength, mode, unusedHeaderByte = 0 } = options;
+  const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
   if (storage !== "lz-rle" && storage !== "rle") {
     throw new Error("Boss storage must be lz-rle or rle.");
   }
   if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
     throw new Error("Boss byteLength must be a positive integer.");
+  }
+  if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
+    throw new Error("Boss sizePolicy must be fixed or encoded.");
   }
   const layout2 = options.layout ? readFrameLayout(options, resources) : void 0;
   let pixels;
@@ -12389,10 +12401,18 @@ function convertBossImage(source, options, resources = {}) {
     throw new Error("Boss atlas supports at most 26 native segments.");
   }
   const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
-  const original = nativeBossChunk(source.bytes, chunkName);
+  let original;
+  if (options.native !== void 0) {
+    if (typeof options.native !== "string" || !options.native || !resources[options.native]) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    original = resources[options.native].bytes;
+  } else {
+    original = nativeBossChunk(source.bytes, chunkName);
+  }
   if (original) {
     if (original.length !== byteLength) {
-      throw new Error("Boss PNG native chunk has the wrong byte length.");
+      throw new Error("Boss native data has the wrong byte length.");
     }
     const decoded = decodeBossStream(original, storage, pixels.length);
     if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
@@ -12409,12 +12429,17 @@ function convertBossImage(source, options, resources = {}) {
       unusedHeaderByte: selectedHeaderByte
     });
   }
-  if (encoded.length > byteLength) {
-    throw new Error("Edited boss graphics exceed their fixed ROM span.");
+  if (sizePolicy === "fixed" && encoded.length > byteLength) {
+    throw new Error(
+      "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
+    );
   }
   const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
   if (verified.some((byte, index) => byte !== pixels[index])) {
     throw new Error("Boss graphics inverse failed.");
+  }
+  if (sizePolicy === "encoded") {
+    return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
   }
   const padded = new Uint8Array(byteLength);
   padded.set(encoded);
@@ -12423,9 +12448,9 @@ function convertBossImage(source, options, resources = {}) {
   }
   return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
 }
-function verifiedBrrFromWave(source) {
+function readBrrWave(source) {
   const document2 = waveImporter.import(source);
-  const pcm = document2.value.samples;
+  const audio = document2.value;
   const bytes = source.bytes;
   if (bytes.length < 12 || String.fromCharCode(...bytes.subarray(0, 4)) !== "RIFF" || String.fromCharCode(...bytes.subarray(8, 12)) !== "WAVE") {
     throw new Error("SoM BRR asset requires a RIFF/WAVE file.");
@@ -12453,14 +12478,57 @@ function verifiedBrrFromWave(source) {
     }
     offset = end + (length & 1);
   }
-  if (!native) {
-    throw new Error("SoM WAVE is missing its native sBRR chunk.");
+  return { audio, native };
+}
+function convertBrrWave(source, options = {}) {
+  const { audio, native } = readBrrWave(source);
+  const decoded = native ? decodeBrrPcm(native) : void 0;
+  const unchanged = decoded?.length === audio.samples.length && decoded.every((sample, index) => sample === audio.samples[index]);
+  let loop;
+  if (options.loop !== void 0) {
+    loop = resolveBrrAudioOptions({ loop: options.loop, padding: options.padding }, audio).loop;
   }
-  const decoded = decodeBrrPcm(native);
-  if (decoded.length !== pcm.length || decoded.some((sample, index) => sample !== pcm[index])) {
-    throw new Error("SoM WAVE PCM no longer matches its native BRR blocks.");
+  const nativeLoop = native ? Boolean(native[native.length - 9] & 2) : false;
+  let output;
+  if (native && unchanged && (loop === void 0 || Boolean(loop) === nativeLoop)) {
+    output = {
+      bytes: native,
+      mediaType: "application/octet-stream",
+      metadata: {
+        nativePreserved: true,
+        sourceSamples: audio.samples.length,
+        sampleRate: audio.sampleRate
+      }
+    };
+  } else {
+    if (options.loop === void 0) {
+      throw new Error(
+        "SoM WAVE PCM no longer matches native BRR (or its chunk was removed). Declare loop: false, 'source', or { start, end } in sample frames to review re-encoding."
+      );
+    }
+    const result = convertAsset(audioRegistry, {
+      source,
+      format: "snes.brr",
+      options: { loop: options.loop, padding: options.padding }
+    });
+    output = {
+      ...result.outputs.brr,
+      metadata: {
+        ...result.outputs.brr.metadata,
+        nativePreserved: false,
+        fidelity: result.fidelity.kind
+      }
+    };
   }
-  return native;
+  if (options.startByte !== void 0) {
+    const fullByteLength = options.fullByteLength ?? native?.length;
+    if (!Number.isSafeInteger(fullByteLength) || output.bytes.length !== fullByteLength) {
+      throw new Error(
+        "Split BRR editing requires the exact fullByteLength; resize the complete stream and repair both bank slices before changing its length."
+      );
+    }
+  }
+  return { primaryOutput: "brr", outputs: { brr: output } };
 }
 function sliceBrrSegment(brr, options) {
   const { startByte, byteLength } = options;
@@ -12592,9 +12660,11 @@ var plugin = definePlugin({
     });
     context.registerAssetFormat({
       id: "som.boss.graphics",
-      version: "1.0.0",
+      version: "1.1.0",
       targets: ["snes.sfc"],
-      resourcePaths: (options) => typeof options.layout === "string" ? [options.layout, options.palettes].filter((path) => typeof path === "string") : [],
+      resourcePaths: (options) => [options.layout, options.palettes, options.native].filter(
+        (path) => typeof path === "string"
+      ),
       convert: convertBossImage
     });
     context.registerAssetFormat({
@@ -12651,22 +12721,17 @@ var plugin = definePlugin({
       id: "som.brr.pcm",
       version: "1.0.0",
       targets: ["snes.sfc"],
-      convert(source) {
-        return {
-          primaryOutput: "brr",
-          outputs: { brr: { bytes: verifiedBrrFromWave(source) } }
-        };
-      }
+      convert: convertBrrWave
     });
     context.registerAssetFormat({
       id: "som.brr.segment",
       version: "1.0.0",
       targets: ["snes.sfc"],
       convert(source, options) {
-        const brr = verifiedBrrFromWave(source);
+        const brr = convertBrrWave(source, options).outputs.brr;
         return {
           primaryOutput: "brr",
-          outputs: { brr: { bytes: sliceBrrSegment(brr, options) } }
+          outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
         };
       }
     });
@@ -12874,12 +12939,13 @@ function convertSomBrrPreview(input) {
   if (input.output !== void 0 && input.output !== "brr") {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const native = verifiedBrrFromWave(input.source);
+  const converted = convertBrrWave(input.source, input.options).outputs.brr;
+  const native = converted.bytes;
   const sourceAudio = waveImporter.import(input.source).value;
   const segment = input.format === "som.brr.segment";
   const selected = segment ? sliceBrrSegment(native, input.options) : native;
   const decoded = decodeBrrPcm(native);
-  const metadata = { previewScope: "full-stream" };
+  const metadata = { ...converted.metadata, previewScope: "full-stream" };
   if (segment) {
     metadata.segmentStartByte = input.options.startByte;
     metadata.segmentByteLength = selected.length;

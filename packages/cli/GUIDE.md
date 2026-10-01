@@ -166,42 +166,35 @@ target normally updates its checksum. To preserve those fields, configure the SN
 `checksumEnabled: false` option. Mapper addresses describe headerless ROM content. Remove a copier
 header before patching and restore it afterward if needed.
 
-### Analyze & Export
+### Git source workflow
+
+Create a Git source project, then edit assembly, assets, and research as ordinary files:
 
 ```sh
-npx uttori-asm disassemble game.sfc game.analysis
-npx uttori-asm analyze game.analysis --rom game.sfc
-npx uttori-asm export game.analysis game.source --rom game.sfc
-npx uttori-asm verify-roundtrip game.source --rom game.sfc
+npx uttori-asm source init game-source game.sfc --mapper lorom
+# Optional creation import: --dizraw research.dizraw
+npx uttori-asm source import game-source capture.act2
+npx uttori-asm source analyze game-source
+npx uttori-asm source prepare game-source
+npx uttori-asm source preview game-source <candidate-commit>
+git -C game-source add <reviewed-paths>
+git -C game-source commit -m "Checkpoint source edits"
+npx uttori-asm source apply game-source <candidate-commit>
+# Resolve any conflicts in Git/VS Code and stage the resolutions.
+npx uttori-asm source finish game-source
+npx uttori-asm source build game-source
 ```
 
-Analysis metadata is stored in SQLite. Supply the same ROM for later operations. Ambiguous mapper detection requires `--mapper`.
-Unknown bytes remain raw assets as `incbin` includes.
-Export refuses modified generated files and loss of previously exported code unless the corresponding override is explicit.
-A matching rebuild proves byte identity not a complete code discovery.
+Git must have an author configured. Creation verifies an exact original-ROM build before adopting
+an immutable generation commit. Preparation and preview preserve uncommitted edits; applying a
+candidate requires a clean committed checkpoint. `source abort` returns an active merge to that
+checkpoint. `source finish` validates the resolved build before committing the merge.
 
-### SNES Commands
-
-| Command            | Required Input                | Output / Default                                                                                        | Specific Options                                  |
-| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `disassemble`      | ROM                           | Optional new/empty project directory. Otherwise `<rom stem>.analysis`                                   | `--mapper`, `--header-size`, `--dizraw`           |
-| `analyze`          | Project directory and `--rom` | Updates the same project's analysis                                                                     | `--entry`, `--max-work-items`, `--max-call-depth` |
-| `export`           | Project directory and `--rom` | Optional source directory. Otherwise `<project stem>.source`                                            | `--force`, `--allow-code-regression`              |
-| `project-validate` | Project directory             | Validation result on stdout. No replacement records                                                     | Optional `--rom` to check identity                |
-| `verify-roundtrip` | Source directory and `--rom`  | Rebuild paths from `generated-files.json`, normally `build/rebuilt-content.sfc` and `build/rebuilt.sfc` | None beyond `--rom`                               |
-
-`disassemble` creates the analysis container. Run `analyze` separately to discover code. For example:
-
-```sh
-uttori-asm disassemble "game.sfc" "game.analysis" --mapper lorom
-uttori-asm analyze "game.analysis" --rom "game.sfc"
-uttori-asm project-validate "game.analysis" --rom "game.sfc"
-uttori-asm export "game.analysis" "game.source" --rom "game.sfc"
-uttori-asm verify-roundtrip "game.source" --rom "game.sfc"
-```
-
-Use the ROM's actual mapper. All mapper names are listed by `--help`.
-For saved annotations and backup/recovery, see the [analysis-project guide](https://github.com/uttori/asm/blob/master/packages/disassembler/PROJECTS.md).
+Tracked research under `.uttori/research/` retains original identities and preferred names.
+SQLite indexes those choices alongside capture evidence. Private ROM/evidence bindings live in
+ignored `.uttori-local/`; a clone needs its own local binding and retained evidence before generation.
+Working source may intentionally differ from the ROM; only pure generations require original-ROM
+equality. ROMs and emulator binaries are not distributed.
 
 ### Analysis Projects
 
@@ -279,40 +272,19 @@ Inspect retained contradictions and runtime-derived explanations:
 uttori-asm evidence-report game.analysis evidence-report.json
 ```
 
-### Native Source Export
+### Regeneration and layout
 
-Export analyzed bytes as deterministic native 65816 source, with conservative raw assets for everything the analysis has not justified as code:
+Generation renders native instructions, stable raw ROM blocks, headers, and vector words into an
+immutable Git commit. RAM maps, structure maps and asset include recipes are tracked inputs.
+Regeneration never overwrites the working source directory. Git merges the new pure generation
+with your committed source edits. Name declarations ensure later calls use the same research name.
 
-```sh
-uttori-asm export game.analysis game.source --rom game.sfc
-uttori-asm verify-roundtrip game.source --rom game.sfc
-```
-
-The export contains `main.asm`, mapper-bank sources under `banks/`, raw bytes under `assets/`,
-documented hardware definitions in `defines.asm`, a checksum-preserving
-`uttori-asm.config.json`, and a versioned `generated-files.json`.
-It also creates a user-owned `ram-map.json`, its local `ram-map.schema.json`, and generated `ram-defines.asm`.
-Edit `ram-map.json` and run `export` again to regenerate definitions and substitute exact known RAM / WRAM operands in the bank source.
-RAM definition comments omit source citations by default. Set `"includeSourceInformation": true`
-at the top level of `ram-map.json` to include them; descriptive notes remain visible in either mode.
-The manifest hashes this input separately, so `verify-roundtrip` reports a stale map until source has been regenerated.
-The manifest assigns every content byte to exactly one code, raw, padding, SNES-header, or vector span.
-A copier header is preserved as its own asset when present.
-
-`verify-roundtrip` first rejects modified generated files and stale user inputs, assembles `main.asm` through the normal CLI project environment, restores any copier header, and compares the complete file length and SHA-256.
-A mismatch reports its first differing file and content offset.
-The final rebuilt ROM is replaced only after comparison succeeds. The intermediate content build can still change on a failed comparison.
-Re-export refuses local changes to generated files unless `--force` is explicit, changing `ram-map.json` is the normal regeneration workflow and does not require `--force`.
-
-Re-export also refuses to turn any previously emitted code range into raw bytes, even if total code coverage increases elsewhere.
-Review intentional code-to-data changes before using `--allow-code-regression`. `--force` only bypasses the generated-file edit check.
-An incomplete analysis that loses previously decoded ROM bytes leaves the saved analysis intact.
-Increase `--max-work-items` or adjust `--max-call-depth` before retrying.
-A byte-identical round trip alone does not detect lost disassembly because `incbin` preserves the original bytes.
-
-Regenerating an older export writes its hardware definitions to `defines.asm` and
-updates the include and manifest together. Keep handwritten includes in sync with the regenerated
-entry source. The definitions remain specific to the selected exporter.
+`source build` validates the selected project's saved files and publishes matching ROM/debug-map
+artifacts. `.uttori/layout.json` declares object extents, CPU state, proven free space and supported
+references. `source relocate <project> <object-id>` proposes relocation and reference repair;
+`source expand <project> <capacity-bytes>` proposes supported mapper-preserving capacity growth.
+Review the resulting source changes before committing. Unsupported or ambiguous references block
+relocation. Free space is never inferred from padding alone.
 
 ### Storage policy
 
@@ -331,14 +303,12 @@ See the [storage contract](https://github.com/uttori/asm/blob/master/packages/di
 
 ### Project safety and recovery
 
-Project creation refuses occupied directories. Normal source regeneration checks the hashes of
-generated files and refuses local modifications. `--force` explicitly permits replacing those files.
-`--allow-code-regression` separately permits losing previously emitted code. User-owned maps are
-preserved, and changing them requires regeneration before verification.
-
-SQLite recovers committed database state, but a
-multi-file export or rebuild can be incomplete. Reopen/validate the project and regenerate/verify
-before using its outputs. Preserve local source edits before any forced regeneration.
+Creation requires a missing destination. Regeneration uses native Git merge state and durable
+candidate identities. A failed build preserves the last successful artifact pair. Resolve conflicts
+in the ordinary index, then finish; abort is available while the merge remains active. Do not delete
+active operation locks or manufacture generation hashes. `source status` reports recovery state,
+and `source clean` removes only unreferenced scratch/build material whose ownership is established.
+Research files and capture evidence are never disposable caches.
 
 ## Development
 

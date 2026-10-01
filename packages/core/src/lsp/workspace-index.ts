@@ -183,7 +183,7 @@ export class WorkspaceIndex {
     this.includePaths = options.includePaths ?? ["./"];
     this.architecture =
       options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
-    this.targetOptions = Object.freeze({ ...(options.targetOptions ?? {}) });
+    this.targetOptions = Object.freeze({ ...options.targetOptions });
     this.directiveCatalog = this.toolingCatalog.getDirectives();
     this.directivePrefixes =
       this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ??

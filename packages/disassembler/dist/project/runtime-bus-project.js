@@ -29,6 +29,9 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
     options.signal?.throwIfAborted();
     const store = openAnalysisProjectStore(directory);
     try {
+        if (store.researchInputsIdentity() !== options.research?.hash) {
+            throw new Error("Refresh the selected Git research index before importing evidence.");
+        }
         const before = store.storageSnapshot();
         const manifest = store.transaction(() => store.manifest(), false);
         const expected = analysisProjectRevision(manifest);
@@ -77,6 +80,7 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
         options.onStage?.("Publishing validated bus activity…");
         options.signal?.throwIfAborted();
         const result = store.transaction(() => {
+            options.assertResearchCurrent?.();
             assertAnalysisProjectRevision(store, expected);
             let imported;
             try {
@@ -104,12 +108,23 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
                 ...imported.report,
                 sourceName: retained?.sourceName ?? imported.report.sourceName,
             };
-            const merged = mergeRuntimeEvidence(base, { ...imported.batch, imports: [report] });
+            let merged = mergeRuntimeEvidence(base, { ...imported.batch, imports: [report] });
             validateLoadedShards(merged.shards, manifest);
             const changed = merged.changed || addedRuntime > 0;
             if (changed) {
+                if (options.research) {
+                    // Preserve imported observations beneath the authoring overlay; a duplicate capture
+                    // leaves both the projection and project revision unchanged.
+                    store.suspendResearchInputs();
+                    merged = mergeRuntimeEvidence({ ...base, evidence: store.loadTable("evidence") }, { ...imported.batch, imports: [report] });
+                    validateLoadedShards(merged.shards, manifest);
+                }
                 store.replaceTables({ evidence: merged.shards.evidence, imports: merged.shards.imports });
                 store.publishManifest(manifest);
+                if (options.research) {
+                    store.synchronizeResearchInputs(options.research);
+                    store.invalidateAnalysis();
+                }
             }
             // Policy changes belong to the same transaction: a failed capture cannot alter storage limits.
             if (options.storagePolicy) {

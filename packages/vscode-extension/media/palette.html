@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';" />
+    <link href="{{styleUri}}" rel="stylesheet" />
+    <title>ROM Palette</title>
+  </head>
+  <body>
+    <header>
+      <h1>ROM Palette</h1>
+      <button id="text">Open JSON</button>
+    </header>
+    <label for="filter">Find a palette</label>
+    <input id="filter" type="search" placeholder="Address or name" />
+    <select id="palettes" aria-label="Palette"></select>
+    <div id="colors" role="group" aria-label="Palette slots"></div>
+    <form id="edit">
+      <label for="word">BGR555 word <span id="slot"></span></label>
+      <input id="word" pattern="[0-9A-Fa-f]{4}" maxlength="4" size="4" required disabled />
+      <button id="apply" type="submit" disabled>Apply color</button>
+    </form>
+    <p>
+      Save and undo normally. Each slot keeps its index; bit 15 and duplicate colors are preserved.
+    </p>
+    <p id="error" role="alert"></p>
+    <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
+  </body>
+</html>

@@ -109,7 +109,7 @@ for (const depth of [1, 2, 4, 8]) {
     depth,
     colorType: 3,
     palette: colors.slice(0, count),
-    transparency: [0, ...new Array<number>(count - 1).fill(255)],
+    transparency: [0, ...Array.from({ length: count - 1 }, () => 255)],
     pixel: (x, y) => [(x + 3 * y) % count],
   });
 }
@@ -119,7 +119,7 @@ png("indexed-4bpp-adam7.png", {
   depth: 4,
   colorType: 3,
   palette: colors,
-  transparency: [0, ...new Array<number>(15).fill(255)],
+  transparency: [0, ...Array.from({ length: 15 }, () => 255)],
   interlaced: true,
   pixel: (x, y) => [(x + 3 * y) % 16],
 });
@@ -133,7 +133,7 @@ png("colored-4bpp.png", {
   depth: 4,
   colorType: 3,
   palette: coloredPalette,
-  transparency: [0, ...new Array<number>(15).fill(255)],
+  transparency: [0, ...Array.from({ length: 15 }, () => 255)],
   pixel: (x, y) => [(x + 3 * y) % 16],
 });
 png("rgb-exact.png", {
@@ -207,7 +207,7 @@ png("indexed-partial-alpha.png", {
   depth: 4,
   colorType: 3,
   palette: colors,
-  transparency: [128, ...new Array<number>(15).fill(255)],
+  transparency: [128, ...Array.from({ length: 15 }, () => 255)],
   pixel: (x) => [x % 2],
 });
 png("bad-dimensions.png", {
@@ -281,9 +281,9 @@ const wave = (
   const body = Buffer.concat([Buffer.from("WAVE"), ...chunks]);
   write(name, Buffer.concat([Buffer.from("RIFF"), u32le(body.length), body]));
 };
-wave("pcm8-silence.wav", new Array<number>(16).fill(128), 8);
-wave("pcm16-transient.wav", [32767, -32768, ...new Array<number>(30).fill(0)], 16);
-wave("pcm16-short.wav", new Array<number>(15).fill(0), 16);
+wave("pcm8-silence.wav", Array.from({ length: 16 }, () => 128), 8);
+wave("pcm16-transient.wav", [32767, -32768, ...Array.from({ length: 30 }, () => 0)], 16);
+wave("pcm16-short.wav", Array.from({ length: 15 }, () => 0), 16);
 wave(
   "pcm16-loop.wav",
   Array.from({ length: 512 }, (_, index) => (index % 32) * 512 - 8192),

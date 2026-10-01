@@ -168,7 +168,7 @@ export function createNesLifecycle({ state }: TargetFactoryContext): SessionLife
     resetNes65xxStageState(nes);
     session.outputFillByte = nes.fillByte;
     const total = nes.header.length + nes.linker.imageSize;
-    const image = new Array<number>(total).fill(nes.fillByte);
+    const image = Array.from({ length: total }, () => nes.fillByte);
     for (let index = 0; index < nes.header.length; index++) {
       image[index] = nes.header[index] ?? 0;
     }
@@ -213,7 +213,7 @@ function normalizeHeader(configured: unknown, imageSize: number): number[] {
     throw new Error("65xx NES target header must be a byte array.");
   }
   const prgBanks = Math.max(1, Math.ceil(imageSize / 0x4000));
-  const header = new Array<number>(16).fill(0);
+  const header = Array.from({ length: 16 }, () => 0);
   header[0] = INES_MAGIC[0];
   header[1] = INES_MAGIC[1];
   header[2] = INES_MAGIC[2];

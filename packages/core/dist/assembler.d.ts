@@ -25,7 +25,7 @@ import { OutputWriterService } from "./services/output-writer-service.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramModel } from "./services/program-model-builder.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
 import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
-import type { SourceSpan } from "./source-location.js";
+import { type SourceSpan } from "./source-location.js";
 import { type SyntaxProfile } from "./syntax-profile.js";
 type RuntimeConditionalNode = ConditionalBranchNode;
 type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
@@ -288,6 +288,8 @@ export declare class Assembler {
      * Records current address.
      */
     recordCurrentAddress(): void;
+    /** Record raw input consumption at its actual output location, including incbin arrow seeks. */
+    recordBinarySlice(file: string, start: number, end: number, bytes: Uint8Array): void;
     /**
      * Sets write position.
      * @param {number} address The address.
@@ -511,6 +513,8 @@ export declare class Assembler {
      * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
      */
     recordSourceWrite(logicalAddress: number, outputOffset: number): void;
+    /** Record the actual typed field encoding without splitting or overlapping its row's byte ownership. */
+    recordStructField(reference: string, expression: string, offset: number, width: number): void;
     /**
      * Run lifecycle disposal in reverse registration order, then dispose live state slots.
      * Idempotent. Attempts all cleanup and throws AggregateError for failures. The environment

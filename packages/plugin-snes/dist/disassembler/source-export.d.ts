@@ -4,19 +4,17 @@ import { type SnesRamMapVariable } from "./ram-map.js";
 import { type SnesMapper } from "./rom-header.js";
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
 export interface SnesSourceExportOptions {
+    /** Render immutable output to an owned sink. In this form directory supplies inputs only; no files are published or removed. */
+    readonly emitFile: (file: {
+        readonly path: string;
+        readonly bytes: Uint8Array;
+    }) => void;
     /** Preferred dataStruct/row width, including indentation. Integer >= 40; defaults to 100. */
     readonly structLineWidth?: number;
     /** Wrap generated assembly comments at word boundaries; defaults to true. */
     readonly wrapComments?: boolean;
     /** Preferred comment columns including indentation and semicolon, integer >= 20; default 100. */
     readonly commentLineWidth?: number;
-    /**
-     * Overwrite an existing export directory. Without this, a populated directory
-     * that is not a previous export, or a previous export whose files drifted, is rejected.
-     */
-    readonly force?: boolean;
-    /** Explicitly permit replacing previously emitted instructions with non-code spans. */
-    readonly allowCodeRegression?: boolean;
     /** SHA-256 of the analysis project that produced this export (provenance). */
     readonly sourceProjectSha256: string;
     /** Complete variants grouped in ascending explicit file-offset order. Consumed inside the caller's SQL read snapshot. */
@@ -43,7 +41,7 @@ export declare const formatSnes65816SourceInstruction: (instruction: DecodedInst
  */
 export declare const snesSourceLabelNames: (shards: AnalysisProjectShards, mapper: SnesMapper, romSize: number, ramNames?: readonly string[]) => ReadonlyMap<string, string>;
 /**
- * Writes a deterministic 65816 source tree that can be reassembled with this plugin.
+ * Renders a deterministic 65816 source tree that can be reassembled with this plugin.
  * Confident CFG nodes become width-qualified instructions. Unknown bytes remain
  * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
  * bound ROM struct fields become native data source. An optional 512-byte copier
@@ -51,9 +49,9 @@ export declare const snesSourceLabelNames: (shards: AnalysisProjectShards, mappe
  * Checksums are preserved, not recomputed.
  * @param {{ readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards }} project Loaded analysis project.
  * @param {RomImage} rom Immutable ROM used for asset bytes and copier-header extraction.
- * @param {string} directory Destination directory (`main.asm`, `banks/`, `assets/`, manifest).
- * @param {SnesSourceExportOptions} options Provenance hash and optional `--force`.
- * @returns {SourceExportManifest} Written file list, spans, and rebuild configuration.
+ * @param {string} directory Immutable input snapshot containing research recipes and build configuration.
+ * @param {SnesSourceExportOptions} options Provenance hash and required output sink. The renderer never publishes files.
+ * @returns {SourceExportManifest} Rendered file inventory, spans, and rebuild configuration.
  */
 export declare const exportSnes65816Source: (project: {
     readonly manifest: AnalysisProjectManifest;

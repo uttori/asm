@@ -1,4 +1,5 @@
 import { type AnalysisProjectShards, type RuntimeExecutionRecord } from "../model/project-types.js";
+import type { ResearchSnapshot } from "../research-inputs/inputs.js";
 import { type RuntimeEvidenceBatch } from "../runtime/runtime-evidence.js";
 import { type RuntimeTraceFileOptions } from "../runtime/runtime-trace-file.js";
 import { type RuntimeInstructionTraceImportContext, type RuntimeInstructionTraceImportResult, type RuntimeTraceSource, type RuntimeTraceImporterStorage } from "../runtime/runtime-trace.js";
@@ -6,6 +7,10 @@ import type { AnalysisStoragePolicy, AnalysisStorageSnapshot } from "../storage/
 import { type AnalysisProjectRevision } from "./project-transaction.js";
 /** File validation limits plus named progress phases for indexing and atomic publication. */
 export interface RuntimeTraceProjectImportOptions extends RuntimeTraceFileOptions {
+    /** Selected Git authoring snapshot, already indexed before asynchronous capture parsing. */
+    readonly research?: ResearchSnapshot;
+    /** Recheck branch/file selection under the publication lock; a throw publishes no capture facts. */
+    readonly assertResearchCurrent?: () => void;
     /** Instruction imports save this before indexing. Bus imports save it with the final publication. */
     readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
     /** Synchronous status callback. A throw before commit aborts the import, after commit it is a warning. */

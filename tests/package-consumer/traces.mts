@@ -57,7 +57,7 @@ try {
   const context = {
     projectRomContentSha256: rom.identity.contentSha256,
     sourceName: file,
-    indexMode: "65816-disassembly" as const,
+    indexMode: "full" as const,
   };
   const before = loadAnalysisProjectSnapshot(directory);
   await assert.rejects(

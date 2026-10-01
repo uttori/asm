@@ -239,7 +239,7 @@ export function handleImport(session: Assembler, words: readonly string[]): void
  * @returns {void}
  */
 export function handleByte(session: Assembler, words: readonly string[]): void {
-  session.directiveRuntime.handleDataDirective("db", [...words.slice(1)]);
+  session.directiveRuntime.handleDataDirective("db", words.slice(1));
 }
 
 /**
@@ -249,7 +249,7 @@ export function handleByte(session: Assembler, words: readonly string[]): void {
  * @returns {void}
  */
 export function handleAddr(session: Assembler, words: readonly string[]): void {
-  session.directiveRuntime.handleDataDirective("dw", [...words.slice(1)]);
+  session.directiveRuntime.handleDataDirective("dw", words.slice(1));
 }
 
 /**
@@ -324,7 +324,7 @@ export function handleDbyt(session: Assembler, words: readonly string[]): void {
  * @param {3 | 4} width Emitted value width.
  */
 export function handleDword(session: Assembler, words: readonly string[], width: 3 | 4 = 4): void {
-  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", [...words.slice(1)]);
+  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", words.slice(1));
 }
 
 /**

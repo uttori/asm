@@ -121,7 +121,7 @@ When changing SNES analysis or source generation, rebuild every host you are ver
 `npm run make-types --workspace @uttori/asm-plugin-snes`, `npm run cli:build`, and
 `npm run vscode:build`. The editor forks its own bundled maintenance worker; a rebuilt CLI
 does not update that worker. Exercise import, reanalysis, export, and verification through
-`packages/vscode-extension/tests/disassembly/maintenance-process.test.ts` as well as plugin tests.
+`packages/vscode-extension/tests/source/process-client.test.ts` as well as plugin tests.
 
 The extension's `src/package.json` marks its TypeScript as ESM while the shipped bundle remains
 CommonJS. Keep this boundary: compiling shared sources as both ESM and CommonJS gives c8 incompatible
@@ -298,7 +298,7 @@ The extension's `src/` and `tests/` directories share feature folders:
 
 - `analysis/`: annotations, navigation, coverage/source/graph trees, and analysis workers.
 - `debug/`: debugger sessions, address resolution, source roots, and debug annotations.
-- `disassembly/`: annotation editing, maintenance jobs/processes, storage reports, and the panel.
+- `source/`: Git regeneration, tracked research, native previews, tasks and source-process lifecycle.
 - `runtime/`: trace recording/import, live bus analysis, runtime bindings, and trace ownership.
 - `project/`: the project panel, outline, creation wizard, and remembered ROM bindings.
 

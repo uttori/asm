@@ -70,12 +70,10 @@ registerHooks({
 });
 
 const { ProjectPanelProvider } = await import("../../src/project/panel.js");
-const { DisassemblyPanelProvider } = await import("../../src/disassembly/panel.js");
 const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
 
 const harness = (options?: {
-  disassembly?: boolean;
   getClient?: () => { sendRequest: (method: string) => Promise<unknown> } | undefined;
   initConfig?: () => Promise<void>;
 }) => {
@@ -98,13 +96,11 @@ const harness = (options?: {
   let visible = true;
   let onVisibility = () => {};
   let receive = (_message: { type?: string; value?: unknown }) => {};
-  const provider = options?.disassembly
-    ? new DisassemblyPanelProvider(uri(extensionRoot) as never)
-    : new ProjectPanelProvider(
-        uri(extensionRoot) as never,
-        () => options?.getClient?.() as never,
-        options?.initConfig ?? (async () => {}),
-      );
+  const provider = new ProjectPanelProvider(
+    uri(extensionRoot) as never,
+    () => options?.getClient?.() as never,
+    options?.initConfig ?? (async () => {}),
+  );
   const webview = {
     html: "",
     options: {},
@@ -140,78 +136,6 @@ const harness = (options?: {
     receive: (message: { type?: string; value?: unknown }) => receive(message),
   };
 };
-
-test.serial(
-  "Disassembly loads external CSP-scoped assets and routes disassembly and capture actions",
-  async (t) => {
-    const h = harness({ disassembly: true });
-    h.receive({ type: "ready" });
-    const routes = {
-      editAnnotation: "asm.disassembly.editAnnotation",
-      regenerateDisassembly: "asm.disassembly.regenerate",
-      startExecutionCapture: "asm.trace.start",
-      stopExecutionCapture: "asm.trace.stopAnalyze",
-      disassemblyStatus: "asm.disassembly.status",
-      openRamMap: "asm.ramMap.open",
-      importRuntimeTrace: "asm.trace.importRegenerate",
-    };
-    for (const [type, command] of Object.entries(routes)) {
-      await h.provider.onMessage({ type });
-      t.is(host.calls.at(-1), command);
-      t.true(
-        h.sent.some((message) => message.type === "actionComplete" && message.command === type),
-      );
-    }
-    t.regex(h.webview.html, /script nonce="[^"]+" src="[^"]+disassembly.js"/);
-    t.regex(h.webview.html, /href="[^"]+disassembly.css"/);
-    t.false(h.webview.html.includes("{{"));
-    t.true(h.sent.some((message) => message.type === "snapshot" && message.trusted));
-    const js = fs.readFileSync("packages/vscode-extension/media/disassembly.js", "utf8");
-    t.notThrows(() => new vm.Script(js));
-    t.false(js.includes("innerHTML"), "action status is rendered as text");
-    t.false(h.webview.html.includes('id="settingsSection"'));
-    host.trusted = false;
-    h.setVisible(false);
-    h.setVisible(true);
-    t.is(h.sent.at(-1)?.trusted, false);
-    const idle = new DisassemblyPanelProvider(uri(extensionRoot) as never);
-    t.notThrows(() => idle.refresh());
-  },
-);
-
-test.serial(
-  "Disassembly prevents duplicate pending actions and returns actionable errors to the panel",
-  async (t) => {
-    const h = harness({ disassembly: true });
-    let finish: () => void = () => {};
-    h.setExecute(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-    );
-    const pending = h.provider.onMessage({ type: "disassemblyStatus" });
-    await h.provider.onMessage({ type: "disassemblyStatus" });
-    t.is(host.calls.length, 1);
-    finish();
-    await pending;
-    h.setExecute(async () => {
-      throw new Error("Save the rules before running.");
-    });
-    await h.provider.onMessage({ type: "disassemblyStatus" });
-    t.is(h.sent.at(-1)?.error, "Save the rules before running.");
-    t.is(host.calls.length, 2, "a completed or failed action can be retried");
-    h.setExecute(async () => {
-      // oxlint-disable-next-line typescript/only-throw-error
-      throw "offline";
-    });
-    await h.provider.onMessage({ type: "disassemblyStatus" });
-    t.is(h.sent.at(-1)?.error, "offline");
-    await h.provider.onMessage({} as { type?: string });
-    await h.provider.onMessage({ type: "noop" });
-    t.is(host.calls.length, 3);
-  },
-);
 
 test.serial(
   "Project snapshots, settings and path edits round-trip through workspace state",

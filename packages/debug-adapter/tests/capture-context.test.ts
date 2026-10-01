@@ -4,6 +4,7 @@ import path from "node:path";
 
 import test from "ava";
 
+import { verifyRuntimeCaptureCompanion } from "../../disassembler/src/runtime/capture-companion.js";
 import { verifyCaptureContext } from "../src/capture-context.js";
 import { LosslessCaptureFileRecorder, recoverCaptureFile } from "../src/capture-file.js";
 import {
@@ -126,6 +127,23 @@ test("default recording publishes complete context only after matching ACT2 boun
   t.is(result.contextDirectory, directory);
   t.true((await recoverCaptureFile(file)).complete);
   await t.notThrowsAsync(verifyCaptureContext(directory, metadata));
+  const recovery = await recoverCaptureFile(file);
+  await t.notThrowsAsync(verifyRuntimeCaptureCompanion(file, recovery));
+  await t.throwsAsync(verifyRuntimeCaptureCompanion(file, { ...recovery, eventThrough: "1" }), {
+    message: /final event boundary/,
+  });
+  await t.throwsAsync(
+    verifyRuntimeCaptureCompanion(file, {
+      ...recovery,
+      header: { ...recovery.header, session: "2".repeat(32) },
+    }),
+    { message: /session/ },
+  );
+  const aborted = new AbortController();
+  aborted.abort();
+  await t.throwsAsync(verifyRuntimeCaptureCompanion(file, recovery, aborted.signal), {
+    name: "AbortError",
+  });
   t.true(producer.calls.indexOf("prepare") < producer.calls.indexOf("start"));
   t.deepEqual(
     producer.calls.filter((call) => call === "stop"),

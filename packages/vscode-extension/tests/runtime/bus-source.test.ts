@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { createRuntimeBusCaptureSource } from "@uttori/asm-disassembler";
 import { build } from "esbuild";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -25,11 +26,12 @@ import {
   loadAnalysisProject,
   openAnalysisProjectStore,
   publishAnalysisProject,
+  sourceGit,
+  type RuntimeBusProjectImportResult,
   type AnalysisProject,
 } from "../../../disassembler/src/index.js";
-import { DisassemblyMaintenanceClient } from "../../src/disassembly/maintenance-client.js";
-import { createEditorRuntimeBusSource } from "../../src/runtime/bus-source.js";
 import { renderBusTraceReport } from "../../src/runtime/bus-trace-report.js";
+import { SourceProcessClient } from "../../src/source/process-client.js";
 
 const project: AnalysisProject = {
   manifest: {
@@ -81,16 +83,19 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const file = path.join(root, "bus.act2");
   const directory = path.join(root, "analysis");
-  const processFile = path.join(root, "maintenance.cjs");
+  const processFile = path.join(root, "source.mjs");
   fs.writeFileSync(file, bytes);
   publishAnalysisProject(directory, project);
   await build({
-    entryPoints: [path.resolve("packages/vscode-extension/src/disassembly/maintenance-process.ts")],
+    entryPoints: [path.resolve("packages/vscode-extension/src/source/process.ts")],
     outfile: processFile,
     bundle: true,
     conditions: ["uttori-source"],
     platform: "node",
-    format: "cjs",
+    format: "esm",
+    banner: {
+      js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+    },
     // Optional Data Tools debug imports use top-level await; the shipped worker
     // disables those branches too, so this test must bundle the same code path.
     define: {
@@ -99,15 +104,48 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
     },
     logLevel: "silent",
   });
-  const client = new DisassemblyMaintenanceClient(processFile);
+  await sourceGit(root, ["init", "-b", "main"]);
+  await sourceGit(root, ["config", "user.name", "Fixture"]);
+  await sourceGit(root, ["config", "user.email", "fixture@localhost"]);
+  fs.mkdirSync(path.join(root, ".uttori/research"), { recursive: true });
+  fs.mkdirSync(path.join(root, ".uttori-local"));
+  const json = (file: string, value: unknown) =>
+    fs.writeFileSync(path.join(root, file), JSON.stringify(value));
+  json(".uttori/project.json", {
+    format: "uttori-source-project",
+    version: 1,
+    id: "bus",
+    target: "snes.sfc",
+    romSha256: context.projectRomContentSha256,
+    sourceRoots: ["source"],
+    researchRoots: [".uttori/research"],
+    buildConfig: "source/uttori-asm.config.json",
+    layout: ".uttori/layout.json",
+    captures: ".uttori/captures.json",
+  });
+  json(".uttori/research/decisions.json", {
+    format: "uttori-research",
+    version: 1,
+    project: "bus",
+    romSha256: context.projectRomContentSha256,
+    decisions: [],
+  });
+  json(".uttori-local/project.json", {
+    format: "uttori-source-local",
+    version: 1,
+    evidence: directory,
+    rom: "original.sfc",
+  });
+  await sourceGit(root, ["add", ".uttori"]);
+  await sourceGit(root, ["commit", "-m", "Seed bus source fixture"]);
+  const client = new SourceProcessClient(processFile);
+  const importCapture = (capture: string) =>
+    client.run<RuntimeBusProjectImportResult>(
+      { action: "import", directory: root, capture },
+      { maxMemoryMiB: 256 },
+    );
   t.teardown(() => client.dispose());
-  const input = {
-    projectDirectory: directory,
-    romContentSha256: context.projectRomContentSha256,
-    traceFile: file,
-    maxBytes: bytes.length,
-  };
-  const result = await client.run("importBus", input, { maxMemoryMiB: 256 });
+  const result = await importCapture(file);
   t.is(result.observedEvents, 7);
   t.is(result.summary.contexts.interrupt, 1);
   t.is(result.summary.activity.length, 5);
@@ -117,7 +155,7 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   t.regex(report, /interrupt: 1/);
   t.regex(report, /not transfer counts/);
   t.regex(report, /require the capture archive/);
-  const duplicate = await client.run("importBus", input, { maxMemoryMiB: 256 });
+  const duplicate = await importCapture(file);
   t.false(duplicate.changed);
   t.is(duplicate.added.runtime, 0);
   t.true(fs.existsSync(file));
@@ -149,8 +187,7 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
     busJsonFrame("END2", busPosition("7", "1", "complete")),
   ]);
   fs.writeFileSync(graphicsFile, graphicsBytes);
-  const graphicsInput = { ...input, traceFile: graphicsFile, maxBytes: graphicsBytes.length };
-  const graphics = await client.run("importBus", graphicsInput, { maxMemoryMiB: 256 });
+  const graphics = await importCapture(graphicsFile);
   t.deepEqual(
     graphics.summary.graphics?.writes.slice(0, 2).map((w) => w.bytes[0]!.address),
     [0xfffe, 0xffff],
@@ -169,11 +206,7 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   );
   const renamed = path.join(root, "renamed-graphics.act2");
   fs.copyFileSync(graphicsFile, renamed);
-  const graphicsAgain = await client.run(
-    "importBus",
-    { ...graphicsInput, traceFile: renamed },
-    { maxMemoryMiB: 256 },
-  );
+  const graphicsAgain = await importCapture(renamed);
   t.false(graphicsAgain.changed);
   t.is(graphicsAgain.added.runtime, 0);
   t.deepEqual(graphicsAgain.summary, graphics.summary);
@@ -188,7 +221,7 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
   publishAnalysisProject(directory, project);
   const before = loadAnalysisProject(directory);
   fs.writeFileSync(file, bytes);
-  await t.throwsAsync(createEditorRuntimeBusSource(file, { maxBytes: 10 }), {
+  await t.throwsAsync(createRuntimeBusCaptureSource(file, { maxBytes: 10 }), {
     message: /byte limit/,
   });
   for (const broken of [
@@ -196,14 +229,14 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
     Buffer.concat([bytes, Buffer.from("junk")]),
   ]) {
     fs.writeFileSync(file, broken);
-    const source = await createEditorRuntimeBusSource(file);
+    const source = await createRuntimeBusCaptureSource(file);
     await t.throwsAsync(importRuntimeBusTraceSourceIntoProject(source, directory, context), {
       message: /incomplete/,
     });
     t.deepEqual(loadAnalysisProject(directory), before);
   }
   fs.writeFileSync(file, bytes);
-  const source = await createEditorRuntimeBusSource(file);
+  const source = await createRuntimeBusCaptureSource(file);
   fs.writeFileSync(
     file,
     Buffer.concat([
@@ -217,7 +250,7 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
   );
   fs.writeFileSync(file, bytes);
   const controller = new AbortController();
-  const cancelled = await createEditorRuntimeBusSource(file, {
+  const cancelled = await createRuntimeBusCaptureSource(file, {
     signal: controller.signal,
     onProgress: () => controller.abort(),
   });
@@ -226,7 +259,7 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
     { name: "AbortError" },
   );
   const consumerError = new Error("consumer budget");
-  const fresh = await createEditorRuntimeBusSource(file);
+  const fresh = await createRuntimeBusCaptureSource(file);
   t.is(
     await t.throwsAsync(
       fresh.read(() => {
@@ -240,7 +273,7 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
   t.is(importer.finish().observedEvents, 7);
   const instructionFile = path.join(root, "instruction.act2");
   await writeCaptureFixture(instructionFile, 1);
-  await t.throwsAsync(createEditorRuntimeBusSource(instructionFile), {
+  await t.throwsAsync(createRuntimeBusCaptureSource(instructionFile), {
     message: /requires a lossless.*bus capture/,
   });
 });

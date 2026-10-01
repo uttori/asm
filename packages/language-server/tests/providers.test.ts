@@ -253,6 +253,22 @@ test("macro definitions can be renamed and found as references", (t) => {
   t.true(changes.every((change) => change.newText === "hello"));
 });
 
+test("rename at a field declaration cannot bind to an identically named field in another struct", (t) => {
+  const file = path.resolve("/virtual/field-scope.asm");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(
+    file,
+    "struct First 0\n.value: dw\nendstruct\nstruct Second 0\n.value: dw\nendstruct\nLDA Second.value\nLDA First.value\n",
+  );
+  const changes = renameEditsFor(index, file, { line: 1, character: 3 }, "word")!.changes![
+    pathToUri(file)
+  ];
+  t.deepEqual(
+    changes.map((change) => change.range.start.line).sort((a, b) => a - b),
+    [1, 7],
+  );
+});
+
 test("semantic tokens extend stale prefix matches to the full identifier", (t) => {
   const macroFile = path.resolve("/virtual/stale-rename.asm");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
@@ -267,6 +283,19 @@ test("semantic tokens extend stale prefix matches to the full identifier", (t) =
     decoded.some((token) => token[2] === "unk1E__WE".length),
     "stale symbol name unk1E extends to cover unk1E__WE",
   );
+});
+
+test("semantic tokens do not overlap on array-valued struct fields", (t) => {
+  const file = path.resolve("/virtual/encoded-header.asm");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(file, "struct Header\n  .encoded_stream: db[1462]\nendstruct\n");
+  const tokens = decodeSemanticTokens(semanticTokensFor(index, file).data);
+  t.true(tokens.length > 0);
+  for (let i = 1; i < tokens.length; i++) {
+    const previous = tokens[i - 1];
+    const current = tokens[i];
+    t.true(current.line !== previous.line || current.char >= previous.char + previous.length);
+  }
 });
 
 test("find-references returns no locations when the index is empty", (t) => {

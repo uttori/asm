@@ -20,7 +20,5 @@ export {
   assertAssetSourceBaseline,
 } from "./source-baseline.js";
 export type { AssetSourceBaseline, AssetSourceFingerprint } from "./source-baseline.js";
-export { createAssetSourceStage, publishAssetSourceStage } from "./source-stage.js";
-export type { AssetSourceStage } from "./source-stage.js";
 
 export { assetSourcePath } from "./source-baseline.js";

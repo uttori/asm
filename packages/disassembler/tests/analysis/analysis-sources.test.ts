@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { constants } from "node:sqlite";
 
 import { test } from "../../../../tests/ava-helper.js";
 import {
@@ -14,6 +15,7 @@ import {
   type RuntimeExecutionRecord,
   type RuntimeInstructionRecord,
 } from "../../src/index.js";
+import { readSourcePage, readSourceSummary } from "../../src/storage/sqlite-source-query.js";
 import { DatabaseSync } from "../helpers/sqlite-connection.js";
 
 const fixture = (): AnalysisProject => ({
@@ -204,6 +206,24 @@ test("SQL source counts deduplicate instruction variants, keep qualified identit
   t.is(store.sourcePage(a, "instructions", 400).length, 51);
   t.is(store.sourcePage(a, "instructions", 200)[0].address, 200);
   t.is(store.sourcePage(a, "contributions")[0].label, "Attributed");
+  const physical = new DatabaseSync(store.file, { readOnly: true });
+  try {
+    // This catches the old global execution self-join without relying on machine-specific timing.
+    // Counts and instruction pages must use physical observations, never the virtual CPU-state union.
+    physical.setAuthorizer((action, table, _column, _database, view) =>
+      action === constants.SQLITE_READ && (table === "runtime" || view === "runtime")
+        ? constants.SQLITE_DENY
+        : constants.SQLITE_OK,
+    );
+    const source = catalog.sources.find((candidate) => candidate.id === a)!;
+    t.deepEqual(readSourceSummary(physical, source), summary);
+    t.deepEqual(
+      readSourcePage(physical, source, "instructions"),
+      store.sourcePage(a, "instructions"),
+    );
+  } finally {
+    physical.close();
+  }
   t.throws(() => store.sourcePage(a, "instructions", -1), { message: /offset/ });
   t.throws(() => store.sourceSummary("unknown"), { message: /Unknown analysis source/ });
   store.transaction(() =>

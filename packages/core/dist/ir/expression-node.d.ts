@@ -65,7 +65,7 @@ export type RawExpressionNode = ExpressionNodeBase & {
  * @param {string} input The expression source text.
  * @returns {ExpressionNode} The parsed expression node.
  */
-export declare function parseExpressionNode(input: string): ExpressionNode;
+export declare function parseExpressionNode(input: string, source?: ExpressionSource): ExpressionNode;
 /**
  * Renders an expression node back into a source-like string.
  * @param {ExpressionNode} node The expression node to render.
@@ -97,5 +97,16 @@ export declare function parseLeadingReferenceExpression(input: string): {
     node: ReferenceExpressionNode;
     length: number;
 } | undefined;
+/** Optional physical provenance for identifier references in a continued expression. */
+export type ExpressionSource = {
+    /** Original command, with physical newlines and indentation preserved. */
+    text: string;
+    /** UTF-16 offset where the input expression starts within text. */
+    offset: number;
+    /** Zero-based physical line where text starts. */
+    line: number;
+    /** Reused physical-line offsets for every value in one large record. */
+    lineStarts?: number[];
+};
 export {};
 //# sourceMappingURL=expression-node.d.ts.map

@@ -7,20 +7,17 @@ import {
   loadAnalysisProjectSnapshot,
   openAnalysisProjectStore,
   RomImage,
-  validateSourceExportFiles,
 } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
+import {
+  renderSourceFixture,
+  verifyRenderedFixture,
+  initializeAnalysisFixture,
+} from "../../../tests/helpers/source-render-fixture.js";
 import { Assembler } from "../../../tests/test-assembler.js";
 import { Cpu65816Decoder } from "../src/architectures/65816-decoder.js";
-import {
-  initializeSnesDisassemblyWorkspace,
-  verifySnesProjectRoundTrip,
-} from "../src/disassembler/project-initializer.js";
-import {
-  exportSnes65816Source,
-  formatSnes65816SourceInstruction,
-} from "../src/disassembler/source-export.js";
+import { formatSnes65816SourceInstruction } from "../src/disassembler/source-export.js";
 import {
   describeSnesStructAccess,
   SnesStructExpressionResolver,
@@ -619,13 +616,13 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
   const outputDirectory = path.join(root, "source");
   const rom = fixtureRom();
   fs.writeFileSync(romFile, rom.bytes());
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const project = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
   const filename = path.join(outputDirectory, "struct-map.json");
   const input = inputMap();
   fs.writeFileSync(filename, JSON.stringify(input));
   const options = { sourceProjectSha256: "0".repeat(64) };
-  const exportSource = () => exportSnes65816Source(project, rom, outputDirectory, options);
+  const exportSource = () => renderSourceFixture(project, rom, outputDirectory, options);
   const first = exportSource();
   t.is(first.inputs?.find((entry) => entry.path === "struct-map.json")?.records, 5);
   const bankFile = path.join(outputDirectory, "banks/bank-000.asm");
@@ -635,8 +632,7 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
   t.regex(unfoldComments(bank), /Shared script consumer\.\n  LDA \[\$D1],y/);
   t.false(bank.includes("trace-derived read"));
   t.true(
-    (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
-      .equal,
+    (await verifyRenderedFixture({ romFile, sourceDirectory: outputDirectory })).comparison.equal,
   );
   t.deepEqual(exportSource(), first);
   const store = openAnalysisProjectStore(path.join(outputDirectory, "analysis"));
@@ -644,7 +640,7 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
     store.prepareAnnotationQueries();
     const streamed = store.transaction(
       () =>
-        exportSnes65816Source(store.sourceExportView(), rom, outputDirectory, {
+        renderSourceFixture(store.sourceExportView(), rom, outputDirectory, {
           ...options,
           instructionGroups: store.instructionExportGroups(),
         }),
@@ -662,7 +658,7 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
     }
   }
   t.deepEqual(
-    exportSnes65816Source(project, rom, outputDirectory, {
+    renderSourceFixture(project, rom, outputDirectory, {
       ...options,
       instructionGroups: [...grouped].sort(([a], [b]) => a - b).map(([, nodes]) => nodes),
     }),
@@ -677,7 +673,6 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
     fs.writeFileSync(filename, JSON.stringify({ ...input, instructionUses: [change] }));
     t.throws(exportSource);
     t.is(fs.readFileSync(bankFile, "utf8"), bank);
-    t.notThrows(() => validateSourceExportFiles(outputDirectory));
   }
   fs.writeFileSync(filename, JSON.stringify(input));
   const conflicting = {
@@ -698,7 +693,7 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
       ],
     },
   };
-  t.throws(() => exportSnes65816Source(conflicting, rom, outputDirectory, options), {
+  t.throws(() => renderSourceFixture(conflicting, rom, outputDirectory, options), {
     message: /accepted instruction/,
   });
   t.is(fs.readFileSync(bankFile, "utf8"), bank);
@@ -710,7 +705,7 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
       analysis: [...project.shards.analysis, { ...site, id: `${site.id}:wrong-width`, size: 3 }],
     },
   };
-  t.throws(() => exportSnes65816Source(incompatible, rom, outputDirectory, options), {
+  t.throws(() => renderSourceFixture(incompatible, rom, outputDirectory, options), {
     message: /accepted instruction/,
   });
   t.is(fs.readFileSync(bankFile, "utf8"), bank);
@@ -881,7 +876,7 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
   const outputDirectory = path.join(root, "source");
   const rom = fixtureRom();
   fs.writeFileSync(romFile, rom.bytes());
-  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const input = inputMap();
   input.instructionUses[0].operand = "sizeof(Tint) / countof(Commands)";
   input.instructionUses[2].operand = "bytesof(Commands) - sizeof(Tint)";
@@ -890,19 +885,18 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
   const mapPath = path.join(outputDirectory, "struct-map.json");
   fs.writeFileSync(mapPath, JSON.stringify(input));
   const project = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
-  const first = exportSnes65816Source(project, rom, outputDirectory, {
+  const first = renderSourceFixture(project, rom, outputDirectory, {
     sourceProjectSha256: "0".repeat(64),
   });
   t.true(
-    (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
-      .equal,
+    (await verifyRenderedFixture({ romFile, sourceDirectory: outputDirectory })).comparison.equal,
   );
   const store = openAnalysisProjectStore(path.join(outputDirectory, "analysis"));
   try {
     store.prepareAnnotationQueries();
     const streamed = store.transaction(
       () =>
-        exportSnes65816Source(store.sourceExportView(), rom, outputDirectory, {
+        renderSourceFixture(store.sourceExportView(), rom, outputDirectory, {
           sourceProjectSha256: "0".repeat(64),
           instructionGroups: store.instructionExportGroups(),
         }),
@@ -919,7 +913,7 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
   fs.writeFileSync(mapPath, JSON.stringify(input));
   t.throws(
     () =>
-      exportSnes65816Source(project, rom, outputDirectory, { sourceProjectSha256: "0".repeat(64) }),
+      renderSourceFixture(project, rom, outputDirectory, { sourceProjectSha256: "0".repeat(64) }),
     { message: /encoded immediate/ },
   );
   t.is(fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8"), generated);

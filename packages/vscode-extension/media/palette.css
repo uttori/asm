@@ -1,0 +1,72 @@
+body {
+  font: var(--vscode-font-size) var(--vscode-font-family);
+  color: var(--vscode-foreground);
+  padding: 20px;
+  max-width: 760px;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+h1 {
+  font-size: 20px;
+  font-weight: 500;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 6px 8px;
+}
+button {
+  cursor: pointer;
+}
+button:focus-visible,
+input:focus,
+select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+#filter,
+#palettes {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0;
+}
+#colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 20px 0;
+}
+#colors button {
+  min-width: 54px;
+  border: 2px solid transparent;
+}
+#colors button[aria-pressed="true"] {
+  border-color: var(--vscode-focusBorder);
+}
+#colors canvas {
+  display: block;
+  margin: auto auto 4px;
+}
+#edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+p {
+  color: var(--vscode-descriptionForeground);
+}
+#error {
+  color: var(--vscode-errorForeground);
+  white-space: pre-wrap;
+}

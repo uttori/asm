@@ -46,6 +46,8 @@ export interface SnesSessionState {
    * `half` = wrap at 32 KiB. `off` = wrap at bank (LoROM `$xx8000`).
    */
   bankCrossMode: "off" | "full" | "half";
+  /** Diagnostic sink for provisional measurement; shared across pass clones, never changes PC advancement. */
+  onBankCrossing?: (address: number, width: number) => void;
   /**
    * Set by `check title`. Until then, `readN` without a default throws
    * `Esnes_address_out_of_bounds` instead of returning a fallback.

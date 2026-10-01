@@ -88,14 +88,18 @@ import {
   type ProgramModel,
 } from "./services/program-model-builder.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
-import { parseStructInitializer, splitInitializerList } from "./services/struct-initializer.js";
+import {
+  parseStructInitializerEntries,
+  structInitializerStart,
+  splitInitializerList,
+} from "./services/struct-initializer.js";
 import { getStructMetadata } from "./services/struct-metadata.js";
 import {
   SymbolScopeService,
   parseUnnamedLabelReference,
   type LabelEntry,
 } from "./services/symbol-scope-service.js";
-import type { SourceSpan } from "./source-location.js";
+import { createTextSpan, sourceLineStarts, type SourceSpan } from "./source-location.js";
 import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "./syntax-profile.js";
 
 type RuntimeConditionalNode = ConditionalBranchNode;
@@ -428,6 +432,29 @@ export class Assembler {
     );
   }
 
+  /** Record raw input consumption at its actual output location, including incbin arrow seeks. */
+  recordBinarySlice(file: string, start: number, end: number, bytes: Uint8Array): void {
+    if (this.traceStage !== "emitProgram" || !this.collectSourceMetadata) {
+      return;
+    }
+    const mapping = this.addressToLineMapping;
+    mapping.registerDependencySnapshot(file, bytes);
+    const outputOffset = this.outputWriter.toOutputOffset(this.currentAddress);
+    mapping.assets.push({
+      fileIdx: mapping.getFileIndex(this.currentFile),
+      assetFileIdx: mapping.getFileIndex(file),
+      line: this.currentLine + 1,
+      format: "raw",
+      part: "bytes",
+      size: end - start,
+      transforms: [],
+      address: this.currentAddress,
+      inputStart: start,
+      inputEnd: end,
+      ...(outputOffset >= 0 ? { outputOffset } : {}),
+    });
+  }
+
   /**
    * Sets write position.
    * @param {number} address The address.
@@ -658,8 +685,12 @@ export class Assembler {
       return;
     }
     const file = options.file ?? this.currentFile;
-    const line = options.line ?? this.currentLine;
-    const dedupeKey = `${kind}\x00${name}\x00${file}\x00${line}\x00${options.containerName ?? ""}`;
+    const line = options.line ?? options.span?.line ?? this.currentLine;
+    // Distinct occurrences on one line must survive for rename. Coarse legacy
+    // references still deduplicate by line when no physical span is available.
+    const columns =
+      options.span?.line === undefined ? "" : `${options.span.start}:${options.span.end}`;
+    const dedupeKey = `${kind}\x00${name}\x00${file}\x00${line}\x00${options.containerName ?? ""}\x00${columns}`;
     if (this.#symbolReferenceKeys.has(dedupeKey)) {
       return;
     }
@@ -692,6 +723,7 @@ export class Assembler {
           this.recordSymbolReference(
             "define",
             expression.braced ? (expression.content ?? "") : (expression.name ?? ""),
+            { span: expression.span?.line === undefined ? undefined : expression.span },
           );
         }
         return;
@@ -705,7 +737,9 @@ export class Assembler {
           }
           return;
         }
-        this.recordSymbolReference("label", expression.name);
+        this.recordSymbolReference("label", expression.name, {
+          span: expression.span?.line === undefined ? undefined : expression.span,
+        });
         return;
       }
       case "member":
@@ -748,7 +782,9 @@ export class Assembler {
   ): void {
     switch (expression.type) {
       case "identifier":
-        this.recordSymbolReference("label", expression.name);
+        this.recordSymbolReference("label", expression.name, {
+          span: expression.span?.line === undefined ? undefined : expression.span,
+        });
         return;
       case "defineReference":
         this.collectExpressionReferences(expression, fallbackSpan);
@@ -908,10 +944,32 @@ export class Assembler {
           this.collectExpressionReferences(parseExpressionNode(index), fallbackSpan);
         }
       }
-      for (const [field, value] of parseStructInitializer(args[1])) {
-        this.recordSymbolReference("label", field, { containerName });
-        for (const expression of typeof value === "string" ? [value] : value) {
-          this.collectExpressionReferences(parseExpressionNode(expression), fallbackSpan);
+      // Read the literal from original source: row lowering supplies a struct
+      // name that is absent from the source and cannot provide physical offsets.
+      const raw = command.source.raw;
+      const lineStarts = sourceLineStarts(raw);
+      const literalStart = structInitializerStart(raw);
+      for (const field of parseStructInitializerEntries(raw.slice(literalStart))) {
+        this.recordSymbolReference("label", field.name, {
+          containerName,
+          span: createTextSpan(
+            raw,
+            literalStart + field.start,
+            literalStart + field.start + field.name.length,
+            command.source.line,
+            lineStarts,
+          ),
+        });
+        for (const expression of field.expressions) {
+          this.collectExpressionReferences(
+            parseExpressionNode(expression.text, {
+              text: raw,
+              offset: literalStart + expression.start,
+              line: command.source.line,
+              lineStarts,
+            }),
+            fallbackSpan,
+          );
         }
       }
       return;
@@ -961,7 +1019,12 @@ export class Assembler {
       this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
     }
 
-    for (const operand of parsed.opcodeOperands?.operands ?? []) {
+    const referenceExpressions = this.resolveActiveArchitecture().definition?.referenceExpressions;
+    const operands =
+      parsed.opcodeOperands && referenceExpressions
+        ? referenceExpressions(parsed.opcodeOperands.operandText)
+        : (parsed.opcodeOperands?.operands ?? []);
+    for (const operand of operands) {
       this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
     }
 
@@ -1519,6 +1582,7 @@ export class Assembler {
           classifyOperand: (resolver, operand) =>
             contribution.classifyOperand({ operands: resolver }, operand),
           splitOperands: contribution.splitOperands,
+          referenceExpressions: contribution.referenceExpressions,
           unknownInstructionBehavior: contribution.unknownInstructionBehavior,
         },
         [...(contribution.aliases ?? [])],
@@ -1678,6 +1742,27 @@ export class Assembler {
       logicalAddress,
       outputOffset,
     );
+  }
+
+  /** Record the actual typed field encoding without splitting or overlapping its row's byte ownership. */
+  recordStructField(reference: string, expression: string, offset: number, width: number): void {
+    if (!this.collectSourceMetadata || !this.canEmitBytes) {
+      return;
+    }
+    const address = this.pluginAddressSpace.advance(this.currentTargetBaseAddress, offset);
+    const outputOffset = this.outputWriter.toOutputOffset(address);
+    if (outputOffset < 0) {
+      return;
+    }
+    const command = this.traceCommandStack.at(-1);
+    this.addressToLineMapping.structFields.push({
+      fileIdx: this.addressToLineMapping.getFileIndex(command?.file ?? this.currentFile),
+      line: (command?.line ?? this.currentLine) + 1,
+      reference,
+      expression,
+      size: width,
+      outputOffset,
+    });
   }
 
   /**
@@ -2127,6 +2212,7 @@ export class Assembler {
     }
     const capture = this.collectSourceMetadata && this.canEmitBytes;
     const address = this.currentTargetAddress;
+    const beforeBytes = this.bytes;
     const outputOffset = capture ? this.outputWriter.toOutputOffset(address) : -1;
     const operands: ResolvedInstructionOperand[] | undefined = capture ? [] : undefined;
     this.#encodingOperands = operands;
@@ -2147,6 +2233,7 @@ export class Assembler {
         architecture: this.arch,
         addressSpace: this.environment.getTarget(this.targetId)?.addressSpace ?? "target.logical",
         address,
+        size: this.bytes - beforeBytes,
         ...(outputOffset >= 0 ? { outputOffset } : {}),
         operands,
       });

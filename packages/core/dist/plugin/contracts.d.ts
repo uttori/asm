@@ -99,6 +99,8 @@ export interface ArchitectureContribution {
     displayName: string;
     unknownInstructionBehavior: "throw" | "returnFalse";
     splitOperands(text: string): string[];
+    /** Unresolved expression fragments used by navigation/rename; omit addressing punctuation and registers without evaluating symbols. */
+    referenceExpressions?(operandText: string): readonly string[];
     classifyOperand(context: OperandClassificationContext, operand: string): LoweredOperand;
     /** Per-session encoder. May be omitted for analysis. Assembler requires encoders for every target architecture. */
     createEncoder?(context: ArchitectureFactoryContext): ArchitectureEncoder;

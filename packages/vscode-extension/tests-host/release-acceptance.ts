@@ -2,16 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-  loadAnalysisProjectViewSnapshot,
-  loadSourceExportManifest,
-} from "@uttori/asm-disassembler";
-import { initializeSnesDisassemblyWorkspace } from "@uttori/asm-plugin-snes";
+import { sourceGit } from "@uttori/asm-disassembler";
+import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import * as vscode from "vscode";
 
 import { AnalysisWorkerClient } from "../src/analysis/worker-client.js";
-import type { AnnotationSaveResult } from "../src/disassembly/annotation-data.js";
-import { DisassemblyMaintenanceClient } from "../src/disassembly/maintenance-client.js";
+import { SourceProcessClient } from "../src/source/process-client.js";
 
 /** Poll provider registration and asynchronous diagnostics without imposing a startup-speed claim. */
 async function eventually(
@@ -156,12 +152,12 @@ async function languageFeatures(folder: vscode.WorkspaceFolder): Promise<void> {
   );
 }
 
-/** Run installed workers and registered regeneration against a synthetic ROM and persistent edit. */
-async function analysisWorkflow(
+/** Verify the installed source worker builds, merges and preserves ordinary edits in a fresh repository. */
+async function sourceWorkflow(
   extension: vscode.Extension<unknown>,
   folder: vscode.WorkspaceFolder,
 ): Promise<void> {
-  const sourceDirectory = path.join(folder.uri.fsPath, "generated");
+  const sourceDirectory = path.join(folder.uri.fsPath, "source-project");
   const romFile = path.join(folder.uri.fsPath, "synthetic.sfc");
   const bytes = new Uint8Array(0x8000).fill(0xea);
   bytes.set([0xea, 0xea, 0xdb]);
@@ -173,99 +169,63 @@ async function analysisWorkflow(
   bytes.fill(0, 0x7fe0);
   bytes.set([0, 0x80], 0x7ffc);
   fs.writeFileSync(romFile, bytes);
-  await initializeSnesDisassemblyWorkspace({
-    romFile,
-    outputDirectory: sourceDirectory,
-    mapper: "lorom",
-  });
-  const projectDirectory = path.join(sourceDirectory, "analysis");
-  const target = {
-    romFile,
-    sourceDirectory,
-    projectDirectory,
-    sourceManifest: loadSourceExportManifest(sourceDirectory),
-  };
+  const source = new SourceProcessClient(
+    path.join(extension.extensionPath, "out/source-process.mjs"),
+  );
   const worker = new AnalysisWorkerClient(
     path.join(extension.extensionPath, "out/analysis-worker.cjs"),
   );
-  const maintenance = new DisassemblyMaintenanceClient(
-    path.join(extension.extensionPath, "out/disassembly-maintenance-process.cjs"),
-  );
+  const limits = { maxMemoryMiB: 1024 };
   try {
-    const saved = await worker.request<AnnotationSaveResult>(projectDirectory, "annotationSave", {
-      annotationSave: {
-        revision: loadAnalysisProjectViewSnapshot(projectDirectory).revision,
-        sourceDirectory,
-        request: {
-          addressSpace: "snes.cpu",
-          address: 0x8000,
-          labelId: "release.entry",
-          name: "ReleaseEntry",
-          comment: "Persistent release annotation",
-          evidenceId: "release.annotation",
-          sourceId: "release-test",
-        },
-      },
-    });
-    await vscode.commands.executeCommand("asm.disassembly.regenerate", {
-      ...target,
-      annotationRefresh: saved.refresh,
-    });
-    const exported = loadSourceExportManifest(sourceDirectory);
-    assert.equal(exported.sourceProjectSha256, saved.refresh.after);
-    const sources = exported.files.filter((file) => file.path.endsWith(".asm"));
-    assert.ok(
-      sources.some((file) =>
-        fs.readFileSync(path.join(sourceDirectory, file.path), "utf8").includes("ReleaseEntry"),
-      ),
+    await source.run(
+      { action: "init", directory: sourceDirectory, rom: romFile, mapper: "lorom" },
+      limits,
     );
-    assert.equal(
-      (
-        await maintenance.run(
-          "verify",
-          { ...target, sourceManifest: exported },
-          { maxMemoryMiB: 256 },
-        )
-      ).comparison.equal,
-      true,
+    const edited = path.join(sourceDirectory, "source/main.asm");
+    const content = fs.readFileSync(edited, "utf8") + "\n; preserved user edit\n";
+    fs.writeFileSync(edited, content);
+    await sourceGit(sourceDirectory, ["add", "source/main.asm"]);
+    await sourceGit(sourceDirectory, ["commit", "-m", "Preserve release source edit"]);
+    const prepared = await source.run<PreparedSnesGeneration>(
+      { action: "prepare", directory: sourceDirectory },
+      limits,
     );
+    const operation = { directory: sourceDirectory, candidate: prepared.generation.commit };
+    await source.run({ ...operation, action: "preview" }, limits);
+    await source.run({ ...operation, action: "apply" }, limits);
+    await source.run({ ...operation, action: "finish" }, limits);
+    const built = await source.run<SnesSourceBuild>(
+      { action: "build", directory: sourceDirectory },
+      limits,
+    );
+    assert.deepEqual(fs.readFileSync(built.outputFile), Buffer.from(bytes));
+    assert.equal(fs.readFileSync(edited, "utf8"), content);
     const cancellation = new AbortController();
     cancellation.abort(new Error("release cancellation"));
-    await assert.rejects(
-      maintenance.run("coverage", target, { signal: cancellation.signal, maxMemoryMiB: 256 }),
-    );
-    assert.equal(
-      (
-        await maintenance.run(
-          "verify",
-          { ...target, sourceManifest: exported },
-          { maxMemoryMiB: 256 },
-        )
-      ).comparison.equal,
-      true,
+    await assert.rejects(async () =>
+      source.run(
+        { action: "prepare", directory: sourceDirectory },
+        { ...limits, signal: cancellation.signal },
+      ),
     );
     const corrupt = path.join(folder.uri.fsPath, "corrupt-analysis");
     fs.mkdirSync(corrupt);
     fs.writeFileSync(path.join(corrupt, "analysis.json"), "{invalid");
     await assert.rejects(worker.request(corrupt, "manifest"));
-    await worker.request(projectDirectory, "manifest");
+    const evidence = path.join(sourceDirectory, ".uttori-local/evidence");
+    await worker.request(evidence, "manifest");
     worker.dispose();
-    await worker.request(projectDirectory, "manifest");
-    const edited = path.join(sourceDirectory, sources[0].path);
-    const content = fs.readFileSync(edited, "utf8") + "\n; preserved user edit\n";
-    fs.writeFileSync(edited, content);
-    await vscode.commands.executeCommand("asm.disassembly.regenerate", target);
-    assert.equal(fs.readFileSync(edited, "utf8"), content, "Regeneration overwrote a user edit.");
+    await worker.request(evidence, "manifest");
     fs.writeFileSync(
       path.join(folder.uri.fsPath, "release-reopen.json"),
       JSON.stringify({ edited, content }),
     );
     console.log(
-      "Installed analysis: annotation, regeneration, byte-identical rebuild, cancellation, corrupt input, worker restart, and edit preservation passed.",
+      "Installed Git source: initialization, checkpoint, regeneration merge, exact build, cancellation, worker restart and edit preservation passed.",
     );
   } finally {
+    source.dispose();
     worker.dispose();
-    maintenance.dispose();
   }
 }
 
@@ -326,7 +286,7 @@ export async function runReleaseAcceptance(
     return;
   }
   await languageFeatures(folder);
-  await analysisWorkflow(extension, folder);
+  await sourceWorkflow(extension, folder);
   const second = path.join(folder.uri.fsPath, "second-folder");
   fs.mkdirSync(second);
   fs.writeFileSync(path.join(second, "second.asm"), "lorom\norg $008000\nSecondEntry:\n nop\n");

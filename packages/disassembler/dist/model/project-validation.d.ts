@@ -27,6 +27,7 @@ export declare const validateRuntimeRecords: (records: Iterable<RuntimeEvidenceR
  * Validate metadata, runtime values, address bounds and provenance before publication.
  * @param {AnalysisProjectShards} shards Complete record collections, or metadata with empty runtime.
  * @param {object} project ROM identity, mapper and address-space bounds.
+ * @param {string} analysisScope Complete ownership at publication; partial only for bounded persisted views.
  */
-export declare const validateLoadedShards: (shards: AnalysisProjectShards, project: Pick<AnalysisProjectManifest, "addressSpaces" | "mapping" | "rom">) => void;
+export declare const validateLoadedShards: (shards: AnalysisProjectShards, project: Pick<AnalysisProjectManifest, "addressSpaces" | "mapping" | "rom">, analysisScope?: "complete" | "partial") => void;
 //# sourceMappingURL=project-validation.d.ts.map

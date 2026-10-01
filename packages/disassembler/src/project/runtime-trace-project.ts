@@ -4,11 +4,10 @@ import {
   type ImportReport,
 } from "../model/project-types.js";
 import { createRuntimeRecordValidator, validateLoadedShards } from "../model/project-validation.js";
+import type { ResearchSnapshot } from "../research-inputs/inputs.js";
+import { createRuntimeCaptureSource } from "../runtime/capture-instruction-source.js";
 import { mergeRuntimeEvidence, type RuntimeEvidenceBatch } from "../runtime/runtime-evidence.js";
-import {
-  createRuntimeTraceFileSource,
-  type RuntimeTraceFileOptions,
-} from "../runtime/runtime-trace-file.js";
+import { type RuntimeTraceFileOptions } from "../runtime/runtime-trace-file.js";
 import {
   createRuntimeInstructionTraceImporter,
   type RuntimeInstructionTraceImportContext,
@@ -29,6 +28,10 @@ import {
 
 /** File validation limits plus named progress phases for indexing and atomic publication. */
 export interface RuntimeTraceProjectImportOptions extends RuntimeTraceFileOptions {
+  /** Selected Git authoring snapshot, already indexed before asynchronous capture parsing. */
+  readonly research?: ResearchSnapshot;
+  /** Recheck branch/file selection under the publication lock; a throw publishes no capture facts. */
+  readonly assertResearchCurrent?: () => void;
   /** Instruction imports save this before indexing. Bus imports save it with the final publication. */
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
   /** Synchronous status callback. A throw before commit aborts the import, after commit it is a warning. */
@@ -73,7 +76,7 @@ export const importRuntimeTraceIntoProject = async (
   context: RuntimeInstructionTraceImportContext,
   options: RuntimeTraceProjectImportOptions = {},
 ): Promise<RuntimeTraceProjectImportResult> => {
-  const source = await createRuntimeTraceFileSource(file, options);
+  const source = await createRuntimeCaptureSource(file, options);
   return importRuntimeTraceSourceIntoProject(source, directory, context, options);
 };
 
@@ -98,6 +101,9 @@ export const importRuntimeTraceSourceIntoProject = async (
   options.signal?.throwIfAborted();
   const store = openAnalysisProjectStore(directory);
   try {
+    if (store.researchInputsIdentity() !== options.research?.hash) {
+      throw new Error("Refresh the selected Git research index before importing evidence.");
+    }
     if (options.storagePolicy) {
       store.transaction(() => store.setStoragePolicy(options.storagePolicy!));
     }
@@ -171,6 +177,7 @@ export const importRuntimeTraceSourceIntoProject = async (
     options.onStage?.("Validating destination revision before publication…");
     options.signal?.throwIfAborted();
     const result = store.transaction(() => {
+      options.assertResearchCurrent?.();
       assertAnalysisProjectRevision(store, expected);
       options.onStage?.("Finalizing and merging runtime facts into SQLite…");
       options.signal?.throwIfAborted();
@@ -196,13 +203,27 @@ export const importRuntimeTraceSourceIntoProject = async (
         evidence: store.loadTable("evidence"),
         imports: store.loadTable("imports"),
       };
-      const merged = mergeRuntimeEvidence(base, retainedReport ? {} : imported.batch);
+      let merged = mergeRuntimeEvidence(base, retainedReport ? {} : imported.batch);
       validateLoadedShards(merged.shards, manifest);
       const changed = merged.changed || addedRuntime > 0;
       if (changed) {
+        if (options.research) {
+          // Imported provenance belongs underneath Git decisions. Recompute against observations
+          // after restoring the overlay, then reapply it in this same atomic transaction.
+          store.suspendResearchInputs();
+          merged = mergeRuntimeEvidence(
+            { ...base, evidence: store.loadTable("evidence") },
+            retainedReport ? {} : imported.batch,
+          );
+          validateLoadedShards(merged.shards, manifest);
+        }
         options.onStage?.("Publishing runtime provenance and project revision…");
         store.replaceTables({ evidence: merged.shards.evidence, imports: merged.shards.imports });
         store.publishManifest(manifest);
+        if (options.research) {
+          store.synchronizeResearchInputs(options.research);
+          store.invalidateAnalysis();
+        }
       }
       store.recordCaptureReceipt(retainedReport ?? imported.report);
       options.signal?.throwIfAborted();

@@ -2,10 +2,12 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, NodeAssemblyFileProvider, PluginError, createDebugMap } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, compareByteImages, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, findManagedSourceFile, sourceGenerationIdentity, assertSourceGeneration, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, RomImage, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, identifySnesFileOffset, } from "@uttori/asm-plugin-snes";
+import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, } from "@uttori/asm-plugin-snes";
 import { publishOutputFiles } from "./output-files.js";
+import { runSourceCli, sourceUsage } from "./source.js";
+export { executeSourceOperation } from "./source.js";
 /** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
 const commandOptions = {
     assemble: [
@@ -22,15 +24,6 @@ const commandOptions = {
     ],
     disassemble: ["--mapper", "--header-size", "--dizraw"],
     analyze: ["--rom", "--entry", "--max-work-items", "--max-call-depth"],
-    export: [
-        "--rom",
-        "--force",
-        "--allow-code-regression",
-        "--struct-line-width",
-        "--comment-line-width",
-        "--no-wrap-comments",
-    ],
-    "verify-roundtrip": ["--rom"],
     "project-validate": ["--rom"],
     "project-compact": [],
     "project-storage": ["--cache-max-mib", "--storage-max-mib"],
@@ -45,20 +38,8 @@ const commandOptions = {
     "evidence-report": [],
 };
 const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
-const booleanOptions = new Set([
-    "--help",
-    "--verbose",
-    "--force",
-    "--allow-code-regression",
-    "--debug",
-    "--no-wrap-comments",
-]);
-const commandsWithOutput = new Set([
-    "assemble",
-    "disassemble",
-    "export",
-    "evidence-report",
-]);
+const booleanOptions = new Set(["--help", "--verbose", "--debug"]);
+const commandsWithOutput = new Set(["assemble", "disassemble", "evidence-report"]);
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */
 export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm assemble <input.asm> [output] [assemble-options]
@@ -66,8 +47,6 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm analyze <project-directory> --rom <rom> [analysis-options]
   uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
   uttori-asm evidence-report <project-directory> [report.json]
-  uttori-asm export <project-directory> [source-directory] --rom <rom> [--force] [--allow-code-regression]
-  uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
   uttori-asm project-compact <project-directory>
   uttori-asm project-storage <project-directory> [storage-options]
@@ -78,7 +57,7 @@ Creation options (disassemble):
   --dizraw <path>              Import uncompressed DiztinGUIsh XML
   Defaults: <rom stem>.analysis. Copier header and mapper detected unless overridden.
 
-ROM identity (analyze, export, verify-roundtrip, evidence-import):
+ROM identity (analyze, evidence-import):
   --rom <path>                Required original ROM. Optional with project-validate
 
 Evidence options (evidence-import):
@@ -90,14 +69,6 @@ Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
   --max-work-items <count>     Positive work limit (default ${DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS})
   --max-call-depth <count>     Nonnegative call-context depth (default ${DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH})
-
-Export options (export):
-  --struct-line-width <count> Preferred dataStruct width, at least 40 (default 100)
-  --comment-line-width <count> Preferred comment width, at least 20 (default 100)
-  --no-wrap-comments          Disable generated assembly comment wrapping
-  --force                     Replace modified generated files
-  --allow-code-regression      Allow previously exported code to become raw bytes
-  Default destination: <project stem>.source
 
 Storage options (project-storage, budget options also accepted by evidence-import):
   --cache-max-mib <count>      Disposable projection budget (default 256)
@@ -154,13 +125,8 @@ export const parseCliArguments = (argv) => {
     let traceIndex;
     const entryPoints = [];
     let maxWorkItems;
-    let structLineWidth;
-    let commentLineWidth;
-    let wrapComments;
     let maxCallDepth;
     let verbose = false;
-    let force = false;
-    let allowCodeRegression = false;
     let help = false;
     const suppliedOptions = new Set();
     const requireValue = (flag, inlineValue, index) => {
@@ -188,7 +154,7 @@ export const parseCliArguments = (argv) => {
         if (!knownOptions.has(flag)) {
             throw new Error(`Unknown option '${flag}'.`);
         }
-        // In particular, --force=false must never turn a user's refusal into overwrite permission.
+        // A boolean flag with an explicit value must not silently enable the option.
         if (booleanOptions.has(flag) && inlineValue !== undefined) {
             throw new Error(`${flag} takes no value. Omit it to disable it.`);
         }
@@ -199,18 +165,6 @@ export const parseCliArguments = (argv) => {
         }
         if (flag === "--verbose") {
             verbose = true;
-            continue;
-        }
-        if (flag === "--force") {
-            force = true;
-            continue;
-        }
-        if (flag === "--allow-code-regression") {
-            allowCodeRegression = true;
-            continue;
-        }
-        if (flag === "--no-wrap-comments") {
-            wrapComments = false;
             continue;
         }
         if (flag === "--debug") {
@@ -299,18 +253,6 @@ export const parseCliArguments = (argv) => {
                 entryPoints.push(address);
                 break;
             }
-            case "--comment-line-width":
-                commentLineWidth = Number(value);
-                if (!Number.isSafeInteger(commentLineWidth) || commentLineWidth < 20) {
-                    throw new Error("--comment-line-width must be an integer of at least 20 columns.");
-                }
-                break;
-            case "--struct-line-width":
-                structLineWidth = Number(value);
-                if (!Number.isSafeInteger(structLineWidth) || structLineWidth < 40) {
-                    throw new Error("--struct-line-width must be an integer of at least 40 columns.");
-                }
-                break;
             case "--max-work-items":
                 maxWorkItems = Number(value);
                 if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
@@ -382,13 +324,8 @@ export const parseCliArguments = (argv) => {
         ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
         entryPoints: Object.freeze(entryPoints),
         maxWorkItems,
-        structLineWidth,
-        commentLineWidth,
-        wrapComments,
         maxCallDepth,
         verbose,
-        force,
-        allowCodeRegression,
         help,
     };
 };
@@ -614,42 +551,6 @@ const analyzeProject = (parsed, cwd) => {
     }
 };
 /**
- * Exports a project's native 65816 source.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
- */
-const exportProjectSource = (parsed, cwd) => {
-    const projectDirectory = path.resolve(cwd, parsed.input);
-    if (!parsed.rom) {
-        console.error("Export failed: --rom is required so project identity can be verified.");
-        return 1;
-    }
-    try {
-        const outputDirectory = parsed.output
-            ? path.resolve(cwd, parsed.output)
-            : defaultOutputPath(projectDirectory, ".source");
-        const result = exportSnesProject({
-            projectDirectory,
-            romFile: path.resolve(cwd, parsed.rom),
-            sourceDirectory: outputDirectory,
-            force: parsed.force,
-            allowCodeRegression: parsed.allowCodeRegression,
-            structLineWidth: parsed.structLineWidth,
-            commentLineWidth: parsed.commentLineWidth,
-            wrapComments: parsed.wrapComments,
-        });
-        console.log(`Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s). ${result.codeBytes} byte(s) emitted as native 65816 source.`);
-        console.log(`RAM map: ${result.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0} variable(s) applied from '${path.join(outputDirectory, "ram-map.json")}'.`);
-        console.log(`Manifest: '${path.join(outputDirectory, SOURCE_EXPORT_MANIFEST)}'.`);
-        return 0;
-    }
-    catch (error) {
-        console.error(`Export failed: ${formatFailure(error)}`);
-        return 1;
-    }
-};
-/**
  * Assembles a source file into a binary output.
  * @param {CliArguments} parsed The parsed CLI arguments.
  * @param {string} cwd The current working directory.
@@ -722,15 +623,8 @@ const assemble = async (parsed, cwd) => {
             console.log(`Target: ${loaded.target}`);
             console.log(`Architecture: ${loaded.architecture}`);
         }
-        const managedGeneration = findManagedSourceFile(inputFile);
-        const generationIdentity = managedGeneration
-            ? sourceGenerationIdentity(managedGeneration.directory)
-            : undefined;
         const source = fileProvider.readTextFile(inputFile);
         assembler.assembleProgram(assembler.buildProgramModel(source, inputFile, 0));
-        if (managedGeneration && generationIdentity) {
-            assertSourceGeneration(managedGeneration.directory, generationIdentity);
-        }
         const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
         const outputFile = parsed.output
             ? path.resolve(cwd, parsed.output)
@@ -767,9 +661,6 @@ const assemble = async (parsed, cwd) => {
             });
             outputs.push({ file: debugMapFile, contents: canonicalJson(debugMap) });
         }
-        if (managedGeneration && generationIdentity) {
-            assertSourceGeneration(managedGeneration.directory, generationIdentity);
-        }
         publishOutputFiles(outputs, [inputFile, loaded.configuration.configFile ?? explicitConfig]);
         console.log(`Success: Output written to '${outputFile}'.`);
         if (debugMapFile) {
@@ -792,79 +683,6 @@ const assemble = async (parsed, cwd) => {
     }
 };
 /**
- * Verifies that a source export round-trips byte-for-byte.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {Promise<number>} The exit code.
- */
-const verifyRoundTrip = async (parsed, cwd) => {
-    const directory = path.resolve(cwd, parsed.input);
-    if (!parsed.rom) {
-        console.error("Round-trip verification failed: --rom is required.");
-        return 1;
-    }
-    try {
-        const generationIdentity = sourceGenerationIdentity(directory);
-        const manifest = loadSourceExportManifest(directory);
-        validateSourceExportFiles(directory, manifest);
-        validateSourceExportInputs(directory, manifest);
-        const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
-            headerSize: manifest.rom.headerSize,
-        });
-        if (rom.identity.sha256 !== manifest.rom.sha256 ||
-            rom.identity.contentSha256 !== manifest.rom.contentSha256) {
-            throw new Error(`ROM identity mismatch: export expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`);
-        }
-        const contentOutput = path.join(directory, manifest.contentOutput);
-        const finalOutput = path.join(directory, manifest.finalOutput);
-        fs.mkdirSync(path.dirname(contentOutput), { recursive: true });
-        const exitCode = await runCli([
-            "assemble",
-            path.join(directory, manifest.entrySource),
-            contentOutput,
-            "--config",
-            path.join(directory, manifest.buildConfiguration),
-        ]);
-        if (exitCode !== 0) {
-            throw new Error("Generated native source did not assemble successfully.");
-        }
-        const content = fs.readFileSync(contentOutput);
-        const final = manifest.rom.headerSize === 0
-            ? content
-            : Buffer.concat([
-                fs.readFileSync(path.join(directory, manifest.spans.find((span) => span.role === "copier-header").file)),
-                content,
-            ]);
-        const comparison = compareByteImages(rom.fileBytes(), final);
-        if (!comparison.equal) {
-            const difference = comparison.firstDifference ?? 0;
-            const contentOffset = difference - manifest.rom.headerSize;
-            const identity = contentOffset < 0
-                ? undefined
-                : identifySnesFileOffset(contentOffset, createSnesAddressContext(manifest.mapper), manifest.rom.contentSize);
-            let addressDetail = "copier header";
-            if (contentOffset >= 0) {
-                addressDetail = `content offset $${contentOffset.toString(16).toUpperCase().padStart(6, "0")}`;
-                if (identity) {
-                    addressDetail += ` / CPU $${identity.canonicalCpuAddress.toString(16).toUpperCase().padStart(6, "0")}`;
-                }
-            }
-            console.error(`Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}. First difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`);
-            return 1;
-        }
-        assertSourceGeneration(directory, generationIdentity);
-        validateSourceExportFiles(directory, manifest);
-        // Keep a previously verified image intact when rebuilding or comparison fails.
-        publishOutputFiles([{ file: finalOutput, contents: final }], [path.resolve(cwd, parsed.rom)]);
-        console.log(`Success: Round trip is byte-identical (${comparison.actualLength} byte(s), SHA-256 ${comparison.actualSha256}).`);
-        return 0;
-    }
-    catch (error) {
-        console.error(`Round-trip verification failed: ${formatFailure(error)}`);
-        return 1;
-    }
-};
-/**
  * Run one invocation using process.cwd(), the real filesystem, and the process console. Status/help
  * goes to stdout. Errors/warnings go to stderr. Output is human-readable, not a stable JSON protocol.
  * Owns and disposes its assembler/plugin environment. Failures including cleanup return 1. Plugins
@@ -876,6 +694,9 @@ const verifyRoundTrip = async (parsed, cwd) => {
  * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv = process.argv.slice(2)) => {
+    if (argv[0] === "source") {
+        return runSourceCli(argv.slice(1));
+    }
     let parsed;
     try {
         parsed = parseCliArguments(argv);
@@ -885,7 +706,7 @@ export const runCli = async (argv = process.argv.slice(2)) => {
         return 1;
     }
     if (parsed.help) {
-        console.log(usage);
+        console.log(`${usage}\n\n${sourceUsage}`);
         return 0;
     }
     if (!parsed.input) {
@@ -919,9 +740,6 @@ const runCommand = async (parsed, cwd) => {
     }
     if (parsed.command === "analyze") {
         return analyzeProject(parsed, cwd);
-    }
-    if (parsed.command === "export") {
-        return exportProjectSource(parsed, cwd);
     }
     if (parsed.command === "project-validate") {
         return validateProject(parsed, cwd);
@@ -963,9 +781,6 @@ const runCommand = async (parsed, cwd) => {
             console.error(`Project compaction failed: ${formatFailure(error)}`);
             return 1;
         }
-    }
-    if (parsed.command === "verify-roundtrip") {
-        return verifyRoundTrip(parsed, cwd);
     }
     return assemble(parsed, cwd);
 };

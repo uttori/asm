@@ -85,6 +85,17 @@ registerHooks({
           }
           export class Position { constructor(line, character) { this.line = line; this.character = character; } }
           export class Selection extends Range {}
+          export class WorkspaceEdit { replace() {} }
+          export class CustomExecution { constructor(callback) { this.callback = callback; } }
+          export class Diagnostic { constructor(range, message, severity) { Object.assign(this, { range, message, severity }); } }
+          export const DiagnosticSeverity = { Error: 0, Warning: 1 };
+          export class TabInputCustom {}
+          export class Task {}
+          export const TaskGroup = { Build: 1 };
+          export const tasks = { registerTaskProvider: () => disposable() };
+          export const FileType = { File: 1, Directory: 2 };
+          export class FileSystemError extends Error { static NoPermissions(message) { return new this(message); } }
+
           export class RelativePattern {
             constructor(base, pattern) { this.base = base; this.pattern = pattern; }
           }
@@ -94,6 +105,7 @@ registerHooks({
           export const CodeActionKind = { RefactorRewrite: "refactor.rewrite" };
           export const env = { openExternal: async () => true };
           export const languages = {
+            createDiagnosticCollection: () => ({ clear() {}, set() {}, dispose() {} }),
             registerCodeActionsProvider: () => disposable(),
             registerHoverProvider: () => disposable(),
           };
@@ -129,6 +141,7 @@ registerHooks({
               inspect: (key) => ({ globalValue: host.config[key] }),
             }),
             createFileSystemWatcher: () => watcher(),
+            registerFileSystemProvider: () => disposable(),
             findFiles: async () => [],
             onDidChangeConfiguration: () => disposable(),
             onDidChangeTextDocument: () => disposable(),
@@ -167,6 +180,9 @@ registerHooks({
               dispose() {},
             }),
             createTreeView: () => disposable(),
+            registerTreeDataProvider: () => disposable(),
+            registerCustomEditorProvider: () => disposable(),
+            tabGroups: { all: [], onDidChangeTabs: () => disposable() },
             registerWebviewViewProvider: () => disposable(),
             createTextEditorDecorationType: () => disposable(),
             onDidChangeActiveTextEditor: () => disposable(),
@@ -230,6 +246,7 @@ registerHooks({
               return Promise.resolve();
             }
             onNotification() { return { dispose() {} }; }
+            onRequest() { return { dispose() {} }; }
             setTrace() {}
             sendRequest() { return Promise.resolve(); }
             sendNotification() { return Promise.resolve(); }
@@ -286,6 +303,10 @@ test.serial(
       extensionUri: uri(directory),
       extensionMode: 1,
       asAbsolutePath: (value: string) => path.join(directory, value),
+      workspaceState: {
+        get: (_key: string, fallback?: unknown) => fallback,
+        update: async () => {},
+      },
       globalState: {
         get: (_key: string, fallback?: unknown) => fallback,
         update: async () => {},

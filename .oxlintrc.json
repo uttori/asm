@@ -1,9 +1,25 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["import", "jsdoc", "node", "promise", "typescript"],
-  "jsPlugins": ["eslint-plugin-optimize-regex"],
+  "plugins": [
+    "eslint",
+    "import",
+    "jsdoc",
+    "node",
+    "oxc",
+    "promise",
+    "typescript",
+    "unicorn"
+  ],
+  "jsPlugins": [
+    "@stylistic/eslint-plugin",
+    "eslint-plugin-ava",
+    "eslint-plugin-boundaries",
+    "eslint-plugin-optimize-regex",
+    "eslint-plugin-regexp"
+  ],
   "options": {
-    "typeAware": true
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
   },
   "env": {
     "builtin": true,
@@ -93,10 +109,17 @@
     "**/__MACOSX/**",
     "**/._*"
   ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
   "rules": {
-    "approx-constant": "error",
-    "bad-bitwise-operator": "error",
-    "branches-sharing-code": "error",
+    "oxc/approx-constant": "error",
+    "oxc/bad-bitwise-operator": "error",
+    "oxc/branches-sharing-code": "error",
+    "oxc/no-accumulating-spread": "error",
+
     "curly": ["error", "all"],
     "no-array-constructor": "error",
     "no-empty": [
@@ -122,11 +145,13 @@
     ],
     "no-useless-constructor": "error",
 
-    "import/namespace": "error",
     "import/default": "error",
-    "import/no-named-as-default": "warn",
-    "import/no-named-as-default-member": "warn",
+    "import/namespace": "error",
+    "import/no-cycle": "error",
     "import/no-duplicates": "warn",
+    "import/no-named-as-default-member": "warn",
+    "import/no-named-as-default": "warn",
+    "import/no-self-import": "error",
 
     "jsdoc/check-access": "error",
     "jsdoc/check-property-names": "error",
@@ -134,24 +159,27 @@
     "jsdoc/empty-tags": "error",
     "jsdoc/implements-on-classes": "error",
     "jsdoc/no-defaults": "error",
-    "jsdoc/require-param": "error",
     "jsdoc/require-param-description": "error",
     "jsdoc/require-param-name": "error",
     "jsdoc/require-param-type": "error",
-    "jsdoc/require-property": "error",
+    "jsdoc/require-param": "error",
     "jsdoc/require-property-description": "error",
     "jsdoc/require-property-name": "error",
     "jsdoc/require-property-type": "error",
-    "jsdoc/require-returns": "error",
+    "jsdoc/require-property": "error",
     "jsdoc/require-returns-description": "error",
     "jsdoc/require-returns-type": "error",
+    "jsdoc/require-returns": "error",
     "jsdoc/require-throws-type": "error",
-    "jsdoc/require-yields": "error",
     "jsdoc/require-yields-type": "error",
+    "jsdoc/require-yields": "error",
+
+    "node/no-exports-assign": "error",
+    "node/no-path-concat": "error",
 
     "optimize-regex/optimize-regex": ["warn"],
 
-    "node/no-exports-assign": "error",
+    "promise/no-multiple-resolved": "error",
 
     "typescript/await-thenable": "error",
     "typescript/ban-ts-comment": "error",
@@ -163,6 +191,7 @@
     ],
     "typescript/no-array-delete": "error",
     "typescript/no-base-to-string": "error",
+    "typescript/no-deprecated": "error",
     "typescript/no-duplicate-enum-values": "error",
     "typescript/no-duplicate-type-constituents": "error",
     "typescript/no-empty-object-type": "error",
@@ -178,6 +207,7 @@
     "typescript/no-redundant-type-constituents": "error",
     "typescript/no-require-imports": "error",
     "typescript/no-this-alias": "error",
+    "typescript/no-unnecessary-condition": "warn",
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/no-unsafe-argument": "error",
@@ -188,6 +218,7 @@
     "typescript/no-unsafe-function-type": "error",
     "typescript/no-unsafe-member-access": "error",
     "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-type-assertion": "error",
     "typescript/no-unsafe-unary-minus": "error",
     "typescript/no-wrapper-object-types": "error",
     "typescript/only-throw-error": "error",
@@ -196,13 +227,22 @@
     "typescript/prefer-function-type": "error",
     "typescript/prefer-literal-enum-member": "error",
     "typescript/prefer-namespace-keyword": "error",
+    "typescript/prefer-nullish-coalescing": "warn",
     "typescript/prefer-promise-reject-errors": "error",
+    "typescript/prefer-readonly": "error",
     "typescript/require-await": "error",
     "typescript/restrict-plus-operands": "error",
     "typescript/restrict-template-expressions": "error",
+    "typescript/return-await": ["error", "error-handling-correctness-only"],
+    "typescript/switch-exhaustiveness-check": "error",
     "typescript/triple-slash-reference": "error",
     "typescript/unbound-method": "error",
-    "typescript/unified-signatures": "error"
+    "typescript/unified-signatures": "error",
+
+    "unicorn/error-message": "error",
+    "unicorn/no-process-exit": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/throw-new-error": "error"
   },
   "overrides": [
     {

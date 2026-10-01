@@ -192,7 +192,8 @@ export class CaptureContextRecorder {
  * @param {string} directory Companion directory selected by the user.
  * @param {Pick<CaptureFileMetadata, "romContentSha256" | "producer">} identity ROM and producer identity of the verified running emulator.
  */
-export const verifyCaptureContext = async (directory, identity) => {
+export const verifyCaptureContext = async (directory, identity, signal) => {
+    signal?.throwIfAborted();
     const metadataFile = path.join(directory, "manifest.json");
     const metadataStat = await lstat(metadataFile);
     if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
@@ -226,6 +227,7 @@ export const verifyCaptureContext = async (directory, identity) => {
         }
     }
     for (const [name, artifact] of Object.entries(files)) {
+        signal?.throwIfAborted();
         if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(name) ||
             !artifact ||
             !Number.isSafeInteger(artifact.bytes) ||
@@ -243,7 +245,7 @@ export const verifyCaptureContext = async (directory, identity) => {
             throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
         const hash = createHash("sha256");
-        for await (const bytes of createReadStream(file)) {
+        for await (const bytes of createReadStream(file, { signal })) {
             hash.update(bytes);
         }
         if (hash.digest("hex") !== artifact.sha256) {

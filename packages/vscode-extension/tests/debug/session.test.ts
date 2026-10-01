@@ -6,7 +6,12 @@ import path from "node:path";
 import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
 import { LosslessCaptureFileRecorder, type CaptureFileSummary } from "@uttori/asm-debug-adapter";
 import sinon from "sinon";
-import type { DebugAdapterDescriptorFactory, ExtensionContext, Uri as VsCodeUri } from "vscode";
+import type {
+  DebugAdapterDescriptorFactory,
+  DebugConfigurationProvider,
+  ExtensionContext,
+  Uri as VsCodeUri,
+} from "vscode";
 
 import { test } from "../../../../tests/ava-helper.js";
 
@@ -48,6 +53,8 @@ const host = {
   registered: [] as string[],
   providers: [] as string[],
   factory: undefined as DebugAdapterDescriptorFactory | undefined,
+  configurationProvider: undefined as DebugConfigurationProvider | undefined,
+  commandResult: undefined as unknown,
 };
 
 (globalThis as { __uttoriDebugTest?: typeof host }).__uttoriDebugTest = host;
@@ -120,11 +127,12 @@ registerHooks({
               host.registered.push(id);
               return { dispose() { host.commands.delete(id); } };
             },
-            executeCommand: async (id) => { host.executed.push(id); },
+            executeCommand: async (id) => { host.executed.push(id); return host.commandResult; },
           };
           export const debug = {
             get activeDebugSession() { return host.activeSession; },
-            registerDebugConfigurationProvider: (type) => {
+            registerDebugConfigurationProvider: (type, provider) => {
+              host.configurationProvider = provider;
               host.providers.push("config:" + type);
               return { dispose() {} };
             },
@@ -166,6 +174,8 @@ const reset = (): void => {
   host.registered = [];
   host.providers = [];
   host.factory = undefined;
+  host.configurationProvider = undefined;
+  host.commandResult = undefined;
 };
 
 const uri = (file: string): VsCodeUri =>
@@ -410,7 +420,7 @@ test.serial(
       complete: true,
       chunks: 1,
     } as CaptureFileSummary);
-    await waitFor(() => host.executed.includes("asm.trace.importRegenerate"));
+    await waitFor(() => host.executed.includes("asm.source.importCapture"));
     t.true(
       host.messages.some((message) => message.includes("1,000,000 instruction event(s) retained")),
     );
@@ -429,3 +439,40 @@ test.serial("registerDebugging exposes commands and cancels live analysis", (t) 
     disposable.dispose();
   }
 });
+
+test.serial(
+  "F5 source launches consume one verified build and abort on failure or missing trust",
+  async (t) => {
+    reset();
+    const subscriptions = registerDebugging("/extension");
+    t.teardown(() => subscriptions.forEach((item) => item.dispose()));
+    const resolve = host.configurationProvider!.resolveDebugConfiguration!.bind(
+      host.configurationProvider,
+    );
+    const folder = { uri: uri("/project"), name: "project", index: 0 };
+    const configuration = {
+      type: "uttori-asm",
+      name: "Source",
+      request: "launch",
+      sourceProject: true,
+      program: "/stale.sfc",
+    };
+    host.commandResult = {
+      outputFile: "/current.sfc",
+      debugMapFile: "/current.map",
+      debugMapFingerprint: "map",
+      verification: { outputSha256: "rom" },
+    };
+    const result = await resolve(folder, configuration);
+    t.is(result?.program, "/current.sfc");
+    t.is(result?.debugMap, "/current.map");
+    t.is(result?.outputSha256, "rom");
+    t.deepEqual(host.executed, ["asm.source.buildProject"]);
+    host.commandResult = undefined;
+    t.is(await resolve(folder, configuration), undefined);
+    host.trusted = false;
+    await t.throwsAsync(async () => resolve(folder, configuration), { message: /trust/ });
+    host.trusted = true;
+    await t.throwsAsync(async () => resolve(undefined, configuration), { message: /workspace/ });
+  },
+);

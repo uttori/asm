@@ -38,6 +38,11 @@
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./source": {
+      "uttori-source": "./src/source.ts",
+      "types": "./dist/source.d.ts",
+      "import": "./dist/source.js"
     }
   },
   "publishConfig": {

@@ -65,11 +65,10 @@ an exact half-open ROM file-offset span and the bank directive emitted there:
 
 The exporter splits raw spans at these bounds and replaces complete non-code
 spans. It rejects overlaps, code, typed-header splits and interior source labels.
-The asset source path is relative to the generated bank file. The exporter records
-the map as an input in `generated-files.json` and preserves an existing
+The asset source path is relative to the generated bank file. Pure generation snapshots
+the map as a tracked recipe and preserves an existing
 `uttori-asm.config.json`, including custom asset plugin registrations. The build configuration is
-also recorded as a user-owned input. Edits make the export stale and are preserved by normal
-regeneration. Keep each
+also a tracked input. Recipe edits produce a new generation for native Git merging. Keep each
 entry's end offset aligned with the bytes the asset plugin emits; verify the full
 ROM after editing an asset or its map entry.
 
@@ -90,7 +89,7 @@ are not generating inputs and will be lost when that source is replaced.
 [Report an issue](https://github.com/uttori/asm/issues). Licensed under
 [MIT](https://github.com/uttori/asm/blob/master/LICENSE).
 
-Generated `dataStruct` declarations and `dataStructs` rows place each field value on its own line. Field descriptions stay on the authoritative declarations in `structs.asm`, where editor hover can surface them without repeating the prose for every ROM record. Binding-specific entry descriptions stay above their declaration or table row. Long numeric arrays wrap at 100 columns by default. Set `structLineWidth` on `exportSnesProject` or `exportSnes65816Source`, or pass `--struct-line-width` to CLI export, to choose a different width (integer, at least 40).
+Generated `dataStruct` declarations and `dataStructs` rows place each field value on its own line. Field descriptions stay on the authoritative declarations in `structs.asm`, where editor hover can surface them without repeating the prose for every ROM record. Binding-specific entry descriptions stay above their declaration or table row. Long numeric arrays wrap at 100 columns by default. Pure-renderer integrations may set `structLineWidth` on `exportSnes65816Source` to choose a different width (integer, at least 40).
 
 Generated assembly comments wrap at whitespace by default, at **100 columns including indentation and `; `**. Set `commentLineWidth` (integer, at least 20) or CLI `--comment-line-width 80` to change the width; set `wrapComments: false` or CLI `--no-wrap-comments` to disable comment wrapping. Oversized inline comments move above their code. Existing paragraph boundaries, quoted semicolons, and complete words/URLs are preserved; indivisible tokens can exceed the preferred width. Formatting changes source layout and debug-map line numbers without changing emitted ROM bytes.
 

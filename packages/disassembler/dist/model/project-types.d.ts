@@ -153,6 +153,8 @@ export interface ProjectLabel {
     readonly comment?: string;
     /** Explicit global assembly name. Legacy names keep their export sanitization. */
     readonly sourceName?: string;
+    /** Previous assembly spellings for this stable identity; used to diagnose or repair stale references. */
+    readonly aliases?: readonly string[];
     /** Single-line comment emitted beside the label definition. */
     readonly inlineComment?: string;
     /** False for presentation-only labels, which must not seed new code analysis. */
@@ -227,6 +229,10 @@ export interface AnalysisControlFlowNodeRecord {
     readonly outgoingState: Readonly<Record<string, unknown>>;
     readonly effectiveAddresses: readonly Readonly<Record<string, unknown>>[];
     readonly entryPoint: string;
+    /** Unambiguous owning function's CFG node. Runtime graphs use this instead of copying every path prefix. */
+    readonly functionEntry?: string;
+    /** Previous CFG node on a discovery path within functionEntry, permitting lazy path reconstruction. */
+    readonly evidencePredecessor?: string;
     readonly evidencePath: readonly string[];
     readonly evidence: readonly string[];
 }
@@ -311,32 +317,10 @@ export interface AnalysisTargetSetRecord {
 }
 /** Collections with user-editable metadata; generated CFG and runtime observations are excluded. */
 export type MetadataShard = "labels" | "comments" | "annotations" | "analysis";
-/** Records accepted by metadata editing and retained verbatim in reversible receipts. */
+/** Records accepted by Git-tracked research declarations. */
 export type EditableMetadataRecord = ProjectLabel | ProjectComment | IntervalAnnotation | AnalysisTargetOverrideRecord | AnalysisTargetSetRecord;
-/** One exact record transition. Omission means absence, including a durable removal tombstone. */
-export interface MetadataRecordChange {
-    readonly shard: MetadataShard;
-    readonly id: string;
-    readonly before?: EditableMetadataRecord;
-    readonly after?: EditableMetadataRecord;
-}
-/**
- * Durable manual decision. Imports keep the latest manual record (including absence); historical
- * facts and provenance remain in these receipts. Reanalysis must preserve this collection.
- */
-export interface AnalysisMetadataEditRecord {
-    readonly id: string;
-    readonly kind: "metadata-edit";
-    /** Monotonic edit order, including operations composed before a single publication. */
-    readonly sequence: number;
-    readonly description: string;
-    readonly changes: readonly MetadataRecordChange[];
-    /** Earlier receipt restored by this operation, when this is an explicit history action. */
-    readonly restores?: string;
-    readonly evidence: readonly string[];
-}
 /** Discriminated analysis-shard record. */
-export type AnalysisRecord = AnalysisControlFlowNodeRecord | AnalysisControlFlowEdgeRecord | AnalysisFunctionRecord | AnalysisConflictRecord | AnalysisUnresolvedRecord | AnalysisSummaryRecord | AnalysisTargetOverrideRecord | AnalysisTargetSetRecord | AnalysisMetadataEditRecord;
+export type AnalysisRecord = AnalysisControlFlowNodeRecord | AnalysisControlFlowEdgeRecord | AnalysisFunctionRecord | AnalysisConflictRecord | AnalysisUnresolvedRecord | AnalysisSummaryRecord | AnalysisTargetOverrideRecord | AnalysisTargetSetRecord;
 /** A scalar register or mode value captured from a runtime source. */
 export type RuntimeStateValue = string | number | boolean;
 interface RuntimeRecordBase {

@@ -1,12 +1,12 @@
-import type { AssetInput } from "../registry.js";
+import type { AssetInput, AssetOutput } from "../registry.js";
 /**
- * Rebuild a fixed ROM span from previewable pixels. An unchanged PNG retains the
- * source's exact token choices; edited pixels use the two-stage encoder and pad
- * only after the decoder's complete stream, preserving later ROM addresses.
+ * Rebuild native graphics from previewable pixels. An unchanged PNG retains its exact
+ * token choices. Fixed sizing pads after the complete stream; encoded sizing exposes
+ * growth to the source layout/relocation service instead of truncating or allocating here.
  * @param {AssetInput} source Indexed PNG, optionally carrying a native chunk.
- * @param {Readonly<Record<string, unknown>>} options Storage, length, and optional atlas resources.
+ * @param {Readonly<Record<string, unknown>>} options Storage, original byteLength, optional native resource, sizePolicy (fixed by default or encoded), and atlas resources.
  * @param {Readonly<Record<string, AssetInput>>} [resources] Layout and palette sidecars.
- * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Fixed-span native bytes.
+ * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Independently decoded native bytes.
  */
 export declare function convertBossImage(source: AssetInput, options: Readonly<Record<string, unknown>>, resources?: Readonly<Record<string, AssetInput>>): {
     primaryOutput: string;
@@ -22,6 +22,16 @@ export declare function convertBossImage(source: AssetInput, options: Readonly<R
  * @returns {Uint8Array} Exact complete BRR stream owned by the caller.
  */
 export declare function verifiedBrrFromWave(source: AssetInput): Uint8Array<ArrayBufferLike>;
+/** Preserve unchanged BRR exactly; edited PCM uses the shared lossy encoder and review metadata.
+ * Re-encoding requires an explicit loop policy because BRR flags do not contain the game's loop pointer.
+ * Split streams retain their full byte count so a newly authored tail cannot disappear between bank slices.
+ */
+export declare function convertBrrWave(source: AssetInput, options?: Readonly<Record<string, unknown>>): {
+    primaryOutput: string;
+    outputs: {
+        brr: AssetOutput;
+    };
+};
 /**
  * Select the ROM-owned part of a verified stream after decoding the complete WAVE.
  * A bank split may occur inside a nine-byte BRR block, so slices are not decoded alone.

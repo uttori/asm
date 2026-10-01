@@ -1,4 +1,4 @@
-import { createSourceSpan } from "../source-location.js";
+import { createSourceSpan, createTextSpan } from "../source-location.js";
 /**
  * Ensures the root expression node keeps at least a coarse span.
  * @param {ExpressionNode} node The parsed expression node.
@@ -16,26 +16,29 @@ function attachRootSpan(node, text) {
  * @param {string} input The expression source text.
  * @returns {ExpressionNode} The parsed expression node.
  */
-export function parseExpressionNode(input) {
+export function parseExpressionNode(input, source) {
     const trimmed = input.trim();
+    if (source) {
+        source = { ...source, offset: source.offset + input.length - input.trimStart().length };
+    }
     if (!trimmed) {
         return { type: "raw", value: "", span: createSourceSpan(0, 0) };
     }
     // Immediate addressing (`#label`, `#label>>8`) is not part of the
     // expression language. Strip it so the inner expression still parses.
     if (trimmed.startsWith("#") && trimmed.length > 1) {
-        return parseExpressionNode(trimmed.slice(1));
+        return parseExpressionNode(trimmed.slice(1), source && { ...source, offset: source.offset + 1 });
     }
     const rangeIndex = findTopLevelRange(trimmed);
     if (rangeIndex !== -1) {
         return attachRootSpan({
             type: "range",
-            start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
-            end: parseExpressionNode(trimmed.slice(rangeIndex + 2)),
+            start: parseExpressionNode(trimmed.slice(0, rangeIndex), source),
+            end: parseExpressionNode(trimmed.slice(rangeIndex + 2), source && { ...source, offset: source.offset + rangeIndex + 2 }),
         }, trimmed);
     }
     try {
-        const tokens = tokenizeExpression(trimmed);
+        const tokens = tokenizeExpression(trimmed, source);
         const parser = new ExpressionParser(tokens);
         const expression = parser.parseExpression();
         if (!parser.isAtEnd()) {
@@ -344,9 +347,16 @@ const binaryOperators = [
  * @param {string} input The expression source text.
  * @returns {Token[]} The list of tokens.
  */
-function tokenizeExpression(input) {
+function tokenizeExpression(input, source) {
     const tokens = [];
     let index = 0;
+    // Only editor callers request token spans; ordinary evaluation avoids the
+    // allocation and retains the compact expression trees used by assembler passes.
+    const provenance = (end) => source
+        ? {
+            span: createTextSpan(source.text, source.offset + index, source.offset + end, source.line, source.lineStarts),
+        }
+        : {};
     while (index < input.length) {
         const char = input[index];
         if (/\s/.test(char)) {
@@ -369,7 +379,7 @@ function tokenizeExpression(input) {
             continue;
         }
         if (char === ".") {
-            tokens.push({ type: "dot" });
+            tokens.push({ type: "dot", ...provenance(index + 1) });
             index++;
             continue;
         }
@@ -398,13 +408,13 @@ function tokenizeExpression(input) {
         }
         if (char === "!") {
             const { token, nextIndex } = readDefineReference(input, index);
-            tokens.push(token);
+            tokens.push({ ...token, ...provenance(nextIndex) });
             index = nextIndex;
             continue;
         }
         if (char === "@" || /[A-Z_a-z]/.test(char)) {
             const { value, nextIndex } = readIdentifier(input, index);
-            tokens.push({ type: "identifier", value });
+            tokens.push({ type: "identifier", value, ...provenance(nextIndex) });
             index = nextIndex;
             continue;
         }
@@ -413,7 +423,7 @@ function tokenizeExpression(input) {
             if (!match) {
                 throw new Error("Invalid hex literal");
             }
-            tokens.push({ type: "literal", value: match[0] });
+            tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
             index += match[0].length;
             continue;
         }
@@ -422,7 +432,7 @@ function tokenizeExpression(input) {
             if (!match) {
                 throw new Error("Invalid binary literal");
             }
-            tokens.push({ type: "literal", value: match[0] });
+            tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
             index += match[0].length;
             continue;
         }
@@ -432,7 +442,7 @@ function tokenizeExpression(input) {
             if (!match) {
                 throw new Error("Invalid numeric literal");
             }
-            tokens.push({ type: "literal", value: match[0] });
+            tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
             index += match[0].length;
             continue;
         }
@@ -566,16 +576,29 @@ class ExpressionParser {
     }
     parsePrimary() {
         if (this.peek()?.type === "dot") {
+            const firstSpan = this.peek()?.span;
             let name = "";
             while (this.match({ type: "dot" })) {
                 name += ".";
             }
             const token = this.consume();
             if (token?.type === "identifier") {
-                return { type: "identifier", name: name + token.value };
+                return {
+                    type: "identifier",
+                    name: name + token.value,
+                    ...(firstSpan && {
+                        span: createSourceSpan(firstSpan.start, token.span.end, firstSpan.line),
+                    }),
+                };
             }
             if (token?.type === "literal" && /^\d+$/.test(token.value)) {
-                return { type: "identifier", name: name + token.value };
+                return {
+                    type: "identifier",
+                    name: name + token.value,
+                    ...(firstSpan && {
+                        span: createSourceSpan(firstSpan.start, token.span.end, firstSpan.line),
+                    }),
+                };
             }
             throw new Error("Expected label name after '.'");
         }
@@ -590,10 +613,20 @@ class ExpressionParser {
                 return { type: "string", value: token.value, quote: token.quote };
             case "defineReference":
                 return token.braced
-                    ? { type: "defineReference", content: token.content, braced: true }
-                    : { type: "defineReference", name: token.name, braced: false };
+                    ? {
+                        type: "defineReference",
+                        content: token.content,
+                        braced: true,
+                        ...(token.span && { span: token.span }),
+                    }
+                    : {
+                        type: "defineReference",
+                        name: token.name,
+                        braced: false,
+                        ...(token.span && { span: token.span }),
+                    };
             case "identifier":
-                return { type: "identifier", name: token.value };
+                return { type: "identifier", name: token.value, ...(token.span && { span: token.span }) };
             case "lparen": {
                 const expression = this.parseExpression();
                 this.expect("rparen");
@@ -628,7 +661,11 @@ class ExpressionParser {
                 current = {
                     type: "member",
                     object: current,
-                    property: { type: "identifier", name: property.value },
+                    property: {
+                        type: "identifier",
+                        name: property.value,
+                        ...(property.span && { span: property.span }),
+                    },
                 };
                 continue;
             }

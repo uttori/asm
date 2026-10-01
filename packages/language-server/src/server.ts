@@ -10,11 +10,7 @@ import { crc32 } from "node:zlib";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { createDebugMap } from "@uttori/asm-core/debug-map";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
-import {
-  findManagedSourceFile,
-  sourceGenerationIdentity,
-  assertSourceGeneration,
-} from "@uttori/asm-disassembler";
+import {} from "@uttori/asm-disassembler";
 import plugin65xx from "@uttori/asm-plugin-65xx";
 import {
   discoverProjectConfigurationPath,
@@ -67,12 +63,16 @@ import {
   prepareRenameFor,
   projectOutlineFor,
   referencesFor,
-  renameEditsFor,
   semanticTokensFor,
   semanticTokensLegend,
   signatureHelpFor,
   uriToPath,
 } from "./providers.js";
+import {
+  researchRenameEditsFor,
+  researchRenameRootFor,
+  type RenameBuffer,
+} from "./research-rename.js";
 
 /** Process-wide LSP transport, also used to forward logs and custom index notifications. */
 const connection = createConnection(ProposedFeatures.all);
@@ -667,10 +667,6 @@ function buildBinary(
       log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
       assembler.setIncludePaths(includePaths);
       assembler.setCurrentFile(file);
-      const managedGeneration = findManagedSourceFile(file);
-      const generationIdentity = managedGeneration
-        ? sourceGenerationIdentity(managedGeneration.directory)
-        : undefined;
       const source = provider.readTextFile(file);
       log.info(
         `  source: ${source.length} chars from ${provider.overlay.has(file) ? "editor buffer" : "disk"}`,
@@ -681,9 +677,6 @@ function buildBinary(
       const assembleStarted = Date.now();
       assembler.assembleProgram(program);
       log.info(`  assembleProgram finished (${formatElapsed(assembleStarted)})`);
-      if (managedGeneration && generationIdentity) {
-        assertSourceGeneration(managedGeneration.directory, generationIdentity);
-      }
       const bytes = assembler.getBinaryOutput();
       log.info(`  emitted ${bytes.length} bytes (output buffer ${assembler.outputBytes.length})`);
       if (bytes.length === 0) {
@@ -724,9 +717,6 @@ function buildBinary(
         mapping: assembler.addressToLineMapping,
         sourceRoot: workspaceRoot(),
       });
-      if (managedGeneration && generationIdentity) {
-        assertSourceGeneration(managedGeneration.directory, generationIdentity);
-      }
       const committed = commitBuildArtifactPair(outputPath, bytes, canonicalJson(debugMap));
       log.info(`  writing ${bytes.length} bytes → ${committed.outputPath}`);
       log.info(`  debug map → ${committed.debugMapPath}`);
@@ -951,12 +941,40 @@ connection.onSignatureHelp((params) => {
   });
   return signatureHelpFor(lineText, index);
 });
-connection.onPrepareRename((params) =>
-  prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position),
-);
-connection.onRenameRequest((params) =>
-  renameEditsFor(index, uriToPath(params.textDocument.uri), params.position, params.newName),
-);
+/** F2 must see the latest buffers even when it immediately follows another rename or typing burst. */
+function flushRenameIndex(): void {
+  if (reindexTimer) {
+    clearTimeout(reindexTimer);
+    reindexTimer = undefined;
+    index.reindex();
+  }
+}
+connection.onPrepareRename((params) => {
+  flushRenameIndex();
+  return prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position);
+});
+connection.onRenameRequest(async (params) => {
+  flushRenameIndex();
+  const file = uriToPath(params.textDocument.uri);
+  const root = researchRenameRootFor(index, file, params.position);
+  const sourceBuffers = documents.all().map((document) => ({
+    uri: document.uri,
+    version: document.version,
+    text: document.getText(),
+  }));
+  // JSON documents keep their normal language service. Ask the client for their text only during F2,
+  // so unsaved research participates without registering assembly hover/completion on JSON files.
+  const researchBuffers = root
+    ? await connection.sendRequest<RenameBuffer[]>("asm/researchBuffers", { root })
+    : [];
+  if (sourceBuffers.some((buffer) => documents.get(buffer.uri)?.version !== buffer.version)) {
+    throw new Error("Source changed during rename. Retry at the current symbol.");
+  }
+  return researchRenameEditsFor(index, file, params.position, params.newName, [
+    ...sourceBuffers,
+    ...researchBuffers,
+  ]);
+});
 connection.languages.semanticTokens.on((params) =>
   semanticTokensFor(index, uriToPath(params.textDocument.uri)),
 );

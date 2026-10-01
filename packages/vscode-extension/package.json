@@ -40,11 +40,13 @@
   },
   "dependencies": {
     "@uttori/asm-assets": "1.0.0",
+    "@uttori/asm-cli": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
     "@uttori/asm-debug-sidecar-ares": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
     "@uttori/asm-plugin-snes": "1.0.0",
+    "jsonc-parser": "^3.3.1",
     "vscode-languageclient": "^10.1.1",
     "vscode-languageserver-types": "^3.18.3"
   },
@@ -56,15 +58,9 @@
   "contributes": {
     "commands": [
       {
-        "command": "asm.createDisassemblyProject",
-        "title": "Create Disassembly Project from ROM",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.importDizProject",
-        "title": "Import Diz Disassembly Project",
-        "category": "Assembly",
+        "command": "asm.source.initDiz",
+        "title": "Create Git Source Project from Diz Research",
+        "category": "Assembly Source",
         "enablement": "isWorkspaceTrusted"
       },
       {
@@ -177,30 +173,10 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.editAnnotation",
-        "title": "Edit Disassembly Annotation",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
         "command": "asm.coverage.explainEvidence",
         "title": "Explain Analysis Evidence",
         "icon": "$(inspect)",
         "category": "Assembly"
-      },
-      {
-        "command": "asm.coverage.undo",
-        "title": "Undo Last Analysis Edit",
-        "icon": "$(discard)",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted && asm.coverage.canUndo"
-      },
-      {
-        "command": "asm.coverage.redo",
-        "title": "Redo Last Analysis Edit",
-        "icon": "$(redo)",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted && asm.coverage.canRedo"
       },
       {
         "command": "asm.trace.start",
@@ -214,19 +190,7 @@
       },
       {
         "command": "asm.trace.stopAnalyze",
-        "title": "Stop Execution Capture and Show Routines",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.trace.importBus",
-        "title": "Import Bus Capture and Show DMA/HDMA Activity",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.trace.importRegenerate",
-        "title": "Import Runtime Trace and Update Disassembly",
+        "title": "Stop Capture and Import Evidence",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
@@ -234,23 +198,6 @@
         "command": "asm.analysis.showOutput",
         "title": "Show Analysis Output",
         "category": "Assembly"
-      },
-      {
-        "command": "asm.ramMap.open",
-        "title": "Open Disassembly RAM Map",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.disassembly.status",
-        "title": "Show Disassembly Update Status",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.disassembly.regenerate",
-        "title": "Analyze and Regenerate Disassembly",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
       },
       {
         "command": "asm.trace.cancelLiveAnalysis",
@@ -293,237 +240,112 @@
         "category": "Assembly"
       },
       {
-        "command": "asm.disassembly.inspectOwnership",
-        "title": "Inspect Disassembly Ownership",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.disassembly.editOwnedAnnotation",
-        "title": "Edit Owned Metadata",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted && asm.disassembly.canAnnotate"
-      },
-      {
-        "command": "asm.disassembly.openOwningInput",
-        "title": "Open Owning Input",
-        "category": "Assembly",
-        "enablement": "asm.disassembly.hasOwningInput"
-      },
-      {
-        "command": "asm.disassembly.showOwnedStatus",
-        "title": "Show Owning Disassembly Status",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.disassembly.regenerateOwned",
-        "title": "Regenerate Owning Disassembly",
+        "command": "asm.source.init",
+        "title": "Create Git Source Project",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.editMetadata",
-        "title": "Edit Disassembly Metadata",
+        "command": "asm.source.clean",
+        "title": "Clean Abandoned Source Temporary Data",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.removeLabel",
-        "title": "Remove Disassembly Label Name",
+        "command": "asm.source.discard",
+        "title": "Discard Generated Candidate",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.resetLabel",
-        "title": "Reset Disassembly Label Name",
+        "command": "asm.source.select",
+        "title": "Select Source Project",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.editComments",
-        "title": "Edit Standalone Disassembly Comments",
+        "command": "asm.source.refresh",
+        "title": "Refresh Source Status",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.editClassification",
-        "title": "Edit Classification and CPU State",
+        "command": "asm.source.prepare",
+        "title": "Prepare Regeneration",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.editTargets",
-        "title": "Edit Disassembly Targets",
+        "command": "asm.source.preview",
+        "title": "Preview Regeneration with Current Edits",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.disassembly.recoverPublication",
-        "title": "Recover Disassembly Publication",
+        "command": "asm.source.apply",
+        "title": "Apply Regeneration after Checkpoint",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.buildTarget.select",
-        "title": "Select Build / Run Target",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.baseline.verify",
-        "title": "Verify Baseline ROM",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.create",
-        "title": "Create ROM Modification Project",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.add",
-        "title": "Add ROM Replacement…",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.open",
-        "title": "Open ROM Modification Manifest",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.build",
-        "title": "Build Modified ROM",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.run",
-        "title": "Run Modified ROM",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.debug",
-        "title": "Debug Modified ROM",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.watch",
-        "title": "Run Modified ROM and Watch",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.derive",
-        "title": "Create Analysis Project for Modified ROM",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.modification.openInput",
-        "title": "Open Owned ROM Input",
+        "command": "asm.source.finish",
+        "title": "Validate and Finish Regeneration",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.modification.remove",
-        "title": "Remove ROM Replacement",
+        "command": "asm.source.abort",
+        "title": "Abort Regeneration",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.asset.extract",
-        "title": "Extract Editable ROM Asset",
+        "command": "asm.source.relocate",
+        "title": "Relocate Source Object",
+        "category": "ASM",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.source.expand",
+        "title": "Expand ROM Capacity",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.asset.import",
-        "title": "Import Edited ROM Asset",
+        "command": "asm.source.build",
+        "title": "Build and Check Source",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.allocation.review",
-        "title": "Prepare ROM Allocation Plan",
+        "command": "asm.source.importCapture",
+        "title": "Import Capture into Source Project",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.allocation.apply",
-        "title": "Apply ROM Allocation Plan",
+        "command": "asm.source.analyze",
+        "title": "Analyze Source Project Evidence",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.rebase.review",
-        "title": "Review ROM Baseline Rebase",
-        "category": "Assembly",
+        "command": "asm.source.editResearch",
+        "title": "Edit Symbol Research",
+        "category": "Assembly Source",
         "enablement": "isWorkspaceTrusted"
       },
       {
-        "command": "asm.rebase.accept",
-        "title": "Accept ROM Rebase",
-        "category": "Assembly",
+        "command": "asm.source.editAnalysis",
+        "title": "Edit Analysis Research",
+        "category": "Assembly Source",
         "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.source.review",
-        "title": "Review Generated Source Edit",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.source.import",
-        "title": "Import Reviewed Source Edit",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.source.detach",
-        "title": "Create Detached Source Project",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.asset.openExternal",
-        "title": "Open Owned ROM Asset Externally",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.source.restore",
-        "title": "Restore Reviewed Generated Source",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.rebase.refresh",
-        "title": "Refresh ROM Rebase Review",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.modification.edit",
-        "title": "Open ROM Editing Workbench",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.asset.edit",
-        "title": "Edit ROM Data or Asset Visually",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.metadata.migrate",
-        "title": "Migrate Metadata to Another ROM",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.retention.manage",
-        "title": "Manage ROM Project Storage",
-        "category": "Assembly"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "asm.createDisassemblyProject"
-        },
-        {
-          "command": "asm.importDizProject"
+          "command": "asm.source.initDiz"
         },
         {
           "command": "asm.build"
@@ -572,16 +394,7 @@
           "command": "asm.coverage.renameLabel"
         },
         {
-          "command": "asm.disassembly.editAnnotation"
-        },
-        {
           "command": "asm.coverage.explainEvidence"
-        },
-        {
-          "command": "asm.coverage.undo"
-        },
-        {
-          "command": "asm.coverage.redo"
         },
         {
           "command": "asm.trace.start"
@@ -591,21 +404,6 @@
         },
         {
           "command": "asm.trace.stopAnalyze"
-        },
-        {
-          "command": "asm.trace.importBus"
-        },
-        {
-          "command": "asm.trace.importRegenerate"
-        },
-        {
-          "command": "asm.ramMap.open"
-        },
-        {
-          "command": "asm.disassembly.status"
-        },
-        {
-          "command": "asm.disassembly.regenerate"
         }
       ],
       "view/title": [
@@ -620,33 +418,18 @@
           "group": "navigation"
         },
         {
-          "command": "asm.coverage.undo",
-          "when": "view == uttori-asm.analysisCoverage && asm.coverage.canUndo",
-          "group": "navigation@2"
-        },
-        {
-          "command": "asm.coverage.redo",
-          "when": "view == uttori-asm.analysisCoverage && asm.coverage.canRedo",
-          "group": "navigation@3"
-        },
-        {
-          "command": "asm.ramMap.open",
-          "when": "view == uttori-asm.analysisCoverage && isWorkspaceTrusted",
-          "group": "navigation@4"
-        },
-        {
-          "command": "asm.disassembly.status",
-          "when": "view == uttori-asm.analysisCoverage",
-          "group": "navigation@5"
-        },
-        {
-          "command": "asm.disassembly.regenerate",
-          "when": "view == uttori-asm.analysisCoverage && isWorkspaceTrusted",
-          "group": "navigation@6"
-        },
-        {
           "command": "asm.sources.refresh",
           "when": "view == uttori-asm.sources",
+          "group": "navigation"
+        },
+        {
+          "command": "asm.source.refresh",
+          "when": "view == uttori-asm.sourceProject",
+          "group": "navigation"
+        },
+        {
+          "command": "asm.source.select",
+          "when": "view == uttori-asm.sourceProject",
           "group": "navigation"
         }
       ],
@@ -700,165 +483,6 @@
           "when": "isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc)",
           "group": "navigation@3"
         }
-      ],
-      "editor/context": [
-        {
-          "submenu": "asm.disassembly.context",
-          "when": "editorLangId == uttori-snes || editorLangId == uttori-65xx",
-          "group": "assembly@1"
-        },
-        {
-          "command": "asm.modification.edit",
-          "when": "editorLangId == uttori-snes",
-          "group": "uttori-editing@1"
-        }
-      ],
-      "asm.disassembly.context": [
-        {
-          "command": "asm.disassembly.inspectOwnership",
-          "group": "ownership@1"
-        },
-        {
-          "command": "asm.disassembly.editOwnedAnnotation",
-          "when": "asm.disassembly.canAnnotate",
-          "group": "ownership@2"
-        },
-        {
-          "command": "asm.disassembly.openOwningInput",
-          "when": "asm.disassembly.hasOwningInput",
-          "group": "ownership@3"
-        },
-        {
-          "command": "asm.disassembly.showOwnedStatus",
-          "when": "asm.disassembly.managed",
-          "group": "generation@1"
-        },
-        {
-          "command": "asm.disassembly.regenerateOwned",
-          "when": "asm.disassembly.managed",
-          "group": "generation@2"
-        },
-        {
-          "command": "asm.disassembly.removeLabel",
-          "group": "metadata@7",
-          "when": "asm.disassembly.canRemoveName"
-        },
-        {
-          "command": "asm.disassembly.resetLabel",
-          "group": "metadata@8",
-          "when": "asm.disassembly.canResetName"
-        },
-        {
-          "command": "asm.disassembly.editComments",
-          "group": "metadata@9"
-        },
-        {
-          "command": "asm.disassembly.editClassification",
-          "group": "metadata@10"
-        },
-        {
-          "command": "asm.disassembly.editTargets",
-          "group": "metadata@11"
-        },
-        {
-          "command": "asm.disassembly.editMetadata",
-          "when": "asm.disassembly.managed && !asm.disassembly.canAnnotate",
-          "group": "1_owner@2"
-        },
-        {
-          "command": "asm.modification.create",
-          "group": "modifications@0"
-        },
-        {
-          "command": "asm.modification.add",
-          "group": "modifications@1"
-        },
-        {
-          "command": "asm.modification.open",
-          "group": "modifications@2"
-        },
-        {
-          "command": "asm.buildTarget.select",
-          "group": "modifications@3"
-        },
-        {
-          "command": "asm.baseline.verify",
-          "group": "modifications@4"
-        },
-        {
-          "command": "asm.modification.build",
-          "group": "modifications@5"
-        },
-        {
-          "submenu": "asm.assets.context",
-          "group": "workflows",
-          "when": "isWorkspaceTrusted"
-        },
-        {
-          "submenu": "asm.reconcile.context",
-          "group": "workflows",
-          "when": "isWorkspaceTrusted"
-        }
-      ],
-      "asm.assets.context": [
-        {
-          "command": "asm.modification.openInput",
-          "group": "actions@0"
-        },
-        {
-          "command": "asm.asset.openExternal",
-          "group": "actions@0"
-        },
-        {
-          "command": "asm.asset.extract",
-          "group": "actions@1"
-        },
-        {
-          "command": "asm.asset.import",
-          "group": "actions@2"
-        },
-        {
-          "command": "asm.allocation.review",
-          "group": "actions@3"
-        },
-        {
-          "command": "asm.allocation.apply",
-          "group": "actions@4"
-        },
-        {
-          "command": "asm.modification.remove",
-          "group": "actions@5"
-        }
-      ],
-      "asm.reconcile.context": [
-        {
-          "command": "asm.source.review",
-          "group": "actions@0"
-        },
-        {
-          "command": "asm.source.import",
-          "group": "actions@1"
-        },
-        {
-          "command": "asm.source.restore",
-          "group": "actions@2"
-        },
-        {
-          "command": "asm.rebase.review",
-          "group": "actions@2"
-        },
-        {
-          "command": "asm.rebase.refresh",
-          "group": "actions@3"
-        },
-        {
-          "command": "asm.rebase.accept",
-          "group": "actions@3"
-        },
-        {
-          "command": "asm.source.detach",
-          "group": "actions@4"
-        }
       ]
     },
     "languages": [
@@ -905,10 +529,6 @@
         ],
         "configurationAttributes": {
           "launch": {
-            "required": [
-              "program",
-              "debugMap"
-            ],
             "properties": {
               "program": {
                 "type": "string",
@@ -959,6 +579,11 @@
                 "type": "boolean",
                 "default": true,
                 "description": "Use ares fast boot."
+              },
+              "sourceProject": {
+                "type": "boolean",
+                "default": false,
+                "description": "Build this workspace Git source project before F5; use the verified ROM and debug map from that build."
               }
             }
           }
@@ -1087,6 +712,11 @@
     "views": {
       "uttori-asm": [
         {
+          "id": "uttori-asm.sourceProject",
+          "name": "Source Project",
+          "type": "tree"
+        },
+        {
           "type": "webview",
           "id": "uttori-asm.projectPanel",
           "name": "Project"
@@ -1095,11 +725,6 @@
           "type": "tree",
           "id": "uttori-asm.projectOutline",
           "name": "Outline"
-        },
-        {
-          "type": "webview",
-          "id": "uttori-asm.disassemblyPanel",
-          "name": "Disassembly"
         },
         {
           "type": "tree",
@@ -1409,52 +1034,53 @@
           },
           "maxItems": 8,
           "description": "Ordered hover-row templates, using the same ${field} placeholders as inline parts. Omit for preset defaults; [] hides analysis rows. Missing fields suppress the entire row."
-        },
-        "asm.buildTarget": {
-          "type": "string",
-          "enum": [
-            "configured",
-            "baseline",
-            "modified"
-          ],
-          "default": "configured",
-          "scope": "window",
-          "description": "Target for Build, Run, Debug and Watch. Baseline verifies exact equality; modified applies owned replacement ranges. Configured retains the normal assembly project."
-        },
-        "asm.modificationProject": {
-          "type": "string",
-          "default": "",
-          "scope": "window",
-          "description": "Path to modification.json, absolute or relative to the first workspace folder. Owned inputs survive baseline regeneration."
         }
       }
     },
-    "jsonValidation": [
+    "jsonValidation": [],
+    "keybindings": [],
+    "submenus": [],
+    "taskDefinitions": [
       {
-        "fileMatch": "**/modification.json",
-        "url": "./modification.schema.json"
+        "type": "uttori-source",
+        "required": [
+          "action",
+          "project"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "build"
+            ]
+          },
+          "project": {
+            "type": "string",
+            "description": "Absolute path of the Git source project."
+          }
+        }
       }
     ],
-    "keybindings": [
+    "customEditors": [
       {
-        "command": "asm.disassembly.editAnnotation",
-        "key": "ctrl+alt+a",
-        "mac": "cmd+alt+a",
-        "when": "editorTextFocus && isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx)"
-      }
-    ],
-    "submenus": [
-      {
-        "id": "asm.disassembly.context",
-        "label": "Disassembly"
+        "viewType": "uttori.palette",
+        "displayName": "ROM Palette",
+        "selector": [
+          {
+            "filenamePattern": "**/rom-palettes.json"
+          }
+        ],
+        "priority": "option"
       },
       {
-        "id": "asm.assets.context",
-        "label": "ROM Assets and Placement"
-      },
-      {
-        "id": "asm.reconcile.context",
-        "label": "Source Recovery and Rebase"
+        "viewType": "uttori.indexedPng",
+        "displayName": "Indexed PNG",
+        "selector": [
+          {
+            "filenamePattern": "*.png"
+          }
+        ],
+        "priority": "option"
       }
     ]
   },

@@ -1,112 +1,97 @@
-# Create, edit, back up, and verify an analysis project
+# Create, edit, back up, and verify a Git source project
 
-Requires Node.js 26+ and a SNES LoROM image you can use. Install the published packages:
+Requires Node.js 26+, Git with a configured author, and a SNES LoROM image you can use.
+Install `@uttori/asm-cli`, `@uttori/asm-disassembler`, and `@uttori/asm-plugin-snes`.
+Save the example as `analysis-workflow.mjs`, then run `node analysis-workflow.mjs game.sfc ./review`
+with a new working directory. Change `mapper` for another supported mapping; copier headers are detected.
 
-```sh
-npm install @uttori/asm-disassembler @uttori/asm-plugin-snes
-```
-
-Save this example as `analysis-workflow.mjs`. Run it with a ROM path and a **new** working directory:
-
-```sh
-node analysis-workflow.mjs game.sfc ./review
-```
-
-The example explicitly selects LoROM. Change `mapper` for another supported mapping. Copier headers
-are detected automatically. Analysis reports unresolved paths and resource limits. Byte-identical
-reassembly proves byte preservation, not that every instruction or function was identified.
+Research declarations and editable assembly live in Git. SQLite indexes those choices alongside
+capture evidence. A pure generation proves original-ROM equality before native Git integration;
+a build of edited source may deliberately differ from the original.
 
 ```js
 import assert from "node:assert/strict";
-import { cpSync, mkdirSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import {
-  RomImage,
-  applyDisassemblyAnnotationEdit,
-  commitAnalysisProjectAnnotationUpdate,
-  loadAnalysisProjectViewSnapshot,
-  validateProjectRom,
-} from "@uttori/asm-disassembler";
-import {
-  analyzeSnesProject,
-  createSnesAnalysisProject,
-  exportSnesProject,
-  verifySnesProjectRoundTrip,
-} from "@uttori/asm-plugin-snes";
+import { executeSourceOperation } from "@uttori/asm-cli/source";
+import { loadAnalysisProjectViewSnapshot, sourceGit, RomImage } from "@uttori/asm-disassembler";
 
 const [romArgument, directoryArgument] = process.argv.slice(2);
 if (!romArgument || !directoryArgument) {
   throw new Error("Usage: node analysis-workflow.mjs ROM NEW_DIRECTORY");
 }
-const romFile = path.resolve(romArgument);
+const rom = path.resolve(romArgument);
 const root = path.resolve(directoryArgument);
 mkdirSync(root); // Refuse to replace an existing workspace.
-const projectDirectory = path.join(root, "analysis");
-const sourceDirectory = path.join(root, "source");
-const backupDirectory = path.join(root, "backup");
-const restoredDirectory = path.join(root, "restored");
-
-createSnesAnalysisProject({ romFile, projectDirectory, mapper: "lorom" });
-const analysis = analyzeSnesProject({ romFile, projectDirectory });
-console.log(analysis.status, analysis.incompleteReasons);
-exportSnesProject({ romFile, projectDirectory, sourceDirectory });
-
-const snapshot = loadAnalysisProjectViewSnapshot(projectDirectory);
-const edit = applyDisassemblyAnnotationEdit(
-  { manifest: snapshot.manifest, shards: snapshot.view },
+const directory = path.join(root, "source");
+await executeSourceOperation({ action: "init", directory, rom, mapper: "lorom" });
+const file = path.join(directory, ".uttori/research/decisions.json");
+const research = JSON.parse(readFileSync(file, "utf8"));
+research.decisions.push(
   {
-    addressSpace: "rom.file",
-    address: 0, // First byte of ROM content, excluding a copier header.
-    labelId: "manual.reviewed-start",
-    name: "ReviewedStart",
-    comment: "Reviewed entry bytes.",
-    evidenceId: "manual.reviewed-start.evidence",
-    sourceId: "manual-review",
+    collection: "evidence",
+    id: "manual.review",
+    value: {
+      id: "manual.review",
+      source: "manual",
+      sourceId: "reviewed-entry",
+      confidence: "certain",
+      detail: "Reviewed the first ROM content byte.",
+    },
+  },
+  {
+    collection: "labels",
+    id: "manual.reviewed-start",
+    value: {
+      id: "manual.reviewed-start",
+      name: "ReviewedStart",
+      sourceName: "ReviewedStart",
+      addressSpace: "rom.file",
+      address: 0,
+      evidence: ["manual.review"],
+    },
   },
 );
-commitAnalysisProjectAnnotationUpdate(projectDirectory, snapshot.revision, {
-  labels: edit.project.shards.labels,
-  comments: edit.project.shards.comments,
-  evidence: edit.project.shards.evidence,
-});
+writeFileSync(file, JSON.stringify(research, null, 2) + "\n");
+await sourceGit(directory, ["add", ".uttori/research/decisions.json"]);
+await sourceGit(directory, ["commit", "-m", "Name the reviewed entry"]);
+await executeSourceOperation({ action: "analyze", directory });
+const prepared = await executeSourceOperation({ action: "prepare", directory });
+const candidate = prepared.generation.commit;
+const preview = await executeSourceOperation({ action: "preview", directory, candidate });
+assert.equal(preview.conflicts.length, 0, "Resolve conflicts through the normal Git workflow.");
+await executeSourceOperation({ action: "apply", directory, candidate });
+await executeSourceOperation({ action: "finish", directory });
+const built = await executeSourceOperation({ action: "build", directory });
+// Source builds contain cartridge bytes; a copier header is private input metadata.
+assert.equal(built.verification.outputSha256, RomImage.load(rom).identity.contentSha256);
 
-// These high-level calls close their connections. Offline copying also requires every other
-// process/editor using this project to be stopped. Copy the whole directory, including any WAL.
-cpSync(projectDirectory, backupDirectory, { recursive: true, errorOnExist: true, force: false });
-cpSync(backupDirectory, restoredDirectory, { recursive: true, errorOnExist: true, force: false });
-const restored = loadAnalysisProjectViewSnapshot(restoredDirectory);
-validateProjectRom(
-  restored.manifest,
-  RomImage.load(romFile, { headerSize: restored.manifest.rom.headerSize }),
+const evidence = path.join(directory, ".uttori-local/evidence");
+assert.ok(
+  loadAnalysisProjectViewSnapshot(evidence).view.labels.some(
+    ({ name }) => name === "ReviewedStart",
+  ),
 );
-assert.ok(restored.view.labels.some(({ name }) => name === "ReviewedStart"));
-
-// Regenerate from the restored edit. Normal regeneration refuses changed generated files.
-exportSnesProject({
-  romFile,
-  projectDirectory: restoredDirectory,
-  sourceDirectory,
-  expectedRevision: restored.revision.manifestSha256,
+// These operations close their connections. Stop every other database user before offline copying,
+// and include the whole evidence directory, including any WAL. Use SQLite backup for a live store.
+cpSync(evidence, path.join(root, "restored"), {
+  recursive: true,
+  errorOnExist: true,
+  force: false,
 });
-const verified = await verifySnesProjectRoundTrip({ romFile, sourceDirectory });
-assert.equal(verified.comparison.equal, true);
-console.log(`Byte-identical rebuild: ${verified.finalOutput}`);
+console.log(`Byte-identical rebuild: ${built.outputFile}`);
 ```
 
-For another edit, load a fresh snapshot and use new evidence IDs. `AnalysisProjectStaleError` means
-another writer committed first: reload and reapply the intended edit. Never attach a new revision
-token to an old replacement. A view omits runtime history. Annotation/view commits preserve it,
-whereas full-project writes replace it.
+Edit assembly and assets normally, review and commit them with Git, and repeat prepare/preview/apply/finish
+when analysis changes. Preview accepts uncommitted edits; applying requires the reviewed checkpoint.
+Use native conflict resolution and then `source finish` to validate. Pure generations are immutable.
+VS Code's source commands, F2 and research actions produce ordinary files and native Undo operations.
 
-The backup above protects the analysis directory and managed files inside it. Back up the external
-ROM, original captures, configuration, and user-owned source/maps separately. Keep backups outside
-the working disk for independent recovery. Restore into a new directory, validate the ROM identity,
-then export and verify before resuming work. Do not replace an open database or delete its WAL.
-[SQLite explains why the WAL must stay with the database](https://www.sqlite.org/wal.html#the_wal_file).
+A Git clone retains source, research and accepted generation ancestry. Back up the private original ROM,
+captures and evidence separately, outside the working disk. Rebind `.uttori-local/project.json` after
+cloning. Missing capture archives mean their retained SQLite evidence cannot yet be rebuilt from archives.
+Do not replace an open database or delete its WAL. [SQLite WAL handling](https://www.sqlite.org/wal.html#the_wal_file).
 
-Cancellation is cooperative. SNES operations accept `signal`. Analysis checks it before committing.
-Low-level SQLite callbacks must be synchronous: throw on cancellation to roll back database changes.
-Database rollback does not undo filesystem writes. An interrupted export may need regeneration.
-
-See [API ownership, transactions, and recovery](https://github.com/uttori/asm/blob/master/packages/disassembler/API.md) for complete versus
-selected writes, store lifetime, pointer failures, and durability limits.
+Cancellation is cooperative; interrupted generation leaves source and staging intact. `source clean`
+reclaims proven-owned scratch. Database transactions must be synchronous; throwing rolls back SQLite,
+not unrelated filesystem writes. See [transactions and recovery](API.md).

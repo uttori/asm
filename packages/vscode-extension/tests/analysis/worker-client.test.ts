@@ -18,7 +18,6 @@ import {
 } from "@uttori/asm-disassembler";
 import test from "ava";
 import { build } from "esbuild";
-import sinon from "sinon";
 
 import { AnalysisWorkerClient } from "../../src/analysis/worker-client.js";
 
@@ -261,33 +260,6 @@ const fakeProcess = (directory: string): string => {
   return file;
 };
 
-test.serial("annotation source publication survives the read-projection timeout", async (t) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-write-timeout-"));
-  const client = new AnalysisWorkerClient(fakeProcess(directory), { timeoutMs: 100 });
-  // Control the parent's deadline without imposing a 100 ms scheduling budget on real IPC.
-  // The child still performs its synchronous publication work in a separate process.
-  const clock = sinon.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  try {
-    const publication = client.request<{ pid: number }>("busy", "annotationRefresh");
-    t.is(clock.countTimers(), 0, "source publication has no forced termination deadline");
-    clock.tick(101);
-    const exported = await publication;
-    const read = client.request<{ pid: number }>("ready", "manifest");
-    t.is(clock.countTimers(), 1, "ordinary reads retain their execution deadline");
-    const next = await read;
-    t.is(next.pid, exported.pid, "the worker finishes publication before serving the next read");
-    const timeout = t.throwsAsync(client.request("timeout", "manifest"), {
-      message: /Analysis manifest process exceeded 0.1 seconds/,
-    });
-    clock.tick(100);
-    await timeout;
-  } finally {
-    client.dispose();
-    clock.restore();
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
-});
-
 test("interactive annotations bypass bulk work and retain their process when a bulk view fails", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-projection-isolation-"));
   const client = new AnalysisWorkerClient(fakeProcess(directory), {
@@ -309,16 +281,16 @@ test("interactive annotations bypass bulk work and retain their process when a b
   const editor = await client.request<{ pid: number }>("ready", "manifest");
   t.not(editor.pid, preview.pid);
   t.not(editor.pid, background.pid);
-  t.is((await client.request<{ pid: number }>("ready", "annotationSave")).pid, editor.pid);
+  t.is((await client.request<{ pid: number }>("ready", "manifest")).pid, editor.pid);
   await t.throwsAsync(client.request("crash", "coverage"));
   t.is(
-    (await client.request<{ pid: number }>("ready", "annotationRefresh")).pid,
+    (await client.request<{ pid: number }>("ready", "manifest")).pid,
     editor.pid,
-    "bulk failure preserves the editor's saved snapshot and pending refresh",
+    "bulk failure preserves the manifest worker",
   );
 });
 
-test("a viewport timeout cannot reject a concurrent project load or annotation edit", async (t) => {
+test("a viewport timeout cannot reject a concurrent project load", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-preview-isolation-"));
   const client = new AnalysisWorkerClient(fakeProcess(directory), {
     isolateAnnotations: true,
@@ -332,11 +304,11 @@ test("a viewport timeout cannot reject a concurrent project load or annotation e
     message: /Analysis annotations process exceeded/,
   });
   const manifest = await client.request<{ pid: number }>("ready", "manifest");
-  const edit = await client.request<{ pid: number }>("ready", "annotationLookup");
+  const edit = await client.request<{ pid: number }>("ready", "manifest");
   t.is(edit.pid, manifest.pid);
   await timedOut;
-  const saved = await client.request<{ pid: number }>("ready", "annotationSave");
-  t.is(saved.pid, edit.pid, "preview failure leaves the edit worker and its queue intact");
+  const saved = await client.request<{ pid: number }>("ready", "manifest");
+  t.is(saved.pid, edit.pid, "preview failure leaves the manifest worker and its queue intact");
   const preview = await client.request<{ pid: number }>("ready", "debugAnnotations");
   t.not(preview.pid, saved.pid, "preview requests restart in their own worker");
 });

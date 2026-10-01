@@ -12,8 +12,8 @@ import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { rgbaPreviewPng, waveformPreviewPng } from "@uttori/asm-assets/preview";
 import {
   convertBossImage,
+  convertBrrWave,
   sliceBrrSegment,
-  verifiedBrrFromWave,
 } from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
 import {
   encodeInspectedFrameSegment,
@@ -259,12 +259,13 @@ function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
   if (input.output !== undefined && input.output !== "brr") {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const native = verifiedBrrFromWave(input.source);
+  const converted = convertBrrWave(input.source, input.options).outputs.brr;
+  const native = converted.bytes;
   const sourceAudio = waveImporter.import(input.source).value as PcmAudio;
   const segment = input.format === "som.brr.segment";
   const selected = segment ? sliceBrrSegment(native, input.options) : native;
   const decoded = decodeBrrPcm(native);
-  const metadata: Record<string, unknown> = { previewScope: "full-stream" };
+  const metadata: Record<string, unknown> = { ...converted.metadata, previewScope: "full-stream" };
   if (segment) {
     metadata.segmentStartByte = input.options.startByte;
     metadata.segmentByteLength = selected.length;

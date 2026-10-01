@@ -42,7 +42,6 @@ Prefer the validated APIs below for application edits.
 | `loadAnalysisProjectViewSnapshot`                                               | Metadata plus optional runtime projection. Omitted runtime is not an empty backing store.                                                                                                                                                |
 | `commitAnalysisProjectTransaction` / `commitPreparedAnalysisProjectTransaction` | Complete replacement, including runtime. Require the caller's revision for existing projects.                                                                                                                                            |
 | `commitAnalysisProjectViewUpdate`                                               | Each supplied metadata array replaces that entire table. Omitted tables and all runtime remain. `[]` clears a supplied table.                                                                                                            |
-| `commitAnalysisProjectAnnotationUpdate`                                         | Complete labels/comments/evidence tables. Existing evidence must remain unchanged, other tables remain.                                                                                                                                  |
 | `commitAnalysisProjectSelectedEdit`                                             | Patch stable IDs in the original/edited selection. Preserve records outside it. Include required evidence. Both runtime arrays must be empty.                                                                                            |
 | `publishAnalysisProject`                                                        | Create or replace everything, including runtime. Samples the revision at call time and cannot detect a replacement based on an old caller snapshot. Editing clients use the revision-checked commit APIs. View updates preserve history. |
 
@@ -151,17 +150,9 @@ temporary disk space and do not run after no-op imports. For backups, use SQLite
 facilities or close every connection before copying the database and pointer. Copying a live database
 without its WAL can omit committed data.
 
-The reversible edit primitives add certain manual evidence and return exact inverse records for
-safe undo. `applyRangeClassificationEdit()` adds a classification without deleting prior
-annotations and emits explicit ranged conflicts for contradictory overlaps.
-`applyStateEntryPointEdit()` copies an existing classified interval into a manual state and/or
-`points: ["in"]` overlay. Incompatible overlapping state remains visible as a `manual-state`
-conflict. `applyTargetResolutionEdit()` creates the sole target override at an indirect-flow site,
-or unions new targets and evidence into the existing override because an indirect instruction may
-legitimately have multiple destinations. `applyLabelRenameEdit()` changes one stable label and
-retains its earlier evidence alongside certain manual rename provenance. Every corresponding
-`revert*Edit()` refuses to remove or restore a record if its exact post-edit value changed or the new
-evidence gained another reference.
+Research actions create Git declarations with stable record IDs and manual evidence. Classification,
+CPU entry state and indirect targets remain separate choices. Conflicting evidence stays visible;
+a presentation rename does not implicitly erase evidence or change analysis entry points.
 
 `explainProjectEvidence()` resolves any project record by stable id, expands its direct evidence,
 lists every reverse reference to that evidence, and includes persisted conflicts that name the
@@ -169,20 +160,11 @@ record or share its provenance. It is read-only and target-neutral: it does not 
 project CPU/RAM addresses into ROM offsets, or claim that a shared evidence id proves more than its
 stored record says.
 
-`applyDisassemblyAnnotationEdit()` creates or updates a label at a qualified address and edits its
-above-label and inline comments plus an independently identified inline instruction comment.
-`ProjectLabel.sourceName` is the exact validated assembly symbol, `inlineComment` belongs beside
-the label, and `ProjectComment.placement: "inline-instruction"` belongs beside an accepted instruction.
-New presentation labels have `analysisEntryPoint: false`, keeping naming separate from code discovery.
-Existing field omissions retain their prior behavior. The edit retains earlier evidence and returns
-an exact inverse for `revertDisassemblyAnnotationEdit()`. Commit it through the normal optimistic
-transaction API. No ROM bytes or generated-source line numbers are used as annotation identities.
-
-`commitAnalysisProjectAnnotationUpdate()` publishes only labels, comments and appended evidence
-under the expected SQLite revision. It validates those tables against the authoritative manifest
-and requires every existing evidence record to remain unchanged, so saving a comment does not
-revalidate unrelated CFG records or scan runtime provenance. Broader edits and evidence removal
-continue to use the full transaction APIs.
+User-facing research edits are Git-tracked `uttori-research` decisions. Stable identities and manual
+provenance survive renames; `ProjectLabel.sourceName` is the validated assembly symbol. Inline label
+comments and `ProjectComment.placement: "inline-instruction"` remain separate presentation choices.
+Naming alone does not add an analysis entry point. `synchronizeSourceResearch()` indexes declarations
+into SQLite; native Git and editor Undo provide history. See [the installed workflow](PROJECTS.md).
 
 The generic static-analysis engine accepts target-provided decode, state-transfer, join, and address-entry callbacks. It deterministically emits CFG nodes and edges, function candidates, coverage, unresolved control flow, boundary conflicts, evidence paths, and explicit incomplete results when a work or call-context limit is reached. It never guesses through an ambiguous decode.
 
@@ -276,13 +258,11 @@ built-in `node:sqlite`.
 See [Trace import](https://github.com/uttori/asm/blob/master/packages/disassembler/TRACES.md) for
 limits, cancellation, capture ownership, profiles, and an installed-package example.
 
-The package also owns the architecture-neutral `uttori-asm-source-export` manifest contract. It
-records generated file hashes, source/asset roles, half-open byte-ownership spans, source-project
-and ROM identities, build entry points, outputs, and checksum policy. It separately records hashes
-for user-owned metadata inputs, allowing status and verification to detect that regenerated output
-is stale without treating an intentional metadata edit as damaged generated source. Helpers load
-and validate generated trees and compare rebuilds by length, SHA-256, and first differing offset.
-Target plugins remain responsible for rendering their native source syntax.
+Pure rendering returns an in-memory source inventory with byte ranges and original-ROM identity.
+It does not establish file ownership or prohibit editing. Git source projects retain immutable pure
+generation commits, verify their payload and original-ROM equality, then integrate them with native
+three-way merges. `sourceContentHash()` and byte-comparison helpers support verification; target
+plugins render assembly and perform build/layout checks. Ordinary working files remain editable.
 
 ## ROM Coverage Map
 

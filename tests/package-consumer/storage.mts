@@ -4,23 +4,22 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { executeSourceOperation } from "@uttori/asm-cli/source";
 import {
   AnalysisProjectStaleError,
-  applyDisassemblyAnnotationEdit,
-  commitAnalysisProjectAnnotationUpdate,
   commitAnalysisProjectTransaction,
   commitAnalysisProjectViewUpdate,
   loadAnalysisProjectSnapshot,
   loadAnalysisProjectViewSnapshot,
-  loadSourceExportManifest,
   openAnalysisProjectStore,
+  sourceGit,
+  openSourceProject,
   type ProjectLabel,
   type SqliteAnalysisStore,
 } from "@uttori/asm-disassembler";
+import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import {
   analyzeSnesProject,
-  exportSnesProject,
-  verifySnesProjectRoundTrip,
   SnesProjectInitializationCancelledError,
 } from "@uttori/asm-plugin-snes";
 
@@ -63,27 +62,32 @@ try {
     });
     assert.equal(run.status, 0, `${run.error ?? ""}\n${run.stderr}\n${run.stdout}`);
     const source = path.join(workspace, "source");
-    const manifest = loadSourceExportManifest(source);
+    const built = (await executeSourceOperation({
+      action: "build",
+      directory: source,
+    })) as SnesSourceBuild;
     assert.deepEqual(
-      fs.readFileSync(path.join(source, manifest.finalOutput)),
-      fs.readFileSync(romFile),
+      fs.readFileSync(built.outputFile),
+      fs.readFileSync(romFile).subarray(headerSize),
     );
     assert.ok(
-      manifest.files.some(
-        ({ path: file }) =>
-          file.endsWith(".asm") &&
-          fs.readFileSync(path.join(source, file), "utf8").includes("ReviewedStart"),
-      ),
+      fs
+        .readdirSync(path.join(source, "source/banks"))
+        .some((file) =>
+          fs
+            .readFileSync(path.join(source, "source/banks", file), "utf8")
+            .includes("ReviewedStart"),
+        ),
     );
     assert.deepEqual(
       loadAnalysisProjectSnapshot(path.join(workspace, "restored")),
-      loadAnalysisProjectSnapshot(path.join(workspace, "analysis")),
+      loadAnalysisProjectSnapshot(path.join(source, ".uttori-local/evidence")),
     );
   }
 
   const sourceDirectory = path.join(scratch, "workflow-0", "source");
-  const ramFile = path.join(sourceDirectory, "ram-map.json");
-  const structFile = path.join(sourceDirectory, "struct-map.json");
+  const ramFile = path.join(sourceDirectory, "source/ram-map.json");
+  const structFile = path.join(sourceDirectory, "source/struct-map.json");
   const ramInput = JSON.stringify({
     format: "uttori-asm-snes-ram-map",
     schemaVersion: 1,
@@ -110,31 +114,57 @@ try {
   });
   fs.writeFileSync(ramFile, ramInput);
   fs.writeFileSync(structFile, structInput);
+  // New recipe files must be explicit generation inputs before a pure render may read them.
+  const generatorFile = path.join(sourceDirectory, ".uttori/generation-inputs.json");
+  const generator = JSON.parse(fs.readFileSync(generatorFile, "utf8"));
+  generator.recipes.push("struct-map.json");
+  fs.writeFileSync(generatorFile, JSON.stringify(generator, null, 2) + "\n");
+  await sourceGit(sourceDirectory, [
+    "add",
+    "source/ram-map.json",
+    "source/struct-map.json",
+    ".uttori/generation-inputs.json",
+  ]);
+  await sourceGit(sourceDirectory, ["commit", "-m", "Declare research maps"]);
   for (let pass = 0; pass < 2; pass++) {
-    exportSnesProject({
-      romFile: path.join(scratch, "fixture-0.sfc"),
-      projectDirectory: path.join(scratch, "workflow-0", "analysis"),
-      sourceDirectory,
+    const prepared = (await executeSourceOperation({
+      action: "prepare",
+      directory: sourceDirectory,
+    })) as PreparedSnesGeneration;
+    await executeSourceOperation({
+      action: "preview",
+      directory: sourceDirectory,
+      candidate: prepared.generation.commit,
     });
+    const applied = (await executeSourceOperation({
+      action: "apply",
+      directory: sourceDirectory,
+      candidate: prepared.generation.commit,
+    })) as { phase: string };
+    if (["merging", "committed"].includes(applied.phase)) {
+      await executeSourceOperation({ action: "finish", directory: sourceDirectory });
+    }
     assert.equal(fs.readFileSync(ramFile, "utf8"), ramInput);
     assert.equal(fs.readFileSync(structFile, "utf8"), structInput);
     assert.match(
-      fs.readFileSync(path.join(sourceDirectory, "ram-defines.asm"), "utf8"),
+      fs.readFileSync(path.join(sourceDirectory, "source/ram-defines.asm"), "utf8"),
       /PlayerHealth/,
     );
-    assert.match(fs.readFileSync(path.join(sourceDirectory, "structs.asm"), "utf8"), /Levels/);
-    assert.equal(
-      (
-        await verifySnesProjectRoundTrip({
-          romFile: path.join(scratch, "fixture-0.sfc"),
-          sourceDirectory,
-        })
-      ).comparison.equal,
-      true,
+    assert.match(
+      fs.readFileSync(path.join(sourceDirectory, "source/structs.asm"), "utf8"),
+      /Levels/,
+    );
+    const built = (await executeSourceOperation({
+      action: "build",
+      directory: sourceDirectory,
+    })) as SnesSourceBuild;
+    assert.deepEqual(
+      fs.readFileSync(built.outputFile),
+      fs.readFileSync(path.join(scratch, "fixture-0.sfc")),
     );
   }
 
-  const directory = path.join(scratch, "workflow-0", "analysis");
+  const directory = path.join(sourceDirectory, ".uttori-local/evidence");
   const original = loadAnalysisProjectSnapshot(directory);
   const runtime = [
     {
@@ -165,33 +195,21 @@ try {
   });
   const snapshot = loadAnalysisProjectViewSnapshot(directory);
   assert.deepEqual(snapshot.view.runtime, []);
-  const edit = applyDisassemblyAnnotationEdit(
-    { manifest: snapshot.manifest, shards: snapshot.view },
-    {
-      addressSpace: "rom.file",
-      address: 0,
-      labelId: "manual.reviewed-start",
-      name: "SavedStart",
-      comment: "Retained through backup.",
-      evidenceId: "manual.rename",
-      sourceId: "installed-consumer",
-    },
-  );
+  // Storage projection writes must retain runtime history and enforce optimistic revisions.
+  // User-facing research authority is exercised through the Git-backed guide above.
   const updates = {
-    labels: edit.project.shards.labels,
-    comments: edit.project.shards.comments,
-    evidence: edit.project.shards.evidence,
+    labels: snapshot.view.labels.map((label) => ({ ...label, name: "SavedStart" })),
   };
-  commitAnalysisProjectAnnotationUpdate(directory, snapshot.revision, updates);
+  commitAnalysisProjectViewUpdate(directory, snapshot, updates);
   const saved = loadAnalysisProjectSnapshot(directory);
   assert.deepEqual(saved.shards.runtime, runtime);
   assert.deepEqual(saved.shards.analysis, original.shards.analysis);
   assert.throws(
-    () => commitAnalysisProjectAnnotationUpdate(directory, snapshot.revision, updates),
+    () => commitAnalysisProjectViewUpdate(directory, snapshot, updates),
     AnalysisProjectStaleError,
   );
   assert.throws(() =>
-    commitAnalysisProjectAnnotationUpdate(directory, saved.revision, {
+    commitAnalysisProjectViewUpdate(directory, loadAnalysisProjectViewSnapshot(directory), {
       ...updates,
       labels: updates.labels.map((label) => ({
         ...label,
@@ -277,11 +295,13 @@ try {
   assert.equal(interrupted.status, 17, `${interrupted.error ?? ""}\n${interrupted.stderr}`);
   assert.deepEqual(loadAnalysisProjectSnapshot(directory), beforeFailure);
 
+  const research = (await openSourceProject(sourceDirectory)).research;
   const cancellation = new AbortController();
   assert.throws(
     () =>
       analyzeSnesProject({
         projectDirectory: directory,
+        research,
         romFile: path.join(scratch, "fixture-0.sfc"),
         signal: cancellation.signal,
         onProgress: ({ stage }) => {

@@ -10,6 +10,8 @@ export interface DataStructHost {
   canEmitBytes: boolean;
   operandResolver: { getnum(input: string): number };
   outputWriter: Pick<OutputWriterService, "step" | "writeBytes">;
+  /** Final scalar attribution before record bytes are written; offsets are relative to the record. */
+  recordStructField?(reference: string, expression: string, offset: number, width: number): void;
 }
 
 /**
@@ -163,6 +165,7 @@ export class DataStructEngine {
       }
     }
     const bytes: number[] = [];
+    const fields: { reference: string; expression: string; offset: number; width: number }[] = [];
     for (const field of layout) {
       const value = values.get(field.name);
       const name = `${reference}.${field.name}`;
@@ -181,12 +184,20 @@ export class DataStructEngine {
       if (!this.host.canEmitBytes) {
         continue;
       }
-      for (const expression of items) {
+      for (const [index, expression] of items.entries()) {
         const number = this.host.operandResolver.getnum(expression);
         if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
           throw new Error(
             `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`,
           );
+        }
+        if (this.host.recordStructField) {
+          fields.push({
+            reference: field.array ? `${name}[${index}]` : name,
+            expression,
+            offset: bytes.length,
+            width: field.width,
+          });
         }
         for (let byte = 0; byte < field.width; byte++) {
           bytes.push(Math.floor(number / 2 ** (8 * byte)) & 0xff);
@@ -201,6 +212,9 @@ export class DataStructEngine {
         );
       }
       // Validate the complete record before writing any byte of it.
+      for (const field of fields) {
+        this.host.recordStructField?.(field.reference, field.expression, field.offset, field.width);
+      }
       this.host.outputWriter.writeBytes(bytes);
     } else {
       this.host.outputWriter.step(definition.size);

@@ -6,12 +6,28 @@
  * @returns {string[]} Complete items with their nested expressions intact.
  */
 export declare function splitInitializerList(text: string): string[];
+/** Locate the record's physical opening brace, skipping index expressions and braced defines. */
+export declare function structInitializerStart(text: string): number;
 /**
  * Parse field names and scalar/array shapes without evaluating assembler expressions.
  * @param {string} text One brace-delimited record literal.
  * @returns {Map<string, string | string[]>} Unique names and unevaluated values.
  */
 export declare function parseStructInitializer(text: string): Map<string, string | string[]>;
+/** An unevaluated field with UTF-16 offsets into the original brace-delimited literal. */
+export type StructInitializerEntry = {
+    name: string;
+    value: string | string[];
+    /** Start of the field identifier, including dotted field paths. */
+    start: number;
+    /** Scalar/array element offsets, in the same order as their expressions. */
+    expressions: {
+        text: string;
+        start: number;
+    }[];
+};
+/** Parse the same record grammar as emission while retaining exact editor locations. */
+export declare function parseStructInitializerEntries(text: string): StructInitializerEntry[];
 /**
  * Only named record statements gain implicit brace continuation, not legacy source.
  * @param {string} text Buffered command including the current physical line.

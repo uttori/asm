@@ -1,6 +1,5 @@
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 
-import { manuallyOwnedMetadata } from "../edits/metadata-edit.js";
 import {
   type AnalysisProjectShards,
   type AnalysisRecord,
@@ -311,9 +310,8 @@ export const mergeRuntimeEvidence = (
     }
     traceProfiles.set(report.sourceSha256, report.indexProfile);
   }
-  // Manual corrections and removals pin stable imported IDs. Import receipts/evidence still merge,
-  // while the original record remains inspectable in the saved metadata edit receipt.
-  const owned = manuallyOwnedMetadata(shards);
+  // Research-aware storage restores observation shadows before import and reapplies selected Git
+  // decisions afterward. This merge handles only evidence and never infers authorship from history.
   const added = emptyCounts();
   const updated = emptyCounts();
   const existing = emptyCounts();
@@ -321,7 +319,7 @@ export const mergeRuntimeEvidence = (
     analysis: mergeRecords(
       "analysis",
       shards.analysis,
-      (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)),
+      batch.analysis ?? [],
       added,
       updated,
       existing,
@@ -329,23 +327,16 @@ export const mergeRuntimeEvidence = (
     annotations: mergeRecords(
       "annotations",
       shards.annotations,
-      (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)),
+      batch.annotations ?? [],
       added,
       updated,
       existing,
     ),
-    labels: mergeRecords(
-      "labels",
-      shards.labels,
-      (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)),
-      added,
-      updated,
-      existing,
-    ),
+    labels: mergeRecords("labels", shards.labels, batch.labels ?? [], added, updated, existing),
     comments: mergeRecords(
       "comments",
       shards.comments,
-      (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)),
+      batch.comments ?? [],
       added,
       updated,
       existing,

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
 
-import { canonicalEquals, canonicalJson } from "@uttori/asm-core/canonical-json";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 import {
   ANALYSIS_PROJECT_MANIFEST,
@@ -260,82 +260,6 @@ export const commitAnalysisProjectViewUpdate = (
   // Snapshot arrays are not frozen at runtime. Explicit replacement requests must not disappear
   // merely because a JavaScript caller edited the same array. SQLite compares unchanged rows.
   return publish(directory, project, snapshot.revision, updates);
-};
-
-/**
- * Publish label/comment edits without loading or revalidating unrelated analysis and runtime.
- * Existing provenance is immutable here, so retained records cannot lose evidence references.
- * @param {string} directory Existing project root.
- * @param {AnalysisProjectRevision} expected Revision on which the edit was based.
- * @param {object} updates Complete labels, comments and evidence tables. Evidence may only be appended.
- * @returns {CommittedAnalysisProjectTransaction} Atomically published identity. Failures roll back.
- */
-export const commitAnalysisProjectAnnotationUpdate = (
-  directory: string,
-  expected: AnalysisProjectRevision,
-  updates: Pick<AnalysisProjectShards, "labels" | "comments" | "evidence">,
-): CommittedAnalysisProjectTransaction => {
-  if (Object.keys(updates).some((key) => !["labels", "comments", "evidence"].includes(key))) {
-    throw new Error("Annotation updates can only replace labels, comments and append evidence.");
-  }
-  const store = openAnalysisProjectStore(directory);
-  try {
-    const manifest = store.transaction(() => {
-      assertAnalysisProjectRevision(store, expected);
-      const current = store.manifest();
-      validateAnalysisProjectManifest({ ...current, shards: [] });
-      const evidence = new Map(updates.evidence.map((record) => [record.id, record]));
-      // Compare authoritative rows, not a mutable caller snapshot. This avoids scanning every
-      // retained CFG/runtime reference while still rejecting removed or rewritten provenance.
-      for (const record of store.loadTable("evidence")) {
-        if (!canonicalEquals(record, evidence.get(record.id))) {
-          throw new Error(`Annotation updates must preserve existing evidence '${record.id}'.`);
-        }
-      }
-      validateLoadedShards(
-        { annotations: [], analysis: [], regions: [], imports: [], runtime: [], ...updates },
-        current,
-      );
-      store.replaceTables(updates);
-      return store.publishManifest(current);
-    });
-    store.writePointer(directory);
-    return committed(manifest);
-  } finally {
-    store.close();
-  }
-};
-
-/** Publish a reversible edit to a selected SQL view without replacing omitted records.
- * Include the original records and all evidence required by the edited selection. Both runtime
- * arrays must be empty. Changed/deleted records are compared by stable ID and original value.
- * The caller's manifest is not a manifest replacement.
- * @param {string} directory Existing project root.
- * @param {AnalysisProjectSnapshot} snapshot Selected original records and their revision.
- * @param {AnalysisProject} project Edited selected view.
- * @returns {CommittedAnalysisProjectTransaction} Atomically committed identity.
- */
-export const commitAnalysisProjectSelectedEdit = (
-  directory: string,
-  snapshot: AnalysisProjectSnapshot,
-  project: AnalysisProject,
-): CommittedAnalysisProjectTransaction => {
-  if (project.shards.runtime.length || snapshot.shards.runtime.length) {
-    throw new Error("Selected metadata edits cannot include runtime records.");
-  }
-  const store = openAnalysisProjectStore(directory);
-  try {
-    const manifest = store.transaction(() => {
-      assertAnalysisProjectRevision(store, snapshot.revision);
-      store.validateView(project.shards);
-      store.patchMetadata(snapshot.shards, project.shards);
-      return store.publishManifest(store.manifest());
-    });
-    store.writePointer(directory);
-    return committed(manifest);
-  } finally {
-    store.close();
-  }
 };
 
 /**

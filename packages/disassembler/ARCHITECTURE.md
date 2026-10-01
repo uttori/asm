@@ -65,16 +65,17 @@ needs target behavior receives an explicit target/plugin callback or descriptor.
 facade or create directory barrels. `npm run check:boundaries` checks area dependencies for runtime
 and type imports, in addition to package ownership rules.
 
-| Area       | Owns                                                                                | Allowed lower areas                                            |
-| ---------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `internal` | Bounded indexes/caches, temporary uniqueness sets, durable filesystem primitives    | None                                                           |
-| `model`    | Record contracts, ROM identity, semantic validation, bus/PPU effect validation      | `internal`                                                     |
-| `analysis` | Static worklist, coverage, instruction/source/call contracts, evidence explanations | `model`, `internal`                                            |
-| `edits`    | Proposed metadata/annotation changes and conditional undo                           | `model`, `analysis/project-evidence`, `internal`               |
-| `runtime`  | Trace parsing, evidence reduction, transfer/graphics/PPU accumulation               | `model`, `edits`, `internal`                                   |
-| `storage`  | Connection lifecycle, physical codecs, queries, invalidation, retention             | `model`, `analysis`, `runtime`, `internal`                     |
-| `project`  | Validated snapshots, revision-checked commits, durable trace imports                | `model`, `analysis`, `edits`, `runtime`, `storage`, `internal` |
-| `source`   | Generated manifests, ownership, integrity, recovery/publication                     | `model`, `internal`                                            |
+| Area              | Owns                                                                                | Allowed lower areas                                                      |
+| ----------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `internal`        | Bounded indexes/caches, temporary uniqueness sets, durable filesystem primitives    | None                                                                     |
+| `model`           | Record contracts, ROM identity, semantic validation, bus/PPU effect validation      | `internal`                                                               |
+| `analysis`        | Static worklist, coverage, instruction/source/call contracts, evidence explanations | `model`, `internal`                                                      |
+| `research-inputs` | Git declarations, stable identities and overlay precedence                          | `model`, `internal`                                                      |
+| `source-project`  | Git generations, preview, merge, recovery and source snapshots                      | `model`, `internal`, `research-inputs`, `project`                        |
+| `runtime`         | Trace parsing, evidence reduction, transfer/graphics/PPU accumulation               | `model`, `internal`                                                      |
+| `storage`         | Connection lifecycle, physical codecs, queries, invalidation, retention             | `model`, `analysis`, `runtime`, `research-inputs`, `internal`            |
+| `project`         | Validated snapshots, revision-checked commits, durable trace imports                | `model`, `analysis`, `research-inputs`, `runtime`, `storage`, `internal` |
+| `source`          | Pure render inventories and byte comparisons                                        | `model`                                                                  |
 
 `RecordIdSet` owns a temporary disk-backed SQLite set and its disposal; it never opens the project
 database. `RomImage` performs explicit file I/O. Model contracts retain existing SNES capture
@@ -149,12 +150,13 @@ stream. SQLite unique constraints enforce stored ID uniqueness without a separat
 
 ## Conflict-safe project edits
 
-Readers capture rows and revision in one SQLite snapshot. Edit functions return changed records and
-inverse operations. Publication validates the proposed records, acquires `BEGIN IMMEDIATE`, rejects
+Readers capture rows and revision in one SQLite snapshot. Research choices are authored in Git
+files and indexed into SQLite. Publication validates the proposed records, acquires `BEGIN IMMEDIATE`, rejects
 an obsolete revision, and commits rows, provenance and the next revision together. View updates
 preserve omitted runtime history. Complete replacements replace it. Unchanged rows are retained.
 
-SQLite WAL handles interrupted writers and concurrent readers. The database is authoritative.
+SQLite WAL handles interrupted writers and concurrent readers. The database retains imported
+evidence; Git files are authoritative for research choices.
 `analysis.json` is atomically refreshed after commit for watchers. A failed pointer refresh is a
 warning about an already committed operation, not a failed edit. Explicit compaction checkpoints and
 VACUUMs the database and prunes unused dictionaries. Normal edits create no filesystem generations.
@@ -227,30 +229,23 @@ policy. Known v1 native IDs resolve for analysis display without rewriting persi
 disassembler does not load converters, render previews, or reencode declared ROM ranges.
 `@uttori/asm-assets` owns standalone conversion and exact byte transforms; source assembly applies
 them only through declared plugin registrations. ROM export remains conservative and keeps original
-raw bytes until a separately verified ownership migration authorizes replacement.
+raw bytes until an explicit source recipe supplies a verified replacement.
 
 ## Native source export and round trip
 
-Export plans give every content byte exactly one owner: native code, raw asset, padding, header, or
-vector data. The versioned `generated-files.json` records source-project/ROM identities, generated
-file hashes, user-owned metadata-input hashes, byte spans, build entries, outputs, and checksum
-policy. The SNES exporter creates `ram-map.json` as the persistent editable input and regenerates
-`ram-defines.asm` plus exact-address WRAM operand names from it. `$00`–`$3F` and `$80`–`$BF`
-low-WRAM mirrors resolve to their canonical `$7E` addresses.
+Pure render plans assign each original content byte to native code, raw blocks, padding, headers or
+vectors. The renderer requires an output sink and never writes the user's source directory. Git
+source-project services retain immutable generation commits, validate their payload and original-ROM
+equality, preview native three-way merges and require a committed checkpoint before application.
 
-Internal and expanded cartridge-header fields and every vector word are emitted as named `db`/`dw`
-source with decoded comments, rather than opaque assets. `defines.asm` covers the SNESdev PPU,
-MMIO, and DMA/HDMA register tables, including documented shared-address aliases and compatibility
-aliases for older generated names. Every symbol carries hover documentation.
+Research inputs are Git-tracked declarations keyed by original ROM identity. SQLite restores imported
+observation shadows before applying the selected branch's research. It retains normalized capture
+facts and rebuildable projections; there is no database edit-receipt/undo engine.
 
-Round-trip verification:
-
-1. rejects a changed/missing generated file or a user input changed since the last export.
-2. assembles the generated native project through the normal CLI/plugin environment.
-3. Restores a copier header when present. And
-4. compares complete length and SHA-256, reporting the first differing offset.
-
-A byte-identical result proves preservation, not that every raw span has been semantically decoded.
+Working assembly, recipes and assets are ordinary editable inputs. Builds validate layout, declared
+CPU-state contracts, code flow and supported relocation references. Edited builds may differ from the
+original ROM. Only pure generations must reproduce it exactly. Exact bytes prove preservation, not
+complete semantic decoding.
 
 ## Debug architecture
 

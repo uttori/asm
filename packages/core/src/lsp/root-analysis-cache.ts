@@ -32,7 +32,8 @@ export type RootAnalysisCacheIdentity = {
   targetOptionsIdentity: string;
 };
 
-const CACHE_VERSION = 3;
+// Older entries flattened multiline records and cannot safely supply rename ranges.
+const CACHE_VERSION = 4;
 
 type CachePayload = {
   version: number;
