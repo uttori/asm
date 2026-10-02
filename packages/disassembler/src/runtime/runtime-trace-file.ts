@@ -94,9 +94,14 @@ async function* traceEntries(
   try {
     for await (const bytes of stream) {
       options.signal?.throwIfAborted();
-      bytesRead += (bytes as Buffer).length;
+      if (!Buffer.isBuffer(bytes)) {
+        throw new Error(
+          `Instruction trace '${file}' is not a valid JSON object with a chunks array.`,
+        );
+      }
+      bytesRead += bytes.length;
       checkSize(bytesRead);
-      const text = decoder.write(bytes as Buffer);
+      const text = decoder.write(bytes);
       let tokenStart = mode === "token" ? 0 : -1;
       for (let index = 0; index < text.length; index++) {
         const char = text[index];
@@ -134,10 +139,10 @@ async function* traceEntries(
           length = 0;
           tokenStart = -1;
           if (tokenKind === "key") {
-            if (typeof value !== "string" || keys.has(value)) {
+            key = typeof value === "string" ? value : fail();
+            if (keys.has(key)) {
               fail();
             }
-            key = value as string;
             keys.add(key);
             mode = "colon";
           } else if (tokenKind === "chunk") {
@@ -231,7 +236,7 @@ async function* traceEntries(
     }
     // The final progress callback can cancel too. No next read exists to check that signal.
     options.signal?.throwIfAborted();
-    if (decoder.end() || String(mode) !== "end" || !keys.has("chunks")) {
+    if (decoder.end() || mode !== "end" || !keys.has("chunks")) {
       fail();
     }
     const after = await stat(file);
@@ -298,7 +303,7 @@ async function* traceFileChunks(
   file: string,
   metadata: RuntimeInstructionTraceMetadata,
   options: RuntimeTraceFileOptions = {},
-): AsyncGenerator<unknown> {
+): AsyncGenerator {
   const properties: Record<string, unknown> = {};
   for await (const entry of traceEntries(file, options)) {
     if (entry.kind === "chunk") {

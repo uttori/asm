@@ -44,15 +44,27 @@ export class Assembler extends CoreAssembler {
   }
 
   get arch65816(): Arch65816 {
-    return this.architectureRegistry.getDefinition("65816")?.encoder as Arch65816;
+    const encoder = this.architectureRegistry.getDefinition("65816")?.encoder;
+    if (!(encoder instanceof Arch65816)) {
+      throw new Error("65816 encoder is not registered.");
+    }
+    return encoder;
   }
 
   get archSPC700(): ArchSPC700 {
-    return this.architectureRegistry.getDefinition("spc700")?.encoder as ArchSPC700;
+    const encoder = this.architectureRegistry.getDefinition("spc700")?.encoder;
+    if (!(encoder instanceof ArchSPC700)) {
+      throw new Error("SPC700 encoder is not registered.");
+    }
+    return encoder;
   }
 
   get archSuperFX(): ArchSuperFX {
-    return this.architectureRegistry.getDefinition("superfx")?.encoder as ArchSuperFX;
+    const encoder = this.architectureRegistry.getDefinition("superfx")?.encoder;
+    if (!(encoder instanceof ArchSuperFX)) {
+      throw new Error("SuperFX encoder is not registered.");
+    }
+    return encoder;
   }
 
   get targetState() {

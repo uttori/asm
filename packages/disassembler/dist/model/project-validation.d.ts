@@ -1,9 +1,9 @@
 import { type AnalysisProjectManifest, type AnalysisProjectShards, type RuntimeEvidenceRecord } from "./project-types.js";
 /**
  * Validate the semantic manifest and reject obsolete storage descriptors.
- * @param {AnalysisProjectManifest} manifest Semantic identity and current storage descriptors.
+ * @param {object} manifest Semantic identity and current storage descriptors.
  */
-export declare const validateAnalysisProjectManifest: (manifest: AnalysisProjectManifest) => void;
+export declare function validateAnalysisProjectManifest(manifest: unknown): asserts manifest is AnalysisProjectManifest;
 /**
  * Validate runtime facts in one pass, spilling large duplicate-ID indexes to temporary disk storage.
  * Stored SQLite rows skip the duplicate index because their primary key already enforces uniqueness.

@@ -69,7 +69,6 @@ function apply65816WidthPolicy(
   if (!isIndexedXLabelOperand(raw)) {
     return length;
   }
-  // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
   const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
   if (!match) {
     return length;

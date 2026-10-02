@@ -77,7 +77,7 @@ const stableValue = (value: unknown): unknown => {
   if (isRecord(value)) {
     return Object.fromEntries(
       Object.keys(value)
-        .sort()
+        .toSorted()
         .map((key) => [key, stableValue(value[key])]),
     );
   }
@@ -122,14 +122,16 @@ const moduleLoadError = (
 const resolveExternalModule = async (request: RequestedModule): Promise<string> => {
   try {
     if (request.module.startsWith("file:")) {
-      return normalizeFileUrl(new URL(request.module));
+      return await normalizeFileUrl(new URL(request.module));
     }
     if (
       path.isAbsolute(request.module) ||
       request.module.startsWith("./") ||
       request.module.startsWith("../")
     ) {
-      return normalizeFileUrl(pathToFileURL(path.resolve(request.baseDirectory, request.module)));
+      return await normalizeFileUrl(
+        pathToFileURL(path.resolve(request.baseDirectory, request.module)),
+      );
     }
     const parent = pathToFileURL(path.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
     // createRequire survives CommonJS bundling, where import.meta.resolve is unavailable.
@@ -218,24 +220,27 @@ export class NodePluginLoader {
     const configPlugins = loadedConfig.configuration.plugins ?? [];
     const defaultPlugins = configPlugins.length === 0 ? (options.defaults?.plugins ?? []) : [];
     const requests: RequestedModule[] = [
-      ...configPlugins.map((request, index) => ({
-        ...request,
-        baseDirectory: loadedConfig.directory,
-        source: "configuration" as const,
-        configEntry: `plugins[${index}]`,
-      })),
-      ...defaultPlugins.map((request, index) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "host-default" as const,
-        configEntry: `hostDefaults.plugins[${index}]`,
-      })),
-      ...(options.pluginModules ?? []).map((request, index) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "override" as const,
-        configEntry: `pluginModules[${index}]`,
-      })),
+      ...configPlugins.map((request, index) =>
+        Object.assign({}, request, {
+          baseDirectory: loadedConfig.directory,
+          source: "configuration" as const,
+          configEntry: `plugins[${index}]`,
+        }),
+      ),
+      ...defaultPlugins.map((request, index) =>
+        Object.assign({}, request, {
+          baseDirectory: cwd,
+          source: "host-default" as const,
+          configEntry: `hostDefaults.plugins[${index}]`,
+        }),
+      ),
+      ...(options.pluginModules ?? []).map((request, index) =>
+        Object.assign({}, request, {
+          baseDirectory: cwd,
+          source: "override" as const,
+          configEntry: `pluginModules[${index}]`,
+        }),
+      ),
     ];
 
     if (options.activateBundledPlugins && options.bundledPlugins) {
@@ -382,7 +387,7 @@ export class NodePluginLoader {
         targetOptions,
         includePaths: Object.freeze(includePaths),
       });
-      const current = {} as CurrentEnvironment;
+      let current: CurrentEnvironment | undefined;
       const loaded: LoadedProjectEnvironment = Object.freeze({
         environment,
         target,
@@ -392,18 +397,21 @@ export class NodePluginLoader {
         configuration,
         diagnostics: Object.freeze([]),
         dispose: async () => {
+          if (current === undefined) {
+            return;
+          }
           if (this.#current === current) {
             this.#current = undefined;
           }
           await this.#disposeEntry(current);
         },
       });
-      Object.assign(current, {
+      current = {
         snapshot: preliminarySnapshot,
         manager,
         loaded,
         disposed: false,
-      });
+      };
       this.#current = current;
       return loaded;
     } catch (error) {

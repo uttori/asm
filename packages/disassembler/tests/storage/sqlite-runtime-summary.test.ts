@@ -227,7 +227,11 @@ test("deletion, rowid reuse, and edits rebuild instead of applying an ambiguous 
   db.exec("UPDATE runtime_observations SET count=17 WHERE oid=1");
   t.is(read()[0].count, 24);
   db.exec('UPDATE runtime_facts SET payload=jsonb(\'{"bytes":[234],"state":{"p":0,"e":0}}\')');
-  t.deepEqual((read()[0] as RuntimeInstructionRecord).state, { p: 0, e: 0 });
+  const edited = read()[0];
+  if (edited.kind !== "runtime-instruction") {
+    throw new Error("Expected an instruction observation.");
+  }
+  t.deepEqual(edited.state, { p: 0, e: 0 });
   t.is(stats().incremental, false);
 });
 
@@ -246,7 +250,11 @@ for (const recursive of ["OFF", "ON"]) {
     t.is(stats().incremental, false);
     db.exec(`INSERT OR REPLACE INTO runtime_facts(fid,fingerprint,kind,architecture,address_space,address,payload)
       SELECT fid,fingerprint,kind,architecture,address_space,address,jsonb('{"bytes":[234],"state":{"p":0}}') FROM runtime_facts`);
-    t.deepEqual((read()[0] as RuntimeInstructionRecord).state, { p: 0 });
+    const replaced = read()[0];
+    if (replaced.kind !== "runtime-instruction") {
+      throw new Error("Expected an instruction observation.");
+    }
+    t.deepEqual(replaced.state, { p: 0 });
     t.is(stats().incremental, false);
   });
 }

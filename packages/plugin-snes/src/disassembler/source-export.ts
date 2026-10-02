@@ -48,7 +48,7 @@ import {
   SNES_RAM_MAP_SOURCE,
   type SnesRamMapVariable,
 } from "./ram-map.js";
-import { parseSnesInternalRomHeader, type SnesMapper } from "./rom-header.js";
+import { isSnesMapper, parseSnesInternalRomHeader, type SnesMapper } from "./rom-header.js";
 import {
   formatStructDeclaration,
   omitAssemblyResearchReferences,
@@ -115,6 +115,20 @@ interface SourceFlowTarget {
 }
 
 /**
+ * Accepts an encoded direct-transfer mode.
+ * @param {string} value Instruction addressing mode.
+ * @returns {boolean} True for absolute, absolute long, relative, or relative long.
+ */
+function isSourceFlowMode(value: string): value is SourceFlowTarget["mode"] {
+  return (
+    value === "absolute" ||
+    value === "absoluteLong" ||
+    value === "relative" ||
+    value === "relativeLong"
+  );
+}
+
+/**
  * Resolve direct control flow in the exported program bank without interpreting indirect pointers.
  * @param {DecodedInstruction} instruction ROM-matched instruction with encoded operands and references.
  * @param {number} sourceAddress 24-bit CPU address where the instruction will be emitted.
@@ -125,7 +139,7 @@ const sourceFlowTarget = (
   sourceAddress: number,
 ): SourceFlowTarget | undefined => {
   const { mode } = instruction;
-  if (!["absolute", "absoluteLong", "relative", "relativeLong"].includes(mode)) {
+  if (!isSourceFlowMode(mode)) {
     return undefined;
   }
   const flow = instruction.references.find(
@@ -147,7 +161,7 @@ const sourceFlowTarget = (
   if (address === undefined) {
     return undefined;
   }
-  return { address, mode: mode as SourceFlowTarget["mode"] };
+  return { address, mode };
 };
 
 /**
@@ -200,6 +214,39 @@ interface AssetIncludeMap {
   }[];
 }
 
+function isAssetIncludeFile(value: unknown): value is {
+  readonly version: 1;
+  readonly entries: readonly unknown[];
+} {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || value.version !== 1) {
+    return false;
+  }
+  return "entries" in value && Array.isArray(value.entries);
+}
+
+function isAssetIncludeEntry(value: unknown): value is AssetIncludeMap["entries"][number] {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("start" in value) || !("end" in value) || !("directive" in value)) {
+    return false;
+  }
+  const { start, end, directive } = value;
+  return (
+    typeof start === "number" &&
+    typeof end === "number" &&
+    Number.isSafeInteger(start) &&
+    Number.isSafeInteger(end) &&
+    start >= 0 &&
+    end > start &&
+    typeof directive === "string" &&
+    /^includeAsset\([^\n\r]+\)$/.test(directive)
+  );
+}
+
 /**
  * Load exact ROM span replacements without making the exporter game-specific.
  * @param {string} directory Export source directory containing the optional project-owned map.
@@ -212,30 +259,17 @@ const loadAssetIncludeMap = (directory: string): AssetIncludeMap | undefined => 
   }
   const sourceBytes = fs.readFileSync(file);
   const data: unknown = JSON.parse(sourceBytes.toString("utf8"));
-  if (
-    !data ||
-    typeof data !== "object" ||
-    (data as { version?: unknown }).version !== 1 ||
-    !Array.isArray((data as { entries?: unknown }).entries)
-  ) {
+  if (!isAssetIncludeFile(data)) {
     throw new Error("asset-includes.json requires version 1 and an entries array.");
   }
-  const entries = (data as { entries: unknown[] }).entries;
-  for (const entry of entries) {
-    const item = entry as Partial<AssetIncludeMap["entries"][number]>;
-    if (
-      !item ||
-      !Number.isSafeInteger(item.start) ||
-      !Number.isSafeInteger(item.end) ||
-      item.start! < 0 ||
-      item.end! <= item.start! ||
-      typeof item.directive !== "string" ||
-      !/^includeAsset\([^\n\r]+\)$/.test(item.directive)
-    ) {
+  const entries: AssetIncludeMap["entries"][number][] = [];
+  for (const entry of data.entries) {
+    if (!isAssetIncludeEntry(entry)) {
       throw new Error("asset-includes.json has an invalid ROM span or includeAsset directive.");
     }
+    entries.push(entry);
   }
-  const ordered = [...entries] as AssetIncludeMap["entries"][number][];
+  const ordered = [...entries];
   ordered.sort((left, right) => left.start - right.start);
   for (let index = 1; index < ordered.length; index++) {
     if (ordered[index - 1].end > ordered[index].start) {
@@ -266,7 +300,7 @@ const applyAssetIncludes = (
   const spans = [...planned];
   let index = 0;
   const splitRawAt = (offset: number): void => {
-    const span = spans[index];
+    const span = index >= 0 && index < spans.length ? spans[index] : undefined;
     if (!span || span.start >= offset || span.end <= offset) {
       return;
     }
@@ -559,7 +593,7 @@ const structuredRomLayout = (
     }
     fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment, "vectors"));
   }
-  const sorted = fields.sort((left, right) => left.start - right.start);
+  const sorted = fields.toSorted((left, right) => left.start - right.start);
   return {
     start: sorted[0].start,
     end: sorted.at(-1)!.end,
@@ -604,7 +638,7 @@ export const formatSnes65816SourceInstruction = (
   structFields?: ReadonlyMap<number, string>,
   indexedStructFields?: ReadonlyMap<number, string>,
 ): string => {
-  const decodedOperand = instruction.operands[0];
+  const decodedOperand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
   const rebaseRelative =
     sourceAddress !== undefined &&
     (instruction.mode === "relative" ||
@@ -729,7 +763,7 @@ export const formatSnes65816SourceInstruction = (
   );
   if (flow && sourceLabels && rawValue !== undefined) {
     let target = flow.address;
-    if (rebaseRelative && sourceAddress !== undefined) {
+    if (rebaseRelative) {
       target =
         (sourceAddress & 0xff0000) | ((sourceAddress + instruction.size + rawValue) & 0xffff);
     } else if (instruction.mode === "absolute" && sourceAddress !== undefined) {
@@ -853,7 +887,7 @@ const metadataLines = (
     }
     values.set(offset, [...(values.get(offset) ?? []), line]);
   };
-  for (const label of [...shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const label of [...shards.labels].toSorted((a, b) => a.id.localeCompare(b.id))) {
     append(toFileOffset(label.addressSpace, label.address, mapper, romSize), {
       name: names.get(label.id),
       identity: label,
@@ -880,15 +914,18 @@ const metadataLines = (
       identity: fn,
     });
   }
-  for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const region of [...shards.regions].toSorted((a, b) => a.id.localeCompare(b.id))) {
     append(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
       comment: `Region: ${region.name}${region.context ? ` (${region.context})` : ""}`,
     });
   }
-  for (const comment of [...shards.comments].sort((a, b) => a.id.localeCompare(b.id))) {
-    append(toFileOffset(comment.addressSpace, comment.address, mapper, romSize), (comment.placement === "inline-instruction"
+  for (const comment of [...shards.comments].toSorted((a, b) => a.id.localeCompare(b.id))) {
+    append(
+      toFileOffset(comment.addressSpace, comment.address, mapper, romSize),
+      comment.placement === "inline-instruction"
         ? { instructionComment: comment.text }
-        : { comment: comment.text }));
+        : { comment: comment.text },
+    );
   }
   return values;
 };
@@ -1035,7 +1072,7 @@ const planInstructions = (
       .filter((record) => record.kind === "conflict")
       .flatMap((record) => record.nodes),
   );
-  const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
+  const metadataOffsets = [...metadata.keys()].toSorted((left, right) => left - right);
   const explicitMetadataOffsets = metadataOffsets.filter((offset) =>
     metadata.get(offset)!.some((line) => !line.inferredFunction),
   );
@@ -1071,7 +1108,7 @@ const planInstructions = (
       group.push(record);
       grouped.set(record.fileOffset, group);
     }
-    return [...grouped].sort(([a], [b]) => a - b).map(([, records]) => records);
+    return [...grouped].toSorted(([a], [b]) => a - b).map(([, records]) => records);
   };
   const candidates = new Map<number, PlannedInstruction>();
   const context = createSnesAddressContext(mapper);
@@ -1112,7 +1149,7 @@ const planInstructions = (
       continue;
     }
     const variants = records
-      .sort((left, right) => left.id.localeCompare(right.id))
+      .toSorted((left, right) => left.id.localeCompare(right.id))
       .map((record) => {
         const state = decodeState(record.incomingState);
         const result = decoder.decode({ source, offset, logicalAddress: record.address, state });
@@ -1137,10 +1174,12 @@ const planInstructions = (
           ),
         };
       });
-    if (variants.some((entry) => entry === undefined)) {
+    const resolved = variants.filter(
+      (entry): entry is NonNullable<(typeof variants)[number]> => entry !== undefined,
+    );
+    if (resolved.length !== variants.length) {
       continue;
     }
-    const resolved = variants as Array<NonNullable<(typeof variants)[number]>>;
     const first = resolved[0];
     // Every variant reads the same ROM offset. Matching size and specification establish one encoding.
     if (
@@ -1192,7 +1231,7 @@ const planInstructions = (
           sourceLabels,
         ),
       );
-      if (numericSources.some((source) => source !== numericSources[0])) {
+      if (numericSources.some((numericSource) => numericSource !== numericSources[0])) {
         continue;
       }
       renderedSource = numericSources[0];
@@ -1226,7 +1265,7 @@ const planInstructions = (
       owners.set(offset, [...(owners.get(offset) ?? []), instruction.start]);
     }
   }
-  for (const [start, instruction] of [...candidates]) {
+  for (const [start, instruction] of candidates) {
     if (
       [...Array(instruction.end - instruction.start).keys()].some(
         (index) => (owners.get(start + index)?.length ?? 0) !== 1,
@@ -1366,7 +1405,8 @@ const planSpans = (
       ) {
         continue;
       }
-      const field = structIndex.overlapping(offset, offset + 1)[0];
+      const overlappingFields = structIndex.overlapping(offset, offset + 1);
+      const field = overlappingFields.length > 0 ? overlappingFields[0] : undefined;
       if (!field || offset === field.start) {
         addExternalCut(offset);
       }
@@ -1382,12 +1422,13 @@ const planSpans = (
       addExternalCut(last + 1);
     }
   }
-  const sorted = [...cuts].sort((left, right) => left - right);
+  const sorted = [...cuts].toSorted((left, right) => left - right);
   return sorted.slice(0, -1).map((start, index) => {
     const end = sorted[index + 1];
     const instruction = instructions.get(start);
     const structured = structure?.byStart.get(start);
-    const structField = structIndex.overlapping(start, end)[0];
+    const overlappingFields = structIndex.overlapping(start, end);
+    const structField = overlappingFields.length > 0 ? overlappingFields[0] : undefined;
     if (instruction?.end === end) {
       return { start, end, role: "code", instruction };
     }
@@ -1479,7 +1520,7 @@ const regionIdsFor = (
       );
     })
     .map((region) => region.id)
-    .sort();
+    .toSorted();
 
 /**
  * Renders a deterministic 65816 source tree that can be reassembled with this plugin.
@@ -1528,7 +1569,10 @@ export const exportSnes65816Source = (
   if (!Number.isSafeInteger(structLineWidth) || structLineWidth < 40) {
     throw new Error("structLineWidth must be an integer of at least 40 columns.");
   }
-  const mapper = project.manifest.mapping.mapper as SnesMapper;
+  const mapper = project.manifest.mapping.mapper;
+  if (!isSnesMapper(mapper)) {
+    throw new Error(`Unsupported SNES mapper '${mapper}'.`);
+  }
   const context = createSnesAddressContext(mapper);
   const structure = structuredRomLayout(rom, mapper);
   // Pure rendering reads an explicit input snapshot. New-project initialization owns creation of
@@ -1684,7 +1728,7 @@ export const exportSnes65816Source = (
               name: line.name!,
               addressSpace: line.identity!.addressSpace,
               address: line.identity!.address,
-              evidence: line.identity!.evidence ?? [],
+              evidence: line.identity!.evidence,
             })),
     );
     emitFile(
@@ -1710,7 +1754,7 @@ export const exportSnes65816Source = (
   }
 
   const bankSources: string[] = [];
-  for (const [bank, bankSpans] of [...banks].sort(([left], [right]) => left - right)) {
+  for (const [bank, bankSpans] of [...banks].toSorted(([left], [right]) => left - right)) {
     const bankPath = `banks/bank-${bank.toString(16).padStart(3, "0")}.asm`;
     bankSources.push(bankPath);
     const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
@@ -1729,7 +1773,7 @@ export const exportSnes65816Source = (
       if (
         table &&
         (span.structRecord?.binding.name !== table.name ||
-          span.structRecord?.index !== table.nextIndex ||
+          span.structRecord.index !== table.nextIndex ||
           named.length > 0 ||
           nextAddress !== address)
       ) {
@@ -1902,7 +1946,7 @@ export const exportSnes65816Source = (
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
         });
       } else {
-        const typed = typedData && snesTypedDataAt(typedData, span.start, span.end);
+        const typed = snesTypedDataAt(typedData, span.start, span.end);
         if (typed) {
           lines.push(
             ...renderSnesTypedData(rom.read(span.start, span.end - span.start)!, span.start, typed),
@@ -2017,7 +2061,7 @@ export const exportSnes65816Source = (
         ? [{ id: record.id, addressSpace: record.addressSpace, address: record.address, reason }]
         : [];
     })
-    .sort((left, right) => left.id.localeCompare(right.id));
+    .toSorted((left, right) => left.id.localeCompare(right.id));
   emitFile(
     directory,
     "annotation-report.json",
@@ -2098,8 +2142,10 @@ export const exportSnes65816Source = (
         sha256: sourceExportSha256(ramMap.sourceBytes),
       },
     ],
-    files: files.sort((left, right) => left.path.localeCompare(right.path)),
-    spans: spans.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)),
+    files: files.toSorted((left, right) => left.path.localeCompare(right.path)),
+    spans: spans.toSorted(
+      (left, right) => left.start - right.start || left.id.localeCompare(right.id),
+    ),
   };
   return manifest;
 };

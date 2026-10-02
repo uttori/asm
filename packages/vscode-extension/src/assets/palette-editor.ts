@@ -14,6 +14,23 @@ import {
 import { renderWebviewTemplate } from "../webview-template.js";
 import { paletteView, paletteWordEdit } from "./palette-model.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Webview edits name the document version and one stored BGR555 slot. */
+function isPaletteEdit(
+  value: Record<string, unknown>,
+): value is { type: "edit"; version: number; id: string; index: number; word: string } {
+  return (
+    value.type === "edit" &&
+    typeof value.version === "number" &&
+    typeof value.id === "string" &&
+    typeof value.index === "number" &&
+    typeof value.word === "string"
+  );
+}
+
 /** A custom text editor shares VS Code's document, undo stack, save and hot-exit recovery. */
 export class PaletteEditor implements CustomTextEditorProvider {
   constructor(readonly extensionUri: Uri) {}
@@ -57,25 +74,15 @@ export class PaletteEditor implements CustomTextEditorProvider {
       }
     };
     const receive = panel.webview.onDidReceiveMessage((message: unknown) => {
-      if (!message || typeof message !== "object") {
+      if (!isRecord(message)) {
         return;
       }
-      const value = message as Record<string, unknown>;
-      if (value.type === "ready") {
+      if (message.type === "ready") {
         update();
-      } else if (value.type === "text") {
+      } else if (message.type === "text") {
         void commands.executeCommand("vscode.openWith", document.uri, "default");
-      } else if (
-        value.type === "edit" &&
-        typeof value.version === "number" &&
-        typeof value.id === "string" &&
-        typeof value.index === "number" &&
-        typeof value.word === "string"
-      ) {
-        void this.edit(
-          document,
-          value as { version: number; id: string; index: number; word: string },
-        )
+      } else if (isPaletteEdit(message)) {
+        void this.edit(document, message)
           .then(update)
           .catch((error: unknown) => {
             update();

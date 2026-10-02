@@ -137,7 +137,7 @@ function hiromFileOffset(address: number, headerSize: number): number {
  */
 function parseFilenameTable(source: string): Map<string, string> {
   const names = new Map<string, string>();
-  const pattern = /^([A-Za-z0-9_]+):\s*\r?\n\s*db\s+"([^"]+)"/gm;
+  const pattern = /^(\w+):\s*\r?\n\s*db\s+"([^"]+)"/gm;
   let match: RegExpExecArray | null = pattern.exec(source);
   while (match) {
     names.set(match[1], match[2]);
@@ -164,8 +164,7 @@ function parsePointerSection(
   }
 
   const entries: AssetEntry[] = [];
-  const linePattern =
-    /^\s*dl\s+\$([0-9A-Fa-f]+)\s*,\s*\$([0-9A-Fa-f]+)\s*,\s*([A-Za-z0-9_]+)\s*,/gm;
+  const linePattern = /^\s*dl\s+\$([\dA-Fa-f]+)\s*,\s*\$([\dA-Fa-f]+)\s*,\s*(\w+)\s*,/gm;
   let match: RegExpExecArray | null = linePattern.exec(block[1]);
   while (match) {
     const nameLabel = match[3];

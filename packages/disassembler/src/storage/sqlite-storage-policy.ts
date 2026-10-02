@@ -1,6 +1,18 @@
 import fs from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 
+function errorCode(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+  return undefined;
+}
+
 /** Budgets use bytes. Zero disables the database ceiling. A zero cache budget evicts optional projections. */
 export interface AnalysisStoragePolicy {
   readonly cacheMaxBytes: number;
@@ -31,38 +43,47 @@ export const CAPTURE_CATALOG_SCHEMA = `CREATE TABLE capture_catalog (
   observed_events INTEGER NOT NULL, dropped_events INTEGER NOT NULL DEFAULT 0
 ) WITHOUT ROWID;`;
 
+function isSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+
+function isPolicyRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** Stored and displayed independently of semantic edit revisions. Invalid persisted limits fail closed.
  * @param {DatabaseSync} db Open project connection.
  * @returns {AnalysisStoragePolicy} Validated persisted limits merged with defaults.
  */
 export const readStoragePolicy = (db: DatabaseSync): AnalysisStoragePolicy => {
   const value = db.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
-  return validateStoragePolicy(
-    value ? (JSON.parse(String(value)) as Partial<AnalysisStoragePolicy>) : {},
-  );
+  return validateStoragePolicy(value ? JSON.parse(String(value)) : {});
 };
 
 /** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
- * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields. Unknown fields are rejected.
+ * @param {unknown} value Explicit policy fields. Unknown fields are rejected.
  * @returns {AnalysisStoragePolicy} Complete validated byte limits.
  */
-export const validateStoragePolicy = (
-  value: Partial<AnalysisStoragePolicy>,
-): AnalysisStoragePolicy => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+export const validateStoragePolicy = (value: unknown): AnalysisStoragePolicy => {
+  if (!isPolicyRecord(value)) {
     throw new Error("Storage policy must be an object containing explicit limits.");
   }
-  const policy = { ...DEFAULT_ANALYSIS_STORAGE_POLICY, ...value };
-  for (const [key, count] of Object.entries(policy)) {
+  let cacheMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.cacheMaxBytes;
+  let databaseMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.databaseMaxBytes;
+  for (const [key, count] of Object.entries(value)) {
     if (
       !Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key) ||
-      !Number.isSafeInteger(count) ||
-      count < 0
+      !(isSafeInteger(count) && count >= 0)
     ) {
       throw new Error(`Invalid storage limit '${key}'. Use nonnegative integer byte limits.`);
     }
+    if (key === "cacheMaxBytes") {
+      cacheMaxBytes = count;
+    } else if (key === "databaseMaxBytes") {
+      databaseMaxBytes = count;
+    }
   }
-  return policy;
+  return { cacheMaxBytes, databaseMaxBytes };
 };
 
 /** Lightweight accounting for final reports. Bytes allocated to freelist pages are separately visible. */
@@ -94,7 +115,7 @@ export const storageSnapshot = (db: DatabaseSync, file: string): AnalysisStorage
   try {
     walBytes = fs.statSync(`${file}-wal`).size;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errorCode(error) !== "ENOENT") {
       throw error;
     }
   }
@@ -231,10 +252,11 @@ export const maintainStorageCaches = (
   }
   const budget = readStoragePolicy(db).cacheMaxBytes;
   const evicted = retireStorageCaches(db);
-  const entries = CACHES.map((cache) => ({
-    ...cache,
-    bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0),
-  }));
+  const entries = CACHES.map((cache) =>
+    Object.assign({}, cache, {
+      bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0),
+    }),
+  );
   let cacheBytes =
     entries.reduce((n, cache) => n + cache.bytes, 0) + cacheTableBytes(db, "query_cache");
   for (const cache of entries) {

@@ -29,7 +29,7 @@ import {
 
 /** In-memory plugin activation. Module text is diagnostic context, never imported by the manager. */
 export interface PluginActivationRequest {
-  readonly plugin: AssemblerPlugin<unknown>;
+  readonly plugin: AssemblerPlugin;
   readonly options?: unknown;
   readonly pluginModule?: string;
 }
@@ -124,8 +124,12 @@ const deepFreeze = <T>(value: T, seen = new Set<unknown>()): Readonly<T> => {
     for (const item of value) {
       deepFreeze(item, seen);
     }
-  } else {
-    for (const item of Object.values(value as Record<string, unknown>)) {
+  } else if (isRecord(value)) {
+    for (const item of Object.values(value)) {
+      deepFreeze(item, seen);
+    }
+  } else if (typeof value === "function") {
+    for (const item of Object.values(value)) {
       deepFreeze(item, seen);
     }
   }
@@ -215,8 +219,16 @@ const validateManifest = (manifest: unknown, pluginModule?: string): AssemblerPl
   });
 };
 
-const validatePlugin = (value: unknown, pluginModule?: string): AssemblerPlugin<unknown> => {
-  if (!isRecord(value) || typeof value.activate !== "function") {
+type PluginActivate = AssemblerPlugin["activate"];
+type PluginValidateOptions = NonNullable<AssemblerPlugin["validateOptions"]>;
+
+const isPluginActivate = (value: unknown): value is PluginActivate => typeof value === "function";
+
+const isPluginValidateOptions = (value: unknown): value is PluginValidateOptions =>
+  typeof value === "function";
+
+const validatePlugin = (value: unknown, pluginModule?: string): AssemblerPlugin => {
+  if (!isRecord(value) || !isPluginActivate(value.activate)) {
     throw new PluginError(
       `Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`,
       {
@@ -226,18 +238,20 @@ const validatePlugin = (value: unknown, pluginModule?: string): AssemblerPlugin<
     );
   }
   const manifest = validateManifest(value.manifest, pluginModule);
-  if (value.validateOptions !== undefined && typeof value.validateOptions !== "function") {
+  const validateOptions = value.validateOptions;
+  if (validateOptions !== undefined && !isPluginValidateOptions(validateOptions)) {
     throw new PluginError(`Plugin '${manifest.id}' validateOptions must be a function.`, {
       code: "PLUGIN_INVALID_EXPORT",
       pluginId: manifest.id,
       pluginModule,
     });
   }
-  const plugin = value as unknown as AssemblerPlugin<unknown>;
   return {
     manifest,
-    ...(plugin.validateOptions ? { validateOptions: plugin.validateOptions.bind(plugin) } : {}),
-    activate: plugin.activate.bind(plugin),
+    ...(isPluginValidateOptions(validateOptions)
+      ? { validateOptions: validateOptions.bind(value) }
+      : {}),
+    activate: value.activate.bind(value),
   };
 };
 
@@ -511,11 +525,8 @@ export class PluginManager implements PluginDisposable {
       logger,
       options,
       registerSessionState: <T>(contribution: SessionStateContribution<T>): SessionStateKey<T> => {
-        add(
-          transaction.sessionStates,
-          contribution as unknown as SessionStateContribution<unknown>,
-        );
-        return Object.freeze({ id: contribution.id }) as SessionStateKey<T>;
+        add(transaction.sessionStates, contribution);
+        return Object.freeze({ id: contribution.id });
       },
       registerArchitecture: (contribution: ArchitectureContribution) =>
         add(transaction.architectures, contribution),
@@ -710,8 +721,7 @@ export class PluginManager implements PluginDisposable {
               !["string", "integer", "boolean", "enum"].includes(String(field.type)) ||
               (field.type === "enum" && !Array.isArray(field.enum)) ||
               (field.required !== undefined && typeof field.required !== "boolean") ||
-              (field.resource !== undefined &&
-                (field.resource !== true || field.type !== "string")) ||
+              (field.resource !== undefined && (!field.resource || field.type !== "string")) ||
               (field.minimum !== undefined &&
                 (typeof field.minimum !== "number" || !Number.isFinite(field.minimum))) ||
               (field.maximum !== undefined &&
@@ -881,7 +891,7 @@ export class PluginManager implements PluginDisposable {
     }
     this.#disposed = true;
     const errors: unknown[] = [];
-    for (const plugin of [...this.#activated].reverse()) {
+    for (const plugin of [...this.#activated].toReversed()) {
       try {
         await plugin.disposable?.dispose();
       } catch (error) {

@@ -370,5 +370,5 @@ test("ArchSuperFX catalog covers every mnemonic the encoder accepts", (t) => {
     "MOVEW",
   ];
 
-  t.deepEqual([...mnemonics].sort(), [...expected].sort());
+  t.deepEqual([...mnemonics].toSorted(), [...expected].toSorted());
 });

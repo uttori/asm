@@ -56,11 +56,15 @@ test("sidecar server orders responses before captured backend events and shuts d
   const parser = new DebugSidecarMessageParser();
   const messages = frames.flatMap((frame) => parser.push(frame));
   t.deepEqual(
-    messages.map((message) =>
-      message.type === "response"
-        ? `${message.type}:${message.requestSequence}`
-        : `${message.type}:${message.event}`,
-    ),
+    messages.map((message) => {
+      if (message.type === "response") {
+        return `${message.type}:${message.requestSequence}`;
+      }
+      if (message.type === "event") {
+        return `${message.type}:${message.event}`;
+      }
+      throw new Error(`Unexpected sidecar ${message.type} message.`);
+    }),
     ["response:1", "response:2", "event:stopped", "response:3"],
   );
   t.true(server.closed);
@@ -110,7 +114,7 @@ test("sidecar server returns command failures but closes on a session mismatch",
   const mismatch = await t.throwsAsync(
     server.receive(request(createDebugSidecarSessionToken(), 3, "ping")),
   );
-  t.regex(mismatch?.message ?? "", /session does not match/);
+  t.regex(mismatch.message, /session does not match/);
   t.true(server.closed);
   t.regex(closeError?.message ?? "", /session does not match/);
 });

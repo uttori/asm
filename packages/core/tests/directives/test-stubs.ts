@@ -20,4 +20,16 @@ export const createOperandResolver = (getCurrentAddress = (): number => 0): Oper
     requireStaticLabelLookup: () => false,
   });
 
-export const runtimeStub = {} as DirectiveRuntimeService;
+function isTestDouble<T>(value: object): value is T {
+  return typeof value === "object";
+}
+
+/** Partial doubles stand in for the methods a single test calls. */
+export function testDouble<T>(value: object): T {
+  if (!isTestDouble<T>(value)) {
+    throw new Error("Expected an object test double.");
+  }
+  return value;
+}
+
+export const runtimeStub = testDouble<DirectiveRuntimeService>({});

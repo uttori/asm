@@ -1,6 +1,55 @@
 import type { RuntimeStateValue } from "./project-types.js";
 
-const isArray = (value: unknown): boolean => Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function isSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+
+function isStateValue(value: unknown): value is RuntimeStateValue {
+  return (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  );
+}
+
+function isMemoryAccess(entry: unknown): entry is RuntimeTraceMemoryAccess {
+  if (!isRecord(entry)) {
+    return false;
+  }
+  const addressSpace = entry.addressSpace;
+  const address = entry.address;
+  const access = entry.access;
+  const width = entry.width;
+  const value = entry.value;
+  const actor = entry.actor;
+  const channel = entry.channel;
+  return (
+    typeof addressSpace === "string" &&
+    addressSpace !== "" &&
+    isSafeInteger(address) &&
+    address >= 0 &&
+    (access === "read" || access === "write" || access === "fetch") &&
+    isSafeInteger(width) &&
+    width >= 1 &&
+    width <= 8 &&
+    (value === undefined || (isSafeInteger(value) && value >= 0)) &&
+    (actor === undefined || actor === "cpu" || actor === "dma" || actor === "hdma") &&
+    (channel === undefined ||
+      (isInteger(channel) && channel >= 0 && channel <= 7 && (actor === "dma" || actor === "hdma")))
+  );
+}
 
 /** An actual bus operation, captured by the producer without extra debugger reads. */
 export interface RuntimeTraceMemoryAccess {
@@ -33,74 +82,61 @@ export const validateRuntimeInstructionDetails = (
   value: unknown,
   count: number,
 ): readonly RuntimeInstructionDetail[] => {
-  if (!Array.isArray(value) || value.length !== count) {
+  if (!isUnknownArray(value) || value.length !== count) {
     throw new Error("Trace details must align one-to-one with instruction addresses.");
   }
-  return (value as RuntimeInstructionDetail[]).map((detail: RuntimeInstructionDetail) => {
-    if (
-      !detail ||
-      !isArray(detail.bytes) ||
-      detail.bytes.length < 1 ||
-      detail.bytes.length > 16 ||
-      detail.bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
-    ) {
+  return value.map((entry) => {
+    if (!isRecord(entry)) {
       throw new Error("Trace instruction bytes must contain 1–16 byte values.");
     }
-    if (
-      !detail.state ||
-      typeof detail.state !== "object" ||
-      isArray(detail.state) ||
-      Object.entries(detail.state).some(
-        ([key, entry]) =>
-          !key ||
-          !["number", "string", "boolean"].includes(typeof entry) ||
-          (typeof entry === "number" && !Number.isFinite(entry)),
-      )
-    ) {
+    const rawBytes = entry.bytes;
+    if (!isUnknownArray(rawBytes) || rawBytes.length < 1 || rawBytes.length > 16) {
+      throw new Error("Trace instruction bytes must contain 1–16 byte values.");
+    }
+    const bytes: number[] = [];
+    for (const byte of rawBytes) {
+      if (!(isInteger(byte) && byte >= 0 && byte <= 255)) {
+        throw new Error("Trace instruction bytes must contain 1–16 byte values.");
+      }
+      bytes.push(byte);
+    }
+    const rawState = entry.state;
+    if (!isRecord(rawState)) {
       throw new Error("Trace instruction state contains an invalid register value.");
     }
-    if (
-      detail.droppedMemoryAccesses !== undefined &&
-      (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)
-    ) {
-      throw new Error("Trace memory loss must be a non-negative safe integer.");
+    const state: Record<string, RuntimeStateValue> = {};
+    for (const [key, stateValue] of Object.entries(rawState)) {
+      if (!key || !isStateValue(stateValue)) {
+        throw new Error("Trace instruction state contains an invalid register value.");
+      }
+      state[key] = stateValue;
     }
-    if (
-      detail.memoryAccesses !== undefined &&
-      (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256)
-    ) {
+    const droppedMemoryAccesses = entry.droppedMemoryAccesses;
+    let droppedCount: number | undefined;
+    if (droppedMemoryAccesses !== undefined) {
+      if (!(isSafeInteger(droppedMemoryAccesses) && droppedMemoryAccesses >= 0)) {
+        throw new Error("Trace memory loss must be a non-negative safe integer.");
+      }
+      droppedCount = droppedMemoryAccesses;
+    }
+    const rawAccesses = entry.memoryAccesses;
+    if (rawAccesses !== undefined && (!isUnknownArray(rawAccesses) || rawAccesses.length > 256)) {
       throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
     }
-    const memoryAccesses = detail.memoryAccesses?.map((access) => {
-      if (
-        !access ||
-        typeof access.addressSpace !== "string" ||
-        !access.addressSpace ||
-        !Number.isSafeInteger(access.address) ||
-        access.address < 0 ||
-        !["read", "write", "fetch"].includes(access.access) ||
-        !Number.isSafeInteger(access.width) ||
-        access.width < 1 ||
-        access.width > 8 ||
-        (access.value !== undefined && (!Number.isSafeInteger(access.value) || access.value < 0)) ||
-        (access.actor !== undefined && !["cpu", "dma", "hdma"].includes(access.actor)) ||
-        (access.channel !== undefined &&
-          (!Number.isInteger(access.channel) ||
-            access.channel < 0 ||
-            access.channel > 7 ||
-            !["dma", "hdma"].includes(access.actor ?? "cpu")))
-      ) {
-        throw new Error("Trace contains an invalid bus operation.");
-      }
-      return { ...access };
-    });
+    const memoryAccesses =
+      rawAccesses === undefined
+        ? undefined
+        : rawAccesses.map((access) => {
+            if (!isMemoryAccess(access)) {
+              throw new Error("Trace contains an invalid bus operation.");
+            }
+            return access;
+          });
     return {
-      bytes: [...detail.bytes],
-      state: { ...detail.state },
+      bytes,
+      state,
       ...(memoryAccesses === undefined ? {} : { memoryAccesses }),
-      ...(detail.droppedMemoryAccesses === undefined
-        ? {}
-        : { droppedMemoryAccesses: detail.droppedMemoryAccesses }),
+      ...(droppedCount === undefined ? {} : { droppedMemoryAccesses: droppedCount }),
     };
   });
 };

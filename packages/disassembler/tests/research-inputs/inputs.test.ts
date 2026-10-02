@@ -22,6 +22,17 @@ import {
 import { changeResearchSymbol, renameResearchSymbol } from "../../src/research-inputs/symbols.js";
 import { sourceGit } from "../../src/source-project/git.js";
 
+function isAnnotation(value: unknown): value is IntervalAnnotation {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "classification" in value &&
+    "start" in value &&
+    "end" in value
+  );
+}
+
 const label: ProjectLabel = {
   id: "label-entry",
   addressSpace: "rom.file",
@@ -492,8 +503,10 @@ test("Git analysis decisions preserve provenance, project only after saving, and
   t.deepEqual(store.loadTable("annotations"), [original]);
   t.is(read().files[0].sha256, file.sha256, "proposals never save authoring files");
   writeResearchDocument(root, first.path, first.document, first.expectedSha256);
-  const classified = first.document.decisions.find((item) => item.id === "range")!
-    .value as IntervalAnnotation;
+  const classified = first.document.decisions.find((item) => item.id === "range")?.value;
+  if (!isAnnotation(classified)) {
+    throw new Error("Expected an annotation decision.");
+  }
   const second = changeResearchAnalysis(
     read(),
     {

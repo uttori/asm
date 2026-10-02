@@ -1,4 +1,4 @@
-import { decodeScalarArray, encodeScalarArray } from "./data.js";
+import { decodeScalarArray, encodeScalarArray } from "./data-scalar.js";
 import { integer, unitCount } from "./validation.js";
 const validateLayout = (layout) => {
     integer(layout.stride, "Struct stride", 1, 1 << 20);

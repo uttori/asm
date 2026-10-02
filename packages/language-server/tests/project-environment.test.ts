@@ -24,11 +24,17 @@ const createController = (): ProjectEnvironmentController =>
 
 test("repository editor config discovers the packaged SoM sprite preview format", async (t) => {
   const project = path.resolve("secret-of-mana");
-  const settings = JSON.parse(
+  const settings: unknown = JSON.parse(
     fs.readFileSync(path.join(project, ".vscode/settings.json"), "utf8"),
-  ) as {
-    "asm.configFile": string;
-  };
+  );
+  if (
+    typeof settings !== "object" ||
+    settings === null ||
+    Array.isArray(settings) ||
+    typeof settings["asm.configFile"] !== "string"
+  ) {
+    throw new Error("Expected editor settings with asm.configFile.");
+  }
   const controller = createController();
   try {
     const state = await controller.replace({
@@ -62,10 +68,10 @@ test("language server replaces target tooling and preserves build/analysis parit
       new Map([[sourceFile, "org 0\nFIX\nfixturebyte\n"]]),
     );
 
-    const fixtureCompletions = completionsFor(fixture.index).map((entry) => entry.label);
-    t.true(fixtureCompletions.includes("FIX"));
-    t.true(fixtureCompletions.includes("fixturebyte"));
-    t.false(fixtureCompletions.includes("LDA"));
+    const fixtureCompletions = new Set(completionsFor(fixture.index).map((entry) => entry.label));
+    t.true(fixtureCompletions.has("FIX"));
+    t.true(fixtureCompletions.has("fixturebyte"));
+    t.false(fixtureCompletions.has("LDA"));
     t.deepEqual(
       fixture.index.toolingCatalog.getTargets().map((target) => target.id),
       ["fixture.raw-target"],
@@ -95,10 +101,10 @@ test("language server replaces target tooling and preserves build/analysis parit
       },
       new Map([[sourceFile, "org $008000\nLDA #$01\n"]]),
     );
-    const snesCompletions = completionsFor(snes.index).map((entry) => entry.label);
-    t.true(snesCompletions.includes("LDA"));
-    t.false(snesCompletions.includes("FIX"));
-    t.false(snesCompletions.includes("fixturebyte"));
+    const snesCompletions = new Set(completionsFor(snes.index).map((entry) => entry.label));
+    t.true(snesCompletions.has("LDA"));
+    t.false(snesCompletions.has("FIX"));
+    t.false(snesCompletions.has("fixturebyte"));
 
     const stable = controller.current;
     await t.throwsAsync(
@@ -207,9 +213,9 @@ test("activateBundledPlugins keeps unused bundled targets in the catalog", async
       },
       new Map([[sourceFile, "org $008000\nLDA #$01\n"]]),
     );
-    const ids = snes.index.toolingCatalog.getTargets().map((target) => target.id);
-    t.true(ids.includes(SNES_TARGET_ID));
-    t.true(ids.includes("fixture.raw-target"));
+    const ids = new Set(snes.index.toolingCatalog.getTargets().map((target) => target.id));
+    t.true(ids.has(SNES_TARGET_ID));
+    t.true(ids.has("fixture.raw-target"));
   } finally {
     await controller.dispose();
     fs.rmSync(directory, { recursive: true, force: true });

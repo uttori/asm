@@ -5,7 +5,11 @@ import {
   renderExpressionNode,
   renderReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { parseOperandSyntax } from "./operand-syntax.js";
+import { parseOperandSyntax, type OperandSyntax } from "./operand-syntax.js";
+
+/** Expand results may omit lexical syntax. Fall back to the raw spelling. */
+const syntaxOf = (operand: { syntax?: OperandSyntax }, raw: string): OperandSyntax =>
+  operand.syntax ?? parseOperandSyntax(raw);
 
 export type OperandResolverDependencies = {
   resolveDefines(input: string): string;
@@ -94,7 +98,7 @@ export class OperandResolver {
     }
   }
 
-  determineValueLength(value: string | number): number {
+  determineValueLength(value: unknown): number {
     if (typeof value !== "string" && typeof value !== "number") {
       throw new Error(`Invalid value type for length determination: ${typeof value}`);
     }
@@ -116,7 +120,7 @@ export class OperandResolver {
     return Math.max(1, Math.ceil(hexString.length / 2));
   }
 
-  isMathExpression(expression: string): boolean {
+  isMathExpression(expression: unknown): boolean {
     if (!expression || typeof expression !== "string") {
       return false;
     }
@@ -282,15 +286,21 @@ export class OperandResolver {
         throw new Error(
           `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`,
         );
-      default:
-        try {
-          return this.deps.evaluateMath(operand);
-        } catch (error: unknown) {
-          if (this.deps.shouldDeferExpressionEvaluation()) {
-            return 0;
-          }
-          throw error;
-        }
+      case "binary":
+      case "call":
+      case "literal":
+      case "raw":
+      case "string":
+      case "unary":
+        break;
+    }
+    try {
+      return this.deps.evaluateMath(operand);
+    } catch (error: unknown) {
+      if (this.deps.shouldDeferExpressionEvaluation()) {
+        return 0;
+      }
+      throw error;
     }
   }
 
@@ -392,7 +402,8 @@ export class OperandResolver {
     const raw = operand.trim();
     const expandedOperand = this.expandOperand(raw);
     const { expanded, length } = expandedOperand;
-    const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+    // Encoder tests stub expandOperand with width only. Recover lexical facts from the raw spelling.
+    const syntax = syntaxOf(expandedOperand, raw);
     return {
       mode: "unknown",
       baseExpression: expanded,

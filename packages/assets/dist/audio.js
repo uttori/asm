@@ -3,6 +3,45 @@ import { decodeBrrPcm, encodeBrrPcm } from "./brr-codec.js";
 export { decodeBrrPcm, encodeBrrPcm } from "./brr-codec.js";
 const MAX_WAVE_BYTES = 16 * 1024 * 1024;
 const MAX_SAMPLES = 1024 * 1024;
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+const PCM_MODEL_ERROR = "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.";
+/** Rebuild a PCM model from an importer or encoder document value.
+ * @param {unknown} value Untrusted document payload.
+ * @returns {PcmAudio} Owned field snapshot; the sample buffer is the validated array.
+ */
+export function readPcmAudio(value) {
+    if (!isRecord(value)) {
+        throw new Error(PCM_MODEL_ERROR);
+    }
+    const samples = value.samples;
+    const sampleRate = value.sampleRate;
+    const sourceBitDepth = value.sourceBitDepth;
+    if (!(samples instanceof Int16Array) ||
+        typeof sampleRate !== "number" ||
+        !Number.isSafeInteger(sampleRate) ||
+        sampleRate < 1 ||
+        sampleRate > 384000 ||
+        (sourceBitDepth !== 8 && sourceBitDepth !== 16)) {
+        throw new Error(PCM_MODEL_ERROR);
+    }
+    let loop;
+    if (value.loop !== undefined) {
+        const sourceLoop = value.loop;
+        if (!isRecord(sourceLoop) ||
+            typeof sourceLoop.start !== "number" ||
+            typeof sourceLoop.end !== "number") {
+            throw new Error(PCM_MODEL_ERROR);
+        }
+        loop = { start: sourceLoop.start, end: sourceLoop.end };
+    }
+    return {
+        kind: "pcm-audio",
+        sampleRate,
+        sourceBitDepth,
+        samples,
+        ...(loop === undefined ? {} : { loop }),
+    };
+}
 const u16le = (bytes, offset) => bytes[offset] | (bytes[offset + 1] << 8);
 const u32le = (bytes, offset) => (bytes[offset] +
     bytes[offset + 1] * 256 +
@@ -229,20 +268,7 @@ export function withAudioEncoder(native) {
                 if (document.kind !== "pcm-audio") {
                     return encoder.encode(document, rawOptions, resources);
                 }
-                if (!document.value ||
-                    typeof document.value !== "object" ||
-                    !("samples" in document.value) ||
-                    !(document.value.samples instanceof Int16Array) ||
-                    !("sampleRate" in document.value) ||
-                    typeof document.value.sampleRate !== "number" ||
-                    !Number.isSafeInteger(document.value.sampleRate) ||
-                    document.value.sampleRate < 1 ||
-                    document.value.sampleRate > 384000 ||
-                    !("sourceBitDepth" in document.value) ||
-                    (document.value.sourceBitDepth !== 8 && document.value.sourceBitDepth !== 16)) {
-                    throw new Error("PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.");
-                }
-                const audio = document.value;
+                const audio = readPcmAudio(document.value);
                 const options = resolveBrrAudioOptions(rawOptions, audio);
                 const originalCount = audio.samples.length;
                 if (originalCount === 0) {
@@ -314,7 +340,7 @@ export function withAudioEncoder(native) {
                         snrDb,
                         loopPeakError,
                     },
-                    normalizedOptions: { padding: options.padding, loop: loop ?? false },
+                    normalizedOptions: { padding: options.padding, loop },
                 };
             },
         });

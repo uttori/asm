@@ -96,11 +96,27 @@ const fieldType = (field: SnesStructField): string =>
 
 const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
 const comment = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
+/**
+ * Accepts a JSON object. Arrays and null are not struct-map records.
+ * @param {unknown} value Candidate record.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Accepts an array of strings.
+ * @param {unknown} value Candidate notes array.
+ * @returns {boolean} True when every element is a string.
+ */
+const isStringList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
 const object = (value: unknown): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new Error("Struct-map records must be objects.");
   }
-  return value as Record<string, unknown>;
+  return value;
 };
 const integer = (value: unknown, minimum = 0, maximum = 0xffffff): number => {
   if (
@@ -123,10 +139,10 @@ const notes = (value: unknown): string[] => {
   if (value === undefined) {
     return [];
   }
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+  if (!isStringList(value)) {
     throw new Error("Struct-map notes must be an array of strings.");
   }
-  return (value as string[]).map(comment);
+  return value.map(comment);
 };
 
 /**
@@ -178,8 +194,8 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
     throw new Error("Struct map requires structures and bindings arrays.");
   }
   const names = new Set<string>();
-  const uniqueName = (value: unknown): string => {
-    const name = identifier(value);
+  const uniqueName = (nameInput: unknown): string => {
+    const name = identifier(nameInput);
     if (names.has(name.toLowerCase())) {
       throw new Error(`Duplicate struct-map name '${name}'.`);
     }
@@ -216,7 +232,8 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
           }
           // oxlint-disable-next-line security/detect-unsafe-regex -- The fixed width token and decimal count cannot overlap.
           const match = field.type.match(/^(db|dw|dl|dd)(?:\[([1-9]\d*)])?$/i);
-          if (!match || widths[match[1].toLowerCase()] * Number(match[2] ?? 1) !== fieldSize) {
+          const repeatText = match !== null && match.length > 2 ? match[2] : undefined;
+          if (!match || widths[match[1].toLowerCase()] * Number(repeatText ?? 1) !== fieldSize) {
             throw new Error(`Field type '${id}.${name}' must match its size (${fieldSize} bytes).`);
           }
           type = field.type.toLowerCase();
@@ -229,7 +246,7 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
           ...(field.description === undefined ? {} : { description: comment(field.description) }),
         };
       })
-      .sort((a, b) => a.offset - b.offset);
+      .toSorted((a, b) => a.offset - b.offset);
     let end = 0;
     for (const field of fields) {
       if (field.offset < end || field.offset + field.size > size) {
@@ -280,7 +297,7 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
             }),
       };
     })
-    .sort((a, b) => a.address - b.address);
+    .toSorted((a, b) => a.address - b.address);
   for (let index = 1; index < bindings.length; index++) {
     const previous = bindings[index - 1];
     if (bindings[index].address < previous.address + previous.structure.size * previous.count) {
@@ -289,7 +306,7 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
   }
   const romBindings = bindings
     .filter((binding) => binding.fileOffset !== undefined)
-    .sort((a, b) => a.fileOffset! - b.fileOffset!);
+    .toSorted((a, b) => a.fileOffset! - b.fileOffset!);
   for (let index = 1; index < romBindings.length; index++) {
     const previous = romBindings[index - 1];
     if (
@@ -528,7 +545,7 @@ export const planSnesStructRomFields = (
       }
     }
   }
-  return fields.sort((a, b) => a.start - b.start);
+  return fields.toSorted((a, b) => a.start - b.start);
 };
 
 /**

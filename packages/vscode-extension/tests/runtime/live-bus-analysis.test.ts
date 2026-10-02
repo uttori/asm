@@ -163,8 +163,9 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
       128,
     );
     t.teardown(() => client.cancel());
+    const sawProgress = (): boolean => progress;
     if (failure !== "lag" && failure !== "budget") {
-      for (let i = 0; !progress && i < 200; i++) {
+      for (let i = 0; !sawProgress() && i < 200; i++) {
         await delay(10);
       }
       t.true(progress);

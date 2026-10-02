@@ -18,10 +18,10 @@ export declare function decodeBgScreenMap(bytes: Uint8Array, width: number, heig
  * @param {readonly number[]} indexes Row-major tile indexes.
  * @param {number} width Width in cells.
  * @param {number} height Height in cells.
- * @param {"full" | "partial"} layout Hardware map or partial upload contract.
+ * @param {string} layout `"full"` for the hardware map, or `"partial"` for an upload rectangle.
  * @returns {Uint8Array} Owned native map bytes.
  */
-export declare function encodeMode7MapLayout(indexes: readonly number[], width: number, height: number, layout: "full" | "partial"): Uint8Array;
+export declare function encodeMode7MapLayout(indexes: readonly number[], width: number, height: number, layout: string): Uint8Array;
 /** Compose PNG-aware tile encoders with native JSON encoders under the same IDs.
  * @param {readonly AssetEncoder[]} native Existing exact native model encoders.
  * @returns {readonly AssetEncoder[]} Combined format registrations.

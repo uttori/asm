@@ -32,6 +32,10 @@ const owned = <T>(
   value,
 });
 
+function isArchitectureContribution(value: object): value is ArchitectureContribution {
+  return "id" in value && typeof value.id === "string";
+}
+
 const architecture = (
   id: string,
   extras: Partial<ArchitectureContribution> = {},
@@ -239,9 +243,13 @@ test("AssemblerEnvironment resolves contributions, owners, summaries, and toolin
         architectures: [
           owned(
             "cpu.one",
-            architecture("cpu.one", {
-              instructions: undefined as unknown as ArchitectureContribution["instructions"],
-            }),
+            (() => {
+              const contribution = { ...architecture("cpu.one"), instructions: undefined };
+              if (!isArchitectureContribution(contribution)) {
+                throw new Error("Expected an architecture contribution.");
+              }
+              return contribution;
+            })(),
           ),
         ],
       },

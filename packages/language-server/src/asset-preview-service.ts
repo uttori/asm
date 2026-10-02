@@ -229,7 +229,7 @@ export class AssetPreviewService {
         .update(JSON.stringify(allOptions))
         .update(output ?? "");
       hash.update(source.bytes);
-      for (const [name, resource] of Object.entries(resources).sort(([a], [b]) =>
+      for (const [name, resource] of Object.entries(resources).toSorted(([a], [b]) =>
         a.localeCompare(b),
       )) {
         hash.update(name).update(resource.bytes);

@@ -5,6 +5,10 @@ import path from "node:path";
 import { acquireFileLease, durableReplace, type FileLease } from "../internal/durable-files.js";
 import type { SourceRepository } from "./git.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** Private, disposable work; none of these directories can contain authoritative source or evidence. */
 type ScratchPurpose = "generation" | "preview" | "prepare";
 
@@ -60,15 +64,14 @@ function pruneScratch(directory: string): SourceScratchCleanup {
       if (!stat.isFile() || stat.size > 4096) {
         throw new Error("Unrecognized scratch owner");
       }
-      const owner = JSON.parse(fs.readFileSync(marker, "utf8")) as {
-        format?: string;
-        id?: string;
-        purpose?: string;
-      };
+      const owner: unknown = JSON.parse(fs.readFileSync(marker, "utf8"));
       if (
+        !isRecord(owner) ||
         owner.format !== "uttori-source-scratch-v1" ||
         owner.id !== entry.name ||
-        !["generation", "preview", "prepare"].includes(owner.purpose ?? "")
+        (owner.purpose !== "generation" &&
+          owner.purpose !== "preview" &&
+          owner.purpose !== "prepare")
       ) {
         throw new Error("Unrecognized scratch owner");
       }

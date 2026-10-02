@@ -1,9 +1,7 @@
 import { Assembler as CoreAssembler, PluginError } from "@uttori/asm-core";
+
 import { test } from "../../../tests/ava-helper.js";
-import {
-  Assembler,
-  snesTestEnvironment,
-} from "../../../tests/test-assembler.js";
+import { Assembler, snesTestEnvironment } from "../../../tests/test-assembler.js";
 import { SNES_TARGET_ID } from "../src/index.js";
 
 const pluginCause = (error: unknown): string =>
@@ -59,7 +57,7 @@ test("plugin directive wrappers for .smart .setcpu startpos and prot run via dis
   protAssembler.currentTargetAddress = 0x808000;
   protAssembler.currentTargetBaseAddress = 0x808000;
   protAssembler.directiveRegistry.dispatch("prot", ["prot", "forward"], "prot forward");
-  t.deepEqual([...protAssembler.outputBytes.slice(0, 5)], [0x50, 0x52, 0x4f, 0x54, 0x03]);
+  t.deepEqual(protAssembler.outputBytes.slice(0, 5), [0x50, 0x52, 0x4f, 0x54, 0x03]);
 
   assembler.directiveRegistry.dispatch(
     "freespacebyte",

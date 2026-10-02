@@ -44,6 +44,13 @@ const counter = (
 const errorCode = (error: unknown): string | undefined =>
   error instanceof PluginError ? error.code : undefined;
 
+const pluginError = (error: unknown): PluginError => {
+  if (!(error instanceof PluginError)) {
+    throw new Error("Expected PluginError.");
+  }
+  return error;
+};
+
 test("PluginSessionStateStore creates, gets, clones, restores, and resets slots", (t) => {
   const stages: string[] = [];
   const store = new PluginSessionStateStore(
@@ -99,8 +106,8 @@ test("PluginSessionStateStore wraps factory, lookup, clone, reset, and dispose f
       ),
   );
   t.is(errorCode(createError), "PLUGIN_ACTIVATION_FAILED");
-  t.is((createError as PluginError).pluginId, "fixture.plugin");
-  t.is((createError as PluginError).targetId, "tgt.main");
+  t.is(pluginError(createError).pluginId, "fixture.plugin");
+  t.is(pluginError(createError).targetId, "tgt.main");
 
   const store = new PluginSessionStateStore([counter("slot.a")], context);
   t.is(errorCode(t.throws(() => store.get(otherKey))), "PLUGIN_CONFIGURATION_INVALID");

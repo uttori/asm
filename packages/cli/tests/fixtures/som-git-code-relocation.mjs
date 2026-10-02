@@ -53,7 +53,7 @@ try {
   try {
     const node = store
       .navigationNodes("snes.cpu", 0xc8e2b5, [])
-      .find((node) => node.address === 0xc8e2b5 && node.id.startsWith("runtime:"));
+      .find((candidate) => candidate.address === 0xc8e2b5 && candidate.id.startsWith("runtime:"));
     assert.ok(node);
     assert.deepEqual(
       [node.incomingState.e.value, node.incomingState.m.value, node.incomingState.x.value],

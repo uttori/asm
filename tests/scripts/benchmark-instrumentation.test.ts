@@ -14,6 +14,63 @@ import {
 } from "../../scripts/benchmark-report.js";
 import { test } from "../ava-helper.js";
 
+const benchmarkSample = (
+  wallMs: number,
+  rss: number,
+  heap: number,
+  clones: number,
+): BenchmarkSample => ({
+  wallMs,
+  peakRssBytes: rss,
+  peakHeapUsedBytes: heap,
+  phasesMs: { emitProgram: wallMs / 2 },
+  counters: {
+    passProgramCacheHits: 1,
+    passProgramCacheMisses: 2,
+    passProgramCachePeakSize: 3,
+    normalizedCommandClones: clones,
+    actualReparses: 2,
+    includeReads: 4,
+    includeBytesRead: 40,
+    includeTextCacheHits: 2,
+    includeResolutionCacheHits: 3,
+    expressionEvaluations: 11,
+    expressionStringEvaluations: 4,
+    expressionUniqueStringEvaluations: 3,
+    expressionNodeEvaluations: 7,
+    expressionUniqueNodeEvaluations: 5,
+    pureExpressionEvaluations: 3,
+    pureExpressionUniqueNodes: 2,
+    pureStringExpressionEvaluations: 3,
+    pureStringExpressionUniqueValues: 2,
+    pureStringExpressionCacheHits: 1,
+    pureStringExpressionCacheMisses: 2,
+    macroExpansions: 5,
+    macroLinesProcessed: 50,
+    passthroughDispatches: 6,
+    loweredProgramBuilds: 7,
+    runtimeNodesLowered: 8,
+    referenceCollections: 9,
+    addressMappings: 10,
+  },
+});
+
+const operationSample = (
+  wallMs: number,
+  baselineRssBytes: number,
+  endRssBytes: number,
+): OperationBenchmarkSample => ({
+  wallMs,
+  baselineRssBytes,
+  baselineHeapUsedBytes: baselineRssBytes / 2,
+  endRssBytes,
+  endHeapUsedBytes: endRssBytes / 2,
+  boundaryMaxRssBytes: Math.max(baselineRssBytes, endRssBytes),
+  boundaryMaxHeapUsedBytes: Math.max(baselineRssBytes, endRssBytes) / 2,
+  rssDeltaBytes: endRssBytes - baselineRssBytes,
+  heapUsedDeltaBytes: (endRssBytes - baselineRssBytes) / 2,
+});
+
 test("internal instrumentation is opt-in and run-scoped", (t) => {
   incrementInternalCounter("includeReads");
   const run = runWithInternalInstrumentation(() => {
@@ -33,46 +90,11 @@ test("internal instrumentation is opt-in and run-scoped", (t) => {
 });
 
 test("benchmark aggregation reports nearest-rank percentiles and memory peaks", (t) => {
-  const sample = (wallMs: number, rss: number, heap: number, clones: number): BenchmarkSample => ({
-    wallMs,
-    peakRssBytes: rss,
-    peakHeapUsedBytes: heap,
-    phasesMs: { emitProgram: wallMs / 2 },
-    counters: {
-      passProgramCacheHits: 1,
-      passProgramCacheMisses: 2,
-      passProgramCachePeakSize: 3,
-      normalizedCommandClones: clones,
-      actualReparses: 2,
-      includeReads: 4,
-      includeBytesRead: 40,
-      includeTextCacheHits: 2,
-      includeResolutionCacheHits: 3,
-      expressionEvaluations: 11,
-      expressionStringEvaluations: 4,
-      expressionUniqueStringEvaluations: 3,
-      expressionNodeEvaluations: 7,
-      expressionUniqueNodeEvaluations: 5,
-      pureExpressionEvaluations: 3,
-      pureExpressionUniqueNodes: 2,
-      pureStringExpressionEvaluations: 3,
-      pureStringExpressionUniqueValues: 2,
-      pureStringExpressionCacheHits: 1,
-      pureStringExpressionCacheMisses: 2,
-      macroExpansions: 5,
-      macroLinesProcessed: 50,
-      passthroughDispatches: 6,
-      loweredProgramBuilds: 7,
-      runtimeNodesLowered: 8,
-      referenceCollections: 9,
-      addressMappings: 10,
-    },
-  });
   const samples = [
-    sample(40, 100, 50, 4),
-    sample(10, 400, 20, 1),
-    sample(30, 200, 80, 3),
-    sample(20, 300, 60, 2),
+    benchmarkSample(40, 100, 50, 4),
+    benchmarkSample(10, 400, 20, 1),
+    benchmarkSample(30, 200, 80, 3),
+    benchmarkSample(20, 300, 60, 2),
   ];
   const aggregate = aggregateSamples(samples);
 
@@ -105,25 +127,10 @@ test("benchmark aggregation reports nearest-rank percentiles and memory peaks", 
 });
 
 test("operation aggregation keeps boundary memory and signed deltas explicit", (t) => {
-  const sample = (
-    wallMs: number,
-    baselineRssBytes: number,
-    endRssBytes: number,
-  ): OperationBenchmarkSample => ({
-    wallMs,
-    baselineRssBytes,
-    baselineHeapUsedBytes: baselineRssBytes / 2,
-    endRssBytes,
-    endHeapUsedBytes: endRssBytes / 2,
-    boundaryMaxRssBytes: Math.max(baselineRssBytes, endRssBytes),
-    boundaryMaxHeapUsedBytes: Math.max(baselineRssBytes, endRssBytes) / 2,
-    rssDeltaBytes: endRssBytes - baselineRssBytes,
-    heapUsedDeltaBytes: (endRssBytes - baselineRssBytes) / 2,
-  });
   const aggregate = aggregateOperationSamples([
-    sample(30, 100, 140),
-    sample(10, 120, 110),
-    sample(20, 110, 130),
+    operationSample(30, 100, 140),
+    operationSample(10, 120, 110),
+    operationSample(20, 110, 130),
   ]);
 
   t.deepEqual(benchmarkStatistics([]), {

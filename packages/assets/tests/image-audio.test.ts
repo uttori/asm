@@ -55,16 +55,45 @@ const wave = (name: string, options: Readonly<Record<string, unknown>> = {}) =>
 test("colored multi-tile PNG emits independent planar, palette, map, and preview bytes", (t) => {
   const result = image("colored-4bpp.png");
   t.deepEqual(
-    [...result.outputs.tiles.bytes.slice(0, 32)],
-    [
-      0x55, 0x33, 0xaa, 0x99, 0x55, 0xcc, 0xaa, 0x66, 0x55, 0x33, 0xaa, 0x99, 0x55, 0xcc, 0xaa,
-      0x66, 0x0f, 0x00, 0x78, 0x07, 0xc3, 0x3f, 0x1e, 0xfe, 0xf0, 0xf0, 0x87, 0x80, 0x3c, 0x03,
-      0xe1, 0x1f,
-    ],
+    result.outputs.tiles.bytes.slice(0, 32),
+    Uint8Array.of(
+      0x55,
+      0x33,
+      0xaa,
+      0x99,
+      0x55,
+      0xcc,
+      0xaa,
+      0x66,
+      0x55,
+      0x33,
+      0xaa,
+      0x99,
+      0x55,
+      0xcc,
+      0xaa,
+      0x66,
+      0x0f,
+      0x00,
+      0x78,
+      0x07,
+      0xc3,
+      0x3f,
+      0x1e,
+      0xfe,
+      0xf0,
+      0xf0,
+      0x87,
+      0x80,
+      0x3c,
+      0x03,
+      0xe1,
+      0x1f,
+    ),
   );
   t.deepEqual(
-    [...result.outputs.palette.bytes.slice(0, 8)],
-    [0xc0, 0x03, 0x82, 0x07, 0x44, 0x0b, 0x06, 0x0f],
+    result.outputs.palette.bytes.slice(0, 8),
+    Uint8Array.of(0xc0, 0x03, 0x82, 0x07, 0x44, 0x0b, 0x06, 0x0f),
   );
   t.deepEqual([...result.outputs.tilemap.bytes], [0, 0, 1, 0, 2, 0, 3, 0]);
   t.deepEqual(result.outputs.tiles.metadata?.tileIndexByCoordinate, [0, 1, 2, 3]);
@@ -119,7 +148,7 @@ test("tile traversal and map utilities preserve logical positions", (t) => {
     },
   });
   t.deepEqual(flipped.outputs.preview.bytes, image("indexed-4bpp.png").outputs.preview.bytes);
-  t.deepEqual([...flipped.outputs.tilemap.bytes.slice(0, 2)], [7, 0xe8]);
+  t.deepEqual(flipped.outputs.tilemap.bytes.slice(0, 2), Uint8Array.of(7, 0xe8));
   t.throws(
     () =>
       image("indexed-4bpp.png", "snes.tile.4bpp", {
@@ -140,7 +169,12 @@ test("tile traversal and map utilities preserve logical positions", (t) => {
   t.is(encoded[32 * 32 * 2] | (encoded[32 * 32 * 2 + 1] << 8), 32 | ((32 % 8) << 10));
   t.throws(() => encodeBgScreenMap(logical.slice(0, 48 * 32), 48, 32), { message: /screen-block/ });
   t.is(
-    encodeMode7MapLayout(new Array<number>(128 * 128).fill(7), 128, 128, "full").length,
+    encodeMode7MapLayout(
+      Array.from({ length: 128 * 128 }, () => 7),
+      128,
+      128,
+      "full",
+    ).length,
     128 * 128,
   );
   t.throws(() => encodeMode7MapLayout([1, 2, 3, 4], 2, 2, "full"), { message: /128×128/ });
@@ -235,10 +269,13 @@ test("PNG rejects bad CRC, truncated chunks, unrepresentable alpha/colors, and d
 });
 
 test("PCM8 and PCM16 WAVE encode deterministic BRR within quality thresholds", (t) => {
-  t.deepEqual([...decodeBrrPcm(fixture("brr-silence.bin"))], new Array<number>(16).fill(0));
+  t.deepEqual(
+    [...decodeBrrPcm(fixture("brr-silence.bin"))],
+    Array.from({ length: 16 }, () => 0),
+  );
   t.deepEqual(
     [...decodeBrrPcm(fixture("brr-transient.bin"))],
-    [28672, -32768, ...new Array<number>(14).fill(0)],
+    [28672, -32768, ...Array.from({ length: 14 }, () => 0)],
   );
   const silence = wave("pcm8-silence.wav");
   t.deepEqual([...silence.outputs.brr.bytes], [1, 0, 0, 0, 0, 0, 0, 0, 0]);

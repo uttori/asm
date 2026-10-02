@@ -158,7 +158,7 @@ try {
   }
   const built = await operation("build");
   assert.deepEqual(fs.readFileSync(built.outputFile), expected);
-  report.changedFiles = [...changes].sort();
+  report.changedFiles = [...changes].toSorted();
   await sourceGit(root, ["add", "--all"]);
   await sourceGit(root, [
     "commit",

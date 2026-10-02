@@ -43,7 +43,7 @@ export function changeResearchAnalysis(snapshot, change, spaces) {
         !["put", "remove"].includes(change.kind)) {
         throw new Error("Choose an annotation or indirect-target research action.");
     }
-    const id = change.kind === "put" ? change.value?.id : change.id;
+    const id = change.kind === "put" ? change.value.id : change.id;
     validateResearchDecision({ collection: change.collection, id, value: null });
     const previousFile = snapshot.files.find((file) => file.document.decisions.some((item) => item.collection === change.collection && item.id === id));
     if (change.kind === "remove") {

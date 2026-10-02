@@ -80,6 +80,9 @@ export const spc700Modes = Object.freeze({
     dpxY: mode("directIndexedXRegisterY", "dp+X,Y", 2),
     absY: mode("absoluteRegisterY", "addr,Y", 3),
 });
+function isSpc700ModeKey(value) {
+    return Object.hasOwn(spc700Modes, value);
+}
 /*
  * Independently transcribed from Nintendo's SNES Development Manual, Book I,
  * Appendix C. The GPL Framework disassembler is an optional oracle only and
@@ -237,10 +240,10 @@ if (entries.length !== 256) {
 /** Complete fixed-width SPC700 opcode specification, indexed by opcode byte. */
 export const spc700Specifications = Object.freeze(entries.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const definition = spc700Modes[modeKeyText];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isSpc700ModeKey(modeKeyText)) {
         throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
     }
+    const definition = spc700Modes[modeKeyText];
     const summaryKey = mnemonic.replace(/[0-7]$/, "0");
     return Object.freeze({
         id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -281,6 +284,6 @@ export function buildSpc700Catalog() {
             });
         }
     }
-    return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+    return [...grouped.values()].toSorted((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
 //# sourceMappingURL=spc700-spec.js.map

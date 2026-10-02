@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { DEBUG_SIDECAR_SESSION_ENV, type DebugSubscription } from "@uttori/asm-debug-adapter";
-import test from "ava";
+import test, { type ExecutionContext } from "ava";
 
 import {
   ARES_RUNTIME_MANIFEST_VERSION,
@@ -16,6 +16,10 @@ import {
   type AresRuntimeManifest,
 } from "../src/ares-process-host.js";
 import type { GdbRspTransport } from "../src/gdb-rsp-client.js";
+
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
 
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);
@@ -143,6 +147,8 @@ class FakeRuntime implements AresProcessRuntime {
       options.onOutput("stderr", this.outputOnLaunch);
     }
     if (this.exitOnLaunch) {
+      // This process is a spawned fixture and the status is the result.
+      // oxlint-disable-next-line unicorn/no-process-exit
       process.exit(this.exitOnLaunch);
     }
     return process;
@@ -163,7 +169,7 @@ class FakeRuntime implements AresProcessRuntime {
   }
 }
 
-const setup = async (t: Parameters<Parameters<typeof test>[1]>[0]) => {
+const setup = async (t: ExecutionContext) => {
   const runtimeDirectory = await mkdtemp(path.join(os.tmpdir(), "uttori-ares-host-"));
   t.teardown(() => rm(runtimeDirectory, { recursive: true, force: true }));
   const executable = path.join(runtimeDirectory, "ares-headless");
@@ -192,7 +198,7 @@ test("ares process host verifies identity, isolates launch arguments, and reconn
   t.is(host.pid, 1_000);
   t.is(fixture.runtime.connectCalls, 2);
   t.deepEqual(fixture.runtime.hashCalls, [fixture.executable, fixture.rom, fixture.resource]);
-  const launch = fixture.runtime.launches[0];
+  const launch = elementAt(fixture.runtime.launches, 0);
   t.is(launch?.cwd, fixture.runtimeDirectory);
   t.is(launch?.env[DEBUG_SIDECAR_SESSION_ENV], undefined);
   t.deepEqual(launch?.args, [
@@ -271,7 +277,7 @@ test("ares process host fails before launch on a manifest/hash mismatch", async 
     runtime: fixture.runtime,
   });
   const error = await t.throwsAsync(host.createClient({ reset: true }));
-  t.regex(error?.message ?? "", /ROM SHA-256 mismatch/);
+  t.regex(error.message, /ROM SHA-256 mismatch/);
   t.is(fixture.runtime.launches.length, 0);
 });
 
@@ -284,7 +290,7 @@ test("ares process host reports an unavailable identity before launch", async (t
     runtime: fixture.runtime,
   });
   const error = await t.throwsAsync(host.createClient({ reset: true }));
-  t.regex(error?.message ?? "", /Unable to verify ares executable/);
+  t.regex(error.message, /Unable to verify ares executable/);
   t.is(fixture.runtime.launches.length, 0);
 });
 
@@ -361,7 +367,7 @@ test("ares process host cleans up a fresh process when RSP readiness fails", asy
     startupTimeoutMs: 1,
   });
   const error = await t.throwsAsync(host.createClient({ reset: true }));
-  t.regex(error?.message ?? "", /was not ready within 1 ms/);
+  t.regex(error.message, /was not ready within 1 ms/);
   t.deepEqual(fixture.runtime.processes[0]?.signals, ["SIGTERM"]);
   t.is(host.pid, undefined);
 });
@@ -447,7 +453,7 @@ test("ares process host applies explicit launch overrides", async (t) => {
     env: { UTTORI_ARES_TEST: "enabled" },
   });
   const client = await host.createClient({ reset: true });
-  const launch = fixture.runtime.launches[0];
+  const launch = elementAt(fixture.runtime.launches, 0);
   t.deepEqual(launch?.args.slice(0, 2), ["--system", "Super Famicom (override)"]);
   t.false(launch?.args.includes("--fast-boot"));
   t.is(launch?.env.UTTORI_ARES_TEST, "enabled");

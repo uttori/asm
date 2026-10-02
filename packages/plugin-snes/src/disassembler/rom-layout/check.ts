@@ -76,7 +76,7 @@ export function checkSnesPlacements(
   if (objects.size !== contract.objects.length) {
     throw new Error("Repeated source placement identity.");
   }
-  const occupied = [...contract.objects].sort((a, b) => a.start - b.start);
+  const occupied = [...contract.objects].toSorted((a, b) => a.start - b.start);
   for (const [index, object] of occupied.entries()) {
     const start = symbols.get(object.startSymbol),
       end = symbols.get(object.endSymbol);
@@ -94,7 +94,6 @@ export function checkSnesPlacements(
         Math.floor((object.start + object.length - 1) / object.bankSize) ||
       start !== contract.logicalAddress(object.start) ||
       end === undefined ||
-      start === undefined ||
       end - start !== object.length ||
       (index > 0 && occupied[index - 1].start + occupied[index - 1].length > object.start)
     ) {
@@ -186,7 +185,7 @@ export function checkSnesSourceLayout(options: SnesLayoutCheckOptions): SnesLayo
   }
   const ranges = mapping.ranges
     .filter((range) => range.outputStart !== undefined && range.outputEnd !== undefined)
-    .sort((a, b) => a.outputStart! - b.outputStart! || a.outputEnd! - b.outputEnd!);
+    .toSorted((a, b) => a.outputStart! - b.outputStart! || a.outputEnd! - b.outputEnd!);
   let previous: AddressToLineRange | undefined;
   for (const range of ranges) {
     if (previous && range.outputStart! < previous.outputEnd!) {
@@ -204,7 +203,6 @@ export function checkSnesSourceLayout(options: SnesLayoutCheckOptions): SnesLayo
   const states = new Map<number, SnesInstructionStateContract>();
   for (const state of options.states ?? []) {
     if (
-      !state ||
       !Number.isSafeInteger(state.offset) ||
       state.offset < 0 ||
       state.offset >= options.expectedSize ||
@@ -245,10 +243,17 @@ export function checkSnesSourceLayout(options: SnesLayoutCheckOptions): SnesLayo
         message: "Instruction crosses its 65816 program bank boundary.",
       });
     }
-    const specification = cpu65816Specifications[output[offset]];
+    const opcodeByte = offset >= 0 && offset < output.length ? output[offset] : undefined;
+    const specification =
+      opcodeByte !== undefined && opcodeByte < cpu65816Specifications.length
+        ? cpu65816Specifications[opcodeByte]
+        : undefined;
     const state = states.get(offset);
-    let expectedSize: number | undefined = specification?.minimumSize;
-    if (specification?.widthFlag) {
+    if (!specification) {
+      continue;
+    }
+    let expectedSize: number | undefined = specification.minimumSize;
+    if (specification.widthFlag) {
       const flag = state?.e === true ? true : state?.[specification.widthFlag];
       expectedSize = undefined;
       if (flag === true) {
@@ -282,7 +287,6 @@ export function checkSnesSourceLayout(options: SnesLayoutCheckOptions): SnesLayo
   const extentIds = new Set<string>();
   for (const extent of options.extents ?? []) {
     if (
-      !extent ||
       typeof extent.id !== "string" ||
       !extent.id ||
       extentIds.has(extent.id) ||

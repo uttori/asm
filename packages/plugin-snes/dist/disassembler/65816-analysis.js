@@ -4,6 +4,7 @@ import { Cpu65816Decoder } from "../architectures/65816-decoder.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { applyCpu65816StateOverride, cpu65816DecodeState, cpu65816StateKey, emulationVectorCpu65816State, enterCpu65816Address, joinCpu65816States, nativeVectorCpu65816State, resetCpu65816State, transferCpu65816State, unknownCpu65816State, } from "./65816-state.js";
 import { createSnesAddressContext, identifySnesCpuAddress, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, } from "./address-identities.js";
+import { coverageRecord, cpu65816StateRecord, effectiveAddressRecords, incompleteReasonRecords, } from "./analysis-record-values.js";
 import { identifySnesHardwareRegister } from "./hardware-registers.js";
 import { SNES_CPU_VECTOR_DEFINITIONS, } from "./rom-header.js";
 const DATA_CLASSIFICATIONS = new Set([
@@ -80,14 +81,9 @@ const controlTargetKind = (kind) => {
 const controlsFor = (instruction, interruptTargets) => {
     const controls = instruction.references
         .filter((reference) => reference.kind === "branch" || reference.kind === "call" || reference.kind === "jump")
-        .map((reference) => ({
-        kind: controlTargetKind(reference.kind),
-        ...(reference.address === undefined ? {} : { address: reference.address }),
-        ...(reference.indirect ? { indirect: true } : {}),
-        ...(reference.address === undefined
-            ? { explanation: "The decoded indirect target is not known statically." }
-            : {}),
-    }));
+        .map((reference) => Object.assign({}, { kind: controlTargetKind(reference.kind) }, reference.address === undefined ? {} : { address: reference.address }, Object.assign({}, reference.indirect ? { indirect: true } : {}, reference.address === undefined
+        ? { explanation: "The decoded indirect target is not known statically." }
+        : {})));
     if (instruction.flow.kind !== "interrupt") {
         return controls;
     }
@@ -151,24 +147,18 @@ const effectiveAddressesFor = (instruction, context, romSize) => instruction.ref
     const indexed = isIndexedOrIndirect(instruction.mode);
     const hardware = identifySnesHardwareRegister(reference.address);
     if (hardware) {
-        return {
-            operandIndex,
-            ...(indexed ? { baseAddress: reference.address } : { address: reference.address }),
+        return Object.assign({}, { operandIndex }, indexed ? { baseAddress: reference.address } : { address: reference.address }, {
             symbol: hardware.symbol,
             volatile: true,
             explanation: indexed
                 ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access. The final address is unresolved.`
                 : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`,
-        };
+        });
     }
     const identity = indexed ? undefined : mappedRomOffset(reference.address, context, romSize);
-    return {
-        operandIndex,
-        ...(indexed ? { baseAddress: reference.address } : { address: reference.address }),
-        volatile: false,
-        ...(identity ? { romOffset: identity.fileOffset } : {}),
+    return Object.assign({}, { operandIndex }, indexed ? { baseAddress: reference.address } : { address: reference.address }, Object.assign({}, { volatile: false }, identity ? { romOffset: identity.fileOffset } : {}, {
         explanation: mappedAddressExplanation(indexed, identity),
-    };
+    }));
 });
 const knownBoolean = (value) => value.kind === "known" && (value.value === 0 || value.value === 1)
     ? value.value === 1
@@ -197,12 +187,12 @@ const recordsFor = (result, runEvidence) => [
         mnemonic: node.mnemonic,
         mode: node.mode,
         context: node.context,
-        incomingState: node.incomingState,
-        outgoingState: node.outgoingState,
-        effectiveAddresses: node.effectiveAddresses,
+        incomingState: cpu65816StateRecord(node.incomingState),
+        outgoingState: cpu65816StateRecord(node.outgoingState),
+        effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
         entryPoint: node.entryPoint,
         evidencePath: node.evidencePath.map((id) => `static:${id}`),
-        evidence: [...new Set([...node.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...node.evidence, runEvidence])].toSorted(),
     })),
     ...result.edges.map((edge) => ({
         id: `static:${edge.id}`,
@@ -216,7 +206,7 @@ const recordsFor = (result, runEvidence) => [
         indirect: edge.indirect,
         ...(edge.override ? { override: edge.override } : {}),
         ...(edge.explanation ? { explanation: edge.explanation } : {}),
-        evidence: [...new Set([...edge.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...edge.evidence, runEvidence])].toSorted(),
     })),
     ...result.functions.map((fn) => ({
         id: `static:${fn.id}`,
@@ -225,7 +215,7 @@ const recordsFor = (result, runEvidence) => [
         address: fn.address,
         source: fn.source,
         evidencePath: fn.evidencePath.map((id) => `static:${id}`),
-        evidence: [...new Set([...fn.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...fn.evidence, runEvidence])].toSorted(),
     })),
     ...result.conflicts.map((conflict) => ({
         id: `static:${conflict.id}`,
@@ -235,7 +225,7 @@ const recordsFor = (result, runEvidence) => [
         conflictKind: conflict.kind,
         message: conflict.message,
         nodes: conflict.nodes.map((id) => `static:${id}`),
-        evidence: [...new Set([...conflict.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...conflict.evidence, runEvidence])].toSorted(),
     })),
     ...result.unresolved.map((flow) => ({
         id: `static:${flow.id}`,
@@ -245,16 +235,16 @@ const recordsFor = (result, runEvidence) => [
         flowKind: flow.kind,
         indirect: flow.indirect,
         reason: flow.reason,
-        evidence: [...new Set([...flow.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...flow.evidence, runEvidence])].toSorted(),
     })),
     {
         id: "static:65816:summary",
         kind: "summary",
         architecture: "snes.65816",
         status: result.status,
-        coverage: result.coverage,
+        coverage: coverageRecord(result.coverage),
         processedWorkItems: result.processedWorkItems,
-        incompleteReasons: result.incompleteReasons,
+        incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
         evidence: [runEvidence],
     },
 ];
@@ -266,7 +256,7 @@ const annotationsFor = (result, runEvidence) => {
         stateByOffset.set(node.fileOffset, previous ? joinCpu65816States(previous, node.incomingState) : node.incomingState);
     }
     for (const node of result.nodes) {
-        const evidence = [...new Set([...node.evidence, runEvidence])].sort();
+        const evidence = [...new Set([...node.evidence, runEvidence])].toSorted();
         const state = annotationState(stateByOffset.get(node.fileOffset) ?? node.incomingState);
         const opcodeId = `static:65816:opcode:${node.fileOffset.toString(16).padStart(6, "0")}`;
         const priorOpcode = output.get(opcodeId);
@@ -278,7 +268,7 @@ const annotationsFor = (result, runEvidence) => {
             classification: "opcode",
             architecture: "snes.65816",
             ...(Object.keys(state).length === 0 ? {} : { state }),
-            evidence: [...new Set([...(priorOpcode?.evidence ?? []), ...evidence])].sort(),
+            evidence: [...new Set([...(priorOpcode?.evidence ?? []), ...evidence])].toSorted(),
         });
         if (node.size > 1) {
             const operandId = `static:65816:operand:${node.fileOffset.toString(16).padStart(6, "0")}`;
@@ -290,11 +280,11 @@ const annotationsFor = (result, runEvidence) => {
                 end: node.fileOffset + node.size,
                 classification: "operand",
                 architecture: "snes.65816",
-                evidence: [...new Set([...(priorOperand?.evidence ?? []), ...evidence])].sort(),
+                evidence: [...new Set([...(priorOperand?.evidence ?? []), ...evidence])].toSorted(),
             });
         }
     }
-    return [...output.values()].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    return [...output.values()].toSorted((left, right) => left.start - right.start || left.id.localeCompare(right.id));
 };
 /**
  * Runs conservative 65816 CFG analysis over a headerless immutable ROM view.
@@ -378,10 +368,10 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
             // One location can accumulate many captures. Rank them without variadic arguments.
             rank: annotation.evidence.reduce((rank, id) => Math.max(rank, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]), 0),
         }))
-            .sort((left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id));
+            .toSorted((left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id));
         let state = base;
         const consumed = [];
-        const ranks = [...new Set(matching.map((entry) => entry.rank))].sort((a, b) => a - b);
+        const ranks = [...new Set(matching.map((entry) => entry.rank))].toSorted((a, b) => a - b);
         for (const rank of ranks) {
             const ranked = matching.filter((entry) => entry.rank === rank);
             const candidates = ranked
@@ -400,7 +390,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
                 }
             }
         }
-        return { state, evidence: [...new Set(consumed)].sort() };
+        return { state, evidence: [...new Set(consumed)].toSorted() };
     };
     const projectAddress = (addressSpace, address) => {
         if (addressSpace === SNES_CPU_ADDRESS_SPACE) {
@@ -436,7 +426,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
             address: entry.address,
             kind: entry.kind ?? "configured",
             state: applyCpu65816StateOverride(seeded.state, entry.state ?? {}),
-            evidence: [...new Set([...(entry.evidence ?? [evidenceId]), ...seeded.evidence])].sort(),
+            evidence: [...new Set([...(entry.evidence ?? [evidenceId]), ...seeded.evidence])].toSorted(),
         });
     }
     for (const label of options.labels ?? []) {
@@ -453,7 +443,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
             address,
             kind: "imported-label",
             state: seeded.state,
-            evidence: [...new Set([...label.evidence, ...seeded.evidence])].sort(),
+            evidence: [...new Set([...label.evidence, ...seeded.evidence])].toSorted(),
             detail: label.name,
         });
     }
@@ -471,7 +461,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
             address,
             kind: "manual",
             state: seeded.state,
-            evidence: [...new Set([...annotation.evidence, ...seeded.evidence])].sort(),
+            evidence: [...new Set([...annotation.evidence, ...seeded.evidence])].toSorted(),
         });
     }
     for (const targetSet of options.targetSets ?? []) {
@@ -482,14 +472,14 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
                 address,
                 kind: "target-set",
                 state: seeded.state,
-                evidence: [...new Set([...targetSet.evidence, ...seeded.evidence])].sort(),
+                evidence: [...new Set([...targetSet.evidence, ...seeded.evidence])].toSorted(),
             });
         }
     }
     const targetOverrides = (options.targetOverrides ?? []).map((override) => ({
         id: override.id,
         address: override.address,
-        targets: [...override.targets].sort((left, right) => left - right),
+        targets: [...override.targets].toSorted((left, right) => left - right),
         evidence: override.evidence,
     }));
     const interruptTargetsFor = (instruction, state) => {
@@ -588,7 +578,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
         ...result,
         records: recordsFor(result, runEvidence),
         annotations: annotationsFor(result, runEvidence),
-        evidenceRecords: [...evidenceRecords.values()].sort((left, right) => left.id.localeCompare(right.id)),
+        evidenceRecords: [...evidenceRecords.values()].toSorted((left, right) => left.id.localeCompare(right.id)),
     };
 };
 //# sourceMappingURL=65816-analysis.js.map

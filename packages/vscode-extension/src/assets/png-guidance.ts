@@ -26,6 +26,19 @@ export interface PngGuidance {
 
 const hash = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
+function errorCode(error: unknown): string | undefined {
+  return error instanceof Error && "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
+}
+
+/** The validator rejects incomplete sidecars; this only admits objects it can inspect. */
+function isFrameLayout(value: unknown): value is Parameters<typeof validateFrameLayout>[0] {
+  return (
+    typeof value === "object" && value !== null && "segments" in value && "paletteRefs" in value
+  );
+}
+
 /** Bound sidecar reads independently of the PNG's decoded-pixel budget. */
 async function read(file: string): Promise<Buffer> {
   const stat = await fs.lstat(file);
@@ -45,16 +58,16 @@ export async function readPngGuidance(
   try {
     bytes = await read(sidecar);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+    if (errorCode(error) === "ENOENT") {
       return undefined;
     }
     throw error;
   }
   const value: unknown = JSON.parse(bytes.toString("utf8"));
-  if (!value || typeof value !== "object" || !("segments" in value) || !("paletteRefs" in value)) {
+  if (!isFrameLayout(value)) {
     return undefined;
   }
-  const layout = validateFrameLayout(value as Parameters<typeof validateFrameLayout>[0], {
+  const layout = validateFrameLayout(value, {
     whole: true,
   });
   if (layout.width !== image.width || layout.height !== image.height) {

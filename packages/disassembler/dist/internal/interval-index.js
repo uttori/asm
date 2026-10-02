@@ -29,7 +29,7 @@ export class HalfOpenIntervalIndex {
         // Search order is deliberately separate from semantic order. InputIndex restores the latter.
         this.#entries = values
             .map((value, inputIndex) => ({ value, inputIndex }))
-            .sort((left, right) => left.value.start - right.value.start ||
+            .toSorted((left, right) => left.value.start - right.value.start ||
             left.value.end - right.value.end ||
             left.inputIndex - right.inputIndex);
         // prefixMaximumEnd[i] is the furthest end among entries 0..i. During a backward scan, a value
@@ -90,7 +90,7 @@ export class HalfOpenIntervalIndex {
         // Consumers historically observed project input order from Array.filter/find. Preserve it even
         // though the index scans in reverse start order.
         return matches
-            .sort((left, right) => left.inputIndex - right.inputIndex)
+            .toSorted((left, right) => left.inputIndex - right.inputIndex)
             .map(({ value }) => value);
     }
 }

@@ -83,6 +83,14 @@ export interface CliArguments {
   readonly help: boolean;
 }
 
+function isCliCommand(value: string): value is CliCommand {
+  return Object.hasOwn(commandOptions, value);
+}
+
+function isSnesMapper(value: string): value is SnesMapper {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
+
 /** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
 const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   assemble: [
@@ -182,8 +190,9 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   const pluginOptions: Record<string, Record<string, unknown>> = {};
   let command: CliCommand = "assemble";
   let startIndex = 0;
-  if (Object.hasOwn(commandOptions, argv[0] ?? "")) {
-    command = argv[0] as CliCommand;
+  const requestedCommand = argv[0];
+  if (requestedCommand !== undefined && isCliCommand(requestedCommand)) {
+    command = requestedCommand;
     startIndex = 1;
   }
   let configFile: string | undefined;
@@ -212,7 +221,9 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     inlineValue: string | undefined,
     index: number,
   ): [string, number] => {
-    const value = inlineValue ?? argv[index + 1];
+    const nextIndex = index + 1;
+    const nextArgument = nextIndex >= 0 && nextIndex < argv.length ? argv[nextIndex] : undefined;
+    const value = inlineValue ?? nextArgument;
     if (
       value === undefined ||
       value === "" ||
@@ -282,16 +293,19 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         includePaths.push(value);
         break;
       case "--mapper":
-        if (!SNES_MAPPERS.includes(value as SnesMapper)) {
+        if (!isSnesMapper(value)) {
           throw new Error(`--mapper must be one of: ${SNES_MAPPERS.join(", ")}.`);
         }
-        mapper = value as SnesMapper;
+        mapper = value;
         break;
       case "--header-size":
-        if (value !== "0" && value !== "512") {
+        if (value === "0") {
+          headerSize = 0;
+        } else if (value === "512") {
+          headerSize = 512;
+        } else {
           throw new Error("--header-size must be 0 or 512.");
         }
-        headerSize = Number(value) as 0 | 512;
         break;
       case "--dizraw":
         dizraw = value;
@@ -356,13 +370,13 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         break;
       case "--plugin-option": {
         const colon = value.indexOf(":");
-        const equals = value.indexOf("=", colon + 1);
-        if (colon <= 0 || equals <= colon + 1) {
+        const equalsAt = value.indexOf("=", colon + 1);
+        if (colon <= 0 || equalsAt <= colon + 1) {
           throw new Error("--plugin-option must use <plugin:key=value> syntax.");
         }
         const plugin = value.slice(0, colon);
-        const key = value.slice(colon + 1, equals);
-        const rawValue = value.slice(equals + 1);
+        const key = value.slice(colon + 1, equalsAt);
+        const rawValue = value.slice(equalsAt + 1);
         let optionValue: unknown = rawValue;
         // Accept JSON values while preserving unquoted strings as written.
         try {
@@ -371,7 +385,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
           // Non-JSON plugin options remain strings.
         }
         pluginOptions[plugin] = {
-          ...(pluginOptions[plugin] ?? {}),
+          ...pluginOptions[plugin],
           [key]: optionValue,
         };
         break;
@@ -434,6 +448,10 @@ const defaultOutputPath = (inputFile: string, extension: string): string => {
  * @param {unknown} error The error.
  * @returns {string} The formatted failure message.
  */
+function stringifyCaught(value: unknown): string | undefined {
+  return JSON.stringify(value);
+}
+
 const formatFailure = (error: unknown): string => {
   if (error instanceof PluginError) {
     const context = [
@@ -443,7 +461,7 @@ const formatFailure = (error: unknown): string => {
     ].filter(Boolean);
     return `${error.code}: ${error.message}${context.length > 0 ? ` (${context.join(", ")})` : ""}`;
   }
-  return error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");
+  return error instanceof Error ? error.message : (stringifyCaught(error) ?? "Unknown error");
 };
 
 /**
@@ -478,7 +496,7 @@ const createAnalysisProject = (parsed: CliArguments, cwd: string): number => {
     console.log(`Success: Analysis project written to '${outputDirectory}'.`);
     if (result.importReport) {
       console.log(
-        `Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`,
+        `Import: ${result.importReport.imported.metadataBytes} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`,
       );
     }
     return 0;
@@ -549,7 +567,7 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
       headerSize: manifest.rom.headerSize,
     });
     validateProjectRom(manifest, rom);
-    if (!SNES_MAPPERS.includes(manifest.mapping.mapper as SnesMapper)) {
+    if (!isSnesMapper(manifest.mapping.mapper)) {
       throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
     }
     const filename = path.resolve(cwd, parsed.instructionTrace);

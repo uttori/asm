@@ -192,29 +192,185 @@ async function candidateGeneration(
   return { commit, tree, ref, descriptor };
 }
 
-/** Validate target recipe selection without scanning the editable source for original asset values. */
-function generationRecipe(project: SourceProject): GenerationRecipe {
-  const recipe = readJson(
-    path.join(project.repository.root, ".uttori/generation-inputs.json"),
-  ) as GenerationRecipe;
+function sourceActionName(action: SourceAction): string {
+  return action;
+}
+
+function assertSourceLayout(value: unknown, romSha256: string): asserts value is SourceLayout {
   if (
-    !recipe ||
-    recipe.format !== "uttori-snes-generation-inputs" ||
-    recipe.version !== 1 ||
-    !project.configuration.sourceRoots.includes(recipe.sourceRoot) ||
-    !Array.isArray(recipe.recipes) ||
-    !Array.isArray(recipe.pristineAssets)
+    typeof value !== "object" ||
+    value === null ||
+    !("format" in value) ||
+    value.format !== "uttori-snes-layout" ||
+    !("version" in value) ||
+    value.version !== 1 ||
+    !("romSha256" in value) ||
+    value.romSha256 !== romSha256 ||
+    !("size" in value) ||
+    typeof value.size !== "number" ||
+    !Number.isSafeInteger(value.size) ||
+    value.size <= 0 ||
+    !("states" in value) ||
+    !isUnknownArray(value.states) ||
+    !("extents" in value) ||
+    !isUnknownArray(value.extents)
+  ) {
+    throw new Error("Invalid SNES source layout contract.");
+  }
+}
+
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSnesMapper(value: string): value is SnesMapper {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
+
+function isExpandableMapper(value: string): value is "lorom" | "hirom" {
+  return value === "lorom" || value === "hirom";
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((item): item is string => typeof item === "string");
+}
+
+function assertSourceMergePreview(value: unknown): asserts value is SourceMergePreview {
+  if (
+    !isRecord(value) ||
+    typeof value.head !== "string" ||
+    typeof value.sourceTree !== "string" ||
+    typeof value.candidate !== "string" ||
+    typeof value.base !== "string" ||
+    typeof value.resultTree !== "string" ||
+    !isStringArray(value.conflicts) ||
+    typeof value.messages !== "string" ||
+    (value.ref !== undefined && typeof value.ref !== "string")
+  ) {
+    throw new Error("Saved generation preview is incomplete. Prepare the generation again.");
+  }
+}
+
+const DIRECT_SOURCE_ACTIONS = [
+  "status",
+  "prepare",
+  "preview",
+  "apply",
+  "finish",
+  "abort",
+  "discard",
+  "clean",
+  "build",
+  "index",
+  "analyze",
+  "catalog",
+  "relocate",
+  "expand",
+  "import",
+] as const;
+
+type DirectSourceAction = (typeof DIRECT_SOURCE_ACTIONS)[number];
+
+function isDirectSourceAction(value: string): value is DirectSourceAction {
+  return DIRECT_SOURCE_ACTIONS.some((action) => action === value);
+}
+
+type AnalysisChange = NonNullable<Extract<SourceResearchRequest, { kind: "analysis" }>["change"]>;
+
+function requestedMapper(value: string | undefined): SnesMapper | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isSnesMapper(value)) {
+    throw new Error("Unsupported SNES mapper.");
+  }
+  return value;
+}
+
+function readAnalysisChange(file: string): AnalysisChange {
+  const value = readJson(file);
+  if (!isResearchAnalysisChange(value)) {
+    throw new Error("Choose an annotation or indirect-target research action.");
+  }
+  return value;
+}
+
+function isResearchAnalysisChange(value: unknown): value is AnalysisChange {
+  if (!isRecord(value) || typeof value.expectedDocumentSha256 !== "string") {
+    return false;
+  }
+  if (value.kind !== "put" && value.kind !== "remove") {
+    return false;
+  }
+  if (value.collection !== "annotations" && value.collection !== "analysis") {
+    return false;
+  }
+  if (value.kind === "remove") {
+    return typeof value.id === "string";
+  }
+  return (
+    typeof value.path === "string" &&
+    typeof value.reason === "string" &&
+    isRecord(value.value) &&
+    typeof value.value.id === "string"
+  );
+}
+
+function isPristineAsset(value: unknown): value is GenerationRecipe["pristineAssets"][number] {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "path" in value &&
+    typeof value.path === "string" &&
+    "sha256" in value &&
+    typeof value.sha256 === "string"
+  );
+}
+
+function assertGenerationRecipe(value: unknown): asserts value is GenerationRecipe {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("format" in value) ||
+    value.format !== "uttori-snes-generation-inputs" ||
+    !("version" in value) ||
+    value.version !== 1 ||
+    !("sourceRoot" in value) ||
+    typeof value.sourceRoot !== "string" ||
+    !("recipes" in value) ||
+    !isUnknownArray(value.recipes) ||
+    !("pristineAssets" in value) ||
+    !isUnknownArray(value.pristineAssets)
   ) {
     throw new Error("Invalid SNES generation input contract.");
   }
-  for (const file of recipe.recipes) {
+  for (const file of value.recipes) {
     if (typeof file !== "string") {
       throw new Error("Generation recipe paths must be strings.");
     }
+  }
+  for (const asset of value.pristineAssets) {
+    if (!isPristineAsset(asset)) {
+      throw new Error("Invalid SNES generation input contract.");
+    }
+  }
+}
+
+/** Validate target recipe selection without scanning the editable source for original asset values. */
+function generationRecipe(project: SourceProject): GenerationRecipe {
+  const recipe = readJson(path.join(project.repository.root, ".uttori/generation-inputs.json"));
+  assertGenerationRecipe(recipe);
+  if (!project.configuration.sourceRoots.includes(recipe.sourceRoot)) {
+    throw new Error("Invalid SNES generation input contract.");
+  }
+  for (const file of recipe.recipes) {
     assertSourcePath(file);
   }
-  const assets = recipe.pristineAssets as GenerationRecipe["pristineAssets"];
-  for (const asset of assets) {
+  for (const asset of recipe.pristineAssets) {
     assertSourcePath(asset.path);
     if (!/^[\da-f]{64}$/.test(asset.sha256)) {
       throw new Error("Pristine assets require original content hashes.");
@@ -229,7 +385,9 @@ function generationRecipe(project: SourceProject): GenerationRecipe {
       throw new Error("Pristine ROM assets require a bounded, half-open original file range.");
     }
   }
-  if (new Set(assets.map((asset) => asset.path)).size !== assets.length) {
+  if (
+    new Set(recipe.pristineAssets.map((asset) => asset.path)).size !== recipe.pristineAssets.length
+  ) {
     throw new Error("Repeated pristine asset declaration.");
   }
   return recipe;
@@ -284,11 +442,11 @@ async function generationInputs(project: SourceProject) {
   const loaded = await loadSourceEnvironment(configFile);
   let toolchain;
   try {
-    toolchain = sourceToolchain([
-      ...loaded.configuration.plugins
+    toolchain = sourceToolchain(
+      loaded.configuration.plugins
         .filter((plugin) => !plugin.bundled)
         .map((plugin) => plugin.resolvedModule),
-    ]);
+    );
   } finally {
     await loaded.dispose();
   }
@@ -347,42 +505,33 @@ async function withSourceBuild<T>(
   run: (options: BuildSnesSourceOptions, layout: SourceLayout) => T,
 ): Promise<T> {
   const root = project.repository.root;
-  const layout = readJson(path.join(root, project.configuration.layout)) as SourceLayout;
-  if (
-    !layout ||
-    layout.format !== "uttori-snes-layout" ||
-    layout.version !== 1 ||
-    layout.romSha256 !== project.configuration.romSha256 ||
-    !Number.isSafeInteger(layout.size) ||
-    layout.size <= 0 ||
-    !Array.isArray(layout.states) ||
-    !Array.isArray(layout.extents)
-  ) {
-    throw new Error("Invalid SNES source layout contract.");
-  }
+  const layout = readJson(path.join(root, project.configuration.layout));
+  assertSourceLayout(layout, project.configuration.romSha256);
   const configFile = path.join(root, project.configuration.buildConfig);
   const configurationBytes = fs.readFileSync(configFile);
-  const configuration = JSON.parse(configurationBytes.toString("utf8")) as {
-    entryPoints?: string[];
-    baseImage?: string;
-  };
-  if (configuration.entryPoints?.length !== 1 || configuration.baseImage) {
+  const configuration: unknown = JSON.parse(configurationBytes.toString("utf8"));
+  const entryPoints =
+    isRecord(configuration) && isStringArray(configuration.entryPoints)
+      ? configuration.entryPoints
+      : undefined;
+  if (
+    !entryPoints ||
+    entryPoints.length !== 1 ||
+    !isRecord(configuration) ||
+    configuration.baseImage
+  ) {
     throw new Error(
       "Source projects require one complete ROM entry point and no base-image patch mode.",
     );
   }
   const entrySource = path
-    .relative(root, path.resolve(path.dirname(configFile), configuration.entryPoints[0]))
+    .relative(root, path.resolve(path.dirname(configFile), entryPoints[0]))
     .split(path.sep)
     .join("/");
   assertSourcePath(entrySource);
-  const raw = readJson(path.join(path.dirname(configFile), "source-raw.json")) as {
-    format: string;
-    version: number;
-    romSha256: string;
-    blockSize: number;
-  };
+  const raw = readJson(path.join(path.dirname(configFile), "source-raw.json"));
   if (
+    !isRecord(raw) ||
     raw.format !== "uttori-source-raw" ||
     raw.version !== 1 ||
     raw.blockSize !== 0x1000 ||
@@ -411,11 +560,11 @@ async function withSourceBuild<T>(
       const manifest = store.manifest();
       if (
         manifest.rom.contentSha256 !== project.configuration.romSha256 ||
-        !SNES_MAPPERS.includes(manifest.mapping.mapper as SnesMapper)
+        !isSnesMapper(manifest.mapping.mapper)
       ) {
         throw new Error("Source evidence has an incompatible ROM or mapper identity.");
       }
-      placementMapper = manifest.mapping.mapper as SnesMapper;
+      placementMapper = manifest.mapping.mapper;
       if (layout.expansion && layout.expansion.mapper !== placementMapper) {
         throw new Error("Expansion mapper must match the original evidence identity.");
       }
@@ -436,11 +585,11 @@ async function withSourceBuild<T>(
         };
   const loaded = await loadSourceEnvironment(configFile);
   try {
-    const toolchain = sourceToolchain([
-      ...loaded.configuration.plugins
+    const toolchain = sourceToolchain(
+      loaded.configuration.plugins
         .filter((plugin) => !plugin.bundled)
         .map((plugin) => plugin.resolvedModule),
-    ]);
+    );
     const result = run(
       {
         root,
@@ -570,11 +719,11 @@ export async function executeSourceOperation(operation: SourceOperation): Promis
         const manifest = store.manifest();
         if (
           manifest.rom.contentSha256 !== project.configuration.romSha256 ||
-          !["lorom", "hirom"].includes(manifest.mapping.mapper)
+          !isExpandableMapper(manifest.mapping.mapper)
         ) {
           throw new Error("Expansion requires matching ordinary LoROM or HiROM evidence.");
         }
-        mapper = manifest.mapping.mapper as "lorom" | "hirom";
+        mapper = manifest.mapping.mapper;
       } finally {
         store.close();
       }
@@ -592,14 +741,15 @@ export async function executeSourceOperation(operation: SourceOperation): Promis
         logicalAddress: (offset) => snesRomAddressSpace.fromOutputOffset(offset, context),
       });
       const edits = [...result.edits];
-      const addJsonEdit = <T>(name: string, change: (value: T) => unknown) => {
+      const addJsonEdit = (name: string, change: (value: unknown) => unknown) => {
         const before = fs.readFileSync(path.join(repository.root, name), "utf8");
-        const after = JSON.stringify(change(JSON.parse(before) as T), null, 2) + "\n";
+        const parsed: unknown = JSON.parse(before);
+        const after = JSON.stringify(change(parsed), null, 2) + "\n";
         if (before !== after) {
           edits.push({ path: name, beforeSha256: sourceContentHash(before), before, after });
         }
       };
-      addJsonEdit(project.configuration.layout, (current: SourceLayout) => {
+      addJsonEdit(project.configuration.layout, (current) => {
         if (canonicalJson(current) !== canonicalJson(layout)) {
           throw new Error("Layout changed during expansion inspection.");
         }
@@ -610,21 +760,24 @@ export async function executeSourceOperation(operation: SourceOperation): Promis
           freeSpace: result.freeSpace,
         };
       });
-      addJsonEdit(
-        project.configuration.buildConfig,
-        (configuration: { plugins?: { module: string; options?: Record<string, unknown> }[] }) => {
-          const plugins = configuration.plugins?.filter(
-            (plugin) => plugin.module === "@uttori/asm-plugin-snes",
+      addJsonEdit(project.configuration.buildConfig, (configuration) => {
+        const plugins =
+          isRecord(configuration) && Array.isArray(configuration.plugins)
+            ? configuration.plugins.filter(
+                (plugin): plugin is { module: string; options?: Record<string, unknown> } =>
+                  isRecord(plugin) &&
+                  plugin.module === "@uttori/asm-plugin-snes" &&
+                  (plugin.options === undefined || isRecord(plugin.options)),
+              )
+            : undefined;
+        if (plugins?.length !== 1) {
+          throw new Error(
+            "Expansion needs one explicit SNES plugin configuration for checksum finalization.",
           );
-          if (plugins?.length !== 1) {
-            throw new Error(
-              "Expansion needs one explicit SNES plugin configuration for checksum finalization.",
-            );
-          }
-          plugins[0].options = { ...plugins[0].options, checksumEnabled: true };
-          return configuration;
-        },
-      );
+        }
+        plugins[0].options = { ...plugins[0].options, checksumEnabled: true };
+        return configuration;
+      });
       return { ...result, edits };
     });
   }
@@ -833,18 +986,17 @@ export async function executeSourceOperation(operation: SourceOperation): Promis
     if (canonicalJson(current.inputs) !== canonicalJson(candidate.descriptor.inputs)) {
       throw new Error("Generation inputs changed since preparation. Prepare and preview again.");
     }
-    const preview = readJson(
-      path.join(repository.stateDirectory, "preview.json"),
-    ) as SourceMergePreview;
+    const preview = readJson(path.join(repository.stateDirectory, "preview.json"));
+    assertSourceMergePreview(preview);
     return applySourceGeneration(repository, candidate, preview);
   }
-  if (operation.action === "finish") {
-    return finishSourceGeneration(repository, {
-      message: operation.message ?? "Integrate regenerated source",
-      validate: async () => (await buildProject(project, operation.signal)).verification,
-    });
+  if (sourceActionName(operation.action) !== "finish") {
+    throw new Error(`Unknown source action: ${sourceActionName(operation.action)}`);
   }
-  throw new Error(`Unknown source action: ${String(operation.action)}`);
+  return finishSourceGeneration(repository, {
+    message: operation.message ?? "Integrate regenerated source",
+    validate: async () => (await buildProject(project, operation.signal)).verification,
+  });
 }
 
 export const sourceUsage = `uttori-asm source <status|prepare|build|index|analyze|catalog|finish|abort|clean> <project>
@@ -872,12 +1024,7 @@ export async function runSourceCli(argv: readonly string[]): Promise<number> {
       if (candidate === "--analysis" && argv.length <= 4) {
         research = {
           kind: "analysis",
-          change: argv[3]
-            ? (readJson(path.resolve(argv[3])) as Extract<
-                SourceResearchRequest,
-                { kind: "analysis" }
-              >["change"])
-            : undefined,
+          change: argv[3] ? readAnalysisChange(path.resolve(argv[3])) : undefined,
         };
       } else if (argv.length > 2) {
         const change = argv[3];
@@ -926,7 +1073,7 @@ export async function runSourceCli(argv: readonly string[]): Promise<number> {
         action,
         directory,
         rom: candidate,
-        mapper: flags.get("--mapper") as SnesMapper | undefined,
+        mapper: requestedMapper(flags.get("--mapper")),
         dizRawFile: flags.get("--dizraw"),
       });
       console.log(JSON.stringify(result, null, 2));
@@ -941,23 +1088,7 @@ export async function runSourceCli(argv: readonly string[]): Promise<number> {
   if (
     !action ||
     !directory ||
-    ![
-      "status",
-      "prepare",
-      "preview",
-      "apply",
-      "finish",
-      "abort",
-      "discard",
-      "clean",
-      "build",
-      "index",
-      "import",
-      "analyze",
-      "catalog",
-      "relocate",
-      "expand",
-    ].includes(action) ||
+    !isDirectSourceAction(action) ||
     argv.length !==
       (["preview", "apply", "discard", "import", "relocate", "expand"].includes(action) ? 3 : 2)
   ) {
@@ -966,7 +1097,7 @@ export async function runSourceCli(argv: readonly string[]): Promise<number> {
   }
   try {
     const result = await executeSourceOperation({
-      action: action as SourceAction,
+      action,
       directory,
       candidate,
       capture: action === "import" ? candidate : undefined,

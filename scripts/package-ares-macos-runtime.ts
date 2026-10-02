@@ -45,16 +45,16 @@ const parseArguments = (arguments_: readonly string[]): Options => {
       process.stdout.write(usage);
       process.exit(0);
     }
-    const name = names.get(argument ?? "");
+    const name = names.get(argument);
     if (!name) {
-      throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
+      throw new Error(`Unknown argument '${argument}'.\n${usage}`);
     }
     if (seen.has(name)) {
-      throw new Error(`Duplicate argument '${String(argument)}'.`);
+      throw new Error(`Duplicate argument '${argument}'.`);
     }
     const value = arguments_[++index];
     if (!value || value.startsWith("--")) {
-      throw new Error(`Argument '${String(argument)}' requires a path.`);
+      throw new Error(`Argument '${argument}' requires a path.`);
     }
     parsed[name] = path.resolve(value);
     seen.add(name);
@@ -142,7 +142,7 @@ const relativeFiles = [
   "patches/headless-series.patch",
   ...manifest.resources.map(({ path: resourcePath }) => resourcePath),
 ];
-const uniqueFiles = [...new Set(relativeFiles)].sort();
+const uniqueFiles = [...new Set(relativeFiles)].toSorted();
 if (uniqueFiles.length !== relativeFiles.length) {
   throw new Error("Runtime archive allowlist contains duplicate paths.");
 }

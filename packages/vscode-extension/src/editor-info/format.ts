@@ -146,7 +146,7 @@ const clip = (value: string, maximum: number): string =>
  * @returns {readonly EditorLocation[]} File locations followed by sorted logical locations.
  */
 export const orderedLocations = (info: LineInformation): readonly EditorLocation[] =>
-  [...info.locations].sort(
+  [...info.locations].toSorted(
     (a, b) =>
       Number(b.file) - Number(a.file) ||
       a.addressSpace.localeCompare(b.addressSpace) ||
@@ -160,6 +160,18 @@ const locationLabel = (location: EditorLocation, locations: readonly EditorLocat
   const address = informationHex(location.address);
   return spaces.size > 1 ? `${location.addressSpace}:${address}` : address;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Top-level undefined, functions, and symbols have no JSON text. */
+function jsonText(value: unknown): string | undefined {
+  if (value === undefined || typeof value === "function" || typeof value === "symbol") {
+    return undefined;
+  }
+  return JSON.stringify(value);
+}
 
 /**
  * Render analysis values for overlays, preserving the distinction between absent (∅) and unknown
@@ -178,12 +190,11 @@ const stateValue = (
   if (!present) {
     return "∅";
   }
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const record = value as Readonly<Record<string, unknown>>;
-    if (record.kind === "known" && "value" in record) {
-      return stateValue(record.value, true, includeStructures);
+  if (isRecord(value)) {
+    if (value.kind === "known" && "value" in value) {
+      return stateValue(value.value, true, includeStructures);
     }
-    if (record.kind === "unknown") {
+    if (value.kind === "unknown") {
       return "?";
     }
   }
@@ -199,7 +210,7 @@ const stateValue = (
   if (!includeStructures) {
     return undefined;
   }
-  const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
+  const serialized = jsonText(canonicalValue(value)) ?? String(value);
   return serialized.length > 60 ? `${serialized.slice(0, 57)}…` : serialized;
 };
 
@@ -388,7 +399,7 @@ const transitionText = (transition: InstructionStateTransitionAnnotation): strin
  */
 const stateText = (observation: InstructionStateObservationAnnotation): string => {
   const fields = Object.entries(observation.state)
-    .sort(([left], [right]) => left.localeCompare(right))
+    .toSorted(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => `${name}=${stateValue(value, true, true)}`)
     .join(",");
   return `${observation.source} state ${fields || "∅"}${observation.count === undefined ? "" : ` ×${observation.count}`}`;
@@ -440,7 +451,7 @@ export const formatInstructionAnnotationSummary = (
   if (annotation.detailsLimited) {
     parts.push("details limited");
   }
-  const coverage = annotation.runtimeCoverage.map(({ coverage }) => coverage);
+  const coverage = annotation.runtimeCoverage.map(({ coverage: kind }) => kind);
   if (coverage.length > 0) {
     parts.push(`coverage ${coverage.join("/")}`);
   }

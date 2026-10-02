@@ -383,10 +383,12 @@ test("separate captures accumulate code and compatible CPU-state changes do not 
             addresses: [0x808000 + offset, 0x808002 + offset],
             droppedEvents: 0,
             active: false,
-            details: [Array.from(bytes.subarray(offset, offset + 2)), [0xdb]].map((bytes) => ({
-              bytes,
-              state: { e: 0, p, db: 0, d: 0 },
-            })),
+            details: [Array.from(bytes.subarray(offset, offset + 2)), [0xdb]].map(
+              (instructionBytes) => ({
+                bytes: instructionBytes,
+                state: { e: 0, p, db: 0, d: 0 },
+              }),
+            ),
           },
         ],
       },

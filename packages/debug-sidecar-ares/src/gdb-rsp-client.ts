@@ -103,7 +103,8 @@ const unescapePayload = (payload: Buffer): string => {
       result[length++] = byte;
       continue;
     }
-    const escaped = payload[++index];
+    ++index;
+    const escaped = index < payload.length ? payload[index] : undefined;
     if (escaped === undefined) {throw new Error("RSP payload ends inside an escape sequence.");}
     result[length++] = escaped ^ 0x20;
   }

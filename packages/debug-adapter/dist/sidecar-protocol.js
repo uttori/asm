@@ -44,6 +44,7 @@ export const DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
     maxQueuedBytes: 8_388_608,
 });
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+const listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
 const positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 const nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const sessionPattern = /^[\w-]{32,128}$/;
@@ -62,31 +63,31 @@ export function assertDebugSidecarSessionToken(value) {
         throw new Error("Sidecar session token must be 32-128 base64url characters.");
     }
 }
-const assertRequestBounds = (message, limits) => {
-    const args = message.arguments ?? {};
-    if (!isRecord(args)) {
+const assertRequestBounds = (command, args, limits) => {
+    const record = args ?? {};
+    if (!isRecord(record)) {
         throw new Error("Sidecar request arguments must be an object.");
     }
-    if (message.command === "readMemory") {
-        const count = args.count;
+    if (command === "readMemory") {
+        const count = record.count;
         if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
             throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
         }
     }
-    if (message.command === "disassemble") {
-        const count = args.count;
+    if (command === "disassemble") {
+        const count = record.count;
         if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
             throw new Error(`Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`);
         }
     }
-    if (message.command === "setBreakpoints") {
-        const breakpoints = args.breakpoints;
+    if (command === "setBreakpoints") {
+        const breakpoints = record.breakpoints;
         if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
             throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
         }
     }
-    if (message.command === "readTrace") {
-        const maxEvents = args.maxEvents;
+    if (command === "readTrace") {
+        const maxEvents = record.maxEvents;
         if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
             throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
         }
@@ -113,10 +114,10 @@ export function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_
         throw new Error("Sidecar message sequence must be a positive safe integer.");
     }
     if (value.type === "request") {
-        if (!DEBUG_SIDECAR_COMMANDS.includes(value.command)) {
+        if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
             throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
         }
-        assertRequestBounds(value, limits);
+        assertRequestBounds(value.command, value.arguments, limits);
         return;
     }
     if (value.type === "response") {
@@ -132,7 +133,7 @@ export function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_
         return;
     }
     if (value.type === "event") {
-        if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
+        if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
             throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
         }
         if (!isRecord(value.body)) {
@@ -142,9 +143,19 @@ export function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_
     }
     throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
+const LIMIT_NAMES = [
+    "maxFrameBytes",
+    "maxBufferedBytes",
+    "maxMemoryReadBytes",
+    "maxDisassemblyInstructions",
+    "maxBreakpoints",
+    "maxTraceBatchEvents",
+    "maxQueuedMessages",
+    "maxQueuedBytes",
+];
 const validateLimits = (limits) => {
-    for (const [name, value] of Object.entries(limits)) {
-        if (!positiveInteger(value)) {
+    for (const name of LIMIT_NAMES) {
+        if (!positiveInteger(limits[name])) {
             throw new Error(`${name} must be a positive safe integer.`);
         }
     }

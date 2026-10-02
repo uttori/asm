@@ -81,18 +81,20 @@ export function parseRequestedFixtures(
   if (!raw || raw.trim() === "" || raw.trim() === "all") {
     return [...EXTERNAL_FIXTURE_IDS];
   }
-  const ids = raw
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  for (const id of ids) {
+  const ids: ExternalFixtureId[] = [];
+  for (const value of raw.split(",")) {
+    const id = value.trim();
+    if (!id) {
+      continue;
+    }
     if (!isExternalFixtureId(id)) {
       throw new Error(
         `Unknown external fixture '${id}'. Available: ${EXTERNAL_FIXTURE_IDS.join(", ")}.`,
       );
     }
+    ids.push(id);
   }
-  return ids as ExternalFixtureId[];
+  return ids;
 }
 
 export function resolveProjectPath(...parts: string[]): string {
@@ -342,14 +344,22 @@ export function prepareExternalFixture(
     if (!rom) {
       throw new Error("SMRPG ROM is required before extraction.");
     }
-    extractSmrpgAssets({ rom: localRomPath(spec) as string, destRoot: workspace });
+    const smrpgRom = localRomPath(spec);
+    if (!smrpgRom) {
+      throw new Error("SMRPG ROM is required before extraction.");
+    }
+    extractSmrpgAssets({ rom: smrpgRom, destRoot: workspace });
   }
 
   if (spec.id === "tmnt") {
     if (!rom) {
       throw new Error("TMNT ROM is required before extraction.");
     }
-    extractTmntAssets({ rom: localRomPath(spec) as string, destRoot: workspace });
+    const tmntRom = localRomPath(spec);
+    if (!tmntRom) {
+      throw new Error("TMNT ROM is required before extraction.");
+    }
+    extractTmntAssets({ rom: tmntRom, destRoot: workspace });
   }
 
   if (spec.id === "zelda") {

@@ -92,14 +92,11 @@ export class CommandLoweringService {
                 endLine: node.endLine,
             };
         }
-        if (node.type !== "if") {
-            throw new Error(`Unknown executable node type: ${String(node.type)}`);
-        }
-        const conditionalNode = node;
+        assertConditionalNode(node);
         return {
             kind: "conditional",
-            header: conditionalNode.header,
-            branches: conditionalNode.branches.map((branch) => ({
+            header: node.header,
+            branches: node.branches.map((branch) => ({
                 kind: branch.kind,
                 header: branch.header,
                 conditionNode: branch.conditionNode,
@@ -107,8 +104,8 @@ export class CommandLoweringService {
                 startLine: branch.startLine,
                 endLine: branch.endLine,
             })),
-            startLine: conditionalNode.startLine,
-            endLine: conditionalNode.endLine,
+            startLine: node.startLine,
+            endLine: node.endLine,
         };
     }
     /**
@@ -179,6 +176,11 @@ export class CommandLoweringService {
             return "registeredPreprocessDirective";
         }
         return command.kind === "opcodeCandidate" ? undefined : "unknown";
+    }
+}
+function assertConditionalNode(node) {
+    if (node.type !== "if") {
+        throw new Error(`Unknown executable node type: ${node.type}`);
     }
 }
 //# sourceMappingURL=command-lowering-service.js.map

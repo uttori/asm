@@ -154,7 +154,7 @@ test("shared facts and virtual state pairs keep exact per-capture counts and det
     t.deepEqual(
       [...store.runtimeRecordsByKinds(["runtime-instruction"])]
         .map((r) => r.count)
-        .sort((a, b) => a - b),
+        .toSorted((a, b) => a - b),
       [1, 1, 1, 1, 1, 9],
     );
     db.exec("DELETE FROM runtime WHERE kind='runtime-cpu-state'");
@@ -184,7 +184,7 @@ test("file imports retain receipts and exact counts without copying the source",
   t.is(again.storage.after.captures, 1);
   t.is(again.observedEvents, 3);
   t.is(fs.readFileSync(file, "utf8"), contents);
-  t.deepEqual(fs.readdirSync(directory).sort(), ["analysis.json", "analysis.sqlite"]);
+  t.deepEqual(fs.readdirSync(directory).toSorted(), ["analysis.json", "analysis.sqlite"]);
   // Receipts and facts remain useful after the caller removes the original recording.
   fs.unlinkSync(file);
   const store = openAnalysisProjectStore(directory);

@@ -125,9 +125,9 @@ function main(): void {
   );
 }
 
+const entryScript = process.argv.length > 1 ? process.argv[1] : undefined;
 const launchedDirectly =
-  process.argv[1] !== undefined &&
-  pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+  entryScript !== undefined && pathToFileURL(path.resolve(entryScript)).href === import.meta.url;
 if (launchedDirectly) {
   main();
 }

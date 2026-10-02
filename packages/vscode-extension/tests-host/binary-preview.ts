@@ -12,6 +12,27 @@ import type { PngDocument } from "../src/assets/png-document.js";
 import { PngEditor } from "../src/assets/png-editor.js";
 import { readPngGuidance } from "../src/assets/png-guidance.js";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isOpaqueDirty = () =>
+  vscode.window.tabGroups.all.some((group) =>
+    group.tabs.some(
+      (tab) =>
+        tab.isDirty &&
+        tab.input instanceof vscode.TabInputCustom &&
+        tab.input.viewType === "uttori.pngSmoke",
+    ),
+  );
+
+const isIndexedImage = (value: unknown): value is IndexedImage =>
+  isRecord(value) &&
+  value.kind === "indexed-image" &&
+  typeof value.width === "number" &&
+  typeof value.height === "number" &&
+  value.indexes instanceof Uint8Array &&
+  Array.isArray(value.palette);
+
 /** Verify production editor/controller wiring through actual native custom-document lifecycle. */
 export async function runBinaryPreviewSmoke(
   folder: vscode.WorkspaceFolder,
@@ -21,8 +42,11 @@ export async function runBinaryPreviewSmoke(
   const relative = "disassembly/assets/images/enemy/rabite-frames.png";
   const uri = vscode.Uri.joinPath(folder.uri, relative);
   const before = await fs.readFile(uri.fsPath);
-  const original = pngImporter.import({ bytes: before, mediaType: "image/png" })
-    .value as IndexedImage;
+  const imported = pngImporter.import({ bytes: before, mediaType: "image/png" });
+  if (!isIndexedImage(imported.value)) {
+    assert.fail("PNG import did not produce an indexed image.");
+  }
+  const original = imported.value;
   const region = (await readPngGuidance(uri.fsPath, original))!.regions[0];
   const pixel = region.y * original.width + region.x;
   const slot =
@@ -50,13 +74,13 @@ export async function runBinaryPreviewSmoke(
     assert.ok(await inspect(), "Production PNG document did not open.");
     const prepared =
       await vscode.commands.executeCommand<PreparedSnesGeneration>("asm.source.prepare");
-    candidate = prepared?.generation.commit;
+    candidate = prepared.generation.commit;
     assert.ok(candidate);
     const draft = await inspect(slot);
     assert.equal(draft?.dirty, true);
     assert.notDeepEqual(Buffer.from(draft!.bytes), before);
     const preview = await vscode.commands.executeCommand<SourceMergePreview>("asm.source.preview");
-    assert.ok(preview?.sourceTree);
+    assert.ok(preview.sourceTree);
     assert.deepEqual(
       (await sourceGit(root, ["show", `${preview.sourceTree}:${relative}`])).stdout,
       Buffer.from(draft!.bytes),
@@ -120,15 +144,7 @@ export async function runBinaryPreviewSmoke(
         index: slot,
         pixels: [pixel],
       });
-      const isOpaqueDirty = () =>
-        vscode.window.tabGroups.all.some((group) =>
-          group.tabs.some(
-            (tab) =>
-              tab.isDirty &&
-              tab.input instanceof vscode.TabInputCustom &&
-              tab.input.viewType === "uttori.pngSmoke",
-          ),
-        );
+
       const dirtyDeadline = Date.now() + 5000;
       while (!isOpaqueDirty() && Date.now() < dirtyDeadline) {
         await new Promise((resolve) => setTimeout(resolve, 25));

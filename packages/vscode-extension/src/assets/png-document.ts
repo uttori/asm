@@ -16,6 +16,10 @@ import {
 
 const hash = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** A stroke holds native index replacements; indexes are row-major positions, never RGB matches. */
 export interface PixelStroke {
   readonly version: number;
@@ -80,12 +84,9 @@ export class PngDocument implements CustomDocument {
       if (backup.length > 26 * 1024 * 1024) {
         throw new Error("PNG backup exceeds its size budget.");
       }
-      const value = JSON.parse(Buffer.from(backup).toString("utf8")) as Record<
-        string,
-        unknown
-      > | null;
+      const value: unknown = JSON.parse(Buffer.from(backup).toString("utf8"));
       if (
-        !value ||
+        !isRecord(value) ||
         value.version !== 1 ||
         value.uri !== uri.toString() ||
         typeof value.bytes !== "string" ||

@@ -233,7 +233,7 @@ test("context request validation rejects path traversal inputs, extra fields and
       action: "prepare",
       directory: "relative",
       ...metadata,
-    } as never),
+    }),
   );
   for (const label of ["", "  ", "\0", "😀".repeat(65)]) {
     t.throws(() =>
@@ -241,7 +241,7 @@ test("context request validation rejects path traversal inputs, extra fields and
     );
   }
   t.throws(() =>
-    validateCaptureRequest({ operation: "context", action: "status", directory: "/tmp" } as never),
+    validateCaptureRequest({ operation: "context", action: "status", directory: "/tmp" }),
   );
   t.notThrows(() =>
     validateCaptureRequest({

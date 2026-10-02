@@ -30,9 +30,9 @@ export interface ResearchSnapshot {
     readonly decisions: readonly ResearchDecision[];
 }
 /** Recheck identities at the storage boundary, including snapshots supplied by JavaScript callers. */
-export declare function validateResearchSnapshot(snapshot: ResearchSnapshot): void;
+export declare function validateResearchSnapshot(snapshot: ResearchSnapshot | null | undefined): void;
 /** Reject unsupported record kinds before the generic project validator accesses their fields. */
-export declare function validateResearchDecision(decision: ResearchDecision): void;
+export declare function validateResearchDecision(decision: unknown): asserts decision is ResearchDecision;
 /** Parse a versioned authoring document; unknown top-level fields are rejected to catch misspellings. */
 export declare function parseResearchDocument(value: unknown): ResearchDocument;
 /** Read bounded JSON inputs only from explicitly selected roots, preserving file locations for F2/navigation. */

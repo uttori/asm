@@ -2,10 +2,31 @@ import { parentPort, workerData } from "node:worker_threads";
 
 import { pngImporter, rewriteIndexedPng } from "@uttori/asm-assets/image";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Worker data is supplied by the extension host and must already be decoded bytes. */
+function isWorkerBytes(value: unknown): value is { bytes: Uint8Array; indexes?: Uint8Array } {
+  return (
+    isRecord(value) &&
+    value.bytes instanceof Uint8Array &&
+    (value.indexes === undefined || value.indexes instanceof Uint8Array)
+  );
+}
+
 // Untrusted containers are decoded away from the extension host under the asset
 // library's one-megapixel/16 MiB limits and the host's worker memory/time budgets.
 try {
-  const { bytes, indexes } = workerData as { bytes: Uint8Array; indexes?: Uint8Array };
+  const data: unknown = workerData;
+  if (!isWorkerBytes(data)) {
+    throw new Error(
+      isRecord(data) && data.indexes !== undefined
+        ? "PNG worker indexes must be bytes."
+        : "PNG worker requires image bytes.",
+    );
+  }
+  const { bytes, indexes } = data;
   if (indexes) {
     // Unsafe ancillary chunks are intentionally not copied. Their producer must
     // revalidate/reencode them after a pixel edit, as it does for external PNG tools.

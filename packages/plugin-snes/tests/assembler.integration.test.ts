@@ -1,10 +1,10 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { test } from "../../../tests/ava-helper.js";
 
+import { test } from "../../../tests/ava-helper.js";
 import { Assembler } from "../../../tests/test-assembler.js";
 
 interface FixtureComparison {
@@ -104,7 +104,7 @@ const discoverTopLevelFixtures = (): string[] =>
   fs
     .readdirSync(FIXTURES_DIR)
     .filter((fileName) => fileName.endsWith(".asm"))
-    .sort((a, b) => a.localeCompare(b))
+    .toSorted((a, b) => a.localeCompare(b))
     .map((fileName) => path.basename(fileName, ".asm"));
 
 const compareFixture = (fixtureName: string): FixtureComparison => {
@@ -127,9 +127,12 @@ const compareFixture = (fixtureName: string): FixtureComparison => {
   }
 
   const failedChecks: string[] = [];
-  if (outputStats.size !== expectedStats.size) {failedChecks.push("staged vs golden size");}
-  if (outputStats.checksum !== expectedStats.checksum)
-    {failedChecks.push("staged vs golden checksum");}
+  if (outputStats.size !== expectedStats.size) {
+    failedChecks.push("staged vs golden size");
+  }
+  if (outputStats.checksum !== expectedStats.checksum) {
+    failedChecks.push("staged vs golden checksum");
+  }
   const overallPassed = failedChecks.length === 0;
 
   return {

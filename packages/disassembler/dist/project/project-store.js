@@ -4,24 +4,27 @@ import { ANALYSIS_PROJECT_MANIFEST, } from "../model/project-types.js";
 import { validateAnalysisProjectManifest, validateLoadedShards, createRuntimeRecordValidator, } from "../model/project-validation.js";
 import { compareRuntimeRecordIds } from "../storage/sqlite-records.js";
 import { SqliteAnalysisStore, analysisProjectSqlitePath } from "../storage/sqlite-store.js";
+function isUntrustedManifest(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
  * @param {unknown} input Parsed watcher or database manifest.
  * @returns {AnalysisProjectManifest} Validated current manifest. Obsolete containers throw.
  */
 export const parseAnalysisProjectManifest = (input) => {
-    if (!input || typeof input !== "object") {
+    if (!isUntrustedManifest(input)) {
         throw new Error("Invalid analysis project manifest.");
     }
-    const manifest = input;
-    if (manifest.schemaVersion > 3) {
-        throw new Error(`Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`);
+    const schemaVersion = input.schemaVersion;
+    if (typeof schemaVersion === "number" && schemaVersion > 3) {
+        throw new Error(`Analysis project schema ${schemaVersion} is newer than supported schema 3. Refusing to downgrade.`);
     }
-    validateAnalysisProjectManifest(manifest);
-    if (manifest.db !== "analysis.sqlite") {
+    validateAnalysisProjectManifest(input);
+    if (input.db !== "analysis.sqlite") {
         throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
     }
-    return manifest;
+    return input;
 };
 /**
  * Open the existing database selected by a validated pointer, without creating missing files.

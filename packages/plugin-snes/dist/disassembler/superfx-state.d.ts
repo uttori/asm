@@ -1,6 +1,6 @@
 import type { DecodedInstruction } from "@uttori/asm-core";
 import type { SuperFxDecodeState } from "../architectures/superfx-decoder.js";
-import type { SuperFxAltState } from "../architectures/superfx-spec.js";
+import { type SuperFxAltState } from "../architectures/superfx-spec.js";
 export type SuperFxKnown<T extends number> = {
     readonly kind: "known";
     readonly value: T;

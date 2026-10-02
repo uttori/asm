@@ -1,7 +1,7 @@
-import { execSync } from "child_process";
-import { createHash } from "crypto";
-import * as fs from "fs";
-import * as path from "path";
+import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 interface TestResult {
   test: string;

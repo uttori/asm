@@ -30,23 +30,28 @@ export interface SnesMovableObject {
   readonly kind: "data" | "asset" | "code";
 }
 
+/** Encodings `planSnesRelocation` accepts. Any other string is rejected at planning time. */
+const RELOCATION_ENCODINGS: readonly string[] = [
+  "long24",
+  "bank16",
+  "low16",
+  "bank8",
+  "relative8",
+  "relative16",
+  "length8",
+  "length16",
+  "count8",
+  "count16",
+];
+
 /** Supported encoded references. Each field carries expected bytes so stale inputs cannot be patched. */
 export interface SnesRelocationReference {
   readonly id: string;
   readonly target: string;
   readonly offset: number;
   readonly expected: readonly number[];
-  readonly encoding:
-    | "long24"
-    | "bank16"
-    | "low16"
-    | "bank8"
-    | "relative8"
-    | "relative16"
-    | "length8"
-    | "length16"
-    | "count8"
-    | "count16";
+  /** One of `RELOCATION_ENCODINGS`. Unknown values are rejected when the relocation is planned. */
+  readonly encoding: string;
   /** Original/current logical bank for bank16; complete logical instruction end for relative encodings. */
   readonly bank?: number;
   readonly instructionEnd?: number;
@@ -147,18 +152,7 @@ export function encodeSnesRelocationReference(
   encodedLength: number,
 ): readonly number[] {
   if (
-    ![
-      "long24",
-      "bank16",
-      "low16",
-      "bank8",
-      "relative8",
-      "relative16",
-      "length8",
-      "length16",
-      "count8",
-      "count16",
-    ].includes(reference.encoding) ||
+    !RELOCATION_ENCODINGS.includes(reference.encoding) ||
     !Number.isSafeInteger(address) ||
     address < 0 ||
     address > 0xffffff ||
@@ -266,7 +260,7 @@ export function planSnesRelocation(options: {
     throw new Error("Invalid allocation size, alignment, or bank constraint.");
   }
   const ids = new Set<string>();
-  const occupied = [...options.objects].sort((a, b) => a.start - b.start);
+  const occupied = [...options.objects].toSorted((a, b) => a.start - b.start);
   for (const [index, item] of occupied.entries()) {
     if (ids.has(item.id)) {
       throw new Error(`Duplicate layout object: ${item.id}`);
@@ -278,7 +272,7 @@ export function planSnesRelocation(options: {
       throw new Error("Existing object allocations overlap.");
     }
   }
-  const free = [...options.freeSpace].sort((a, b) => a.start - b.start);
+  const free = [...options.freeSpace].toSorted((a, b) => a.start - b.start);
   for (const [index, space] of free.entries()) {
     range(space.start, space.end, options.original.length, space.id);
     if (
@@ -290,18 +284,7 @@ export function planSnesRelocation(options: {
       throw new Error("Free-space declarations overlap.");
     }
   }
-  const encodings = new Set([
-    "long24",
-    "bank16",
-    "low16",
-    "bank8",
-    "relative8",
-    "relative16",
-    "length8",
-    "length16",
-    "count8",
-    "count16",
-  ]);
+  const encodings = new Set(RELOCATION_ENCODINGS);
   assertSnesSplitReferences(options.references);
   const fields = new Set<number>();
   const referenceIds = new Set<string>();

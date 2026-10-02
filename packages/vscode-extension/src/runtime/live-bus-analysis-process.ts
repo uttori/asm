@@ -6,6 +6,11 @@ import {
   validateRuntimeBusTraceMetadata,
 } from "@uttori/asm-disassembler";
 
+/** readThrough can mark the cursor complete before the next backlog decision. */
+function captureCursorComplete(cursor: NativeCaptureFileCursor): boolean {
+  return cursor.complete;
+}
+
 /** One capture per process. Positions are coalesced. Event bytes stay in the archive.
  * SQLite temp staging survives asynchronous reads without locking the project.
  */
@@ -72,6 +77,11 @@ const flushPreview = (): void => {
   pendingPreview = undefined;
   process.send?.(message);
 };
+
+const settle = (value: unknown): void => {
+  process.send?.(value, () => process.disconnect?.());
+};
+
 /**
  * Start at most one importer, coalesce acknowledged recorder positions, and handle
  * cancellation/preview acknowledgments.
@@ -104,9 +114,6 @@ export const handleLiveBusProcessMessage = (
   }
   started = true;
   latest = message.position;
-  const settle = (value: unknown): void => {
-    process.send?.(value, () => process.disconnect?.());
-  };
   void runLiveBusAnalysis(message).then(
     (value) => settle({ type: "result", value }),
     (error: unknown) =>
@@ -156,7 +163,7 @@ export async function runLiveBusAnalysis(options: LiveBusStart) {
       maxBytes: options.maxBytes,
     });
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
       throw error;
     }
     cursor = await NativeCaptureFileCursor.open(options.file, {
@@ -217,7 +224,7 @@ export async function runLiveBusAnalysis(options: LiveBusStart) {
             // yield a full event-loop turn for IPC/cancellation, including once
             // after END2 before entering synchronous publication. This services
             // queued cancellation but does not make the transaction interruptible.
-            if (cursor.complete || cursor.readBytes < Number(position.fileBytes)) {
+            if (captureCursorComplete(cursor) || cursor.readBytes < Number(position.fileBytes)) {
               await yieldToMessages(undefined, { signal: cancellation.signal });
               if (profile) {
                 profile.yields++;

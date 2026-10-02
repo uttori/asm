@@ -106,7 +106,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
     }
     try {
       const nodes = await client.sendRequest<ProjectOutlineNode[]>("asm/projectOutline");
-      return (nodes ?? []).map((node) => this.toItem(node));
+      return nodes.map((node) => this.toItem(node));
     } catch {
       return [];
     }
@@ -137,9 +137,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
       const symbols = await client.sendRequest<DocumentSymbol[]>("textDocument/documentSymbol", {
         textDocument: { uri },
       });
-      return (symbols ?? []).map((symbol, index) =>
-        symbolToItem(symbol, uri, `${parentId}:${index}`),
-      );
+      return symbols.map((symbol, index) => symbolToItem(symbol, uri, `${parentId}:${index}`));
     } catch {
       return [];
     }
@@ -155,7 +153,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
  * @returns {OutlineItem} Outline subtree preserving symbol selection ranges.
  */
 function symbolToItem(symbol: DocumentSymbol, uri: string, id: string): OutlineItem {
-  const range = symbol.selectionRange ?? symbol.range;
+  const range = symbol.selectionRange;
   const children = (symbol.children ?? []).map((child, index) =>
     symbolToItem(child, uri, `${id}:${index}`),
   );

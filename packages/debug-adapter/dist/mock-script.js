@@ -29,7 +29,7 @@ export const createDebugMapReplayScript = (map, output) => {
     if (map.ranges.length === 0) {
         throw new Error("Debug map contains no executable source ranges.");
     }
-    const architectures = [...new Set(map.ranges.map((range) => range.architecture))].sort();
+    const architectures = [...new Set(map.ranges.map((range) => range.architecture))].toSorted();
     const threads = architectures.map((architecture, index) => ({
         id: index + 1,
         name: architecture,
@@ -40,7 +40,7 @@ export const createDebugMapReplayScript = (map, output) => {
         map.ranges.find((range) => range.architecture === architecture),
     ]));
     const currentRange = new Map(firstRange);
-    const ordered = [...map.ranges].sort((left, right) => (left.outputStart ?? Number.MAX_SAFE_INTEGER) -
+    const ordered = [...map.ranges].toSorted((left, right) => (left.outputStart ?? Number.MAX_SAFE_INTEGER) -
         (right.outputStart ?? Number.MAX_SAFE_INTEGER) ||
         left.architecture.localeCompare(right.architecture) ||
         left.start - right.start);

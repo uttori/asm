@@ -238,7 +238,7 @@ modes, actor and boss tile round trips, transform chaining and an actual assembl
 Run them from the repository root with:
 
 ```sh
-rtk proxy node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs
+node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs
 ```
 
 For another Secret of Mana compression or graphics mode, keep the game codec next to its
@@ -272,13 +272,13 @@ Run from the repository root (after building workspace packages, plain `node` al
 
 ```sh
 # Add reviewed composition to existing sidecars; leaves PNGs untouched.
-rtk proxy python3 secret-of-mana/tools/build-frame-atlases.py
+python3 secret-of-mana/tools/build-frame-atlases.py
 # To seed original ROM pixels, --seed requires new output files and refuses existing ones.
-rtk proxy python3 secret-of-mana/tools/build-frame-atlases.py --atlas rabite --seed --output /tmp/new-sprite-images
+python3 secret-of-mana/tools/build-frame-atlases.py --atlas rabite --seed --output /tmp/new-sprite-images
 
 # Dry-run by default; add --write to publish. --atlas is optional and repeatable.
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --atlas enemy/rabite-frames.png
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --edits /tmp/palette-edits.json
+node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --atlas enemy/rabite-frames.png
+node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --edits /tmp/palette-edits.json
 ```
 
 Palette edits are a JSON array: `[{"palette":"<catalogue ID>","index":1,"rgb":[255,0,0]}]`.
@@ -324,9 +324,9 @@ and swatches, and include sources/map. It is relocatable;
 its identity includes the adapter revision and reference ROM hash.
 
 ```sh
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/snapshot-sprite-assets.mjs --output /tmp/sprite-baseline.json
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --baseline /tmp/sprite-baseline.json
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --baseline /tmp/sprite-baseline.json --edits /tmp/palette-edits.json
+node --conditions=uttori-source --import tsx secret-of-mana/tools/snapshot-sprite-assets.mjs --output /tmp/sprite-baseline.json
+node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --baseline /tmp/sprite-baseline.json
+node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --baseline /tmp/sprite-baseline.json --edits /tmp/palette-edits.json
 ```
 
 The snapshot command refuses to overwrite an existing baseline. Authoring commands
@@ -340,10 +340,10 @@ validate placement and references against their exact source snapshot.
 ## Verification against selected exports
 
 ```sh
-rtk proxy node packages/cli/out/cli.mjs source build /path/to/project
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --source-only
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/build-palette-previews.mjs --export /path/to/export --check
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --rom /path/to/rebuilt.sfc
+node packages/cli/out/cli.mjs source build /path/to/project
+node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --source-only
+node --conditions=uttori-source --import tsx secret-of-mana/tools/build-palette-previews.mjs --export /path/to/export --check
+node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --rom /path/to/rebuilt.sfc
 ```
 
 The build command validates the selected Git source snapshot. The sprite
@@ -358,7 +358,7 @@ shape and the HiROM address mapping remain explicit SoM adapter policy.
 Run both conversion and authoring regressions with:
 
 ```sh
-rtk proxy node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs secret-of-mana/tools/asset-authoring.test.mjs
+node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs secret-of-mana/tools/asset-authoring.test.mjs
 ```
 
 ## Editable rooms (`som.room`)
@@ -418,6 +418,6 @@ which refuses to overwrite an edited source. Its `--check` mode verifies the
 no-edit ROM conversion and saved preview PNGs.
 
 ```sh
-rtk proxy node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-room-assets.test.mjs
-rtk proxy node --conditions=uttori-source --import tsx secret-of-mana/tools/build-haunted-room-assets.mjs --check
+node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-room-assets.test.mjs
+node --conditions=uttori-source --import tsx secret-of-mana/tools/build-haunted-room-assets.mjs --check
 ```

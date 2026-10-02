@@ -291,7 +291,7 @@ const FIXED_REGISTER_ALIASES = [
   },
 ] as const satisfies readonly SnesHardwareDefine[];
 
-const FIXED_REGISTERS: Readonly<Record<number, SnesHardwareDefine>> = Object.freeze(
+const FIXED_REGISTERS: Partial<Record<number, SnesHardwareDefine>> = Object.freeze(
   Object.fromEntries(
     FIXED_REGISTER_DEFINITIONS.map((definition) => [definition.address, definition]),
   ),
@@ -464,7 +464,7 @@ export const snesHardwareDefineRecords = (): readonly SnesHardwareDefine[] => {
       }
     }
   }
-  return values.sort(
+  return values.toSorted(
     (left, right) => left.address - right.address || left.symbol.localeCompare(right.symbol),
   );
 };

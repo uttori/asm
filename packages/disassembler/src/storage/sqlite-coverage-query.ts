@@ -5,12 +5,15 @@ import type {
   RomCoverageSegment,
   RomCoverageSummary,
 } from "../analysis/coverage-map.js";
-import type {
-  AnalysisProjectManifest,
-  AnalysisConflictRecord,
-  IntervalAnnotation,
-} from "../model/project-types.js";
-import { decodeSqlitePayload } from "./sqlite-payload.js";
+import type { AnalysisProjectManifest } from "../model/project-types.js";
+import {
+  isFiniteNumber,
+  isRecord,
+  isStringArray,
+  requireAnalysisRecord,
+  requireIntervalAnnotation,
+} from "../model/record-shape.js";
+import { parseSqlitePayload } from "./sqlite-payload.js";
 import { readQueryCache } from "./sqlite-query-cache.js";
 
 /** Compact cache header. Segment/detail bodies stay paged in SQLite. */
@@ -23,7 +26,61 @@ export type SqliteCoverageSummary = Omit<
   readonly diagnostics: readonly never[];
   readonly detailCount: number;
 };
-const decode = <T>(value: unknown): T => JSON.parse(decodeSqlitePayload(value)) as T;
+const COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"] as const;
+const COVERAGE_RUNTIME = ["executed", "operand", "read", "written"] as const;
+
+function isCoverageCounts(value: unknown, keys: readonly string[]): boolean {
+  return (
+    isRecord(value) &&
+    keys.every((key) => isFiniteNumber(value[key])) &&
+    Object.keys(value).every((key) => keys.includes(key))
+  );
+}
+
+export function isSqliteCoverageSummary(value: unknown): value is SqliteCoverageSummary {
+  if (
+    !isRecord(value) ||
+    !isFiniteNumber(value.contentSize) ||
+    !isStringArray(value.fileAddressSpaces) ||
+    !Array.isArray(value.segments) ||
+    value.segments.length !== 0 ||
+    !Array.isArray(value.unprojected) ||
+    value.unprojected.length !== 0 ||
+    !Array.isArray(value.diagnostics) ||
+    value.diagnostics.length !== 0 ||
+    !isFiniteNumber(value.detailCount) ||
+    !isRecord(value.summary)
+  ) {
+    return false;
+  }
+  const summary = value.summary;
+  return (
+    isFiniteNumber(summary.totalBytes) &&
+    isFiniteNumber(summary.classifiedBytes) &&
+    isFiniteNumber(summary.unknownBytes) &&
+    isFiniteNumber(summary.conflictBytes) &&
+    isFiniteNumber(summary.segmentCount) &&
+    isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) &&
+    isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME)
+  );
+}
+
+function requireConflict(value: unknown) {
+  const record = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record.kind !== "conflict") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record;
+}
+
+function requireAccessWidth(value: unknown): { access: string; width: number } {
+  const parsed = parseSqlitePayload(value);
+  if (!isRecord(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
+    throw new Error("Invalid runtime memory coverage payload.");
+  }
+  return { access: parsed.access, width: parsed.width };
+}
+
 export const coverageSignature = (manifest: AnalysisProjectManifest): string =>
   JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 /** Read a current header without acquiring a writer lock.
@@ -34,7 +91,16 @@ export const coverageSignature = (manifest: AnalysisProjectManifest): string =>
 export const cachedCoverage = (
   db: DatabaseSync,
   manifest: AnalysisProjectManifest,
-): SqliteCoverageSummary | undefined => readQueryCache(db, "coverage", coverageSignature(manifest));
+): SqliteCoverageSummary | undefined => {
+  const value = readQueryCache(db, "coverage", coverageSignature(manifest));
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isSqliteCoverageSummary(value)) {
+    throw new Error("Invalid coverage summary cache.");
+  }
+  return value;
+};
 
 /** Build disk-backed events and sweep them with only the active interval identities in memory.
  * Explicit offsets are used. CPU bus addresses are never guessed to be ROM offsets.
@@ -54,7 +120,7 @@ export const prepareCoverage = (
   const fileAddressSpaces = manifest.addressSpaces
     .filter((s) => s.kind === "file")
     .map((s) => s.id)
-    .sort((a, b) => a.localeCompare(b));
+    .toSorted((a, b) => a.localeCompare(b));
   const files = new Set(fileAddressSpaces);
   const size = manifest.rom.contentSize;
   if (!Number.isSafeInteger(size) || size < 0) {
@@ -115,7 +181,7 @@ export const prepareCoverage = (
     for (const row of db
       .prepare("SELECT * FROM annotations WHERE classification != 'unreached'")
       .iterate()) {
-      const record = decode<IntervalAnnotation>(row.payload);
+      const record = requireIntervalAnnotation(parseSqlitePayload(row.payload));
       if (!files.has(record.addressSpace)) {
         unprojected("annotation", record.id, "non-file-address-space");
         continue;
@@ -167,7 +233,7 @@ export const prepareCoverage = (
       "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'",
     );
     for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-      const record = decode<AnalysisConflictRecord>(row.payload);
+      const record = requireConflict(row.payload);
       if (files.has(record.addressSpace)) {
         add("analysis", record.id, record.address, record.end ?? record.address + 1, [
           ["conflictIds", record.id],
@@ -240,7 +306,7 @@ export const prepareCoverage = (
       WHERE r.kind='runtime-memory-access' AND r.accessed_address_space IN (SELECT value FROM json_each(?))`)
       .iterate(JSON.stringify(fileAddressSpaces))) {
       const id = String(row.id);
-      const payload = decode<{ access: string; width: number }>(row.payload);
+      const payload = requireAccessWidth(row.payload);
       for (const [access, classification] of [
         ["read", "read"],
         ["write", "written"],
@@ -264,7 +330,7 @@ export const prepareCoverage = (
     event.run(size, "boundary", "", 0);
     const active = new Map<string, Map<string, number>>();
     const ids = (category: string): string[] =>
-      [...(active.get(category)?.keys() ?? [])].sort((a, b) => a.localeCompare(b));
+      [...(active.get(category)?.keys() ?? [])].toSorted((a, b) => a.localeCompare(b));
     const put = db.prepare("INSERT INTO query_coverage_segments VALUES(?,?)");
     const summary: RomCoverageSummary = {
       totalBytes: size,
@@ -321,8 +387,8 @@ export const prepareCoverage = (
         conflictIds,
         regionIds: ids("regionIds"),
       };
-      const { start: _start, end: _end, ...identity } = segment;
-      const key = JSON.stringify(identity);
+      const { start: _start, end: _end, ...segmentIdentity } = segment;
+      const key = JSON.stringify(segmentIdentity);
       // Overlapping copies can change an identity's multiplicity without changing its visible set.
       if (pending && key === pendingKey) {
         pending = { ...pending, end };

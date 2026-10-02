@@ -70,9 +70,6 @@ export function tileRgba(tile, palette) {
     const rgba = new Uint8Array(8 * 8 * 4);
     tile.forEach((row, y) => row.forEach((index, x) => {
         const color = palette[integer(index, `Palette index ${x},${y}`, 0, palette.length - 1)];
-        if (!color || color.length !== 4) {
-            throw new Error(`Missing RGBA palette entry ${index}.`);
-        }
         color.forEach((component, channel) => {
             rgba[(y * 8 + x) * 4 + channel] = integer(component, `RGBA channel ${channel}`, 0, 255);
         });

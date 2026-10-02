@@ -9,9 +9,82 @@ import sinon from "sinon";
 import type {
   DebugAdapterDescriptorFactory,
   DebugConfigurationProvider,
+  DebugSession,
   ExtensionContext,
   Uri as VsCodeUri,
+  WorkspaceFolder,
 } from "vscode";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUri(value: object): value is VsCodeUri {
+  return (
+    "scheme" in value &&
+    value.scheme === "file" &&
+    "fsPath" in value &&
+    typeof value.fsPath === "string" &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  );
+}
+
+function isExtensionContext(value: object): value is ExtensionContext {
+  return (
+    "subscriptions" in value &&
+    Array.isArray(value.subscriptions) &&
+    "globalState" in value &&
+    typeof value.globalState === "object" &&
+    value.globalState !== null
+  );
+}
+
+function isWorkspaceFolder(value: object): value is WorkspaceFolder {
+  return (
+    "name" in value &&
+    typeof value.name === "string" &&
+    "uri" in value &&
+    typeof value.uri === "object" &&
+    value.uri !== null &&
+    isUri(value.uri)
+  );
+}
+
+function isDebugSession(value: object): value is DebugSession {
+  return (
+    "id" in value &&
+    typeof value.id === "string" &&
+    "configuration" in value &&
+    typeof value.configuration === "object" &&
+    value.configuration !== null
+  );
+}
+
+function isCaptureSummary(value: object): value is CaptureFileSummary {
+  return (
+    "file" in value &&
+    typeof value.file === "string" &&
+    "archive" in value &&
+    typeof value.archive === "string" &&
+    "observedEvents" in value &&
+    typeof value.observedEvents === "number" &&
+    "droppedEvents" in value &&
+    value.droppedEvents === 0 &&
+    "chunks" in value &&
+    typeof value.chunks === "number" &&
+    "complete" in value &&
+    typeof value.complete === "boolean"
+  );
+}
+
+function isInlineAdapter(value: unknown): value is { adapter: { dispose(): void } } {
+  return isRecord(value) && isRecord(value.adapter) && typeof value.adapter.dispose === "function";
+}
+
+function isRecorder(value: object): value is LosslessCaptureFileRecorder {
+  return "completion" in value && "stop" in value && typeof value.stop === "function";
+}
 
 import { test } from "../../../../tests/ava-helper.js";
 
@@ -57,7 +130,7 @@ const host = {
   commandResult: undefined as unknown,
 };
 
-(globalThis as { __uttoriDebugTest?: typeof host }).__uttoriDebugTest = host;
+Object.assign(globalThis, { __uttoriDebugTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -178,21 +251,37 @@ const reset = (): void => {
   host.commandResult = undefined;
 };
 
-const uri = (file: string): VsCodeUri =>
-  ({ scheme: "file", fsPath: file, toString: () => `file://${file}` }) as VsCodeUri;
+const workspaceFolder = (file: string): WorkspaceFolder => {
+  const value = { uri: uri(file), name: "workspace", index: 0 };
+  if (!isWorkspaceFolder(value)) {
+    throw new Error("workspace folder stub");
+  }
+  return value;
+};
+
+const uri = (file: string): VsCodeUri => {
+  const value = { scheme: "file", fsPath: file, toString: () => `file://${file}` };
+  if (!isUri(value)) {
+    throw new Error("uri stub");
+  }
+  return value;
+};
 
 const context = (bindings: Record<string, unknown> = {}): ExtensionContext => {
-  const store = { "uttoriAsm.emulatorRuntimeBindings.v1": bindings };
-  return {
+  const store: Record<string, unknown> = { "uttoriAsm.emulatorRuntimeBindings.v1": bindings };
+  const value = {
     subscriptions: [],
     globalState: {
-      get: (key: string, fallback?: unknown) =>
-        key in store ? store[key as keyof typeof store] : fallback,
-      update: async (key: string, value: unknown) => {
-        (store as Record<string, unknown>)[key] = value;
+      get: (key: string, fallback?: unknown) => (key in store ? store[key] : fallback),
+      update: async (key: string, next: unknown) => {
+        store[key] = next;
       },
     },
-  } as never;
+  };
+  if (!isExtensionContext(value)) {
+    throw new Error("extension context stub");
+  }
+  return value;
 };
 
 test.serial(
@@ -201,7 +290,10 @@ test.serial(
     reset();
     t.is(configuredEmulatorRuntime(context()), undefined);
     const folder = { uri: uri("/project"), name: "project" };
-    host.folders = [folder as never];
+    if (!isWorkspaceFolder(folder)) {
+      throw new Error("workspace folder stub");
+    }
+    host.folders = [folder];
     const saved = {
       backend: "ares" as const,
       runtimeManifest: "/runtime/manifest.json",
@@ -246,7 +338,7 @@ test.serial("liveDebugConfiguration names backends and resolves sourceRoot", (t)
       fastBoot: true,
     },
     artifacts,
-    { uri: uri("/workspace"), name: "workspace" } as never,
+    workspaceFolder("/workspace"),
   );
   t.is(ares.type, UTTORI_ASM_DEBUG_TYPE);
   t.is(ares.name, "Debug Uttori ASM (ares)");
@@ -298,7 +390,10 @@ test.serial("debug launch rejects a valid ROM/map pair from a different selected
       name: "Modified ROM",
       configuration: { backend: "replay", program, debugMap, [field]: "0".repeat(64) },
     };
-    t.throws(() => host.factory!.createDebugAdapterDescriptor(session as never, undefined), {
+    if (!isDebugSession(session)) {
+      throw new Error("debug session stub");
+    }
+    t.throws(() => host.factory!.createDebugAdapterDescriptor(session, undefined), {
       message: expected,
     });
   }
@@ -318,7 +413,11 @@ test.serial(
     });
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-debug-runtime-"));
     t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-    host.folders = [{ uri: uri(directory), name: "game" } as never];
+    const game = { uri: uri(directory), name: "game" };
+    if (!isWorkspaceFolder(game)) {
+      throw new Error("workspace folder stub");
+    }
+    host.folders = [game];
     host.quickPick = undefined;
     t.is(await configureEmulatorRuntime(context()), undefined);
     host.quickPick = { label: "ares", backend: "ares" };
@@ -372,13 +471,17 @@ test.serial(
       release = resolve;
     });
     let stopRequested = false;
-    const stub = sinon.stub(LosslessCaptureFileRecorder, "create").resolves({
+    const recorder = {
       completion,
       stop: () => {
         stopRequested = true;
         return completion;
       },
-    } as never);
+    };
+    if (!isRecorder(recorder)) {
+      throw new Error("recorder stub");
+    }
+    const stub = sinon.stub(LosslessCaptureFileRecorder, "create").resolves(recorder);
     t.teardown(() => stub.restore());
     const subscriptions = registerDebugging("/extension");
     t.teardown(() => subscriptions.forEach((subscription) => subscription.dispose()));
@@ -387,13 +490,24 @@ test.serial(
       type: "uttori-asm",
       configuration: { backend: "replay", program, debugMap },
       customRequest: async () => ({
-        traces: [{ architecture: "snes.65816", addressSpace: "snes.cpu" }],
+        traces: [
+          {
+            architecture: "snes.65816",
+            addressSpace: "snes.cpu",
+            maxBufferedEvents: 65536,
+            maxBatchEvents: 4096,
+          },
+        ],
       }),
     };
-    const adapter = host.factory!.createDebugAdapterDescriptor(
-      session as never,
-      undefined,
-    ) as unknown as { adapter: { dispose(): void } };
+    if (!isDebugSession(session)) {
+      throw new Error("debug session stub");
+    }
+    const descriptor = host.factory!.createDebugAdapterDescriptor(session, undefined);
+    if (!isInlineAdapter(descriptor)) {
+      throw new Error("expected an inline debug adapter");
+    }
+    const adapter = descriptor;
     t.teardown(() => adapter.adapter.dispose());
     host.activeSession = session;
     host.destination = uri(path.join(directory, "capture.act2"));
@@ -412,14 +526,18 @@ test.serial(
       cancellable: false,
     });
     t.deepEqual(host.executed, []);
-    release({
+    const summary = {
       file: host.destination.fsPath,
       archive: host.destination.fsPath,
       observedEvents: 1000000,
       droppedEvents: 0,
       complete: true,
       chunks: 1,
-    } as CaptureFileSummary);
+    };
+    if (!isCaptureSummary(summary)) {
+      throw new Error("capture summary stub");
+    }
+    release(summary);
     await waitFor(() => host.executed.includes("asm.source.importCapture"));
     t.true(
       host.messages.some((message) => message.includes("1,000,000 instruction event(s) retained")),

@@ -1,11 +1,28 @@
 /** Plugin-owned session slot id. Keep in sync with the contribution in `index.ts`. */
 export const NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 /**
- * Branded key for `SessionStateStore.get`. The brand is compile-time only.
+ * Attaches the compile-time session-state brand. The brand is not a runtime property;
+ * a non-empty id is the only value `SessionStateStore` reads.
+ * @param {{ readonly id: string }} value Key candidate.
+ * @returns {boolean} True when the id can identify a session slot.
  */
-export const nes65xxSessionStateKey = {
-    id: NES_65XX_SESSION_STATE_ID,
-};
+function isSessionStateKey(value) {
+    return value.id.length > 0;
+}
+/**
+ * Builds the branded NES session slot key.
+ * @param {string} id Plugin-owned slot id.
+ * @returns {SessionStateKey<T>} Key for `SessionStateStore.get`.
+ */
+function createSessionStateKey(id) {
+    const key = { id };
+    if (!isSessionStateKey(key)) {
+        throw new Error(`Invalid session state key '${id}'.`);
+    }
+    return key;
+}
+/** Branded key for `SessionStateStore.get`. The brand is compile-time only. */
+export const nes65xxSessionStateKey = createSessionStateKey(NES_65XX_SESSION_STATE_ID);
 /**
  * Deep-clones mutable nested fields so pass clones cannot share cursors.
  * @param {Nes65xxSessionState} value The session state to clone.

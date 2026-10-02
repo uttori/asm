@@ -1,4 +1,17 @@
 import { sourceContentHash } from "@uttori/asm-disassembler";
+/** Encodings `planSnesRelocation` accepts. Any other string is rejected at planning time. */
+const RELOCATION_ENCODINGS = [
+    "long24",
+    "bank16",
+    "low16",
+    "bank8",
+    "relative8",
+    "relative16",
+    "length8",
+    "length16",
+    "count8",
+    "count16",
+];
 /** Refuse partial split pointers: repairing an offset alone can silently keep the old bank. */
 export function assertSnesSplitReferences(references) {
     const pairs = new Map();
@@ -60,18 +73,7 @@ function bytes(value, width, signed = false) {
 }
 /** Encode a declared pointer/length/count for both relocation and ordinary saved-source validation. */
 export function encodeSnesRelocationReference(reference, address, encodedLength) {
-    if (![
-        "long24",
-        "bank16",
-        "low16",
-        "bank8",
-        "relative8",
-        "relative16",
-        "length8",
-        "length16",
-        "count8",
-        "count16",
-    ].includes(reference.encoding) ||
+    if (!RELOCATION_ENCODINGS.includes(reference.encoding) ||
         !Number.isSafeInteger(address) ||
         address < 0 ||
         address > 0xffffff ||
@@ -154,7 +156,7 @@ export function planSnesRelocation(options) {
         throw new Error("Invalid allocation size, alignment, or bank constraint.");
     }
     const ids = new Set();
-    const occupied = [...options.objects].sort((a, b) => a.start - b.start);
+    const occupied = [...options.objects].toSorted((a, b) => a.start - b.start);
     for (const [index, item] of occupied.entries()) {
         if (ids.has(item.id)) {
             throw new Error(`Duplicate layout object: ${item.id}`);
@@ -166,7 +168,7 @@ export function planSnesRelocation(options) {
             throw new Error("Existing object allocations overlap.");
         }
     }
-    const free = [...options.freeSpace].sort((a, b) => a.start - b.start);
+    const free = [...options.freeSpace].toSorted((a, b) => a.start - b.start);
     for (const [index, space] of free.entries()) {
         range(space.start, space.end, options.original.length, space.id);
         if (sourceContentHash(options.original.subarray(space.start, space.end)) !== space.originalSha256) {
@@ -176,18 +178,7 @@ export function planSnesRelocation(options) {
             throw new Error("Free-space declarations overlap.");
         }
     }
-    const encodings = new Set([
-        "long24",
-        "bank16",
-        "low16",
-        "bank8",
-        "relative8",
-        "relative16",
-        "length8",
-        "length16",
-        "count8",
-        "count16",
-    ]);
+    const encodings = new Set(RELOCATION_ENCODINGS);
     assertSnesSplitReferences(options.references);
     const fields = new Set();
     const referenceIds = new Set();

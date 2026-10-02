@@ -40,7 +40,7 @@ export interface RuntimeInstructionTraceImportContext {
     readonly projectRomContentSha256: string;
     readonly sourceName: string;
     /** Full indexing retains every supplied register; other modes are rejected. */
-    readonly indexMode?: RuntimeTraceIndexMode;
+    readonly indexMode?: string;
     /**
      * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
      * In-memory imports default to 8M records, with an 8M ceiling.
@@ -97,7 +97,7 @@ export declare const validateRuntimeInstructionTrace: (value: unknown) => Runtim
  * @param {RuntimeInstructionTraceImportContext} context Selected project and source identity.
  * @returns {RuntimeInstructionTraceImportResult} Deterministic batch and loss diagnostics.
  */
-export declare const importRuntimeInstructionTrace: (value: RuntimeInstructionTraceArtifact, context: RuntimeInstructionTraceImportContext) => RuntimeInstructionTraceImportResult;
+export declare const importRuntimeInstructionTrace: (value: unknown, context: RuntimeInstructionTraceImportContext) => RuntimeInstructionTraceImportResult;
 /** One distinct indexed fact. Byte/state pairs expand into two persisted records at finalization. */
 export type RuntimeTraceIndexedFact = {
     readonly kind: "execution";
@@ -142,12 +142,12 @@ export interface RuntimeTraceImporterStorage {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {RuntimeTraceIndexMode} mode Validated retention profile.
+ * @param {string} mode Retention profile. Only full indexing is supported.
  * @param {number} requested Explicit caller budget, if any.
  * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
  * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
  */
-export declare const runtimeTraceIndexRecordLimit: (mode: RuntimeTraceIndexMode, requested: number | undefined, storage?: RuntimeTraceImporterStorage) => number;
+export declare const runtimeTraceIndexRecordLimit: (mode: string, requested: number | undefined, storage?: RuntimeTraceImporterStorage) => number;
 /** Incremental aggregation. Any failed push permanently invalidates the pending import. */
 export interface RuntimeInstructionTraceImporter {
     /** Accept the next ordered chunk. Invalid data or an exceeded record budget prevents finalization. */

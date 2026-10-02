@@ -11,6 +11,70 @@ export const SNES_RAM_MAP_SOURCE = "ram-map.json";
 export const SNES_RAM_MAP_SCHEMA_SOURCE = "ram-map.schema.json";
 /** Generated assembly definitions included by `main.asm`. */
 export const SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
+/**
+ * Accepts a JSON object. Arrays and null are not RAM-map documents.
+ * @param {unknown} value Candidate object.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/**
+ * Accepts one raw RAM-map variable. Extra JSON fields are left in place.
+ * @param {unknown} value Candidate variable.
+ * @returns {boolean} True when the fields `SnesRamMapVariableInput` reads have the right types.
+ */
+const isRamMapVariableInput = (value) => {
+    if (!isRecord(value)) {
+        return false;
+    }
+    if (typeof value.name !== "string") {
+        return false;
+    }
+    if (typeof value.address !== "string" && typeof value.address !== "number") {
+        return false;
+    }
+    if (value.memory !== undefined && value.memory !== "wram" && value.memory !== "sram") {
+        return false;
+    }
+    if (value.size !== undefined && typeof value.size !== "number") {
+        return false;
+    }
+    if (value.category !== undefined && typeof value.category !== "string") {
+        return false;
+    }
+    if (typeof value.description !== "string") {
+        return false;
+    }
+    if (value.notes !== undefined &&
+        !(Array.isArray(value.notes) && value.notes.every((note) => typeof note === "string"))) {
+        return false;
+    }
+    return (value.sources === undefined ||
+        (Array.isArray(value.sources) && value.sources.every((source) => typeof source === "string")));
+};
+/**
+ * Accepts a RAM-map document whose fields match `SnesRamMapFile`.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when format, schema, and variables have the expected types.
+ */
+const isSnesRamMapFile = (value) => {
+    if (!isRecord(value)) {
+        return false;
+    }
+    if (value.format !== SNES_RAM_MAP_FORMAT || value.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
+        return false;
+    }
+    if (value.$schema !== undefined && typeof value.$schema !== "string") {
+        return false;
+    }
+    if (value.source !== undefined && typeof value.source !== "string") {
+        return false;
+    }
+    if (value.includeSourceInformation !== undefined &&
+        typeof value.includeSourceInformation !== "boolean") {
+        return false;
+    }
+    return Array.isArray(value.variables) && value.variables.every(isRamMapVariableInput);
+};
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 const cleanText = (value, field) => {
     const cleaned = value.replaceAll(/\s+/g, " ").trim();
@@ -76,34 +140,32 @@ const parseAddress = (value, memory) => {
  * @returns {readonly SnesRamMapVariable[]} Deterministically sorted variables.
  */
 export const validateSnesRamMap = (value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
+    if (!isRecord(value)) {
         throw new Error("RAM map must be a JSON object.");
     }
-    const file = value;
-    if (file.format !== SNES_RAM_MAP_FORMAT) {
+    if (value.format !== SNES_RAM_MAP_FORMAT) {
         throw new Error("Invalid SNES RAM-map format.");
     }
-    if (file.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
-        throw new Error(`Unsupported SNES RAM-map schema ${String(file.schemaVersion)}.`);
+    if (value.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
+        throw new Error(`Unsupported SNES RAM-map schema ${String(value.schemaVersion)}.`);
     }
-    if (!Array.isArray(file.variables)) {
+    if (!Array.isArray(value.variables)) {
         throw new Error("RAM map must contain a variables array.");
     }
-    if (file.includeSourceInformation !== undefined &&
-        typeof file.includeSourceInformation !== "boolean") {
+    if (value.includeSourceInformation !== undefined &&
+        typeof value.includeSourceInformation !== "boolean") {
         throw new Error("RAM-map includeSourceInformation must be a boolean.");
     }
     const names = new Set();
     const addresses = new Set();
-    const variables = file.variables.map((input, index) => {
-        if (!input || typeof input !== "object" || Array.isArray(input)) {
+    const variables = value.variables.map((input, index) => {
+        if (!isRecord(input)) {
             throw new Error(`RAM-map variable ${index + 1} must be an object.`);
         }
-        const record = input;
-        if (typeof record.name !== "string") {
+        if (typeof input.name !== "string") {
             throw new Error(`RAM-map variable ${index + 1} name must be a string.`);
         }
-        const name = cleanText(record.name, `variable ${index + 1} name`);
+        const name = cleanText(input.name, `variable ${index + 1} name`);
         if (!/^[A-Z_a-z]\w*$/.test(name)) {
             throw new Error(`RAM-map variable name '${name}' is not an assembler identifier.`);
         }
@@ -112,19 +174,19 @@ export const validateSnesRamMap = (value) => {
             throw new Error(`Duplicate RAM-map variable name '${name}'.`);
         }
         names.add(nameKey);
-        if (typeof record.address !== "string" && typeof record.address !== "number") {
+        if (typeof input.address !== "string" && typeof input.address !== "number") {
             throw new Error(`RAM-map variable '${name}' must have a string or integer address.`);
         }
-        const memory = record.memory ?? "wram";
+        const memory = input.memory ?? "wram";
         if (memory !== "wram" && memory !== "sram") {
             throw new Error(`RAM-map memory for '${name}' must be 'wram' or 'sram'.`);
         }
-        const address = parseAddress(record.address, memory);
+        const address = parseAddress(input.address, memory);
         if (addresses.has(address)) {
             throw new Error(`Duplicate RAM-map address '${hex(address)}'. Combine aliases in one entry.`);
         }
         addresses.add(address);
-        const size = record.size ?? 1;
+        const size = input.size ?? 1;
         // A SRAM declaration owns one CPU window, not the ROM or I/O beyond its end.
         // Physical size and aliases depend on the cartridge and remain the map author's responsibility.
         const end = memory === "sram" ? sramWindowEnd(address) : 0x800000;
@@ -134,29 +196,29 @@ export const validateSnesRamMap = (value) => {
             address + size > end) {
             throw new Error(`Invalid size for RAM-map variable '${name}'.`);
         }
-        if (record.category !== undefined && typeof record.category !== "string") {
+        if (input.category !== undefined && typeof input.category !== "string") {
             throw new Error(`RAM-map category for '${name}' must be a string.`);
         }
-        const category = record.category === undefined ? undefined : cleanText(record.category, `${name} category`);
-        if (typeof record.description !== "string") {
+        const category = input.category === undefined ? undefined : cleanText(input.category, `${name} category`);
+        if (typeof input.description !== "string") {
             throw new Error(`RAM-map description for '${name}' must be a string.`);
         }
-        const description = cleanText(record.description, `${name} description`);
-        if (record.notes !== undefined && !Array.isArray(record.notes)) {
+        const description = cleanText(input.description, `${name} description`);
+        if (input.notes !== undefined && !Array.isArray(input.notes)) {
             throw new Error(`RAM-map notes for '${name}' must be an array.`);
         }
-        const notes = (record.notes ?? []).map((note) => {
+        const notes = (input.notes ?? []).map((note) => {
             if (typeof note !== "string") {
                 throw new Error(`RAM-map notes for '${name}' must be strings.`);
             }
             return cleanText(note, `${name} note`);
         });
         let sources;
-        if (record.sources !== undefined) {
-            if (!Array.isArray(record.sources)) {
+        if (input.sources !== undefined) {
+            if (!Array.isArray(input.sources)) {
                 throw new Error(`RAM-map sources for '${name}' must be an array.`);
             }
-            sources = record.sources.map((source) => {
+            sources = input.sources.map((source) => {
                 if (typeof source !== "string") {
                     throw new Error(`RAM-map sources for '${name}' must be strings.`);
                 }
@@ -166,7 +228,7 @@ export const validateSnesRamMap = (value) => {
         return {
             name,
             address,
-            ...(record.memory === undefined ? {} : { memory }),
+            ...(input.memory === undefined ? {} : { memory }),
             size,
             ...(category ? { category } : {}),
             description,
@@ -174,7 +236,7 @@ export const validateSnesRamMap = (value) => {
             ...(sources === undefined ? {} : { sources }),
         };
     });
-    const sorted = variables.sort((left, right) => left.address - right.address || left.name.localeCompare(right.name));
+    const sorted = variables.toSorted((left, right) => left.address - right.address || left.name.localeCompare(right.name));
     for (let index = 1; index < sorted.length; index++) {
         const previous = sorted[index - 1];
         const current = sorted[index];
@@ -212,9 +274,12 @@ export const loadSnesRamMap = (directory) => {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
     }
     catch (error) {
-        throw new Error(`Could not parse '${SNES_RAM_MAP_SOURCE}': ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Could not parse '${SNES_RAM_MAP_SOURCE}': ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
     const variables = validateSnesRamMap(parsed);
+    if (!isSnesRamMapFile(parsed)) {
+        throw new Error("Invalid SNES RAM-map format.");
+    }
     return { file: parsed, variables, sourceBytes };
 };
 /**

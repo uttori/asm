@@ -78,6 +78,33 @@ type BuildResult = {
   message?: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** LSP command results are untyped. Missing and malformed replies take the failed-build path. */
+function isBuildResult(value: unknown): value is BuildResult {
+  if (!isRecord(value) || typeof value.ok !== "boolean") {
+    return false;
+  }
+  const strings = [
+    "outputPath",
+    "outputSha256",
+    "debugMapPath",
+    "debugMapFingerprint",
+    "target",
+    "architecture",
+    "message",
+  ] as const;
+  const numbers = ["bytes", "outputSize"] as const;
+  const booleans = ["outputChanged", "debugMapChanged"] as const;
+  return (
+    strings.every((key) => value[key] === undefined || typeof value[key] === "string") &&
+    numbers.every((key) => value[key] === undefined || typeof value[key] === "number") &&
+    booleans.every((key) => value[key] === undefined || typeof value[key] === "boolean")
+  );
+}
+
 /** Language IDs the client and commands treat as Uttori Assembly source. */
 const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
 
@@ -105,6 +132,12 @@ let sourceController: SourceController | undefined;
 let watchEpoch = 0;
 let watchBuildRunning = false;
 let watchEnabled = false;
+
+/** stopWatch clears this flag while a build started under watch is still awaiting. */
+function watchIsEnabled(): boolean {
+  return watchEnabled;
+}
+
 /** Whether watch mode only builds or also performs a deterministic emulator reload. */
 let watchMode: "build" | "emulator" = "build";
 /**
@@ -153,6 +186,21 @@ function serverInitializationOptions(): Record<string, unknown> {
     workspaceTrusted: workspace.isTrusted,
   };
 }
+
+/** Compare only non-display configuration so changing a template cannot trigger database refreshes. */
+const analysisConfigurationIdentity = (): string =>
+  JSON.stringify(
+    (workspace.workspaceFolders ?? []).map(({ uri }) => {
+      const config = workspace.getConfiguration("asm", uri);
+      return Object.assign({}, config, {
+        editorInfo: undefined,
+        analysis: Object.assign({}, config.get<Record<string, unknown>>("analysis", {}), {
+          showAnnotations: undefined,
+          annotationColumn: undefined,
+        }),
+      });
+    }),
+  );
 
 /**
  * Activates the extension and starts the Uttori Assembly language server.
@@ -212,7 +260,6 @@ export function activate(context: ExtensionContext): void {
       language,
     })),
     synchronize: {
-      configurationSection: "asm",
       fileEvents: [
         workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
         workspace.createFileSystemWatcher("**/*.{png,wav,wave,json,bin,pal,palette}"),
@@ -286,23 +333,6 @@ export function activate(context: ExtensionContext): void {
       analysisAnnotationController.configurationChanged();
     }),
   );
-  // Compare only non-display configuration so changing a template cannot trigger database refreshes.
-  const analysisConfigurationIdentity = (): string =>
-    JSON.stringify(
-      (workspace.workspaceFolders ?? []).map(({ uri }) => {
-        const config = workspace.getConfiguration("asm", uri);
-        const values = {
-          ...config,
-          editorInfo: undefined,
-          analysis: {
-            ...config.get<Record<string, unknown>>("analysis", {}),
-            showAnnotations: undefined,
-            annotationColumn: undefined,
-          },
-        };
-        return values;
-      }),
-    );
   let previousAnalysisConfiguration = analysisConfigurationIdentity();
   let previousBuildConfiguration = JSON.stringify(serverInitializationOptions());
   let analysisRefreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -510,6 +540,7 @@ export function activate(context: ExtensionContext): void {
         outlineProvider.refresh();
       }),
     );
+    return;
   });
 }
 
@@ -683,7 +714,7 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
   } finally {
     watchBuildRunning = false;
   }
-  if (!watchEnabled) {
+  if (!watchIsEnabled()) {
     return;
   }
   if (epoch !== watchEpoch) {
@@ -774,7 +805,7 @@ function scheduleWatchBuild(): void {
         while (watchEnabled && watchEntryUri) {
           const epoch = watchEpoch;
           const result = await runBuild(watchEntryUri, true);
-          if (!watchEnabled) {
+          if (!watchIsEnabled()) {
             return;
           }
           if (epoch !== watchEpoch) {
@@ -844,7 +875,7 @@ async function initConfig(): Promise<void> {
   let metadata: ProjectMetadata = {};
   try {
     if (client) {
-      metadata = (await client.sendRequest<ProjectMetadata>("asm/projectMetadata")) ?? {};
+      metadata = await client.sendRequest<ProjectMetadata>("asm/projectMetadata");
     }
   } catch {
     // Server may not be ready. Proceed with defaults.
@@ -959,10 +990,11 @@ async function runBuild(
   outputChannel?.info("  sending asm.build to language server");
 
   try {
-    const result = (await client.sendRequest(ExecuteCommandRequest.type, {
+    const response: unknown = await client.sendRequest(ExecuteCommandRequest.type, {
       command: "asm.build",
       arguments: [documentUri, output, baseImage],
-    })) as BuildResult | undefined;
+    });
+    const result = isBuildResult(response) ? response : undefined;
 
     if (result?.ok) {
       if (result.debugMapPath) {
@@ -1020,9 +1052,6 @@ function resolveConfiguredPath(configuredPath: string, document: Uri): string | 
  * @see https://code.visualstudio.com/api/references/vscode-api#StatusBarAlignment
  */
 function updateStatusItem(): void {
-  if (!statusItem) {
-    return;
-  }
   if (!watchEnabled) {
     statusItem.text = "$(eye-closed) Assembly Watch: Off";
     statusItem.tooltip = "Click to rebuild the binary on every save.";

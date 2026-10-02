@@ -35,8 +35,8 @@ export const projectSourceLabelNames = (
   const used = new Set([...reserved].map((name) => name.toLowerCase()));
   const sorted = labels
     .filter((label) => !label.suppressed)
-    .sort((a, b) => a.id.localeCompare(b.id));
-  for (const label of sorted.filter((label) => label.sourceName === undefined)) {
+    .toSorted((a, b) => a.id.localeCompare(b.id));
+  for (const label of sorted.filter((candidate) => candidate.sourceName === undefined)) {
     const base = legacySourceLabelName(label.name);
     let name = base;
     let suffix = 2;
@@ -46,7 +46,7 @@ export const projectSourceLabelNames = (
     used.add(name.toLowerCase());
     names.set(label.id, name);
   }
-  for (const label of sorted.filter((label) => label.sourceName !== undefined)) {
+  for (const label of sorted.filter((candidate) => candidate.sourceName !== undefined)) {
     const name = label.sourceName!;
     validateSourceLabelName(name);
     if (used.has(name.toLowerCase())) {

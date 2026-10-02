@@ -22,8 +22,8 @@ export declare class OperandResolver {
     isNumericToken(token: string): boolean;
     resolveArithmeticToken(token: string): number;
     tryResolveSimpleArithmetic(operand: string): number | null;
-    determineValueLength(value: string | number): number;
-    isMathExpression(expression: string): boolean;
+    determineValueLength(value: unknown): number;
+    isMathExpression(expression: unknown): boolean;
     tryResolveLabelInOperand(operand: string): string;
     /**
      * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.

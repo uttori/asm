@@ -42,9 +42,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// ../../node_modules/vscode-languageclient/lib/common/utils/is.js
+// node_modules/vscode-languageclient/lib/common/utils/is.js
 var require_is = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/utils/is.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
@@ -88,8 +88,8 @@ var require_is = __commonJS({
       if (value instanceof Promise) {
         return value;
       } else if (thenable(value)) {
-        return new Promise((resolve9, reject) => {
-          value.then((resolved) => resolve9(resolved), (error2) => reject(error2));
+        return new Promise((resolve9, reject2) => {
+          value.then((resolved) => resolve9(resolved), (error2) => reject2(error2));
         });
       } else {
         return Promise.resolve(value);
@@ -98,9 +98,9 @@ var require_is = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/is.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js
 var require_is2 = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
@@ -134,9 +134,9 @@ var require_is2 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/messages.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js
 var require_messages = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -519,9 +519,9 @@ var require_messages = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/linkedMap.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js
 var require_linkedMap = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LRUCache = exports2.LinkedMap = exports2.Touch = void 0;
@@ -903,9 +903,9 @@ var require_linkedMap = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/disposable.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js
 var require_disposable = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Disposable = void 0;
@@ -921,9 +921,9 @@ var require_disposable = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/ral.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js
 var require_ral = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var _ral;
@@ -946,9 +946,9 @@ var require_ral = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/events.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js
 var require_events = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1083,9 +1083,9 @@ var require_events = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/cancellation.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js
 var require_cancellation = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1212,9 +1212,9 @@ var require_cancellation = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
 var require_sharedArrayCancellation = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SharedArrayReceiverStrategy = exports2.SharedArraySenderStrategy = void 0;
@@ -1291,9 +1291,9 @@ var require_sharedArrayCancellation = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/semaphore.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js
 var require_semaphore = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1314,8 +1314,8 @@ var require_semaphore = __commonJS({
         this._waiting = [];
       }
       lock(thunk) {
-        return new Promise((resolve9, reject) => {
-          this._waiting.push({ thunk, resolve: resolve9, reject });
+        return new Promise((resolve9, reject2) => {
+          this._waiting.push({ thunk, resolve: resolve9, reject: reject2 });
           this.runNext();
         });
       }
@@ -1365,9 +1365,9 @@ var require_semaphore = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/messageReader.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js
 var require_messageReader = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1607,9 +1607,9 @@ ${JSON.stringify(Object.fromEntries(headers))}`));
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/messageWriter.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js
 var require_messageWriter = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1765,9 +1765,9 @@ var require_messageWriter = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
 var require_messageBuffer = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.AbstractMessageBuffer = void 0;
@@ -1916,9 +1916,9 @@ ${header}`);
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/connection.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js
 var require_connection = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -2622,7 +2622,8 @@ ${JSON.stringify(message, null, 4)}`);
               }
             }
           }
-          tracer.log(`Sending response '${method} - (${message.id})'. Processing request took ${Date.now() - startTime}ms`, data);
+          const error = message.error ? ` Request failed: ${message.error.message} (${message.error.code}).` : "";
+          tracer.log(`Sending response '${method} - (${message.id})'. Processing request took ${Date.now() - startTime}ms.${error}`, data);
         } else {
           logLSPMessage("send-response", message);
         }
@@ -2940,14 +2941,14 @@ ${JSON.stringify(message, null, 4)}`);
           if (typeof cancellationStrategy.sender.enableCancellation === "function") {
             cancellationStrategy.sender.enableCancellation(requestMessage);
           }
-          return new Promise(async (resolve9, reject) => {
+          return new Promise(async (resolve9, reject2) => {
             const resolveWithCleanup = (r) => {
               resolve9(r);
               cancellationStrategy.sender.cleanup(id);
               disposable?.dispose();
             };
             const rejectWithCleanup = (r) => {
-              reject(r);
+              reject2(r);
               cancellationStrategy.sender.cleanup(id);
               disposable?.dispose();
             };
@@ -2962,7 +2963,6 @@ ${JSON.stringify(message, null, 4)}`);
               responsePromises.delete(id);
               responsePromise.reject(new messages_1.ResponseError(messages_1.ErrorCodes.MessageWriteError, error.message ? error.message : "Unknown reason"));
               logger.error(`Sending request failed.`);
-              throw error;
             }
           });
         },
@@ -3082,9 +3082,9 @@ ${JSON.stringify(message, null, 4)}`);
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/common/api.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js
 var require_api = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -3296,9 +3296,9 @@ var require_api = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-types/lib/umd/main.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js
 var require_main = __commonJS({
-  "../../node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
     (function(factory) {
       if (typeof module2 === "object" && typeof module2.exports === "object") {
         var v = factory(require, exports2);
@@ -4921,9 +4921,9 @@ var require_main = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/messages.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js
 var require_messages2 = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CM = exports2.ProtocolNotificationType = exports2.ProtocolNotificationType0 = exports2.ProtocolRequestType = exports2.ProtocolRequestType0 = exports2.RegistrationType = exports2.MessageDirection = void 0;
@@ -5004,9 +5004,9 @@ var require_messages2 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
 var require_is3 = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
@@ -5048,9 +5048,9 @@ var require_is3 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
 var require_protocol_implementation = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationRequest = void 0;
@@ -5065,9 +5065,9 @@ var require_protocol_implementation = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
 var require_protocol_typeDefinition = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionRequest = void 0;
@@ -5082,9 +5082,9 @@ var require_protocol_typeDefinition = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
 var require_protocol_workspaceFolder = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidChangeWorkspaceFoldersNotification = exports2.WorkspaceFoldersRequest = void 0;
@@ -5106,9 +5106,9 @@ var require_protocol_workspaceFolder = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
 var require_protocol_configuration = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ConfigurationRequest = void 0;
@@ -5123,9 +5123,9 @@ var require_protocol_configuration = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
 var require_protocol_colorProvider = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorPresentationRequest = exports2.DocumentColorRequest = void 0;
@@ -5147,9 +5147,9 @@ var require_protocol_colorProvider = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
 var require_protocol_foldingRange = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeRefreshRequest = exports2.FoldingRangeRequest = void 0;
@@ -5171,9 +5171,9 @@ var require_protocol_foldingRange = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
 var require_protocol_declaration = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationRequest = void 0;
@@ -5188,9 +5188,9 @@ var require_protocol_declaration = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
 var require_protocol_selectionRange = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeRequest = void 0;
@@ -5205,9 +5205,9 @@ var require_protocol_selectionRange = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
 var require_protocol_progress = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkDoneProgressCancelNotification = exports2.WorkDoneProgressCreateRequest = exports2.WorkDoneProgress = void 0;
@@ -5237,9 +5237,9 @@ var require_protocol_progress = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
 var require_protocol_callHierarchy = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyOutgoingCallsRequest = exports2.CallHierarchyIncomingCallsRequest = exports2.CallHierarchyPrepareRequest = void 0;
@@ -5268,9 +5268,9 @@ var require_protocol_callHierarchy = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
 var require_protocol_semanticTokens = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SemanticTokensRefreshRequest = exports2.SemanticTokensRangeRequest = exports2.SemanticTokensDeltaRequest = exports2.SemanticTokensRequest = exports2.SemanticTokensRegistrationType = exports2.TokenFormat = void 0;
@@ -5318,9 +5318,9 @@ var require_protocol_semanticTokens = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
 var require_protocol_showDocument = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ShowDocumentRequest = void 0;
@@ -5335,9 +5335,9 @@ var require_protocol_showDocument = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
 var require_protocol_linkedEditingRange = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LinkedEditingRangeRequest = void 0;
@@ -5352,9 +5352,9 @@ var require_protocol_linkedEditingRange = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
 var require_protocol_fileOperations = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WillDeleteFilesRequest = exports2.DidDeleteFilesNotification = exports2.DidRenameFilesNotification = exports2.WillRenameFilesRequest = exports2.DidCreateFilesNotification = exports2.WillCreateFilesRequest = exports2.FileOperationPatternKind = void 0;
@@ -5409,9 +5409,9 @@ var require_protocol_fileOperations = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
 var require_protocol_moniker = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.MonikerRequest = exports2.MonikerKind = exports2.UniquenessLevel = void 0;
@@ -5440,9 +5440,9 @@ var require_protocol_moniker = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
 var require_protocol_typeHierarchy = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchySubtypesRequest = exports2.TypeHierarchySupertypesRequest = exports2.TypeHierarchyPrepareRequest = void 0;
@@ -5469,9 +5469,9 @@ var require_protocol_typeHierarchy = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
 var require_protocol_inlineValue = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueRefreshRequest = exports2.InlineValueRequest = void 0;
@@ -5493,9 +5493,9 @@ var require_protocol_inlineValue = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
 var require_protocol_inlayHint = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintRefreshRequest = exports2.InlayHintResolveRequest = exports2.InlayHintRequest = void 0;
@@ -5524,9 +5524,9 @@ var require_protocol_inlayHint = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
 var require_protocol_diagnostic = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5609,9 +5609,9 @@ var require_protocol_diagnostic = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
 var require_protocol_notebook = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5835,9 +5835,9 @@ var require_protocol_notebook = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
 var require_protocol_inlineCompletion = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineCompletionRequest = void 0;
@@ -5852,9 +5852,9 @@ var require_protocol_inlineCompletion = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
 var require_protocol_textDocumentContent = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TextDocumentContentRefreshRequest = exports2.TextDocumentContentRequest = void 0;
@@ -5875,9 +5875,9 @@ var require_protocol_textDocumentContent = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js
 var require_protocol = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6603,9 +6603,9 @@ var require_protocol = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/connection.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js
 var require_connection2 = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.createProtocolConnection = createProtocolConnection;
@@ -6619,9 +6619,9 @@ var require_connection2 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/common/api.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js
 var require_api2 = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6661,9 +6661,9 @@ var require_api2 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/utils/async.js
+// node_modules/vscode-languageclient/lib/common/utils/async.js
 var require_async = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/utils/async.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/utils/async.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Semaphore = exports2.Delayer = void 0;
@@ -6749,8 +6749,8 @@ var require_async = __commonJS({
         this._waiting = [];
       }
       lock(thunk) {
-        return new Promise((resolve9, reject) => {
-          this._waiting.push({ thunk, resolve: resolve9, reject });
+        return new Promise((resolve9, reject2) => {
+          this._waiting.push({ thunk, resolve: resolve9, reject: reject2 });
           this.runNext();
         });
       }
@@ -6949,9 +6949,9 @@ var require_async = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js
+// node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js
 var require_protocolCompletionItem = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7007,9 +7007,9 @@ var require_protocolCompletionItem = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolCodeLens.js
+// node_modules/vscode-languageclient/lib/common/protocolCodeLens.js
 var require_protocolCodeLens = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolCodeLens.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolCodeLens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7060,9 +7060,9 @@ var require_protocolCodeLens = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js
+// node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js
 var require_protocolDocumentLink = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7113,9 +7113,9 @@ var require_protocolDocumentLink = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolCodeAction.js
+// node_modules/vscode-languageclient/lib/common/protocolCodeAction.js
 var require_protocolCodeAction = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7167,9 +7167,9 @@ var require_protocolCodeAction = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js
+// node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js
 var require_protocolDiagnostic = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7233,9 +7233,9 @@ var require_protocolDiagnostic = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js
+// node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js
 var require_protocolCallHierarchyItem = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7289,9 +7289,9 @@ var require_protocolCallHierarchyItem = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js
+// node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js
 var require_protocolTypeHierarchyItem = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7345,9 +7345,9 @@ var require_protocolTypeHierarchyItem = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js
+// node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js
 var require_protocolWorkspaceSymbol = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7404,9 +7404,9 @@ var require_protocolWorkspaceSymbol = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolInlayHint.js
+// node_modules/vscode-languageclient/lib/common/protocolInlayHint.js
 var require_protocolInlayHint = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolInlayHint.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolInlayHint.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7457,9 +7457,9 @@ var require_protocolInlayHint = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/codeConverter.js
+// node_modules/vscode-languageclient/lib/common/codeConverter.js
 var require_codeConverter = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/codeConverter.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/codeConverter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8385,9 +8385,9 @@ var require_codeConverter = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/protocolConverter.js
+// node_modules/vscode-languageclient/lib/common/protocolConverter.js
 var require_protocolConverter = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/protocolConverter.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/protocolConverter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -9562,9 +9562,9 @@ ${JSON.stringify(change, void 0, 4)}`);
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/utils/uuid.js
+// node_modules/vscode-languageclient/lib/common/utils/uuid.js
 var require_uuid = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/utils/uuid.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/utils/uuid.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.empty = void 0;
@@ -9654,9 +9654,9 @@ var require_uuid = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/progressPart.js
+// node_modules/vscode-languageclient/lib/common/progressPart.js
 var require_progressPart = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/progressPart.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/progressPart.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -9748,9 +9748,9 @@ var require_progressPart = __commonJS({
             this._client.sendNotification(vscode_languageserver_protocol_1.WorkDoneProgressCancelNotification.type, { token: this._token });
           });
           this.report(params);
-          return new Promise((resolve9, reject) => {
+          return new Promise((resolve9, reject2) => {
             this._resolve = resolve9;
-            this._reject = reject;
+            this._reject = reject2;
           });
         });
       }
@@ -9797,9 +9797,9 @@ var require_progressPart = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/features.js
+// node_modules/vscode-languageclient/lib/common/features.js
 var require_features = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/features.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/features.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -10151,9 +10151,9 @@ var require_features = __commonJS({
   }
 });
 
-// ../../node_modules/balanced-match/dist/commonjs/index.js
+// node_modules/balanced-match/dist/commonjs/index.js
 var require_commonjs = __commonJS({
-  "../../node_modules/balanced-match/dist/commonjs/index.js"(exports2) {
+  "node_modules/balanced-match/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.range = exports2.balanced = void 0;
@@ -10213,9 +10213,9 @@ var require_commonjs = __commonJS({
   }
 });
 
-// ../../node_modules/brace-expansion/dist/commonjs/index.js
+// node_modules/brace-expansion/dist/commonjs/index.js
 var require_commonjs2 = __commonJS({
-  "../../node_modules/brace-expansion/dist/commonjs/index.js"(exports2) {
+  "node_modules/brace-expansion/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.EXPANSION_MAX_LENGTH = exports2.EXPANSION_MAX = void 0;
@@ -10435,9 +10435,9 @@ var require_commonjs2 = __commonJS({
   }
 });
 
-// ../../node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
+// node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
 var require_assert_valid_pattern = __commonJS({
-  "../../node_modules/minimatch/dist/commonjs/assert-valid-pattern.js"(exports2) {
+  "node_modules/minimatch/dist/commonjs/assert-valid-pattern.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.assertValidPattern = void 0;
@@ -10454,9 +10454,9 @@ var require_assert_valid_pattern = __commonJS({
   }
 });
 
-// ../../node_modules/minimatch/dist/commonjs/brace-expressions.js
+// node_modules/minimatch/dist/commonjs/brace-expressions.js
 var require_brace_expressions = __commonJS({
-  "../../node_modules/minimatch/dist/commonjs/brace-expressions.js"(exports2) {
+  "node_modules/minimatch/dist/commonjs/brace-expressions.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.parseClass = void 0;
@@ -10571,9 +10571,9 @@ var require_brace_expressions = __commonJS({
   }
 });
 
-// ../../node_modules/minimatch/dist/commonjs/unescape.js
+// node_modules/minimatch/dist/commonjs/unescape.js
 var require_unescape = __commonJS({
-  "../../node_modules/minimatch/dist/commonjs/unescape.js"(exports2) {
+  "node_modules/minimatch/dist/commonjs/unescape.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.unescape = void 0;
@@ -10587,9 +10587,9 @@ var require_unescape = __commonJS({
   }
 });
 
-// ../../node_modules/minimatch/dist/commonjs/ast.js
+// node_modules/minimatch/dist/commonjs/ast.js
 var require_ast = __commonJS({
-  "../../node_modules/minimatch/dist/commonjs/ast.js"(exports2) {
+  "node_modules/minimatch/dist/commonjs/ast.js"(exports2) {
     "use strict";
     var _a;
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -11241,9 +11241,9 @@ var require_ast = __commonJS({
   }
 });
 
-// ../../node_modules/minimatch/dist/commonjs/escape.js
+// node_modules/minimatch/dist/commonjs/escape.js
 var require_escape = __commonJS({
-  "../../node_modules/minimatch/dist/commonjs/escape.js"(exports2) {
+  "node_modules/minimatch/dist/commonjs/escape.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.escape = void 0;
@@ -11257,9 +11257,9 @@ var require_escape = __commonJS({
   }
 });
 
-// ../../node_modules/minimatch/dist/commonjs/index.js
+// node_modules/minimatch/dist/commonjs/index.js
 var require_commonjs3 = __commonJS({
-  "../../node_modules/minimatch/dist/commonjs/index.js"(exports2) {
+  "node_modules/minimatch/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.unescape = exports2.escape = exports2.AST = exports2.Minimatch = exports2.match = exports2.makeRe = exports2.braceExpand = exports2.defaults = exports2.filter = exports2.GLOBSTAR = exports2.sep = exports2.minimatch = void 0;
@@ -12097,9 +12097,9 @@ var require_commonjs3 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/utils/globPattern.js
+// node_modules/vscode-languageclient/lib/common/utils/globPattern.js
 var require_globPattern = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/utils/globPattern.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/utils/globPattern.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12163,9 +12163,9 @@ var require_globPattern = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/diagnostic.js
+// node_modules/vscode-languageclient/lib/common/diagnostic.js
 var require_diagnostic = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/diagnostic.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/diagnostic.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DiagnosticFeature = exports2.DiagnosticPullMode = exports2.vsdiag = void 0;
@@ -12992,9 +12992,9 @@ var require_diagnostic = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/notebook.js
+// node_modules/vscode-languageclient/lib/common/notebook.js
 var require_notebook = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/notebook.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13974,9 +13974,9 @@ var require_notebook = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/configuration.js
+// node_modules/vscode-languageclient/lib/common/configuration.js
 var require_configuration = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/configuration.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/configuration.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -14213,9 +14213,9 @@ var require_configuration = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-textdocument/lib/umd/main.js
+// node_modules/vscode-languageserver-textdocument/lib/umd/main.js
 var require_main2 = __commonJS({
-  "../../node_modules/vscode-languageserver-textdocument/lib/umd/main.js"(exports2, module2) {
+  "node_modules/vscode-languageserver-textdocument/lib/umd/main.js"(exports2, module2) {
     var __spreadArray = exports2 && exports2.__spreadArray || function(to, from, pack) {
       if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -14511,9 +14511,9 @@ var require_main2 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/textSynchronization.js
+// node_modules/vscode-languageclient/lib/common/textSynchronization.js
 var require_textSynchronization = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15184,9 +15184,9 @@ var require_textSynchronization = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/completion.js
+// node_modules/vscode-languageclient/lib/common/completion.js
 var require_completion = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15349,9 +15349,9 @@ var require_completion = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/hover.js
+// node_modules/vscode-languageclient/lib/common/hover.js
 var require_hover = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15444,9 +15444,9 @@ var require_hover = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/definition.js
+// node_modules/vscode-languageclient/lib/common/definition.js
 var require_definition = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15536,9 +15536,9 @@ var require_definition = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/signatureHelp.js
+// node_modules/vscode-languageclient/lib/common/signatureHelp.js
 var require_signatureHelp = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15644,9 +15644,9 @@ var require_signatureHelp = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/documentHighlight.js
+// node_modules/vscode-languageclient/lib/common/documentHighlight.js
 var require_documentHighlight = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15731,9 +15731,9 @@ var require_documentHighlight = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/documentSymbol.js
+// node_modules/vscode-languageclient/lib/common/documentSymbol.js
 var require_documentSymbol = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15869,9 +15869,9 @@ var require_documentSymbol = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/workspaceSymbol.js
+// node_modules/vscode-languageclient/lib/common/workspaceSymbol.js
 var require_workspaceSymbol = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15981,9 +15981,9 @@ var require_workspaceSymbol = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/reference.js
+// node_modules/vscode-languageclient/lib/common/reference.js
 var require_reference = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16071,9 +16071,9 @@ var require_reference = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/typeDefinition.js
+// node_modules/vscode-languageclient/lib/common/typeDefinition.js
 var require_typeDefinition = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/typeDefinition.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionFeature = void 0;
@@ -16126,9 +16126,9 @@ var require_typeDefinition = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/implementation.js
+// node_modules/vscode-languageclient/lib/common/implementation.js
 var require_implementation = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/implementation.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationFeature = void 0;
@@ -16180,9 +16180,9 @@ var require_implementation = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/colorProvider.js
+// node_modules/vscode-languageclient/lib/common/colorProvider.js
 var require_colorProvider = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/colorProvider.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorProviderFeature = void 0;
@@ -16252,9 +16252,9 @@ var require_colorProvider = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/codeAction.js
+// node_modules/vscode-languageclient/lib/common/codeAction.js
 var require_codeAction = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16396,9 +16396,9 @@ var require_codeAction = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/codeLens.js
+// node_modules/vscode-languageclient/lib/common/codeLens.js
 var require_codeLens = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16509,9 +16509,9 @@ var require_codeLens = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/formatting.js
+// node_modules/vscode-languageclient/lib/common/formatting.js
 var require_formatting = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16722,9 +16722,9 @@ var require_formatting = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/rename.js
+// node_modules/vscode-languageclient/lib/common/rename.js
 var require_rename = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/rename.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/rename.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16871,9 +16871,9 @@ var require_rename = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/documentLink.js
+// node_modules/vscode-languageclient/lib/common/documentLink.js
 var require_documentLink = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16975,9 +16975,9 @@ var require_documentLink = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/executeCommand.js
+// node_modules/vscode-languageclient/lib/common/executeCommand.js
 var require_executeCommand = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17087,9 +17087,9 @@ var require_executeCommand = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/foldingRange.js
+// node_modules/vscode-languageclient/lib/common/foldingRange.js
 var require_foldingRange = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/foldingRange.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeFeature = void 0;
@@ -17152,9 +17152,9 @@ var require_foldingRange = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/declaration.js
+// node_modules/vscode-languageclient/lib/common/declaration.js
 var require_declaration = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/declaration.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationFeature = void 0;
@@ -17206,9 +17206,9 @@ var require_declaration = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/selectionRange.js
+// node_modules/vscode-languageclient/lib/common/selectionRange.js
 var require_selectionRange = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/selectionRange.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeFeature = void 0;
@@ -17263,9 +17263,9 @@ var require_selectionRange = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/callHierarchy.js
+// node_modules/vscode-languageclient/lib/common/callHierarchy.js
 var require_callHierarchy = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/callHierarchy.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyFeature = void 0;
@@ -17358,9 +17358,9 @@ var require_callHierarchy = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/semanticTokens.js
+// node_modules/vscode-languageclient/lib/common/semanticTokens.js
 var require_semanticTokens = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/semanticTokens.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/semanticTokens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17564,9 +17564,9 @@ var require_semanticTokens = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/linkedEditingRange.js
+// node_modules/vscode-languageclient/lib/common/linkedEditingRange.js
 var require_linkedEditingRange = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/linkedEditingRange.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/linkedEditingRange.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17654,9 +17654,9 @@ var require_linkedEditingRange = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/typeHierarchy.js
+// node_modules/vscode-languageclient/lib/common/typeHierarchy.js
 var require_typeHierarchy = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/typeHierarchy.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchyFeature = void 0;
@@ -17748,9 +17748,9 @@ var require_typeHierarchy = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/inlineValue.js
+// node_modules/vscode-languageclient/lib/common/inlineValue.js
 var require_inlineValue = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/inlineValue.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueFeature = void 0;
@@ -17813,9 +17813,9 @@ var require_inlineValue = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/inlayHint.js
+// node_modules/vscode-languageclient/lib/common/inlayHint.js
 var require_inlayHint = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/inlayHint.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintsFeature = void 0;
@@ -17899,9 +17899,9 @@ var require_inlayHint = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/workspaceFolder.js
+// node_modules/vscode-languageclient/lib/common/workspaceFolder.js
 var require_workspaceFolder = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18081,9 +18081,9 @@ var require_workspaceFolder = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/fileOperations.js
+// node_modules/vscode-languageclient/lib/common/fileOperations.js
 var require_fileOperations = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/fileOperations.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/fileOperations.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18429,9 +18429,9 @@ var require_fileOperations = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/inlineCompletion.js
+// node_modules/vscode-languageclient/lib/common/inlineCompletion.js
 var require_inlineCompletion = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18520,9 +18520,9 @@ var require_inlineCompletion = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/textDocumentContent.js
+// node_modules/vscode-languageclient/lib/common/textDocumentContent.js
 var require_textDocumentContent = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/textDocumentContent.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/textDocumentContent.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18666,9 +18666,9 @@ var require_textDocumentContent = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js
+// node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js
 var require_fileSystemWatcher = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FileSystemWatcherFeature = void 0;
@@ -18767,9 +18767,9 @@ var require_fileSystemWatcher = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/progress.js
+// node_modules/vscode-languageclient/lib/common/progress.js
 var require_progress = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/progress.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ProgressFeature = void 0;
@@ -18815,9 +18815,9 @@ var require_progress = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/client.js
+// node_modules/vscode-languageclient/lib/common/client.js
 var require_client = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/client.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/client.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19640,7 +19640,7 @@ ${this.data2String(data)}` : message;
         if (this._onStart !== void 0) {
           return this._onStart;
         }
-        const [promise, resolve9, reject] = this.createOnStartPromise();
+        const [promise, resolve9, reject2] = this.createOnStartPromise();
         this._onStart = promise;
         this._diagnostics = void 0;
         for (const [method, handler] of this._notificationHandlers) {
@@ -19752,18 +19752,18 @@ ${this.data2String(data)}` : message;
         } catch (error) {
           this.$state = ClientState.StartFailed;
           this.error(`${this._name} client: couldn't create connection to server.`, error, "force");
-          reject(error);
+          reject2(error);
         }
         return this._onStart;
       }
       createOnStartPromise() {
         let resolve9;
-        let reject;
+        let reject2;
         const promise = new Promise((_resolve, _reject) => {
           resolve9 = _resolve;
-          reject = _reject;
+          reject2 = _reject;
         });
-        return [promise, resolve9, reject];
+        return [promise, resolve9, reject2];
       }
       async initialize(connection) {
         this.refreshTrace(connection, false);
@@ -20106,7 +20106,7 @@ ${this.data2String(data)}` : message;
           this.handleConnectionClosed().catch((error) => this.error(`Handling connection close failed`, error));
         };
         const transports = await this.createMessageTransports(this._clientOptions.stdioEncoding || "utf8");
-        this._connection = createConnection(transports.reader, transports.writer, errorHandler, closeHandler, this._clientOptions.connectionOptions);
+        this._connection = createConnection(transports.reader, transports.writer, errorHandler, closeHandler, this, this._clientOptions.connectionOptions);
         return this._connection;
       }
       async handleConnectionClosed() {
@@ -20525,8 +20525,26 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
         (0, vscode_languageserver_protocol_1.RAL)().console.log(message);
       }
     };
-    function createConnection(input, output, errorHandler, closeHandler, options) {
-      const logger = new ConsoleLogger();
+    var OutputChannelLogger = class {
+      channelProvider;
+      constructor(channelProvider) {
+        this.channelProvider = channelProvider;
+      }
+      error(message) {
+        this.channelProvider.error(message, void 0, false);
+      }
+      warn(message) {
+        this.channelProvider.warn(message, void 0, false);
+      }
+      info(message) {
+        this.channelProvider.info(message, void 0, false);
+      }
+      log(message) {
+        this.channelProvider.info(message, void 0, false);
+      }
+    };
+    function createConnection(input, output, errorHandler, closeHandler, channelProvider, options) {
+      const logger = channelProvider !== void 0 ? new OutputChannelLogger(channelProvider) : new ConsoleLogger();
       const connection = (0, vscode_languageserver_protocol_1.createProtocolConnection)(input, output, logger, options);
       connection.onError((data) => {
         errorHandler(data[0], data[1], data[2]);
@@ -20579,9 +20597,9 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/node/processes.js
+// node_modules/vscode-languageclient/lib/node/processes.js
 var require_processes = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/node/processes.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/node/processes.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20672,9 +20690,9 @@ terminateTree "${pid}"
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/node/ril.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js
 var require_ril = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var util_1 = require("util");
@@ -20748,12 +20766,12 @@ var require_ril = __commonJS({
         return api_1.Disposable.create(() => this.stream.off("end", listener));
       }
       write(data, encoding) {
-        return new Promise((resolve9, reject) => {
+        return new Promise((resolve9, reject2) => {
           const callback = (error) => {
             if (error === void 0 || error === null) {
               resolve9();
             } else {
-              reject(error);
+              reject2(error);
             }
           };
           if (typeof data === "string") {
@@ -20830,9 +20848,9 @@ var require_ril = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-jsonrpc/lib/node/main.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js
 var require_main3 = __commonJS({
-  "../../node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21046,7 +21064,7 @@ var require_main3 = __commonJS({
       const connected = new Promise((resolve9, _reject) => {
         connectResolve = resolve9;
       });
-      return new Promise((resolve9, reject) => {
+      return new Promise((resolve9, reject2) => {
         const server = (0, net_1.createServer)((socket) => {
           server.close();
           connectResolve([
@@ -21054,9 +21072,9 @@ var require_main3 = __commonJS({
             new SocketMessageWriter(socket, encoding)
           ]);
         });
-        server.on("error", reject);
+        server.on("error", reject2);
         server.listen(pipeName, () => {
-          server.removeListener("error", reject);
+          server.removeListener("error", reject2);
           resolve9({
             onConnected: () => {
               return connected;
@@ -21077,7 +21095,7 @@ var require_main3 = __commonJS({
       const connected = new Promise((resolve9, _reject) => {
         connectResolve = resolve9;
       });
-      return new Promise((resolve9, reject) => {
+      return new Promise((resolve9, reject2) => {
         const server = (0, net_1.createServer)((socket) => {
           server.close();
           connectResolve([
@@ -21085,10 +21103,17 @@ var require_main3 = __commonJS({
             new SocketMessageWriter(socket, encoding)
           ]);
         });
-        server.on("error", reject);
+        server.on("error", reject2);
         server.listen(port, "127.0.0.1", () => {
-          server.removeListener("error", reject);
+          server.removeListener("error", reject2);
+          const address4 = server.address();
+          if (address4 === null || typeof address4 === "string") {
+            reject2(new Error(`Unexpected server address: ${address4}`));
+            return;
+          }
+          const boundPort = address4.port;
           resolve9({
+            port: () => boundPort,
             onConnected: () => {
               return connected;
             }
@@ -21125,9 +21150,9 @@ var require_main3 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageserver-protocol/lib/node/main.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js
 var require_main4 = __commonJS({
-  "../../node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21156,9 +21181,9 @@ var require_main4 = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/debug.js
+// node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "../../node_modules/semver/internal/debug.js"(exports2, module2) {
+  "node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug4 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -21166,9 +21191,9 @@ var require_debug = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/constants.js
+// node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "../../node_modules/semver/internal/constants.js"(exports2, module2) {
+  "node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -21198,9 +21223,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/re.js
+// node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "../../node_modules/semver/internal/re.js"(exports2, module2) {
+  "node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -21286,9 +21311,9 @@ var require_re = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/parse-options.js
+// node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "../../node_modules/semver/internal/parse-options.js"(exports2, module2) {
+  "node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -21305,9 +21330,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/identifiers.js
+// node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "../../node_modules/semver/internal/identifiers.js"(exports2, module2) {
+  "node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -21330,9 +21355,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/semver.js
+// node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "../../node_modules/semver/classes/semver.js"(exports2, module2) {
+  "node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug4 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -21622,9 +21647,9 @@ var require_semver = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/parse.js
+// node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "../../node_modules/semver/functions/parse.js"(exports2, module2) {
+  "node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse3 = (version, options, throwErrors = false) => {
@@ -21644,9 +21669,9 @@ var require_parse = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/lrucache.js
+// node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "../../node_modules/semver/internal/lrucache.js"(exports2, module2) {
+  "node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -21682,9 +21707,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare.js
+// node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "../../node_modules/semver/functions/compare.js"(exports2, module2) {
+  "node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -21692,9 +21717,9 @@ var require_compare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/eq.js
+// node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "../../node_modules/semver/functions/eq.js"(exports2, module2) {
+  "node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -21702,9 +21727,9 @@ var require_eq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/neq.js
+// node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "../../node_modules/semver/functions/neq.js"(exports2, module2) {
+  "node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -21712,9 +21737,9 @@ var require_neq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gt.js
+// node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "../../node_modules/semver/functions/gt.js"(exports2, module2) {
+  "node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -21722,9 +21747,9 @@ var require_gt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gte.js
+// node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "../../node_modules/semver/functions/gte.js"(exports2, module2) {
+  "node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -21732,9 +21757,9 @@ var require_gte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lt.js
+// node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "../../node_modules/semver/functions/lt.js"(exports2, module2) {
+  "node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -21742,9 +21767,9 @@ var require_lt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lte.js
+// node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "../../node_modules/semver/functions/lte.js"(exports2, module2) {
+  "node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -21752,9 +21777,9 @@ var require_lte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/cmp.js
+// node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "../../node_modules/semver/functions/cmp.js"(exports2, module2) {
+  "node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -21802,9 +21827,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/comparator.js
+// node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "../../node_modules/semver/classes/comparator.js"(exports2, module2) {
+  "node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -21915,9 +21940,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/range.js
+// node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "../../node_modules/semver/classes/range.js"(exports2, module2) {
+  "node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range7 = class _Range {
@@ -22300,9 +22325,9 @@ var require_range = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/satisfies.js
+// node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "../../node_modules/semver/functions/satisfies.js"(exports2, module2) {
+  "node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
     var Range7 = require_range();
     var satisfies = (version, range, options) => {
@@ -22317,9 +22342,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/common/api.js
+// node_modules/vscode-languageclient/lib/common/api.js
 var require_api3 = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/common/api.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -22352,9 +22377,9 @@ var require_api3 = __commonJS({
   }
 });
 
-// ../../node_modules/vscode-languageclient/lib/node/main.js
+// node_modules/vscode-languageclient/lib/node/main.js
 var require_main5 = __commonJS({
-  "../../node_modules/vscode-languageclient/lib/node/main.js"(exports2) {
+  "node_modules/vscode-languageclient/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -22677,8 +22702,6 @@ var require_main5 = __commonJS({
               } else if (transport === TransportKind2.pipe) {
                 pipeName = (0, node_1.generateRandomPipeName)();
                 args.push(`--pipe=${pipeName}`);
-              } else if (Transport.isSocket(transport)) {
-                args.push(`--socket=${transport.port}`);
               }
               args.push(`--clientProcessId=${process.pid.toString()}`);
               if (transport === TransportKind2.ipc || transport === TransportKind2.stdio) {
@@ -22709,6 +22732,7 @@ var require_main5 = __commonJS({
                 });
               } else if (Transport.isSocket(transport)) {
                 return (0, node_1.createClientSocketTransport)(transport.port).then((transport2) => {
+                  args.push(`--socket=${transport2.port()}`);
                   const process2 = cp.spawn(runtime, args, execOptions);
                   if (!process2 || !process2.pid) {
                     return handleChildProcessStartError(process2, `Launching server using runtime ${runtime} failed.`);
@@ -22723,7 +22747,7 @@ var require_main5 = __commonJS({
               }
             } else {
               let pipeName = void 0;
-              return new Promise((resolve9, reject) => {
+              return new Promise((resolve9, reject2) => {
                 const args = (node.args && node.args.slice()) ?? [];
                 if (transport === TransportKind2.ipc) {
                   args.push("--node-ipc");
@@ -22732,8 +22756,6 @@ var require_main5 = __commonJS({
                 } else if (transport === TransportKind2.pipe) {
                   pipeName = (0, node_1.generateRandomPipeName)();
                   args.push(`--pipe=${pipeName}`);
-                } else if (Transport.isSocket(transport)) {
-                  args.push(`--socket=${transport.port}`);
                 }
                 args.push(`--clientProcessId=${process.pid.toString()}`);
                 const options = node.options ? { ...node.options } : /* @__PURE__ */ Object.create(null);
@@ -22761,10 +22783,11 @@ var require_main5 = __commonJS({
                     pipeStdout(sp.stdout, this.outputChannel);
                     transport2.onConnected().then((protocol) => {
                       resolve9({ reader: protocol[0], writer: protocol[1] });
-                    }, reject);
-                  }, reject);
+                    }, reject2);
+                  }, reject2);
                 } else if (Transport.isSocket(transport)) {
                   (0, node_1.createClientSocketTransport)(transport.port).then((transport2) => {
+                    args.push(`--socket=${transport2.port()}`);
                     const sp = cp.fork(node.module, args || [], options);
                     assertStdio(sp);
                     this._serverProcess = sp;
@@ -22772,8 +22795,8 @@ var require_main5 = __commonJS({
                     pipeStdout(sp.stdout, this.outputChannel);
                     transport2.onConnected().then((protocol) => {
                       resolve9({ reader: protocol[0], writer: protocol[1] });
-                    }, reject);
-                  }, reject);
+                    }, reject2);
+                  }, reject2);
                 }
               });
             }
@@ -22787,8 +22810,6 @@ var require_main5 = __commonJS({
             } else if (transport === TransportKind2.pipe) {
               pipeName = (0, node_1.generateRandomPipeName)();
               args.push(`--pipe=${pipeName}`);
-            } else if (Transport.isSocket(transport)) {
-              args.push(`--socket=${transport.port}`);
             } else if (transport === TransportKind2.ipc) {
               throw new Error(`Transport kind ipc is not support for command executable`);
             }
@@ -22819,6 +22840,7 @@ var require_main5 = __commonJS({
               });
             } else if (Transport.isSocket(transport)) {
               return (0, node_1.createClientSocketTransport)(transport.port).then((transport2) => {
+                args.push(`--socket=${transport2.port()}`);
                 const serverProcess = cp.spawn(command.command, args, options);
                 if (!serverProcess || !serverProcess.pid) {
                   return handleChildProcessStartError(serverProcess, `Launching server using command ${command.command} failed.`);
@@ -22930,28 +22952,35 @@ var require_main5 = __commonJS({
       if (process2 === null) {
         return Promise.reject(message);
       }
-      return new Promise((_, reject) => {
+      return new Promise((_, reject2) => {
         process2.on("error", (err) => {
-          reject(`${message} ${err}`);
+          reject2(`${message} ${err}`);
         });
-        setImmediate(() => reject(message));
+        setImmediate(() => reject2(message));
       });
     }
   }
 });
 
-// ../core/src/canonical-json.ts
-var compareKeys, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
+// packages/core/src/canonical-json.ts
+function stringifyCanonical(value) {
+  return JSON.stringify(value);
+}
+var compareKeys, isRecord, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
 var init_canonical_json = __esm({
-  "../core/src/canonical-json.ts"() {
+  "packages/core/src/canonical-json.ts"() {
     "use strict";
     compareKeys = (a, b) => a.localeCompare(b);
+    isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     canonicalValue = (value) => {
       if (typeof value !== "object" || value === null) {
         return value;
       }
       if (Array.isArray(value)) {
         return value.map(canonicalValue);
+      }
+      if (!isRecord(value)) {
+        return value;
       }
       const input = value;
       const result = {};
@@ -22978,17 +23007,17 @@ var init_canonical_json = __esm({
       }
       return result;
     };
-    canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+    canonicalJsonCompact = (value) => stringifyCanonical(canonicalValue(value)) ?? "";
     canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
     canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
   }
 });
 
-// ../core/src/debug-map.ts
+// packages/core/src/debug-map.ts
 var import_node_crypto, import_node_path, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, sha256, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
-  "../core/src/debug-map.ts"() {
+  "packages/core/src/debug-map.ts"() {
     "use strict";
     import_node_crypto = require("node:crypto");
     import_node_path = __toESM(require("node:path"), 1);
@@ -23000,7 +23029,7 @@ var init_debug_map = __esm({
       const { fingerprint, ...payload } = map;
       const issues = [];
       if (map.format !== DEBUG_MAP_FORMAT) {
-        issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
+        issues.push(`Unsupported debug-map format '${map.format}'.`);
       }
       if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
         issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
@@ -23040,10 +23069,10 @@ var init_debug_map = __esm({
   }
 });
 
-// ../disassembler/src/model/project-types.ts
+// packages/disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
 var init_project_types = __esm({
-  "../disassembler/src/model/project-types.ts"() {
+  "packages/disassembler/src/model/project-types.ts"() {
     "use strict";
     ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
     ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
@@ -23051,7 +23080,7 @@ var init_project_types = __esm({
   }
 });
 
-// ../disassembler/src/model/project-asset-ids.ts
+// packages/disassembler/src/model/project-asset-ids.ts
 function resolveProjectNativeAssetId(declaration) {
   if (declaration.codecVersion !== "1.0.0") {
     return void 0;
@@ -23060,7 +23089,7 @@ function resolveProjectNativeAssetId(declaration) {
 }
 var legacyNativeIds;
 var init_project_asset_ids = __esm({
-  "../disassembler/src/model/project-asset-ids.ts"() {
+  "packages/disassembler/src/model/project-asset-ids.ts"() {
     "use strict";
     legacyNativeIds = /* @__PURE__ */ new Map([
       ["snes.asset.tile.2bpp", "snes.tile.2bpp"],
@@ -23076,10 +23105,10 @@ var init_project_asset_ids = __esm({
   }
 });
 
-// ../disassembler/src/model/project-labels.ts
+// packages/disassembler/src/model/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
-  "../disassembler/src/model/project-labels.ts"() {
+  "packages/disassembler/src/model/project-labels.ts"() {
     "use strict";
     validateSourceLabelName = (name) => {
       if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
@@ -23092,8 +23121,8 @@ var init_project_labels = __esm({
     projectSourceLabelNames = (labels, reserved = []) => {
       const names = /* @__PURE__ */ new Map();
       const used = new Set([...reserved].map((name) => name.toLowerCase()));
-      const sorted2 = labels.filter((label) => !label.suppressed).sort((a, b) => a.id.localeCompare(b.id));
-      for (const label of sorted2.filter((label2) => label2.sourceName === void 0)) {
+      const sorted2 = labels.filter((label) => !label.suppressed).toSorted((a, b) => a.id.localeCompare(b.id));
+      for (const label of sorted2.filter((candidate) => candidate.sourceName === void 0)) {
         const base = legacySourceLabelName(label.name);
         let name = base;
         let suffix = 2;
@@ -23103,7 +23132,7 @@ var init_project_labels = __esm({
         used.add(name.toLowerCase());
         names.set(label.id, name);
       }
-      for (const label of sorted2.filter((label2) => label2.sourceName !== void 0)) {
+      for (const label of sorted2.filter((candidate) => candidate.sourceName !== void 0)) {
         const name = label.sourceName;
         validateSourceLabelName(name);
         if (used.has(name.toLowerCase())) {
@@ -23117,10 +23146,10 @@ var init_project_labels = __esm({
   }
 });
 
-// ../disassembler/src/model/rom-image.ts
+// packages/disassembler/src/model/rom-image.ts
 var import_node_crypto3, fs, sha2562, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
-  "../disassembler/src/model/rom-image.ts"() {
+  "packages/disassembler/src/model/rom-image.ts"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
     fs = __toESM(require("node:fs"), 1);
@@ -23226,55 +23255,120 @@ var init_rom_image = __esm({
   }
 });
 
-// ../disassembler/src/model/trace-detail.ts
-var isArray, validateRuntimeInstructionDetails;
+// packages/disassembler/src/model/trace-detail.ts
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray(value) {
+  return Array.isArray(value);
+}
+function isInteger(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+function isSafeInteger(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isStateValue(value) {
+  return typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value);
+}
+function isMemoryAccess(entry) {
+  if (!isRecord5(entry)) {
+    return false;
+  }
+  const addressSpace = entry.addressSpace;
+  const address4 = entry.address;
+  const access = entry.access;
+  const width = entry.width;
+  const value = entry.value;
+  const actor = entry.actor;
+  const channel = entry.channel;
+  return typeof addressSpace === "string" && addressSpace !== "" && isSafeInteger(address4) && address4 >= 0 && (access === "read" || access === "write" || access === "fetch") && isSafeInteger(width) && width >= 1 && width <= 8 && (value === void 0 || isSafeInteger(value) && value >= 0) && (actor === void 0 || actor === "cpu" || actor === "dma" || actor === "hdma") && (channel === void 0 || isInteger(channel) && channel >= 0 && channel <= 7 && (actor === "dma" || actor === "hdma"));
+}
+var validateRuntimeInstructionDetails;
 var init_trace_detail = __esm({
-  "../disassembler/src/model/trace-detail.ts"() {
+  "packages/disassembler/src/model/trace-detail.ts"() {
     "use strict";
-    isArray = (value) => Array.isArray(value);
     validateRuntimeInstructionDetails = (value, count2) => {
-      if (!Array.isArray(value) || value.length !== count2) {
+      if (!isUnknownArray(value) || value.length !== count2) {
         throw new Error("Trace details must align one-to-one with instruction addresses.");
       }
-      return value.map((detail) => {
-        if (!detail || !isArray(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255)) {
+      return value.map((entry) => {
+        if (!isRecord5(entry)) {
           throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
         }
-        if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
-          ([key3, entry]) => !key3 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-        )) {
+        const rawBytes = entry.bytes;
+        if (!isUnknownArray(rawBytes) || rawBytes.length < 1 || rawBytes.length > 16) {
+          throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
+        }
+        const bytes = [];
+        for (const byte2 of rawBytes) {
+          if (!(isInteger(byte2) && byte2 >= 0 && byte2 <= 255)) {
+            throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
+          }
+          bytes.push(byte2);
+        }
+        const rawState = entry.state;
+        if (!isRecord5(rawState)) {
           throw new Error("Trace instruction state contains an invalid register value.");
         }
-        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
-          throw new Error("Trace memory loss must be a non-negative safe integer.");
+        const state = {};
+        for (const [key3, stateValue2] of Object.entries(rawState)) {
+          if (!key3 || !isStateValue(stateValue2)) {
+            throw new Error("Trace instruction state contains an invalid register value.");
+          }
+          state[key3] = stateValue2;
         }
-        if (detail.memoryAccesses !== void 0 && (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
+        const droppedMemoryAccesses = entry.droppedMemoryAccesses;
+        let droppedCount;
+        if (droppedMemoryAccesses !== void 0) {
+          if (!(isSafeInteger(droppedMemoryAccesses) && droppedMemoryAccesses >= 0)) {
+            throw new Error("Trace memory loss must be a non-negative safe integer.");
+          }
+          droppedCount = droppedMemoryAccesses;
+        }
+        const rawAccesses = entry.memoryAccesses;
+        if (rawAccesses !== void 0 && (!isUnknownArray(rawAccesses) || rawAccesses.length > 256)) {
           throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
         }
-        const memoryAccesses = detail.memoryAccesses?.map((access) => {
-          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isSafeInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
+        const memoryAccesses = rawAccesses === void 0 ? void 0 : rawAccesses.map((access) => {
+          if (!isMemoryAccess(access)) {
             throw new Error("Trace contains an invalid bus operation.");
           }
-          return { ...access };
+          return access;
         });
         return {
-          bytes: [...detail.bytes],
-          state: { ...detail.state },
+          bytes,
+          state,
           ...memoryAccesses === void 0 ? {} : { memoryAccesses },
-          ...detail.droppedMemoryAccesses === void 0 ? {} : { droppedMemoryAccesses: detail.droppedMemoryAccesses }
+          ...droppedCount === void 0 ? {} : { droppedMemoryAccesses: droppedCount }
         };
       });
     };
   }
 });
 
-// ../disassembler/src/model/runtime-ppu-effect.ts
+// packages/disassembler/src/model/runtime-ppu-effect.ts
+function isEffectRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isVramBytes(value) {
+  return value === 65536 || value === 131072;
+}
+function isInteger2(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
 var normalizeRuntimePPUEffect;
 var init_runtime_ppu_effect = __esm({
-  "../disassembler/src/model/runtime-ppu-effect.ts"() {
+  "packages/disassembler/src/model/runtime-ppu-effect.ts"() {
     "use strict";
     normalizeRuntimePPUEffect = (effect, access) => {
-      const port = access.address & 65535;
+      const accessAddress = access.address;
+      const accessValue = access.value;
+      const accessDirection = access.direction;
+      if (typeof accessAddress !== "number" || typeof accessValue !== "number" || typeof accessDirection !== "string") {
+        throw new Error("Invalid native PPU effect identity or flags.");
+      }
+      const port = accessAddress & 65535;
       let target = "vram";
       if (port === 8452) {
         target = "oam";
@@ -23282,66 +23376,99 @@ var init_runtime_ppu_effect = __esm({
       if (port === 8482) {
         target = "cgram";
       }
-      if (!effect || access.direction !== "write" || access.address & 4194304 || ![8452, 8472, 8473, 8482].includes(port) || effect.target !== target || !["written", "blocked", "latched"].includes(effect.outcome) || typeof effect.forcedBlank !== "boolean" || typeof effect.renderingRestricted !== "boolean" || effect.forcedBlank && effect.renderingRestricted || !["accurate", "performance"].includes(effect.implementation) || (target === "vram" ? ![65536, 131072].includes(effect.vramBytes ?? 0) : effect.vramBytes !== null) || !Array.isArray(effect.bytes) || effect.bytes.length > 2) {
+      const effectRecord = isEffectRecord(effect) ? effect : void 0;
+      const outcome = effectRecord?.outcome;
+      const forcedBlank = effectRecord?.forcedBlank;
+      const renderingRestricted = effectRecord?.renderingRestricted;
+      const implementation = effectRecord?.implementation;
+      const vramBytes = effectRecord?.vramBytes;
+      const rawBytes = effectRecord?.bytes;
+      if (!effectRecord || accessDirection !== "write" || accessAddress & 4194304 || ![8452, 8472, 8473, 8482].includes(port) || effectRecord.target !== target || outcome !== "written" && outcome !== "blocked" && outcome !== "latched" || typeof forcedBlank !== "boolean" || typeof renderingRestricted !== "boolean" || forcedBlank && renderingRestricted || implementation !== "accurate" && implementation !== "performance" || (target === "vram" ? !isVramBytes(vramBytes) : vramBytes !== null) || !Array.isArray(rawBytes) || rawBytes.length > 2) {
         throw new Error("Invalid native PPU effect identity or flags.");
       }
-      const count2 = effect.bytes.length;
-      if (effect.outcome === "written" && (count2 === 0 || target === "vram" && count2 !== 1 || target === "cgram" && count2 !== 2) || effect.outcome !== "written" && count2 !== 0 || effect.outcome === "blocked" && (target !== "vram" || !effect.renderingRestricted) || effect.outcome === "latched" && (target === "vram" || effect.renderingRestricted)) {
+      const count2 = rawBytes.length;
+      const capacity = target === "vram" && isVramBytes(vramBytes) ? vramBytes : null;
+      if (outcome === "written" && (count2 === 0 || target === "vram" && count2 !== 1 || target === "cgram" && count2 !== 2) || outcome !== "written" && count2 !== 0 || outcome === "blocked" && (target !== "vram" || !renderingRestricted) || outcome === "latched" && (target === "vram" || renderingRestricted)) {
         throw new Error("Invalid native PPU outcome or write count.");
       }
-      let bound = effect.vramBytes ?? 0;
+      let bound = capacity ?? 0;
       if (target === "cgram") {
         bound = 512;
       }
       if (target === "oam") {
         bound = 544;
       }
-      const bytes = effect.bytes.map((byte2, i) => {
-        if (!byte2 || !Number.isInteger(byte2.address) || byte2.address < 0 || byte2.address >= bound || !Number.isInteger(byte2.value) || byte2.value < 0 || byte2.value > 255 || target === "vram" && ((byte2.address & 1) !== (port & 1) || byte2.value !== access.value) || target === "cgram" && (i === 0 ? (byte2.address & 1) !== 0 : byte2.address !== effect.bytes[0].address + 1 || byte2.value !== (access.value & 127)) || target === "oam" && i === count2 - 1 && byte2.value !== access.value) {
+      const byteEntries = rawBytes;
+      let firstAddress = 0;
+      const bytes = byteEntries.map((entry, i) => {
+        const byte2 = isEffectRecord(entry) ? entry : void 0;
+        if (!byte2) {
           throw new Error("Invalid native PPU byte destination or value.");
         }
-        return { address: byte2.address, value: byte2.value };
+        const address4 = byte2.address;
+        const byteValue = byte2.value;
+        if (!isInteger2(address4) || !isInteger2(byteValue)) {
+          throw new Error("Invalid native PPU byte destination or value.");
+        }
+        if (address4 < 0 || address4 >= bound || byteValue < 0 || byteValue > 255 || target === "vram" && ((address4 & 1) !== (port & 1) || byteValue !== accessValue) || target === "cgram" && (i === 0 ? (address4 & 1) !== 0 : address4 !== firstAddress + 1 || byteValue !== (accessValue & 127)) || target === "oam" && i === count2 - 1 && byteValue !== accessValue) {
+          throw new Error("Invalid native PPU byte destination or value.");
+        }
+        if (i === 0) {
+          firstAddress = address4;
+        }
+        return { address: address4, value: byteValue };
       });
       return {
-        target: effect.target,
-        outcome: effect.outcome,
-        forcedBlank: effect.forcedBlank,
-        renderingRestricted: effect.renderingRestricted,
-        implementation: effect.implementation,
-        vramBytes: effect.vramBytes,
+        target,
+        outcome,
+        forcedBlank,
+        renderingRestricted,
+        implementation,
+        vramBytes: capacity,
         bytes
       };
     };
   }
 });
 
-// ../disassembler/src/model/runtime-bus-types.ts
+// packages/disassembler/src/model/runtime-bus-types.ts
+function isInteger3(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
 var validateRuntimeBusFact;
 var init_runtime_bus_types = __esm({
-  "../disassembler/src/model/runtime-bus-types.ts"() {
+  "packages/disassembler/src/model/runtime-bus-types.ts"() {
     "use strict";
     init_runtime_ppu_effect();
     validateRuntimeBusFact = (fact) => {
-      if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
+      const address4 = fact.address;
+      const pc = fact.pc;
+      const value = fact.value;
+      const direction = fact.direction;
+      const context = fact.context;
+      if (fact.addressSpace !== "snes.cpu" || !(isInteger3(address4) && address4 >= 0 && address4 <= 16777215) || !(isInteger3(pc) && pc >= 0 && pc <= 16777215) || !(isInteger3(value) && value >= 0 && value <= 255) || direction !== "read" && direction !== "write" || context !== "unattributed" && context !== "instruction" && context !== "interrupt" && context !== "wait" && context !== "stop") {
         throw new Error("Invalid bus access coordinates, value, direction or context.");
       }
-      if (fact.actor === "cpu") {
-        if (fact.channel !== null || fact.phase !== "cpu") {
+      const actor = fact.actor;
+      const channel = fact.channel;
+      const phase = fact.phase;
+      if (actor === "cpu") {
+        if (channel !== null || phase !== "cpu") {
           throw new Error("CPU bus accesses require a null channel and CPU phase.");
         }
       } else {
-        if (!Number.isInteger(fact.channel) || fact.channel === null || fact.channel < 0 || fact.channel > 7) {
+        if (!(isInteger3(channel) && channel >= 0 && channel <= 7)) {
           throw new Error("DMA/HDMA bus accesses require a channel in [0, 7].");
         }
-        if (fact.actor === "dma") {
-          if (fact.phase !== "dma") {
+        if (actor === "dma") {
+          if (phase !== "dma") {
             throw new Error("DMA bus access has an invalid phase.");
           }
-        } else if (fact.actor === "hdma") {
-          if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase)) {
+        } else if (actor === "hdma") {
+          if (phase !== "hdma-table" && phase !== "hdma-indirect" && phase !== "hdma-transfer") {
             throw new Error("HDMA bus access has an invalid phase.");
           }
-          if (fact.phase !== "hdma-transfer" && fact.direction !== "read") {
+          if (phase !== "hdma-transfer" && direction !== "read") {
             throw new Error("HDMA table and indirect phases must be reads.");
           }
         } else {
@@ -23349,26 +23476,26 @@ var init_runtime_bus_types = __esm({
         }
       }
       if (fact.ppu !== void 0) {
-        return normalizeRuntimePPUEffect(fact.ppu, fact);
+        return normalizeRuntimePPUEffect(fact.ppu, { address: address4, direction, value });
       }
       return void 0;
     };
   }
 });
 
-// ../disassembler/src/analysis/analysis-graph.ts
+// packages/disassembler/src/analysis/analysis-graph.ts
 var init_analysis_graph = __esm({
-  "../disassembler/src/analysis/analysis-graph.ts"() {
+  "packages/disassembler/src/analysis/analysis-graph.ts"() {
     "use strict";
   }
 });
 
-// ../disassembler/src/analysis/analysis-sources.ts
+// packages/disassembler/src/analysis/analysis-sources.ts
 var sorted, key, buildAnalysisSourceCatalog;
 var init_analysis_sources = __esm({
-  "../disassembler/src/analysis/analysis-sources.ts"() {
+  "packages/disassembler/src/analysis/analysis-sources.ts"() {
     "use strict";
-    sorted = (values) => [...new Set(values)].sort();
+    sorted = (values) => [...new Set(values)].toSorted();
     key = (...values) => JSON.stringify(values);
     buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
       const sources = /* @__PURE__ */ new Map();
@@ -23410,25 +23537,30 @@ var init_analysis_sources = __esm({
         source.kinds.add(evidence.source);
         source.evidenceIds.push(evidence.id);
       }
-      return [...sources.values()].map((source) => ({
-        ...source,
-        ...source.sha256 && importTimes.has(source.sha256) ? { lastImportedAt: importTimes.get(source.sha256) } : {},
-        names: sorted(source.names),
-        name: sorted(source.names).join(" / "),
-        kinds: [...source.kinds].sort(),
-        evidenceIds: sorted(source.evidenceIds),
-        reports: source.reports.sort((a, b) => a.id.localeCompare(b.id))
-      })).sort(
+      return [...sources.values()].map(
+        (source) => Object.assign(
+          {},
+          source,
+          source.sha256 && importTimes.has(source.sha256) ? { lastImportedAt: importTimes.get(source.sha256) } : {},
+          {
+            names: sorted(source.names),
+            name: sorted(source.names).join(" / "),
+            kinds: [...source.kinds].toSorted(),
+            evidenceIds: sorted(source.evidenceIds),
+            reports: source.reports.toSorted((a, b) => a.id.localeCompare(b.id))
+          }
+        )
+      ).toSorted(
         (a, b) => (b.lastImportedAt ?? -1) - (a.lastImportedAt ?? -1) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
       );
     };
   }
 });
 
-// ../disassembler/src/analysis/coverage-map.ts
+// packages/disassembler/src/analysis/coverage-map.ts
 var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
 var init_coverage_map = __esm({
-  "../disassembler/src/analysis/coverage-map.ts"() {
+  "packages/disassembler/src/analysis/coverage-map.ts"() {
     "use strict";
     CLASSIFICATION_ORDER = [
       "opcode",
@@ -23450,8 +23582,21 @@ var init_coverage_map = __esm({
           return "asset";
         case "unreached":
           return void 0;
-        default:
+        case "data8":
+        case "data16":
+        case "data24":
+        case "data32":
+        case "empty":
+        case "pointer16":
+        case "pointer24":
+        case "pointer32":
+        case "text": {
           return "data";
+        }
+        default: {
+          const leftover = classification2;
+          throw new Error(`Unsupported annotation classification: ${String(leftover)}`);
+        }
       }
     };
     compareStrings = (left, right) => left.localeCompare(right);
@@ -23471,7 +23616,7 @@ var init_coverage_map = __esm({
       if (!Number.isSafeInteger(contentSize) || contentSize < 0) {
         throw new Error("ROM coverage requires a non-negative safe content size.");
       }
-      const fileAddressSpaces = manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id).sort(compareStrings);
+      const fileAddressSpaces = manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id).toSorted(compareStrings);
       const fileAddressSpaceSet = new Set(fileAddressSpaces);
       const events = /* @__PURE__ */ new Map();
       const unprojected = [];
@@ -23604,9 +23749,9 @@ var init_coverage_map = __esm({
           addConflict(record4);
         }
       }
-      const addRuntimeAddressSpaceOverlay = (record4, runtime2, start, end) => {
+      const addRuntimeAddressSpaceOverlay = (record4, runtimeCoverage, start, end) => {
         const addressSpace = coverageAddressSpace(record4);
-        addAddressSpaceOverlay({ runtime: runtime2, runtimeId: record4.id }, start, end, {
+        addAddressSpaceOverlay({ runtime: runtimeCoverage, runtimeId: record4.id }, start, end, {
           kind: "runtime",
           id: record4.id,
           addressSpace
@@ -23668,7 +23813,7 @@ var init_coverage_map = __esm({
       }
       eventAt(0);
       eventAt(contentSize);
-      const boundaries = [...events.keys()].sort((left, right) => left - right);
+      const boundaries = [...events.keys()].toSorted((left, right) => left - right);
       const active = /* @__PURE__ */ new Map();
       const segments = [];
       for (let index = 0; index + 1 < boundaries.length; index++) {
@@ -23697,7 +23842,7 @@ var init_coverage_map = __esm({
         );
         const conflictIds = [
           ...new Set(values.flatMap(({ conflictId }) => conflictId ? [conflictId] : []))
-        ].sort(compareStrings);
+        ].toSorted(compareStrings);
         let status = "classified";
         if (classifications.size === 0 && conflictIds.length === 0) {
           status = "unknown";
@@ -23709,22 +23854,24 @@ var init_coverage_map = __esm({
           end,
           status,
           classifications: sortedClassifications,
-          runtime: [...new Set(values.flatMap(({ runtime: runtime2 }) => runtime2 ? [runtime2] : []))].sort(
-            (left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)
-          ),
+          runtime: [
+            ...new Set(
+              values.flatMap(({ runtime: runtimeKind }) => runtimeKind ? [runtimeKind] : [])
+            )
+          ].toSorted((left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)),
           annotationIds: [
             ...new Set(values.flatMap(({ annotationId }) => annotationId ? [annotationId] : []))
-          ].sort(compareStrings),
+          ].toSorted(compareStrings),
           analysisIds: [
             ...new Set(values.flatMap(({ analysisId }) => analysisId ? [analysisId] : []))
-          ].sort(compareStrings),
+          ].toSorted(compareStrings),
           runtimeIds: [
             ...new Set(values.flatMap(({ runtimeId }) => runtimeId ? [runtimeId] : []))
-          ].sort(compareStrings),
+          ].toSorted(compareStrings),
           conflictIds,
-          regionIds: [...new Set(values.flatMap(({ regionId }) => regionId ? [regionId] : []))].sort(
-            compareStrings
-          )
+          regionIds: [
+            ...new Set(values.flatMap(({ regionId }) => regionId ? [regionId] : []))
+          ].toSorted(compareStrings)
         };
         const previous = segments.at(-1);
         if (previous && previous.end === segment.start && segmentsEqual(previous, segment)) {
@@ -23754,8 +23901,8 @@ var init_coverage_map = __esm({
         for (const classification2 of segment.classifications) {
           bytesByClassification[classification2] += size;
         }
-        for (const runtime2 of segment.runtime) {
-          bytesByRuntimeCoverage[runtime2] += size;
+        for (const runtimeKind of segment.runtime) {
+          bytesByRuntimeCoverage[runtimeKind] += size;
         }
         if (segment.status === "classified") {
           classifiedBytes += size;
@@ -23778,10 +23925,10 @@ var init_coverage_map = __esm({
           bytesByClassification,
           bytesByRuntimeCoverage
         },
-        unprojected: unprojected.sort(
+        unprojected: unprojected.toSorted(
           (left, right) => left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id) || left.reason.localeCompare(right.reason)
         ),
-        diagnostics: diagnostics.sort(
+        diagnostics: diagnostics.toSorted(
           (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
         )
       };
@@ -23789,14 +23936,14 @@ var init_coverage_map = __esm({
   }
 });
 
-// ../disassembler/src/analysis/instruction-annotations.ts
-var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
+// packages/disassembler/src/analysis/instruction-annotations.ts
+var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, lowerBound, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
-  "../disassembler/src/analysis/instruction-annotations.ts"() {
+  "packages/disassembler/src/analysis/instruction-annotations.ts"() {
     "use strict";
     init_canonical_json();
-    sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
-    sortedNumbers = (values) => values ? [...new Set(values)].sort((left, right) => left - right) : [];
+    sortedStrings = (values) => values ? [...new Set(values)].toSorted((left, right) => left.localeCompare(right)) : [];
+    sortedNumbers = (values) => values ? [...new Set(values)].toSorted((left, right) => left - right) : [];
     valueKey = (value, present) => present ? canonicalJsonCompact(value) : "<absent>";
     locationKey = (addressSpace, address4) => `${addressSpace}:${address4}`;
     addValue = (target, value) => {
@@ -23816,7 +23963,7 @@ var init_instruction_annotations = __esm({
     };
     numberField = (record4, name) => {
       const value = record4[name];
-      return Number.isSafeInteger(value) && value >= 0 ? value : void 0;
+      return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
     };
     effectiveAddress = (value) => {
       const operandIndex = numberField(value, "operandIndex");
@@ -23839,6 +23986,19 @@ var init_instruction_annotations = __esm({
     };
     annotationState = (annotation) => annotation.state;
     runtimeState = (record4) => record4.state;
+    lowerBound = (values, target, at) => {
+      let low = 0;
+      let high = values.length;
+      while (low < high) {
+        const middle = low + Math.floor((high - low) / 2);
+        if (at(values[middle]) < target) {
+          low = middle + 1;
+        } else {
+          high = middle;
+        }
+      }
+      return low;
+    };
     buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => shards.runtime) => {
       const fileAddressSpaces = new Set(
         manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
@@ -24025,19 +24185,6 @@ var init_instruction_annotations = __esm({
         values.sort((left, right) => left.address - right.address);
       }
       outputIndex.sort((left, right) => left.offset - right.offset);
-      const lowerBound = (values, target, at) => {
-        let low = 0;
-        let high = values.length;
-        while (low < high) {
-          const middle = low + Math.floor((high - low) / 2);
-          if (at(values[middle]) < target) {
-            low = middle + 1;
-          } else {
-            high = middle;
-          }
-        }
-        return low;
-      };
       const attachToRange = (addressSpace, start, end, callback) => {
         const direct = directIndex.get(addressSpace) ?? [];
         for (let index = lowerBound(direct, start, ({ address: address4 }) => address4); index < direct.length && direct[index].address < end; index++) {
@@ -24103,61 +24250,77 @@ var init_instruction_annotations = __esm({
             evidence: sortedStrings([...previous?.evidence ?? [], ...record4.evidence])
           });
         }
-        return {
-          id: `instruction:${instruction2.addressSpace}:${instruction2.address}`,
-          addressSpace: instruction2.addressSpace,
-          address: instruction2.address,
-          outputOffsets: sortedNumbers(instruction2.outputOffsets),
-          architectures: sortedStrings(instruction2.architectures),
-          nodeIds: sortedStrings(instruction2.nodeIds),
-          effectiveAddresses: [...instruction2.effectiveAddresses?.values() ?? []].map(({ value, nodeIds, evidence }) => ({
-            ...value,
-            nodeIds: sortedStrings(nodeIds),
-            evidence: sortedStrings(evidence)
-          })).sort(
-            (left, right) => left.operandIndex - right.operandIndex || (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) || left.explanation.localeCompare(right.explanation)
-          ),
-          stateTransitions: [...instruction2.stateTransitions?.values() ?? []].sort(
-            (left, right) => left.field.localeCompare(right.field) || left.beforeKey.localeCompare(right.beforeKey) || left.afterKey.localeCompare(right.afterKey)
-          ).map(({ field, before, after, nodeIds, evidence }) => ({
-            field,
-            ...before === void 0 ? {} : { before },
-            ...after === void 0 ? {} : { after },
-            nodeIds: sortedStrings(nodeIds),
-            evidence: sortedStrings(evidence)
-          })),
-          stateObservations: [...instruction2.stateObservations?.values() ?? []].sort(
-            (left, right) => left.source.localeCompare(right.source) || left.architecture.localeCompare(right.architecture) || left.stateKey.localeCompare(right.stateKey)
-          ).map(({ source, architecture, state, count: count2, recordIds, evidence }) => ({
-            source,
-            architecture,
-            state,
-            ...count2 === void 0 ? {} : { count: count2 },
-            recordIds: sortedStrings(recordIds),
-            evidence: sortedStrings(evidence)
-          })),
-          executionCount: instruction2.executionCount,
-          ...instruction2.comments ? { comments: [...instruction2.comments].sort((a, b) => a.id.localeCompare(b.id)) } : {},
-          executionRecordIds: sortedStrings(instruction2.executionRecordIds),
-          runtimeCoverage: [...coverage.values()].sort(
-            (left, right) => left.coverage.localeCompare(right.coverage)
-          ),
-          memoryAccesses: [...instruction2.memoryAccesses?.values() ?? []].map(({ value, count: count2, recordIds, evidence }) => ({
-            ...value,
-            count: count2,
-            recordIds: sortedStrings(recordIds),
-            evidence: sortedStrings(evidence)
-          })).sort(
-            (left, right) => left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) || left.accessedAddress - right.accessedAddress || left.access.localeCompare(right.access) || left.width - right.width || (left.value ?? -1) - (right.value ?? -1)
-          ),
-          evidence: sortedStrings(instruction2.evidence)
-        };
+        return Object.assign(
+          {
+            id: `instruction:${instruction2.addressSpace}:${instruction2.address}`,
+            addressSpace: instruction2.addressSpace,
+            address: instruction2.address,
+            outputOffsets: sortedNumbers(instruction2.outputOffsets),
+            architectures: sortedStrings(instruction2.architectures),
+            nodeIds: sortedStrings(instruction2.nodeIds),
+            effectiveAddresses: [...instruction2.effectiveAddresses?.values() ?? []].map(
+              ({ value, nodeIds, evidence }) => Object.assign({}, value, {
+                nodeIds: sortedStrings(nodeIds),
+                evidence: sortedStrings(evidence)
+              })
+            ).toSorted(
+              (left, right) => left.operandIndex - right.operandIndex || (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) || left.explanation.localeCompare(right.explanation)
+            ),
+            stateTransitions: [...instruction2.stateTransitions?.values() ?? []].toSorted(
+              (left, right) => left.field.localeCompare(right.field) || left.beforeKey.localeCompare(right.beforeKey) || left.afterKey.localeCompare(right.afterKey)
+            ).map(
+              ({ field, before, after, nodeIds, evidence }) => Object.assign(
+                Object.assign(
+                  {},
+                  { field },
+                  before === void 0 ? {} : { before },
+                  after === void 0 ? {} : { after }
+                ),
+                {
+                  nodeIds: sortedStrings(nodeIds),
+                  evidence: sortedStrings(evidence)
+                }
+              )
+            ),
+            stateObservations: [...instruction2.stateObservations?.values() ?? []].toSorted(
+              (left, right) => left.source.localeCompare(right.source) || left.architecture.localeCompare(right.architecture) || left.stateKey.localeCompare(right.stateKey)
+            ).map(
+              ({ source, architecture, state, count: count2, recordIds, evidence }) => Object.assign(
+                {},
+                { source, architecture, state },
+                count2 === void 0 ? {} : { count: count2 },
+                {
+                  recordIds: sortedStrings(recordIds),
+                  evidence: sortedStrings(evidence)
+                }
+              )
+            ),
+            executionCount: instruction2.executionCount
+          },
+          instruction2.comments ? { comments: instruction2.comments.toSorted((a, b) => a.id.localeCompare(b.id)) } : {},
+          {
+            executionRecordIds: sortedStrings(instruction2.executionRecordIds),
+            runtimeCoverage: [...coverage.values()].toSorted(
+              (left, right) => left.coverage.localeCompare(right.coverage)
+            ),
+            memoryAccesses: [...instruction2.memoryAccesses?.values() ?? []].map(
+              ({ value, count: count2, recordIds, evidence }) => Object.assign({}, value, {
+                count: count2,
+                recordIds: sortedStrings(recordIds),
+                evidence: sortedStrings(evidence)
+              })
+            ).toSorted(
+              (left, right) => left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) || left.accessedAddress - right.accessedAddress || left.access.localeCompare(right.access) || left.width - right.width || (left.value ?? -1) - (right.value ?? -1)
+            ),
+            evidence: sortedStrings(instruction2.evidence)
+          }
+        );
       });
       return {
-        instructions: finalized.sort(
+        instructions: finalized.toSorted(
           (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
         ),
-        diagnostics: diagnostics.sort(
+        diagnostics: diagnostics.toSorted(
           (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
         )
       };
@@ -24165,17 +24328,17 @@ var init_instruction_annotations = __esm({
   }
 });
 
-// ../disassembler/src/analysis/static-analysis.ts
+// packages/disassembler/src/analysis/static-analysis.ts
 var DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, hexAddress, contextKey, nodeIdFor, sortedUnique, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
-  "../disassembler/src/analysis/static-analysis.ts"() {
+  "packages/disassembler/src/analysis/static-analysis.ts"() {
     "use strict";
     DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1e6;
     DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
     hexAddress = (address4) => address4.toString(16).padStart(6, "0");
     contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`).join("/");
     nodeIdFor = (address4, context) => `cfg:${hexAddress(address4)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
-    sortedUnique = (values) => [...new Set(values)].sort();
+    sortedUnique = (values) => [...new Set(values)].toSorted();
     sortWork = (left, right) => left.address - right.address || contextKey(left.context).localeCompare(contextKey(right.context)) || left.entryPoint.localeCompare(right.entryPoint) || (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
     StaticWorkQueue = class {
       #values = [];
@@ -24206,9 +24369,9 @@ var init_static_analysis = __esm({
         this.#values[index] = queued;
       }
       shift() {
-        const first = this.#values[0];
+        const firstSlot = this.#values.length > 0 ? this.#values[0] : void 0;
         const last = this.#values.pop();
-        if (!first || !last) {
+        if (!firstSlot || !last) {
           return void 0;
         }
         if (this.#values.length > 0) {
@@ -24228,7 +24391,7 @@ var init_static_analysis = __esm({
           }
           this.#values[index] = last;
         }
-        return first.item;
+        return firstSlot.item;
       }
       #compare(left, right) {
         return sortWork(left.item, right.item) || left.sequence - right.sequence;
@@ -24266,7 +24429,7 @@ var init_static_analysis = __esm({
         throw new Error("maxCallDepth must be a non-negative safe integer.");
       }
       const overrides = /* @__PURE__ */ new Map();
-      for (const override of [...options.targetOverrides ?? []].sort(
+      for (const override of [...options.targetOverrides ?? []].toSorted(
         (left, right) => left.address - right.address || left.id.localeCompare(right.id)
       )) {
         if (overrides.has(override.address)) {
@@ -24275,7 +24438,7 @@ var init_static_analysis = __esm({
         overrides.set(override.address, override);
       }
       const queue = new StaticWorkQueue(
-        [...seeds].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
+        [...seeds].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
           address: seed.address,
           state: seed.state,
           context: [],
@@ -24409,7 +24572,7 @@ var init_static_analysis = __esm({
           }
         }
         if (overlapping.size > 0) {
-          const related = [...overlapping, nodeId].sort();
+          const related = [...overlapping, nodeId].toSorted();
           addConflict({
             id: `conflict:instruction-boundary:${hexAddress(item.address)}:${related.join("+")}`,
             kind: "instruction-boundary",
@@ -24573,23 +24736,23 @@ var init_static_analysis = __esm({
           reachedOffsets.add(offset);
         }
       }
-      const sortedNodes = [...nodes.values()].sort(
+      const sortedNodes = [...nodes.values()].toSorted(
         (left, right) => left.address - right.address || left.id.localeCompare(right.id)
       );
-      const sortedFunctions = [...functions.values()].sort(
+      const sortedFunctions = [...functions.values()].toSorted(
         (left, right) => left.address - right.address || left.id.localeCompare(right.id)
       );
       return {
         status: incompleteReasons.size === 0 ? "complete" : "incomplete",
         nodes: sortedNodes,
-        edges: [...edges.values()].sort(
+        edges: [...edges.values()].toSorted(
           (left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id)
         ),
         functions: sortedFunctions,
-        conflicts: [...conflicts.values()].sort(
+        conflicts: [...conflicts.values()].toSorted(
           (left, right) => left.address - right.address || left.id.localeCompare(right.id)
         ),
-        unresolved: [...unresolved.values()].sort(
+        unresolved: [...unresolved.values()].toSorted(
           (left, right) => left.address - right.address || left.id.localeCompare(right.id)
         ),
         coverage: {
@@ -24599,7 +24762,7 @@ var init_static_analysis = __esm({
           totalBytes: adapter.backingSize,
           reachedPercent: adapter.backingSize === 0 ? 0 : Number((reachedOffsets.size / adapter.backingSize * 100).toFixed(6))
         },
-        incompleteReasons: [...incompleteReasons.values()].sort(
+        incompleteReasons: [...incompleteReasons.values()].toSorted(
           (left, right) => left.address - right.address || left.kind.localeCompare(right.kind)
         ),
         processedWorkItems
@@ -24608,10 +24771,10 @@ var init_static_analysis = __esm({
   }
 });
 
-// ../disassembler/src/analysis/project-evidence.ts
+// packages/disassembler/src/analysis/project-evidence.ts
 var evidenceReferences, sortedUnique2, explainProjectEvidence;
 var init_project_evidence = __esm({
-  "../disassembler/src/analysis/project-evidence.ts"() {
+  "packages/disassembler/src/analysis/project-evidence.ts"() {
     "use strict";
     evidenceReferences = (shards, evidenceId) => [
       ...shards.analysis.filter((record4) => record4.evidence.includes(evidenceId)).map((record4) => `analysis:${record4.id}`),
@@ -24621,7 +24784,7 @@ var init_project_evidence = __esm({
       ...shards.regions.filter((record4) => record4.evidence.includes(evidenceId)).map((record4) => `regions:${record4.id}`),
       ...shards.runtime.filter((record4) => record4.evidence.includes(evidenceId)).map((record4) => `runtime:${record4.id}`)
     ];
-    sortedUnique2 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+    sortedUnique2 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
     explainProjectEvidence = (shards, shard, recordId) => {
       const records2 = shards[shard];
       const record4 = records2.find(({ id }) => id === recordId);
@@ -24645,16 +24808,16 @@ var init_project_evidence = __esm({
       const evidenceSet = new Set(evidenceIds);
       const conflicts = shards.analysis.filter(
         (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
-      ).sort((left, right) => left.id.localeCompare(right.id));
+      ).toSorted((left, right) => left.id.localeCompare(right.id));
       return { shard, record: record4, evidence, referencedBy, conflicts };
     };
   }
 });
 
-// ../disassembler/src/runtime/runtime-evidence.ts
+// packages/disassembler/src/runtime/runtime-evidence.ts
 var emptyCounts, sortedUnique3, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
-  "../disassembler/src/runtime/runtime-evidence.ts"() {
+  "packages/disassembler/src/runtime/runtime-evidence.ts"() {
     "use strict";
     init_canonical_json();
     emptyCounts = () => ({
@@ -24667,7 +24830,7 @@ var init_runtime_evidence = __esm({
       evidence: 0,
       imports: 0
     });
-    sortedUnique3 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+    sortedUnique3 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
     stateValueKey = (value) => `${typeof value}:${String(value)}`;
     conflictReport = (runtime) => {
       const observations = [];
@@ -24751,10 +24914,12 @@ var init_runtime_evidence = __esm({
             value: entries[0].value,
             records: sortedUnique3(entries.map((entry) => entry.record)),
             evidence: sortedUnique3(entries.flatMap((entry) => entry.evidence))
-          })).sort((left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value)))
+          })).toSorted(
+            (left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value))
+          )
         });
       }
-      return conflicts.sort((left, right) => left.id.localeCompare(right.id));
+      return conflicts.toSorted((left, right) => left.id.localeCompare(right.id));
     };
     explanationReport = (shards) => {
       const runtimeEvidence = new Set(
@@ -24766,7 +24931,7 @@ var init_runtime_evidence = __esm({
         if (evidence.length === 0) {
           continue;
         }
-        const stateFields = Object.keys(annotation.state ?? {}).sort();
+        const stateFields = Object.keys(annotation.state ?? {}).toSorted();
         explanations.push({
           recordId: annotation.id,
           detail: stateFields.length > 0 ? `Runtime observation supplies ${stateFields.join(", ")} state.` : `Runtime observation classifies bytes as ${annotation.classification}.`,
@@ -24787,9 +24952,9 @@ var init_runtime_evidence = __esm({
           evidence: sortedUnique3(evidence)
         });
       }
-      return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
+      return explanations.toSorted((left, right) => left.recordId.localeCompare(right.recordId));
     };
-    mergeRecords = (kind, prior, incoming, added, updated, existing) => {
+    mergeRecords = (kind, prior, incoming, added, updated, existing, combine) => {
       if (incoming.length === 0) {
         return prior;
       }
@@ -24801,17 +24966,13 @@ var init_runtime_evidence = __esm({
           added[kind]++;
         } else if (canonicalEquals(current, record4)) {
           existing[kind]++;
-        } else if (kind === "analysis" && "kind" in current && "kind" in record4 && current.kind === "target-override" && record4.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
-          const left = current;
-          const right = record4;
-          if (left.addressSpace !== right.addressSpace || left.address !== right.address) {
-            throw new Error(`Runtime target override '${record4.id}' changed its control-flow site.`);
+        } else if (combine) {
+          const merged = combine(current, record4);
+          if (!merged) {
+            throw new Error(
+              `Runtime evidence id '${record4.id}' in '${kind}' changed content. Use a content-derived id.`
+            );
           }
-          const merged = {
-            ...left,
-            targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
-            evidence: sortedUnique3([...left.evidence, ...right.evidence])
-          };
           if (canonicalEquals(current, merged)) {
             existing[kind]++;
           } else {
@@ -24849,7 +25010,20 @@ var init_runtime_evidence = __esm({
           batch.analysis ?? [],
           added,
           updated,
-          existing
+          existing,
+          (current, record4) => {
+            if (current.kind !== "target-override" || record4.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
+              return void 0;
+            }
+            if (current.addressSpace !== record4.addressSpace || current.address !== record4.address) {
+              throw new Error(`Runtime target override '${record4.id}' changed its control-flow site.`);
+            }
+            return {
+              ...current,
+              targets: [.../* @__PURE__ */ new Set([...current.targets, ...record4.targets])].toSorted((a, b) => a - b),
+              evidence: sortedUnique3([...current.evidence, ...record4.evidence])
+            };
+          }
         ),
         annotations: mergeRecords(
           "annotations",
@@ -24903,10 +25077,13 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// ../disassembler/src/runtime/runtime-trace.ts
+// packages/disassembler/src/runtime/runtime-trace.ts
+function isRowRecord(value) {
+  return !Array.isArray(value);
+}
 var import_node_crypto4, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
-  "../disassembler/src/runtime/runtime-trace.ts"() {
+  "packages/disassembler/src/runtime/runtime-trace.ts"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     init_canonical_json();
@@ -24916,7 +25093,7 @@ var init_runtime_trace = __esm({
     DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8e6;
     MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
     record = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (typeof value !== "object" || value === null || !isRowRecord(value)) {
         throw new Error(`${context} must be an object.`);
       }
       return value;
@@ -24928,7 +25105,7 @@ var init_runtime_trace = __esm({
       return value;
     };
     integer = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum) {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       }
       return value;
@@ -25118,11 +25295,11 @@ var init_runtime_trace = __esm({
       let failure;
       let detailedEvents = 0;
       let memoryLoss = 0;
-      const pushChunk = (value2) => {
+      const pushChunk = (input) => {
         if (finished) {
           throw new Error("Instruction trace import already finished.");
         }
-        const chunk = validateChunk(value2);
+        const chunk = validateChunk(input);
         hash4.update(chunks++ === 0 ? "[\n" : ",\n");
         hash4.update(`    ${canonicalJson(chunk).slice(0, -1).replaceAll("\n", "\n    ")}`);
         droppedEvents = chunk.droppedEvents;
@@ -25181,12 +25358,12 @@ var init_runtime_trace = __esm({
           }
         }
       };
-      const push = (value2) => {
+      const push = (input) => {
         if (failure) {
           throw failure;
         }
         try {
-          pushChunk(value2);
+          pushChunk(input);
         } catch (error) {
           failure = error instanceof Error ? error : new Error(String(error));
           index.clear();
@@ -25210,13 +25387,13 @@ var init_runtime_trace = __esm({
         let processedRecords = 0;
         let lastProgress = performance.now();
         storage?.onMergeProgress?.(0, indexRecords);
-        const emit = (record4) => {
+        const emit = (emitted) => {
           if (storage?.onRecord) {
-            storage.onRecord(record4);
-          } else if (record4.kind === "runtime-execution") {
-            executions.push(record4);
+            storage.onRecord(emitted);
+          } else if (emitted.kind === "runtime-execution") {
+            executions.push(emitted);
           } else {
-            facts.push(record4);
+            facts.push(emitted);
           }
           processedRecords++;
           if (storage?.onMergeProgress && (processedRecords === indexRecords || processedRecords % 128 === 0 && performance.now() - lastProgress >= 1e3)) {
@@ -25264,13 +25441,13 @@ var init_runtime_trace = __esm({
         } finally {
           index.clear();
         }
-        const runtime = executions.sort((a, b) => {
+        const runtime = executions.toSorted((a, b) => {
           if (a.kind !== "runtime-execution" || b.kind !== "runtime-execution") {
             return 0;
           }
           return a.address - b.address;
         });
-        for (const fact of facts.sort((a, b) => a.id.localeCompare(b.id))) {
+        for (const fact of facts.toSorted((a, b) => a.id.localeCompare(b.id))) {
           runtime.push(fact);
         }
         const evidence = {
@@ -25329,7 +25506,7 @@ var init_runtime_trace = __esm({
   }
 });
 
-// ../disassembler/src/runtime/runtime-trace-file.ts
+// packages/disassembler/src/runtime/runtime-trace-file.ts
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
@@ -25359,7 +25536,7 @@ async function* traceEntries(file, options) {
   const fail2 = () => {
     throw new Error(`Instruction trace '${file}' is not a valid JSON object with a chunks array.`);
   };
-  const append2 = (text) => {
+  const append3 = (text) => {
     length += text.length;
     if (length > MAX_VALUE_CHARACTERS) {
       throw new Error("Instruction trace chunk or metadata value exceeds the 32 MiB text limit.");
@@ -25372,6 +25549,11 @@ async function* traceEntries(file, options) {
   try {
     for await (const bytes of stream) {
       options.signal?.throwIfAborted();
+      if (!Buffer.isBuffer(bytes)) {
+        throw new Error(
+          `Instruction trace '${file}' is not a valid JSON object with a chunks array.`
+        );
+      }
       bytesRead += bytes.length;
       checkSize(bytesRead);
       const text = decoder.write(bytes);
@@ -25406,16 +25588,16 @@ async function* traceEntries(file, options) {
           if (!done) {
             continue;
           }
-          append2(text.slice(tokenStart, delimiter ? index : index + 1));
+          append3(text.slice(tokenStart, delimiter ? index : index + 1));
           const value = JSON.parse(parts.join(""));
           parts = [];
           length = 0;
           tokenStart = -1;
           if (tokenKind === "key") {
-            if (typeof value !== "string" || keys.has(value)) {
+            key3 = typeof value === "string" ? value : fail2();
+            if (keys.has(key3)) {
               fail2();
             }
-            key3 = value;
             keys.add(key3);
             mode = "colon";
           } else if (tokenKind === "chunk") {
@@ -25497,12 +25679,12 @@ async function* traceEntries(file, options) {
         primitive = !inString && depth === 0;
       }
       if (tokenStart >= 0) {
-        append2(text.slice(tokenStart));
+        append3(text.slice(tokenStart));
       }
       options.onProgress?.(bytesRead, before.size);
     }
     options.signal?.throwIfAborted();
-    if (decoder.end() || String(mode) !== "end" || !keys.has("chunks")) {
+    if (decoder.end() || mode !== "end" || !keys.has("chunks")) {
       fail2();
     }
     const after = await (0, import_promises2.stat)(file);
@@ -25540,7 +25722,7 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
 }
 var import_node_fs, import_promises2, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
-  "../disassembler/src/runtime/runtime-trace-file.ts"() {
+  "packages/disassembler/src/runtime/runtime-trace-file.ts"() {
     "use strict";
     import_node_fs = require("node:fs");
     import_promises2 = require("node:fs/promises");
@@ -25593,10 +25775,10 @@ var init_runtime_trace_file = __esm({
   }
 });
 
-// ../disassembler/src/internal/trace-cache.ts
+// packages/disassembler/src/internal/trace-cache.ts
 var TraceCache;
 var init_trace_cache = __esm({
-  "../disassembler/src/internal/trace-cache.ts"() {
+  "packages/disassembler/src/internal/trace-cache.ts"() {
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
@@ -25669,10 +25851,10 @@ var init_trace_cache = __esm({
   }
 });
 
-// ../disassembler/src/runtime/runtime-graphics.ts
+// packages/disassembler/src/runtime/runtime-graphics.ts
 var mapVram, createRuntimeGraphicsAccumulator;
 var init_runtime_graphics = __esm({
-  "../disassembler/src/runtime/runtime-graphics.ts"() {
+  "packages/disassembler/src/runtime/runtime-graphics.ts"() {
     "use strict";
     mapVram = (address4, mapping) => {
       if (mapping === 0) {
@@ -25893,7 +26075,7 @@ var init_runtime_graphics = __esm({
         push,
         finish: () => ({
           model: "snes-ppu-ports-v1",
-          activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, group2]) => group2),
+          activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, group2]) => group2),
           writes,
           omittedWrites
         })
@@ -25902,10 +26084,10 @@ var init_runtime_graphics = __esm({
   }
 });
 
-// ../disassembler/src/runtime/runtime-ppu.ts
+// packages/disassembler/src/runtime/runtime-ppu.ts
 var createRuntimePPUAccumulator;
 var init_runtime_ppu = __esm({
-  "../disassembler/src/runtime/runtime-ppu.ts"() {
+  "packages/disassembler/src/runtime/runtime-ppu.ts"() {
     "use strict";
     init_runtime_ppu_effect();
     createRuntimePPUAccumulator = () => {
@@ -25963,64 +26145,78 @@ var init_runtime_ppu = __esm({
   }
 });
 
-// ../disassembler/src/runtime/runtime-transfer.ts
-var validateRuntimeTransferBoundary, createRuntimeTransferAccumulator;
+// packages/disassembler/src/runtime/runtime-transfer.ts
+function isRecord6(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isInteger4(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+var readRegister, validateRuntimeTransferBoundary, createRuntimeTransferAccumulator;
 var init_runtime_transfer = __esm({
-  "../disassembler/src/runtime/runtime-transfer.ts"() {
+  "packages/disassembler/src/runtime/runtime-transfer.ts"() {
     "use strict";
+    readRegister = (configuration, field, maximum, message) => {
+      const count2 = configuration[field];
+      if (!(isInteger4(count2) && count2 >= 0 && count2 <= maximum)) {
+        throw new Error(message);
+      }
+      return count2;
+    };
     validateRuntimeTransferBoundary = (marker) => {
-      const { configuration: c } = marker;
-      if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
+      if (!isRecord6(marker) || !isRecord6(marker.configuration)) {
         throw new Error("Invalid transfer boundary attribution or count.");
       }
-      for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"]) {
-        if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255) {
-          throw new Error("Invalid transfer byte register.");
-        }
+      const configuration = marker.configuration;
+      const actor = marker.actor;
+      const channel = marker.channel;
+      const boundary = marker.boundary;
+      const transferId = marker.transferId;
+      const pc = marker.pc;
+      const context = marker.context;
+      const transferred = marker.transferred;
+      const sequence = marker.sequence;
+      const ordinal = marker.ordinal;
+      const cycle = marker.cycle;
+      const hcounter = marker.hcounter;
+      const vcounter = marker.vcounter;
+      if (actor !== "dma" && actor !== "hdma" || !(isInteger4(channel) && channel >= 0 && channel <= 7) || boundary !== "begin" && boundary !== "complete" && boundary !== "interrupted" || typeof transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(transferId) || BigInt(transferId) > 0xffffffffffffffffn || !(isInteger4(pc) && pc >= 0 && pc <= 16777215) || context !== "unattributed" && context !== "instruction" && context !== "interrupt" && context !== "wait" && context !== "stop" || !(isInteger4(transferred) && transferred >= 0 && transferred <= 65536) || typeof sequence !== "string" || typeof ordinal !== "string" || typeof cycle !== "string" || !isInteger4(hcounter) || !isInteger4(vcounter)) {
+        throw new Error("Invalid transfer boundary attribution or count.");
       }
-      for (const field of ["a1t", "das", "a2a"]) {
-        if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535) {
-          throw new Error("Invalid transfer word register.");
-        }
-      }
-      if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15) {
-        throw new Error("Invalid transfer channel flags.");
-      }
-      if (marker.boundary === "begin") {
-        if (marker.transferId !== marker.sequence || marker.transferred !== 0) {
+      const dmap = readRegister(configuration, "dmap", 255, "Invalid transfer byte register.");
+      const bbad = readRegister(configuration, "bbad", 255, "Invalid transfer byte register.");
+      const a1b = readRegister(configuration, "a1b", 255, "Invalid transfer byte register.");
+      const dasb = readRegister(configuration, "dasb", 255, "Invalid transfer byte register.");
+      const ntlr = readRegister(configuration, "ntlr", 255, "Invalid transfer byte register.");
+      const a1t = readRegister(configuration, "a1t", 65535, "Invalid transfer word register.");
+      const das = readRegister(configuration, "das", 65535, "Invalid transfer word register.");
+      const a2a = readRegister(configuration, "a2a", 65535, "Invalid transfer word register.");
+      const flags = readRegister(configuration, "flags", 15, "Invalid transfer channel flags.");
+      if (boundary === "begin") {
+        if (transferId !== sequence || transferred !== 0) {
           throw new Error("Invalid transfer begin identity.");
         }
-      } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1) {
+      } else if (BigInt(transferId) >= BigInt(sequence) || transferred < 1) {
         throw new Error("Invalid transfer end identity.");
       }
-      if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4)) {
+      if (actor === "hdma" && (boundary === "interrupted" || transferred > 4)) {
         throw new Error("Invalid HDMA payload-burst boundary.");
       }
       return {
         kind: "transfer",
-        sequence: marker.sequence,
-        ordinal: marker.ordinal,
-        cycle: marker.cycle,
-        transferId: marker.transferId,
-        pc: marker.pc,
-        boundary: marker.boundary,
-        actor: marker.actor,
-        channel: marker.channel,
-        context: marker.context,
-        hcounter: marker.hcounter,
-        vcounter: marker.vcounter,
-        transferred: marker.transferred,
-        configuration: {
-          dmap: c.dmap,
-          bbad: c.bbad,
-          a1t: c.a1t,
-          a1b: c.a1b,
-          das: c.das,
-          dasb: c.dasb,
-          a2a: c.a2a,
-          ntlr: c.ntlr,
-          flags: c.flags
-        }
+        sequence,
+        ordinal,
+        cycle,
+        transferId,
+        pc,
+        boundary,
+        actor,
+        channel,
+        context,
+        hcounter,
+        vcounter,
+        transferred,
+        configuration: { dmap, bbad, a1t, a1b, das, dasb, a2a, ntlr, flags }
       };
     };
     createRuntimeTransferAccumulator = () => {
@@ -26147,7 +26343,7 @@ var init_runtime_transfer = __esm({
           }
           open6.clear();
           return {
-            activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
+            activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
             windows,
             omittedWindows
           };
@@ -26157,10 +26353,31 @@ var init_runtime_transfer = __esm({
   }
 });
 
-// ../disassembler/src/runtime/runtime-bus-trace.ts
+// packages/disassembler/src/runtime/runtime-bus-trace.ts
+function isRowRecord2(value) {
+  return !Array.isArray(value);
+}
+function isMetadataRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isBusScope(value) {
+  return value === "snes.cpu-bus" || value === "snes.cpu-bus-transfers" || value === "snes.cpu-bus-ppu";
+}
+function positiveDecimal(value) {
+  if (typeof value !== "string" || unsigned(value) === 0) {
+    if (typeof value !== "string") {
+      throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
+    }
+    throw new Error("Bus trace clock frequency must be positive.");
+  }
+  return value;
+}
+function isBusTraceEvent(value) {
+  return typeof value === "object" && value !== null;
+}
 var import_node_crypto5, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
-  "../disassembler/src/runtime/runtime-bus-trace.ts"() {
+  "packages/disassembler/src/runtime/runtime-bus-trace.ts"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     init_trace_cache();
@@ -26187,26 +26404,32 @@ var init_runtime_bus_trace = __esm({
       return number;
     };
     validateRuntimeBusTraceMetadata = (value) => {
-      const meta = value;
-      if (!meta || meta.format !== RUNTIME_BUS_TRACE_FORMAT || meta.schemaVersion !== 1 || meta.scope !== "snes.cpu-bus" && meta.scope !== "snes.cpu-bus-transfers" && meta.scope !== "snes.cpu-bus-ppu" || meta.architecture !== "snes.65816" || meta.addressSpace !== "snes.cpu" || typeof meta.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(meta.romContentSha256) || typeof meta.session !== "string" || !/^[\da-f]{32}$/.test(meta.session) || typeof meta.producer?.id !== "string" || !meta.producer.id || typeof meta.producer?.revision !== "string" || !meta.producer.revision || meta.clock?.id !== "snes.master") {
+      if (!isMetadataRecord(value)) {
         throw new Error("Invalid SNES bus trace metadata.");
       }
-      if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0) {
-        throw new Error("Bus trace clock frequency must be positive.");
+      const producer = isMetadataRecord(value.producer) ? value.producer : void 0;
+      const clock = isMetadataRecord(value.clock) ? value.clock : void 0;
+      const producerId = producer?.id;
+      const producerRevision = producer?.revision;
+      const scope = value.scope;
+      const romContentSha256 = value.romContentSha256;
+      const session = value.session;
+      if (value.format !== RUNTIME_BUS_TRACE_FORMAT || value.schemaVersion !== 1 || !isBusScope(scope) || value.architecture !== "snes.65816" || value.addressSpace !== "snes.cpu" || typeof romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(romContentSha256) || typeof session !== "string" || !/^[\da-f]{32}$/.test(session) || typeof producerId !== "string" || producerId === "" || typeof producerRevision !== "string" || producerRevision === "" || !clock || clock.id !== "snes.master") {
+        throw new Error("Invalid SNES bus trace metadata.");
       }
       return {
         format: RUNTIME_BUS_TRACE_FORMAT,
         schemaVersion: 1,
-        scope: meta.scope,
+        scope,
         architecture: "snes.65816",
         addressSpace: "snes.cpu",
-        romContentSha256: meta.romContentSha256,
-        producer: { id: meta.producer.id, revision: meta.producer.revision },
-        session: meta.session,
+        romContentSha256,
+        producer: { id: producerId, revision: producerRevision },
+        session,
         clock: {
           id: "snes.master",
-          numerator: meta.clock.numerator,
-          denominator: meta.clock.denominator
+          numerator: positiveDecimal(clock.numerator),
+          denominator: positiveDecimal(clock.denominator)
         }
       };
     };
@@ -26266,13 +26489,13 @@ ${JSON.stringify(meta)}
           throw new Error("Bus trace importer is no longer writable.");
         }
         try {
-          const accesses = chunk?.accesses;
+          const accesses = typeof chunk === "object" && chunk !== null && isRowRecord2(chunk) ? chunk.accesses : void 0;
           if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095) {
             throw new Error("Bus trace chunks require 1\u20134095 accesses.");
           }
           const hashLines = [];
           for (const item of accesses) {
-            if (!item || typeof item !== "object") {
+            if (!isBusTraceEvent(item)) {
               throw new Error("Invalid bus trace event.");
             }
             const access = item;
@@ -26424,7 +26647,7 @@ ${JSON.stringify(meta)}
               firstCycle,
               lastCycle: firstCycle === null ? null : String(previousCycle),
               ...counts ? { ppu: counts } : {},
-              activity: [...activity.values()].map((group2) => ({ ...group2 }))
+              activity: [...activity.values()].map((group2) => Object.assign({}, group2))
             });
           }
         } catch (error) {
@@ -26525,10 +26748,10 @@ ${JSON.stringify(meta)}
               firstCycle,
               lastCycle: firstCycle === null ? null : String(previousCycle),
               contexts,
-              activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
+              activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
             },
             batch: {
-              ...storage?.onRecord ? {} : { runtime: runtime.sort((a, b) => a.id.localeCompare(b.id)) },
+              ...storage?.onRecord ? {} : { runtime: runtime.toSorted((a, b) => a.id.localeCompare(b.id)) },
               evidence: [
                 {
                   id: evidenceId,
@@ -26556,10 +26779,10 @@ ${JSON.stringify(meta)}
   }
 });
 
-// ../disassembler/src/internal/record-id-set.ts
+// packages/disassembler/src/internal/record-id-set.ts
 var import_node_fs2, import_node_os, import_node_path3, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
-  "../disassembler/src/internal/record-id-set.ts"() {
+  "packages/disassembler/src/internal/record-id-set.ts"() {
     "use strict";
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
@@ -26625,7 +26848,7 @@ var init_record_id_set = __esm({
   }
 });
 
-// ../disassembler/src/model/analysis-ownership.ts
+// packages/disassembler/src/model/analysis-ownership.ts
 function validateAnalysisOwnership(records2, scope = "complete") {
   if (!records2.some(
     (record4) => record4.kind === "cfg-node" && (record4.functionEntry !== void 0 || record4.evidencePredecessor !== void 0)
@@ -26679,59 +26902,84 @@ function validateAnalysisOwnership(records2, scope = "complete") {
   }
 }
 var init_analysis_ownership = __esm({
-  "../disassembler/src/model/analysis-ownership.ts"() {
+  "packages/disassembler/src/model/analysis-ownership.ts"() {
     "use strict";
   }
 });
 
-// ../disassembler/src/model/project-validation.ts
-var validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, validateLoadedShards;
+// packages/disassembler/src/model/project-validation.ts
+function isObject(value) {
+  return typeof value === "object" && value !== null;
+}
+function isRowRecord3(value) {
+  return !Array.isArray(value);
+}
+function isSafeInteger2(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function validateAnalysisProjectManifest(manifest) {
+  if (typeof manifest !== "object" || manifest === null || !isRowRecord3(manifest)) {
+    throw new Error("Unsupported analysis project format 'undefined'.");
+  }
+  if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
+    throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
+  }
+  if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
+    );
+  }
+  const rom = manifest.rom;
+  if (!isObject(rom) || typeof rom.sha256 !== "string" || !/^[\da-f]{64}$/.test(rom.sha256)) {
+    throw new Error("Invalid ROM SHA-256.");
+  }
+  if (typeof rom.contentSha256 !== "string" || !/^[\da-f]{64}$/.test(rom.contentSha256)) {
+    throw new Error("Invalid ROM content SHA-256.");
+  }
+  if (!Array.isArray(manifest.addressSpaces)) {
+    throw new Error("Analysis address spaces require non-empty ids and names.");
+  }
+  const addressSpaceIds = /* @__PURE__ */ new Set();
+  for (const entry of manifest.addressSpaces) {
+    if (!isObject(entry)) {
+      throw new Error("Analysis address spaces require non-empty ids and names.");
+    }
+    const id = entry.id;
+    const name = entry.name;
+    if (typeof id !== "string" || id === "" || typeof name !== "string" || name === "") {
+      throw new Error("Analysis address spaces require non-empty ids and names.");
+    }
+    if (addressSpaceIds.has(id)) {
+      throw new Error(`Duplicate analysis address-space id '${id}'.`);
+    }
+    const addressBits = entry.addressBits;
+    if (!(isSafeInteger2(addressBits) && addressBits > 0 && addressBits <= 53)) {
+      throw new Error(`Analysis address space '${id}' has invalid address bits.`);
+    }
+    addressSpaceIds.add(id);
+  }
+  const db = manifest.db;
+  if (db !== void 0 && db !== "analysis.sqlite") {
+    const pathText = typeof db === "string" ? db : JSON.stringify(db);
+    throw new Error(`Unsupported analysis sqlite path '${pathText}'.`);
+  }
+  const revision = manifest.revision;
+  if (revision !== void 0 && !(isSafeInteger2(revision) && revision >= 0)) {
+    throw new Error("Invalid analysis sqlite revision.");
+  }
+  if (!Array.isArray(manifest.shards) || manifest.shards.length !== 0) {
+    throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
+  }
+}
+var FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isAlphaNumeric, isStableId, visitJson, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, outsideSpace, validateLoadedShards;
 var init_project_validation = __esm({
-  "../disassembler/src/model/project-validation.ts"() {
+  "packages/disassembler/src/model/project-validation.ts"() {
     "use strict";
     init_record_id_set();
     init_analysis_ownership();
     init_project_types();
     init_runtime_bus_types();
     init_trace_detail();
-    validateAnalysisProjectManifest = (manifest) => {
-      if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
-        throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
-      }
-      if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
-        throw new Error(
-          `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
-        );
-      }
-      if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) {
-        throw new Error("Invalid ROM SHA-256.");
-      }
-      if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
-        throw new Error("Invalid ROM content SHA-256.");
-      }
-      const addressSpaceIds = /* @__PURE__ */ new Set();
-      for (const addressSpace of manifest.addressSpaces) {
-        if (addressSpace.id === "" || addressSpace.name === "") {
-          throw new Error("Analysis address spaces require non-empty ids and names.");
-        }
-        if (addressSpaceIds.has(addressSpace.id)) {
-          throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
-        }
-        if (!Number.isSafeInteger(addressSpace.addressBits) || addressSpace.addressBits <= 0 || addressSpace.addressBits > 53) {
-          throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
-        }
-        addressSpaceIds.add(addressSpace.id);
-      }
-      if (manifest.db !== void 0 && manifest.db !== "analysis.sqlite") {
-        throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
-      }
-      if (manifest.revision !== void 0 && (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0)) {
-        throw new Error("Invalid analysis sqlite revision.");
-      }
-      if (manifest.shards.length !== 0) {
-        throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
-      }
-    };
     FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
     assertNoRomPayload = (value, location) => {
       if (Array.isArray(value)) {
@@ -26743,7 +26991,7 @@ var init_project_validation = __esm({
         }
         return;
       }
-      if (!value || typeof value !== "object") {
+      if (!value || typeof value !== "object" || !isRowRecord3(value)) {
         return;
       }
       const record4 = value;
@@ -26760,11 +27008,11 @@ var init_project_validation = __esm({
         }
       }
     };
+    isAlphaNumeric = (character) => {
+      const code = character.charCodeAt(0);
+      return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+    };
     isStableId = (id) => {
-      const isAlphaNumeric = (character) => {
-        const code = character.charCodeAt(0);
-        return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-      };
       if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
         return false;
       }
@@ -26774,6 +27022,20 @@ var init_project_validation = __esm({
         }
       }
       return true;
+    };
+    visitJson = (value, current) => {
+      if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
+        return;
+      }
+      if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+        Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
+        return;
+      }
+      throw new Error(`${current} is not a JSON-safe codec option.`);
     };
     assertCodecReference = (reference, location) => {
       if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
@@ -26790,20 +27052,6 @@ var init_project_validation = __esm({
           throw new Error(`${location} has no provider plugin version.`);
         }
       }
-      const visitJson = (value, current) => {
-        if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
-          return;
-        }
-        if (Array.isArray(value)) {
-          value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
-          return;
-        }
-        if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-          Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
-          return;
-        }
-        throw new Error(`${current} is not a JSON-safe codec option.`);
-      };
       if (reference.options !== void 0) {
         visitJson(reference.options, `${location} options`);
       }
@@ -26819,7 +27067,7 @@ var init_project_validation = __esm({
         if (ids && !ids.add(record4.id)) {
           throw new Error(`Analysis shard 'runtime' contains duplicate id '${record4.id}'.`);
         }
-        for (const id of record4.evidence ?? []) {
+        for (const id of record4.evidence) {
           if (!evidenceIds.has(id)) {
             throw new Error(`Analysis record '${record4.id}' refers to missing evidence '${id}'.`);
           }
@@ -26925,23 +27173,33 @@ var init_project_validation = __esm({
         validate.close();
       }
     };
+    outsideSpace = (address4, exclusiveMaximum) => !Number.isSafeInteger(address4) || address4 < 0 || address4 >= exclusiveMaximum;
     validateLoadedShards = (shards, project, analysisScope = "complete") => {
       const { addressSpaces } = project;
       const evidenceIds = new Set(shards.evidence.map((record4) => record4.id));
-      for (const [kind, records2] of Object.entries(shards)) {
-        if (kind === "runtime") {
-          continue;
-        }
+      const shardKinds = [
+        "analysis",
+        "annotations",
+        "labels",
+        "comments",
+        "regions",
+        "evidence",
+        "imports"
+      ];
+      for (const kind of shardKinds) {
         const ids = /* @__PURE__ */ new Set();
-        for (const record4 of records2) {
-          if (!record4 || typeof record4.id !== "string" || record4.id === "") {
+        for (const record4 of shards[kind]) {
+          if (typeof record4.id !== "string" || record4.id === "") {
             throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
           }
           if (ids.has(record4.id)) {
             throw new Error(`Analysis shard '${kind}' contains duplicate id '${record4.id}'.`);
           }
           ids.add(record4.id);
-          for (const evidence of record4.evidence ?? []) {
+          if (!("evidence" in record4)) {
+            continue;
+          }
+          for (const evidence of record4.evidence) {
             if (!evidenceIds.has(evidence)) {
               throw new Error(
                 `Analysis record '${record4.id}' refers to missing evidence '${evidence}'.`
@@ -27083,7 +27341,6 @@ var init_project_validation = __esm({
       const addressSpaceById = new Map(
         addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
       );
-      const outsideSpace = (address4, exclusiveMaximum) => !Number.isSafeInteger(address4) || address4 < 0 || address4 >= exclusiveMaximum;
       for (const records2 of [
         shards.annotations,
         shards.labels,
@@ -27136,7 +27393,283 @@ var init_project_validation = __esm({
   }
 });
 
-// ../disassembler/src/internal/durable-files.ts
+// packages/disassembler/src/model/record-shape.ts
+function isRecord7(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+function isFiniteNumberArray(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isJsonValue(value) {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (isFiniteNumber(value)) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  return isRecord7(value) && Object.values(value).every(isJsonValue);
+}
+function allowsString(value) {
+  return value === void 0 || typeof value === "string";
+}
+function allowsFinite(value) {
+  return value === void 0 || isFiniteNumber(value);
+}
+function allowsBoolean(value) {
+  return value === void 0 || typeof value === "boolean";
+}
+function isNumberRecord(value) {
+  return isRecord7(value) && Object.values(value).every(isFiniteNumber);
+}
+function isAttributeRecord(value) {
+  return isRecord7(value) && Object.values(value).every(
+    (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
+  );
+}
+function isRecordArray(value) {
+  return Array.isArray(value) && value.every(isRecord7);
+}
+function isClassification(value) {
+  return CLASSIFICATIONS.some((candidate) => candidate === value);
+}
+function isAnnotationState(value) {
+  if (value === void 0) {
+    return true;
+  }
+  if (!isRecord7(value)) {
+    return false;
+  }
+  for (const key3 of Object.keys(value)) {
+    const entry = value[key3];
+    if (key3 === "e" || key3 === "m" || key3 === "x" || key3 === "carry") {
+      if (typeof entry !== "boolean") {
+        return false;
+      }
+    } else if (key3 === "programBank" || key3 === "dataBank" || key3 === "directPage" || key3 === "stackPointer") {
+      if (!isFiniteNumber(entry)) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+function isPoints(value) {
+  return value === void 0 || Array.isArray(value) && value.every(
+    (point) => point === "in" || point === "out" || point === "end" || point === "read"
+  );
+}
+function isCodecFields(value) {
+  if (typeof value.codecId !== "string" || typeof value.codecVersion !== "string") {
+    return false;
+  }
+  const provider = value.provider;
+  if (provider !== void 0) {
+    if (!isRecord7(provider) || typeof provider.pluginId !== "string" || typeof provider.pluginVersion !== "string") {
+      return false;
+    }
+  }
+  return value.options === void 0 || isJsonValue(value.options);
+}
+function isAsset(value) {
+  if (!isRecord7(value) || !isCodecFields(value)) {
+    return false;
+  }
+  const compression = value.compression;
+  if (compression === void 0) {
+    return true;
+  }
+  return isRecord7(compression) && isCodecFields(compression) && allowsFinite(compression.maximumSize) && allowsFinite(compression.bankStart) && allowsFinite(compression.bankEnd) && allowsFinite(compression.fillByte);
+}
+function hasIdentity(value) {
+  return typeof value.id === "string" && isStringArray(value.evidence);
+}
+function isProjectLabel(value) {
+  return isRecord7(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.name === "string" && allowsString(value.comment) && allowsString(value.sourceName) && (value.aliases === void 0 || isStringArray(value.aliases)) && allowsString(value.inlineComment) && allowsBoolean(value.analysisEntryPoint) && allowsBoolean(value.suppressed) && allowsString(value.author) && allowsString(value.confidence);
+}
+function isProjectComment(value) {
+  return isRecord7(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.text === "string" && (value.placement === void 0 || value.placement === "before" || value.placement === "inline-instruction");
+}
+function isProjectRegion(value) {
+  return isRecord7(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && typeof value.name === "string" && allowsString(value.parentRegion) && allowsString(value.context) && allowsFinite(value.priority) && (value.attributes === void 0 || isAttributeRecord(value.attributes));
+}
+function isIntervalAnnotation(value) {
+  return isRecord7(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && isClassification(value.classification) && typeof value.architecture === "string" && isAnnotationState(value.state) && isPoints(value.points) && (value.asset === void 0 || isAsset(value.asset));
+}
+function isArtifact(value) {
+  if (value === void 0) {
+    return true;
+  }
+  return isRecord7(value) && typeof value.format === "string" && typeof value.sha256 === "string" && typeof value.romContentSha256 === "string" && allowsString(value.formatVersion) && allowsString(value.mapper);
+}
+function isEvidenceRecord(value) {
+  return isRecord7(value) && typeof value.id === "string" && (value.source === "manual" || value.source === "import" || value.source === "detector" || value.source === "static" || value.source === "runtime") && typeof value.sourceId === "string" && (value.confidence === "certain" || value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" || value.confidence === "unknown") && allowsString(value.detail) && isArtifact(value.artifact);
+}
+function isLossItem(value) {
+  return isRecord7(value) && typeof value.field === "string" && isFiniteNumber(value.count) && typeof value.reason === "string";
+}
+function isImportReport(value) {
+  return isRecord7(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && allowsString(value.sourceVersion) && allowsString(value.indexProfile) && isNumberRecord(value.imported) && Array.isArray(value.unsupported) && value.unsupported.every(isLossItem) && isStringArray(value.warnings);
+}
+function isControlFlowNode(value) {
+  return isRecord7(value) && value.kind === "cfg-node" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.fileOffset) && (value.bytes === void 0 || isFiniteNumberArray(value.bytes)) && isFiniteNumber(value.size) && isFiniteNumber(value.opcode) && typeof value.specificationId === "string" && typeof value.mnemonic === "string" && typeof value.mode === "string" && isFiniteNumberArray(value.context) && isRecord7(value.incomingState) && isRecord7(value.outgoingState) && isRecordArray(value.effectiveAddresses) && typeof value.entryPoint === "string" && allowsString(value.functionEntry) && allowsString(value.evidencePredecessor) && isStringArray(value.evidencePath);
+}
+function isControlFlowEdge(value) {
+  return isRecord7(value) && value.kind === "cfg-edge" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.from === "string" && isFiniteNumber(value.fromAddress) && allowsString(value.to) && allowsFinite(value.toAddress) && typeof value.edgeKind === "string" && typeof value.indirect === "boolean" && allowsString(value.override) && allowsString(value.explanation);
+}
+function isFunctionRecord(value) {
+  return isRecord7(value) && value.kind === "function" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isStringArray(value.evidencePath);
+}
+function isConflictRecord(value) {
+  return isRecord7(value) && value.kind === "conflict" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.end) && typeof value.conflictKind === "string" && typeof value.message === "string" && isStringArray(value.nodes);
+}
+function isUnresolvedRecord(value) {
+  return isRecord7(value) && value.kind === "unresolved" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string";
+}
+function isSummaryRecord(value) {
+  return isRecord7(value) && value.kind === "summary" && hasIdentity(value) && typeof value.architecture === "string" && (value.status === "complete" || value.status === "incomplete") && isNumberRecord(value.coverage) && isFiniteNumber(value.processedWorkItems) && isRecordArray(value.incompleteReasons);
+}
+function isTargetOverride(value) {
+  return isRecord7(value) && value.kind === "target-override" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isFiniteNumberArray(value.targets);
+}
+function isTargetSet(value) {
+  return isRecord7(value) && value.kind === "target-set" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.name === "string" && isFiniteNumberArray(value.targets);
+}
+function isAnalysisRecord(value) {
+  if (!isRecord7(value)) {
+    return false;
+  }
+  switch (value.kind) {
+    case "cfg-node":
+      return isControlFlowNode(value);
+    case "cfg-edge":
+      return isControlFlowEdge(value);
+    case "function":
+      return isFunctionRecord(value);
+    case "conflict":
+      return isConflictRecord(value);
+    case "unresolved":
+      return isUnresolvedRecord(value);
+    case "summary":
+      return isSummaryRecord(value);
+    case "target-override":
+      return isTargetOverride(value);
+    case "target-set":
+      return isTargetSet(value);
+    default:
+      return false;
+  }
+}
+function reject(kind) {
+  throw new Error(`Invalid stored ${kind} record.`);
+}
+function requireProjectLabel(value) {
+  if (!isProjectLabel(value)) {
+    reject("label");
+  }
+  return value;
+}
+function requireProjectComment(value) {
+  if (!isProjectComment(value)) {
+    reject("comment");
+  }
+  return value;
+}
+function requireProjectRegion(value) {
+  if (!isProjectRegion(value)) {
+    reject("region");
+  }
+  return value;
+}
+function requireIntervalAnnotation(value) {
+  if (!isIntervalAnnotation(value)) {
+    reject("annotation");
+  }
+  return value;
+}
+function requireEvidenceRecord(value) {
+  if (!isEvidenceRecord(value)) {
+    reject("evidence");
+  }
+  return value;
+}
+function requireImportReport(value) {
+  if (!isImportReport(value)) {
+    reject("import");
+  }
+  return value;
+}
+function requireAnalysisRecord(value) {
+  if (!isAnalysisRecord(value)) {
+    reject("analysis");
+  }
+  return value;
+}
+function requireMetadataRecord(kind, value) {
+  switch (kind) {
+    case "labels":
+      return requireProjectLabel(value);
+    case "comments":
+      return requireProjectComment(value);
+    case "regions":
+      return requireProjectRegion(value);
+    case "annotations":
+      return requireIntervalAnnotation(value);
+    case "analysis":
+      return requireAnalysisRecord(value);
+    case "evidence":
+      return requireEvidenceRecord(value);
+    case "imports":
+      return requireImportReport(value);
+    default:
+      return reject(kind);
+  }
+}
+var CLASSIFICATIONS;
+var init_record_shape = __esm({
+  "packages/disassembler/src/model/record-shape.ts"() {
+    "use strict";
+    CLASSIFICATIONS = [
+      "unreached",
+      "opcode",
+      "operand",
+      "data8",
+      "data16",
+      "data24",
+      "data32",
+      "pointer16",
+      "pointer24",
+      "pointer32",
+      "graphics",
+      "music",
+      "compressed",
+      "asset",
+      "empty",
+      "text"
+    ];
+  }
+});
+
+// packages/disassembler/src/internal/durable-files.ts
+function errorCode(error) {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return void 0;
+}
+function isRecord8(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 function durableReplace(file, bytes) {
   ensureDurableDirectory(import_node_path4.default.dirname(import_node_path4.default.resolve(file)));
   const temporary = `${file}.${(0, import_node_crypto6.randomUUID)()}.tmp`;
@@ -27163,7 +27696,7 @@ function ensureDurableDirectory(directory) {
   try {
     import_node_fs3.default.mkdirSync(directory);
   } catch (error) {
-    if (error.code !== "EEXIST") {
+    if (errorCode(error) !== "EEXIST") {
       throw error;
     }
   }
@@ -27189,21 +27722,21 @@ function acquireFileLease(file) {
     try {
       import_node_fs3.default.linkSync(candidate, file);
     } catch (error) {
-      if (error.code !== "EEXIST") {
+      if (errorCode(error) !== "EEXIST") {
         throw error;
       }
       const previous = import_node_fs3.default.readFileSync(file, "utf8");
       const parsed = JSON.parse(previous);
       let dead = false;
-      if (parsed.host === import_node_os2.default.hostname() && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
+      if (isRecord8(parsed) && parsed.host === import_node_os2.default.hostname() && typeof parsed.pid === "number" && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
         try {
           process.kill(parsed.pid, 0);
         } catch (cause) {
-          dead = cause.code === "ESRCH";
+          dead = errorCode(cause) === "ESRCH";
         }
       }
       if (!dead) {
-        throw new Error(`An operation owns ${file}. Retry after it finishes.`);
+        throw new Error(`An operation owns ${file}. Retry after it finishes.`, { cause: error });
       }
       const recovery = acquireFileLease(`${file}.recovery`);
       try {
@@ -27230,7 +27763,7 @@ function acquireFileLease(file) {
 }
 var import_node_crypto6, import_node_fs3, import_node_os2, import_node_path4;
 var init_durable_files = __esm({
-  "../disassembler/src/internal/durable-files.ts"() {
+  "packages/disassembler/src/internal/durable-files.ts"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     import_node_fs3 = __toESM(require("node:fs"), 1);
@@ -27239,7 +27772,7 @@ var init_durable_files = __esm({
   }
 });
 
-// ../disassembler/src/internal/source-inputs.ts
+// packages/disassembler/src/internal/source-inputs.ts
 function assertSourcePath(relative3) {
   if (!relative3 || relative3.includes("\0") || relative3.includes("\\") || import_node_path5.default.isAbsolute(relative3) || /^[A-Za-z]:/.test(relative3) || relative3.split("/").some((part) => !part || part === "." || part === ".." || part.toLowerCase() === ".git")) {
     throw new Error(`Invalid source project path: ${relative3}`);
@@ -27247,7 +27780,7 @@ function assertSourcePath(relative3) {
 }
 var import_node_crypto7, import_node_path5, sourceContentHash;
 var init_source_inputs = __esm({
-  "../disassembler/src/internal/source-inputs.ts"() {
+  "packages/disassembler/src/internal/source-inputs.ts"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     import_node_path5 = __toESM(require("node:path"), 1);
@@ -27255,101 +27788,165 @@ var init_source_inputs = __esm({
   }
 });
 
-// ../disassembler/src/model/metadata-validation.ts
-var validateEditableMetadataRecord;
+// packages/disassembler/src/model/metadata-validation.ts
+function isRecord9(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringList(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isInteger5(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+function isSafeInteger3(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isStateRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function stateEntries(state) {
+  if (typeof state === "string") {
+    const entries2 = [];
+    for (let index = 0; index < state.length; index += 1) {
+      entries2.push([String(index), state[index]]);
+    }
+    return entries2;
+  }
+  if (!isStateRecord(state)) {
+    return [];
+  }
+  const entries = [];
+  for (const field of Object.keys(state)) {
+    entries.push([field, state[field]]);
+  }
+  return entries;
+}
+var CLASSIFICATIONS2, validateEditableMetadataRecord;
 var init_metadata_validation = __esm({
-  "../disassembler/src/model/metadata-validation.ts"() {
+  "packages/disassembler/src/model/metadata-validation.ts"() {
     "use strict";
     init_project_labels();
+    CLASSIFICATIONS2 = [
+      "unreached",
+      "opcode",
+      "operand",
+      "data8",
+      "data16",
+      "data24",
+      "data32",
+      "pointer16",
+      "pointer24",
+      "pointer32",
+      "graphics",
+      "music",
+      "compressed",
+      "asset",
+      "empty",
+      "text"
+    ];
     validateEditableMetadataRecord = (shard, record4) => {
-      if (!record4 || typeof record4.id !== "string" || !/^\w[\w./:-]*$/.test(record4.id) || !Array.isArray(record4.evidence) || record4.evidence.some((id) => typeof id !== "string")) {
+      if (!isRecord9(record4) || typeof record4.id !== "string" || !/^\w[\w./:-]*$/.test(record4.id) || !isStringList(record4.evidence)) {
         throw new Error("Metadata needs a stable record ID and evidence list.");
       }
-      if ("address" in record4 && (!Number.isSafeInteger(record4.address) || record4.address < 0)) {
+      const address4 = record4.address;
+      if ("address" in record4 && !(isSafeInteger3(address4) && address4 >= 0)) {
         throw new Error("Metadata needs a nonnegative integer address.");
       }
       if (typeof record4.addressSpace !== "string") {
         throw new Error("Metadata needs a named address space.");
       }
       if (shard === "labels") {
-        if (!("name" in record4) || typeof record4.name !== "string" || !record4.name || !("address" in record4) || "kind" in record4) {
+        const name = record4.name;
+        if (typeof name !== "string" || name === "" || !("address" in record4) || "kind" in record4) {
           throw new Error("Invalid label metadata.");
         }
-        const label = record4;
-        if (label.sourceName !== void 0) {
-          validateSourceLabelName(label.sourceName);
+        const sourceName = record4.sourceName;
+        if (sourceName !== void 0) {
+          if (typeof sourceName !== "string") {
+            throw new Error(
+              "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+            );
+          }
+          validateSourceLabelName(sourceName);
         }
-        if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+        if (record4.suppressed !== void 0 && typeof record4.suppressed !== "boolean") {
           throw new Error("Invalid label suppression flag.");
         }
-        for (const value of [label.comment, label.inlineComment]) {
+        for (const value of [record4.comment, record4.inlineComment]) {
           if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
             throw new Error("Invalid label comment.");
           }
         }
       } else if (shard === "comments") {
-        if (!("text" in record4) || typeof record4.text !== "string" || !record4.text.trim() || record4.text.includes("\0") || !("address" in record4) || "kind" in record4) {
+        const text = record4.text;
+        if (typeof text !== "string" || !text.trim() || text.includes("\0") || !("address" in record4) || "kind" in record4) {
           throw new Error("A standalone comment needs nonempty text.");
         }
       } else if (shard === "annotations") {
-        if (!("classification" in record4) || ![
-          "unreached",
-          "opcode",
-          "operand",
-          "data8",
-          "data16",
-          "data24",
-          "data32",
-          "pointer16",
-          "pointer24",
-          "pointer32",
-          "graphics",
-          "music",
-          "compressed",
-          "asset",
-          "empty",
-          "text"
-        ].includes(record4.classification) || typeof record4.architecture !== "string" || !record4.architecture) {
+        const classification2 = record4.classification;
+        const architecture = record4.architecture;
+        if (typeof classification2 !== "string" || !CLASSIFICATIONS2.some((candidate) => candidate === classification2) || typeof architecture !== "string" || architecture === "") {
           throw new Error("Invalid classification metadata.");
         }
-        if (!Number.isSafeInteger(record4.start) || !Number.isSafeInteger(record4.end) || record4.start < 0 || record4.end <= record4.start) {
+        const start = record4.start;
+        const end = record4.end;
+        if (!(isSafeInteger3(start) && isSafeInteger3(end) && start >= 0 && end > start)) {
           throw new Error("Classification bounds must describe a nonempty half-open interval.");
         }
-        for (const [field, value] of Object.entries(record4.state ?? {})) {
-          if (["e", "m", "x", "carry"].includes(field)) {
+        const state = record4.state ?? {};
+        for (const [field, value] of stateEntries(state)) {
+          if (field === "e" || field === "m" || field === "x" || field === "carry") {
             if (typeof value !== "boolean") {
               throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
             }
           } else {
-            const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
-            if (!["programBank", "dataBank", "directPage", "stackPointer"].includes(field) || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+            const maximum = field === "programBank" || field === "dataBank" ? 255 : 65535;
+            if (field !== "programBank" && field !== "dataBank" && field !== "directPage" && field !== "stackPointer" || !(isInteger5(value) && value >= 0 && value <= maximum)) {
               throw new Error(`Invalid state field '${field}'.`);
             }
           }
         }
-        if (record4.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
+        const points = record4.points;
+        if (Array.isArray(points) && points.some(
+          (point) => point !== "in" && point !== "out" && point !== "end" && point !== "read" || typeof point !== "string"
+        )) {
           throw new Error("Invalid entry-point metadata.");
         }
-      } else if (shard === "analysis") {
-        if (!("kind" in record4) || !["target-override", "target-set"].includes(record4.kind) || !Array.isArray(record4.targets) || record4.targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+      } else {
+        const kind = record4.kind;
+        const targets = record4.targets;
+        if (kind !== "target-override" && kind !== "target-set" || !Array.isArray(targets) || targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
           throw new Error("Only target overrides and target sets are editable analysis records.");
         }
-        if (record4.kind === "target-set" && (typeof record4.name !== "string" || !record4.name.trim())) {
+        if (kind === "target-set" && (typeof record4.name !== "string" || !record4.name.trim())) {
           throw new Error("A target set needs a name.");
         }
-        if (record4.kind === "target-override" && !Number.isSafeInteger(record4.address)) {
+        if (kind === "target-override" && !Number.isSafeInteger(record4.address)) {
           throw new Error("A target override needs an instruction anchor.");
         }
-      } else {
-        throw new Error("This collection is not editable metadata.");
       }
     };
   }
 });
 
-// ../disassembler/src/research-inputs/inputs.ts
+// packages/disassembler/src/research-inputs/inputs.ts
+function isRecord10(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray2(value) {
+  return Array.isArray(value);
+}
+function isResearchCollection(value) {
+  return RESEARCH_COLLECTIONS.some((collection) => collection === value);
+}
+function isSafeInteger4(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isConfidence(value) {
+  return value === "certain" || value === "high" || value === "medium" || value === "low" || value === "unknown";
+}
 function validateResearchSnapshot(snapshot) {
-  if (!snapshot || typeof snapshot.project !== "string" || !/^[\w.-]+$/.test(snapshot.project) || typeof snapshot.romSha256 !== "string" || !/^[\da-f]{64}$/.test(snapshot.romSha256) || !isArray2(snapshot.decisions)) {
+  if (!snapshot || typeof snapshot.project !== "string" || !/^[\w.-]+$/.test(snapshot.project) || typeof snapshot.romSha256 !== "string" || !/^[\da-f]{64}$/.test(snapshot.romSha256) || !isArray(snapshot.decisions)) {
     throw new Error("Invalid research snapshot identity.");
   }
   const keys = /* @__PURE__ */ new Set();
@@ -27361,7 +27958,7 @@ function validateResearchSnapshot(snapshot) {
     }
     keys.add(key3);
   }
-  const decisions = [...snapshot.decisions].sort(compareDecisions);
+  const decisions = [...snapshot.decisions].toSorted(compareDecisions);
   if (snapshot.hash !== sourceContentHash(
     canonicalJson({ project: snapshot.project, romSha256: snapshot.romSha256, decisions })
   )) {
@@ -27369,68 +27966,85 @@ function validateResearchSnapshot(snapshot) {
   }
 }
 function validateResearchDecision(decision) {
-  if (!decision || !RESEARCH_COLLECTIONS.includes(decision.collection) || typeof decision.id !== "string" || !/^\w[\w./:-]*$/.test(decision.id)) {
+  if (!isRecord10(decision)) {
+    throw new Error("Research decisions require a known collection and stable ID.");
+  }
+  const collection = decision.collection;
+  const id = decision.id;
+  if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
   const record4 = decision.value;
   if (record4 === null) {
     return;
   }
-  if (!record4 || record4.id !== decision.id) {
-    throw new Error(`Research record identity mismatch: ${decision.id}`);
+  if (!isRecord10(record4) || record4.id !== id) {
+    throw new Error(`Research record identity mismatch: ${id}`);
   }
-  if (decision.collection === "evidence") {
-    const evidence = record4;
-    if (evidence.source !== "manual" || typeof evidence.sourceId !== "string" || !evidence.sourceId || !["certain", "high", "medium", "low", "unknown"].includes(evidence.confidence) || evidence.detail !== void 0 && typeof evidence.detail !== "string") {
+  if (collection === "evidence") {
+    const sourceId = record4.sourceId;
+    const detail = record4.detail;
+    if (record4.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record4.confidence) || detail !== void 0 && typeof detail !== "string") {
       throw new Error("Research files may author only valid manual evidence.");
     }
     return;
   }
-  if (!("evidence" in record4) || !isArray2(record4.evidence) || record4.evidence.some((id) => typeof id !== "string")) {
-    throw new Error(`Research record ${decision.id} needs an evidence list.`);
+  const evidence = record4.evidence;
+  if (!isUnknownArray2(evidence) || evidence.some((entry) => typeof entry !== "string")) {
+    throw new Error(`Research record ${id} needs an evidence list.`);
   }
-  if (decision.collection === "regions") {
-    if (!("start" in record4) || !("end" in record4) || !("name" in record4) || typeof record4.name !== "string" || !record4.name || !Number.isSafeInteger(record4.start) || !Number.isSafeInteger(record4.end) || record4.start < 0 || record4.end <= record4.start) {
-      throw new Error(`Invalid research region: ${decision.id}`);
+  if (collection === "regions") {
+    const name = record4.name;
+    const start = record4.start;
+    const end = record4.end;
+    if (typeof name !== "string" || name === "" || !(isSafeInteger4(start) && isSafeInteger4(end) && start >= 0 && end > start)) {
+      throw new Error(`Invalid research region: ${id}`);
     }
   } else {
-    validateEditableMetadataRecord(
-      decision.collection,
-      record4
-    );
+    validateEditableMetadataRecord(collection, record4);
   }
-  if (decision.collection === "labels") {
-    const label = record4;
-    if (label.aliases !== void 0) {
-      if (!isArray2(label.aliases)) {
-        throw new Error("Symbol aliases must be an array.");
+  if (collection === "labels" && record4.aliases !== void 0) {
+    const aliases = record4.aliases;
+    if (!isUnknownArray2(aliases)) {
+      throw new Error("Symbol aliases must be an array.");
+    }
+    for (const alias of aliases) {
+      if (typeof alias !== "string") {
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+        );
       }
-      for (const alias of label.aliases) {
-        validateSourceLabelName(alias);
-      }
-      if (new Set(label.aliases).size !== label.aliases.length) {
-        throw new Error("Symbol aliases must be unique.");
-      }
+      validateSourceLabelName(alias);
+    }
+    if (new Set(aliases).size !== aliases.length) {
+      throw new Error("Symbol aliases must be unique.");
     }
   }
 }
 function parseResearchDocument(value) {
-  const document = value;
-  if (!document || document.format !== "uttori-research" || document.version !== 1 || typeof document.project !== "string" || !/^[\w.-]+$/.test(document.project) || typeof document.romSha256 !== "string" || !/^[\da-f]{64}$/.test(document.romSha256) || !isArray2(document.decisions) || Object.keys(document).some(
+  if (!isRecord10(value)) {
+    throw new Error("Invalid research document header.");
+  }
+  const project = value.project;
+  const romSha256 = value.romSha256;
+  const decisions = value.decisions;
+  if (value.format !== "uttori-research" || value.version !== 1 || typeof project !== "string" || !/^[\w.-]+$/.test(project) || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray2(decisions) || Object.keys(value).some(
     (key3) => !["format", "version", "project", "romSha256", "decisions"].includes(key3)
   )) {
     throw new Error("Invalid research document header.");
   }
+  const parsed = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const decision of document.decisions) {
+  for (const decision of decisions) {
     validateResearchDecision(decision);
     const key3 = `${decision.collection}:${decision.id}`;
     if (seen.has(key3)) {
       throw new Error(`Duplicate research decision: ${key3}`);
     }
     seen.add(key3);
+    parsed.push(decision);
   }
-  return document;
+  return { format: "uttori-research", version: 1, project, romSha256, decisions: parsed };
 }
 function researchPath(root, relative3) {
   assertSourcePath(relative3);
@@ -27456,7 +28070,7 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
     const overlay = overlays.get(relative3);
     const stat3 = import_node_fs4.default.existsSync(file) ? import_node_fs4.default.lstatSync(file) : void 0;
     if (stat3?.isDirectory()) {
-      for (const entry of import_node_fs4.default.readdirSync(file).sort()) {
+      for (const entry of import_node_fs4.default.readdirSync(file).toSorted()) {
         visit2(`${relative3}/${entry}`);
       }
       return;
@@ -27524,9 +28138,9 @@ function writeResearchDocument(root, relative3, document, expectedSha256) {
     lease.release();
   }
 }
-var import_node_fs4, import_node_path6, isArray2, RESEARCH_COLLECTIONS, compareDecisions;
+var import_node_fs4, import_node_path6, isArray, RESEARCH_COLLECTIONS, compareDecisions;
 var init_inputs = __esm({
-  "../disassembler/src/research-inputs/inputs.ts"() {
+  "packages/disassembler/src/research-inputs/inputs.ts"() {
     "use strict";
     import_node_fs4 = __toESM(require("node:fs"), 1);
     import_node_path6 = __toESM(require("node:path"), 1);
@@ -27535,7 +28149,7 @@ var init_inputs = __esm({
     init_source_inputs();
     init_metadata_validation();
     init_project_labels();
-    isArray2 = (value) => Array.isArray(value);
+    isArray = (value) => Array.isArray(value);
     RESEARCH_COLLECTIONS = [
       "labels",
       "comments",
@@ -27548,10 +28162,10 @@ var init_inputs = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-runtime-payload.ts
+// packages/disassembler/src/storage/sqlite-runtime-payload.ts
 var import_node_zlib, MAGIC, FIELDS, FIELD_NAMES, HEADER_BYTES, CHECKSUM_BYTES, encodePackedRuntimePayload, isPackedRuntimePayload, decodePackedRuntimePayload;
 var init_sqlite_runtime_payload = __esm({
-  "../disassembler/src/storage/sqlite-runtime-payload.ts"() {
+  "packages/disassembler/src/storage/sqlite-runtime-payload.ts"() {
     "use strict";
     import_node_zlib = require("node:zlib");
     MAGIC = Buffer.from([85, 65, 82, 1]);
@@ -27609,7 +28223,11 @@ var init_sqlite_runtime_payload = __esm({
       }
       for (const [index, [key3, width]] of FIELDS.entries()) {
         if (mask & 1 << index) {
-          encoded.writeUIntLE(record4.state[key3], offset, width);
+          const field = record4.state[key3];
+          if (typeof field !== "number") {
+            return void 0;
+          }
+          encoded.writeUIntLE(field, offset, width);
           offset += width;
         }
       }
@@ -27657,10 +28275,10 @@ var init_sqlite_runtime_payload = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-payload.ts
+// packages/disassembler/src/storage/sqlite-payload.ts
 var import_node_util, import_node_zlib2, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES2, utf8, encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
-  "../disassembler/src/storage/sqlite-payload.ts"() {
+  "packages/disassembler/src/storage/sqlite-payload.ts"() {
     "use strict";
     import_node_util = require("node:util");
     import_node_zlib2 = require("node:zlib");
@@ -27731,7 +28349,8 @@ var init_sqlite_payload = __esm({
       if (import_node_util.types.isUint8Array(value) && isPackedRuntimePayload(value)) {
         return decodePackedRuntimePayload(value);
       }
-      return JSON.parse(decodeSqlitePayload(value));
+      const parsed = JSON.parse(decodeSqlitePayload(value));
+      return parsed;
     };
     sqliteRuntimeIdentity = (id) => {
       const split = id.lastIndexOf(":") + 1;
@@ -27756,12 +28375,178 @@ var init_sqlite_payload = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-records.ts
+// packages/disassembler/src/storage/sqlite-records.ts
+function isRowRecord4(value) {
+  return !Array.isArray(value);
+}
+function requireString(value, label) {
+  if (typeof value !== "string") {
+    throw new Error(`Invalid runtime ${label}.`);
+  }
+  return value;
+}
+function requireFinite(value, label) {
+  if (!isFiniteNumber(value)) {
+    throw new Error(`Invalid runtime ${label}.`);
+  }
+  return value;
+}
+function optionalFinite(record4, key3) {
+  if (!Object.hasOwn(record4, key3)) {
+    return void 0;
+  }
+  return requireFinite(record4[key3], key3);
+}
+function requirePayload(value) {
+  if (!value) {
+    throw new Error("Invalid runtime payload.");
+  }
+  return value;
+}
+function requireBytes(value) {
+  if (!Array.isArray(value)) {
+    throw new Error("Invalid runtime bytes.");
+  }
+  const bytes = [];
+  for (const entry of value) {
+    if (!isFiniteNumber(entry)) {
+      throw new Error("Invalid runtime bytes.");
+    }
+    bytes.push(entry);
+  }
+  return bytes;
+}
+function isRuntimeState(value) {
+  return isRecord7(value) && Object.values(value).every(
+    (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
+  );
+}
+function requireState(value) {
+  if (!isRuntimeState(value)) {
+    throw new Error("Invalid runtime state.");
+  }
+  return value;
+}
+function requireCpuSpace(value) {
+  if (value === "snes.cpu") {
+    return value;
+  }
+  throw new Error("Invalid runtime address space.");
+}
+function requireDirection(value) {
+  if (value === "read" || value === "write") {
+    return value;
+  }
+  throw new Error("Invalid runtime direction.");
+}
+function requireBusActor(value) {
+  if (value === "cpu" || value === "dma" || value === "hdma") {
+    return value;
+  }
+  throw new Error("Invalid runtime actor.");
+}
+function requirePhase(value) {
+  if (value === "cpu" || value === "dma" || value === "hdma-indirect" || value === "hdma-table" || value === "hdma-transfer") {
+    return value;
+  }
+  throw new Error("Invalid runtime phase.");
+}
+function requireContext(value) {
+  if (value === "unattributed" || value === "instruction" || value === "interrupt" || value === "wait" || value === "stop") {
+    return value;
+  }
+  throw new Error("Invalid runtime context.");
+}
+function requireNullableFinite(value, label) {
+  if (value === null) {
+    return null;
+  }
+  return requireFinite(value, label);
+}
+function requireMemoryAccess(value) {
+  if (value === "read" || value === "write" || value === "read-write" || value === "unknown") {
+    return value;
+  }
+  throw new Error("Invalid runtime access.");
+}
+function requireCoverage(value) {
+  if (value === "executed" || value === "operand" || value === "read" || value === "written") {
+    return value;
+  }
+  throw new Error("Invalid runtime coverage.");
+}
+function isPpuByte(value) {
+  return isRecord7(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
+}
+function requirePpu(value) {
+  if (!isRecord7(value) || value.target !== "vram" && value.target !== "cgram" && value.target !== "oam" || value.outcome !== "written" && value.outcome !== "blocked" && value.outcome !== "latched" || typeof value.forcedBlank !== "boolean" || typeof value.renderingRestricted !== "boolean" || value.implementation !== "accurate" && value.implementation !== "performance" || value.vramBytes !== null && value.vramBytes !== 65536 && value.vramBytes !== 131072 || !Array.isArray(value.bytes)) {
+    throw new Error("Invalid runtime ppu effect.");
+  }
+  const bytes = [];
+  for (const entry of value.bytes) {
+    if (!isPpuByte(entry)) {
+      throw new Error("Invalid runtime ppu effect.");
+    }
+    bytes.push({ address: entry.address, value: entry.value });
+  }
+  return {
+    target: value.target,
+    outcome: value.outcome,
+    forcedBlank: value.forcedBlank,
+    renderingRestricted: value.renderingRestricted,
+    implementation: value.implementation,
+    vramBytes: value.vramBytes,
+    bytes
+  };
+}
+function readPayload(value) {
+  if (value === null || value === void 0) {
+    return {};
+  }
+  const parsed = parseSqlitePayload(value);
+  return isRecord7(parsed) ? parsed : void 0;
+}
+function optionalBusActor(record4) {
+  if (!Object.hasOwn(record4, "actor")) {
+    return {};
+  }
+  return { actor: requireBusActor(record4.actor) };
+}
+function allowsFinite2(value) {
+  return value === void 0 || isFiniteNumber(value);
+}
+function isRuntimeEvidenceRecord(value) {
+  if (!isRecord7(value) || typeof value.id !== "string" || typeof value.architecture !== "string" || !isFiniteNumber(value.count) || !isStringArray(value.evidence)) {
+    return false;
+  }
+  switch (value.kind) {
+    case "runtime-execution":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite2(value.fileOffset) && allowsFinite2(value.size) && allowsFinite2(value.opcode);
+    case "runtime-instruction":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && Array.isArray(value.bytes) && value.bytes.every(isFiniteNumber) && isRuntimeState(value.state);
+    case "runtime-cpu-state":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isRuntimeState(value.state);
+    case "runtime-coverage":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && (value.coverage === "executed" || value.coverage === "operand" || value.coverage === "read" || value.coverage === "written");
+    case "runtime-control-target":
+      return typeof value.fromAddressSpace === "string" && isFiniteNumber(value.fromAddress) && typeof value.toAddressSpace === "string" && isFiniteNumber(value.toAddress) && typeof value.flowKind === "string" && typeof value.indirect === "boolean";
+    case "runtime-memory-access":
+      return typeof value.instructionAddressSpace === "string" && isFiniteNumber(value.instructionAddress) && typeof value.accessedAddressSpace === "string" && isFiniteNumber(value.accessedAddress) && (value.access === "read" || value.access === "write" || value.access === "read-write" || value.access === "unknown") && isFiniteNumber(value.width) && (value.actor === void 0 || value.actor === "cpu" || value.actor === "dma" || value.actor === "hdma") && allowsFinite2(value.channel) && allowsFinite2(value.value);
+    case "runtime-bus-access":
+      return (value.ppu === void 0 || isBusPpu(value.ppu)) && value.addressSpace === "snes.cpu" && isFiniteNumber(value.address) && isFiniteNumber(value.pc) && isFiniteNumber(value.value) && (value.direction === "read" || value.direction === "write") && (value.actor === "cpu" || value.actor === "dma" || value.actor === "hdma") && (value.channel === null || isFiniteNumber(value.channel)) && (value.phase === "cpu" || value.phase === "dma" || value.phase === "hdma-indirect" || value.phase === "hdma-table" || value.phase === "hdma-transfer") && (value.context === "unattributed" || value.context === "instruction" || value.context === "interrupt" || value.context === "wait" || value.context === "stop");
+    default:
+      return false;
+  }
+}
+function isBusPpu(value) {
+  return isRecord7(value) && (value.target === "vram" || value.target === "cgram" || value.target === "oam") && (value.outcome === "written" || value.outcome === "blocked" || value.outcome === "latched") && typeof value.forcedBlank === "boolean" && typeof value.renderingRestricted === "boolean" && (value.implementation === "accurate" || value.implementation === "performance") && (value.vramBytes === null || value.vramBytes === 65536 || value.vramBytes === 131072) && Array.isArray(value.bytes) && value.bytes.every(isPpuByte);
+}
 var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
-  "../disassembler/src/storage/sqlite-records.ts"() {
+  "packages/disassembler/src/storage/sqlite-records.ts"() {
     "use strict";
     init_canonical_json();
+    init_record_shape();
     init_sqlite_payload();
     compareRuntimeRecordIds = (left, right) => {
       if (left.id < right.id) {
@@ -27917,119 +28702,137 @@ var init_sqlite_records = __esm({
       throw new Error("Unsupported runtime evidence kind.");
     };
     runtimeFromRow = (row) => {
-      const fields = row;
-      const extra = fields.payload === null || fields.payload === void 0 ? {} : parseSqlitePayload(fields.payload);
-      if (typeof fields.evidence !== "string") {
+      if (!isRowRecord4(row)) {
+        throw new Error("Invalid runtime row.");
+      }
+      const extra = readPayload(row.payload);
+      if (typeof row.evidence !== "string") {
         throw new Error("Missing SQLite runtime evidence dictionary entry.");
       }
-      const evidence = JSON.parse(fields.evidence);
-      const kind = fields.kind;
-      const architecture = fields.architecture;
-      const count2 = Number(fields.count);
-      const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+      const parsedEvidence = JSON.parse(row.evidence);
+      if (!isStringArray(parsedEvidence)) {
+        throw new Error("Invalid runtime evidence list.");
+      }
+      const kind = row.kind;
+      const count2 = Number(row.count);
+      const id = decodeSqliteRuntimeIdentity(row.id_prefix, row.id);
       if (kind === "runtime-execution") {
+        const body = requirePayload(extra);
+        const fileOffset = optionalFinite(body, "fileOffset");
+        const size = optionalFinite(body, "size");
+        const opcode = optionalFinite(body, "opcode");
         return {
           id,
           kind,
-          architecture,
+          architecture: requireString(row.architecture, "architecture"),
           count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          address: Number(fields.address),
-          ...extra
+          evidence: parsedEvidence,
+          addressSpace: requireString(row.address_space, "address space"),
+          address: Number(row.address),
+          ...fileOffset === void 0 ? {} : { fileOffset },
+          ...size === void 0 ? {} : { size },
+          ...opcode === void 0 ? {} : { opcode }
         };
       }
       if (kind === "runtime-instruction") {
+        const body = requirePayload(extra);
         return {
           id,
           kind,
-          architecture,
+          architecture: requireString(row.architecture, "architecture"),
           count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          address: Number(fields.address),
-          bytes: extra.bytes,
-          state: extra.state
+          evidence: parsedEvidence,
+          addressSpace: requireString(row.address_space, "address space"),
+          address: Number(row.address),
+          bytes: requireBytes(body.bytes),
+          state: requireState(body.state)
         };
       }
       if (kind === "runtime-bus-access") {
+        const body = requirePayload(extra);
         return {
           id,
           kind,
-          architecture,
+          architecture: requireString(row.architecture, "architecture"),
           count: count2,
-          evidence,
-          addressSpace: fields.accessed_address_space,
-          address: Number(fields.accessed_address),
-          ...extra.ppu === void 0 ? {} : { ppu: extra.ppu },
-          pc: extra.pc,
-          value: extra.value,
-          direction: extra.direction,
-          actor: extra.actor,
-          channel: extra.channel,
-          phase: extra.phase,
-          context: extra.context
+          evidence: parsedEvidence,
+          ...body.ppu === void 0 ? {} : { ppu: requirePpu(body.ppu) },
+          addressSpace: requireCpuSpace(row.accessed_address_space),
+          address: Number(row.accessed_address),
+          pc: requireFinite(body.pc, "pc"),
+          value: requireFinite(body.value, "value"),
+          direction: requireDirection(body.direction),
+          actor: requireBusActor(body.actor),
+          channel: requireNullableFinite(body.channel, "channel"),
+          phase: requirePhase(body.phase),
+          context: requireContext(body.context)
         };
       }
       if (kind === "runtime-memory-access") {
+        const body = requirePayload(extra);
+        const actor = optionalBusActor(body);
+        const channel = optionalFinite(body, "channel");
+        const value = optionalFinite(body, "value");
         return {
           id,
           kind,
-          architecture,
+          architecture: requireString(row.architecture, "architecture"),
           count: count2,
-          evidence,
-          instructionAddressSpace: fields.instruction_address_space,
-          instructionAddress: Number(fields.instruction_address),
-          accessedAddressSpace: fields.accessed_address_space,
-          accessedAddress: Number(fields.accessed_address),
-          access: extra.access,
-          width: extra.width,
-          ...extra.actor === void 0 ? {} : { actor: extra.actor },
-          ...extra.channel === void 0 ? {} : { channel: extra.channel },
-          ...extra.value === void 0 ? {} : { value: extra.value }
+          evidence: parsedEvidence,
+          instructionAddressSpace: requireString(row.instruction_address_space, "address space"),
+          instructionAddress: Number(row.instruction_address),
+          accessedAddressSpace: requireString(row.accessed_address_space, "address space"),
+          accessedAddress: Number(row.accessed_address),
+          access: requireMemoryAccess(body.access),
+          width: requireFinite(body.width, "width"),
+          ...actor,
+          ...channel === void 0 ? {} : { channel },
+          ...value === void 0 ? {} : { value }
         };
       }
       if (kind === "runtime-cpu-state") {
+        const body = requirePayload(extra);
         return {
           id,
           kind,
-          architecture,
+          architecture: requireString(row.architecture, "architecture"),
           count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          address: Number(fields.address),
-          state: extra.state
+          evidence: parsedEvidence,
+          addressSpace: requireString(row.address_space, "address space"),
+          address: Number(row.address),
+          state: requireState(body.state)
         };
       }
       if (kind === "runtime-coverage") {
         return {
           id,
           kind,
-          architecture,
+          architecture: requireString(row.architecture, "architecture"),
           count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          start: Number(fields.start),
-          end: Number(fields.end),
-          coverage: fields.coverage
+          evidence: parsedEvidence,
+          addressSpace: requireString(row.address_space, "address space"),
+          start: Number(row.start),
+          end: Number(row.end),
+          coverage: requireCoverage(row.coverage)
         };
       }
-      if (kind !== "runtime-control-target") {
-        throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
+      if (kind === "runtime-control-target") {
+        const body = requirePayload(extra);
+        return {
+          id,
+          kind: "runtime-control-target",
+          architecture: requireString(row.architecture, "architecture"),
+          count: count2,
+          evidence: parsedEvidence,
+          fromAddressSpace: requireString(row.from_address_space, "address space"),
+          fromAddress: Number(row.from_address),
+          toAddressSpace: requireString(row.to_address_space, "address space"),
+          toAddress: Number(row.to_address),
+          flowKind: requireString(body.flowKind, "flow kind"),
+          indirect: Boolean(body.indirect)
+        };
       }
-      return {
-        id,
-        kind: "runtime-control-target",
-        architecture,
-        count: count2,
-        evidence,
-        fromAddressSpace: fields.from_address_space,
-        fromAddress: Number(fields.from_address),
-        toAddressSpace: fields.to_address_space,
-        toAddress: Number(fields.to_address),
-        flowKind: extra.flowKind,
-        indirect: Boolean(extra.indirect)
-      };
+      throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
     };
     analysisAddress = (record4) => {
       if ("addressSpace" in record4 && "address" in record4) {
@@ -28043,19 +28846,52 @@ var init_sqlite_records = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-annotation-query.ts
-var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, validateAnnotationRanges, readInstructionExecutionSummary;
+// packages/disassembler/src/storage/sqlite-annotation-query.ts
+function isPartialInstruction(value) {
+  if (!isRecord7(value)) {
+    return false;
+  }
+  if (value.kind !== void 0 && value.kind !== "cfg-node") {
+    return false;
+  }
+  if (value.id !== void 0 && typeof value.id !== "string") {
+    return false;
+  }
+  if (value.addressSpace !== void 0 && typeof value.addressSpace !== "string") {
+    return false;
+  }
+  if (value.specificationId !== void 0 && typeof value.specificationId !== "string") {
+    return false;
+  }
+  for (const key3 of ["address", "fileOffset", "size", "opcode"]) {
+    if (value[key3] !== void 0 && !isFiniteNumber(value[key3])) {
+      return false;
+    }
+  }
+  if (value.incomingState !== void 0 && !isRecord7(value.incomingState)) {
+    return false;
+  }
+  return value.evidence === void 0 || isStringArray(value.evidence);
+}
+function requirePartialInstruction(value) {
+  const parsed = parseSqlitePayload(value);
+  if (!isPartialInstruction(parsed)) {
+    throw new Error("Invalid indexed instruction.");
+  }
+  return parsed;
+}
+var QUERY_LAYOUT, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, validateAnnotationRanges, readInstructionExecutionSummary;
 var init_sqlite_annotation_query = __esm({
-  "../disassembler/src/storage/sqlite-annotation-query.ts"() {
+  "packages/disassembler/src/storage/sqlite-annotation-query.ts"() {
     "use strict";
+    init_record_shape();
     init_sqlite_payload();
     init_sqlite_records();
     QUERY_LAYOUT = "5";
-    decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
-    runtimeSelect = (pairedState = false) => {
-      const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
-      const prefix = pairedState ? "o.state_prefix_id" : "o.prefix_id";
-      const row = pairedState ? "-o.oid" : "o.oid";
+    runtimeSelect = (pairedState2 = false) => {
+      const kind = pairedState2 ? "'runtime-cpu-state'" : "f.kind";
+      const prefix = pairedState2 ? "o.state_prefix_id" : "o.prefix_id";
+      const row = pairedState2 ? "-o.oid" : "o.oid";
       return `SELECT ${row} AS storage_rowid,${kind} AS kind,i.value AS id,
     p.value AS id_prefix,e.value AS evidence,o.count,f.architecture,
     f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
@@ -28126,7 +28962,7 @@ var init_sqlite_annotation_query = __esm({
         const exportData = table === "analysis" ? database.prepare("UPDATE analysis SET query_data=? WHERE rowid=?") : void 0;
         for (let rows = pending.all(); rows.length; rows = pending.all()) {
           for (const row of rows) {
-            const record4 = row.payload === null ? {} : decode(row.payload);
+            const record4 = row.payload === null ? {} : requirePartialInstruction(row.payload);
             const offset = record4.fileOffset;
             if (offset !== void 0 && (!Number.isSafeInteger(offset) || offset < 0)) {
               throw new Error("Invalid persisted instruction output offset.");
@@ -28203,7 +29039,7 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record4 = decode(row.payload);
+          const record4 = requireAnalysisRecord(parseSqlitePayload(row.payload));
           analysis.set(record4.id, record4);
           if (record4.kind === "cfg-node") {
             locate(record4.addressSpace, record4.address);
@@ -28272,7 +29108,7 @@ var init_sqlite_annotation_query = __esm({
         }
       }
       for (const row of database.prepare("SELECT payload FROM analysis WHERE kind='summary'").iterate()) {
-        const record4 = decode(row.payload);
+        const record4 = requireAnalysisRecord(parseSqlitePayload(row.payload));
         analysis.set(record4.id, record4);
       }
       const runtime = /* @__PURE__ */ new Map();
@@ -28280,7 +29116,7 @@ var init_sqlite_annotation_query = __esm({
       const point = database.prepare(
         `${runtimeSelect()} WHERE f.kind=? AND f.address_space=? AND f.address=? ORDER BY o.oid LIMIT ?`
       );
-      const pairedState = database.prepare(
+      const pairedState2 = database.prepare(
         `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_prefix_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`
       );
       const memory = database.prepare(
@@ -28292,7 +29128,7 @@ var init_sqlite_annotation_query = __esm({
       );
       function* stateRows(space, address4, limit) {
         let remaining = limit;
-        for (const row of pairedState.iterate(space, address4, remaining)) {
+        for (const row of pairedState2.iterate(space, address4, remaining)) {
           yield row;
           remaining--;
         }
@@ -28349,7 +29185,7 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record4 = decode(row.payload);
+          const record4 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
           annotations.set(record4.id, record4);
         }
         let commentCount = 0;
@@ -28358,7 +29194,7 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record4 = decode(row.payload);
+          const record4 = requireProjectComment(parseSqlitePayload(row.payload));
           comments.set(record4.id, record4);
         }
         addRuntime(
@@ -28372,7 +29208,7 @@ var init_sqlite_annotation_query = __esm({
           annotations: [...annotations.values()],
           comments: [...comments.values()],
           evidence: [...database.prepare("SELECT payload FROM evidence").iterate()].map(
-            (row) => decode(row.payload)
+            (row) => requireEvidenceRecord(parseSqlitePayload(row.payload))
           ),
           labels: [],
           regions: [],
@@ -28471,10 +29307,10 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-query-cache.ts
+// packages/disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA, installQueryCache, readQueryCache, writeQueryCache;
 var init_sqlite_query_cache = __esm({
-  "../disassembler/src/storage/sqlite-query-cache.ts"() {
+  "packages/disassembler/src/storage/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
     installQueryCache = (db, key3, dependencies) => {
@@ -28512,7 +29348,11 @@ var init_sqlite_query_cache = __esm({
         return void 0;
       }
       const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
-      return row ? JSON.parse(String(row.payload)) : void 0;
+      if (!row) {
+        return void 0;
+      }
+      const parsed = JSON.parse(String(row.payload));
+      return parsed;
     };
     writeQueryCache = (db, key3, signature, value) => {
       db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
@@ -28524,23 +29364,58 @@ var init_sqlite_query_cache = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-coverage-query.ts
-var decode2, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage;
+// packages/disassembler/src/storage/sqlite-coverage-query.ts
+function isCoverageCounts(value, keys) {
+  return isRecord7(value) && keys.every((key3) => isFiniteNumber(value[key3])) && Object.keys(value).every((key3) => keys.includes(key3));
+}
+function isSqliteCoverageSummary(value) {
+  if (!isRecord7(value) || !isFiniteNumber(value.contentSize) || !isStringArray(value.fileAddressSpaces) || !Array.isArray(value.segments) || value.segments.length !== 0 || !Array.isArray(value.unprojected) || value.unprojected.length !== 0 || !Array.isArray(value.diagnostics) || value.diagnostics.length !== 0 || !isFiniteNumber(value.detailCount) || !isRecord7(value.summary)) {
+    return false;
+  }
+  const summary = value.summary;
+  return isFiniteNumber(summary.totalBytes) && isFiniteNumber(summary.classifiedBytes) && isFiniteNumber(summary.unknownBytes) && isFiniteNumber(summary.conflictBytes) && isFiniteNumber(summary.segmentCount) && isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) && isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME);
+}
+function requireConflict(value) {
+  const record4 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record4.kind !== "conflict") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record4;
+}
+function requireAccessWidth(value) {
+  const parsed = parseSqlitePayload(value);
+  if (!isRecord7(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
+    throw new Error("Invalid runtime memory coverage payload.");
+  }
+  return { access: parsed.access, width: parsed.width };
+}
+var COVERAGE_CLASSES, COVERAGE_RUNTIME, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage;
 var init_sqlite_coverage_query = __esm({
-  "../disassembler/src/storage/sqlite-coverage-query.ts"() {
+  "packages/disassembler/src/storage/sqlite-coverage-query.ts"() {
     "use strict";
+    init_record_shape();
     init_sqlite_payload();
     init_sqlite_query_cache();
-    decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
+    COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"];
+    COVERAGE_RUNTIME = ["executed", "operand", "read", "written"];
     coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
-    cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
+    cachedCoverage = (db, manifest) => {
+      const value = readQueryCache(db, "coverage", coverageSignature(manifest));
+      if (value === void 0) {
+        return void 0;
+      }
+      if (!isSqliteCoverageSummary(value)) {
+        throw new Error("Invalid coverage summary cache.");
+      }
+      return value;
+    };
     prepareCoverage = (db, manifest) => {
       db.exec(`CREATE TEMP TABLE query_coverage_segments (start INTEGER PRIMARY KEY, payload TEXT NOT NULL);
     CREATE TEMP TABLE query_coverage_details (kind TEXT, id TEXT, reason TEXT, payload TEXT NOT NULL);
     CREATE INDEX temp.query_coverage_detail_order ON query_coverage_details(kind,id,reason);
     DELETE FROM query_coverage_segments; DELETE FROM query_coverage_details;
     CREATE TEMP TABLE coverage_events (pos INTEGER NOT NULL, category TEXT NOT NULL, id TEXT NOT NULL, delta INTEGER NOT NULL);`);
-      const fileAddressSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id).sort((a, b) => a.localeCompare(b));
+      const fileAddressSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id).toSorted((a, b) => a.localeCompare(b));
       const files = new Set(fileAddressSpaces);
       const size = manifest.rom.contentSize;
       if (!Number.isSafeInteger(size) || size < 0) {
@@ -28593,7 +29468,7 @@ var init_sqlite_coverage_query = __esm({
       };
       try {
         for (const row of db.prepare("SELECT * FROM annotations WHERE classification != 'unreached'").iterate()) {
-          const record4 = decode2(row.payload);
+          const record4 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
           if (!files.has(record4.addressSpace)) {
             unprojected("annotation", record4.id, "non-file-address-space");
             continue;
@@ -28642,7 +29517,7 @@ var init_sqlite_coverage_query = __esm({
           "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'"
         );
         for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-          const record4 = decode2(row.payload);
+          const record4 = requireConflict(row.payload);
           if (files.has(record4.addressSpace)) {
             add("analysis", record4.id, record4.address, record4.end ?? record4.address + 1, [
               ["conflictIds", record4.id]
@@ -28707,7 +29582,7 @@ var init_sqlite_coverage_query = __esm({
         for (const row of db.prepare(`SELECT ${identity2} AS id,r.accessed_address,r.payload FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id
       WHERE r.kind='runtime-memory-access' AND r.accessed_address_space IN (SELECT value FROM json_each(?))`).iterate(JSON.stringify(fileAddressSpaces))) {
           const id = String(row.id);
-          const payload = decode2(row.payload);
+          const payload = requireAccessWidth(row.payload);
           for (const [access, classification2] of [
             ["read", "read"],
             ["write", "written"]
@@ -28729,7 +29604,7 @@ var init_sqlite_coverage_query = __esm({
         event.run(0, "boundary", "", 0);
         event.run(size, "boundary", "", 0);
         const active = /* @__PURE__ */ new Map();
-        const ids = (category) => [...active.get(category)?.keys() ?? []].sort((a, b) => a.localeCompare(b));
+        const ids = (category) => [...active.get(category)?.keys() ?? []].toSorted((a, b) => a.localeCompare(b));
         const put = db.prepare("INSERT INTO query_coverage_segments VALUES(?,?)");
         const summary = {
           totalBytes: size,
@@ -28782,8 +29657,8 @@ var init_sqlite_coverage_query = __esm({
             conflictIds,
             regionIds: ids("regionIds")
           };
-          const { start: _start, end: _end, ...identity3 } = segment;
-          const key3 = JSON.stringify(identity3);
+          const { start: _start, end: _end, ...segmentIdentity } = segment;
+          const key3 = JSON.stringify(segmentIdentity);
           if (pending && key3 === pendingKey) {
             pending = { ...pending, end };
           } else {
@@ -28868,15 +29743,77 @@ var init_sqlite_coverage_query = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-graph-query.ts
-var decode3, unique, numbers, prepareGraph, publishGraph;
+// packages/disassembler/src/storage/sqlite-graph-query.ts
+function requireNode(value) {
+  const record4 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record4.kind !== "cfg-node") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record4;
+}
+function requireEdge(value) {
+  const record4 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record4.kind !== "cfg-edge") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record4;
+}
+function requireUnresolved(value) {
+  const record4 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record4.kind !== "unresolved") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record4;
+}
+function requireFunctionRecord(value) {
+  const record4 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record4.kind !== "function") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record4;
+}
+function isLabelRefList(value) {
+  return Array.isArray(value) && value.every(
+    (entry) => isRecord7(entry) && typeof entry.id === "string" && typeof entry.name === "string"
+  );
+}
+function isNumberList(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isCallGraphFunction(value) {
+  return isRecord7(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isLabelRefList(value.labels) && isStringArray(value.nodeIds) && isNumberList(value.outputOffsets) && isStringArray(value.incomingCallIds) && isStringArray(value.outgoingCallIds) && isStringArray(value.unresolvedIds) && isStringArray(value.evidence);
+}
+function isCallGraphEdge(value) {
+  return isRecord7(value) && typeof value.id === "string" && (value.edgeKind === "call" || value.edgeKind === "interrupt") && typeof value.addressSpace === "string" && isFiniteNumber(value.fromAddress) && isFiniteNumber(value.toAddress) && typeof value.fromNodeId === "string" && (value.toNodeId === void 0 || typeof value.toNodeId === "string") && isStringArray(value.callerFunctionIds) && isStringArray(value.calleeFunctionIds) && isNumberList(value.fromOutputOffsets) && isNumberList(value.toOutputOffsets) && typeof value.indirect === "boolean" && (value.override === void 0 || typeof value.override === "string") && (value.explanation === void 0 || typeof value.explanation === "string") && isStringArray(value.evidence);
+}
+function isCallGraphUnresolved(value) {
+  return isRecord7(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string" && isStringArray(value.nodeIds) && isStringArray(value.ownerFunctionIds) && isNumberList(value.outputOffsets) && isStringArray(value.evidence);
+}
+function isCallGraph(value) {
+  return isRecord7(value) && Array.isArray(value.functions) && value.functions.every(isCallGraphFunction) && Array.isArray(value.calls) && value.calls.every(isCallGraphEdge) && Array.isArray(value.unresolved) && value.unresolved.every(isCallGraphUnresolved) && isStringArray(value.orphanCallIds) && isStringArray(value.orphanUnresolvedIds);
+}
+function requireCallKind(value) {
+  if (value === "call" || value === "interrupt") {
+    return value;
+  }
+  throw new Error("Invalid call graph edge.");
+}
+var unique, numbers, append, prepareGraph, publishGraph;
 var init_sqlite_graph_query = __esm({
-  "../disassembler/src/storage/sqlite-graph-query.ts"() {
+  "packages/disassembler/src/storage/sqlite-graph-query.ts"() {
     "use strict";
+    init_record_shape();
     init_sqlite_payload();
-    decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
-    unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
-    numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
+    unique = (ids) => [...new Set(ids)].toSorted((a, b) => a.localeCompare(b));
+    numbers = (ids) => [...new Set(ids)].toSorted((a, b) => a - b);
+    append = (map, owner2, id) => {
+      let ids = map.get(owner2);
+      if (!ids) {
+        ids = [];
+        map.set(owner2, ids);
+      }
+      ids.push(id);
+    };
     prepareGraph = (db) => {
       db.exec(`CREATE TEMP TABLE query_graph_nodes(id TEXT PRIMARY KEY,address_space TEXT,address INTEGER,file_offset INTEGER,owner TEXT) WITHOUT ROWID;
     CREATE INDEX temp.query_graph_owner ON query_graph_nodes(owner);
@@ -28893,7 +29830,7 @@ var init_sqlite_graph_query = __esm({
       const putEdge = db.prepare("INSERT INTO query_graph_edges VALUES(?,?,?,?,?,?)");
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
-          const node = decode3(row.payload);
+          const node = requireNode(row.payload);
           const path41 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner2 = node.functionEntry;
           for (let i = path41.length - 1; i >= 0; i--) {
@@ -28907,7 +29844,7 @@ var init_sqlite_graph_query = __esm({
           }
           putNode.run(node.id, node.addressSpace, node.address, node.fileOffset ?? null, owner2 ?? null);
         } else {
-          const edge = decode3(row.payload);
+          const edge = requireEdge(row.payload);
           if (edge.edgeKind === "unresolved" || ["call", "interrupt"].includes(edge.edgeKind) && edge.toAddress !== void 0) {
             putEdge.run(
               edge.id,
@@ -28932,10 +29869,10 @@ var init_sqlite_graph_query = __esm({
       );
       const calls = [];
       for (const row of db.prepare("SELECT payload FROM query_graph_edges WHERE kind IN ('call','interrupt')").iterate()) {
-        const edge = decode3(row.payload);
+        const edge = requireEdge(row.payload);
         calls.push({
           id: edge.id,
-          edgeKind: edge.edgeKind,
+          edgeKind: requireCallKind(edge.edgeKind),
           addressSpace: edge.addressSpace,
           fromAddress: edge.fromAddress,
           toAddress: edge.toAddress,
@@ -28943,7 +29880,7 @@ var init_sqlite_graph_query = __esm({
           ...edge.to ? { toNodeId: edge.to } : {},
           callerFunctionIds: owners(edge.from),
           calleeFunctionIds: unique(
-            functionsAt.all(edge.addressSpace, edge.toAddress).map((row2) => String(row2.id))
+            functionsAt.all(edge.addressSpace, edge.toAddress).map((functionRow) => String(functionRow.id))
           ),
           fromOutputOffsets: offsets([edge.from]),
           toOutputOffsets: offsets(edge.to ? [edge.to] : []),
@@ -28958,9 +29895,9 @@ var init_sqlite_graph_query = __esm({
         "SELECT from_id FROM query_graph_edges WHERE kind='unresolved' AND address_space=? AND from_address=?"
       );
       for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='unresolved'").iterate()) {
-        const record4 = decode3(row.payload);
+        const record4 = requireUnresolved(row.payload);
         const nodeIds = unique(
-          unresolvedNodes.all(record4.addressSpace, record4.address).map((row2) => String(row2.from_id))
+          unresolvedNodes.all(record4.addressSpace, record4.address).map((nodeRow) => String(nodeRow.from_id))
         );
         unresolved.push({
           id: record4.id,
@@ -28976,25 +29913,17 @@ var init_sqlite_graph_query = __esm({
         });
       }
       const incoming = /* @__PURE__ */ new Map(), outgoing = /* @__PURE__ */ new Map(), unresolvedByOwner = /* @__PURE__ */ new Map();
-      const append2 = (map, owner2, id) => {
-        let ids = map.get(owner2);
-        if (!ids) {
-          ids = [];
-          map.set(owner2, ids);
-        }
-        ids.push(id);
-      };
       for (const call of calls) {
         for (const id of call.callerFunctionIds) {
-          append2(outgoing, id, call.id);
+          append(outgoing, id, call.id);
         }
         for (const id of call.calleeFunctionIds) {
-          append2(incoming, id, call.id);
+          append(incoming, id, call.id);
         }
       }
       for (const record4 of unresolved) {
         for (const id of record4.ownerFunctionIds) {
-          append2(unresolvedByOwner, id, record4.id);
+          append(unresolvedByOwner, id, record4.id);
         }
       }
       const owned = db.prepare(
@@ -29003,20 +29932,20 @@ var init_sqlite_graph_query = __esm({
       const labels = db.prepare("SELECT payload FROM labels WHERE address_space=? AND address=?");
       const functions = [];
       for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='function'").iterate()) {
-        const fn = decode3(row.payload);
+        const fn = requireFunctionRecord(row.payload);
         const nodes = owned.all(fn.addressSpace, fn.address);
         functions.push({
           id: fn.id,
           addressSpace: fn.addressSpace,
           address: fn.address,
           source: fn.source,
-          labels: labels.all(fn.addressSpace, fn.address).map((row2) => {
-            const { id, name } = decode3(row2.payload);
+          labels: labels.all(fn.addressSpace, fn.address).map((labelRow) => {
+            const { id, name } = requireProjectLabel(parseSqlitePayload(labelRow.payload));
             return { id, name };
-          }).sort((a, b) => a.id.localeCompare(b.id)),
-          nodeIds: unique(nodes.map((row2) => String(row2.id))),
+          }).toSorted((a, b) => a.id.localeCompare(b.id)),
+          nodeIds: unique(nodes.map((nodeRow) => String(nodeRow.id))),
           outputOffsets: numbers(
-            nodes.filter((row2) => row2.address === fn.address && row2.file_offset !== null).map((row2) => Number(row2.file_offset))
+            nodes.filter((nodeRow) => nodeRow.address === fn.address && nodeRow.file_offset !== null).map((nodeRow) => Number(nodeRow.file_offset))
           ),
           incomingCallIds: unique(incoming.get(fn.id) ?? []),
           outgoingCallIds: unique(outgoing.get(fn.id) ?? []),
@@ -29058,10 +29987,19 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-research-inputs.ts
+// packages/disassembler/src/storage/sqlite-research-inputs.ts
+function isRecord11(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isResearchCollection2(value) {
+  return value === "labels" || value === "comments" || value === "annotations" || value === "regions" || value === "analysis" || value === "evidence";
+}
 function analysisInput(collection, value) {
   if (value === null || collection === "comments") {
     return null;
+  }
+  if (!isRecord11(value)) {
+    throw new Error("Invalid research record.");
   }
   const record4 = value;
   if (collection === "labels") {
@@ -29137,7 +30075,7 @@ function projectResearchInputs(database, snapshot, insert) {
     const before = database.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(decision.id);
     if (collection === "evidence" && before) {
       const observation = recordValue(before.payload);
-      if (observation.source !== "manual") {
+      if (!isRecord11(observation) || observation.source !== "manual") {
         throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
       }
     }
@@ -29157,7 +30095,7 @@ function projectResearchInputs(database, snapshot, insert) {
 }
 var SCHEMA, collectionName, recordValue;
 var init_sqlite_research_inputs = __esm({
-  "../disassembler/src/storage/sqlite-research-inputs.ts"() {
+  "packages/disassembler/src/storage/sqlite-research-inputs.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -29166,7 +30104,7 @@ var init_sqlite_research_inputs = __esm({
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
     collectionName = (value) => {
-      if (typeof value !== "string" || !["labels", "comments", "annotations", "regions", "analysis", "evidence"].includes(value)) {
+      if (typeof value !== "string" || !isResearchCollection2(value)) {
         throw new Error("Invalid research projection collection.");
       }
       return value;
@@ -29175,10 +30113,10 @@ var init_sqlite_research_inputs = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-runtime-facts.ts
+// packages/disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS, runtimeIdentityKey, columns, inserted, key2, descriptorInsert, descriptorId, RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA;
 var init_sqlite_runtime_facts = __esm({
-  "../disassembler/src/storage/sqlite-runtime-facts.ts"() {
+  "packages/disassembler/src/storage/sqlite-runtime-facts.ts"() {
     "use strict";
     RUNTIME_DESCRIPTOR_COLUMNS = [
       "kind",
@@ -29270,10 +30208,16 @@ BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
   }
 });
 
-// ../disassembler/src/storage/sqlite-runtime-history.ts
+// packages/disassembler/src/storage/sqlite-runtime-history.ts
+function historyPayload(value) {
+  if (value === null || typeof value === "string" || import_node_util2.types.isUint8Array(value)) {
+    return value;
+  }
+  throw new Error("Invalid runtime history payload.");
+}
 var import_node_util2, import_node_zlib3, MAGIC2, MAX_ROWS, MAX_BYTES, TARGET_BYTES, CACHE_BYTES, utf82, RUNTIME_HISTORY_SCHEMA, encodeRuntimeHistory, decodeHistoryBlock, historyValue, registerRuntimeHistory, packRuntimeHistory, collectRuntimeHistory;
 var init_sqlite_runtime_history = __esm({
-  "../disassembler/src/storage/sqlite-runtime-history.ts"() {
+  "packages/disassembler/src/storage/sqlite-runtime-history.ts"() {
     "use strict";
     import_node_util2 = require("node:util");
     import_node_zlib3 = require("node:zlib");
@@ -29420,7 +30364,7 @@ END;`;
         const rows = [];
         let size = 0;
         for (const row of pending.iterate(MAX_ROWS)) {
-          const value = row.payload;
+          const value = historyPayload(row.payload);
           const bytes = typeof value === "string" ? Buffer.byteLength(value) : value?.byteLength ?? 0;
           if (rows.length && size + bytes > TARGET_BYTES) {
             break;
@@ -29431,7 +30375,7 @@ END;`;
         if (!rows.length) {
           return packed;
         }
-        const encoded = encodeRuntimeHistory(rows.map((row) => row.payload));
+        const encoded = encodeRuntimeHistory(rows.map((row) => historyPayload(row.payload)));
         const id = insert.run(rows[0].fid, rows[rows.length - 1].fid, encoded).lastInsertRowid;
         for (const [slot, row] of rows.entries()) {
           update.run(id, slot, row.fid);
@@ -29450,13 +30394,21 @@ END;`;
   }
 });
 
-// ../disassembler/src/storage/sqlite-runtime-storage.ts
+// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+function pairedState(payload) {
+  const parsed = parseSqlitePayload(payload);
+  if (!isRecord7(parsed)) {
+    throw new Error("Invalid paired runtime payload.");
+  }
+  return parsed.state;
+}
 var import_node_crypto8, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
-  "../disassembler/src/storage/sqlite-runtime-storage.ts"() {
+  "packages/disassembler/src/storage/sqlite-runtime-storage.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
     init_canonical_json();
+    init_record_shape();
     init_sqlite_payload();
     init_sqlite_records();
     init_sqlite_runtime_facts();
@@ -29640,7 +30592,7 @@ END;
           );
           const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
           const expectedKind = record4.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record4.count && other.evidence_id === evidence && other.architecture === record4.architecture && other.address_space === record4.addressSpace && other.address === record4.address && canonicalEquals(parseSqlitePayload(other.payload).state, record4.state)) {
+          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record4.count && other.evidence_id === evidence && other.architecture === record4.architecture && other.address_space === record4.addressSpace && other.address === record4.address && canonicalEquals(pairedState(other.payload), record4.state)) {
             if (record4.kind === "runtime-cpu-state") {
               this.#pair.run(prefix, other.oid);
               return;
@@ -29694,7 +30646,7 @@ END;
   }
 });
 
-// ../disassembler/src/storage/sqlite-runtime-batch.ts
+// packages/disassembler/src/storage/sqlite-runtime-batch.ts
 function assertTraceRecordNamespace(record4, sourceSha256) {
   const root = `runtime:instruction-trace:${sourceSha256}:`;
   let prefix = root;
@@ -29718,7 +30670,7 @@ function assertTraceRecordNamespace(record4, sourceSha256) {
 }
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL, SqliteRuntimeTraceBatch;
 var init_sqlite_runtime_batch = __esm({
-  "../disassembler/src/storage/sqlite-runtime-batch.ts"() {
+  "packages/disassembler/src/storage/sqlite-runtime-batch.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -29854,12 +30806,16 @@ var init_sqlite_runtime_batch = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-runtime-summary.ts
+// packages/disassembler/src/storage/sqlite-runtime-summary.ts
+function isByteList(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
 var import_node_crypto9, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
-  "../disassembler/src/storage/sqlite-runtime-summary.ts"() {
+  "packages/disassembler/src/storage/sqlite-runtime-summary.ts"() {
     "use strict";
     import_node_crypto9 = require("node:crypto");
+    init_record_shape();
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
@@ -29947,9 +30903,10 @@ var init_sqlite_runtime_summary = __esm({
     };
     registerVariantKey = (db, fields, masks) => {
       db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
-        const record4 = parseSqlitePayload(
-          payload
-        );
+        const record4 = parseSqlitePayload(payload);
+        if (!isRecord7(record4) || !isByteList(record4.bytes) || !isRecord7(record4.state)) {
+          throw new Error("Invalid instruction variant payload.");
+        }
         const state = {};
         for (const key3 of fields) {
           const value = record4.state[key3];
@@ -30068,10 +31025,36 @@ var init_sqlite_runtime_summary = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-source-query.ts
+// packages/disassembler/src/storage/sqlite-source-query.ts
+function isRecord12(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray2(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function optionalString(record4, key3) {
+  if (!Object.hasOwn(record4, key3)) {
+    return void 0;
+  }
+  const value = record4[key3];
+  if (typeof value !== "string") {
+    throw new Error("Invalid source metadata record.");
+  }
+  return value;
+}
+function optionalNumber(record4, key3) {
+  if (!Object.hasOwn(record4, key3)) {
+    return void 0;
+  }
+  const value = record4[key3];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("Invalid source metadata record.");
+  }
+  return value;
+}
 var collections, sourceEvidence, sourceRuntime, sourceObservations, instructionKinds, observationLocations, hex2, sourceQueriesReady, prepareSourceQueries, readSourceSummary, readSourcePage;
 var init_sqlite_source_query = __esm({
-  "../disassembler/src/storage/sqlite-source-query.ts"() {
+  "packages/disassembler/src/storage/sqlite-source-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -30116,12 +31099,12 @@ var init_sqlite_source_query = __esm({
         );
         for (let rows = pending.all(table); rows.length; rows = pending.all(table)) {
           for (const row of rows) {
-            const record4 = JSON.parse(decodeSqlitePayload(row.payload));
-            if (!Array.isArray(record4.evidence) || record4.evidence.some((id) => typeof id !== "string")) {
+            const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+            if (!isRecord12(parsed) || !isStringArray2(parsed.evidence)) {
               throw new Error("Invalid source metadata evidence membership.");
             }
             remove.run(table, row.id);
-            for (const id of record4.evidence) {
+            for (const id of parsed.evidence) {
               insert.run(id, table, row.id);
             }
             ready.run(table, row.id);
@@ -30196,37 +31179,53 @@ var init_sqlite_source_query = __esm({
           };
         });
       }
-      if (group2 !== "contributions") {
-        throw new Error("Unknown source contribution group.");
-      }
       const select = collections.map(
         (table) => `SELECT '${table}' AS collection,t.id AS id,t.payload AS payload FROM ${table} t JOIN matched m ON m.collection='${table}' AND m.id=t.id`
       ).join(" UNION ALL ");
       return db.prepare(`WITH matched AS (SELECT DISTINCT collection,id FROM query_source_links WHERE evidence_id IN (SELECT value FROM json_each(?)))
     ${select} ORDER BY collection,id LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
-        const record4 = JSON.parse(decodeSqlitePayload(row.payload));
-        const address4 = record4.address ?? record4.start;
-        const label = record4.name ?? record4.text ?? record4.classification ?? record4.id;
+        const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+        if (!isRecord12(parsed) || typeof parsed.id !== "string") {
+          throw new Error("Invalid source metadata record.");
+        }
+        const addressSpace = optionalString(parsed, "addressSpace");
+        if (addressSpace === void 0) {
+          throw new Error("Invalid source metadata record.");
+        }
+        const address4 = optionalNumber(parsed, "address") ?? optionalNumber(parsed, "start");
+        const label = optionalString(parsed, "name") ?? optionalString(parsed, "text") ?? optionalString(parsed, "classification") ?? parsed.id;
         return {
-          id: `${String(row.collection)}:${record4.id}`,
+          id: `${String(row.collection)}:${parsed.id}`,
           label,
           description: String(row.collection),
-          detail: `Attributed to ${source.name}: ${record4.id}`,
-          addressSpace: record4.addressSpace,
+          detail: `Attributed to ${source.name}: ${parsed.id}`,
+          addressSpace,
           address: address4,
-          architecture: record4.architecture,
+          architecture: optionalString(parsed, "architecture"),
           outputOffsets: [],
-          recordIds: [record4.id]
+          recordIds: [parsed.id]
         };
       });
     };
   }
 });
 
-// ../disassembler/src/storage/sqlite-storage-policy.ts
+// packages/disassembler/src/storage/sqlite-storage-policy.ts
+function errorCode2(error) {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return void 0;
+}
+function isSafeInteger5(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isPolicyRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var import_node_fs5, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, RETIRED_CACHES, retireStorageCaches, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
-  "../disassembler/src/storage/sqlite-storage-policy.ts"() {
+  "packages/disassembler/src/storage/sqlite-storage-policy.ts"() {
     "use strict";
     import_node_fs5 = __toESM(require("node:fs"), 1);
     DEFAULT_ANALYSIS_STORAGE_POLICY = {
@@ -30240,21 +31239,25 @@ var init_sqlite_storage_policy = __esm({
 ) WITHOUT ROWID;`;
     readStoragePolicy = (db) => {
       const value = db.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
-      return validateStoragePolicy(
-        value ? JSON.parse(String(value)) : {}
-      );
+      return validateStoragePolicy(value ? JSON.parse(String(value)) : {});
     };
     validateStoragePolicy = (value) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (!isPolicyRecord(value)) {
         throw new Error("Storage policy must be an object containing explicit limits.");
       }
-      const policy = { ...DEFAULT_ANALYSIS_STORAGE_POLICY, ...value };
-      for (const [key3, count2] of Object.entries(policy)) {
-        if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key3) || !Number.isSafeInteger(count2) || count2 < 0) {
+      let cacheMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.cacheMaxBytes;
+      let databaseMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.databaseMaxBytes;
+      for (const [key3, count2] of Object.entries(value)) {
+        if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key3) || !(isSafeInteger5(count2) && count2 >= 0)) {
           throw new Error(`Invalid storage limit '${key3}'. Use nonnegative integer byte limits.`);
         }
+        if (key3 === "cacheMaxBytes") {
+          cacheMaxBytes = count2;
+        } else if (key3 === "databaseMaxBytes") {
+          databaseMaxBytes = count2;
+        }
       }
-      return policy;
+      return { cacheMaxBytes, databaseMaxBytes };
     };
     storageSnapshot = (db, file) => {
       const size = Number(db.prepare("PRAGMA page_size").get().page_size);
@@ -30266,7 +31269,7 @@ var init_sqlite_storage_policy = __esm({
       try {
         walBytes = import_node_fs5.default.statSync(`${file}-wal`).size;
       } catch (error) {
-        if (error.code !== "ENOENT") {
+        if (errorCode2(error) !== "ENOENT") {
           throw error;
         }
       }
@@ -30364,10 +31367,11 @@ var init_sqlite_storage_policy = __esm({
       }
       const budget = readStoragePolicy(db).cacheMaxBytes;
       const evicted = retireStorageCaches(db);
-      const entries = CACHES.map((cache) => ({
-        ...cache,
-        bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0)
-      }));
+      const entries = CACHES.map(
+        (cache) => Object.assign({}, cache, {
+          bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0)
+        })
+      );
       let cacheBytes = entries.reduce((n, cache) => n + cache.bytes, 0) + cacheTableBytes(db, "query_cache");
       for (const cache of entries) {
         const token = db.prepare("SELECT signature FROM query_cache WHERE name=?").get(cache.key);
@@ -30397,10 +31401,66 @@ var init_sqlite_storage_policy = __esm({
   }
 });
 
-// ../disassembler/src/storage/sqlite-store.ts
+// packages/disassembler/src/storage/sqlite-store.ts
+function isByteList2(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isRuntimeState2(value) {
+  return isRecord7(value) && Object.values(value).every(
+    (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
+  );
+}
+function requireTraceFact(value) {
+  if (!isRecord7(value)) {
+    throw new Error("Invalid indexed trace fact.");
+  }
+  if (value.kind === "execution" && isFiniteNumber(value.address)) {
+    return { kind: "execution", address: value.address };
+  }
+  if (value.kind === "instruction" && typeof value.identity === "string" && isFiniteNumber(value.address) && isByteList2(value.bytes) && isRuntimeState2(value.state)) {
+    return {
+      kind: "instruction",
+      identity: value.identity,
+      address: value.address,
+      bytes: value.bytes,
+      state: value.state
+    };
+  }
+  if (value.kind === "memory" && isRuntimeEvidenceRecord(value.record)) {
+    return { kind: "memory", record: value.record };
+  }
+  throw new Error("Invalid indexed trace fact.");
+}
+function isShardKind(value) {
+  return value === "analysis" || value === "annotations" || value === "labels" || value === "comments" || value === "regions" || value === "runtime" || value === "evidence" || value === "imports";
+}
+function isResearchUpdate(value) {
+  return value === "analysis" || value === "annotations" || value === "comments" || value === "evidence";
+}
+function observedImportCount(counts, key3) {
+  return Object.hasOwn(counts, key3) ? counts[key3] : void 0;
+}
+function isSafeInteger6(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isObjectRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function isIndexedExportInstruction(value, spaces, knownEvidence) {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+  const address4 = value.address;
+  const addressSpace = value.addressSpace;
+  const size = value.size;
+  const opcode = value.opcode;
+  const incomingState = value.incomingState;
+  const evidenceList = value.evidence;
+  return typeof value.id === "string" && value.id !== "" && typeof addressSpace === "string" && isSafeInteger6(address4) && address4 >= 0 && address4 < (spaces.get(addressSpace) ?? 0) && isSafeInteger6(size) && size >= 1 && isSafeInteger6(opcode) && typeof value.specificationId === "string" && typeof incomingState === "object" && incomingState !== null && Array.isArray(evidenceList) && evidenceList.every((id) => typeof id === "string" && knownEvidence.has(id));
+}
 var import_node_crypto10, import_node_fs6, import_node_path7, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA2, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
-  "../disassembler/src/storage/sqlite-store.ts"() {
+  "packages/disassembler/src/storage/sqlite-store.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
     import_node_fs6 = __toESM(require("node:fs"), 1);
@@ -30412,6 +31472,7 @@ var init_sqlite_store = __esm({
     init_trace_cache();
     init_project_types();
     init_project_validation();
+    init_record_shape();
     init_inputs();
     init_runtime_evidence();
     init_sqlite_annotation_query();
@@ -30671,74 +31732,76 @@ PRAGMA user_version=4;
       }
       #insertRecord(kind, value) {
         if (kind === "evidence") {
-          const record5 = value;
-          this.#insertEvidence.run(record5.id, encodeSqlitePayload(JSON.stringify(record5)));
+          const record4 = requireMetadataRecord(kind, value);
+          this.#insertEvidence.run(record4.id, encodeSqlitePayload(JSON.stringify(record4)));
           return;
         }
         if (kind === "labels") {
-          const record5 = value;
+          const record4 = requireMetadataRecord(kind, value);
           this.#insertLabel.run(
-            record5.id,
-            record5.addressSpace,
-            record5.address,
-            record5.name,
-            encodeSqlitePayload(JSON.stringify(record5))
+            record4.id,
+            record4.addressSpace,
+            record4.address,
+            record4.name,
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
         if (kind === "comments") {
-          const record5 = value;
+          const record4 = requireMetadataRecord(kind, value);
           this.#insertComment.run(
-            record5.id,
-            record5.addressSpace,
-            record5.address,
-            encodeSqlitePayload(JSON.stringify(record5))
+            record4.id,
+            record4.addressSpace,
+            record4.address,
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
         if (kind === "regions") {
-          const record5 = value;
+          const record4 = requireMetadataRecord(kind, value);
           this.#insertRegion.run(
-            record5.id,
-            record5.addressSpace,
-            record5.start,
-            record5.end,
-            encodeSqlitePayload(JSON.stringify(record5))
+            record4.id,
+            record4.addressSpace,
+            record4.start,
+            record4.end,
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
         if (kind === "annotations") {
-          const record5 = value;
+          const record4 = requireMetadataRecord(kind, value);
           this.#insertAnnotation.run(
-            record5.id,
-            record5.addressSpace,
-            record5.start,
-            record5.end,
-            record5.classification,
-            encodeSqlitePayload(JSON.stringify(record5))
+            record4.id,
+            record4.addressSpace,
+            record4.start,
+            record4.end,
+            record4.classification,
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
         if (kind === "analysis") {
-          const record5 = value;
-          const located = analysisAddress(record5);
+          const record4 = requireMetadataRecord(kind, value);
+          const located = analysisAddress(record4);
           this.#insertAnalysis.run(
-            record5.id,
-            record5.kind,
+            record4.id,
+            record4.kind,
             located.addressSpace,
             located.address,
-            encodeSqlitePayload(JSON.stringify(record5))
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
         if (kind === "imports") {
-          const record5 = value;
-          this.#insertImport.run(record5.id, encodeSqlitePayload(JSON.stringify(record5)));
-          this.recordCaptureReceipt(record5);
+          const record4 = requireMetadataRecord(kind, value);
+          this.#insertImport.run(record4.id, encodeSqlitePayload(JSON.stringify(record4)));
+          this.recordCaptureReceipt(record4);
           return;
         }
-        const record4 = value;
-        this.#runtimeWriter.insert(record4, (table, value2) => this.#intern(table, value2));
+        if (!isRuntimeEvidenceRecord(value)) {
+          throw new Error("Invalid stored runtime record.");
+        }
+        this.#runtimeWriter.insert(value, (table, entry) => this.#intern(table, entry));
       }
       /**
        * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
@@ -30851,7 +31914,7 @@ PRAGMA user_version=4;
             flush();
             for (const row of values.iterate()) {
               yield {
-                fact: parseRecord(row.payload),
+                fact: requireTraceFact(parseRecord(row.payload)),
                 count: Number(row.count)
               };
             }
@@ -31008,10 +32071,11 @@ PRAGMA user_version=4;
         }
         this.suspendResearchInputs();
         const projected = {};
-        for (const collection of Object.keys(updates)) {
-          if (!["analysis", "annotations", "comments", "evidence"].includes(collection)) {
+        for (const key3 of Object.keys(updates)) {
+          if (!isResearchUpdate(key3)) {
             throw new Error("Analysis may only replace derived metadata collections.");
           }
+          const collection = key3;
           const protectedIds = new Set(
             snapshot.decisions.filter((decision) => decision.collection === collection).map((decision) => decision.id)
           );
@@ -31027,11 +32091,21 @@ PRAGMA user_version=4;
           for (const id of protectedIds) {
             const row = find.get(id);
             if (row) {
-              records2.push(
-                JSON.parse(
-                  decodeSqlitePayload(row.payload)
-                )
-              );
+              const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+              switch (collection) {
+                case "analysis":
+                  records2.push(requireMetadataRecord(collection, parsed));
+                  break;
+                case "annotations":
+                  records2.push(requireMetadataRecord(collection, parsed));
+                  break;
+                case "comments":
+                  records2.push(requireMetadataRecord(collection, parsed));
+                  break;
+                case "evidence":
+                  records2.push(requireMetadataRecord(collection, parsed));
+                  break;
+              }
             }
           }
           this.replaceTables({ [collection]: records2 });
@@ -31064,10 +32138,11 @@ PRAGMA user_version=4;
           "evidence",
           "imports"
         ]);
-        for (const kind of Object.keys(shards)) {
-          if (!tables.has(kind)) {
-            throw new Error(`Unknown analysis table '${kind}'.`);
+        for (const key3 of Object.keys(shards)) {
+          if (!isShardKind(key3) || !tables.has(key3)) {
+            throw new Error(`Unknown analysis table '${key3}'.`);
           }
+          const kind = key3;
           if (kind === "runtime") {
             this.#replaceRuntime(shards.runtime ?? []);
             continue;
@@ -31287,7 +32362,12 @@ PRAGMA user_version=4;
         if (!row) {
           throw new Error("Sqlite analysis project is missing its stored manifest.");
         }
-        return { ...parseRecord(row.v), revision: this.revision() };
+        const parsed = parseRecord(row.v);
+        if (!isRecord7(parsed)) {
+          throw new Error("Sqlite analysis project is missing its stored manifest.");
+        }
+        validateAnalysisProjectManifest(parsed);
+        return { ...parsed, revision: this.revision() };
       }
       /**
        * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
@@ -31319,11 +32399,6 @@ PRAGMA user_version=4;
           }
         }
       }
-      /**
-       * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
-       * @param {string} kind Metadata table name from the semantic collection contract.
-       * @returns {Array} Decoded metadata in deterministic display order.
-       */
       loadTable(kind) {
         const order = {
           labels: "address_space, address, id",
@@ -31339,7 +32414,7 @@ PRAGMA user_version=4;
         }
         const records2 = [];
         for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`).iterate()) {
-          records2.push(parseRecord(row.payload));
+          records2.push(requireMetadataRecord(kind, parseRecord(row.payload)));
         }
         return records2;
       }
@@ -31367,7 +32442,7 @@ PRAGMA user_version=4;
           runtime: []
         };
         const ids = JSON.stringify((batch.analysis ?? []).map((record4) => record4.id));
-        const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => parseRecord(row.payload));
+        const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
         const before = { ...base, analysis };
         const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
         this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
@@ -31469,7 +32544,7 @@ PRAGMA user_version=4;
             const sql = ids ? `SELECT payload FROM ${kind} WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 200` : `SELECT payload FROM ${kind} ORDER BY id LIMIT 200`;
             const parameters = ids ? [JSON.stringify(ids)] : [];
             for (const row of this.#database.prepare(sql).iterate(...parameters)) {
-              records2.push(parseRecord(row.payload));
+              records2.push(requireMetadataRecord(kind, parseRecord(row.payload)));
             }
           }
           Object.assign(shards, { [kind]: records2 });
@@ -31536,7 +32611,7 @@ PRAGMA user_version=4;
           const runtime = "SELECT 'runtime:'||p.value||CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END AS reference FROM runtime_evidence e JOIN runtime r ON r.evidence_id=e.id JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?)))";
           const metadataRows = this.#database.prepare(`${metadata} ORDER BY reference LIMIT 200`).all(evidenceIds);
           const runtimeRows = this.#database.prepare(`${runtime} ORDER BY r.prefix_id,r.id LIMIT 200`).all(evidenceIds);
-          const referencedBy = [...metadataRows, ...runtimeRows].map((row) => String(row.reference)).sort((a, b) => a.localeCompare(b)).slice(0, 200);
+          const referencedBy = [...metadataRows, ...runtimeRows].map((row) => String(row.reference)).toSorted((a, b) => a.localeCompare(b)).slice(0, 200);
           const metadataCount = Number(
             this.#database.prepare(`SELECT count(*) AS n FROM (${metadata})`).get(evidenceIds).n
           );
@@ -31563,7 +32638,13 @@ PRAGMA user_version=4;
             coverageSignature(this.manifest()),
             ["analysis", "annotations", "regions", "runtime"],
             () => prepareCoverage(this.#database, this.manifest()),
-            () => publishCoverage(this.#database)
+            () => publishCoverage(this.#database),
+            (value) => {
+              if (!isSqliteCoverageSummary(value)) {
+                throw new Error("Project changed while building coverage. Refresh the view.");
+              }
+              return value;
+            }
           );
           const published = cachedCoverage(this.#database, this.manifest());
           if (!published) {
@@ -31597,10 +32678,16 @@ PRAGMA user_version=4;
             "3",
             ["analysis"],
             () => prepareGraph(this.#database),
-            () => publishGraph(this.#database)
+            () => publishGraph(this.#database),
+            (value) => {
+              if (!isCallGraph(value)) {
+                throw new Error("Analysis changed while building the graph. Refresh the view.");
+              }
+              return value;
+            }
           );
           const published = readQueryCache(this.#database, "graph", "3");
-          if (!published) {
+          if (!isCallGraph(published)) {
             throw new Error("Analysis changed while building the graph. Refresh the view.");
           }
           graph = published;
@@ -31612,10 +32699,13 @@ PRAGMA user_version=4;
         const labels = this.loadTable("labels");
         return {
           ...graph,
-          functions: graph.functions.map((fn) => ({
-            ...fn,
-            labels: labels.filter((label) => label.addressSpace === fn.addressSpace && label.address === fn.address).map(({ id, name }) => ({ id, name })).sort((a, b) => a.id.localeCompare(b.id))
-          }))
+          functions: graph.functions.map(
+            (fn) => Object.assign({}, fn, {
+              labels: labels.filter(
+                (label) => label.addressSpace === fn.addressSpace && label.address === fn.address
+              ).map(({ id, name }) => ({ id, name })).toSorted((a, b) => a.id.localeCompare(b.id))
+            })
+          )
         };
       }
       /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
@@ -31628,10 +32718,13 @@ PRAGMA user_version=4;
        * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
        * @returns {T} Current projected value.
        */
-      cachedProjection(key3, signature, dependencies, compute, publish2) {
+      cachedProjection(key3, signature, dependencies, compute, publish2, restore) {
         const cached = readQueryCache(this.#database, key3, signature);
         if (cached !== void 0) {
-          return cached;
+          if (!restore) {
+            throw new Error(`Query cache '${key3}' requires a restore function.`);
+          }
+          return restore(cached);
         }
         const pending = `pending:${(0, import_node_crypto10.randomUUID)()}`;
         this.transaction(() => {
@@ -31661,11 +32754,13 @@ PRAGMA user_version=4;
         }
         const before = this.#database.prepare(
           `SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address<? ${matches} ORDER BY address DESC,id DESC LIMIT 4`
-        ).all(...parameters).reverse();
+        ).all(...parameters).toReversed();
         const after = this.#database.prepare(
           `SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address>=? ${matches} ORDER BY address,id LIMIT ?`
         ).all(...parameters, 32 - before.length);
-        return [...before, ...after].map((row) => parseRecord(row.payload));
+        return [...before, ...after].map(
+          (row) => requireMetadataRecord("analysis", parseRecord(row.payload))
+        );
       }
       /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
        * @returns {Array} Half-open ROM-content intervals.
@@ -31729,19 +32824,23 @@ PRAGMA user_version=4;
           const address4 = Number(row.address);
           const seed = seeds.get(address4) ?? { count: 0, evidence: /* @__PURE__ */ new Set() };
           seed.count += Number(row.count);
-          for (const id of JSON.parse(String(row.evidence))) {
+          const parsedEvidence = JSON.parse(String(row.evidence));
+          if (!isStringArray(parsedEvidence)) {
+            throw new Error("Invalid runtime evidence list.");
+          }
+          for (const id of parsedEvidence) {
             seed.evidence.add(id);
           }
           seeds.set(address4, seed);
         }
-        return [...seeds].sort(([a], [b]) => a - b).map(([address4, seed]) => ({
+        return [...seeds].toSorted(([a], [b]) => a - b).map(([address4, seed]) => ({
           id: `query:execution:${address4}`,
           kind: "runtime-execution",
           architecture,
           addressSpace: space,
           address: address4,
           count: seed.count,
-          evidence: [...seed.evidence].sort()
+          evidence: [...seed.evidence].toSorted()
         }));
       }
       /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
@@ -31862,8 +32961,8 @@ PRAGMA user_version=4;
             yield group2;
             group2 = [];
           }
-          const record4 = parseRecord(row.data);
-          if (typeof record4.id !== "string" || !record4.id || !Number.isSafeInteger(record4.address) || record4.address < 0 || record4.address >= (spaces.get(record4.addressSpace) ?? 0) || !Number.isSafeInteger(record4.size) || record4.size < 1 || !Number.isSafeInteger(record4.opcode) || typeof record4.specificationId !== "string" || !record4.incomingState || typeof record4.incomingState !== "object" || !Array.isArray(record4.evidence) || record4.evidence.some((id) => typeof id !== "string" || !evidence.has(id))) {
+          const record4 = parseSqlitePayload(row.data);
+          if (!isIndexedExportInstruction(record4, spaces, evidence)) {
             throw new Error("Invalid indexed export instruction or missing provenance.");
           }
           group2.push(record4);
@@ -31905,7 +33004,7 @@ PRAGMA user_version=4;
         for (const row of this.#database.prepare(
           `SELECT payload FROM analysis WHERE kind IN (${kinds.map(() => "?").join(",")}) ORDER BY id`
         ).iterate(...kinds)) {
-          records2.push(parseRecord(row.payload));
+          records2.push(requireMetadataRecord("analysis", parseRecord(row.payload)));
         }
         return records2;
       }
@@ -31922,7 +33021,7 @@ PRAGMA user_version=4;
       SELECT MIN(rowid) FROM analysis WHERE kind='cfg-node' AND address_space=? AND address=? GROUP BY address_space,address
       UNION SELECT MIN(rowid) FROM analysis INDEXED BY query_instruction_output
       WHERE kind='cfg-node' AND query_file_offset=? GROUP BY address_space,address)`).all(addressSpace, address4, outputOffset ?? null);
-        return rows.map((row) => parseRecord(row.payload));
+        return rows.map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
       }
       /**
        * Materialize complete record arrays without semantic validation. Run inside a read transaction.
@@ -31938,7 +33037,7 @@ PRAGMA user_version=4;
           annotations: this.loadTable("annotations"),
           analysis: this.loadTable("analysis"),
           imports: this.loadTable("imports"),
-          runtime: runtime ? [...this.runtimeRecords()].sort(compareRuntimeRecordIds) : []
+          runtime: runtime ? [...this.runtimeRecords()].toSorted(compareRuntimeRecordIds) : []
         };
       }
       /**
@@ -32083,7 +33182,7 @@ PRAGMA user_version=4;
           report.sourceName,
           now,
           now,
-          report.imported.busEvents ?? report.imported.executionEvents ?? 0,
+          observedImportCount(report.imported, "busEvents") ?? observedImportCount(report.imported, "executionEvents") ?? 0,
           report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0
         );
       }
@@ -32109,10 +33208,13 @@ PRAGMA user_version=4;
   }
 });
 
-// ../disassembler/src/project/project-store.ts
+// packages/disassembler/src/project/project-store.ts
+function isUntrustedManifest(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var fs7, import_node_path8, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
-  "../disassembler/src/project/project-store.ts"() {
+  "packages/disassembler/src/project/project-store.ts"() {
     "use strict";
     fs7 = __toESM(require("node:fs"), 1);
     import_node_path8 = __toESM(require("node:path"), 1);
@@ -32121,20 +33223,20 @@ var init_project_store = __esm({
     init_sqlite_records();
     init_sqlite_store();
     parseAnalysisProjectManifest = (input) => {
-      if (!input || typeof input !== "object") {
+      if (!isUntrustedManifest(input)) {
         throw new Error("Invalid analysis project manifest.");
       }
-      const manifest = input;
-      if (manifest.schemaVersion > 3) {
+      const schemaVersion = input.schemaVersion;
+      if (typeof schemaVersion === "number" && schemaVersion > 3) {
         throw new Error(
-          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
+          `Analysis project schema ${schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
         );
       }
-      validateAnalysisProjectManifest(manifest);
-      if (manifest.db !== "analysis.sqlite") {
+      validateAnalysisProjectManifest(input);
+      if (input.db !== "analysis.sqlite") {
         throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
       }
-      return manifest;
+      return input;
     };
     openAnalysisProjectStore = (directory) => {
       const manifest = parseAnalysisProjectManifest(
@@ -32201,10 +33303,10 @@ var init_project_store = __esm({
   }
 });
 
-// ../disassembler/src/project/project-transaction.ts
+// packages/disassembler/src/project/project-transaction.ts
 var import_node_crypto11, fs8, import_node_path9, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
-  "../disassembler/src/project/project-transaction.ts"() {
+  "packages/disassembler/src/project/project-transaction.ts"() {
     "use strict";
     import_node_crypto11 = require("node:crypto");
     fs8 = __toESM(require("node:fs"), 1);
@@ -32326,19 +33428,22 @@ var init_project_transaction = __esm({
   }
 });
 
-// ../debug-adapter/src/contracts.ts
+// packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION;
 var init_contracts = __esm({
-  "../debug-adapter/src/contracts.ts"() {
+  "packages/debug-adapter/src/contracts.ts"() {
     "use strict";
     DEBUG_BACKEND_PROTOCOL_VERSION = 1;
   }
 });
 
-// ../debug-adapter/src/conformance.ts
-var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
+// packages/debug-adapter/src/conformance.ts
+function reportedProtocol(version) {
+  return version;
+}
+var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, CAPABILITY_KEYS, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
 var init_conformance = __esm({
-  "../debug-adapter/src/conformance.ts"() {
+  "packages/debug-adapter/src/conformance.ts"() {
     "use strict";
     init_contracts();
     DEBUG_BACKEND_CONFORMANCE_VERSION = 1;
@@ -32362,18 +33467,28 @@ var init_conformance = __esm({
         );
       }
     };
+    CAPABILITY_KEYS = [
+      "pause",
+      "step",
+      "stepKinds",
+      "registers",
+      "memory",
+      "stackFrames",
+      "breakpoints",
+      "disassemble"
+    ];
     assertCapability = (actual, expected) => {
-      const spaces = [...actual.addressSpaces].sort();
-      const expectedSpaces = [...expected.addressSpaces].sort();
+      const spaces = [...actual.addressSpaces].toSorted();
+      const expectedSpaces = [...expected.addressSpaces].toSorted();
       if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces)) {
         fail(
           `${expected.architecture}: expected address spaces ${expectedSpaces.join(", ")}, received ${spaces.join(", ")}.`
         );
       }
-      const memorySpaces = [...actual.memorySpaces].sort(
+      const memorySpaces = [...actual.memorySpaces].toSorted(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace)
       );
-      const expectedMemorySpaces = [...expected.memorySpaces].sort(
+      const expectedMemorySpaces = [...expected.memorySpaces].toSorted(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace)
       );
       if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces)) {
@@ -32381,9 +33496,14 @@ var init_conformance = __esm({
           `${expected.architecture}: expected memory spaces ${JSON.stringify(expectedMemorySpaces)}, received ${JSON.stringify(memorySpaces)}.`
         );
       }
-      for (const [key3, value] of Object.entries(expected.capabilities)) {
-        if (actual[key3] !== value) {
-          fail(`${expected.architecture}: expected capability '${key3}' to be ${value}.`);
+      for (const key3 of CAPABILITY_KEYS) {
+        if (!Object.hasOwn(expected.capabilities, key3)) {
+          continue;
+        }
+        if (actual[key3] !== expected.capabilities[key3]) {
+          fail(
+            `${expected.architecture}: expected capability '${key3}' to be ${JSON.stringify(expected.capabilities[key3])}.`
+          );
         }
       }
     };
@@ -32401,7 +33521,7 @@ var init_conformance = __esm({
         if (existing) {
           return existing;
         }
-        return new Promise((resolve9, reject) => {
+        return new Promise((resolve9, reject2) => {
           const started = Date.now();
           const timer = setInterval(() => {
             const match = this.events.slice(start).find(predicate);
@@ -32410,25 +33530,27 @@ var init_conformance = __esm({
               resolve9(match);
             } else if (Date.now() - started >= timeoutMs) {
               clearInterval(timer);
-              reject(new Error(`Timed out after ${timeoutMs} ms waiting for a backend event.`));
+              reject2(new Error(`Timed out after ${timeoutMs} ms waiting for a backend event.`));
             }
           }, 5);
         });
       }
     };
-    withTimeout = async (operation, timeoutMs, context) => new Promise((resolve9, reject) => {
+    withTimeout = async (operation, timeoutMs, context) => new Promise((resolve9, reject2) => {
       const timer = setTimeout(
-        () => reject(new Error(`${context} timed out after ${timeoutMs} ms.`)),
+        () => reject2(new Error(`${context} timed out after ${timeoutMs} ms.`)),
         timeoutMs
       );
       operation.then(
         (value) => {
           clearTimeout(timer);
           resolve9(value);
+          return;
         },
         (error) => {
           clearTimeout(timer);
-          reject(error instanceof Error ? error : new Error(String(error)));
+          reject2(error instanceof Error ? error : new Error(String(error)));
+          return;
         }
       );
     });
@@ -32457,7 +33579,7 @@ var init_conformance = __esm({
     eventTypes = (events) => events.map((event) => event.type);
     scenarios = {
       "protocol-and-capabilities": async (options) => withBackend(options, (backend) => {
-        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
+        if (reportedProtocol(backend.protocolVersion) !== DEBUG_BACKEND_PROTOCOL_VERSION) {
           fail(`Expected backend protocol ${String(DEBUG_BACKEND_PROTOCOL_VERSION)}.`);
         }
         if (options.fixture.initialAddress.architecture !== options.fixture.primaryArchitecture || options.fixture.initialAddress.addressSpace !== options.fixture.primaryAddressSpace) {
@@ -32556,7 +33678,8 @@ var init_conformance = __esm({
           ),
           "Missing primary thread."
         );
-        const [breakpoint2] = await backend.setBreakpoints([options.fixture.breakpointAddress]);
+        const appliedBreakpoints = await backend.setBreakpoints([options.fixture.breakpointAddress]);
+        const breakpoint2 = appliedBreakpoints.length > 0 ? appliedBreakpoints[0] : void 0;
         if (!breakpoint2?.verified) {
           fail("Conformance breakpoint was not verified.");
         }
@@ -32640,10 +33763,10 @@ var init_conformance = __esm({
   }
 });
 
-// ../debug-adapter/src/debug-expression.ts
+// packages/debug-adapter/src/debug-expression.ts
 var MAX_EXPRESSION_CHARACTERS, MAX_EXPRESSION_DEPTH, MAX_SHIFT, MAX_EXPONENT, MAX_MAGNITUDE, binaryPrecedence, checked, parseDigits, digitPattern, tokenize, DebugExpressionParser, evaluateDebugExpression, formatDebugExpressionValue;
 var init_debug_expression = __esm({
-  "../debug-adapter/src/debug-expression.ts"() {
+  "packages/debug-adapter/src/debug-expression.ts"() {
     "use strict";
     MAX_EXPRESSION_CHARACTERS = 256;
     MAX_EXPRESSION_DEPTH = 32;
@@ -32943,10 +34066,10 @@ var init_debug_expression = __esm({
   }
 });
 
-// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, crc32cBytes;
 var init_data_hash_crc32 = __esm({
-  "../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
     CRC32_POLYNOMIAL = 3988292384;
     CRC32C_POLYNOMIAL = 2197175160;
     reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -32992,7 +34115,193 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-v2.ts
+// packages/debug-adapter/src/capture-v2.ts
+function isFieldRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function validateCaptureRequest(value) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture request.");
+  }
+  if (value.operation === "context") {
+    let fields2 = ["operation", "action"];
+    const action = value.action;
+    if (action === "prepare" || action === "replay" || action === "restore") {
+      fields2.push("directory", "romContentSha256", "producer");
+      validateCaptureRequest({
+        operation: "file-start",
+        file: value.directory,
+        romContentSha256: value.romContentSha256,
+        producer: value.producer,
+        bufferBytes: 8388608
+      });
+    } else if (action === "start" || action === "stop" || action === "mark") {
+      fields2.push("session");
+      captureSession(value.session);
+      if (action === "mark") {
+        fields2.push("label");
+        if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
+          throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
+        }
+      }
+    } else if (action !== "abort" && action !== "status") {
+      throw new Error("Unsupported capture context action.");
+    }
+    if (Object.keys(value).some((key3) => !fields2.includes(key3))) {
+      throw new Error("Unsupported capture context field.");
+    }
+    return;
+  }
+  if (value.operation === "file-capabilities") {
+    if (Object.keys(value).some((key3) => !["operation", "scope"].includes(key3))) {
+      throw new Error("Unsupported native file capability field.");
+    }
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+    return;
+  }
+  if (value.operation === "file-start") {
+    if (Object.keys(value).some(
+      (key3) => ![
+        "operation",
+        "scope",
+        "bufferBytes",
+        "file",
+        "romContentSha256",
+        "producer",
+        "measureStages"
+      ].includes(key3)
+    )) {
+      throw new Error("Unsupported native file start field.");
+    }
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
+      throw new Error("Native file profiling must be boolean.");
+    }
+    validateCaptureRequest({
+      operation: "start",
+      bufferBytes: value.bufferBytes,
+      scope: value.scope
+    });
+    const producer = value.producer;
+    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key3) => !["id", "revision"].includes(key3))) {
+      throw new Error(
+        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
+      );
+    }
+    return;
+  }
+  let fields = ["operation", "session"];
+  if (value.operation === "capabilities") {
+    fields = ["operation", "scope"];
+  }
+  if (value.operation === "start") {
+    fields = ["operation", "bufferBytes", "scope"];
+  }
+  if (value.operation === "read") {
+    fields = ["operation", "session", "chunk"];
+  }
+  if (value.operation === "ack") {
+    fields = ["operation", "session", "chunk", "event"];
+  }
+  if (Object.keys(value).some((key3) => !fields.includes(key3))) {
+    throw new Error(
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
+    );
+  }
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+  }
+  if (value.operation === "capabilities") {
+    return;
+  }
+  if (value.operation === "start") {
+    const bufferBytes = value.bufferBytes;
+    if (typeof bufferBytes !== "number" || !Number.isSafeInteger(bufferBytes) || bufferBytes < 4718656 || bufferBytes > 64 * 1024 * 1024) {
+      throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+    }
+    return;
+  }
+  captureSession(value.session);
+  if (value.operation === "status" || value.operation === "stop" || value.operation === "abort" || value.operation === "release" || value.operation === "file-status" || value.operation === "file-stop" || value.operation === "file-abort" || value.operation === "file-release") {
+    return;
+  }
+  if (value.operation === "read" || value.operation === "ack") {
+    if (!captureU64(value.chunk)) {
+      throw new Error("Capture chunk sequence starts at one.");
+    }
+    if (value.operation === "ack" && !captureU64(value.event)) {
+      throw new Error("Capture event sequence starts at one.");
+    }
+    return;
+  }
+  throw new Error("Unsupported capture operation.");
+}
+function assertCapturePosition(value, session, scope) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture position.");
+  }
+  captureSession(value.session);
+  if (session !== void 0 && value.session !== session) {
+    throw new Error("Capture session changed.");
+  }
+  if (value.scope !== void 0) {
+    captureScope(value.scope);
+  }
+  const positionScope = value.scope === void 0 ? "snes.65816.instructions" : value.scope;
+  if (scope !== void 0 && positionScope !== captureScope(scope)) {
+    throw new Error("Capture scope changed or was not confirmed by the producer.");
+  }
+  const state = value.state;
+  if (state !== "armed" && state !== "recording" && state !== "throttled" && state !== "stopping" && state !== "draining" && state !== "complete" && state !== "incomplete") {
+    throw new Error("Invalid capture state.");
+  }
+  const bounds = [
+    value.releasedThrough,
+    value.durableThrough,
+    value.acceptedThrough,
+    value.deliveredThrough,
+    value.producedThrough
+  ].map(captureU64);
+  if (bounds.some((bound, index) => index > 0 && bound < bounds[index - 1])) {
+    throw new Error("Capture ownership boundaries are inconsistent.");
+  }
+  if (captureU64(value.chunkThrough) > captureU64(value.producedChunks)) {
+    throw new Error("Capture chunk boundary is inconsistent.");
+  }
+  captureU64(value.throttleCount);
+  if (!captureU64(value.clockNumerator) || !captureU64(value.clockDenominator)) {
+    throw new Error("Invalid capture clock domain.");
+  }
+  if (value.droppedInScope !== "0" || typeof value.error !== "string" || value.error.length > 256) {
+    throw new Error("Capture integrity failed.");
+  }
+  const bufferedBytes = value.bufferedBytes;
+  const allocatedBytes = value.allocatedBytes;
+  if (typeof bufferedBytes !== "number" || typeof allocatedBytes !== "number" || !Number.isSafeInteger(bufferedBytes) || !Number.isSafeInteger(allocatedBytes) || bufferedBytes < 0 || allocatedBytes < 0 || bufferedBytes > 64 * 1024 * 1024 || allocatedBytes > 64 * 1024 * 1024 || bufferedBytes > allocatedBytes) {
+    throw new Error("Capture allocation exceeds its bounds.");
+  }
+  if (state === "complete" && (value.error || bufferedBytes || new Set(bounds.map(String)).size !== 1 || value.chunkThrough !== value.producedChunks)) {
+    throw new Error("Capture terminal totals do not reconcile.");
+  }
+}
+function validateCaptureResult(value) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Capture result must be an object.");
+  }
+  if (typeof value.hex === "string" && value.version === void 0 && value.session === void 0 && value.contextState === void 0) {
+    return { hex: value.hex };
+  }
+  if (typeof value.contextState === "string" && value.version === void 0 && value.session === void 0) {
+    return { contextState: value.contextState };
+  }
+  if (value.version === 2) {
+    return validateCaptureCapabilities(value, captureScope(value.scope));
+  }
+  return validateCapturePosition(value);
+}
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
@@ -33025,10 +34334,17 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
     through: String(through)
   };
   if (scope === "snes.cpu-bus") {
+    const accesses = [];
+    for (const access of decodeBusAccesses(b, first, count2)) {
+      if ("kind" in access) {
+        throw new Error("Bus capture chunk contains a transfer marker.");
+      }
+      accesses.push(access);
+    }
     return {
       ...identity2,
       scope,
-      accesses: decodeBusAccesses(b, first, count2)
+      accesses
     };
   }
   if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu") {
@@ -33093,9 +34409,9 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
     instructions
   };
 }
-var maxU64, captureScope, captureU64, captureSession, validateCaptureRequest, validateCaptureCapabilities, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
+var maxU64, captureScope, captureU64, captureSession, bounded, validateCaptureCapabilities, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "../debug-adapter/src/capture-v2.ts"() {
+  "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
     maxU64 = (1n << 64n) - 1n;
@@ -33117,134 +34433,7 @@ var init_capture_v2 = __esm({
       }
       return value;
     };
-    validateCaptureRequest = (value) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Invalid capture request.");
-      }
-      if (value.operation === "context") {
-        let fields2 = ["operation", "action"];
-        if (["prepare", "replay", "restore"].includes(value.action)) {
-          fields2.push("directory", "romContentSha256", "producer");
-          const request = value;
-          validateCaptureRequest({
-            operation: "file-start",
-            file: request.directory,
-            romContentSha256: request.romContentSha256,
-            producer: request.producer,
-            bufferBytes: 8388608
-          });
-        } else if (value.action === "start" || value.action === "stop" || value.action === "mark") {
-          fields2.push("session");
-          captureSession(value.session);
-          if (value.action === "mark") {
-            fields2.push("label");
-            if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
-              throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
-            }
-          }
-        } else if (value.action !== "abort" && value.action !== "status") {
-          throw new Error("Unsupported capture context action.");
-        }
-        if (Object.keys(value).some((key3) => !fields2.includes(key3))) {
-          throw new Error("Unsupported capture context field.");
-        }
-        return;
-      }
-      if (value.operation === "file-capabilities") {
-        if (Object.keys(value).some((key3) => !["operation", "scope"].includes(key3))) {
-          throw new Error("Unsupported native file capability field.");
-        }
-        if (value.scope !== void 0) {
-          captureScope(value.scope);
-        }
-        return;
-      }
-      if (value.operation === "file-start") {
-        if (Object.keys(value).some(
-          (key3) => ![
-            "operation",
-            "scope",
-            "bufferBytes",
-            "file",
-            "romContentSha256",
-            "producer",
-            "measureStages"
-          ].includes(key3)
-        )) {
-          throw new Error("Unsupported native file start field.");
-        }
-        if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
-          throw new Error("Native file profiling must be boolean.");
-        }
-        validateCaptureRequest({
-          operation: "start",
-          bufferBytes: value.bufferBytes,
-          scope: value.scope
-        });
-        const bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
-        if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key3) => !["id", "revision"].includes(key3))) {
-          throw new Error(
-            "Native file capture requires an absolute bounded path and exact ROM/producer identity."
-          );
-        }
-        return;
-      }
-      let fields = ["operation", "session"];
-      if (value.operation === "capabilities") {
-        fields = ["operation", "scope"];
-      }
-      if (value.operation === "start") {
-        fields = ["operation", "bufferBytes", "scope"];
-      }
-      if (value.operation === "read") {
-        fields = ["operation", "session", "chunk"];
-      }
-      if (value.operation === "ack") {
-        fields = ["operation", "session", "chunk", "event"];
-      }
-      if (Object.keys(value).some((key3) => !fields.includes(key3))) {
-        throw new Error(
-          "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
-        );
-      }
-      if (value.operation === "capabilities" || value.operation === "start") {
-        if (value.scope !== void 0) {
-          captureScope(value.scope);
-        }
-      }
-      if (value.operation === "capabilities") {
-        return;
-      }
-      if (value.operation === "start") {
-        if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024) {
-          throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
-        }
-        return;
-      }
-      captureSession(value.session);
-      if ([
-        "status",
-        "stop",
-        "abort",
-        "release",
-        "file-status",
-        "file-stop",
-        "file-abort",
-        "file-release"
-      ].includes(value.operation)) {
-        return;
-      }
-      if (value.operation === "read" || value.operation === "ack") {
-        if (!captureU64(value.chunk)) {
-          throw new Error("Capture chunk sequence starts at one.");
-        }
-        if (value.operation === "ack" && !captureU64(value.event)) {
-          throw new Error("Capture event sequence starts at one.");
-        }
-        return;
-      }
-      throw new Error("Unsupported capture operation.");
-    };
+    bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
     validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
       captureScope(scope);
       let reserve = 71;
@@ -33267,7 +34456,7 @@ var init_capture_v2 = __esm({
         overheadBytes: 4194304,
         resumeSession: false
       };
-      if (!value || typeof value !== "object" || Object.entries(expected).some(([key3, item]) => value[key3] !== item)) {
+      if (!isFieldRecord(value) || Object.entries(expected).some(([key3, item]) => value[key3] !== item)) {
         throw new Error("Unsupported capture scope, reserve, or ownership contract.");
       }
       if (value.nativeFile === true) {
@@ -33276,54 +34465,8 @@ var init_capture_v2 = __esm({
       return expected;
     };
     validateCapturePosition = (value, session, scope) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Invalid capture position.");
-      }
-      const p = value;
-      captureSession(p.session);
-      if (session !== void 0 && p.session !== session) {
-        throw new Error("Capture session changed.");
-      }
-      if (p.scope !== void 0) {
-        captureScope(p.scope);
-      }
-      if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
-        throw new Error("Capture scope changed or was not confirmed by the producer.");
-      }
-      if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
-        p.state
-      )) {
-        throw new Error("Invalid capture state.");
-      }
-      const bounds = [
-        p.releasedThrough,
-        p.durableThrough,
-        p.acceptedThrough,
-        p.deliveredThrough,
-        p.producedThrough
-      ].map(captureU64);
-      if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
-        throw new Error("Capture ownership boundaries are inconsistent.");
-      }
-      if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
-        throw new Error("Capture chunk boundary is inconsistent.");
-      }
-      captureU64(p.throttleCount);
-      if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
-        throw new Error("Invalid capture clock domain.");
-      }
-      if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
-        throw new Error("Capture integrity failed.");
-      }
-      if (![p.bufferedBytes, p.allocatedBytes].every(
-        (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-      ) || p.bufferedBytes > p.allocatedBytes) {
-        throw new Error("Capture allocation exceeds its bounds.");
-      }
-      if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
-        throw new Error("Capture terminal totals do not reconcile.");
-      }
-      return p;
+      assertCapturePosition(value, session, scope);
+      return value;
     };
     captureCrc32c = (bytes, zeroChecksum = false) => crc32cBytes(bytes, zeroChecksum);
     captureChunkRecords = (chunk) => {
@@ -33503,10 +34646,13 @@ var init_capture_v2 = __esm({
   }
 });
 
-// ../debug-adapter/src/dap.ts
-var import_node_async_hooks, import_node_path10, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
+// packages/debug-adapter/src/dap.ts
+function indexedString(values, index) {
+  return index >= 0 && index < values.length ? values[index] : void 0;
+}
+var import_node_async_hooks, import_node_path10, numeric, isRecord13, dapRequest, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
-  "../debug-adapter/src/dap.ts"() {
+  "packages/debug-adapter/src/dap.ts"() {
     "use strict";
     import_node_async_hooks = require("node:async_hooks");
     import_node_path10 = __toESM(require("node:path"), 1);
@@ -33514,6 +34660,23 @@ var init_dap = __esm({
     init_debug_expression();
     init_capture_v2();
     numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
+    isRecord13 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    dapRequest = (value) => {
+      if (!isRecord13(value) || value.type !== "request" || typeof value.command !== "string") {
+        throw new Error("DAP frame is not a request.");
+      }
+      if (typeof value.seq !== "number" || !Number.isSafeInteger(value.seq)) {
+        throw new Error("DAP frame is not a request.");
+      }
+      const request = { seq: value.seq, type: "request", command: value.command };
+      if (value.arguments === void 0) {
+        return request;
+      }
+      if (!isRecord13(value.arguments)) {
+        throw new Error("DAP request arguments must be an object.");
+      }
+      return { ...request, arguments: value.arguments };
+    };
     records = (value) => Array.isArray(value) ? value.filter(
       (entry) => entry !== null && typeof entry === "object"
     ) : [];
@@ -33526,7 +34689,12 @@ var init_dap = __esm({
     ];
     formatDebugAddress = (address4) => `${address4.architecture}|${address4.addressSpace}|0x${address4.address.toString(16)}${address4.outputOffset === void 0 ? "" : `|0x${address4.outputOffset.toString(16)}`}`;
     parseDebugAddress = (reference) => {
-      const [architecture, addressSpace, rawAddress, rawOutputOffset, extra] = reference.split("|");
+      const parts = reference.split("|");
+      const architecture = indexedString(parts, 0);
+      const addressSpace = indexedString(parts, 1);
+      const rawAddress = indexedString(parts, 2);
+      const rawOutputOffset = indexedString(parts, 3);
+      const extra = indexedString(parts, 4);
       if (!architecture || !addressSpace || !rawAddress || extra !== void 0) {
         return void 0;
       }
@@ -33722,7 +34890,7 @@ var init_dap = __esm({
           }
           const messages = [
             response,
-            ...pending.map((event) => ({ ...event, seq: this.#nextSequence++ }))
+            ...pending.map((event) => Object.assign({}, event, { seq: this.#nextSequence++ }))
           ];
           for (const message of messages) {
             this.#onMessage?.(message);
@@ -33744,11 +34912,11 @@ var init_dap = __esm({
         if (!this.#configurationHandshake) {
           return;
         }
-        const configured = new Promise((resolve9, reject) => {
+        const configured = new Promise((resolve9, reject2) => {
           const timer = setTimeout(() => {
             this.#configurationDone = void 0;
             this.#cancelConfiguration = void 0;
-            reject(new Error("Debugger configuration timed out after 30 seconds."));
+            reject2(new Error("Debugger configuration timed out after 30 seconds."));
           }, 3e4);
           this.#configurationDone = () => {
             clearTimeout(timer);
@@ -33760,7 +34928,7 @@ var init_dap = __esm({
             clearTimeout(timer);
             this.#configurationDone = void 0;
             this.#cancelConfiguration = void 0;
-            reject(new Error("Debugger launch cancelled."));
+            reject2(new Error("Debugger launch cancelled."));
           };
         });
         this.#onMessage?.({ type: "event", event: "initialized", seq: this.#nextSequence++ });
@@ -33778,7 +34946,8 @@ var init_dap = __esm({
             this.#runWithoutDebug = args.noDebug === true;
             await this.#backend.connect({ reset: command === "launch" });
             if (this.#runWithoutDebug) {
-              const [thread2] = await this.#backend.threads();
+              const threads = await this.#backend.threads();
+              const thread2 = threads.length > 0 ? threads[0] : void 0;
               if (!thread2) {
                 throw new Error("The backend has no execution thread to run.");
               }
@@ -33924,10 +35093,9 @@ var init_dap = __esm({
             if (capabilities?.step && !supportedSteps.includes("out")) {
               unavailable.push("step out");
             }
-            return {
-              ...thread2,
+            return Object.assign({}, thread2, {
               name: unavailable.length === 0 ? thread2.name : `${thread2.name} (unavailable: ${unavailable.join(", ")})`
-            };
+            });
           })
         };
       }
@@ -34239,7 +35407,7 @@ var init_dap = __esm({
         if (!this.#map) {
           throw new Error("Source breakpoints require a debug map.");
         }
-        const source = args.source;
+        const source = isRecord13(args.source) ? args.source : void 0;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
         if (!sourcePath) {
           throw new Error("Source breakpoint request requires source.path.");
@@ -34266,12 +35434,11 @@ var init_dap = __esm({
             const match = address4 ? applied.get(breakpointKey(address4)) : void 0;
             if (match) {
               const verified = matches.length > 0 && matches.every((entry) => entry?.verified);
-              const result = { ...dapBreakpoint(match), verified, line };
+              const result = Object.assign({}, dapBreakpoint(match), { verified, line });
               if (!verified) {
-                return {
-                  ...result,
+                return Object.assign({}, result, {
                   message: matches.find((entry) => !entry?.verified)?.message ?? "One or more source breakpoint addresses could not be installed."
-                };
+                });
               }
               return result;
             }
@@ -34293,7 +35460,7 @@ var init_dap = __esm({
         if (!this.#map) {
           throw new Error("Breakpoint locations require a debug map.");
         }
-        const source = args.source;
+        const source = isRecord13(args.source) ? args.source : void 0;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
         if (!sourcePath) {
           throw new Error("Breakpoint location request requires source.path.");
@@ -34306,7 +35473,7 @@ var init_dap = __esm({
           ).map((range) => range.line)
         );
         return {
-          breakpoints: [...lines].sort((left, right) => left - right).map((line) => ({ line, column: 1 }))
+          breakpoints: [...lines].toSorted((left, right) => left - right).map((line) => ({ line, column: 1 }))
         };
       }
       async #setInstructionBreakpoints(args) {
@@ -34317,7 +35484,7 @@ var init_dap = __esm({
           const address4 = parseDebugAddress(reference);
           if (address4) {
             const offset = numeric(breakpoint2.offset);
-            const adjusted = { ...address4, address: address4.address + offset };
+            const adjusted = Object.assign({}, address4, { address: address4.address + offset });
             if (this.#supportsBreakpoint(adjusted)) {
               instructions.set(formatDebugAddress(adjusted), adjusted);
             }
@@ -34379,7 +35546,7 @@ var init_dap = __esm({
             );
             this.#assertExecutionActive();
             if (restored.some(({ verified }) => !verified)) {
-              throw new Error("Breakpoint recovery was not verified.");
+              throw new Error("Breakpoint recovery was not verified.", { cause: error });
             }
             this.#verifiedBreakpoints = restored;
             this.#breakpointTableReliable = true;
@@ -34407,7 +35574,7 @@ var init_dap = __esm({
             try {
               await this.#resumeAfterBreakpointUpdate(paused.threadId);
             } catch (error) {
-              if (this.#executionState === "stopped" && !this.#executionEnded) {
+              if (this.#executionState === "stopped" && !this.#executionHasEnded()) {
                 this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
               }
               throw error;
@@ -34447,7 +35614,7 @@ var init_dap = __esm({
           (range) => this.#supportsBreakpoint(this.#addressForRange(range))
         ) ?? this.#sourceRanges(sourcePath).filter(
           (range) => range.line > requestedLine && this.#supportsBreakpoint(this.#addressForRange(range))
-        ).sort((left, right) => left.line - right.line || left.start - right.start)[0];
+        ).toSorted((left, right) => left.line - right.line || left.start - right.start)[0];
       }
       /**
        * Serializes execution and whole-table writes without blocking backend events.
@@ -34465,6 +35632,18 @@ var init_dap = __esm({
           () => void 0
         );
         return result;
+      }
+      /** A resumed CPU can stop again while this request is awaiting the backend. */
+      #executionIsRunning() {
+        return this.#executionState === "running";
+      }
+      /** Termination can arrive while a breakpoint-table write is awaiting the backend. */
+      #executionHasEnded() {
+        return this.#executionEnded;
+      }
+      /** The maintenance pause can be completed by a stop event before this finally runs. */
+      #maintenancePauseRecord() {
+        return this.#maintenancePause;
       }
       #assertExecutionActive() {
         if (this.#executionEnded) {
@@ -34512,7 +35691,7 @@ var init_dap = __esm({
           await this.#threadList();
         }
         this.#assertExecutionActive();
-        if (this.#executionState !== "running") {
+        if (!this.#executionIsRunning()) {
           return void 0;
         }
         const architectures = new Set(addresses2.map(({ architecture }) => architecture));
@@ -34525,9 +35704,9 @@ var init_dap = __esm({
         let resolvePause;
         let rejectPause;
         const stopped = new Promise(
-          (resolve9, reject) => {
+          (resolve9, reject2) => {
             resolvePause = resolve9;
-            rejectPause = reject;
+            rejectPause = reject2;
           }
         );
         const timer = setTimeout(
@@ -34541,7 +35720,7 @@ var init_dap = __esm({
           const [, stop] = await Promise.all([pause2, stopped]);
           return { threadId: thread2.id, ...stop };
         } finally {
-          if (this.#maintenancePause?.timer === timer) {
+          if (this.#maintenancePauseRecord()?.timer === timer) {
             this.#maintenancePause = void 0;
           }
           clearTimeout(timer);
@@ -34591,12 +35770,16 @@ var init_dap = __esm({
           instructions.map((instruction2) => this.#annotatedInstructionText(instruction2))
         );
         return {
-          instructions: instructions.map((instruction2, index) => ({
-            address: formatDebugAddress(instruction2.address),
-            instructionBytes: bytesText(instruction2),
-            instruction: texts[index],
-            ...instruction2.symbol ? { symbol: instruction2.symbol } : {}
-          }))
+          instructions: instructions.map(
+            (instruction2, index) => Object.assign(
+              {
+                address: formatDebugAddress(instruction2.address),
+                instructionBytes: bytesText(instruction2),
+                instruction: texts[index]
+              },
+              instruction2.symbol ? { symbol: instruction2.symbol } : {}
+            )
+          )
         };
       }
       async #source(sourceReference) {
@@ -34729,7 +35912,7 @@ var init_dap = __esm({
           }
           const body = this.#buffer.subarray(start, start + length).toString("utf8");
           this.#buffer = this.#buffer.subarray(start + length);
-          messages.push(JSON.parse(body));
+          messages.push(dapRequest(JSON.parse(body)));
         }
         return messages;
       }
@@ -34737,10 +35920,10 @@ var init_dap = __esm({
   }
 });
 
-// ../debug-adapter/src/mock-script.ts
+// packages/debug-adapter/src/mock-script.ts
 var addressFor, instructionFor, createDebugMapReplayScript;
 var init_mock_script = __esm({
-  "../debug-adapter/src/mock-script.ts"() {
+  "packages/debug-adapter/src/mock-script.ts"() {
     "use strict";
     init_debug_map();
     addressFor = (range) => ({
@@ -34765,7 +35948,7 @@ var init_mock_script = __esm({
       if (map.ranges.length === 0) {
         throw new Error("Debug map contains no executable source ranges.");
       }
-      const architectures = [...new Set(map.ranges.map((range) => range.architecture))].sort();
+      const architectures = [...new Set(map.ranges.map((range) => range.architecture))].toSorted();
       const threads = architectures.map((architecture, index) => ({
         id: index + 1,
         name: architecture,
@@ -34778,7 +35961,7 @@ var init_mock_script = __esm({
         ])
       );
       const currentRange = new Map(firstRange);
-      const ordered = [...map.ranges].sort(
+      const ordered = [...map.ranges].toSorted(
         (left, right) => (left.outputStart ?? Number.MAX_SAFE_INTEGER) - (right.outputStart ?? Number.MAX_SAFE_INTEGER) || left.architecture.localeCompare(right.architecture) || left.start - right.start
       );
       const instructions = ordered.map((range) => instructionFor(range, output));
@@ -34822,14 +36005,14 @@ var init_mock_script = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-protocol.ts
+// packages/debug-adapter/src/sidecar-protocol.ts
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value)) {
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
   }
 }
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord(value)) {
+  if (!isRecord14(value)) {
     throw new Error("Sidecar message must be an object.");
   }
   if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
@@ -34843,10 +36026,10 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     throw new Error("Sidecar message sequence must be a positive safe integer.");
   }
   if (value.type === "request") {
-    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command)) {
+    if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
       throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
     }
-    assertRequestBounds(value, limits);
+    assertRequestBounds(value.command, value.arguments, limits);
     return;
   }
   if (value.type === "response") {
@@ -34862,19 +36045,19 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     return;
   }
   if (value.type === "event") {
-    if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
+    if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
     }
-    if (!isRecord(value.body)) {
+    if (!isRecord14(value.body)) {
       throw new Error("Sidecar event body must be an object.");
     }
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
-var import_node_crypto12, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
+var import_node_crypto12, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord14, listed, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, LIMIT_NAMES, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
-  "../debug-adapter/src/sidecar-protocol.ts"() {
+  "packages/debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
     import_node_crypto12 = require("node:crypto");
     DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
@@ -34916,46 +36099,57 @@ var init_sidecar_protocol = __esm({
       maxQueuedMessages: 1024,
       maxQueuedBytes: 8388608
     });
-    isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    isRecord14 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
     positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
     nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
     sessionPattern = /^[\w-]{32,128}$/;
     createDebugSidecarSessionToken = () => (0, import_node_crypto12.randomBytes)(32).toString("base64url");
-    assertRequestBounds = (message, limits) => {
-      const args = message.arguments ?? {};
-      if (!isRecord(args)) {
+    assertRequestBounds = (command, args, limits) => {
+      const record4 = args ?? {};
+      if (!isRecord14(record4)) {
         throw new Error("Sidecar request arguments must be an object.");
       }
-      if (message.command === "readMemory") {
-        const count2 = args.count;
+      if (command === "readMemory") {
+        const count2 = record4.count;
         if (!nonNegativeInteger(count2) || count2 > limits.maxMemoryReadBytes) {
           throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
         }
       }
-      if (message.command === "disassemble") {
-        const count2 = args.count;
+      if (command === "disassemble") {
+        const count2 = record4.count;
         if (!nonNegativeInteger(count2) || count2 > limits.maxDisassemblyInstructions) {
           throw new Error(
             `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
           );
         }
       }
-      if (message.command === "setBreakpoints") {
-        const breakpoints = args.breakpoints;
+      if (command === "setBreakpoints") {
+        const breakpoints = record4.breakpoints;
         if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
           throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
         }
       }
-      if (message.command === "readTrace") {
-        const maxEvents = args.maxEvents;
+      if (command === "readTrace") {
+        const maxEvents = record4.maxEvents;
         if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
           throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
         }
       }
     };
+    LIMIT_NAMES = [
+      "maxFrameBytes",
+      "maxBufferedBytes",
+      "maxMemoryReadBytes",
+      "maxDisassemblyInstructions",
+      "maxBreakpoints",
+      "maxTraceBatchEvents",
+      "maxQueuedMessages",
+      "maxQueuedBytes"
+    ];
     validateLimits = (limits) => {
-      for (const [name, value] of Object.entries(limits)) {
-        if (!positiveInteger(value)) {
+      for (const name of LIMIT_NAMES) {
+        if (!positiveInteger(limits[name])) {
           throw new Error(`${name} must be a positive safe integer.`);
         }
       }
@@ -35077,10 +36271,10 @@ var init_sidecar_protocol = __esm({
   }
 });
 
-// ../debug-adapter/src/node-stdio-transport.ts
+// packages/debug-adapter/src/node-stdio-transport.ts
 var import_node_child_process, DEBUG_SIDECAR_SESSION_ENV, positiveInteger2, NodeStdioSidecarTransport;
 var init_node_stdio_transport = __esm({
-  "../debug-adapter/src/node-stdio-transport.ts"() {
+  "packages/debug-adapter/src/node-stdio-transport.ts"() {
     "use strict";
     import_node_child_process = require("node:child_process");
     init_sidecar_protocol();
@@ -35163,17 +36357,17 @@ var init_node_stdio_transport = __esm({
         if (this.#notified || this.#exited) {
           return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));
         }
-        return new Promise((resolve9, reject) => {
+        return new Promise((resolve9, reject2) => {
           try {
             this.#child.stdin.write(Buffer.from(data), (error) => {
               if (error) {
-                reject(error);
+                reject2(error);
               } else {
                 resolve9();
               }
             });
           } catch (error) {
-            reject(error instanceof Error ? error : new Error(String(error)));
+            reject2(error instanceof Error ? error : new Error(String(error)));
           }
         });
       }
@@ -35254,7 +36448,7 @@ var init_node_stdio_transport = __esm({
           timer.unref();
           void this.#exit.then(() => {
             clearTimeout(timer);
-            resolve9(true);
+            return resolve9(true);
           });
         });
       }
@@ -35262,10 +36456,10 @@ var init_node_stdio_transport = __esm({
   }
 });
 
-// ../debug-adapter/src/trace-buffer.ts
+// packages/debug-adapter/src/trace-buffer.ts
 var positiveInteger3, identity, DebugTraceBuffer;
 var init_trace_buffer = __esm({
-  "../debug-adapter/src/trace-buffer.ts"() {
+  "packages/debug-adapter/src/trace-buffer.ts"() {
     "use strict";
     positiveInteger3 = (value, context) => {
       if (!Number.isSafeInteger(value) || value <= 0) {
@@ -35367,10 +36561,10 @@ var init_trace_buffer = __esm({
   }
 });
 
-// ../debug-adapter/src/replay-backend.ts
+// packages/debug-adapter/src/replay-backend.ts
 var REPLAY_TRACE_BUFFER_EVENTS, REPLAY_TRACE_BATCH_EVENTS, REPLAY_STEP_KINDS, replayArchitectureCapabilities, addressKey, addressesEqual, assertCount, ReplayDebugBackend;
 var init_replay_backend = __esm({
-  "../debug-adapter/src/replay-backend.ts"() {
+  "packages/debug-adapter/src/replay-backend.ts"() {
     "use strict";
     init_contracts();
     init_trace_buffer();
@@ -35390,7 +36584,7 @@ var init_replay_backend = __esm({
           architectureNames.add(instruction2.address.architecture);
         }
       }
-      return [...architectureNames].sort().map((architecture) => {
+      return [...architectureNames].toSorted().map((architecture) => {
         const addressSpaces = /* @__PURE__ */ new Set();
         let registers = false;
         let disassemble = false;
@@ -35414,13 +36608,13 @@ var init_replay_backend = __esm({
           (addressSpace) => script.snapshots.some(
             (snapshot) => snapshot.memory.some((region) => region.addressSpace === addressSpace)
           )
-        ).sort().map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
+        ).toSorted().map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
         return {
           architecture,
-          addressSpaces: [...addressSpaces].sort(),
+          addressSpaces: [...addressSpaces].toSorted(),
           memorySpaces,
           trace: addressSpaces.size === 0 ? null : {
-            addressSpaces: [...addressSpaces].sort(),
+            addressSpaces: [...addressSpaces].toSorted(),
             maxBufferedEvents: REPLAY_TRACE_BUFFER_EVENTS,
             maxBatchEvents: REPLAY_TRACE_BATCH_EVENTS
           },
@@ -35464,11 +36658,11 @@ var init_replay_backend = __esm({
         const architectures = script.architectures ? script.architectures.map((capability) => ({
           ...capability,
           ...capability.stepKinds ? { stepKinds: [...capability.stepKinds] } : {},
-          addressSpaces: [...capability.addressSpaces].sort(),
-          memorySpaces: [...capability.memorySpaces].sort((left, right) => left.addressSpace.localeCompare(right.addressSpace)).map((memorySpace) => Object.freeze({ ...memorySpace })),
+          addressSpaces: [...capability.addressSpaces].toSorted(),
+          memorySpaces: [...capability.memorySpaces].toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace)).map((memorySpace) => Object.freeze({ ...memorySpace })),
           trace: capability.trace ? {
             ...capability.trace,
-            addressSpaces: [...capability.trace.addressSpaces].sort()
+            addressSpaces: [...capability.trace.addressSpaces].toSorted()
           } : null
         })) : replayArchitectureCapabilities(script);
         const supports = (key3) => architectures.some((capability) => capability[key3]);
@@ -35585,7 +36779,7 @@ var init_replay_backend = __esm({
       stackFrames(threadId) {
         this.#requireConnected();
         return Promise.resolve(
-          this.#snapshot.frames.filter((frame) => frame.threadId === threadId).map((frame) => ({ ...frame, pc: { ...frame.pc } }))
+          this.#snapshot.frames.filter((frame) => frame.threadId === threadId).map((frame) => Object.assign({}, frame, { pc: Object.assign({}, frame.pc) }))
         );
       }
       /**
@@ -35596,7 +36790,7 @@ var init_replay_backend = __esm({
       registers(frameId) {
         this.#requireConnected();
         return Promise.resolve(
-          (this.#snapshot.registers[frameId] ?? []).map((register2) => ({ ...register2 }))
+          (this.#snapshot.registers[frameId] ?? []).map((register2) => Object.assign({}, register2))
         );
       }
       /**
@@ -35637,7 +36831,7 @@ var init_replay_backend = __esm({
       setBreakpoints(addresses2) {
         this.#requireConnected();
         this.#breakpoints.clear();
-        const sorted2 = [...addresses2].sort(
+        const sorted2 = [...addresses2].toSorted(
           (left, right) => left.architecture.localeCompare(right.architecture) || left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address
         );
         for (const address4 of sorted2) {
@@ -35666,11 +36860,12 @@ var init_replay_backend = __esm({
         return Promise.resolve(
           (this.#snapshot.instructions ?? []).filter(
             (instruction2) => instruction2.address.architecture === address4.architecture && instruction2.address.addressSpace === address4.addressSpace && instruction2.address.address >= address4.address
-          ).sort((left, right) => left.address.address - right.address.address).slice(0, count2).map((instruction2) => ({
-            ...instruction2,
-            address: { ...instruction2.address },
-            bytes: [...instruction2.bytes]
-          }))
+          ).toSorted((left, right) => left.address.address - right.address.address).slice(0, count2).map(
+            (instruction2) => Object.assign({}, instruction2, {
+              address: Object.assign({}, instruction2.address),
+              bytes: Array.from(instruction2.bytes)
+            })
+          )
         );
       }
       /** @inheritdoc */
@@ -35767,54 +36962,95 @@ var init_replay_backend = __esm({
   }
 });
 
-// ../debug-adapter/src/trace-detail-validation.ts
-var isArray3, validateDebugTraceDetails;
+// packages/debug-adapter/src/trace-detail-validation.ts
+function isUnknownArray3(value) {
+  return Array.isArray(value);
+}
+function isRecord15(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function assertInstructionBytes(bytes) {
+  if (!isUnknownArray3(bytes) || bytes.length < 1 || bytes.length > 16) {
+    throw new Error("Invalid trace instruction bytes.");
+  }
+  for (const byte2 of bytes) {
+    if (typeof byte2 !== "number" || !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255) {
+      throw new Error("Invalid trace instruction bytes.");
+    }
+  }
+}
+function assertInstructionState(state) {
+  if (!isRecord15(state)) {
+    throw new Error("Invalid trace instruction state.");
+  }
+  for (const [key3, entry] of Object.entries(state)) {
+    if (!key3 || typeof entry !== "number" && typeof entry !== "boolean" && typeof entry !== "string" || typeof entry === "number" && !Number.isFinite(entry)) {
+      throw new Error("Invalid trace instruction state.");
+    }
+  }
+}
+function assertBusAccess(access) {
+  if (!isRecord15(access)) {
+    throw new Error("Invalid trace bus operation.");
+  }
+  const actor = access.actor === void 0 ? "cpu" : access.actor;
+  if (typeof access.addressSpace !== "string" || !access.addressSpace || typeof access.address !== "number" || !Number.isSafeInteger(access.address) || access.address < 0 || access.access !== "read" && access.access !== "write" && access.access !== "fetch" || typeof access.width !== "number" || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (typeof access.value !== "number" || !Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && actor !== "cpu" && actor !== "dma" && actor !== "hdma" || access.channel !== void 0 && (typeof access.channel !== "number" || !Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || actor !== "dma" && actor !== "hdma")) {
+    throw new Error("Invalid trace bus operation.");
+  }
+}
+function assertTraceDetails(value) {
+  for (const detail of value) {
+    assertTraceDetail(detail);
+  }
+}
+function assertTraceDetail(detail) {
+  if (!isRecord15(detail)) {
+    throw new Error("Invalid trace instruction bytes.");
+  }
+  assertInstructionBytes(detail.bytes);
+  assertInstructionState(detail.state);
+  const dropped = detail.droppedMemoryAccesses;
+  if (dropped !== void 0 && (typeof dropped !== "number" || !Number.isSafeInteger(dropped) || dropped < 0)) {
+    throw new Error("Invalid trace memory loss.");
+  }
+  const memoryAccesses = detail.memoryAccesses;
+  if (memoryAccesses !== void 0 && (!isUnknownArray3(memoryAccesses) || memoryAccesses.length > 256)) {
+    throw new Error("Invalid trace memory access bound.");
+  }
+  if (isUnknownArray3(memoryAccesses)) {
+    for (const access of memoryAccesses) {
+      assertBusAccess(access);
+    }
+  }
+}
+function validateDebugTraceDetails(value, count2) {
+  if (!isUnknownArray3(value) || value.length !== count2) {
+    throw new Error("Trace details must align with instruction addresses.");
+  }
+  assertTraceDetails(value);
+  return value;
+}
 var init_trace_detail_validation = __esm({
-  "../debug-adapter/src/trace-detail-validation.ts"() {
+  "packages/debug-adapter/src/trace-detail-validation.ts"() {
     "use strict";
-    isArray3 = (value) => Array.isArray(value);
-    validateDebugTraceDetails = (value, count2) => {
-      if (!Array.isArray(value) || value.length !== count2) {
-        throw new Error("Trace details must align with instruction addresses.");
-      }
-      for (const detail of value) {
-        if (!detail || !isArray3(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255)) {
-          throw new Error("Invalid trace instruction bytes.");
-        }
-        if (!detail.state || typeof detail.state !== "object" || isArray3(detail.state) || Object.entries(detail.state).some(
-          ([key3, entry]) => !key3 || !["number", "boolean", "string"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-        )) {
-          throw new Error("Invalid trace instruction state.");
-        }
-        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
-          throw new Error("Invalid trace memory loss.");
-        }
-        if (detail.memoryAccesses !== void 0 && (!isArray3(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
-          throw new Error("Invalid trace memory access bound.");
-        }
-        for (const access of detail.memoryAccesses ?? []) {
-          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
-            throw new Error("Invalid trace bus operation.");
-          }
-        }
-      }
-      return value;
-    };
   }
 });
 
-// ../debug-adapter/src/sidecar-backend.ts
-var stopReasons, stepKinds, record2, array, string2, boolean, integer2, positiveInteger4, address, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
+// packages/debug-adapter/src/sidecar-backend.ts
+var isStopReason, stepKindNames, isStepKind, isOutputCategory, isRecord16, record2, array, string2, readStepKinds, boolean, integer2, positiveInteger4, address, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
 var init_sidecar_backend = __esm({
-  "../debug-adapter/src/sidecar-backend.ts"() {
+  "packages/debug-adapter/src/sidecar-backend.ts"() {
     "use strict";
     init_contracts();
     init_trace_detail_validation();
     init_capture_v2();
-    stopReasons = /* @__PURE__ */ new Set(["entry", "pause", "step", "breakpoint", "exception"]);
-    stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStopReason = (value) => value === "entry" || value === "pause" || value === "step" || value === "breakpoint" || value === "exception";
+    stepKindNames = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStepKind = (value) => stepKindNames.has(value);
+    isOutputCategory = (value) => value === "console" || value === "stdout" || value === "stderr";
+    isRecord16 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     record2 = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (!isRecord16(value)) {
         throw new Error(`${context} must be an object.`);
       }
       return value;
@@ -35831,6 +37067,23 @@ var init_sidecar_backend = __esm({
       }
       return value;
     };
+    readStepKinds = (value, context) => {
+      if (value === void 0) {
+        return void 0;
+      }
+      const values = array(value, context).map((entry, index) => string2(entry, `${context}[${index}]`));
+      const kinds = [];
+      for (const entry of values) {
+        if (!isStepKind(entry)) {
+          throw new Error(`${context} contains an unsupported step kind.`);
+        }
+        kinds.push(entry);
+      }
+      if (new Set(kinds).size !== kinds.length) {
+        throw new Error(`${context} must be unique.`);
+      }
+      return kinds;
+    };
     boolean = (value, context) => {
       if (typeof value !== "boolean") {
         throw new Error(`${context} must be boolean.`);
@@ -35838,7 +37091,7 @@ var init_sidecar_backend = __esm({
       return value;
     };
     integer2 = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum) {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       }
       return value;
@@ -35875,7 +37128,7 @@ var init_sidecar_backend = __esm({
             `${context}.memorySpaces[${index}].sideEffectFree`
           )
         };
-      }).sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
+      }).toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace));
       if (new Set(memorySpaces.map(({ addressSpace }) => addressSpace)).size !== memorySpaces.length) {
         throw new Error(`${context}.memorySpaces must use unique address spaces.`);
       }
@@ -35891,8 +37144,8 @@ var init_sidecar_backend = __esm({
         if (candidate.trace === null) {
           return null;
         }
-        const value2 = record2(candidate.trace, `${context}.trace`);
-        const traceAddressSpaces = array(value2.addressSpaces, `${context}.trace.addressSpaces`).map((entry, index) => string2(entry, `${context}.trace.addressSpaces[${index}]`)).sort();
+        const traceRecord = record2(candidate.trace, `${context}.trace`);
+        const traceAddressSpaces = array(traceRecord.addressSpaces, `${context}.trace.addressSpaces`).map((entry, index) => string2(entry, `${context}.trace.addressSpaces[${index}]`)).toSorted();
         if (traceAddressSpaces.length === 0) {
           throw new Error(`${context}.trace.addressSpaces must not be empty.`);
         }
@@ -35903,10 +37156,13 @@ var init_sidecar_backend = __esm({
           throw new Error(`${context}.trace.addressSpaces must be declared in addressSpaces.`);
         }
         const maxBufferedEvents = positiveInteger4(
-          value2.maxBufferedEvents,
+          traceRecord.maxBufferedEvents,
           `${context}.trace.maxBufferedEvents`
         );
-        const maxBatchEvents = positiveInteger4(value2.maxBatchEvents, `${context}.trace.maxBatchEvents`);
+        const maxBatchEvents = positiveInteger4(
+          traceRecord.maxBatchEvents,
+          `${context}.trace.maxBatchEvents`
+        );
         if (maxBatchEvents > maxBufferedEvents) {
           throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);
         }
@@ -35914,33 +37170,20 @@ var init_sidecar_backend = __esm({
           addressSpaces: traceAddressSpaces,
           maxBufferedEvents,
           maxBatchEvents,
-          ...value2.instructionDetails === void 0 ? {} : { instructionDetails: boolean(value2.instructionDetails, "Trace instructionDetails") }
+          ...traceRecord.instructionDetails === void 0 ? {} : {
+            instructionDetails: boolean(traceRecord.instructionDetails, "Trace instructionDetails")
+          }
         };
       })();
-      const stepKinds3 = (() => {
-        if (candidate.stepKinds === void 0) {
-          return void 0;
-        }
-        const values = array(candidate.stepKinds, `${context}.stepKinds`).map(
-          (entry, index) => string2(entry, `${context}.stepKinds[${index}]`)
-        );
-        const allowed = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry))) {
-          throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        }
-        if (new Set(values).size !== values.length) {
-          throw new Error(`${context}.stepKinds must be unique.`);
-        }
-        return values;
-      })();
+      const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
       return {
         architecture: string2(candidate.architecture, `${context}.architecture`),
-        addressSpaces: [...addressSpaces].sort(),
+        addressSpaces: [...addressSpaces].toSorted(),
         memorySpaces,
         trace,
         pause: boolean(candidate.pause, `${context}.pause`),
         step: boolean(candidate.step, `${context}.step`),
-        ...stepKinds3 === void 0 ? {} : { stepKinds: stepKinds3 },
+        ...stepKinds === void 0 ? {} : { stepKinds },
         registers: boolean(candidate.registers, `${context}.registers`),
         memory,
         stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -35950,30 +37193,15 @@ var init_sidecar_backend = __esm({
     };
     backendCapabilities = (value, context) => {
       const candidate = record2(value, context);
-      const architectures = array(candidate.architectures, `${context}.architectures`).map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`)).sort((left, right) => left.architecture.localeCompare(right.architecture));
+      const architectures = array(candidate.architectures, `${context}.architectures`).map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`)).toSorted((left, right) => left.architecture.localeCompare(right.architecture));
       if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length) {
         throw new Error(`${context}.architectures must use unique architecture identifiers.`);
       }
-      const stepKinds3 = (() => {
-        if (candidate.stepKinds === void 0) {
-          return void 0;
-        }
-        const values = array(candidate.stepKinds, `${context}.stepKinds`).map(
-          (entry, index) => string2(entry, `${context}.stepKinds[${index}]`)
-        );
-        const allowed = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry))) {
-          throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        }
-        if (new Set(values).size !== values.length) {
-          throw new Error(`${context}.stepKinds must be unique.`);
-        }
-        return values;
-      })();
+      const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
       return Object.freeze({
         pause: boolean(candidate.pause, `${context}.pause`),
         step: boolean(candidate.step, `${context}.step`),
-        ...stepKinds3 === void 0 ? {} : { stepKinds: Object.freeze(stepKinds3) },
+        ...stepKinds === void 0 ? {} : { stepKinds: Object.freeze(stepKinds) },
         registers: boolean(candidate.registers, `${context}.registers`),
         memory: boolean(candidate.memory, `${context}.memory`),
         stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -36098,7 +37326,7 @@ var init_sidecar_backend = __esm({
       const body = record2(message.body, `Sidecar '${message.event}' event body`);
       if (message.event === "stopped") {
         const reason = string2(body.reason, "Stopped event reason");
-        if (!stopReasons.has(reason)) {
+        if (!isStopReason(reason)) {
           throw new Error(`Unsupported stop reason '${reason}'.`);
         }
         return {
@@ -36124,7 +37352,7 @@ var init_sidecar_backend = __esm({
         type: "output",
         category: (() => {
           const category = string2(body.category, "Output event category");
-          if (!(/* @__PURE__ */ new Set(["console", "stdout", "stderr"])).has(category)) {
+          if (!isOutputCategory(category)) {
             throw new Error(`Unsupported output category '${category}'.`);
           }
           return category;
@@ -36199,20 +37427,22 @@ var init_sidecar_backend = __esm({
       }
       /** @inheritdoc */
       async pause(threadId) {
-        await this.#requireConnected().request("pause", {
-          ...threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
-        });
+        await this.#requireConnected().request(
+          "pause",
+          threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
+        );
       }
       /** @inheritdoc */
       async continue(threadId) {
-        await this.#requireConnected().request("continue", {
-          ...threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
-        });
+        await this.#requireConnected().request(
+          "continue",
+          threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
+        );
       }
       /** @inheritdoc */
       async step(threadId, kind) {
-        if (!stepKinds.has(kind)) {
-          throw new Error(`Unsupported step kind '${String(kind)}'.`);
+        if (!stepKindNames.has(kind)) {
+          throw new Error(`Unsupported step kind '${kind}'.`);
         }
         await this.#requireConnected().request("step", {
           threadId: positiveInteger4(threadId, "Thread id"),
@@ -36323,7 +37553,7 @@ var init_sidecar_backend = __esm({
       /** @inheritdoc */
       async capture(request) {
         validateCaptureRequest(request);
-        return await this.#requireConnected().request("capture", { ...request });
+        return validateCaptureResult(await this.#requireConnected().request("capture", { ...request }));
       }
       async startTrace(options) {
         const architecture = string2(options.architecture, "Trace architecture");
@@ -36463,10 +37693,10 @@ var init_sidecar_backend = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-client.ts
+// packages/debug-adapter/src/sidecar-client.ts
 var asError, DebugSidecarClient;
 var init_sidecar_client = __esm({
-  "../debug-adapter/src/sidecar-client.ts"() {
+  "packages/debug-adapter/src/sidecar-client.ts"() {
     "use strict";
     init_sidecar_protocol();
     asError = (error) => error instanceof Error ? error : new Error(String(error));
@@ -36571,12 +37801,12 @@ var init_sidecar_client = __esm({
           );
         }
         this.#queuedWriteBytes += frame.length;
-        return new Promise((resolve9, reject) => {
+        return new Promise((resolve9, reject2) => {
           const timer = setTimeout(
             () => this.#fail(new Error(`Sidecar request '${command}' timed out.`)),
             this.#requestTimeoutMs
           );
-          this.#pending.set(sequence, { resolve: resolve9, reject, timer });
+          this.#pending.set(sequence, { resolve: resolve9, reject: reject2, timer });
           const write = this.#writeTail.then(() => {
             if (this.#closed) {
               throw new Error("Sidecar client is closed.");
@@ -36662,23 +37892,29 @@ var init_sidecar_client = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-server.ts
-var stepKinds2, record3, integer3, positiveInteger5, string3, optionalPositiveInteger, boolean2, address2, addresses, asError2, DebugSidecarServer;
+// packages/debug-adapter/src/sidecar-server.ts
+function assertShutdownCommand(command) {
+  if (command !== "shutdown") {
+    throw new Error(`Unsupported command '${command}'.`);
+  }
+}
+var isStepKind2, isRecord17, record3, integer3, positiveInteger5, string3, optionalPositiveInteger, boolean2, address2, addresses, asError2, DebugSidecarServer;
 var init_sidecar_server = __esm({
-  "../debug-adapter/src/sidecar-server.ts"() {
+  "packages/debug-adapter/src/sidecar-server.ts"() {
     "use strict";
     init_contracts();
     init_sidecar_protocol();
     init_capture_v2();
-    stepKinds2 = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStepKind2 = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
+    isRecord17 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     record3 = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (!isRecord17(value)) {
         throw new Error(`${context} must be an object.`);
       }
       return value;
     };
     integer3 = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum) {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       }
       return value;
@@ -36866,13 +38102,11 @@ var init_sidecar_server = __esm({
           return {};
         }
         if (request.command === "step") {
-          if (!stepKinds2.has(args.kind)) {
-            throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+          const kind = args.kind;
+          if (typeof kind !== "string" || !isStepKind2(kind)) {
+            throw new Error(`Unsupported step kind '${String(kind)}'.`);
           }
-          await this.#implementation.step(
-            positiveInteger5(args.threadId, "Step threadId"),
-            args.kind
-          );
+          await this.#implementation.step(positiveInteger5(args.threadId, "Step threadId"), kind);
           return {};
         }
         if (request.command === "threads") {
@@ -36937,10 +38171,8 @@ var init_sidecar_server = __esm({
         if (request.command === "ping") {
           return { pong: true };
         }
-        if (request.command === "shutdown") {
-          return {};
-        }
-        throw new Error(`Unsupported command '${String(request.command)}'.`);
+        assertShutdownCommand(request.command);
+        return {};
       }
       #backendEvent(event) {
         if (this.#closed) {
@@ -37012,6 +38244,7 @@ var init_sidecar_server = __esm({
             await this.#write(frame);
             frame = this.#outgoing.dequeue();
           }
+          return;
         });
         this.#writeTail = write.catch(() => void 0);
         return write;
@@ -37020,15 +38253,26 @@ var init_sidecar_server = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-context.ts
-var import_node_crypto13, import_node_fs7, import_promises3, import_node_path11, CaptureContextRecorder, verifyCaptureContext;
+// packages/debug-adapter/src/capture-context.ts
+var import_node_crypto13, import_node_fs7, import_promises3, import_node_path11, isRecord18, digestFile, CaptureContextRecorder, verifyCaptureContext;
 var init_capture_context = __esm({
-  "../debug-adapter/src/capture-context.ts"() {
+  "packages/debug-adapter/src/capture-context.ts"() {
     "use strict";
     import_node_crypto13 = require("node:crypto");
     import_node_fs7 = require("node:fs");
     import_promises3 = require("node:fs/promises");
     import_node_path11 = __toESM(require("node:path"), 1);
+    isRecord18 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    digestFile = async (file, signal) => {
+      const hash4 = (0, import_node_crypto13.createHash)("sha256");
+      for await (const bytes of (0, import_node_fs7.createReadStream)(file, { signal })) {
+        if (!Buffer.isBuffer(bytes)) {
+          throw new Error(`Expected binary capture context data in ${import_node_path11.default.basename(file)}.`);
+        }
+        hash4.update(bytes);
+      }
+      return hash4.digest("hex");
+    };
     CaptureContextRecorder = class {
       directory;
       transport;
@@ -37108,11 +38352,15 @@ var init_capture_context = __esm({
         const boundaries = JSON.parse(
           await (0, import_promises3.readFile)(import_node_path11.default.join(this.directory, "boundaries.json"), "utf8")
         );
-        if (boundaries.session !== summary.position.session || boundaries.end?.eventThrough !== summary.position.producedThrough) {
+        if (!isRecord18(boundaries)) {
+          throw new Error("Capture context boundaries must be an object.");
+        }
+        const boundaryEnd = isRecord18(boundaries.end) ? boundaries.end.eventThrough : void 0;
+        if (boundaries.session !== summary.position.session || boundaryEnd !== summary.position.producedThrough) {
           throw new Error("Capture context boundary does not match the completed ACT2 archive.");
         }
         const files = {};
-        for (const name of (await (0, import_promises3.readdir)(this.directory)).sort()) {
+        for (const name of (await (0, import_promises3.readdir)(this.directory)).toSorted()) {
           if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
             name
           )) {
@@ -37129,17 +38377,14 @@ var init_capture_context = __esm({
           if (name === "inputs.bin" && stat3.size % 18) {
             throw new Error("Controller evidence has an incomplete row.");
           }
-          const hash4 = (0, import_node_crypto13.createHash)("sha256");
-          for await (const bytes of (0, import_node_fs7.createReadStream)(file)) {
-            hash4.update(bytes);
-          }
+          const sha2564 = await digestFile(file);
           const handle2 = await (0, import_promises3.open)(file, "r+");
           try {
             await handle2.sync();
           } finally {
             await handle2.close();
           }
-          files[name] = { bytes: stat3.size, sha256: hash4.digest("hex") };
+          files[name] = { bytes: stat3.size, sha256: sha2564 };
         }
         for (const name of [
           "start.bst",
@@ -37220,8 +38465,11 @@ var init_capture_context = __esm({
         throw new Error("Invalid capture context manifest.");
       }
       const manifest = JSON.parse(await (0, import_promises3.readFile)(metadataFile, "utf8"));
-      const producer = manifest.producer;
-      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || producer?.id !== identity2.producer.id || producer?.revision !== identity2.producer.revision || !manifest.files || typeof manifest.files !== "object") {
+      if (!isRecord18(manifest)) {
+        throw new Error("Invalid capture context manifest.");
+      }
+      const producer = isRecord18(manifest.producer) ? manifest.producer : void 0;
+      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || !isRecord18(producer) || producer.id !== identity2.producer.id || producer.revision !== identity2.producer.revision || !isRecord18(manifest.files)) {
         throw new Error("Capture context requires the matching ROM and emulator build.");
       }
       const files = manifest.files;
@@ -37244,18 +38492,14 @@ var init_capture_context = __esm({
         signal?.throwIfAborted();
         if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
           name
-        ) || !artifact || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+        ) || !isRecord18(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
           throw new Error("Invalid capture context artifact descriptor.");
         }
         const file = import_node_path11.default.join(directory, name), stat3 = await (0, import_promises3.lstat)(file);
         if (!stat3.isFile() || stat3.isSymbolicLink() || stat3.size !== artifact.bytes || name === "start.bst" && (stat3.size < 538 || stat3.size > 32 * 1048576) || name.startsWith("wram-") && stat3.size !== 131072 || name === "inputs.bin" && stat3.size % 18) {
           throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
-        const hash4 = (0, import_node_crypto13.createHash)("sha256");
-        for await (const bytes of (0, import_node_fs7.createReadStream)(file, { signal })) {
-          hash4.update(bytes);
-        }
-        if (hash4.digest("hex") !== artifact.sha256) {
+        if (await digestFile(file, signal) !== artifact.sha256) {
           throw new Error(`Capture context checksum mismatch: ${name}.`);
         }
       }
@@ -37263,10 +38507,10 @@ var init_capture_context = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file-reader.ts
+// packages/debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "../debug-adapter/src/capture-file-reader.ts"() {
+  "packages/debug-adapter/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -37326,10 +38570,50 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file.ts
-var import_promises4, import_promises5, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
+// packages/debug-adapter/src/capture-file.ts
+function isRecord19(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function consumerRejected(failed) {
+  return failed;
+}
+function metadataValid(m) {
+  if (!isRecord19(m)) {
+    throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
+  const producer = m.producer;
+  if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || typeof m.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !isRecord19(producer) || typeof producer.id !== "string" || !producer.id || typeof producer.revision !== "string" || !producer.revision) {
+    throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
+}
+function captureOutputFormat(value) {
+  const format2 = value ?? "json";
+  if (format2 !== "json" && format2 !== "act2") {
+    throw new Error("Unsupported capture output format.");
+  }
+  return format2;
+}
+function headerAllocationAccepted(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 4718656 && value <= 64 * 1024 * 1024;
+}
+function assertCaptureFileHeader(value) {
+  if (!isRecord19(value)) {
+    throw new Error("Missing capture session header.");
+  }
+  metadataValid(value);
+  captureSession(value.session);
+  captureScope(value.scope);
+  const clock = value.clock;
+  if (!isRecord19(clock) || clock.id !== "snes.master" || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
+    throw new Error("Invalid session clock domain.");
+  }
+  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
+    throw new Error("Unsupported capture session contract.");
+  }
+}
+var import_promises4, import_promises5, pause, jsonFrame, emptyStageTiming, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
 var init_capture_file = __esm({
-  "../debug-adapter/src/capture-file.ts"() {
+  "packages/debug-adapter/src/capture-file.ts"() {
     "use strict";
     import_promises4 = require("node:fs/promises");
     import_promises5 = require("node:timers/promises");
@@ -37337,11 +38621,6 @@ var init_capture_file = __esm({
     init_capture_file_reader();
     init_capture_v2();
     pause = () => new Promise((resolve9) => setTimeout(resolve9, 10));
-    metadataValid = (m) => {
-      if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
-        throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
-      }
-    };
     jsonFrame = (magic, value) => {
       const body = Buffer.from(JSON.stringify(value));
       if (body.length > 65536) {
@@ -37353,6 +38632,11 @@ var init_capture_file = __esm({
       header.writeUInt32LE(captureCrc32c(body), 8);
       return Buffer.concat([header, body]);
     };
+    emptyStageTiming = () => ({
+      calls: 0,
+      totalMs: 0,
+      maxMs: 0
+    });
     LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       completion;
       #file;
@@ -37389,21 +38673,20 @@ var init_capture_file = __esm({
         };
         this.#position = position;
         if (measureStages) {
-          const stage = () => ({ calls: 0, totalMs: 0, maxMs: 0 });
           this.#timings = {
             started: performance.now(),
             bytes: 0,
             stages: {
-              read: stage(),
-              decode: stage(),
-              dataWrite: stage(),
-              dataSync: stage(),
-              checkpointWrite: stage(),
-              checkpointSync: stage(),
-              ack: stage(),
-              status: stage(),
-              idle: stage(),
-              finalize: stage()
+              read: emptyStageTiming(),
+              decode: emptyStageTiming(),
+              dataWrite: emptyStageTiming(),
+              dataSync: emptyStageTiming(),
+              checkpointWrite: emptyStageTiming(),
+              checkpointSync: emptyStageTiming(),
+              ack: emptyStageTiming(),
+              status: emptyStageTiming(),
+              idle: emptyStageTiming(),
+              finalize: emptyStageTiming()
             }
           };
         }
@@ -37418,10 +38701,7 @@ var init_capture_file = __esm({
       static async create(options) {
         metadataValid(options);
         const scope = captureScope(options.scope ?? "snes.65816.instructions");
-        const format2 = options.format ?? "json";
-        if (format2 !== "json" && format2 !== "act2") {
-          throw new Error("Unsupported capture output format.");
-        }
+        const format2 = captureOutputFormat(options.format);
         if (scope !== "snes.65816.instructions" && format2 !== "act2") {
           throw new Error("Bus capture requires ACT2 output. Instruction JSON cannot represent it.");
         }
@@ -37679,20 +38959,8 @@ var init_capture_file = __esm({
       }
     };
     validateCaptureFileHeader = (value) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Missing capture session header.");
-      }
-      const header = value;
-      metadataValid(header);
-      captureSession(header.session);
-      captureScope(header.scope);
-      if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator)) {
-        throw new Error("Invalid session clock domain.");
-      }
-      if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024) {
-        throw new Error("Unsupported capture session contract.");
-      }
-      return header;
+      assertCaptureFileHeader(value);
+      return value;
     };
     readCaptureBytes = async (handle, length, offset) => {
       const bytes = Buffer.allocUnsafe(length);
@@ -37802,7 +39070,7 @@ var init_capture_file = __esm({
             }
           } else if (magic === "ACK2") {
             const checkpoint = await json(prefix);
-            if (!pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
+            if (!isRecord19(checkpoint) || !pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
               throw new Error("Checkpoint does not match the pending chunk.");
             }
             if (accept) {
@@ -37847,7 +39115,7 @@ var init_capture_file = __esm({
         }
       } catch (error) {
         options.signal?.throwIfAborted();
-        if (consumerFailed) {
+        if (consumerRejected(consumerFailed)) {
           throw error;
         }
         return {
@@ -38086,7 +39354,7 @@ var init_capture_file = __esm({
               throw new Error("Native capture chunk has no checkpoint.");
             }
             const ack = await json(ackPrefix);
-            if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
+            if (!isRecord19(ack) || ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
               throw new Error("Native checkpoint disagrees with its chunk.");
             }
             accept(chunk);
@@ -38111,20 +39379,48 @@ var init_capture_file = __esm({
     };
     nativePosition = (value, session, scope) => {
       const position = validateCapturePosition(value, session, scope);
-      if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
+      if (!isRecord19(value)) {
         throw new Error("Invalid native file state.");
       }
-      captureU64(position.fileBytes);
-      captureU64(position.fileBatches);
-      if (position.fileProfile) {
-        for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"]) {
-          captureU64(position.fileProfile[field]);
-        }
+      const fileState = value.fileState;
+      if (fileState !== "preparing" && fileState !== "writing" && fileState !== "complete" && fileState !== "incomplete") {
+        throw new Error("Invalid native file state.");
       }
-      if (position.state === "complete" !== (position.fileState === "complete")) {
+      const fileBytes = value.fileBytes;
+      const fileBatches = value.fileBatches;
+      captureU64(fileBytes);
+      captureU64(fileBatches);
+      if (typeof fileBytes !== "string" || typeof fileBatches !== "string") {
+        throw new Error("Invalid native file counters.");
+      }
+      let fileProfile;
+      if (value.fileProfile) {
+        if (!isRecord19(value.fileProfile)) {
+          throw new Error("Invalid native file profile.");
+        }
+        const sealNs = value.fileProfile.sealNs;
+        const copyNs = value.fileProfile.copyNs;
+        const writeNs = value.fileProfile.writeNs;
+        const syncNs = value.fileProfile.syncNs;
+        captureU64(sealNs);
+        captureU64(copyNs);
+        captureU64(writeNs);
+        captureU64(syncNs);
+        if (typeof sealNs !== "string" || typeof copyNs !== "string" || typeof writeNs !== "string" || typeof syncNs !== "string") {
+          throw new Error("Invalid native file profile.");
+        }
+        fileProfile = { sealNs, copyNs, writeNs, syncNs };
+      }
+      if (position.state === "complete" !== (fileState === "complete")) {
         throw new Error("Native file publication and producer completion disagree.");
       }
-      return position;
+      return {
+        ...position,
+        fileState,
+        fileBytes,
+        fileBatches,
+        ...fileProfile ? { fileProfile } : {}
+      };
     };
     NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
       completion;
@@ -38281,7 +39577,7 @@ var init_capture_file = __esm({
   }
 });
 
-// ../debug-adapter/src/index.ts
+// packages/debug-adapter/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   CaptureContextRecorder: () => CaptureContextRecorder,
@@ -38330,10 +39626,11 @@ __export(src_exports, {
   validateCaptureCapabilities: () => validateCaptureCapabilities,
   validateCapturePosition: () => validateCapturePosition,
   validateCaptureRequest: () => validateCaptureRequest,
+  validateCaptureResult: () => validateCaptureResult,
   verifyCaptureContext: () => verifyCaptureContext
 });
 var init_src = __esm({
-  "../debug-adapter/src/index.ts"() {
+  "packages/debug-adapter/src/index.ts"() {
     "use strict";
     init_conformance();
     init_contracts();
@@ -38353,7 +39650,10 @@ var init_src = __esm({
   }
 });
 
-// ../disassembler/src/runtime/capture-companion.ts
+// packages/disassembler/src/runtime/capture-companion.ts
+function isRecord20(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   const directory = `${file}.context`;
   const stat3 = await (0, import_promises6.lstat)(directory).catch((error) => {
@@ -38374,22 +39674,29 @@ async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   }
   const before = await (0, import_promises6.readFile)(manifestFile, "utf8");
   const manifest = JSON.parse(before);
-  if (!recovery.complete || manifest.archive !== import_node_path12.default.basename(file) || manifest.scope !== recovery.header.scope || manifest.boundaries?.session !== recovery.header.session || manifest.boundaries.end?.eventThrough !== recovery.eventThrough) {
+  if (!isRecord20(manifest)) {
+    throw new Error(
+      "Capture companion does not match this archive's scope, session, or final event boundary."
+    );
+  }
+  const boundaries = isRecord20(manifest.boundaries) ? manifest.boundaries : void 0;
+  const end = boundaries && isRecord20(boundaries.end) ? boundaries.end : void 0;
+  if (!recovery.complete || manifest.archive !== import_node_path12.default.basename(file) || manifest.scope !== recovery.header.scope || boundaries?.session !== recovery.header.session || end?.eventThrough !== recovery.eventThrough) {
     throw new Error(
       "Capture companion does not match this archive's scope, session, or final event boundary."
     );
   }
   await verifyCaptureContext(directory, recovery.header, signal);
-  const boundaries = JSON.parse(
+  const boundaryArtifact = JSON.parse(
     await (0, import_promises6.readFile)(import_node_path12.default.join(directory, "boundaries.json"), "utf8")
   );
-  if (!canonicalEquals(boundaries, manifest.boundaries) || await (0, import_promises6.readFile)(manifestFile, "utf8") !== before) {
+  if (!canonicalEquals(boundaryArtifact, manifest.boundaries) || await (0, import_promises6.readFile)(manifestFile, "utf8") !== before) {
     throw new Error("Capture companion changed or its manifest and boundary artifact disagree.");
   }
 }
 var import_promises6, import_node_path12;
 var init_capture_companion = __esm({
-  "../disassembler/src/runtime/capture-companion.ts"() {
+  "packages/disassembler/src/runtime/capture-companion.ts"() {
     "use strict";
     import_promises6 = require("node:fs/promises");
     import_node_path12 = __toESM(require("node:path"), 1);
@@ -38398,10 +39705,10 @@ var init_capture_companion = __esm({
   }
 });
 
-// ../disassembler/src/runtime/capture-instruction-source.ts
+// packages/disassembler/src/runtime/capture-instruction-source.ts
 var import_promises7, createRuntimeCaptureSource;
 var init_capture_instruction_source = __esm({
-  "../disassembler/src/runtime/capture-instruction-source.ts"() {
+  "packages/disassembler/src/runtime/capture-instruction-source.ts"() {
     "use strict";
     import_promises7 = require("node:fs/promises");
     init_canonical_json();
@@ -38477,10 +39784,10 @@ var init_capture_instruction_source = __esm({
   }
 });
 
-// ../disassembler/src/project/runtime-trace-project.ts
+// packages/disassembler/src/project/runtime-trace-project.ts
 var importRuntimeTraceIntoProject, importRuntimeTraceSourceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
-  "../disassembler/src/project/runtime-trace-project.ts"() {
+  "packages/disassembler/src/project/runtime-trace-project.ts"() {
     "use strict";
     init_project_validation();
     init_capture_instruction_source();
@@ -38518,7 +39825,7 @@ var init_runtime_trace_project = __esm({
         options.onStage?.("Indexing trace facts in SQLite\u2026");
         options.signal?.throwIfAborted();
         const importer = await store.indexTrace(async (index) => {
-          const importer2 = createRuntimeInstructionTraceImporter(source.metadata, context, {
+          const traceImporter = createRuntimeInstructionTraceImporter(source.metadata, context, {
             index,
             onMergeProgress: options.onMergeProgress,
             onSource: (sha2564, profile) => {
@@ -38556,9 +39863,9 @@ var init_runtime_trace_project = __esm({
           });
           await source.read((chunk) => {
             options.signal?.throwIfAborted();
-            importer2.push(chunk);
+            traceImporter.push(chunk);
           });
-          return importer2;
+          return traceImporter;
         });
         options.onStage?.("Validating destination revision before publication\u2026");
         options.signal?.throwIfAborted();
@@ -38613,7 +39920,7 @@ var init_runtime_trace_project = __esm({
             sourceSha256: imported.sourceSha256,
             observedEvents: imported.observedEvents,
             droppedEvents: imported.droppedEvents,
-            execution: execution.sort((a, b) => a.address - b.address),
+            execution: execution.toSorted((a, b) => a.address - b.address),
             changed,
             added: { runtime: addedRuntime, evidence: merged.added.evidence }
           };
@@ -38659,11 +39966,11 @@ var init_runtime_trace_project = __esm({
       try {
         const result = store.transaction(() => {
           assertAnalysisProjectRevision(store, expected);
-          const result2 = store.mergeEvidenceBatch(batch);
-          if (result2.changed) {
+          const merged = store.mergeEvidenceBatch(batch);
+          if (merged.changed) {
             store.publishManifest(store.manifest());
           }
-          return result2;
+          return merged;
         });
         if (result.changed) {
           store.writePointer(directory);
@@ -38676,10 +39983,10 @@ var init_runtime_trace_project = __esm({
   }
 });
 
-// ../disassembler/src/project/runtime-bus-project.ts
+// packages/disassembler/src/project/runtime-bus-project.ts
 var import_node_fs8, captureFileIdentity, importRuntimeBusTraceSourceIntoProject;
 var init_runtime_bus_project = __esm({
-  "../disassembler/src/project/runtime-bus-project.ts"() {
+  "packages/disassembler/src/project/runtime-bus-project.ts"() {
     "use strict";
     import_node_fs8 = __toESM(require("node:fs"), 1);
     init_project_validation();
@@ -38713,7 +40020,7 @@ var init_runtime_bus_project = __esm({
         let insert;
         options.onStage?.("Indexing CPU/DMA/HDMA bus facts in SQLite\u2026");
         const importer = await store.indexTrace(async (index) => {
-          const importer2 = createRuntimeBusTraceImporter(source.metadata, context, {
+          const traceImporter = createRuntimeBusTraceImporter(source.metadata, context, {
             index,
             // finish() calls onSource before onRecord inside the publication transaction,
             // after the entire source validates. This keeps the one-time namespace
@@ -38741,12 +40048,12 @@ var init_runtime_bus_project = __esm({
           });
           await source.read((chunk) => {
             options.signal?.throwIfAborted();
-            importer2.push(chunk);
+            traceImporter.push(chunk);
           });
           if (source.completedFile) {
             completedFileIdentity = captureFileIdentity(source.completedFile);
           }
-          return importer2;
+          return traceImporter;
         }, context.cacheMetrics?.index);
         options.onStage?.("Publishing validated bus activity\u2026");
         options.signal?.throwIfAborted();
@@ -38844,10 +40151,10 @@ var init_runtime_bus_project = __esm({
   }
 });
 
-// ../disassembler/src/source/source-export.ts
+// packages/disassembler/src/source/source-export.ts
 var import_node_crypto14, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages;
 var init_source_export = __esm({
-  "../disassembler/src/source/source-export.ts"() {
+  "packages/disassembler/src/source/source-export.ts"() {
     "use strict";
     import_node_crypto14 = require("node:crypto");
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
@@ -38877,7 +40184,7 @@ var init_source_export = __esm({
   }
 });
 
-// ../disassembler/src/source-project/git.ts
+// packages/disassembler/src/source-project/git.ts
 function sourceGit(root, args, options = {}) {
   const env = { ...process.env, GIT_TERMINAL_PROMPT: "0", GIT_OPTIONAL_LOCKS: "0" };
   for (const key3 of [
@@ -38893,7 +40200,7 @@ function sourceGit(root, args, options = {}) {
   if (options.indexFile) {
     env.GIT_INDEX_FILE = options.indexFile;
   }
-  return new Promise((resolve9, reject) => {
+  return new Promise((resolve9, reject2) => {
     const child = (0, import_node_child_process2.spawn)("git", [...args], {
       cwd: root,
       env,
@@ -38925,7 +40232,7 @@ function sourceGit(root, args, options = {}) {
     });
     child.on("close", (code) => {
       if (failure) {
-        reject(failure);
+        reject2(failure);
         return;
       }
       const result = {
@@ -38934,7 +40241,7 @@ function sourceGit(root, args, options = {}) {
         stderr: Buffer.concat(stderr)
       };
       if (!(options.acceptedCodes ?? [0]).includes(result.code)) {
-        reject(new SourceGitError(args, result));
+        reject2(new SourceGitError(args, result));
       } else {
         resolve9(result);
       }
@@ -38988,7 +40295,7 @@ function assertSourceObjectId(value) {
 }
 var import_node_child_process2, import_node_fs9, import_node_path13, SourceGitError;
 var init_git = __esm({
-  "../disassembler/src/source-project/git.ts"() {
+  "packages/disassembler/src/source-project/git.ts"() {
     "use strict";
     import_node_child_process2 = require("node:child_process");
     import_node_fs9 = __toESM(require("node:fs"), 1);
@@ -39007,7 +40314,10 @@ var init_git = __esm({
   }
 });
 
-// ../disassembler/src/source-project/pins.ts
+// packages/disassembler/src/source-project/pins.ts
+function isRecord21(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 async function registry(repository) {
   const common = (await sourceGit(repository.root, ["rev-parse", "--path-format=absolute", "--git-common-dir"])).stdout.toString().replace(/\n$/, "");
   return { common, directory: import_node_path14.default.join(common, "uttori-source", "pin-owners") };
@@ -39040,7 +40350,7 @@ function retiredOwnerFile(common, directory, id) {
     throw new Error("Unknown owner");
   }
   const owner2 = JSON.parse(import_node_fs10.default.readFileSync(file, "utf8"));
-  if (owner2.format !== "uttori-source-pin-owner-v1" || typeof owner2.gitDirectory !== "string" || ownerId(owner2.gitDirectory) !== id || import_node_path14.default.dirname(owner2.gitDirectory) !== import_node_path14.default.join(common, "worktrees") || import_node_fs10.default.existsSync(owner2.gitDirectory)) {
+  if (!isRecord21(owner2) || owner2.format !== "uttori-source-pin-owner-v1" || typeof owner2.gitDirectory !== "string" || ownerId(owner2.gitDirectory) !== id || import_node_path14.default.dirname(owner2.gitDirectory) !== import_node_path14.default.join(common, "worktrees") || import_node_fs10.default.existsSync(owner2.gitDirectory)) {
     throw new Error("Owner still exists or cannot be proven removed");
   }
   return file;
@@ -39090,7 +40400,7 @@ async function pruneSourcePins(repository) {
 }
 var import_node_crypto15, import_node_fs10, import_node_path14, ownerId;
 var init_pins = __esm({
-  "../disassembler/src/source-project/pins.ts"() {
+  "packages/disassembler/src/source-project/pins.ts"() {
     "use strict";
     import_node_crypto15 = require("node:crypto");
     import_node_fs10 = __toESM(require("node:fs"), 1);
@@ -39101,7 +40411,10 @@ var init_pins = __esm({
   }
 });
 
-// ../disassembler/src/source-project/scratch.ts
+// packages/disassembler/src/source-project/scratch.ts
+function isRecord22(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 function removeScratch(directory, lease) {
   for (const entry of import_node_fs11.default.readdirSync(directory)) {
     if (entry !== "owner.json" && entry !== "active.lock") {
@@ -39137,7 +40450,7 @@ function pruneScratch(directory) {
         throw new Error("Unrecognized scratch owner");
       }
       const owner2 = JSON.parse(import_node_fs11.default.readFileSync(marker, "utf8"));
-      if (owner2.format !== "uttori-source-scratch-v1" || owner2.id !== entry.name || !["generation", "preview", "prepare"].includes(owner2.purpose ?? "")) {
+      if (!isRecord22(owner2) || owner2.format !== "uttori-source-scratch-v1" || owner2.id !== entry.name || owner2.purpose !== "generation" && owner2.purpose !== "preview" && owner2.purpose !== "prepare") {
         throw new Error("Unrecognized scratch owner");
       }
       const lease = acquireFileLease(import_node_path15.default.join(root, "active.lock"));
@@ -39204,7 +40517,7 @@ function createSourceScratch(repository, purpose) {
 }
 var import_node_crypto16, import_node_fs11, import_node_path15, uuidPattern;
 var init_scratch = __esm({
-  "../disassembler/src/source-project/scratch.ts"() {
+  "packages/disassembler/src/source-project/scratch.ts"() {
     "use strict";
     import_node_crypto16 = require("node:crypto");
     import_node_fs11 = __toESM(require("node:fs"), 1);
@@ -39214,7 +40527,10 @@ var init_scratch = __esm({
   }
 });
 
-// ../disassembler/src/source-project/generation.ts
+// packages/disassembler/src/source-project/generation.ts
+function isGenerationFileMode(value) {
+  return value === "100644" || value === "100755";
+}
 async function verifySourceGeneration(repository, commit) {
   const descriptor = await generationAt(repository, commit);
   const listing = await sourceGit(repository.root, ["ls-tree", "-r", "-z", commit]);
@@ -39223,11 +40539,11 @@ async function verifySourceGeneration(repository, commit) {
     const [mode, type, blob] = line.slice(0, tab).split(" ");
     const name = line.slice(tab + 1);
     assertSourcePath(name);
-    if (type !== "blob" || mode !== "100644" && mode !== "100755") {
+    if (type !== "blob" || !isGenerationFileMode(mode)) {
       throw new Error("Pure generations contain regular files only.");
     }
     return { path: name, mode, blob };
-  }).filter((entry) => entry.path !== SOURCE_GENERATION_FILE).sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
+  }).filter((entry) => entry.path !== SOURCE_GENERATION_FILE).toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
   const files = [];
   for (let start = 0; start < entries.length; start += 32) {
     const batch = entries.slice(start, start + 32);
@@ -39244,7 +40560,6 @@ async function verifySourceGeneration(repository, commit) {
       }
       files.push({
         ...entry,
-        mode: entry.mode,
         sha256: sourceContentHash(result.stdout.subarray(end + 1, end + 1 + size))
       });
       cursor = end + size + 2;
@@ -39306,30 +40621,36 @@ async function pinSourceCandidate(repository, commit, signal) {
     lease.release();
   }
 }
+function isRecord23(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSha256(value) {
+  return typeof value === "string" && /^[\da-f]{64}$/.test(value);
+}
+function isGenerationInputs(value) {
+  if (!isRecord23(value)) {
+    return false;
+  }
+  return typeof value.project === "string" && /^[\w.-]+$/.test(value.project) && isSha256(value.romSha256) && isSha256(value.evidenceSha256) && isSha256(value.researchSha256) && isSha256(value.toolchainSha256) && isSha256(value.optionsSha256) && (value.captureCatalogSha256 === void 0 || isSha256(value.captureCatalogSha256));
+}
 function parseSourceGeneration(value) {
-  const descriptor = value;
-  const inputs = descriptor?.inputs;
-  if (descriptor?.format !== "uttori-source-generation" || !inputs || typeof inputs.project !== "string" || !/^[\w.-]+$/.test(inputs.project)) {
+  if (!isRecord23(value)) {
     throw new Error("Invalid source generation descriptor.");
   }
-  for (const hash4 of [
-    inputs.romSha256,
-    inputs.evidenceSha256,
-    inputs.researchSha256,
-    inputs.toolchainSha256,
-    inputs.optionsSha256,
-    descriptor.payloadSha256,
-    descriptor.id,
-    ...inputs.captureCatalogSha256 === void 0 ? [] : [inputs.captureCatalogSha256]
-  ]) {
-    if (typeof hash4 !== "string" || !/^[\da-f]{64}$/.test(hash4)) {
-      throw new Error("Invalid source generation content identity.");
-    }
+  const inputs = value.inputs;
+  const project = isRecord23(inputs) ? inputs.project : void 0;
+  if (value.format !== "uttori-source-generation" || !isRecord23(inputs) || typeof project !== "string" || !/^[\w.-]+$/.test(project)) {
+    throw new Error("Invalid source generation descriptor.");
   }
-  if (sourceContentHash(canonicalJson({ inputs, payloadSha256: descriptor.payloadSha256 })) !== descriptor.id) {
+  const payloadSha256 = value.payloadSha256;
+  const id = value.id;
+  if (!isGenerationInputs(inputs) || !isSha256(payloadSha256) || !isSha256(id)) {
+    throw new Error("Invalid source generation content identity.");
+  }
+  if (sourceContentHash(canonicalJson({ inputs, payloadSha256 })) !== id) {
     throw new Error("Source generation descriptor identity mismatch.");
   }
-  return descriptor;
+  return { format: "uttori-source-generation", inputs, payloadSha256, id };
 }
 async function generationAt(repository, commit) {
   assertSourceObjectId(commit);
@@ -39345,7 +40666,7 @@ async function retainSourceGeneration(repository, options) {
     }
   }
   const names = /* @__PURE__ */ new Set();
-  const files = [...options.files].sort(
+  const files = [...options.files].toSorted(
     (a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))
   );
   for (const file of files) {
@@ -39479,7 +40800,7 @@ async function acceptedSourceGeneration(repository, sourceCommit) {
 }
 var import_node_fs12, import_node_path16, SOURCE_GENERATION_FILE;
 var init_generation = __esm({
-  "../disassembler/src/source-project/generation.ts"() {
+  "packages/disassembler/src/source-project/generation.ts"() {
     "use strict";
     import_node_fs12 = __toESM(require("node:fs"), 1);
     import_node_path16 = __toESM(require("node:path"), 1);
@@ -39494,11 +40815,11 @@ var init_generation = __esm({
   }
 });
 
-// ../disassembler/src/source-project/input-snapshot.ts
+// packages/disassembler/src/source-project/input-snapshot.ts
 function createSourceInputSnapshot(files) {
   const paths = /* @__PURE__ */ new Set();
   let size = 0;
-  const entries = [...files].sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))).map((file) => {
+  const entries = [...files].toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))).map((file) => {
     assertSourcePath(file.path);
     const identity2 = file.path.normalize("NFC").toLowerCase();
     size += file.bytes.length;
@@ -39525,30 +40846,34 @@ function createSourceInputSnapshot(files) {
     )
   };
 }
+function isSnapshotRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 function readSourceInputSnapshot(bytes) {
   if (bytes.length > MAX_INPUT_BYTES * 1.5) {
     throw new Error("Generation input snapshot exceeds its serialized budget.");
   }
   const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-  if (value.format !== "uttori-generation-input-snapshot" || value.version !== 1 || !Array.isArray(value.files) || value.files.length > 1024) {
+  if (!isSnapshotRecord(value) || value.format !== "uttori-generation-input-snapshot" || value.version !== 1 || !Array.isArray(value.files) || value.files.length > 1024) {
     throw new Error("Invalid generation input snapshot.");
   }
-  const files = value.files.map((file) => {
-    if (!file || typeof file.path !== "string" || typeof file.base64 !== "string") {
+  const files = value.files.map((entry) => {
+    if (!isSnapshotRecord(entry) || typeof entry.path !== "string" || typeof entry.base64 !== "string") {
       throw new Error("Invalid generation input snapshot entry.");
     }
-    const contents = Buffer.from(file.base64, "base64");
-    if (contents.toString("base64") !== file.base64 || sourceContentHash(contents) !== file.sha256) {
-      throw new Error(`Generation input snapshot content changed: ${file.path}`);
+    const sha2564 = entry.sha256;
+    const contents = Buffer.from(entry.base64, "base64");
+    if (typeof sha2564 !== "string" || contents.toString("base64") !== entry.base64 || sourceContentHash(contents) !== sha2564) {
+      throw new Error(`Generation input snapshot content changed: ${entry.path}`);
     }
-    return { path: file.path, bytes: contents };
+    return { path: entry.path, bytes: contents };
   });
   createSourceInputSnapshot(files);
   return files;
 }
 var SOURCE_INPUT_SNAPSHOT_FILE, MAX_INPUT_BYTES;
 var init_input_snapshot = __esm({
-  "../disassembler/src/source-project/input-snapshot.ts"() {
+  "packages/disassembler/src/source-project/input-snapshot.ts"() {
     "use strict";
     init_canonical_json();
     init_generation();
@@ -39558,20 +40883,46 @@ var init_input_snapshot = __esm({
   }
 });
 
-// ../disassembler/src/source-project/merge.ts
+// packages/disassembler/src/source-project/merge.ts
 function readJournal(repository) {
   const file = journalFile(repository);
   if (!import_node_fs13.default.existsSync(file)) {
     return void 0;
   }
   const value = JSON.parse(import_node_fs13.default.readFileSync(file, "utf8"));
-  if (value.format !== "uttori-source-merge" || !["adopt", "regenerate"].includes(value.kind) || !/^refs\/heads\//.test(value.branch) || !/^refs\/uttori\/candidates\/[\w-]+$/.test(value.candidateRef)) {
+  if (!isJournalRecord(value)) {
     throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
   }
-  assertSourceObjectId(value.before);
-  assertSourceObjectId(value.candidate);
-  if (value.validatedTree) {
-    assertSourceObjectId(value.validatedTree);
+  const before = value.before;
+  const candidate = value.candidate;
+  const validatedTree = value.validatedTree;
+  if (!isMergeJournal(value)) {
+    throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
+  }
+  assertSourceObjectId(gitObjectId(before));
+  assertSourceObjectId(gitObjectId(candidate));
+  if (validatedTree) {
+    assertSourceObjectId(gitObjectId(validatedTree));
+  }
+  return value;
+}
+function isJournalRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isMergeKind(value) {
+  return value === "adopt" || value === "regenerate";
+}
+function isMergeJournal(value) {
+  if (!isJournalRecord(value)) {
+    return false;
+  }
+  const branch = value.branch;
+  const candidateRef = value.candidateRef;
+  return value.format === "uttori-source-merge" && isMergeKind(value.kind) && typeof branch === "string" && branch.startsWith("refs/heads/") && typeof candidateRef === "string" && /^refs\/uttori\/candidates\/[\w-]+$/.test(candidateRef);
+}
+function gitObjectId(value) {
+  if (typeof value !== "string") {
+    throw new Error("Expected a complete Git object ID.");
   }
   return value;
 }
@@ -39773,7 +41124,7 @@ async function adoptSourceGeneration(repository, generation) {
       canonicalJson(generation.descriptor)
     );
     await sourceGit(repository.root, ["add", "--", SOURCE_GENERATION_FILE]);
-    return sourceMergeStatus(repository);
+    return await sourceMergeStatus(repository);
   } finally {
     lease.release();
   }
@@ -39787,14 +41138,14 @@ async function applySourceGeneration(repository, generation, preview) {
       throw new Error("Regeneration preview is stale. Preview the current checkpoint again.");
     }
     if (generation.commit === preview.base) {
-      return sourceMergeStatus(repository);
+      return await sourceMergeStatus(repository);
     }
     await previewSourceGeneration(repository, generation.commit);
     await beginJournal(repository, generation, "regenerate");
     await sourceGit(repository.root, ["merge", "--no-ff", "--no-commit", generation.commit], {
       acceptedCodes: [0, 1]
     });
-    return sourceMergeStatus(repository);
+    return await sourceMergeStatus(repository);
   } finally {
     lease.release();
   }
@@ -39919,14 +41270,14 @@ async function abortSourceGeneration(repository) {
       throw new Error("There is no matching regeneration merge to abort.");
     }
     await sourceGit(repository.root, ["merge", "--abort"]);
-    return sourceMergeStatus(repository);
+    return await sourceMergeStatus(repository);
   } finally {
     lease.release();
   }
 }
 var import_node_crypto17, import_node_fs13, import_node_path17, journalFile;
 var init_merge = __esm({
-  "../disassembler/src/source-project/merge.ts"() {
+  "packages/disassembler/src/source-project/merge.ts"() {
     "use strict";
     import_node_crypto17 = require("node:crypto");
     import_node_fs13 = __toESM(require("node:fs"), 1);
@@ -39941,37 +41292,56 @@ var init_merge = __esm({
   }
 });
 
-// ../disassembler/src/source-project/project.ts
-function parseSourceProject(value) {
-  const config = value;
-  if (!config || config.format !== "uttori-source-project" || config.version !== 1 || typeof config.id !== "string" || !/^[\w.-]+$/.test(config.id) || typeof config.target !== "string" || !config.target || typeof config.romSha256 !== "string" || !/^[\da-f]{64}$/.test(config.romSha256) || !isArray4(config.sourceRoots) || !config.sourceRoots.length || !isArray4(config.researchRoots) || !config.researchRoots.length) {
+// packages/disassembler/src/source-project/project.ts
+function isUnknownArray4(value) {
+  return Array.isArray(value);
+}
+function isRecord24(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSafeInteger7(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function assertSourceProjectConfiguration(value) {
+  if (!isRecord24(value)) {
+    throw new Error("Invalid Git source project configuration.");
+  }
+  const id = value.id;
+  const target = value.target;
+  const romSha256 = value.romSha256;
+  const sourceRoots = value.sourceRoots;
+  const researchRoots = value.researchRoots;
+  if (value.format !== "uttori-source-project" || value.version !== 1 || typeof id !== "string" || !/^[\w.-]+$/.test(id) || typeof target !== "string" || target === "" || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray4(sourceRoots) || sourceRoots.length === 0 || !isUnknownArray4(researchRoots) || researchRoots.length === 0) {
     throw new Error("Invalid Git source project configuration.");
   }
   for (const name of [
-    ...config.sourceRoots,
-    ...config.researchRoots,
-    config.buildConfig,
-    config.layout,
-    config.captures
+    ...sourceRoots,
+    ...researchRoots,
+    value.buildConfig,
+    value.layout,
+    value.captures
   ]) {
     if (typeof name !== "string") {
       throw new Error("Source project paths must be strings.");
     }
     assertSourcePath(name);
   }
-  if (config.limits !== void 0) {
-    if (!config.limits || typeof config.limits !== "object" || Array.isArray(config.limits)) {
+  if (value.limits !== void 0) {
+    if (!isRecord24(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
-    for (const [name, limit] of Object.entries(config.limits)) {
-      if (!["captureBytes", "analysisWorkItems", "analysisCallDepth"].includes(name) || !Number.isSafeInteger(limit) || limit < (name === "analysisCallDepth" ? 0 : 1)) {
+    for (const [name, limit] of Object.entries(value.limits)) {
+      if (name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth" || !(isSafeInteger7(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))) {
         throw new Error(
           `Invalid source work limit: ${name}. Use an integer within the supported range.`
         );
       }
     }
   }
-  return config;
+}
+function parseSourceProject(value) {
+  assertSourceProjectConfiguration(value);
+  return value;
 }
 async function openSourceProject(directory) {
   const repository = await sourceRepository(directory);
@@ -39992,15 +41362,18 @@ async function openSourceProject(directory) {
 function sourceProjectLocalInputs(project) {
   return readSourceProjectLocalInputs(project.repository.root);
 }
-function readSourceProjectLocalInputs(root) {
-  const local = JSON.parse(
-    import_node_fs14.default.readFileSync(import_node_path18.default.join(root, ".uttori-local/project.json"), "utf8")
-  );
-  if (!local || local.format !== "uttori-source-local" || local.version !== 1 || typeof local.rom !== "string" || !local.rom || typeof local.evidence !== "string" || !local.evidence) {
+function assertSourceProjectLocalInputs(value) {
+  if (!isRecord24(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
     throw new Error(
       "Configure the local ROM and evidence paths before running this source project."
     );
   }
+}
+function readSourceProjectLocalInputs(root) {
+  const local = JSON.parse(
+    import_node_fs14.default.readFileSync(import_node_path18.default.join(root, ".uttori-local/project.json"), "utf8")
+  );
+  assertSourceProjectLocalInputs(local);
   return {
     ...local,
     rom: import_node_path18.default.resolve(root, local.rom),
@@ -40020,9 +41393,9 @@ function synchronizeSourceResearch(project) {
     store.close();
   }
 }
-var import_node_fs14, import_node_path18, isArray4;
+var import_node_fs14, import_node_path18;
 var init_project = __esm({
-  "../disassembler/src/source-project/project.ts"() {
+  "packages/disassembler/src/source-project/project.ts"() {
     "use strict";
     import_node_fs14 = __toESM(require("node:fs"), 1);
     import_node_path18 = __toESM(require("node:path"), 1);
@@ -40031,11 +41404,25 @@ var init_project = __esm({
     init_inputs();
     init_generation();
     init_git();
-    isArray4 = (value) => Array.isArray(value);
   }
 });
 
-// ../disassembler/src/source-project/captures.ts
+// packages/disassembler/src/source-project/captures.ts
+function errorCode3(error) {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return void 0;
+}
+function isUnknownArray5(value) {
+  return Array.isArray(value);
+}
+function isRecord25(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function observedCount(counts, key3) {
+  return Object.hasOwn(counts, key3) ? counts[key3] : void 0;
+}
 function validName(value) {
   return typeof value === "string" && value.length > 0 && value.length <= 1024 && !/[\0\n\r/\\]/.test(value) && value !== "." && value !== "..";
 }
@@ -40049,39 +41436,62 @@ function catalogPath(root, name) {
         throw new Error("Capture catalogs cannot follow symlinks.");
       }
     } catch (error) {
-      if (error.code !== "ENOENT") {
+      if (errorCode3(error) !== "ENOENT") {
         throw error;
       }
     }
   }
   return current;
 }
-function parseSourceCaptureCatalog(value, romSha256) {
-  const catalog = value;
-  if (!catalog || catalog.format !== "uttori-capture-catalog" || catalog.version !== 1 || !validHash(catalog.romSha256) || catalog.romSha256 !== romSha256 || !isArray5(catalog.captures) || catalog.captures.length > 1e4) {
+function assertSourceCaptureCatalog(value, romSha256) {
+  if (!isRecord25(value)) {
+    throw new Error("Invalid source capture catalog or original-ROM identity.");
+  }
+  const catalogRom = value.romSha256;
+  const captureEntries = value.captures;
+  if (value.format !== "uttori-capture-catalog" || value.version !== 1 || !validHash(catalogRom) || catalogRom !== romSha256 || !isUnknownArray5(captureEntries) || captureEntries.length > 1e4) {
     throw new Error("Invalid source capture catalog or original-ROM identity.");
   }
   const identities = /* @__PURE__ */ new Set();
   const archiveOwners = /* @__PURE__ */ new Map();
-  for (const capture of catalog.captures) {
-    if (!capture || !validHash(capture.sha256) || identities.has(capture.sha256) || !validName(capture.sourceName) || typeof capture.profile !== "string" || !capture.profile || capture.profile.length > 128 || !validCount(capture.observedEvents) || !validCount(capture.droppedEvents) || !isArray5(capture.archives) || capture.archives.length > 32) {
+  for (const entry of captureEntries) {
+    if (!isRecord25(entry)) {
       throw new Error("Invalid or duplicate canonical capture identity.");
     }
-    identities.add(capture.sha256);
+    const sha2564 = entry.sha256;
+    const sourceName = entry.sourceName;
+    const profile = entry.profile;
+    const observedEvents = entry.observedEvents;
+    const droppedEvents = entry.droppedEvents;
+    const archiveEntries = entry.archives;
+    if (!validHash(sha2564) || identities.has(sha2564) || !validName(sourceName) || typeof profile !== "string" || profile === "" || profile.length > 128 || !validCount(observedEvents) || !validCount(droppedEvents) || !isUnknownArray5(archiveEntries) || archiveEntries.length > 32) {
+      throw new Error("Invalid or duplicate canonical capture identity.");
+    }
+    identities.add(sha2564);
     const archiveIds = /* @__PURE__ */ new Set();
-    for (const archive of capture.archives) {
-      if (!archive || !validName(archive.name) || !validHash(archive.sha256) || !validCount(archive.bytes) || archive.bytes === 0 || archive.companionSha256 !== void 0 && !validHash(archive.companionSha256) || archiveIds.has(archive.sha256)) {
+    for (const archiveEntry of archiveEntries) {
+      if (!isRecord25(archiveEntry)) {
         throw new Error("Invalid or duplicate capture archive binding.");
       }
-      const owner2 = archiveOwners.get(archive.sha256);
-      if (owner2 && owner2 !== capture.sha256) {
+      const name = archiveEntry.name;
+      const archiveSha = archiveEntry.sha256;
+      const bytes = archiveEntry.bytes;
+      const companion = archiveEntry.companionSha256;
+      if (!validName(name) || !validHash(archiveSha) || !validCount(bytes) || bytes === 0 || companion !== void 0 && !validHash(companion) || archiveIds.has(archiveSha)) {
+        throw new Error("Invalid or duplicate capture archive binding.");
+      }
+      const owner2 = archiveOwners.get(archiveSha);
+      if (owner2 && owner2 !== sha2564) {
         throw new Error("One archive is bound to conflicting canonical capture identities.");
       }
-      archiveOwners.set(archive.sha256, capture.sha256);
-      archiveIds.add(archive.sha256);
+      archiveOwners.set(archiveSha, sha2564);
+      archiveIds.add(archiveSha);
     }
   }
-  return catalog;
+}
+function parseSourceCaptureCatalog(value, romSha256) {
+  assertSourceCaptureCatalog(value, romSha256);
+  return value;
 }
 function readSourceCaptureCatalog(root, name, romSha256) {
   const file = catalogPath(root, name);
@@ -40093,7 +41503,7 @@ function readSourceCaptureCatalog(root, name, romSha256) {
     }
     bytes = import_node_fs15.default.readFileSync(file);
   } catch (error) {
-    if (error.code !== "ENOENT") {
+    if (errorCode3(error) !== "ENOENT") {
       throw error;
     }
     return { catalog: { format: "uttori-capture-catalog", version: 1, romSha256, captures: [] } };
@@ -40114,7 +41524,7 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
       sha256: report.sourceSha256,
       sourceName,
       profile: report.indexProfile ?? "full",
-      observedEvents: report.imported.busEvents ?? report.imported.executionEvents ?? 0,
+      observedEvents: observedCount(report.imported, "busEvents") ?? observedCount(report.imported, "executionEvents") ?? 0,
       droppedEvents: report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0,
       archives: captures.get(report.sourceSha256)?.archives ?? []
     };
@@ -40140,7 +41550,7 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
     if (!prior) {
       captures.set(capture.sha256, {
         ...capture,
-        archives: [...capture.archives, binding.archive].sort(
+        archives: [...capture.archives, binding.archive].toSorted(
           (a, b) => a.sha256.localeCompare(b.sha256)
         )
       });
@@ -40149,7 +41559,7 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
   return parseSourceCaptureCatalog(
     {
       ...catalog,
-      captures: [...captures.values()].sort((a, b) => a.sha256.localeCompare(b.sha256))
+      captures: [...captures.values()].toSorted((a, b) => a.sha256.localeCompare(b.sha256))
     },
     catalog.romSha256
   );
@@ -40193,9 +41603,11 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
   const hash4 = (0, import_node_crypto18.createHash)("sha256");
   let bytes = 0;
   for await (const chunk of import_node_fs15.default.createReadStream(file, { signal })) {
-    const buffer = chunk;
-    hash4.update(buffer);
-    bytes += buffer.length;
+    if (!Buffer.isBuffer(chunk)) {
+      throw new Error("Capture archive read failed.");
+    }
+    hash4.update(chunk);
+    bytes += chunk.length;
     if (bytes > maxBytes) {
       throw new Error("Capture archive grew beyond the project's byte budget.");
     }
@@ -40213,7 +41625,7 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
     }
     companionSha256 = sourceContentHash(import_node_fs15.default.readFileSync(manifestFile));
   } catch (error) {
-    if (error.code !== "ENOENT") {
+    if (errorCode3(error) !== "ENOENT") {
       throw error;
     }
   }
@@ -40224,9 +41636,9 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
     ...companionSha256 ? { companionSha256 } : {}
   };
 }
-var import_node_crypto18, import_node_fs15, import_node_path19, hashPattern, isArray5, validHash, validCount;
+var import_node_crypto18, import_node_fs15, import_node_path19, hashPattern, validHash, validCount;
 var init_captures = __esm({
-  "../disassembler/src/source-project/captures.ts"() {
+  "packages/disassembler/src/source-project/captures.ts"() {
     "use strict";
     import_node_crypto18 = require("node:crypto");
     import_node_fs15 = __toESM(require("node:fs"), 1);
@@ -40236,13 +41648,15 @@ var init_captures = __esm({
     init_generation();
     init_git();
     hashPattern = /^[\da-f]{64}$/;
-    isArray5 = (value) => Array.isArray(value);
     validHash = (value) => typeof value === "string" && hashPattern.test(value);
     validCount = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
   }
 });
 
-// ../disassembler/src/research-inputs/symbols.ts
+// packages/disassembler/src/research-inputs/symbols.ts
+function isProjectLabel2(value) {
+  return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
+}
 function changeResearchSymbol(snapshot, id, change) {
   validateResearchSnapshot(snapshot);
   const file = snapshot.files.find(
@@ -40258,10 +41672,15 @@ function changeResearchSymbol(snapshot, id, change) {
       "Choose an existing label declaration. A record tombstone must be restored explicitly in its research file."
     );
   }
+  if (!isProjectLabel2(decision.value)) {
+    throw new Error(
+      "Choose an existing label declaration. A record tombstone must be restored explicitly in its research file."
+    );
+  }
   const previous = decision.value;
   let symbol;
   if (change.kind === "aliases") {
-    if (!isArray6(change.aliases) || change.aliases.length > 64) {
+    if (!isArray2(change.aliases) || change.aliases.length > 64) {
       throw new Error("A symbol may have at most 64 research aliases.");
     }
     const names = /* @__PURE__ */ new Set();
@@ -40276,6 +41695,9 @@ function changeResearchSymbol(snapshot, id, change) {
     for (const other of snapshot.decisions) {
       if (other.collection !== "labels" || !other.value || other.id === id) {
         continue;
+      }
+      if (!isProjectLabel2(other.value)) {
+        throw new Error("Invalid research label.");
       }
       const label = other.value;
       for (const name of [label.sourceName ?? label.name, ...label.aliases ?? []]) {
@@ -40296,6 +41718,9 @@ function changeResearchSymbol(snapshot, id, change) {
     snapshot.decisions.flatMap((item) => {
       if (item.collection !== "labels" || !item.value) {
         return [];
+      }
+      if (!isProjectLabel2(item.value)) {
+        throw new Error("Invalid research label.");
       }
       return [item.id === id ? symbol : item.value];
     })
@@ -40326,7 +41751,11 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
   if (decision?.value === null) {
     throw new Error("Restore this suppressed research record before renaming it.");
   }
-  const previous = decision?.value;
+  const previousValue = decision?.value;
+  if (previousValue && !isProjectLabel2(previousValue)) {
+    throw new Error("Invalid research label.");
+  }
+  const previous = previousValue;
   if (previous && (previous.addressSpace !== identity2.addressSpace || previous.address !== identity2.address)) {
     throw new Error("The symbol's original identity changed. Refresh before renaming.");
   }
@@ -40351,7 +41780,12 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
   };
   const labels = snapshot.decisions.filter(
     (item) => item.collection === "labels" && item.value !== null && item.id !== identity2.id
-  ).map((item) => item.value);
+  ).map((item) => {
+    if (item.value === null || !isProjectLabel2(item.value)) {
+      throw new Error("Invalid research label.");
+    }
+    return item.value;
+  });
   if ([...reservedNames].some((name) => name.toLowerCase() === newName.toLowerCase())) {
     throw new Error(`Source name '${newName}' is already used by another symbol.`);
   }
@@ -40374,7 +41808,7 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
         (item) => item.collection !== "labels" || item.id !== identity2.id
       ),
       { collection: "labels", id: identity2.id, value: symbol }
-    ].sort(
+    ].toSorted(
       (a, b) => Buffer.compare(
         Buffer.from(`${a.collection}:${a.id}`),
         Buffer.from(`${b.collection}:${b.id}`)
@@ -40383,18 +41817,18 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
   });
   return { path: relative3, expectedSha256: destination?.sha256 ?? null, document, symbol };
 }
-var isArray6;
+var isArray2;
 var init_symbols = __esm({
-  "../disassembler/src/research-inputs/symbols.ts"() {
+  "packages/disassembler/src/research-inputs/symbols.ts"() {
     "use strict";
     init_source_inputs();
     init_project_labels();
     init_inputs();
-    isArray6 = (value) => Array.isArray(value);
+    isArray2 = (value) => Array.isArray(value);
   }
 });
 
-// ../disassembler/src/research-inputs/analysis.ts
+// packages/disassembler/src/research-inputs/analysis.ts
 function validateLocations(record4, spaces) {
   const space = spaces.find((item) => item.id === record4.addressSpace);
   if (!space || !Number.isInteger(space.addressBits) || space.addressBits < 1 || space.addressBits > 53) {
@@ -40427,7 +41861,7 @@ function changeResearchAnalysis(snapshot, change, spaces) {
   if (!change || !["annotations", "analysis"].includes(change.collection) || !["put", "remove"].includes(change.kind)) {
     throw new Error("Choose an annotation or indirect-target research action.");
   }
-  const id = change.kind === "put" ? change.value?.id : change.id;
+  const id = change.kind === "put" ? change.value.id : change.id;
   validateResearchDecision({ collection: change.collection, id, value: null });
   const previousFile = snapshot.files.find(
     (file2) => file2.document.decisions.some((item) => item.collection === change.collection && item.id === id)
@@ -40512,17 +41946,17 @@ function changeResearchAnalysis(snapshot, change, spaces) {
   };
 }
 var init_analysis = __esm({
-  "../disassembler/src/research-inputs/analysis.ts"() {
+  "packages/disassembler/src/research-inputs/analysis.ts"() {
     "use strict";
     init_source_inputs();
     init_inputs();
   }
 });
 
-// ../disassembler/src/internal/interval-index.ts
+// packages/disassembler/src/internal/interval-index.ts
 var HalfOpenIntervalIndex;
 var init_interval_index = __esm({
-  "../disassembler/src/internal/interval-index.ts"() {
+  "packages/disassembler/src/internal/interval-index.ts"() {
     "use strict";
     HalfOpenIntervalIndex = class {
       #entries;
@@ -40538,7 +41972,7 @@ var init_interval_index = __esm({
             throw new Error("Interval index entries must be non-negative safe half-open ranges.");
           }
         }
-        this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).sort(
+        this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).toSorted(
           (left, right) => left.value.start - right.value.start || left.value.end - right.value.end || left.inputIndex - right.inputIndex
         );
         const prefixMaximumEnd = [];
@@ -40590,16 +42024,16 @@ var init_interval_index = __esm({
             matches.push(entry);
           }
         }
-        return matches.sort((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
+        return matches.toSorted((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
       }
     };
   }
 });
 
-// ../disassembler/src/runtime/capture-bus-source.ts
+// packages/disassembler/src/runtime/capture-bus-source.ts
 var createRuntimeBusCaptureSource;
 var init_capture_bus_source = __esm({
-  "../disassembler/src/runtime/capture-bus-source.ts"() {
+  "packages/disassembler/src/runtime/capture-bus-source.ts"() {
     "use strict";
     init_canonical_json();
     init_capture_companion();
@@ -40647,7 +42081,7 @@ var init_capture_bus_source = __esm({
   }
 });
 
-// ../disassembler/src/runtime/capture-source.ts
+// packages/disassembler/src/runtime/capture-source.ts
 async function openRuntimeCaptureSource(file, options = {}) {
   options.signal?.throwIfAborted();
   const handle = await (0, import_promises8.open)(file, "r");
@@ -40675,7 +42109,7 @@ async function openRuntimeCaptureSource(file, options = {}) {
 }
 var import_promises8;
 var init_capture_source = __esm({
-  "../disassembler/src/runtime/capture-source.ts"() {
+  "packages/disassembler/src/runtime/capture-source.ts"() {
     "use strict";
     import_promises8 = require("node:fs/promises");
     init_capture_bus_source();
@@ -40683,7 +42117,7 @@ var init_capture_source = __esm({
   }
 });
 
-// ../disassembler/src/index.ts
+// packages/disassembler/src/index.ts
 var src_exports2 = {};
 __export(src_exports2, {
   ANALYSIS_PROJECT_FORMAT: () => ANALYSIS_PROJECT_FORMAT,
@@ -40821,7 +42255,7 @@ __export(src_exports2, {
   writeSourceCaptureCatalog: () => writeSourceCaptureCatalog
 });
 var init_src2 = __esm({
-  "../disassembler/src/index.ts"() {
+  "packages/disassembler/src/index.ts"() {
     "use strict";
     init_project_types();
     init_project_asset_ids();
@@ -40868,7 +42302,7 @@ var init_src2 = __esm({
   }
 });
 
-// src/extension.ts
+// packages/vscode-extension/src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
   activate: () => activate,
@@ -40879,11 +42313,11 @@ var path40 = __toESM(require("node:path"), 1);
 var import_vscode22 = require("vscode");
 var import_node = __toESM(require_main5(), 1);
 
-// src/analysis/annotation-controller.ts
+// packages/vscode-extension/src/analysis/annotation-controller.ts
 var path25 = __toESM(require("node:path"), 1);
 var import_vscode3 = require("vscode");
 
-// src/editor-info/format.ts
+// packages/vscode-extension/src/editor-info/format.ts
 init_canonical_json();
 var INFORMATION_FIELDS = {
   output_offsets: "File and logical addresses",
@@ -40949,7 +42383,7 @@ var informationHex = (value, digits = 4) => {
   return `${sign}$${Math.abs(value).toString(16).toUpperCase().padStart(digits, "0")}`;
 };
 var clip = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
-var orderedLocations = (info) => [...info.locations].sort(
+var orderedLocations = (info) => [...info.locations].toSorted(
   (a, b) => Number(b.file) - Number(a.file) || a.addressSpace.localeCompare(b.addressSpace) || a.address - b.address
 );
 var locationLabel = (location, locations) => {
@@ -40959,16 +42393,24 @@ var locationLabel = (location, locations) => {
   const address4 = informationHex(location.address);
   return spaces.size > 1 ? `${location.addressSpace}:${address4}` : address4;
 };
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function jsonText(value) {
+  if (value === void 0 || typeof value === "function" || typeof value === "symbol") {
+    return void 0;
+  }
+  return JSON.stringify(value);
+}
 var stateValue = (value, present = true, includeStructures = false) => {
   if (!present) {
     return "\u2205";
   }
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const record4 = value;
-    if (record4.kind === "known" && "value" in record4) {
-      return stateValue(record4.value, true, includeStructures);
+  if (isRecord2(value)) {
+    if (value.kind === "known" && "value" in value) {
+      return stateValue(value.value, true, includeStructures);
     }
-    if (record4.kind === "unknown") {
+    if (value.kind === "unknown") {
       return "?";
     }
   }
@@ -40984,7 +42426,7 @@ var stateValue = (value, present = true, includeStructures = false) => {
   if (!includeStructures) {
     return void 0;
   }
-  const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
+  const serialized = jsonText(canonicalValue(value)) ?? String(value);
   return serialized.length > 60 ? `${serialized.slice(0, 57)}\u2026` : serialized;
 };
 var informationField = (field, info) => {
@@ -41089,7 +42531,7 @@ var effectiveAddressText = (address4) => {
 };
 var transitionText = (transition) => `\u0394${transition.field} ${stateValue(transition.before, "before" in transition, true)}\u2192${stateValue(transition.after, "after" in transition, true)}`;
 var stateText = (observation) => {
-  const fields = Object.entries(observation.state).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${stateValue(value, true, true)}`).join(",");
+  const fields = Object.entries(observation.state).toSorted(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${stateValue(value, true, true)}`).join(",");
   return `${observation.source} state ${fields || "\u2205"}${observation.count === void 0 ? "" : ` \xD7${observation.count}`}`;
 };
 var accessText = (access) => {
@@ -41233,7 +42675,7 @@ var renderInformationSection = (info, section) => {
   return lines.join("\n");
 };
 
-// src/editor-info/configuration.ts
+// packages/vscode-extension/src/editor-info/configuration.ts
 var INFORMATION_PRESETS = {
   compact: {
     parts: ["${output_offsets}", "exec ${execution_counts}"],
@@ -41260,6 +42702,15 @@ var INFORMATION_PRESETS = {
     ]
   }
 };
+var INFORMATION_PRESET_NAMES = [
+  "compact",
+  "authoring",
+  "disassembly"
+];
+function informationPreset(name) {
+  const preset = INFORMATION_PRESET_NAMES.find((candidate) => candidate === name);
+  return preset === void 0 ? INFORMATION_PRESETS.compact : INFORMATION_PRESETS[preset];
+}
 var explicitSetting = (configuration, key3) => {
   const inspected = configuration.inspect(key3);
   if (!inspected) {
@@ -41277,7 +42728,7 @@ var explicitSetting = (configuration, key3) => {
 };
 var readEditorInformationConfiguration = (configuration) => {
   const name = configuration.get("editorInfo.preset", "compact");
-  const preset = INFORMATION_PRESETS[name] ?? INFORMATION_PRESETS.compact;
+  const preset = informationPreset(name);
   const issues = [];
   const templates = (key3, fallback, limit) => {
     const value = explicitSetting(configuration, key3) ?? fallback;
@@ -41327,22 +42778,28 @@ var readEditorInformationConfiguration = (configuration) => {
   };
 };
 
-// src/editor-info/layout.ts
-var informationSourceColumns = (text, tabSize) => {
-  const width = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
-  let columns2 = 0;
-  for (const character of text) {
-    columns2 += character === "	" ? width - columns2 % width : 1;
-  }
-  return columns2;
-};
-var informationOverlayGap = (source, tabSize, column = 80) => Math.max(3, column - informationSourceColumns(source, tabSize));
-
-// src/editor-info/provider.ts
+// packages/vscode-extension/src/editor-info/provider.ts
 var import_node_crypto2 = require("node:crypto");
 var import_promises = require("node:fs/promises");
 var path2 = __toESM(require("node:path"), 1);
 init_debug_map();
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStoredDebugMap(value) {
+  return isRecord3(value) && isRecord3(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord3(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
+}
+function isAcceptedDebugMap(map) {
+  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
+}
+function isExecutionSummaryRow(value) {
+  return isRecord3(value) && typeof value.rangeIndex === "number" && typeof value.limited === "boolean" && Array.isArray(value.locations) && value.locations.every(
+    (location) => isRecord3(location) && typeof location.addressSpace === "string" && typeof location.address === "number" && typeof location.executionCount === "number" && Array.isArray(location.outputOffsets) && location.outputOffsets.every((offset) => typeof offset === "number")
+  );
+}
+function isAnnotationRow(value) {
+  return isRecord3(value) && typeof value.line === "number" && isRecord3(value.annotation) && typeof value.annotation.id === "string" && (value.annotation.detailsLimited === void 0 || typeof value.annotation.detailsLimited === "boolean");
+}
 var hash = (bytes) => (0, import_node_crypto2.createHash)("sha256").update(bytes).digest("hex");
 var rangeKey = (range) => JSON.stringify(range);
 var EditorInformationProvider = class {
@@ -41453,7 +42910,7 @@ var EditorInformationProvider = class {
       }
       const sourceFiles = /* @__PURE__ */ new Set();
       const reasons = [];
-      const reject = (reason) => {
+      const reject2 = (reason) => {
         reasons.push(reason);
       };
       if (this.#currentConfigurationMaps && !this.#currentConfigurationMaps.has(file)) {
@@ -41467,16 +42924,22 @@ var EditorInformationProvider = class {
       try {
         tracked.add(file);
         if ((await (0, import_promises.stat)(file)).size > 64 * 1024 * 1024) {
-          reject("Debug map exceeds the 64 MiB inspection budget.");
+          reject2("Debug map exceeds the 64 MiB inspection budget.");
           continue;
         }
-        const map = JSON.parse(await (0, import_promises.readFile)(file, "utf8"));
-        const errors = validateDebugMap(map);
-        if (errors.length) {
-          reject(`Invalid debug map: ${errors.join("; ")}`);
+        const parsed = JSON.parse(await (0, import_promises.readFile)(file, "utf8"));
+        if (!isStoredDebugMap(parsed)) {
+          throw new Error(
+            "Debug map is not an object with fingerprint, output, sources, and ranges."
+          );
+        }
+        const errors = validateDebugMap(parsed);
+        if (errors.length || !isAcceptedDebugMap(parsed)) {
+          reject2(`Invalid debug map: ${errors.join("; ")}`);
           continue;
         }
-        const resolutionRoots = [.../* @__PURE__ */ new Set([path2.dirname(file), ...roots])].sort(
+        const map = parsed;
+        const resolutionRoots = [.../* @__PURE__ */ new Set([path2.dirname(file), ...roots])].toSorted(
           (a, b) => Number(file.startsWith(path2.resolve(b) + path2.sep)) - Number(file.startsWith(path2.resolve(a) + path2.sep)) || b.length - a.length
         );
         const sources = /* @__PURE__ */ new Map();
@@ -41525,7 +42988,7 @@ var EditorInformationProvider = class {
           }
           if (!resolved) {
             current = false;
-            reject(failure);
+            reject2(failure);
             continue;
           }
           sources.set(source.id, resolved);
@@ -41546,7 +43009,7 @@ var EditorInformationProvider = class {
             if (bytes.length === map.output.size && hash(bytes) === map.output.sha256) {
               output = bytes;
             } else {
-              reject(
+              reject2(
                 `Output differs from build map: ${outputFile}. Run Build Binary to publish a matching output and map.`
               );
               continue;
@@ -41582,7 +43045,7 @@ var EditorInformationProvider = class {
         artifacts.push({ file, map, output, sources, lines, instructions });
         seen.add(sourceIdentity);
       } catch (error) {
-        reject(`Cannot load build map: ${error instanceof Error ? error.message : String(error)}`);
+        reject2(`Cannot load build map: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
         if (reasons.length) {
           rejected.push({ file, sources: sourceFiles, reasons });
@@ -41699,12 +43162,11 @@ var EditorInformationProvider = class {
           if (missing.length) {
             const rows = await this.#request(
               `${identity2}:counts:${JSON.stringify(missing)}`,
-              () => this.host.request(
-                project.directory,
-                "annotationSummary",
-                { ranges: missing }
-              )
+              () => this.host.request(project.directory, "annotationSummary", { ranges: missing })
             );
+            if (!Array.isArray(rows) || !rows.every(isExecutionSummaryRow)) {
+              throw new Error("Analysis execution summary is unavailable.");
+            }
             if (epoch !== this.#epoch) {
               return /* @__PURE__ */ new Map();
             }
@@ -41722,6 +43184,9 @@ var EditorInformationProvider = class {
               `${identity2}:details:${JSON.stringify(missing)}`,
               () => this.host.request(project.directory, "annotations", { ranges: missing })
             );
+            if (!Array.isArray(rows) || !rows.every(isAnnotationRow)) {
+              throw new Error("Analysis annotations are unavailable.");
+            }
             if (epoch !== this.#epoch) {
               return /* @__PURE__ */ new Map();
             }
@@ -41823,9 +43288,60 @@ var EditorInformationProvider = class {
   }
 };
 
-// src/editor-info/worker-client.ts
+// packages/vscode-extension/src/editor-info/layout.ts
+var informationSourceColumns = (text, tabSize) => {
+  const width = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
+  let columns2 = 0;
+  for (const character of text) {
+    columns2 += character === "	" ? width - columns2 % width : 1;
+  }
+  return columns2;
+};
+var informationOverlayGap = (source, tabSize, column = 80) => Math.max(3, column - informationSourceColumns(source, tabSize));
+
+// packages/vscode-extension/src/editor-info/worker-client.ts
 var import_node_path2 = __toESM(require("node:path"), 1);
 var import_node_worker_threads = require("node:worker_threads");
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isDebugMapRange(value) {
+  return isRecord4(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.start === "number" && typeof value.end === "number" && typeof value.sourceId === "number" && typeof value.line === "number" && (value.outputStart === void 0 || typeof value.outputStart === "number") && (value.outputEnd === void 0 || typeof value.outputEnd === "number");
+}
+function isEditorLocation(value) {
+  return isRecord4(value) && typeof value.addressSpace === "string" && typeof value.address === "number" && typeof value.file === "boolean" && (value.executionCount === void 0 || typeof value.executionCount === "number");
+}
+function isDebugMapInstruction(value) {
+  return isRecord4(value) && typeof value.sourceId === "number" && typeof value.line === "number" && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.address === "number" && Array.isArray(value.operands) && value.operands.every(
+    (operand) => isRecord4(operand) && typeof operand.expression === "string" && typeof operand.value === "number"
+  ) && (value.size === void 0 || typeof value.size === "number") && (value.outputOffset === void 0 || typeof value.outputOffset === "number");
+}
+function isAnnotation(value) {
+  return isRecord4(value) && typeof value.id === "string";
+}
+function isLineInformation(value) {
+  return isRecord4(value) && typeof value.identity === "string" && typeof value.label === "string" && Array.isArray(value.ranges) && value.ranges.every(isDebugMapRange) && Array.isArray(value.locations) && value.locations.every(isEditorLocation) && Array.isArray(value.instructions) && value.instructions.every(isDebugMapInstruction) && (value.bytes === void 0 || Array.isArray(value.bytes) && value.bytes.every((byte2) => typeof byte2 === "number")) && (value.outputSize === void 0 || typeof value.outputSize === "number") && (value.annotations === void 0 || Array.isArray(value.annotations) && value.annotations.every(isAnnotation)) && (value.limited === void 0 || typeof value.limited === "boolean");
+}
+function isLineMap(value) {
+  if (!(value instanceof Map)) {
+    return false;
+  }
+  for (const [key3, lines] of value) {
+    if (typeof key3 !== "number" || !Array.isArray(lines) || !lines.every(isLineInformation)) {
+      return false;
+    }
+  }
+  return true;
+}
+function isHostRequestArgs(args) {
+  if (args.length !== 3 || typeof args[0] !== "string") {
+    return false;
+  }
+  if (args[1] !== "annotationSummary" && args[1] !== "annotations") {
+    return false;
+  }
+  return isRecord4(args[2]) && Array.isArray(args[2].ranges) && args[2].ranges.every(isDebugMapRange);
+}
 var EditorInformationWorker = class {
   constructor(file, host) {
     this.host = host;
@@ -41843,8 +43359,8 @@ var EditorInformationWorker = class {
         }
         if (message.tracked) {
           this.#tracked.clear();
-          for (const file2 of message.tracked) {
-            this.#tracked.add(file2);
+          for (const trackedFile of message.tracked) {
+            this.#tracked.add(trackedFile);
           }
         }
         const request = this.#pending.get(message.id);
@@ -41882,6 +43398,9 @@ var EditorInformationWorker = class {
       } else if (message.method === "projects") {
         value = await this.host.projects();
       } else if (message.method === "request") {
+        if (!message.args || !isHostRequestArgs(message.args)) {
+          throw new Error("Invalid source information host request.");
+        }
         const [directory, operation, options] = message.args;
         value = await this.host.request(directory, operation, options);
       } else {
@@ -41908,13 +43427,13 @@ var EditorInformationWorker = class {
       return Promise.reject(this.#failure);
     }
     const id = ++this.#sequence;
-    return new Promise((resolve9, reject) => {
-      this.#pending.set(id, { resolve: (value) => resolve9(value), reject });
+    return new Promise((resolve9, reject2) => {
+      this.#pending.set(id, { resolve: resolve9, reject: reject2 });
       try {
         this.#worker.postMessage({ type: "query", id, method, args });
       } catch (error) {
         this.#pending.delete(id);
-        reject(error instanceof Error ? error : new Error(String(error)));
+        reject2(error instanceof Error ? error : new Error(String(error)));
       }
     });
   }
@@ -41939,11 +43458,19 @@ var EditorInformationWorker = class {
   tracks(file) {
     return this.#tracked.has(import_node_path2.default.resolve(file)) || file.endsWith(".debug.json");
   }
-  diagnostics(file, dirty) {
-    return this.#send("diagnostics", [file, dirty]);
+  async diagnostics(file, dirty) {
+    const value = await this.#send("diagnostics", [file, dirty]);
+    if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
+      throw new Error("Invalid source information diagnostics.");
+    }
+    return value;
   }
-  lines(file, visible, requirements, dirty) {
-    return this.#send("lines", [file, visible, requirements, dirty]);
+  async lines(file, visible, requirements, dirty) {
+    const value = await this.#send("lines", [file, visible, requirements, dirty]);
+    if (!isLineMap(value)) {
+      throw new Error("Invalid source information lines.");
+    }
+    return value;
   }
   dispose() {
     this.#fail(new Error("Source information worker disposed."));
@@ -41951,12 +43478,12 @@ var EditorInformationWorker = class {
   }
 };
 
-// src/analysis/coverage-tree.ts
+// packages/vscode-extension/src/analysis/coverage-tree.ts
 var path22 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode = require("vscode");
 
-// src/analysis/worker-client.ts
+// packages/vscode-extension/src/analysis/worker-client.ts
 var import_node_child_process3 = require("node:child_process");
 var path21 = __toESM(require("node:path"), 1);
 var interactiveOperations = /* @__PURE__ */ new Set([
@@ -42003,11 +43530,11 @@ var AnalysisWorkerClient = class _AnalysisWorkerClient {
       return previous;
     }
     const id = ++this.#nextId;
-    const promise = new Promise((resolve9, reject) => {
+    const promise = new Promise((resolve9, reject2) => {
       this.#queue.push({
         message: { id, directory, operation, sourceRoot, ...options },
-        resolve: (value) => resolve9(value),
-        reject
+        resolve: resolve9,
+        reject: reject2
       });
     });
     this.#inflight.set(key3, promise);
@@ -42151,7 +43678,7 @@ var analysisWorker = () => {
   return client;
 };
 
-// src/analysis/coverage-tree.ts
+// packages/vscode-extension/src/analysis/coverage-tree.ts
 var PAGE_SIZE = 200;
 var ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
 var selectedSourceRoot;
@@ -42164,6 +43691,40 @@ function initializeAnalysisProjectDiscovery(root) {
       }
     }
   };
+}
+function isRecord26(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray3(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isCoverageManifest(value) {
+  return isRecord26(value) && typeof value.target === "string" && isRecord26(value.mapping) && typeof value.mapping.mapper === "string" && isRecord26(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
+}
+var COVERAGE_CLASSIFICATIONS = ["opcode", "operand", "data", "asset", "unknown"];
+var COVERAGE_RUNTIME2 = ["executed", "operand", "read", "written"];
+function isCountRecord(value, keys) {
+  return isRecord26(value) && keys.every((key3) => typeof value[key3] === "number");
+}
+function isCoverageSummary(value) {
+  if (!isRecord26(value) || typeof value.contentSize !== "number" || typeof value.detailCount !== "number" || !isRecord26(value.summary)) {
+    return false;
+  }
+  const summary = value.summary;
+  return typeof summary.totalBytes === "number" && typeof summary.classifiedBytes === "number" && typeof summary.unknownBytes === "number" && typeof summary.conflictBytes === "number" && typeof summary.segmentCount === "number" && isCountRecord(summary.bytesByClassification, COVERAGE_CLASSIFICATIONS) && isCountRecord(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME2);
+}
+function isCoverageSegment(value) {
+  return isRecord26(value) && typeof value.start === "number" && typeof value.end === "number" && (value.status === "unknown" || value.status === "classified" || value.status === "conflict") && Array.isArray(value.classifications) && value.classifications.every(
+    (entry) => entry === "opcode" || entry === "operand" || entry === "data" || entry === "asset" || entry === "unknown"
+  ) && Array.isArray(value.runtime) && value.runtime.every(
+    (entry) => entry === "executed" || entry === "operand" || entry === "read" || entry === "written"
+  ) && isStringArray3(value.annotationIds) && isStringArray3(value.analysisIds) && isStringArray3(value.runtimeIds) && isStringArray3(value.conflictIds) && isStringArray3(value.regionIds);
+}
+function isCoverageDetail(value) {
+  return isRecord26(value) && typeof value.id === "string" && typeof value.label === "string" && typeof value.icon === "string" && (value.description === void 0 || typeof value.description === "string") && (value.tooltip === void 0 || typeof value.tooltip === "string");
+}
+function isEditTarget(value) {
+  return isRecord26(value) && typeof value.projectDirectory === "string" && typeof value.start === "number" && typeof value.end === "number" && isStringArray3(value.annotationIds) && isStringArray3(value.analysisIds) && isStringArray3(value.runtimeIds) && isStringArray3(value.conflictIds) && isStringArray3(value.regionIds);
 }
 var formatBytes = (bytes) => `${bytes.toLocaleString("en-US")} byte${bytes === 1 ? "" : "s"}`;
 var percentage = (bytes, total) => total === 0 ? "0.00%" : `${(bytes / total * 100).toFixed(2)}%`;
@@ -42322,7 +43883,7 @@ var findAnalysisProjectDirectories = async () => {
           (candidate) => path22.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path22.dirname(candidate) : candidate
         )
       )
-    ].sort();
+    ].toSorted();
   }
   const manifests = await import_vscode.workspace.findFiles(
     `**/${ANALYSIS_PROJECT_MANIFEST}`,
@@ -42333,7 +43894,7 @@ var findAnalysisProjectDirectories = async () => {
     ...new Set(
       manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path22.dirname(fsPath))
     )
-  ].sort();
+  ].toSorted();
 };
 var AnalysisCoverageProvider = class {
   static viewId = "uttori-asm.analysisCoverage";
@@ -42365,10 +43926,10 @@ var AnalysisCoverageProvider = class {
     }
     if (element.loadProject) {
       try {
-        const map = await analysisWorker().request(
-          element.projectDirectory,
-          "coverage"
-        );
+        const map = await analysisWorker().request(element.projectDirectory, "coverage");
+        if (!isCoverageSummary(map)) {
+          throw new Error("Analysis coverage is unavailable.");
+        }
         return [...mapChildren(element.id, element.projectDirectory, map)];
       } catch (error) {
         return [leaf(`${element.id}:error`, "Could not load coverage", String(error), "error")];
@@ -42379,22 +43940,28 @@ var AnalysisCoverageProvider = class {
       if (count2 <= PAGE_SIZE) {
         try {
           if (operation === "segments") {
-            const segments = await analysisWorker().request(
-              element.projectDirectory,
-              operation,
-              { offset }
-            );
+            const segments = await analysisWorker().request(element.projectDirectory, operation, {
+              offset
+            });
+            if (!Array.isArray(segments) || !segments.every(isCoverageSegment)) {
+              throw new Error("Analysis coverage segments are unavailable.");
+            }
             return segments.slice(0, count2).map(
               (segment) => segmentNode(element.id, segment, element.contentSize, element.projectDirectory)
             );
           }
-          return (await analysisWorker().request(element.projectDirectory, operation, {
+          const details = await analysisWorker().request(element.projectDirectory, operation, {
             offset
-          })).slice(0, count2).map((detail) => ({
-            ...detail,
-            id: `${element.id}:${detail.id}`,
-            state: import_vscode.TreeItemCollapsibleState.None
-          }));
+          });
+          if (!Array.isArray(details) || !details.every(isCoverageDetail)) {
+            throw new Error("Analysis coverage details are unavailable.");
+          }
+          return details.slice(0, count2).map(
+            (detail) => Object.assign({}, detail, {
+              id: `${element.id}:${detail.id}`,
+              state: import_vscode.TreeItemCollapsibleState.None
+            })
+          );
         } catch (error) {
           return [leaf(`${element.id}:error`, "Could not load page", String(error), "error")];
         }
@@ -42420,7 +43987,7 @@ var AnalysisCoverageProvider = class {
     return [...element.children ?? []];
   }
   editTarget(element) {
-    if (!element || typeof element !== "object" || !("editTarget" in element)) {
+    if (!isRecord26(element) || !isEditTarget(element.editTarget)) {
       return void 0;
     }
     return element.editTarget;
@@ -42432,10 +43999,10 @@ var AnalysisCoverageProvider = class {
       const manifestUri = import_vscode.Uri.file(path22.join(directory, ANALYSIS_PROJECT_MANIFEST));
       const projectId = `analysis:${directory}`;
       try {
-        const manifest = await analysisWorker().request(
-          directory,
-          "manifest"
-        );
+        const manifest = await analysisWorker().request(directory, "manifest");
+        if (!isCoverageManifest(manifest)) {
+          throw new Error("Analysis manifest is unavailable.");
+        }
         result.push({
           id: projectId,
           label: path22.basename(directory),
@@ -42467,14 +44034,14 @@ ${message}`,
   }
 };
 
-// src/analysis/debug-maps.ts
+// packages/vscode-extension/src/analysis/debug-maps.ts
 var import_node_crypto19 = require("node:crypto");
 var fs18 = __toESM(require("node:fs"), 1);
 var path24 = __toESM(require("node:path"), 1);
 init_debug_map();
 var import_vscode2 = require("vscode");
 
-// src/source/project-path.ts
+// packages/vscode-extension/src/source/project-path.ts
 var import_promises9 = __toESM(require("node:fs/promises"), 1);
 var import_node_path20 = __toESM(require("node:path"), 1);
 init_src2();
@@ -42513,9 +44080,21 @@ async function findEvidenceSourceRoot(evidenceDirectory, selected) {
   return root;
 }
 
-// src/analysis/debug-maps.ts
+// packages/vscode-extension/src/analysis/debug-maps.ts
 var DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
-var sortedUnique4 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+var sortedUnique4 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+function isRecord27(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStoredDebugMap2(value) {
+  return isRecord27(value) && isRecord27(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord27(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
+}
+function isAcceptedDebugMap2(map) {
+  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
+}
+function isIdentityList(value) {
+  return Array.isArray(value);
+}
 var resolvedConfigurationPath = (value, root) => path24.isAbsolute(value) ? value : path24.resolve(root ?? process.cwd(), value);
 var analysisSourceSha256 = (file) => (0, import_node_crypto19.createHash)("sha256").update(fs18.readFileSync(file)).digest("hex");
 var sourcePaths = (source, candidate) => {
@@ -42539,17 +44118,20 @@ var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths
   }
 });
 var findAnalysisDebugMapCandidates = async (identity2) => {
-  const identities = Array.isArray(identity2) ? identity2 : [identity2];
+  const identities = isIdentityList(identity2) ? identity2 : [identity2];
   const candidates = [];
   for (const descriptor of await discoverAnalysisDebugMapFiles()) {
     try {
-      const map = JSON.parse(fs18.readFileSync(descriptor.file, "utf8"));
-      if (validateDebugMap(map).length > 0 || !identities.some(
-        (candidate) => map.target === candidate.target && map.output.sha256 === candidate.romContentSha256 && map.output.size === candidate.romContentSize
+      const parsed = JSON.parse(fs18.readFileSync(descriptor.file, "utf8"));
+      if (!isStoredDebugMap2(parsed)) {
+        continue;
+      }
+      if (validateDebugMap(parsed).length > 0 || !isAcceptedDebugMap2(parsed) || !identities.some(
+        (candidate) => parsed.target === candidate.target && parsed.output.sha256 === candidate.romContentSha256 && parsed.output.size === candidate.romContentSize
       )) {
         continue;
       }
-      candidates.push({ ...descriptor, map });
+      candidates.push({ ...descriptor, map: parsed });
     } catch {
     }
   }
@@ -42579,7 +44161,7 @@ var discoverAnalysisDebugMapFiles = async () => {
         continue;
       }
       const receipt = JSON.parse(await fs18.promises.readFile(receiptFile, "utf8"));
-      if (!/^[\da-f]{64}$/.test(receipt.inputSha256)) {
+      if (!isRecord27(receipt) || typeof receipt.inputSha256 !== "string" || typeof receipt.debugMapFile !== "string" || !/^[\da-f]{64}$/.test(receipt.inputSha256)) {
         continue;
       }
       const file = path24.join(directory, receipt.inputSha256, "program.sfc.debug.json");
@@ -42641,7 +44223,24 @@ var analysisDebugMapRanges = (map, location) => {
   return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
 };
 
-// src/analysis/annotation-controller.ts
+// packages/vscode-extension/src/analysis/annotation-controller.ts
+function isInformationPreset(value) {
+  return value === "compact" || value === "authoring" || value === "disassembly";
+}
+function isRecord28(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isEditorProjectManifest(value) {
+  return isRecord28(value) && typeof value.target === "string" && isRecord28(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number" && Array.isArray(value.addressSpaces) && value.addressSpaces.every(
+    (space) => isRecord28(space) && typeof space.id === "string" && typeof space.kind === "string"
+  );
+}
+function cancellationRequested(token) {
+  return token.isCancellationRequested;
+}
+function documentDirty(document) {
+  return document.isDirty;
+}
 var TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
 var configurationTarget = (uri) => uri && import_vscode3.workspace.getWorkspaceFolder(uri) ? import_vscode3.ConfigurationTarget.WorkspaceFolder : import_vscode3.ConfigurationTarget.Global;
 var AnalysisAnnotationController = class {
@@ -42655,6 +44254,10 @@ var AnalysisAnnotationController = class {
   /** Per-editor explanations prevent a background split's result from replacing active status. */
   #explanations = /* @__PURE__ */ new WeakMap();
   #disposed = false;
+  /** Disposal can win the race against an in-flight diagnostics query. */
+  #isDisposed() {
+    return this.#disposed;
+  }
   constructor(provider, workerFile) {
     const host = {
       discoverMaps: discoverAnalysisDebugMapFiles,
@@ -42662,12 +44265,13 @@ var AnalysisAnnotationController = class {
         const projects = [];
         for (const directory of await findAnalysisProjectDirectories()) {
           try {
+            const manifest = await analysisWorker().request(directory, "manifest");
+            if (!isEditorProjectManifest(manifest)) {
+              throw new Error("Analysis manifest is unavailable.");
+            }
             projects.push({
               directory,
-              manifest: await analysisWorker().request(
-                directory,
-                "manifest"
-              )
+              manifest
             });
           } catch {
           }
@@ -42923,7 +44527,7 @@ Click for source information diagnostics.`;
         editor.document.uri.fsPath,
         this.#dirtyFiles()
       );
-      if (this.#generations.get(editor) !== generation || this.#disposed) {
+      if (this.#generations.get(editor) !== generation || this.#isDisposed()) {
         return;
       }
       let reason = "No mapped source lines in this viewport. Scroll to an instruction or emitted data.";
@@ -42959,7 +44563,7 @@ Click for source information diagnostics.`;
         this.#dirtyFiles()
       );
       const currentConfiguration = this.#configuration(document.uri);
-      if (this.#disposed || token.isCancellationRequested || version !== document.version || document.isDirty || !currentConfiguration.hoverEnabled || JSON.stringify(currentConfiguration.rows) !== JSON.stringify(config.rows)) {
+      if (this.#disposed || cancellationRequested(token) || version !== document.version || documentDirty(document) || !currentConfiguration.hoverEnabled || JSON.stringify(currentConfiguration.rows) !== JSON.stringify(config.rows)) {
         return void 0;
       }
       const infos = facts.get(position.line + 1) ?? [];
@@ -42991,6 +44595,9 @@ Click for source information diagnostics.`;
     const config = import_vscode3.workspace.getConfiguration("asm", uri);
     const target = configurationTarget(uri);
     await config.update("editorInfo.preset", selected.label, target);
+    if (!isInformationPreset(selected.label)) {
+      return;
+    }
     const preset = INFORMATION_PRESETS[selected.label];
     await config.update("editorInfo.inline.parts", [...preset.parts], target);
     await config.update("editorInfo.hover.rows", [...preset.rows], target);
@@ -43093,10 +44700,39 @@ ${content.slice(start, start + 120).join("\n")}`
   }
 };
 
-// src/analysis/evidence-inspector.ts
+// packages/vscode-extension/src/analysis/evidence-inspector.ts
 var path26 = __toESM(require("node:path"), 1);
 init_canonical_json();
 var import_vscode4 = require("vscode");
+var EVIDENCE_SHARDS = [
+  "analysis",
+  "annotations",
+  "labels",
+  "comments",
+  "regions",
+  "runtime",
+  "evidence",
+  "imports"
+];
+function isRecord29(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isIdRecord(value) {
+  return isRecord29(value) && typeof value.id === "string";
+}
+function isEvidenceChoices(value) {
+  if (!isRecord29(value) || !isRecord29(value.shards)) {
+    return false;
+  }
+  const shards = value.shards;
+  return EVIDENCE_SHARDS.every(
+    (kind) => Array.isArray(shards[kind]) && shards[kind].every(isIdRecord)
+  );
+}
+function isEvidenceExplanation(value) {
+  return isRecord29(value) && typeof value.shard === "string" && typeof value.record === "object" && value.record !== null && Array.isArray(value.evidence) && Array.isArray(value.referencedBy) && value.referencedBy.every((reference) => typeof reference === "string") && Array.isArray(value.conflicts) && (value.referencedByTotal === void 0 || typeof value.referencedByTotal === "number");
+}
+var indentedJson = (value) => canonicalJson(value).trimEnd().split("\n").map((line) => `    ${line}`).join("\n");
 var AnalysisEvidenceInspector = class {
   async explainEvidence(target) {
     try {
@@ -43107,8 +44743,10 @@ var AnalysisEvidenceInspector = class {
       if (!projectDirectory) {
         return;
       }
-      const snapshot = await analysisWorker().request(projectDirectory, "evidenceChoices", {
-        ...target ? {
+      const snapshot = await analysisWorker().request(
+        projectDirectory,
+        "evidenceChoices",
+        target ? {
           evidenceSelection: {
             annotations: target.annotationIds,
             analysis: [...target.analysisIds, ...target.conflictIds],
@@ -43116,7 +44754,10 @@ var AnalysisEvidenceInspector = class {
             regions: target.regionIds
           }
         } : {}
-      });
+      );
+      if (!isEvidenceChoices(snapshot)) {
+        throw new Error("Analysis evidence choices are unavailable.");
+      }
       const choices = this.evidenceChoices(snapshot.shards);
       if (choices.length === 0) {
         await import_vscode4.window.showInformationMessage(
@@ -43131,11 +44772,12 @@ var AnalysisEvidenceInspector = class {
       if (!selected) {
         return;
       }
-      const explanation = await analysisWorker().request(
-        projectDirectory,
-        "explainEvidence",
-        { evidenceRecord: { kind: selected.shard, id: selected.recordId } }
-      );
+      const explanation = await analysisWorker().request(projectDirectory, "explainEvidence", {
+        evidenceRecord: { kind: selected.shard, id: selected.recordId }
+      });
+      if (!isEvidenceExplanation(explanation)) {
+        throw new Error("Analysis evidence explanation is unavailable.");
+      }
       const content = this.renderEvidenceExplanation(projectDirectory, explanation);
       const document = await import_vscode4.workspace.openTextDocument({ language: "markdown", content });
       await import_vscode4.window.showTextDocument(document, { preview: true });
@@ -43166,16 +44808,7 @@ var AnalysisEvidenceInspector = class {
     ))?.directory;
   }
   evidenceChoices(shards) {
-    const kinds = [
-      "analysis",
-      "annotations",
-      "labels",
-      "comments",
-      "regions",
-      "runtime",
-      "evidence",
-      "imports"
-    ];
+    const kinds = EVIDENCE_SHARDS;
     return kinds.flatMap(
       (shard) => shards[shard].map((record4) => ({
         label: record4.id,
@@ -43187,7 +44820,6 @@ var AnalysisEvidenceInspector = class {
     );
   }
   renderEvidenceExplanation(projectDirectory, explanation) {
-    const indentedJson = (value) => canonicalJson(value).trimEnd().split("\n").map((line) => `    ${line}`).join("\n");
     const sections = [
       "# Analysis evidence explanation",
       "",
@@ -43224,14 +44856,14 @@ var AnalysisEvidenceInspector = class {
   }
 };
 
-// src/analysis/navigation-target.ts
-var isStringArray = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
+// packages/vscode-extension/src/analysis/navigation-target.ts
+var isStringArray4 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var isAnalysisNavigationTarget = (value) => {
   if (!value || typeof value !== "object") {
     return false;
   }
   const target = value;
-  return typeof target.projectDirectory === "string" && target.projectDirectory.length > 0 && typeof target.target === "string" && target.target.length > 0 && typeof target.romContentSha256 === "string" && /^[\da-f]{64}$/u.test(target.romContentSha256) && Number.isSafeInteger(target.romContentSize) && target.romContentSize >= 0 && typeof target.addressSpace === "string" && target.addressSpace.length > 0 && Number.isSafeInteger(target.address) && target.address >= 0 && Array.isArray(target.outputOffsets) && target.outputOffsets.every((offset) => Number.isSafeInteger(offset) && offset >= 0) && isStringArray(target.architectureHints) && isStringArray(target.recordIds);
+  return typeof target.projectDirectory === "string" && target.projectDirectory.length > 0 && typeof target.target === "string" && target.target.length > 0 && typeof target.romContentSha256 === "string" && /^[\da-f]{64}$/u.test(target.romContentSha256) && Number.isSafeInteger(target.romContentSize) && target.romContentSize >= 0 && typeof target.addressSpace === "string" && target.addressSpace.length > 0 && Number.isSafeInteger(target.address) && target.address >= 0 && Array.isArray(target.outputOffsets) && target.outputOffsets.every((offset) => Number.isSafeInteger(offset) && offset >= 0) && isStringArray4(target.architectureHints) && isStringArray4(target.recordIds);
 };
 var parseAnalysisNavigationTarget = (value) => {
   if (!value || typeof value !== "object") {
@@ -43241,11 +44873,20 @@ var parseAnalysisNavigationTarget = (value) => {
   return isAnalysisNavigationTarget(candidate) ? candidate : void 0;
 };
 
-// src/analysis/navigation.ts
+// packages/vscode-extension/src/analysis/navigation.ts
 var path27 = __toESM(require("node:path"), 1);
 init_src();
 var import_vscode5 = require("vscode");
-var sortedUnique5 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+function isRecord30(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isNavigationManifest(value) {
+  return isRecord30(value) && typeof value.target === "string" && isRecord30(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
+}
+function isNavigationProjection(value) {
+  return isRecord30(value) && typeof value.capturedRam === "boolean" && Array.isArray(value.lines) && value.lines.every((line) => typeof line === "string");
+}
+var sortedUnique5 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 var findDebugMapSources = async (target) => {
   const locations = [];
   const architectures = [...target.architectureHints];
@@ -43279,7 +44920,7 @@ var findDebugMapSources = async (target) => {
     ])
   );
   return {
-    locations: [...unique2.values()].sort(
+    locations: [...unique2.values()].toSorted(
       (left, right) => left.file.localeCompare(right.file) || left.line - right.line || left.architecture.localeCompare(right.architecture)
     ),
     architectures: sortedUnique5(architectures),
@@ -43343,8 +44984,8 @@ var openLiveDisassembly = async (target, architectures) => {
       instructionOffset: 0,
       instructionCount: 32
     });
-    const instructions = response.instructions ?? [];
-    if (instructions.length === 0) {
+    const instructions = isRecord30(response) && Array.isArray(response.instructions) ? response.instructions : [];
+    if (instructions.length === 0 || !instructions.every(isRecord30)) {
       return false;
     }
     const lines = instructions.map((instruction2) => {
@@ -43390,10 +45031,10 @@ ${lines.length > 0 ? lines.join("\n") : "; No accepted CFG node exists near this
 };
 var navigateToAnalysisLocation = async (target) => {
   try {
-    const manifest = await analysisWorker().request(
-      target.projectDirectory,
-      "manifest"
-    );
+    const manifest = await analysisWorker().request(target.projectDirectory, "manifest");
+    if (!isNavigationManifest(manifest)) {
+      throw new Error("Analysis manifest is unavailable.");
+    }
     if (manifest.target !== target.target || manifest.rom.contentSha256 !== target.romContentSha256 || manifest.rom.contentSize !== target.romContentSize) {
       throw new Error("Navigation target no longer matches the current native analysis project.");
     }
@@ -43401,11 +45042,12 @@ var navigateToAnalysisLocation = async (target) => {
     if (await openSourceLocation(search.locations)) {
       return;
     }
-    const projection = await analysisWorker().request(
-      target.projectDirectory,
-      "navigation",
-      { navigationTarget: target }
-    );
+    const projection = await analysisWorker().request(target.projectDirectory, "navigation", {
+      navigationTarget: target
+    });
+    if (!isNavigationProjection(projection)) {
+      throw new Error("Analysis navigation is unavailable.");
+    }
     if (projection.capturedRam) {
       await openPersistedDisassembly(target, projection);
       return;
@@ -43426,9 +45068,38 @@ var navigateToAnalysisLocation = async (target) => {
   }
 };
 
-// src/analysis/sources-tree.ts
+// packages/vscode-extension/src/analysis/sources-tree.ts
 var path28 = __toESM(require("node:path"), 1);
 var import_vscode6 = require("vscode");
+function isRecord31(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray5(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isNumberRecord2(value) {
+  return isRecord31(value) && Object.values(value).every((entry) => typeof entry === "number");
+}
+function isEvidenceKind(value) {
+  return value === "manual" || value === "import" || value === "detector" || value === "static" || value === "runtime";
+}
+function isImportReport2(value) {
+  return isRecord31(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && isNumberRecord2(value.imported) && isStringArray5(value.warnings) && Array.isArray(value.unsupported) && value.unsupported.every(
+    (loss) => isRecord31(loss) && typeof loss.field === "string" && typeof loss.reason === "string" && typeof loss.count === "number"
+  );
+}
+function isEvidenceSource(value) {
+  return isRecord31(value) && typeof value.id === "string" && typeof value.name === "string" && isStringArray5(value.names) && Array.isArray(value.kinds) && value.kinds.every(isEvidenceKind) && isStringArray5(value.evidenceIds) && Array.isArray(value.reports) && value.reports.every(isImportReport2) && (value.format === void 0 || typeof value.format === "string") && (value.sha256 === void 0 || typeof value.sha256 === "string") && (value.lastImportedAt === void 0 || typeof value.lastImportedAt === "number");
+}
+function isSourceCatalog(value) {
+  return isRecord31(value) && Array.isArray(value.sources) && value.sources.every(isEvidenceSource);
+}
+function isSourceSummary(value) {
+  return isRecord31(value) && isRecord31(value.manifest) && typeof value.manifest.target === "string" && isRecord31(value.manifest.rom) && typeof value.manifest.rom.contentSha256 === "string" && typeof value.manifest.rom.contentSize === "number" && isRecord31(value.summary) && typeof value.summary.instructionCount === "number" && typeof value.summary.memoryCount === "number" && typeof value.summary.contributionCount === "number" && isEvidenceSource(value.summary.source);
+}
+function isSourceEntry(value) {
+  return isRecord31(value) && typeof value.id === "string" && typeof value.label === "string" && typeof value.description === "string" && typeof value.detail === "string" && Array.isArray(value.outputOffsets) && value.outputOffsets.every((offset) => typeof offset === "number") && isStringArray5(value.recordIds) && (value.addressSpace === void 0 || typeof value.addressSpace === "string") && (value.address === void 0 || typeof value.address === "number") && (value.architecture === void 0 || typeof value.architecture === "string");
+}
 var count = (value) => value.toLocaleString("en-US");
 var PAGE_SIZE2 = 200;
 var AnalysisSourcesProvider = class {
@@ -43489,10 +45160,10 @@ var AnalysisSourcesProvider = class {
     const groups = await Promise.all(
       directories.map(async (directory) => {
         try {
-          const catalog = await analysisWorker().request(
-            directory,
-            "sources"
-          );
+          const catalog = await analysisWorker().request(directory, "sources");
+          if (!isSourceCatalog(catalog)) {
+            throw new Error("Analysis sources are unavailable.");
+          }
           return {
             id: directory,
             label: path28.basename(directory),
@@ -43590,7 +45261,13 @@ ${String(error)}`
   }
   async #sourceChildren(target) {
     const id = this.#sourceKey(target);
-    const { manifest, summary } = await analysisWorker().request(target.directory, "sourceSummary", { sourceId: target.source.id });
+    const loaded = await analysisWorker().request(target.directory, "sourceSummary", {
+      sourceId: target.source.id
+    });
+    if (!isSourceSummary(loaded)) {
+      throw new Error("Analysis source summary is unavailable.");
+    }
+    const { manifest, summary } = loaded;
     const children = [];
     const group2 = (name, label, total, icon, description = count(total), tooltip) => {
       children.push({
@@ -43632,10 +45309,11 @@ ${String(error)}`
           ([field, value]) => `${report.sourceName}: ${count(value)} ${field} imported`
         )
       ),
-      ...summary.source.reports.flatMap((report) => [
-        ...report.warnings,
-        ...report.unsupported.map((loss) => `${loss.field}: ${loss.reason} (${loss.count})`)
-      ])
+      ...summary.source.reports.flatMap(
+        (report) => report.warnings.concat(
+          report.unsupported.map((loss) => `${loss.field}: ${loss.reason} (${loss.count})`)
+        )
+      )
     ];
     children.push({
       id: `${id}:notes`,
@@ -43657,11 +45335,14 @@ ${String(error)}`
   async #pages(target, manifest, group2, start, total) {
     const id = `${this.#sourceKey(target)}:${group2}`;
     if (total <= PAGE_SIZE2) {
-      const entries = await analysisWorker().request(
-        target.directory,
-        "sourceEntries",
-        { sourceId: target.source.id, sourceGroup: group2, offset: start }
-      );
+      const entries = await analysisWorker().request(target.directory, "sourceEntries", {
+        sourceId: target.source.id,
+        sourceGroup: group2,
+        offset: start
+      });
+      if (!Array.isArray(entries) || !entries.every(isSourceEntry)) {
+        throw new Error("Analysis source entries are unavailable.");
+      }
       return entries.map((entry) => {
         const navigation = entry.address !== void 0 && entry.addressSpace ? {
           projectDirectory: target.directory,
@@ -43674,20 +45355,22 @@ ${String(error)}`
           architectureHints: entry.architecture ? [entry.architecture] : [],
           recordIds: entry.recordIds
         } : void 0;
-        return {
-          id: `${id}:${entry.id}`,
-          label: entry.label,
-          description: entry.description,
-          tooltip: entry.detail,
-          icon: "location",
-          ...navigation ? {
+        return Object.assign(
+          {
+            id: `${id}:${entry.id}`,
+            label: entry.label,
+            description: entry.description,
+            tooltip: entry.detail,
+            icon: "location"
+          },
+          navigation ? {
             command: {
               command: "asm.analysis.navigate",
               title: "Open source or disassembly",
               arguments: [navigation]
             }
           } : {}
-        };
+        );
       });
     }
     let stride = PAGE_SIZE2;
@@ -43710,7 +45393,7 @@ ${String(error)}`
   }
 };
 
-// src/asset-preview-controller.ts
+// packages/vscode-extension/src/asset-preview-controller.ts
 var import_vscode7 = require("vscode");
 function escapeHtml(value) {
   return value.replace(/["&'<>]/g, (character) => {
@@ -43724,12 +45407,17 @@ function escapeHtml(value) {
     return replacements[character];
   });
 }
+function isRecord32(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 function isPaletteUser(value) {
-  if (!value || typeof value !== "object") {
+  if (!isRecord32(value) || typeof value.atlas !== "string" || !Array.isArray(value.segments)) {
     return false;
   }
-  const user = value;
-  return typeof user.atlas === "string" && Array.isArray(user.segments) && user.segments.every((segment) => typeof segment === "string");
+  return value.segments.every((segment) => typeof segment === "string");
+}
+function isAssetPreviewRequest(value) {
+  return isRecord32(value) && typeof value.uri === "string" && value.uri.startsWith("file:") && typeof value.version === "number" && typeof value.line === "number" && Number.isSafeInteger(value.line) && value.line >= 0;
 }
 function openLink(request) {
   return `command:asm.assetPreview.open?${encodeURIComponent(JSON.stringify([request]))}`;
@@ -43849,13 +45537,10 @@ var AssetPreviewController = class {
    * @returns {Promise<void>} Completes after panel content is ready.
    */
   async open(argument) {
-    if (!argument || typeof argument !== "object") {
+    if (!isAssetPreviewRequest(argument)) {
       return;
     }
     const request = argument;
-    if (typeof request.uri !== "string" || typeof request.version !== "number" || !Number.isSafeInteger(request.line) || request.line < 0 || !request.uri.startsWith("file:")) {
-      return;
-    }
     const document = import_vscode7.workspace.textDocuments.find((item) => item.uri.toString() === request.uri);
     if (!document || !["uttori-snes", "uttori-65xx"].includes(document.languageId) || document.version !== request.version || request.line >= document.lineCount) {
       return;
@@ -43937,7 +45622,7 @@ var AssetPreviewController = class {
   }
 };
 
-// src/assets/binary-drafts.ts
+// packages/vscode-extension/src/assets/binary-drafts.ts
 var import_vscode8 = require("vscode");
 var BinaryDrafts = class {
   documents = /* @__PURE__ */ new Set();
@@ -43952,10 +45637,10 @@ var BinaryDrafts = class {
   }
 };
 
-// src/assets/palette-editor.ts
+// packages/vscode-extension/src/assets/palette-editor.ts
 var import_vscode10 = require("vscode");
 
-// src/webview-template.ts
+// packages/vscode-extension/src/webview-template.ts
 var import_node_crypto20 = require("node:crypto");
 var import_node_fs16 = require("node:fs");
 var import_vscode9 = require("vscode");
@@ -43986,12 +45671,22 @@ var renderWebviewTemplate = (webview, extensionUri, name) => {
   });
 };
 
-// ../assets/src/secret-of-mana/som-sprite-palettes.ts
+// packages/assets/src/secret-of-mana/som-sprite-palettes.ts
+function isSpritePaletteCatalog(value) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || !("palettes" in value)) {
+    return false;
+  }
+  const palettes = value.palettes;
+  return value.version === 1 && typeof palettes === "object" && palettes !== null;
+}
 function paletteRecord(catalog, id) {
-  if (catalog?.version !== 1 || !catalog.palettes || typeof id !== "string") {
+  if (!isSpritePaletteCatalog(catalog) || typeof id !== "string") {
     throw new Error("Palette catalogue requires version 1 palette records.");
   }
-  const palette = catalog.palettes[id];
+  const palette = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
   if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) || !Array.isArray(palette.words) || palette.words.length < 1 || palette.words.length > 256 || palette.words.some((word) => typeof word !== "string" || !/^[\dA-Fa-f]{4}$/.test(word))) {
     throw new Error(`Unknown or invalid ROM palette ${id}.`);
   }
@@ -44008,7 +45703,7 @@ function spritePaletteBytes(catalog, id) {
   return bytes;
 }
 
-// ../../node_modules/jsonc-parser/lib/esm/impl/scanner.js
+// node_modules/jsonc-parser/lib/esm/impl/scanner.js
 function createScanner(text, ignoreTrivia = false) {
   const len = text.length;
   let pos = 0, value = "", tokenOffset = 0, token = 16, lineNumber = 0, lineStartOffset = 0, tokenLineStartOffset = 0, prevTokenLineStartOffset = 0, scanError = 0;
@@ -44429,7 +46124,7 @@ var CharacterCodes;
   CharacterCodes2[CharacterCodes2["tab"] = 9] = "tab";
 })(CharacterCodes || (CharacterCodes = {}));
 
-// ../../node_modules/jsonc-parser/lib/esm/impl/string-intern.js
+// node_modules/jsonc-parser/lib/esm/impl/string-intern.js
 var cachedSpaces = new Array(20).fill(0).map((_, index) => {
   return " ".repeat(index);
 });
@@ -44459,7 +46154,7 @@ var cachedBreakLinesWithSpaces = {
   }
 };
 
-// ../../node_modules/jsonc-parser/lib/esm/impl/parser.js
+// node_modules/jsonc-parser/lib/esm/impl/parser.js
 var ParseOptions;
 (function(ParseOptions2) {
   ParseOptions2.DEFAULT = {
@@ -44881,7 +46576,7 @@ function getNodeType(value) {
   }
 }
 
-// ../../node_modules/jsonc-parser/lib/esm/main.js
+// node_modules/jsonc-parser/lib/esm/main.js
 var ScanError;
 (function(ScanError2) {
   ScanError2[ScanError2["None"] = 0] = "None";
@@ -44934,12 +46629,22 @@ var ParseErrorCode;
   ParseErrorCode2[ParseErrorCode2["InvalidCharacter"] = 16] = "InvalidCharacter";
 })(ParseErrorCode || (ParseErrorCode = {}));
 
-// src/assets/palette-model.ts
+// packages/vscode-extension/src/assets/palette-model.ts
+function isSpritePaletteCatalog2(value) {
+  return typeof value === "object" && value !== null && "version" in value && value.version === 1 && "palettes" in value && typeof value.palettes === "object" && value.palettes !== null && !Array.isArray(value.palettes);
+}
+function propertyName(node) {
+  const key3 = node.children?.[0]?.value;
+  if (typeof key3 !== "string") {
+    throw new Error("Repair the palette JSON in the text editor before editing colors.");
+  }
+  return key3;
+}
 function uniqueKeys(node) {
   if (node.type === "object") {
     const keys = /* @__PURE__ */ new Set();
     for (const property of node.children ?? []) {
-      const key3 = property.children?.[0]?.value;
+      const key3 = propertyName(property);
       if (keys.has(key3)) {
         throw new Error(`Duplicate palette JSON key: ${key3}.`);
       }
@@ -44961,7 +46666,7 @@ function parse2(text) {
   }
   uniqueKeys(tree);
   const catalog = JSON.parse(text);
-  if (catalog?.version !== 1 || !catalog.palettes || typeof catalog.palettes !== "object" || Array.isArray(catalog.palettes)) {
+  if (!isSpritePaletteCatalog2(catalog)) {
     throw new Error("Expected a version 1 ROM palette catalog.");
   }
   if (Object.keys(catalog.palettes).length > 4096) {
@@ -44974,15 +46679,12 @@ function parse2(text) {
 }
 function paletteView(text) {
   const { catalog } = parse2(text);
-  return Object.entries(catalog.palettes).map(([id, record4]) => {
-    const name = record4.name;
-    return {
-      id,
-      name: typeof name === "string" ? name : "",
-      firstIndex: record4.firstIndex,
-      words: record4.words
-    };
-  });
+  return Object.entries(catalog.palettes).map(([id, record4]) => ({
+    id,
+    name: "name" in record4 && typeof record4.name === "string" ? record4.name : "",
+    firstIndex: record4.firstIndex,
+    words: record4.words
+  }));
 }
 function paletteWordEdit(text, id, index, word) {
   const { tree, catalog } = parse2(text);
@@ -44997,7 +46699,13 @@ function paletteWordEdit(text, id, index, word) {
   return { offset: node.offset, length: node.length, text: JSON.stringify(word.toUpperCase()) };
 }
 
-// src/assets/palette-editor.ts
+// packages/vscode-extension/src/assets/palette-editor.ts
+function isRecord33(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isPaletteEdit(value) {
+  return value.type === "edit" && typeof value.version === "number" && typeof value.id === "string" && typeof value.index === "number" && typeof value.word === "string";
+}
 var PaletteEditor = class {
   constructor(extensionUri) {
     this.extensionUri = extensionUri;
@@ -45038,19 +46746,15 @@ var PaletteEditor = class {
       }
     };
     const receive = panel.webview.onDidReceiveMessage((message) => {
-      if (!message || typeof message !== "object") {
+      if (!isRecord33(message)) {
         return;
       }
-      const value = message;
-      if (value.type === "ready") {
+      if (message.type === "ready") {
         update();
-      } else if (value.type === "text") {
+      } else if (message.type === "text") {
         void import_vscode10.commands.executeCommand("vscode.openWith", document.uri, "default");
-      } else if (value.type === "edit" && typeof value.version === "number" && typeof value.id === "string" && typeof value.index === "number" && typeof value.word === "string") {
-        void this.edit(
-          document,
-          value
-        ).then(update).catch((error) => {
+      } else if (isPaletteEdit(message)) {
+        void this.edit(document, message).then(update).catch((error) => {
           update();
           void panel.webview.postMessage({ type: "error", text: String(error) });
         });
@@ -45076,10 +46780,10 @@ function registerPaletteEditor(context) {
   );
 }
 
-// src/assets/png-editor.ts
+// packages/vscode-extension/src/assets/png-editor.ts
 var import_vscode12 = require("vscode");
 
-// src/assets/png-codec.ts
+// packages/vscode-extension/src/assets/png-codec.ts
 var import_node_worker_threads2 = require("node:worker_threads");
 var PngCodec = class {
   constructor(workerFile) {
@@ -45092,29 +46796,29 @@ var PngCodec = class {
     if (this.#disposed) {
       return Promise.reject(new Error("PNG editor closed."));
     }
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve9, reject2) => {
       const worker = new import_node_worker_threads2.Worker(this.workerFile, {
         workerData: { bytes, indexes },
         resourceLimits: { maxOldGenerationSizeMb: 256 }
       });
       this.#workers.add(worker);
       const timer = setTimeout(() => {
-        reject(new Error("PNG conversion exceeded 15 seconds."));
+        reject2(new Error("PNG conversion exceeded 15 seconds."));
         void worker.terminate();
       }, 15e3);
       worker.once("message", (message) => {
         if (message.error) {
-          reject(new Error(message.error));
+          reject2(new Error(message.error));
         } else {
           resolve9(message.value);
         }
         void worker.terminate();
       });
-      worker.once("error", reject);
+      worker.once("error", reject2);
       worker.once("exit", () => {
         clearTimeout(timer);
         this.#workers.delete(worker);
-        reject(new Error("PNG conversion worker exited before returning a result."));
+        reject2(new Error("PNG conversion worker exited before returning a result."));
       });
     });
   }
@@ -45132,17 +46836,17 @@ var PngCodec = class {
   }
 };
 
-// src/assets/png-document.ts
+// packages/vscode-extension/src/assets/png-document.ts
 var import_node_crypto22 = require("node:crypto");
 var import_promises11 = __toESM(require("node:fs/promises"), 1);
 var import_node_path21 = __toESM(require("node:path"), 1);
 var import_vscode11 = require("vscode");
 
-// src/assets/png-guidance.ts
+// packages/vscode-extension/src/assets/png-guidance.ts
 var import_node_crypto21 = require("node:crypto");
 var import_promises10 = __toESM(require("node:fs/promises"), 1);
 
-// ../assets/src/validation.ts
+// packages/assets/src/validation.ts
 function integer4(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -45150,7 +46854,7 @@ function integer4(value, label, minimum, maximum) {
   return value;
 }
 
-// ../assets/src/indexed-edit.ts
+// packages/assets/src/indexed-edit.ts
 function validateOrientation(value) {
   for (const flag of [value.flipX, value.flipY]) {
     if (flag !== void 0 && typeof flag !== "boolean") {
@@ -45183,7 +46887,8 @@ function expandIndexedGrid(block) {
   });
 }
 
-// ../assets/src/secret-of-mana/som-body-frame.ts
+// packages/assets/src/secret-of-mana/som-body-frame.ts
+var signed7 = (byte2) => (byte2 & 63) - (byte2 & 64);
 function decodeBodyFrame(input) {
   if (!Array.isArray(input) && !(input instanceof Uint8Array) || input.length < 2 || input.length > 157 || [...input].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
     throw new Error("Invalid bounded body frame bytes.");
@@ -45207,7 +46912,6 @@ function decodeBodyFrame(input) {
   if (offset + groups * 2 > bytes.length) {
     throw new Error("Missing sprite block offsets.");
   }
-  const signed7 = (byte2) => (byte2 & 63) - (byte2 & 64);
   const coordinateOffsets = Array.from({ length: groups }, (_, i) => ({
     y: offset + i * 2,
     x: offset + i * 2 + 1
@@ -45233,9 +46937,20 @@ function decodeBodyFrame(input) {
   };
 }
 
-// ../assets/src/secret-of-mana/som-frame-composition.ts
-function isSegmentTile(ref) {
-  return Array.isArray(ref);
+// packages/assets/src/secret-of-mana/som-frame-composition.ts
+function isUnknownArray6(value) {
+  return Array.isArray(value);
+}
+function isIntegerPair(value) {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+  for (const component of value) {
+    if (typeof component !== "number" || !Number.isSafeInteger(component)) {
+      return false;
+    }
+  }
+  return true;
 }
 function placementValue(p) {
   return [
@@ -45268,10 +46983,11 @@ function deriveFramePlacements(layout, frame) {
     external.set(e.romAddress, e);
   }
   const resolve9 = (ref) => {
-    if (isSegmentTile(ref)) {
+    if (isUnknownArray6(ref)) {
       const segmentName = ref[0];
       const tile = ref[1];
-      if (ref.length !== 2 || typeof segmentName !== "string" || typeof tile !== "number" || !Number.isSafeInteger(tile) || tile < 0 || tile >= (layout.segments[segmentName]?.tiles.length ?? 0)) {
+      const segment = typeof segmentName === "string" && Object.hasOwn(layout.segments, segmentName) ? layout.segments[segmentName] : void 0;
+      if (ref.length !== 2 || typeof segmentName !== "string" || typeof tile !== "number" || !Number.isSafeInteger(tile) || tile < 0 || tile >= (segment?.tiles.length ?? 0)) {
         throw new Error(`Invalid expanded graphics reference: ${frame.id}.`);
       }
       return { segment: segmentName, tile };
@@ -45295,9 +47011,6 @@ function deriveFramePlacements(layout, frame) {
     }
     return { external: structuredClone(e) };
   };
-  if (!frame.blocks) {
-    throw new Error(`Invalid native block: ${frame.id}.`);
-  }
   const ids = /* @__PURE__ */ new Set();
   return frame.blocks.flatMap((block) => {
     if (typeof block.id !== "string" || !block.id || ids.has(block.id) || ![8, 16, 32, 64].includes(block.size) || !Array.isArray(block.tiles) || block.tiles.length !== (block.size / 8) ** 2 || typeof block.flipX !== "boolean" || typeof block.flipY !== "boolean") {
@@ -45311,16 +47024,21 @@ function deriveFramePlacements(layout, frame) {
       cellWidth: 8,
       cellHeight: 8,
       cells: references.map((_, index) => ({ source: String(index) }))
-    }).map((p, index) => ({
-      id: `${block.id}:tile-${index}`,
-      block: block.id,
-      quadrant: index,
-      x: p.x,
-      y: p.y,
-      flipX: p.flipX,
-      flipY: p.flipY,
-      ...references[index]
-    }));
+    }).map(
+      (p, index) => Object.assign(
+        {},
+        {
+          id: `${block.id}:tile-${index}`,
+          block: block.id,
+          quadrant: index,
+          x: p.x,
+          y: p.y,
+          flipX: p.flipX,
+          flipY: p.flipY
+        },
+        references[index]
+      )
+    );
   });
 }
 function validateNativeFrame(frame) {
@@ -45347,9 +47065,7 @@ function validateNativeFrame(frame) {
       }
       const relative3 = decoded.tileOffsets[index * 4 + quadrant];
       const base = address4 & 16711680 | address4 - relative3 & 65535;
-      if (graphicsBase === void 0) {
-        graphicsBase = base;
-      }
+      graphicsBase ??= base;
       if (base !== graphicsBase) {
         throw new Error(`Native tile references disagree: ${frame.id}/${block.id}.`);
       }
@@ -45362,7 +47078,7 @@ function validateFrameComposition(layout, frame) {
     return void 0;
   }
   const placements = frame.placements;
-  if (!Array.isArray(frame.origin) || frame.origin.length !== 2 || frame.origin.some((v) => !Number.isSafeInteger(v)) || !placements) {
+  if (!isIntegerPair(frame.origin) || !placements) {
     throw new Error(`Incomplete retained composition: ${frame.id}.`);
   }
   const expected = deriveFramePlacements(layout, frame);
@@ -45375,14 +47091,37 @@ function validateFrameComposition(layout, frame) {
   return expected;
 }
 
-// ../assets/src/secret-of-mana/som-frame-atlas.ts
+// packages/assets/src/secret-of-mana/som-frame-atlas.ts
 function rectangle(bounds, width, height, label) {
   if (!Array.isArray(bounds) || bounds.length !== 4 || bounds.some((v) => !Number.isSafeInteger(v)) || bounds[0] < 0 || bounds[1] < 0 || bounds[2] < 1 || bounds[3] < 1 || bounds[0] + bounds[2] > width || bounds[1] + bounds[3] > height) {
     throw new Error(`Invalid ${label} bounds.`);
   }
 }
+function isVersionOneLayout(value) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || !("segments" in value) || !("width" in value) || !("height" in value)) {
+    return false;
+  }
+  return value.version === 1 && Boolean(value.segments) && Number.isInteger(value.width) && Number.isInteger(value.height);
+}
+function isKnownTileSource(value) {
+  return value === void 0 || value === "native-strip";
+}
+function isRgba8(color) {
+  if (!Array.isArray(color) || color.length !== 4) {
+    return false;
+  }
+  for (const channel of color) {
+    if (typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255) {
+      return false;
+    }
+  }
+  return true;
+}
 function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
-  if (layout?.version !== 1 || !layout.segments || !Number.isInteger(layout.width) || !Number.isInteger(layout.height)) {
+  if (!isVersionOneLayout(layout)) {
     throw new Error("Frame atlas requires a version 1 layout with dimensions and segments.");
   }
   if (!Array.isArray(layout.paletteRefs) || layout.paletteRefs.length < 1 || layout.paletteRefs.length > 15) {
@@ -45391,9 +47130,7 @@ function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
   if (layout.guideIndex !== layout.paletteRefs.length * 16) {
     throw new Error("Frame atlas guide index must follow the source palette groups.");
   }
-  if (layout.indexPalette !== void 0 && (!Array.isArray(layout.indexPalette) || layout.indexPalette.length !== layout.guideIndex || layout.indexPalette.some(
-    (color) => !Array.isArray(color) || color.length !== 4 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)
-  ))) {
+  if (layout.indexPalette !== void 0 && (!Array.isArray(layout.indexPalette) || layout.indexPalette.length !== layout.guideIndex || layout.indexPalette.some((color) => !isRgba8(color)))) {
     throw new Error("Frame atlas indexPalette must bind every native slot to an RGBA8 color.");
   }
   for (const variant of layout.paletteVariants ?? []) {
@@ -45401,12 +47138,12 @@ function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
       throw new Error("Frame atlas palette variant refers to an invalid source group.");
     }
   }
-  if (layout.tileSources !== void 0 && layout.tileSources !== "native-strip") {
+  if (!isKnownTileSource(layout.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
   }
   const names = whole ? Object.keys(layout.segments) : [segmentName ?? ""];
   for (const name of names) {
-    const segment = layout.segments[name];
+    const segment = Object.hasOwn(layout.segments, name) ? layout.segments[name] : void 0;
     if (!segment || !Array.isArray(segment.tiles) || segment.tiles.length === 0) {
       throw new Error(`Unknown or empty frame atlas segment: ${name}.`);
     }
@@ -45482,7 +47219,7 @@ function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
         nativeRecords.set(record4.address, record4);
       }
     }
-    const ordered = [...nativeRecords.values()].sort((a, b) => a.address - b.address);
+    const ordered = [...nativeRecords.values()].toSorted((a, b) => a.address - b.address);
     for (let i = 1; i < ordered.length; i++) {
       if (ordered[i].address < ordered[i - 1].end) {
         throw new Error("Overlapping native frame records.");
@@ -45512,8 +47249,14 @@ function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
   return layout;
 }
 
-// src/assets/png-guidance.ts
+// packages/vscode-extension/src/assets/png-guidance.ts
 var hash2 = (bytes) => (0, import_node_crypto21.createHash)("sha256").update(bytes).digest("hex");
+function errorCode4(error) {
+  return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : void 0;
+}
+function isFrameLayout(value) {
+  return typeof value === "object" && value !== null && "segments" in value && "paletteRefs" in value;
+}
 async function read(file) {
   const stat3 = await import_promises10.default.lstat(file);
   if (!stat3.isFile() || stat3.size > 2 * 1024 * 1024) {
@@ -45527,13 +47270,13 @@ async function readPngGuidance(file, image) {
   try {
     bytes = await read(sidecar);
   } catch (error) {
-    if (error.code === "ENOENT") {
+    if (errorCode4(error) === "ENOENT") {
       return void 0;
     }
     throw error;
   }
   const value = JSON.parse(bytes.toString("utf8"));
-  if (!value || typeof value !== "object" || !("segments" in value) || !("paletteRefs" in value)) {
+  if (!isFrameLayout(value)) {
     return void 0;
   }
   const layout = validateFrameLayout(value, {
@@ -45593,8 +47336,11 @@ async function assertPngGuidanceCurrent(guidance) {
   }
 }
 
-// src/assets/png-document.ts
+// packages/vscode-extension/src/assets/png-document.ts
 var hash3 = (bytes) => (0, import_node_crypto22.createHash)("sha256").update(bytes).digest("hex");
+function isRecord34(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var PngDocument = class _PngDocument {
   constructor(uri, bytes, image, codec, drafts, diskHash, savedIndexes, guidance) {
     this.uri = uri;
@@ -45648,7 +47394,7 @@ var PngDocument = class _PngDocument {
         throw new Error("PNG backup exceeds its size budget.");
       }
       const value = JSON.parse(Buffer.from(backup).toString("utf8"));
-      if (!value || value.version !== 1 || value.uri !== uri.toString() || typeof value.bytes !== "string" || typeof value.indexes !== "string" || typeof value.saved !== "string" || typeof value.diskHash !== "string" || !/^[\da-f]{64}$/.test(value.diskHash)) {
+      if (!isRecord34(value) || value.version !== 1 || value.uri !== uri.toString() || typeof value.bytes !== "string" || typeof value.indexes !== "string" || typeof value.saved !== "string" || typeof value.diskHash !== "string" || !/^[\da-f]{64}$/.test(value.diskHash)) {
         throw new Error("Invalid PNG editor backup.");
       }
       bytes = Buffer.from(value.bytes, "base64");
@@ -45919,7 +47665,16 @@ var PngDocument = class _PngDocument {
   }
 };
 
-// src/assets/png-editor.ts
+// packages/vscode-extension/src/assets/png-editor.ts
+function isRecord35(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isPixelStroke(value) {
+  return isRecord35(value) && value.type === "paint" && typeof value.version === "number" && typeof value.index === "number" && Array.isArray(value.pixels) && value.pixels.every((pixel) => typeof pixel === "number");
+}
+function cancellationRequested2(token) {
+  return token.isCancellationRequested;
+}
 var PngEditor = class {
   constructor(extensionUri, codec, drafts) {
     this.extensionUri = extensionUri;
@@ -45990,15 +47745,14 @@ var PngEditor = class {
     };
     const changed = document.onDidChange(update);
     const received = panel.webview.onDidReceiveMessage((value) => {
-      if (!value || typeof value !== "object") {
+      if (!isRecord35(value)) {
         return;
       }
-      const message = value;
-      if (message.type === "ready") {
+      if (value.type === "ready") {
         update();
-      } else if (message.type === "paint") {
+      } else if (isPixelStroke(value)) {
         try {
-          document.paint(message);
+          document.paint(value);
           update();
         } catch (error) {
           update();
@@ -46032,7 +47786,7 @@ var PngEditor = class {
       throw new Error("PNG backup cancelled.");
     }
     await import_vscode12.workspace.fs.writeFile(context.destination, document.backup());
-    if (token.isCancellationRequested) {
+    if (cancellationRequested2(token)) {
       await import_vscode12.workspace.fs.delete(context.destination);
       throw new Error("PNG backup cancelled.");
     }
@@ -46059,13 +47813,13 @@ function registerPngEditor(context, drafts) {
   );
 }
 
-// src/debug/session.ts
+// packages/vscode-extension/src/debug/session.ts
 var fs22 = __toESM(require("node:fs"), 1);
 var path34 = __toESM(require("node:path"), 1);
 init_debug_map();
 init_src();
 
-// ../debug-sidecar-ares/src/profile.ts
+// packages/debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -46148,14 +47902,14 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
   ])
 });
 
-// ../debug-sidecar-ares/src/ares-process-host.ts
+// packages/debug-sidecar-ares/src/ares-process-host.ts
 var import_node_child_process4 = require("node:child_process");
 var import_node_crypto23 = require("node:crypto");
 var import_node_fs17 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
 var import_node_path22 = __toESM(require("node:path"), 1);
 
-// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -46204,11 +47958,11 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
       }
     }
     const socket = new import_node_net.default.Socket();
-    await new Promise((resolve9, reject) => {
+    await new Promise((resolve9, reject2) => {
       const timeout = setTimeout(() => {
         cleanup();
         socket.destroy();
-        reject(new Error(`RSP connection to ${host}:${options.port} timed out.`));
+        reject2(new Error(`RSP connection to ${host}:${options.port} timed out.`));
       }, connectTimeoutMs);
       const cleanup = () => {
         clearTimeout(timeout);
@@ -46222,7 +47976,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
       const failed = (error) => {
         cleanup();
         socket.destroy();
-        reject(error);
+        reject2(error);
       };
       socket.once("connect", connected);
       socket.once("error", failed);
@@ -46235,10 +47989,10 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
     if (this.#closed) {
       return Promise.reject(new Error("RSP TCP transport is closed."));
     }
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve9, reject2) => {
       this.#socket.write(data, (error) => {
         if (error) {
-          reject(error);
+          reject2(error);
         } else {
           resolve9();
         }
@@ -46295,7 +48049,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
 };
 
-// ../debug-sidecar-ares/src/ares-process-host.ts
+// packages/debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
@@ -46360,14 +48114,17 @@ var NodeAresProcessHandle = class {
 var nodeSha256 = async (file) => {
   const digest = (0, import_node_crypto23.createHash)("sha256");
   for await (const chunk of (0, import_node_fs17.createReadStream)(file)) {
+    if (!Buffer.isBuffer(chunk)) {
+      throw new Error(`Expected binary bytes while hashing ${file}.`);
+    }
     digest.update(chunk);
   }
   return digest.digest("hex");
 };
 var reserveLoopbackPort = async () => {
   const server = import_node_net2.default.createServer();
-  await new Promise((resolve9, reject) => {
-    server.once("error", reject);
+  await new Promise((resolve9, reject2) => {
+    server.once("error", reject2);
     server.listen({ host: "127.0.0.1", port: 0, exclusive: true }, resolve9);
   });
   const address4 = server.address();
@@ -46376,9 +48133,9 @@ var reserveLoopbackPort = async () => {
     throw new Error("Unable to reserve an IPv4 loopback port for ares.");
   }
   await new Promise(
-    (resolve9, reject) => server.close((error) => {
+    (resolve9, reject2) => server.close((error) => {
       if (error) {
-        reject(error);
+        reject2(error);
       } else {
         resolve9();
       }
@@ -46402,11 +48159,32 @@ var nodeAresProcessRuntime = Object.freeze({
     timer.unref();
   })
 });
+var isRecord36 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var manifestRecord = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord36(value)) {
     throw new Error("Ares runtime manifest must be an object.");
   }
   return value;
+};
+var NODE_PLATFORMS = [
+  "aix",
+  "android",
+  "darwin",
+  "freebsd",
+  "haiku",
+  "linux",
+  "openbsd",
+  "sunos",
+  "win32",
+  "cygwin",
+  "netbsd"
+];
+var manifestPlatform = (value) => {
+  const platform = NODE_PLATFORMS.find((candidate) => candidate === value);
+  if (!platform) {
+    throw new Error(`Ares manifest platform '${value}' is not a Node platform.`);
+  }
+  return platform;
 };
 var manifestString = (value, name) => {
   if (typeof value !== "string" || value.length === 0) {
@@ -46433,8 +48211,8 @@ var parseAresRuntimeManifest = (value) => {
     throw new Error("Ares runtime manifest resources must be an array.");
   }
   const resources = Object.freeze(
-    manifest.resources.map((value2, index) => {
-      const resource = manifestRecord(value2);
+    manifest.resources.map((entry, index) => {
+      const resource = manifestRecord(entry);
       const resourcePath = checkedResourcePath(
         manifestString(resource.path, `Ares resource ${index} path`)
       );
@@ -46479,22 +48257,25 @@ var parseAresRuntimeManifest = (value) => {
       "Ares executable SHA-256"
     ),
     romSha256: checkedSha256(manifestString(manifest.romSha256, "ROM SHA-256"), "ROM SHA-256"),
-    platform: manifestString(manifest.platform, "Ares manifest platform"),
+    platform: manifestPlatform(manifestString(manifest.platform, "Ares manifest platform")),
     architecture: manifestString(manifest.architecture, "Ares manifest architecture"),
     buildConfiguration,
     resources
   });
 };
 
-// src/debug/session.ts
+// packages/vscode-extension/src/debug/session.ts
 var import_vscode14 = require("vscode");
 
-// src/runtime/binding.ts
+// packages/vscode-extension/src/runtime/binding.ts
 var path31 = __toESM(require("node:path"), 1);
+function isRecord37(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var runtimeBindingFromLaunch = (configurations, root) => {
   const bindings = /* @__PURE__ */ new Map();
   for (const configuration of configurations) {
-    if (!configuration || typeof configuration !== "object") {
+    if (!isRecord37(configuration)) {
       continue;
     }
     const config = configuration;
@@ -46527,7 +48308,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
   return bindings.size === 1 ? [...bindings.values()][0] : void 0;
 };
 
-// src/runtime/live-bus-analysis.ts
+// packages/vscode-extension/src/runtime/live-bus-analysis.ts
 var import_node_child_process5 = require("node:child_process");
 var LiveBusAnalysis = class {
   /** Resolves only after guarded project publication. Rejection leaves the recording available. */
@@ -46547,8 +48328,8 @@ var LiveBusAnalysis = class {
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
       stdio: ["ignore", "ignore", "pipe", "ipc"]
     });
-    this.completion = new Promise((resolve9, reject) => {
-      this.#reject = reject;
+    this.completion = new Promise((resolve9, reject2) => {
+      this.#reject = reject2;
       this.#worker.on(
         "message",
         (message) => {
@@ -46641,7 +48422,7 @@ var LiveBusAnalysis = class {
   }
 };
 
-// src/runtime/trace-lease.ts
+// packages/vscode-extension/src/runtime/trace-lease.ts
 var owner;
 var acquireTraceLease = () => {
   if (owner) {
@@ -46658,7 +48439,7 @@ var acquireTraceLease = () => {
   };
 };
 
-// src/runtime/trace-recorder.ts
+// packages/vscode-extension/src/runtime/trace-recorder.ts
 var import_promises12 = require("node:fs/promises");
 var resolveEditorTraceDetail = (requested, instructionDetails) => {
   if (requested === "full" && !instructionDetails) {
@@ -46852,9 +48633,15 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
   }
 };
 
-// src/source/evidence-selection.ts
+// packages/vscode-extension/src/source/evidence-selection.ts
 var import_node_path23 = __toESM(require("node:path"), 1);
 var import_vscode13 = require("vscode");
+function isRecord38(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isRomManifest(value) {
+  return isRecord38(value) && isRecord38(value.rom) && typeof value.rom.contentSha256 === "string";
+}
 async function chooseLiveBusProject(romContentSha256) {
   if (!import_vscode13.workspace.isTrusted) {
     throw new Error("Live bus analysis requires a trusted workspace.");
@@ -46862,6 +48649,9 @@ async function chooseLiveBusProject(romContentSha256) {
   const choices = [];
   for (const directory of await findAnalysisProjectDirectories()) {
     const manifest = await analysisWorker().request(directory, "manifest");
+    if (!isRomManifest(manifest)) {
+      throw new Error("Analysis manifest is unavailable.");
+    }
     if (manifest.rom.contentSha256 === romContentSha256) {
       choices.push({ label: import_node_path23.default.basename(directory), description: directory, directory });
     }
@@ -46875,9 +48665,18 @@ async function chooseLiveBusProject(romContentSha256) {
   return (await import_vscode13.window.showQuickPick(choices, { title: "Choose the matching evidence project" }))?.directory;
 }
 
-// src/debug/analysis-annotations.ts
+// packages/vscode-extension/src/debug/analysis-annotations.ts
 var locationKey2 = (addressSpace, address4) => `${addressSpace}:${address4}`;
-var append = (map, key3, value) => {
+function isRecord39(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isDebugManifest(value) {
+  return isRecord39(value) && typeof value.target === "string" && isRecord39(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
+}
+function isDebugAnnotation(value) {
+  return isRecord39(value) && typeof value.addressSpace === "string" && typeof value.address === "number" && typeof value.text === "string" && Array.isArray(value.outputOffsets) && value.outputOffsets.every((offset) => typeof offset === "number") && Array.isArray(value.architectures) && value.architectures.every((architecture) => typeof architecture === "string");
+}
+var append2 = (map, key3, value) => {
   const entries = map.get(key3);
   if (entries) {
     entries.push(value);
@@ -46889,10 +48688,10 @@ var createDebugInstructionAnnotation = async (map) => {
   const directories = [];
   for (const directory of await findAnalysisProjectDirectories()) {
     try {
-      const manifest = await analysisWorker().request(
-        directory,
-        "manifest"
-      );
+      const manifest = await analysisWorker().request(directory, "manifest");
+      if (!isDebugManifest(manifest)) {
+        continue;
+      }
       if (manifest.target !== map.target || manifest.rom.contentSha256 !== map.output.sha256 || manifest.rom.contentSize !== map.output.size) {
         continue;
       }
@@ -46922,15 +48721,16 @@ var createDebugInstructionAnnotation = async (map) => {
       }));
       for (const directory of directories) {
         try {
-          const annotations = await analysisWorker().request(
-            directory,
-            "debugAnnotations",
-            { ranges }
-          );
+          const annotations = await analysisWorker().request(directory, "debugAnnotations", {
+            ranges
+          });
+          if (!Array.isArray(annotations) || !annotations.every(isDebugAnnotation)) {
+            throw new Error("Analysis annotations are unavailable.");
+          }
           for (const annotation of annotations) {
-            append(byAddress, locationKey2(annotation.addressSpace, annotation.address), annotation);
+            append2(byAddress, locationKey2(annotation.addressSpace, annotation.address), annotation);
             for (const output of annotation.outputOffsets) {
-              append(byOutputOffset, output, annotation);
+              append2(byOutputOffset, output, annotation);
             }
           }
         } catch {
@@ -46975,10 +48775,10 @@ var createDebugInstructionAnnotation = async (map) => {
   };
 };
 
-// src/debug/rom-addresses.ts
+// packages/vscode-extension/src/debug/rom-addresses.ts
 init_src2();
 
-// ../plugin-snes/src/target/address-space.ts
+// packages/plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace = {
   name: "snes-rom",
   addressWidth: 24,
@@ -47160,7 +48960,7 @@ var snesRomAddressSpace = {
   }
 };
 
-// ../plugin-snes/src/disassembler/address-identities.ts
+// packages/plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE = "rom.file";
 var SNES_CPU_ADDRESS_SPACE = "snes.cpu";
 var SNES_WRAM_ADDRESS_SPACE = "snes.wram";
@@ -47203,7 +49003,7 @@ var mirrorsForOffset = (fileOffset, context, canonical) => {
     }
   }
   mirrors.add(canonical);
-  return [...mirrors].sort((left, right) => left - right);
+  return [...mirrors].toSorted((left, right) => left - right);
 };
 var identifySnesCpuAddress = (address4, context, romSize) => {
   const fileOffset = snesRomAddressSpace.toOutputOffset(address4, context);
@@ -47225,7 +49025,7 @@ var identifySnesCpuAddress = (address4, context, romSize) => {
   };
 };
 
-// ../plugin-snes/src/disassembler/rom-header.ts
+// packages/plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS = [
   "lorom",
   "hirom",
@@ -47236,6 +49036,9 @@ var SNES_MAPPERS = [
   "bigsa1rom",
   "norom"
 ];
+function isSnesMapper(value) {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
 var SNES_CPU_VECTOR_DEFINITIONS = [
   {
     id: "native-reserved-0",
@@ -47444,12 +49247,12 @@ var parseSnesInternalRomHeader = (rom, mapper) => {
   const vectors = SNES_CPU_VECTOR_DEFINITIONS.map((definition) => {
     const fileOffset = offset + definition.pointer - 65472;
     const value = rom.readByte(fileOffset) | rom.readByte(fileOffset + 1) << 8;
-    return {
-      ...definition,
-      fileOffset,
-      value,
-      ...definition.state && value !== 0 && value !== 65535 ? { targetAddress: value } : {}
-    };
+    return Object.assign(
+      {},
+      definition,
+      { fileOffset, value },
+      definition.state && value !== 0 && value !== 65535 ? { targetAddress: value } : {}
+    );
   });
   return {
     offset,
@@ -47582,7 +49385,7 @@ var detectSnesRom = (rom, options = {}) => {
       `Header override ${options.headerSize} does not match the loaded ROM view (${rom.identity.headerSize}).`
     );
   }
-  const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec)).filter((candidate) => candidate !== void 0).sort((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
+  const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec)).filter((candidate) => candidate !== void 0).toSorted((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
   if (options.mapper) {
     const selected = candidates.find((candidate) => candidate.mapper === options.mapper);
     const parsed = parseSnesInternalRomHeader(rom, options.mapper);
@@ -47598,9 +49401,12 @@ var detectSnesRom = (rom, options = {}) => {
       ...selected ? {} : { message: `Mapper '${options.mapper}' has no standard in-range header candidate.` }
     };
   }
-  const first = candidates[0];
-  const second = candidates[1];
+  const first = candidates.length > 0 ? candidates[0] : void 0;
+  const second = candidates.length > 1 ? candidates[1] : void 0;
   if (first && first.score >= 8 && (!second || first.score - second.score >= 3)) {
+    if (!isSnesMapper(first.mapper)) {
+      throw new Error(`Unsupported SNES mapper '${first.mapper}'.`);
+    }
     const mapper = first.mapper;
     return {
       status: "detected",
@@ -47618,7 +49424,7 @@ var detectSnesRom = (rom, options = {}) => {
   };
 };
 
-// src/debug/rom-addresses.ts
+// packages/vscode-extension/src/debug/rom-addresses.ts
 var createSnesDebugAddressResolvers = (map, output) => {
   if (map.target !== "snes.sfc") {
     return {};
@@ -47646,7 +49452,7 @@ var createSnesDebugAddressResolvers = (map, output) => {
       if (!mapped || address4.outputOffset !== mapped.fileOffset + rom.identity.headerSize) {
         return [address4];
       }
-      return mapped.mirrors.map((alias) => ({ ...address4, address: alias }));
+      return mapped.mirrors.map((alias) => Object.assign({}, address4, { address: alias }));
     },
     sourceOutputOffset: (address4) => {
       const mapped = identity2(address4);
@@ -47655,7 +49461,7 @@ var createSnesDebugAddressResolvers = (map, output) => {
   };
 };
 
-// src/debug/source-root.ts
+// packages/vscode-extension/src/debug/source-root.ts
 var import_node_fs18 = __toESM(require("node:fs"), 1);
 var import_node_path24 = __toESM(require("node:path"), 1);
 var sourceMatches = (root, source) => {
@@ -47704,7 +49510,7 @@ var resolveDebugSourceRoot = (options) => {
   return bestRoot;
 };
 
-// src/debug/session.ts
+// packages/vscode-extension/src/debug/session.ts
 var UTTORI_ASM_DEBUG_TYPE = "uttori-asm";
 var UTTORI_TRACE_START_COMMAND = "asm.trace.start";
 var UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
@@ -47840,39 +49646,86 @@ var stringField = (value, name) => {
   }
   return value;
 };
+function isRecord40(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function optionalString2(value) {
+  return value === void 0 || typeof value === "string";
+}
+function isUttoriDebugConfiguration(value) {
+  return typeof value.program === "string" && value.program.length > 0 && typeof value.debugMap === "string" && value.debugMap.length > 0 && (value.backend === void 0 || value.backend === "replay" || value.backend === "ares") && optionalString2(value.sourceRoot) && optionalString2(value.replay) && optionalString2(value.runtimeManifest) && optionalString2(value.emulator) && optionalString2(value.runtimeDirectory) && optionalString2(value.sidecar) && optionalString2(value.aresSystem) && (value.fastBoot === void 0 || typeof value.fastBoot === "boolean");
+}
+function debugConfiguration(session) {
+  const configuration = session.configuration;
+  if (typeof configuration.program !== "string" || !configuration.program || typeof configuration.debugMap !== "string" || !configuration.debugMap) {
+    throw new Error("Uttori ASM debugging requires 'program' and 'debugMap'.");
+  }
+  if (!isUttoriDebugConfiguration(configuration)) {
+    throw new Error("Invalid debug configuration.");
+  }
+  return configuration;
+}
+function parsedReplayScript(text) {
+  const value = JSON.parse(text);
+  if (!isReplayScript(value)) {
+    throw new Error("Invalid replay script.");
+  }
+  return value;
+}
+function isTraceCapability(value) {
+  return isRecord40(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.maxBufferedEvents === "number" && typeof value.maxBatchEvents === "number" && (value.instructionDetails === void 0 || typeof value.instructionDetails === "boolean");
+}
+function isNativeFilePosition(value) {
+  return isRecord40(value) && (value.fileState === "preparing" || value.fileState === "writing" || value.fileState === "complete" || value.fileState === "incomplete") && typeof value.fileBytes === "string" && typeof value.fileBatches === "string";
+}
+function isEditorTraceBatch(value) {
+  return isRecord40(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.sequenceStart === "number" && Array.isArray(value.addresses) && value.addresses.every((address4) => typeof address4 === "number") && typeof value.droppedEvents === "number" && typeof value.active === "boolean" && (value.details === void 0 || Array.isArray(value.details)) && (value.unattributedMemoryAccesses === void 0 || typeof value.unattributedMemoryAccesses === "number");
+}
+function isReplayScript(value) {
+  if (!isRecord40(value) || !Array.isArray(value.snapshots)) {
+    return false;
+  }
+  if (value.architectures !== void 0 && !Array.isArray(value.architectures)) {
+    return false;
+  }
+  return value.snapshots.every(
+    (snapshot) => isRecord40(snapshot) && Array.isArray(snapshot.threads) && Array.isArray(snapshot.frames) && isRecord40(snapshot.registers) && Array.isArray(snapshot.memory)
+  );
+}
 var traceMetadata = (session, trace) => {
   const loaded = sessionContexts.get(session.id);
   if (!loaded) {
     throw new Error("No loaded debug-session identity is available.");
   }
   const map = loaded.map;
-  const romContentSha256 = stringField(map.output?.sha256, "debugMap.output.sha256").toLowerCase();
+  const romContentSha256 = stringField(map.output.sha256, "debugMap.output.sha256").toLowerCase();
   if (!/^[\da-f]{64}$/.test(romContentSha256)) {
     throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
   }
   return { ...trace, romContentSha256, producer: loaded.producer };
 };
 var traceProducer = (session, map) => {
-  const configuration = session.configuration;
+  const configuration = debugConfiguration(session);
   const folder = session.workspaceFolder;
   const kind = configuration.backend ?? "replay";
   if (kind === "replay") {
     return {
       id: "debug-map-replay",
-      revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value")
+      revision: stringField(map.fingerprint.value, "debugMap.fingerprint.value")
     };
   }
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
-  const manifest = JSON.parse(fs22.readFileSync(manifestFile, "utf8"));
+  const parsed = JSON.parse(fs22.readFileSync(manifestFile, "utf8"));
+  const manifest = isRecord40(parsed) ? parsed : {};
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
-  const revision = kind === "ares" ? stringField(manifest.forkRevision, "runtimeManifest.forkRevision") : stringField(manifest.upstreamRevision, "runtimeManifest.upstreamRevision");
+  const revision = stringField(manifest.forkRevision, "runtimeManifest.forkRevision");
   const executable = stringField(manifest.executableSha256, "runtimeManifest.executableSha256");
   return { id: kind, revision: `${revision}:${patch}:${executable}` };
 };
 var chooseTrace = async (session) => {
   const result = await session.customRequest("uttori/traceCapabilities");
-  const traces = result.traces ?? [];
-  if (traces.length === 0) {
+  const traces = isRecord40(result) && Array.isArray(result.traces) ? result.traces : [];
+  if (!traces.every(isTraceCapability) || traces.length === 0) {
     throw new Error("The active backend has no instruction trace stream.");
   }
   if (traces.length === 1) {
@@ -47960,7 +49813,7 @@ var startRuntimeTraceWithLease = async () => {
       format: "act2",
       scope: captureScope2,
       context: settings.get("debug.captureContext", true),
-      transport: async (request) => await session.customRequest("uttori/capture", request)
+      transport: async (request) => validateCaptureResult(await session.customRequest("uttori/capture", request))
     });
     let live;
     if (liveProject && recorder2 instanceof NativeCaptureFileRecorder) {
@@ -47993,13 +49846,16 @@ var startRuntimeTraceWithLease = async () => {
         void recorder2.completion.then(
           (summary) => {
             clearInterval(polling);
-            analysis.update(
-              summary.position
-            );
+            if (!isNativeFilePosition(summary.position)) {
+              throw new Error("Invalid native file state.");
+            }
+            analysis.update(summary.position);
+            return;
           },
           () => {
             clearInterval(polling);
             analysis.cancel();
+            return;
           }
         );
         void analysis.completion.then(
@@ -48008,11 +49864,13 @@ var startRuntimeTraceWithLease = async () => {
               `Assembly: live bus analysis published ${result.added.runtime.toLocaleString()} new facts from ${result.observedEvents.toLocaleString()} accesses.`
             );
             void import_vscode14.commands.executeCommand("asm.sources.refresh");
+            return;
           },
           (error) => {
             void import_vscode14.window.showWarningMessage(
               `Assembly live analysis stopped: ${error instanceof Error ? error.message : String(error)} The ACT2 recording remains available for offline import.`
             );
+            return;
           }
         ).finally(() => {
           clearInterval(polling);
@@ -48050,7 +49908,13 @@ var startRuntimeTraceWithLease = async () => {
       file: destination.fsPath,
       ...metadata,
       maxBatchEvents: trace.maxBatchEvents,
-      readTrace: async (maxEvents) => await session.customRequest("uttori/readTrace", { maxEvents }),
+      readTrace: async (maxEvents) => {
+        const batch = await session.customRequest("uttori/readTrace", { maxEvents });
+        if (!isEditorTraceBatch(batch)) {
+          throw new Error("Invalid trace batch shape.");
+        }
+        return batch;
+      },
       stopTrace: async () => {
         await session.customRequest("uttori/stopTrace");
       }
@@ -48269,25 +50133,26 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
   });
 };
 var loadConfiguration = (session, extensionRoot, log) => {
-  const configuration = session.configuration;
-  if (!configuration.program || !configuration.debugMap) {
-    throw new Error("Uttori ASM debugging requires 'program' and 'debugMap'.");
-  }
+  const configuration = debugConfiguration(session);
   const folder = session.workspaceFolder;
   const program = resolvedPath(configuration.program, folder);
   const mapFile = resolvedPath(configuration.debugMap, folder);
   const output = new Uint8Array(fs22.readFileSync(program));
-  const map = JSON.parse(fs22.readFileSync(mapFile, "utf8"));
-  const issues = [...validateDebugMap(map, output)];
-  if (configuration.outputSha256 && configuration.outputSha256 !== map.output.sha256) {
+  const parsedMap = JSON.parse(fs22.readFileSync(mapFile, "utf8"));
+  if (!isStoredDebugMap2(parsedMap)) {
+    throw new Error("Invalid debug map.");
+  }
+  const issues = [...validateDebugMap(parsedMap, output)];
+  if (configuration.outputSha256 && configuration.outputSha256 !== parsedMap.output.sha256) {
     issues.push("ROM differs from the selected build.");
   }
-  if (configuration.debugMapFingerprint && configuration.debugMapFingerprint !== map.fingerprint.value) {
+  if (configuration.debugMapFingerprint && configuration.debugMapFingerprint !== parsedMap.fingerprint.value) {
     issues.push("Debug map differs from the selected build.");
   }
-  if (issues.length) {
-    throw new Error(issues.join(" "));
+  if (issues.length || !isAcceptedDebugMap2(parsedMap)) {
+    throw new Error(issues.join(" ") || "Invalid debug map.");
   }
+  const map = parsedMap;
   const kind = configuration.backend ?? "replay";
   const backend = (() => {
     if (kind !== "replay") {
@@ -48300,9 +50165,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
         log
       );
     }
-    const script = configuration.replay ? JSON.parse(
-      fs22.readFileSync(resolvedPath(configuration.replay, folder), "utf8")
-    ) : createDebugMapReplayScript(map, output);
+    const script = configuration.replay ? parsedReplayScript(fs22.readFileSync(resolvedPath(configuration.replay, folder), "utf8")) : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
   const configuredSourceRoot = resolvedPath(configuration.sourceRoot ?? ".", folder);
@@ -48392,7 +50255,7 @@ var UttoriDebugConfigurationProvider = class {
         ...configuration,
         type: UTTORI_ASM_DEBUG_TYPE,
         request: "launch",
-        name: configuration.name ?? "Debug Git Source",
+        name: configuration.name,
         program: built.outputFile,
         debugMap: built.debugMapFile,
         outputSha256: built.verification.outputSha256,
@@ -48436,18 +50299,13 @@ var UttoriDebugAdapterFactory = class {
     let loaded;
     try {
       if (session.configuration.backend === "ares") {
-        const manifest = parseAresRuntimeManifest(
-          JSON.parse(
-            fs22.readFileSync(
-              requiredLivePath(
-                session.configuration.runtimeManifest,
-                "runtimeManifest",
-                session.workspaceFolder
-              ),
-              "utf8"
-            )
-          )
+        const runtimeManifest = typeof session.configuration.runtimeManifest === "string" ? session.configuration.runtimeManifest : void 0;
+        const manifestText = fs22.readFileSync(
+          requiredLivePath(runtimeManifest, "runtimeManifest", session.workspaceFolder),
+          "utf8"
         );
+        const manifestValue = JSON.parse(manifestText);
+        const manifest = parseAresRuntimeManifest(manifestValue);
         log(
           manifest.frontend === "desktop" ? "ares desktop: a game window will open with video, audio, and controller input. Launch pauses at entry. Continue (F5) starts the game. Configure controls in ares Settings \u2192 Input." : "ares headless: no game window, video, or controller input. Choose a desktop runtime manifest for interactive play."
         );
@@ -48527,10 +50385,10 @@ var registerDebugging = (extensionRoot) => {
   ];
 };
 
-// src/project/outline-tree.ts
+// packages/vscode-extension/src/project/outline-tree.ts
 var import_vscode15 = require("vscode");
 
-// ../../node_modules/vscode-languageserver-types/lib/esm/main.js
+// packages/vscode-extension/node_modules/vscode-languageserver-types/lib/esm/main.js
 var DocumentUri;
 (function(DocumentUri2) {
   function is(value) {
@@ -49821,7 +51679,7 @@ var Is;
   Is2.typedArray = typedArray;
 })(Is || (Is = {}));
 
-// src/project/outline-tree.ts
+// packages/vscode-extension/src/project/outline-tree.ts
 var ProjectOutlineProvider = class {
   constructor(getClient) {
     this.getClient = getClient;
@@ -49882,7 +51740,7 @@ var ProjectOutlineProvider = class {
     }
     try {
       const nodes = await client3.sendRequest("asm/projectOutline");
-      return (nodes ?? []).map((node) => this.toItem(node));
+      return nodes.map((node) => this.toItem(node));
     } catch {
       return [];
     }
@@ -49909,16 +51767,14 @@ var ProjectOutlineProvider = class {
       const symbols = await client3.sendRequest("textDocument/documentSymbol", {
         textDocument: { uri }
       });
-      return (symbols ?? []).map(
-        (symbol, index) => symbolToItem(symbol, uri, `${parentId}:${index}`)
-      );
+      return symbols.map((symbol, index) => symbolToItem(symbol, uri, `${parentId}:${index}`));
     } catch {
       return [];
     }
   }
 };
 function symbolToItem(symbol, uri, id) {
-  const range = symbol.selectionRange ?? symbol.range;
+  const range = symbol.selectionRange;
   const children = (symbol.children ?? []).map(
     (child, index) => symbolToItem(child, uri, `${id}:${index}`)
   );
@@ -49965,7 +51821,7 @@ function iconForSymbolKind(kind) {
   }
 }
 
-// src/project/panel.ts
+// packages/vscode-extension/src/project/panel.ts
 var path35 = __toESM(require("node:path"), 1);
 var import_vscode16 = require("vscode");
 var ProjectPanelProvider = class {
@@ -50034,7 +51890,7 @@ var ProjectPanelProvider = class {
    * @param {unknown} message.value The value of the message.
    */
   async onMessage(message) {
-    if (!message || typeof message.type !== "string" || this.#pending.has(message.type)) {
+    if (!isPanelMessage(message) || this.#pending.has(message.type)) {
       return;
     }
     this.#pending.add(message.type);
@@ -50214,21 +52070,24 @@ var ProjectPanelProvider = class {
     await this.refresh();
   }
 };
+function isPanelMessage(value) {
+  return typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
+}
 function asString(value) {
   return typeof value === "string" ? value : "";
 }
 
-// src/source/controller.ts
+// packages/vscode-extension/src/source/controller.ts
 var import_promises13 = __toESM(require("node:fs/promises"), 1);
 var import_node_path28 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode21 = require("vscode");
 
-// src/source/analysis-editor.ts
+// packages/vscode-extension/src/source/analysis-editor.ts
 var import_node_path26 = __toESM(require("node:path"), 1);
 var import_vscode18 = require("vscode");
 
-// src/source/research-editor.ts
+// packages/vscode-extension/src/source/research-editor.ts
 var import_node_path25 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode17 = require("vscode");
@@ -50402,7 +52261,7 @@ async function editSourceResearch(worker, context, request) {
   return result;
 }
 
-// src/source/analysis-editor.ts
+// packages/vscode-extension/src/source/analysis-editor.ts
 function parseResearchAddress(text) {
   const value = text.trim();
   if (!/^(?:\$[\da-f]+|0x[\da-f]+|\d+)$/i.test(value)) {
@@ -50412,6 +52271,22 @@ function parseResearchAddress(text) {
   return Number.isSafeInteger(number) && number >= 0 ? number : void 0;
 }
 var hex3 = (value) => `$${value.toString(16).toUpperCase()}`;
+var CPU_STATE_FIELDS = [
+  { label: "E \xB7 emulation mode", key: "e" },
+  { label: "M \xB7 accumulator width", key: "m" },
+  { label: "X \xB7 index width", key: "x" },
+  { label: "Carry", key: "carry" },
+  { label: "Program bank", key: "programBank" },
+  { label: "Data bank", key: "dataBank" },
+  { label: "Direct page", key: "directPage" },
+  { label: "Stack pointer", key: "stackPointer" }
+];
+function isFlagKey(key3) {
+  return key3 === "e" || key3 === "m" || key3 === "x" || key3 === "carry";
+}
+function isRegisterKey(key3) {
+  return key3 === "programBank" || key3 === "dataBank" || key3 === "directPage" || key3 === "stackPointer";
+}
 async function address3(title, initial, maximum) {
   const text = await import_vscode18.window.showInputBox({
     title,
@@ -50425,25 +52300,15 @@ async function address3(title, initial, maximum) {
   return text === void 0 ? void 0 : parseResearchAddress(text);
 }
 async function editState(record4) {
-  const field = await import_vscode18.window.showQuickPick(
-    [
-      { label: "E \xB7 emulation mode", key: "e" },
-      { label: "M \xB7 accumulator width", key: "m" },
-      { label: "X \xB7 index width", key: "x" },
-      { label: "Carry", key: "carry" },
-      { label: "Program bank", key: "programBank" },
-      { label: "Data bank", key: "dataBank" },
-      { label: "Direct page", key: "directPage" },
-      { label: "Stack pointer", key: "stackPointer" }
-    ],
-    { title: `CPU assumption \xB7 ${record4.id}` }
-  );
+  const field = await import_vscode18.window.showQuickPick(CPU_STATE_FIELDS, {
+    title: `CPU assumption \xB7 ${record4.id}`
+  });
   if (!field) {
     return void 0;
   }
-  const key3 = field.key;
   const state = { ...record4.state };
-  if (["e", "m", "x", "carry"].includes(key3)) {
+  if (isFlagKey(field.key)) {
+    const key3 = field.key;
     let labels = ["Set", "Clear"];
     if (key3 === "e") {
       labels = ["Emulation (8-bit M/X)", "Native"];
@@ -50471,8 +52336,8 @@ async function editState(record4) {
       state.m = true;
       state.x = true;
     }
-  } else {
-    const register2 = key3;
+  } else if (isRegisterKey(field.key)) {
+    const register2 = field.key;
     const maximum = register2 === "programBank" || register2 === "dataBank" ? 255 : 65535;
     const value = await import_vscode18.window.showInputBox({
       title: field.label,
@@ -50609,7 +52474,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
     throw new Error("Research service returned an invalid analysis selection.");
   }
   const relevant = selection.records.filter(
-    (record5) => !hint || "classification" in record5.value !== (hint.action === "targets") && (!(hint.range || hint.ids.length) || hint.ids.includes(record5.value.id))
+    (record5) => !hint || "classification" in record5.value !== (hint.action === "targets") && (!(hint.range ?? hint.ids.length) || hint.ids.includes(record5.value.id))
   );
   const options = relevant.map((record5) => ({
     label: record5.value.id,
@@ -50750,7 +52615,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
   return editSourceResearch(worker, context, { kind: "analysis", change });
 }
 
-// src/source/code-actions.ts
+// packages/vscode-extension/src/source/code-actions.ts
 var import_node_path27 = __toESM(require("node:path"), 1);
 var import_vscode19 = require("vscode");
 function registerSourceCodeActions(context) {
@@ -50771,7 +52636,7 @@ function registerSourceCodeActions(context) {
           return [];
         }
         const actions = [];
-        const append2 = (title, command, args = []) => {
+        const append3 = (title, command, args = []) => {
           const action = new import_vscode19.CodeAction(title, import_vscode19.CodeActionKind.QuickFix);
           action.command = { title, command, arguments: args };
           action.diagnostics = diagnostics;
@@ -50786,7 +52651,7 @@ function registerSourceCodeActions(context) {
           diagnostics.map((item) => typeof item.code === "object" ? item.code.value : item.code)
         );
         if (["fixed-extent", "placement", "bank-crossing"].some((code) => codes.has(code))) {
-          append2("Review relocation for a declared object\u2026", "asm.source.relocate");
+          append3("Review relocation for a declared object\u2026", "asm.source.relocate");
         }
         if ([
           "fixed-extent",
@@ -50800,11 +52665,11 @@ function registerSourceCodeActions(context) {
           "output-size",
           "expansion"
         ].some((code) => codes.has(code))) {
-          append2("Open layout and reference contracts", "vscode.open", [
+          append3("Open layout and reference contracts", "vscode.open", [
             import_vscode19.Uri.file(import_node_path27.default.join(project.root, project.layout))
           ]);
         }
-        append2("Build and check source again", "asm.source.build");
+        append3("Build and check source again", "asm.source.build");
         return actions;
       }
     },
@@ -50812,7 +52677,7 @@ function registerSourceCodeActions(context) {
   );
 }
 
-// src/source/git-files.ts
+// packages/vscode-extension/src/source/git-files.ts
 init_src2();
 var import_vscode20 = require("vscode");
 var SourceGitFiles = class {
@@ -50867,7 +52732,7 @@ var SourceGitFiles = class {
   }
 };
 
-// src/source/process-client.ts
+// packages/vscode-extension/src/source/process-client.ts
 var import_node_child_process6 = require("node:child_process");
 var SourceProcessClient = class {
   constructor(file, log = () => {
@@ -50887,7 +52752,7 @@ var SourceProcessClient = class {
     if (!Number.isSafeInteger(options.maxMemoryMiB) || options.maxMemoryMiB < 128) {
       return Promise.reject(new Error("Source worker heap budget must be at least 128 MiB."));
     }
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve9, reject2) => {
       const child = (0, import_node_child_process6.fork)(this.file, [], {
         execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
         env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
@@ -50907,7 +52772,7 @@ var SourceProcessClient = class {
         clearTimeout(cancellationTimer);
         options.signal?.removeEventListener("abort", cancel);
         if (error) {
-          reject(error);
+          reject2(error);
         } else {
           resolve9(value);
         }
@@ -50970,7 +52835,34 @@ ${stderr}` : ""}`
   }
 };
 
-// src/source/controller.ts
+// packages/vscode-extension/src/source/controller.ts
+function isRecord41(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSnesMapper2(value) {
+  return value === "lorom" || value === "hirom" || value === "exlorom" || value === "exhirom" || value === "sfxrom" || value === "sa1rom" || value === "bigsa1rom" || value === "norom";
+}
+function isLayoutObject(value) {
+  return isRecord41(value) && typeof value.id === "string" && typeof value.kind === "string";
+}
+function isSnesSourceBuild(value) {
+  return isRecord41(value) && typeof value.outputFile === "string" && typeof value.debugMapFile === "string" && typeof value.inputSha256 === "string" && typeof value.outputSize === "number" && typeof value.debugMapFingerprint === "string" && isRecord41(value.verification) && typeof value.verification.outputSha256 === "string" && typeof value.verification.debugMapSha256 === "string" && typeof value.verification.toolchainSha256 === "string" && Array.isArray(value.verification.checks) && value.verification.checks.every((check) => typeof check === "string") && isRecord41(value.contracts) && typeof value.contracts.cpuStates === "number" && typeof value.contracts.fixedExtents === "number" && (value.cacheWarnings === void 0 || Array.isArray(value.cacheWarnings) && value.cacheWarnings.every((warning) => typeof warning === "string"));
+}
+function isSourceMergePreview(value) {
+  return isRecord41(value) && typeof value.head === "string" && typeof value.sourceTree === "string" && typeof value.candidate === "string" && typeof value.base === "string" && typeof value.resultTree === "string" && typeof value.messages === "string" && Array.isArray(value.conflicts) && value.conflicts.every((conflict) => typeof conflict === "string") && (value.ref === void 0 || typeof value.ref === "string");
+}
+function isGenerationCommit(value) {
+  return isRecord41(value) && isRecord41(value.generation) && typeof value.generation.commit === "string" && value.generation.commit.length > 0;
+}
+function isRelocationEdit(value) {
+  return isRecord41(value) && typeof value.path === "string" && typeof value.beforeSha256 === "string" && typeof value.before === "string" && typeof value.after === "string";
+}
+function relocationEdits(value) {
+  if (!isRecord41(value) || !Array.isArray(value.edits) || !value.edits.every(isRelocationEdit)) {
+    throw new Error("Invalid source relocation.");
+  }
+  return value.edits;
+}
 var SourceRow = class extends import_vscode21.TreeItem {
   constructor(label, children = [], command, args) {
     super(
@@ -51291,7 +53183,7 @@ var SourceController = class {
     const mapper = await import_vscode21.window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
       title: "SNES cartridge mapping"
     });
-    if (!mapper) {
+    if (!mapper || mapper !== "Detect automatically" && !isSnesMapper2(mapper)) {
       return;
     }
     this.#busy = "init";
@@ -51415,7 +53307,9 @@ var SourceController = class {
         this.#savedInput.fire();
       }
       const researchRoots = this.#configuration?.researchRoots ?? [];
-      if (relative3.startsWith(".uttori/") || relative3.startsWith(".git/") || researchRoots.some((root2) => relative3 === root2 || relative3.startsWith(root2 + "/"))) {
+      if (relative3.startsWith(".uttori/") || relative3.startsWith(".git/") || researchRoots.some(
+        (researchRoot) => relative3 === researchRoot || relative3.startsWith(`${researchRoot}/`)
+      )) {
         this.#researchChanged.fire();
       }
       clearTimeout(this.#refreshTimer);
@@ -51448,6 +53342,9 @@ var SourceController = class {
     const result = await this.perform("build");
     if (!result) {
       throw new Error("Select a source project before building or launching.");
+    }
+    if (!isSnesSourceBuild(result)) {
+      throw new Error("Invalid source build.");
     }
     const build = result;
     return {
@@ -51556,10 +53453,16 @@ var SourceController = class {
     let objectId;
     let expansionSize;
     if (action === "expand") {
-      const layout = JSON.parse(
-        await import_promises13.default.readFile(import_node_path28.default.join(root, this.#configuration.layout), "utf8")
-      );
-      const capacities = [65536, 131072, 262144, 524288, 1048576, 2097152, 4194304].filter((size) => size > layout.size).map((size) => ({
+      const layoutText = await import_promises13.default.readFile(import_node_path28.default.join(root, this.#configuration.layout), "utf8");
+      const layoutValue = JSON.parse(layoutText);
+      if (!isRecord41(layoutValue)) {
+        throw new Error("Layout contract is missing a numeric ROM size.");
+      }
+      const romSize = layoutValue.size;
+      if (typeof romSize !== "number") {
+        throw new Error("Layout contract is missing a numeric ROM size.");
+      }
+      const capacities = [65536, 131072, 262144, 524288, 1048576, 2097152, 4194304].filter((size) => size > romSize).map((size) => ({
         label: `${size / 1024} KiB`,
         size,
         description: "Keep mapper; add $FF storage and update header/checksum"
@@ -51580,8 +53483,10 @@ var SourceController = class {
       if ((await import_promises13.default.stat(file)).size > 8 * 1024 * 1024) {
         throw new Error("Layout contract exceeds its size budget.");
       }
-      const layout = JSON.parse(await import_promises13.default.readFile(file, "utf8"));
-      const choices = (layout.objects ?? []).map((object) => ({
+      const layoutText = await import_promises13.default.readFile(file, "utf8");
+      const layoutValue = JSON.parse(layoutText);
+      const objects = isRecord41(layoutValue) && Array.isArray(layoutValue.objects) ? layoutValue.objects.filter(isLayoutObject) : [];
+      const choices = objects.map((object) => ({
         label: object.id,
         description: object.kind
       }));
@@ -51613,7 +53518,10 @@ var SourceController = class {
     this.#busy = action;
     this.#changed.fire(void 0);
     try {
-      const overlays = buffers.map(({ path: path41, bytes }) => ({ path: path41, bytes }));
+      const overlays = buffers.map(({ path: overlayPath, bytes }) => ({
+        path: overlayPath,
+        bytes
+      }));
       if (action === "preview") {
         for (const document of binaryBuffers) {
           overlays.push({
@@ -51659,10 +53567,16 @@ var SourceController = class {
         }
       );
       if (action === "prepare") {
+        if (!isGenerationCommit(result)) {
+          throw new Error("Invalid source generation.");
+        }
         this.#candidate = result.generation.commit;
         await this.context.workspaceState.update(`source.candidate:${root}`, this.#candidate);
         this.#preview = void 0;
       } else if (action === "preview") {
+        if (!isSourceMergePreview(result)) {
+          throw new Error("Invalid source preview.");
+        }
         this.#preview = result;
         void import_vscode21.window.showInformationMessage(
           `Preview: ${this.#preview.conflicts.length} conflicting files. Commit the reviewed source snapshot before applying.`
@@ -51671,16 +53585,17 @@ var SourceController = class {
         if (this.#epoch !== epoch || this.buffers().length || this.binaryBuffers().length || this.opaqueBinaryBuffers().length) {
           throw new Error("Source changed during the build. Rebuild before running or debugging.");
         }
+        if (!isSnesSourceBuild(result)) {
+          throw new Error("Invalid source build.");
+        }
         this.#build = result;
         this.#buildStale = false;
         this.#diagnostics.clear();
         this.#built.fire({ root, build: this.#build });
       } else if (action === "relocate" || action === "expand") {
-        const relocation = result;
+        const edits = relocationEdits(result);
         const documents = await Promise.all(
-          relocation.edits.map(
-            (edit2) => import_vscode21.workspace.openTextDocument(import_vscode21.Uri.file(import_node_path28.default.join(root, edit2.path)))
-          )
+          edits.map((edit2) => import_vscode21.workspace.openTextDocument(import_vscode21.Uri.file(import_node_path28.default.join(root, edit2.path))))
         );
         if (this.#root !== root || this.#epoch !== epoch || this.buffers().length || this.binaryBuffers().length) {
           throw new Error(
@@ -51688,7 +53603,7 @@ var SourceController = class {
           );
         }
         const edit = new import_vscode21.WorkspaceEdit();
-        for (const [index, change] of relocation.edits.entries()) {
+        for (const [index, change] of edits.entries()) {
           const document = documents[index];
           if (sourceContentHash(document.getText()) !== change.beforeSha256) {
             throw new Error(`Placement source changed: ${change.path}`);
@@ -51897,7 +53812,27 @@ var SourceController = class {
   }
 };
 
-// src/extension.ts
+// packages/vscode-extension/src/extension.ts
+function isRecord42(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isBuildResult(value) {
+  if (!isRecord42(value) || typeof value.ok !== "boolean") {
+    return false;
+  }
+  const strings = [
+    "outputPath",
+    "outputSha256",
+    "debugMapPath",
+    "debugMapFingerprint",
+    "target",
+    "architecture",
+    "message"
+  ];
+  const numbers2 = ["bytes", "outputSize"];
+  const booleans = ["outputChanged", "debugMapChanged"];
+  return strings.every((key3) => value[key3] === void 0 || typeof value[key3] === "string") && numbers2.every((key3) => value[key3] === void 0 || typeof value[key3] === "number") && booleans.every((key3) => value[key3] === void 0 || typeof value[key3] === "boolean");
+}
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client2;
 var editorInformationController;
@@ -51907,6 +53842,9 @@ var sourceController;
 var watchEpoch = 0;
 var watchBuildRunning = false;
 var watchEnabled = false;
+function watchIsEnabled() {
+  return watchEnabled;
+}
 var watchMode = "build";
 var watchedDebugSession;
 var watchEntryUri;
@@ -51927,6 +53865,18 @@ function serverInitializationOptions() {
     workspaceTrusted: import_vscode22.workspace.isTrusted
   };
 }
+var analysisConfigurationIdentity = () => JSON.stringify(
+  (import_vscode22.workspace.workspaceFolders ?? []).map(({ uri }) => {
+    const config = import_vscode22.workspace.getConfiguration("asm", uri);
+    return Object.assign({}, config, {
+      editorInfo: void 0,
+      analysis: Object.assign({}, config.get("analysis", {}), {
+        showAnnotations: void 0,
+        annotationColumn: void 0
+      })
+    });
+  })
+);
 function activate(context) {
   extensionContext = context;
   registerPaletteEditor(context);
@@ -51967,7 +53917,6 @@ function activate(context) {
       language
     })),
     synchronize: {
-      configurationSection: "asm",
       fileEvents: [
         import_vscode22.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
         import_vscode22.workspace.createFileSystemWatcher("**/*.{png,wav,wave,json,bin,pal,palette}"),
@@ -52034,21 +53983,6 @@ function activate(context) {
     sourceController.onDidSelectProject(() => {
       stopWatch();
       analysisAnnotationController.configurationChanged();
-    })
-  );
-  const analysisConfigurationIdentity = () => JSON.stringify(
-    (import_vscode22.workspace.workspaceFolders ?? []).map(({ uri }) => {
-      const config = import_vscode22.workspace.getConfiguration("asm", uri);
-      const values = {
-        ...config,
-        editorInfo: void 0,
-        analysis: {
-          ...config.get("analysis", {}),
-          showAnnotations: void 0,
-          annotationColumn: void 0
-        }
-      };
-      return values;
     })
   );
   let previousAnalysisConfiguration = analysisConfigurationIdentity();
@@ -52237,6 +54171,7 @@ function activate(context) {
         outlineProvider.refresh();
       })
     );
+    return;
   });
 }
 function deactivate() {
@@ -52342,7 +54277,7 @@ async function runAndWatch(context) {
   } finally {
     watchBuildRunning = false;
   }
-  if (!watchEnabled) {
+  if (!watchIsEnabled()) {
     return;
   }
   if (epoch !== watchEpoch) {
@@ -52406,7 +54341,7 @@ function scheduleWatchBuild() {
         while (watchEnabled && watchEntryUri) {
           const epoch = watchEpoch;
           const result = await runBuild(watchEntryUri, true);
-          if (!watchEnabled) {
+          if (!watchIsEnabled()) {
             return;
           }
           if (epoch !== watchEpoch) {
@@ -52446,7 +54381,7 @@ async function initConfig() {
   let metadata = {};
   try {
     if (client2) {
-      metadata = await client2.sendRequest("asm/projectMetadata") ?? {};
+      metadata = await client2.sendRequest("asm/projectMetadata");
     }
   } catch {
   }
@@ -52534,10 +54469,11 @@ async function runBuild(documentUri, transient = false) {
   outputChannel?.info(`  baseImage: ${baseImage ?? "(none)"}`);
   outputChannel?.info("  sending asm.build to language server");
   try {
-    const result = await client2.sendRequest(import_node.ExecuteCommandRequest.type, {
+    const response = await client2.sendRequest(import_node.ExecuteCommandRequest.type, {
       command: "asm.build",
       arguments: [documentUri, output, baseImage]
     });
+    const result = isBuildResult(response) ? response : void 0;
     if (result?.ok) {
       if (result.debugMapPath) {
         editorInformationController?.buildCompleted(
@@ -52577,9 +54513,6 @@ function resolveConfiguredPath(configuredPath, document) {
   return path40.resolve(folder?.uri.fsPath ?? path40.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
-  if (!statusItem) {
-    return;
-  }
   if (!watchEnabled) {
     statusItem.text = "$(eye-closed) Assembly Watch: Off";
     statusItem.tooltip = "Click to rebuild the binary on every save.";

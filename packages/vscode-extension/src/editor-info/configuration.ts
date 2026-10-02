@@ -29,6 +29,20 @@ export const INFORMATION_PRESETS = {
   },
 } as const;
 
+const INFORMATION_PRESET_NAMES = [
+  "compact",
+  "authoring",
+  "disassembly",
+] as const satisfies readonly (keyof typeof INFORMATION_PRESETS)[];
+
+/** Unknown preset names, including hand-edited settings, use the compact fields. */
+function informationPreset(
+  name: string,
+): (typeof INFORMATION_PRESETS)[keyof typeof INFORMATION_PRESETS] {
+  const preset = INFORMATION_PRESET_NAMES.find((candidate) => candidate === name);
+  return preset === undefined ? INFORMATION_PRESETS.compact : INFORMATION_PRESETS[preset];
+}
+
 /** Resolved resource settings; templates are validated before entering the render path. */
 export interface EditorInformationConfiguration {
   readonly inlineEnabled: boolean;
@@ -78,8 +92,7 @@ export const readEditorInformationConfiguration = (
   configuration: WorkspaceConfiguration,
 ): EditorInformationConfiguration => {
   const name = configuration.get<string>("editorInfo.preset", "compact");
-  const preset =
-    INFORMATION_PRESETS[name as keyof typeof INFORMATION_PRESETS] ?? INFORMATION_PRESETS.compact;
+  const preset = informationPreset(name);
   const issues: string[] = [];
   const templates = (
     key: string,

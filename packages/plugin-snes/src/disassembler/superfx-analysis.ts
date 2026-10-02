@@ -15,6 +15,12 @@ import {
 } from "@uttori/asm-disassembler";
 
 import { SuperFxDecoder } from "../architectures/superfx-decoder.js";
+import {
+  coverageRecord,
+  effectiveAddressRecords,
+  incompleteReasonRecords,
+  superFxStateRecord,
+} from "./analysis-record-values.js";
 import { SUPERFX_ROM_ADDRESS_SPACE, SuperFxRomImage } from "./superfx-address-space.js";
 import {
   enterSuperFxAddress,
@@ -102,15 +108,27 @@ const applyEntryState = (
  */
 const controlsFor = (instruction: DecodedInstruction): readonly StaticControlTarget[] =>
   instruction.references
-    .filter((entry) => entry.kind === "branch" || entry.kind === "jump" || entry.kind === "call")
-    .map((entry) => ({
-      kind: entry.kind as "branch" | "call" | "jump",
-      ...(entry.address === undefined ? {} : { address: entry.address }),
-      ...(entry.indirect ? { indirect: true } : {}),
-      ...(entry.address === undefined && entry.indirect
-        ? { explanation: "The SuperFX register target is not known statically." }
-        : {}),
-    }));
+    .filter(
+      (
+        entry,
+      ): entry is DecodedInstruction["references"][number] & {
+        kind: "branch" | "call" | "jump";
+      } => entry.kind === "branch" || entry.kind === "call" || entry.kind === "jump",
+    )
+    .map((entry) =>
+      Object.assign(
+        {},
+        { kind: entry.kind },
+        entry.address === undefined ? {} : { address: entry.address },
+        Object.assign(
+          {},
+          entry.indirect ? { indirect: true } : {},
+          entry.address === undefined && entry.indirect
+            ? { explanation: "The SuperFX register target is not known statically." }
+            : {},
+        ),
+      ),
+    );
 
 /**
  * Converts a decoded instruction into a set of effective addresses.
@@ -122,15 +140,20 @@ const effectiveAddressesFor = (
 ): readonly StaticEffectiveAddress[] =>
   instruction.references
     .filter((entry) => entry.kind === "data" || entry.kind === "pointer")
-    .map((entry) => ({
-      operandIndex: entry.operandIndex ?? 0,
-      ...(entry.address === undefined ? {} : { address: entry.address }),
-      volatile: false,
-      explanation:
-        entry.address === undefined
-          ? "The register-indirect SuperFX RAM address is unresolved."
-          : "The encoded operand identifies SuperFX RAM, not cartridge ROM.",
-    }));
+    .map((entry) =>
+      Object.assign(
+        {},
+        { operandIndex: entry.operandIndex ?? 0 },
+        entry.address === undefined ? {} : { address: entry.address },
+        {
+          volatile: false,
+          explanation:
+            entry.address === undefined
+              ? "The register-indirect SuperFX RAM address is unresolved."
+              : "The encoded operand identifies SuperFX RAM, not cartridge ROM.",
+        },
+      ),
+    );
 
 /**
  * Converts a static analysis result into a set of analysis records.
@@ -154,14 +177,12 @@ const recordsFor = (
     mnemonic: node.mnemonic,
     mode: node.mode,
     context: node.context,
-    incomingState: node.incomingState as unknown as Readonly<Record<string, unknown>>,
-    outgoingState: node.outgoingState as unknown as Readonly<Record<string, unknown>>,
-    effectiveAddresses: node.effectiveAddresses as unknown as readonly Readonly<
-      Record<string, unknown>
-    >[],
+    incomingState: superFxStateRecord(node.incomingState),
+    outgoingState: superFxStateRecord(node.outgoingState),
+    effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
     entryPoint: node.entryPoint,
     evidencePath: node.evidencePath.map((id) => `static:superfx:${id}`),
-    evidence: [...new Set([...node.evidence, runEvidence])].sort(),
+    evidence: [...new Set([...node.evidence, runEvidence])].toSorted(),
   })),
   ...result.edges.map((edge): AnalysisRecord => ({
     id: `static:superfx:${edge.id}`,
@@ -175,7 +196,7 @@ const recordsFor = (
     indirect: edge.indirect,
     ...(edge.override ? { override: edge.override } : {}),
     ...(edge.explanation ? { explanation: edge.explanation } : {}),
-    evidence: [...new Set([...edge.evidence, runEvidence])].sort(),
+    evidence: [...new Set([...edge.evidence, runEvidence])].toSorted(),
   })),
   ...result.functions.map((entry): AnalysisRecord => ({
     id: `static:superfx:${entry.id}`,
@@ -184,7 +205,7 @@ const recordsFor = (
     address: entry.address,
     source: entry.source,
     evidencePath: entry.evidencePath.map((id) => `static:superfx:${id}`),
-    evidence: [...new Set([...entry.evidence, runEvidence])].sort(),
+    evidence: [...new Set([...entry.evidence, runEvidence])].toSorted(),
   })),
   ...result.conflicts.map((entry): AnalysisRecord => ({
     id: `static:superfx:${entry.id}`,
@@ -194,7 +215,7 @@ const recordsFor = (
     conflictKind: entry.kind,
     message: entry.message,
     nodes: entry.nodes.map((id) => `static:superfx:${id}`),
-    evidence: [...new Set([...entry.evidence, runEvidence])].sort(),
+    evidence: [...new Set([...entry.evidence, runEvidence])].toSorted(),
   })),
   ...result.unresolved.map((entry): AnalysisRecord => ({
     id: `static:superfx:${entry.id}`,
@@ -204,18 +225,16 @@ const recordsFor = (
     flowKind: entry.kind,
     indirect: entry.indirect,
     reason: entry.reason,
-    evidence: [...new Set([...entry.evidence, runEvidence])].sort(),
+    evidence: [...new Set([...entry.evidence, runEvidence])].toSorted(),
   })),
   {
     id: "static:superfx:summary",
     kind: "summary",
     architecture: "snes.superfx",
     status: result.status,
-    coverage: result.coverage as unknown as Readonly<Record<string, number>>,
+    coverage: coverageRecord(result.coverage),
     processedWorkItems: result.processedWorkItems,
-    incompleteReasons: result.incompleteReasons as unknown as readonly Readonly<
-      Record<string, unknown>
-    >[],
+    incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
     evidence: [runEvidence],
   },
 ];
@@ -240,7 +259,7 @@ const annotationsFor = (
         end: node.address + 1,
         classification: "opcode",
         architecture: "snes.superfx",
-        evidence: [...new Set([...node.evidence, evidence])].sort(),
+        evidence: [...new Set([...node.evidence, evidence])].toSorted(),
       },
     ];
     if (node.size > 1) {
@@ -251,7 +270,7 @@ const annotationsFor = (
         end: node.address + node.size,
         classification: "operand",
         architecture: "snes.superfx",
-        evidence: [...new Set([...node.evidence, evidence])].sort(),
+        evidence: [...new Set([...node.evidence, evidence])].toSorted(),
       });
     }
     return records;
@@ -340,7 +359,7 @@ export const analyzeSuperFxRom = (
     .map((entry) => ({
       id: entry.id,
       address: entry.address,
-      targets: [...entry.targets].sort((a, b) => a - b),
+      targets: [...entry.targets].toSorted((a, b) => a - b),
       evidence: entry.evidence,
     }));
 
@@ -425,7 +444,7 @@ export const analyzeSuperFxRom = (
     ...result,
     records: recordsFor(result, runEvidence),
     annotations: annotationsFor(result, runEvidence),
-    evidenceRecords: [...(options.evidence ?? []), ...evidenceRecords].sort((a, b) =>
+    evidenceRecords: [...(options.evidence ?? []), ...evidenceRecords].toSorted((a, b) =>
       a.id.localeCompare(b.id),
     ),
   };

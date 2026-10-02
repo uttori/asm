@@ -9,6 +9,7 @@ import {
   IncludeSourceService,
   type IncludeSourceHost,
 } from "../../src/services/include-source-service.js";
+import { testDouble } from "../directives/test-stubs.js";
 
 const createHost = (
   files: Record<string, string | Uint8Array>,
@@ -31,7 +32,7 @@ const createHost = (
     edges: [] as Array<[string, string]>,
     executedFiles: [] as string[],
     parsedSources: [] as string[],
-    programModelBuilder: {
+    programModelBuilder: testDouble<IncludeSourceHost["programModelBuilder"]>({
       createIncludeNode: (file: string, source: string) => {
         host.parsedSources.push(source);
         return {
@@ -40,7 +41,7 @@ const createHost = (
           commands: [],
         };
       },
-    } as IncludeSourceHost["programModelBuilder"],
+    }),
     lowerAndExecuteRuntimeNodes: () => {
       host.executedFiles.push(host.currentFile);
     },

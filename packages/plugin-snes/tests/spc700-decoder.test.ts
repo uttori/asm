@@ -1,14 +1,14 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { test } from "../../../tests/ava-helper.js";
-import { createEncoderTestHost } from "../../../tests/architecture/test-stubs.js";
 
-import { ArchSPC700 } from "../src/architectures/spc700.js";
+import { createEncoderTestHost } from "../../../tests/architecture/test-stubs.js";
+import { test } from "../../../tests/ava-helper.js";
 import {
   formatSpc700Instruction,
   Spc700Decoder,
   type Spc700DecodeState,
 } from "../src/architectures/spc700-decoder.js";
 import { buildSpc700Catalog, spc700Specifications } from "../src/architectures/spc700-spec.js";
+import { ArchSPC700 } from "../src/architectures/spc700.js";
 
 const decoder = new Spc700Decoder();
 const logicalAddress = 0x2000;
@@ -33,7 +33,7 @@ test("SPC700 declarative table covers every opcode and generates complete toolin
   const catalog = buildSpc700Catalog();
   t.deepEqual(
     catalog.map((entry) => entry.mnemonic),
-    [...catalog.map((entry) => entry.mnemonic)].sort(),
+    catalog.map((entry) => entry.mnemonic).toSorted(),
   );
   t.is(catalog.find((entry) => entry.mnemonic === "MOV")?.modes.length, 41);
   t.deepEqual(
@@ -122,7 +122,9 @@ test("SPC700 official-documentation vectors decode in native syntax", (t) => {
   for (const vector of vectors) {
     const result = decode(vector.bytes);
     t.is(result.kind, "instruction", vector.source);
-    if (result.kind !== "instruction") {continue;}
+    if (result.kind !== "instruction") {
+      continue;
+    }
     t.is(formatSpc700Instruction(result.instruction), vector.source);
     t.is(result.instruction.flow.kind, vector.flow);
   }
@@ -154,7 +156,9 @@ test("SPC700 decode-format-encode round trips all 256 opcode bytes", (t) => {
     const bytes = [specification.opcode[0], 0x34, 0x12].slice(0, specification.minimumSize);
     const result = decode(bytes, { directPage: 0 });
     t.is(result.kind, "instruction", specification.id);
-    if (result.kind !== "instruction") {continue;}
+    if (result.kind !== "instruction") {
+      continue;
+    }
 
     const source = formatSpc700Instruction(result.instruction);
     const host = createEncoderTestHost();

@@ -3,10 +3,83 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import type { DebugMap } from "@uttori/asm-core/debug-map";
-import { parseDebugAddress, type DapProtocolMessage } from "@uttori/asm-debug-adapter";
+import { parseDebugAddress } from "@uttori/asm-debug-adapter";
 import * as vscode from "vscode";
 
 import { resolveDebugSourceRoot } from "../src/debug/source-root.js";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+interface TrackedDapMessage {
+  type?: string;
+  event?: string;
+  command?: string;
+  success?: boolean;
+  message?: string;
+  body?: Record<string, unknown>;
+}
+
+const trackedDapMessage = (value: unknown): TrackedDapMessage => {
+  if (!isRecord(value)) {
+    return {};
+  }
+  const message: TrackedDapMessage = {};
+  if (typeof value.type === "string") {
+    message.type = value.type;
+  }
+  if (typeof value.event === "string") {
+    message.event = value.event;
+  }
+  if (typeof value.command === "string") {
+    message.command = value.command;
+  }
+  if (typeof value.success === "boolean") {
+    message.success = value.success;
+  }
+  if (typeof value.message === "string") {
+    message.message = value.message;
+  }
+  if (isRecord(value.body)) {
+    message.body = value.body;
+  }
+  return message;
+};
+
+const verifiedBreakpoints = (
+  body: Record<string, unknown> | undefined,
+): { verified: boolean; line: number }[] => {
+  if (!Array.isArray(body?.breakpoints)) {
+    assert.fail("Breakpoint response is missing its breakpoint list.");
+  }
+  return body.breakpoints.map((entry) => {
+    if (!isRecord(entry) || typeof entry.verified !== "boolean" || typeof entry.line !== "number") {
+      assert.fail("Breakpoint response entry is missing verification.");
+    }
+    return { verified: entry.verified, line: entry.line };
+  });
+};
+
+/** The smoke reads source paths and address ranges. Other map fields stay unread. */
+const isDebugMap = (value: unknown): value is DebugMap =>
+  isRecord(value) &&
+  Array.isArray(value.sources) &&
+  value.sources.every(
+    (source) =>
+      isRecord(source) &&
+      typeof source.id === "number" &&
+      typeof source.path === "string" &&
+      typeof source.size === "number",
+  ) &&
+  Array.isArray(value.ranges) &&
+  value.ranges.every(
+    (range) =>
+      isRecord(range) &&
+      typeof range.architecture === "string" &&
+      typeof range.start === "number" &&
+      typeof range.sourceId === "number" &&
+      typeof range.line === "number",
+  );
 
 /** One actual generated line and the runtime PC expected when it stops. */
 interface SourceTarget {
@@ -24,6 +97,26 @@ const waitFor = async (condition: () => boolean, description: string): Promise<v
     }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
+};
+
+/** Validate the stack frame is at the expected location. */
+const frame = async (session: vscode.DebugSession, location: SourceTarget): Promise<void> => {
+  const stack: unknown = await session.customRequest("stackTrace", { threadId: 1 });
+  if (!isRecord(stack) || !Array.isArray(stack.stackFrames)) {
+    assert.fail("stackTrace response must list frames.");
+  }
+  const top: unknown = stack.stackFrames[0];
+  if (!isRecord(top) || !isRecord(top.source)) {
+    assert.fail("stack frame is missing its source path.");
+  }
+  assert.equal(top.line, location.line);
+  assert.equal(top.source.path, location.uri.fsPath);
+  assert.equal(
+    typeof top.instructionPointerReference === "string"
+      ? parseDebugAddress(top.instructionPointerReference)?.address
+      : undefined,
+    location.pc,
+  );
 };
 
 /**
@@ -44,7 +137,10 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
   const resolve = (value: string): string =>
     path.resolve(folder.uri.fsPath, value.replaceAll("${workspaceFolder}", folder.uri.fsPath));
   const mapFile = resolve(configuration.debugMap);
-  const map = JSON.parse(fs.readFileSync(mapFile, "utf8")) as DebugMap;
+  const map: unknown = JSON.parse(fs.readFileSync(mapFile, "utf8"));
+  if (!isDebugMap(map)) {
+    assert.fail(`Debug map ${mapFile} is missing source ranges.`);
+  }
   const sourceRoot = resolveDebugSourceRoot({
     map,
     configuredRoot: resolve(configuration.sourceRoot ?? "."),
@@ -64,10 +160,10 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
   // Reset executes through bank $00. The generated HiROM source names bank $C0.
   const reset = target(0xc08005, 0x008005);
   const upload = target(0xc300c6);
-  const messages: DapProtocolMessage[] = [];
+  const messages: TrackedDapMessage[] = [];
   const tracker = vscode.debug.registerDebugAdapterTrackerFactory("uttori-asm", {
     createDebugAdapterTracker: () => ({
-      onDidSendMessage: (message: unknown) => messages.push(message as DapProtocolMessage),
+      onDidSendMessage: (message: unknown) => messages.push(trackedDapMessage(message)),
     }),
   });
   const owned = new Set<vscode.SourceBreakpoint>();
@@ -107,11 +203,11 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
     const result = response();
     assert.ok(result?.type === "response");
     assert.equal(result.success, true, result.message ?? "Source breakpoint request failed.");
-    const body = result.body as { breakpoints: { verified: boolean; line: number }[] };
+    const breakpoints = verifiedBreakpoints(result.body);
     if (line === undefined) {
-      assert.deepEqual(body.breakpoints, []);
+      assert.deepEqual(breakpoints, []);
     } else {
-      assert.ok(body.breakpoints.some((entry) => entry.line === line && entry.verified));
+      assert.ok(breakpoints.some((entry) => entry.line === line && entry.verified));
     }
   };
   const stopped = async (start: number, reason: string): Promise<void> => {
@@ -123,26 +219,12 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
             (message) =>
               message.type === "event" &&
               message.event === "stopped" &&
-              (message.body as { reason?: string }).reason === reason,
+              message.body?.reason === reason,
           ),
       `${reason} stop`,
     );
   };
-  const frame = async (session: vscode.DebugSession, location: SourceTarget): Promise<void> => {
-    const stack = (await session.customRequest("stackTrace", { threadId: 1 })) as {
-      stackFrames: {
-        line: number;
-        source: { path: string };
-        instructionPointerReference: string;
-      }[];
-    };
-    assert.equal(stack.stackFrames[0]?.line, location.line);
-    assert.equal(stack.stackFrames[0]?.source.path, location.uri.fsPath);
-    assert.equal(
-      parseDebugAddress(stack.stackFrames[0]?.instructionPointerReference)?.address,
-      location.pc,
-    );
-  };
+
   const launch = async (): Promise<vscode.DebugSession> => {
     const start = messages.length;
     assert.equal(await vscode.debug.startDebugging(folder, name), true);
@@ -175,7 +257,7 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
           (message) =>
             message.type === "event" &&
             message.event === "stopped" &&
-            (message.body as { reason?: string }).reason === "pause",
+            message.body?.reason === "pause",
         ),
       false,
     );

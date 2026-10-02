@@ -4,6 +4,13 @@ import { crc32, deflateSync, inflateSync } from "node:zlib";
 
 /** History preserves SQLite storage types, including JSONB and packed register bytes. */
 export type HistoryValue = string | Uint8Array | null;
+
+function historyPayload(value: unknown): HistoryValue {
+  if (value === null || typeof value === "string" || types.isUint8Array(value)) {
+    return value;
+  }
+  throw new Error("Invalid runtime history payload.");
+}
 const MAGIC = Buffer.from([0x55, 0x48, 0x42, 1]);
 const MAX_ROWS = 1024;
 const MAX_BYTES = 32 * 1024 * 1024;
@@ -210,7 +217,7 @@ export const packRuntimeHistory = (
     // Stop fetching at the byte target instead of materializing 1,024 potentially large payloads.
     // Leaving the loop closes its cursor before the same table is updated below.
     for (const row of pending.iterate(MAX_ROWS)) {
-      const value = row.payload as HistoryValue;
+      const value = historyPayload(row.payload);
       const bytes = typeof value === "string" ? Buffer.byteLength(value) : (value?.byteLength ?? 0);
       if (rows.length && size + bytes > TARGET_BYTES) {
         break;
@@ -221,7 +228,7 @@ export const packRuntimeHistory = (
     if (!rows.length) {
       return packed;
     }
-    const encoded = encodeRuntimeHistory(rows.map((row) => row.payload as HistoryValue));
+    const encoded = encodeRuntimeHistory(rows.map((row) => historyPayload(row.payload)));
     const id = insert.run(rows[0].fid, rows[rows.length - 1].fid, encoded).lastInsertRowid;
     for (const [slot, row] of rows.entries()) {
       update.run(id, slot, row.fid);

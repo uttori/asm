@@ -61,7 +61,9 @@ export function applyAssetFileChanges(changes) {
             try {
                 // Never roll back over somebody else's edit made after our replacement.
                 if (!matches(entry.change.path, entry.change.after)) {
-                    throw new Error(`Concurrent edit prevents recovery: ${entry.change.path}.`);
+                    throw new Error(`Concurrent edit prevents recovery: ${entry.change.path}.`, {
+                        cause: cause,
+                    });
                 }
                 fs.renameSync(entry.backup, entry.change.path);
             }
@@ -71,7 +73,7 @@ export function applyAssetFileChanges(changes) {
         }
         if (failures.length > 1) {
             keepBackups = true;
-            throw new AggregateError(failures, `Asset recovery incomplete. Backups: ${staged.map((s) => s.directory).join(", ")}`);
+            throw new AggregateError(failures, `Asset recovery incomplete. Backups: ${staged.map((s) => s.directory).join(", ")}`, { cause: cause });
         }
         throw cause;
     }

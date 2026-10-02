@@ -1,10 +1,10 @@
-import { test } from "../../../tests/ava-helper.js";
-
 import fs from "node:fs";
 
 import { Assembler } from "@uttori/asm-core";
-import plugin65xx, { create65xxAssemblerEnvironment, RAW_65XX_TARGET_ID } from "../src/index.js";
+
+import { test } from "../../../tests/ava-helper.js";
 import { PluginManager } from "../../core/src/plugin/manager.js";
+import plugin65xx, { create65xxAssemblerEnvironment, RAW_65XX_TARGET_ID } from "../src/index.js";
 
 const environment = await create65xxAssemblerEnvironment();
 
@@ -20,9 +20,107 @@ interface DifferentialFixture {
   }>;
 }
 
-const differentialFixture = JSON.parse(
-  fs.readFileSync(new URL("./fixtures/ca65-v2.19-nmos-differential.json", import.meta.url), "utf8"),
-) as DifferentialFixture;
+/**
+ * Accepts a JSON object. Arrays and null are not fixtures.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Accepts a list of numbers.
+ * @param {unknown} value Candidate byte list.
+ * @returns {boolean} True when every element is a number.
+ */
+const isNumberList = (value: unknown): value is readonly number[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "number");
+
+/**
+ * Accepts one NMOS differential case.
+ * @param {unknown} value Candidate case.
+ * @returns {boolean} True when opcode, mnemonic, mode, documented, source, and bytes are present.
+ */
+const isDifferentialCase = (value: unknown): value is DifferentialFixture["cases"][number] =>
+  isRecord(value) &&
+  typeof value.opcode === "number" &&
+  typeof value.mnemonic === "string" &&
+  typeof value.mode === "string" &&
+  typeof value.documented === "boolean" &&
+  typeof value.source === "string" &&
+  isNumberList(value.bytes);
+
+/**
+ * Accepts the NMOS differential fixture document.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when oracle release/commit and cases match the fixture contract.
+ */
+const isDifferentialFixture = (value: unknown): value is DifferentialFixture =>
+  isRecord(value) &&
+  isRecord(value.oracle) &&
+  typeof value.oracle.release === "string" &&
+  typeof value.oracle.commit === "string" &&
+  Array.isArray(value.cases) &&
+  value.cases.every(isDifferentialCase);
+
+/**
+ * Accepts one CMOS/vendor differential case.
+ * @param {unknown} value Candidate case.
+ * @returns {boolean} True when mnemonic, mode, source, and bytes are present.
+ */
+const isVariantCase = (
+  value: unknown,
+): value is VariantDifferentialFixture["variants"][number]["cases"][number] =>
+  isRecord(value) &&
+  typeof value.mnemonic === "string" &&
+  typeof value.mode === "string" &&
+  typeof value.source === "string" &&
+  isNumberList(value.bytes);
+
+/**
+ * Accepts one CPU variant block.
+ * @param {unknown} value Candidate variant.
+ * @returns {boolean} True when cpu, sha256, and cases match.
+ */
+const isVariant = (value: unknown): value is VariantDifferentialFixture["variants"][number] =>
+  isRecord(value) &&
+  typeof value.cpu === "string" &&
+  typeof value.sha256 === "string" &&
+  Array.isArray(value.cases) &&
+  value.cases.every(isVariantCase);
+
+/**
+ * Accepts a CMOS/vendor differential fixture document.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when the oracle and variant list match the fixture contract.
+ */
+const isVariantDifferentialFixture = (value: unknown): value is VariantDifferentialFixture =>
+  isRecord(value) &&
+  isRecord(value.oracle) &&
+  typeof value.oracle.release === "string" &&
+  typeof value.oracle.commit === "string" &&
+  typeof value.oracle.instructionTableSha256 === "string" &&
+  Array.isArray(value.variants) &&
+  value.variants.every(isVariant);
+
+/**
+ * Parses a differential fixture and rejects a document that does not match the expected fields.
+ * @param {URL} url Fixture URL.
+ * @param {(value: unknown) => value is T} accept Shape check.
+ * @returns {T} The fixture.
+ */
+function readFixture<T>(url: URL, accept: (value: unknown) => value is T): T {
+  const parsed: unknown = JSON.parse(fs.readFileSync(url, "utf8"));
+  if (!accept(parsed)) {
+    throw new Error(`Invalid ca65 differential fixture: ${url.pathname}`);
+  }
+  return parsed;
+}
+
+const differentialFixture = readFixture(
+  new URL("./fixtures/ca65-v2.19-nmos-differential.json", import.meta.url),
+  isDifferentialFixture,
+);
 
 interface VariantDifferentialFixture {
   readonly oracle: {
@@ -42,19 +140,15 @@ interface VariantDifferentialFixture {
   }>;
 }
 
-const variantDifferentialFixture = JSON.parse(
-  fs.readFileSync(
-    new URL("./fixtures/ca65-e11fb5c-cmos-vendor-differential.json", import.meta.url),
-    "utf8",
-  ),
-) as VariantDifferentialFixture;
+const variantDifferentialFixture = readFixture(
+  new URL("./fixtures/ca65-e11fb5c-cmos-vendor-differential.json", import.meta.url),
+  isVariantDifferentialFixture,
+);
 
-const huc6280M740DifferentialFixture = JSON.parse(
-  fs.readFileSync(
-    new URL("./fixtures/ca65-e11fb5c-huc6280-m740-differential.json", import.meta.url),
-    "utf8",
-  ),
-) as VariantDifferentialFixture;
+const huc6280M740DifferentialFixture = readFixture(
+  new URL("./fixtures/ca65-e11fb5c-huc6280-m740-differential.json", import.meta.url),
+  isVariantDifferentialFixture,
+);
 
 function assemble(
   source: string,
@@ -297,7 +391,7 @@ test("every CMOS and vendor-extension form matches the pinned ca65 byte fixture"
         actual = [...assemble(fixture.source, { architecture: variant.cpu })];
       } catch (error) {
         throw new Error(
-          `${variant.cpu} ${fixture.mnemonic} ${fixture.mode} (${JSON.stringify(fixture.source)}): ${error instanceof Error ? error.message : String(error)}`,
+          `${variant.cpu} ${fixture.mnemonic} ${fixture.mode} (${JSON.stringify(fixture.source)}): ${error instanceof Error ? error.message : String(error)}`, { cause: error },
         );
       }
       t.deepEqual(actual, fixture.bytes, `${variant.cpu} ${fixture.mnemonic} ${fixture.mode}`);

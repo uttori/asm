@@ -56,7 +56,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         options.onStage?.("Indexing trace facts in SQLite…");
         options.signal?.throwIfAborted();
         const importer = await store.indexTrace(async (index) => {
-            const importer = createRuntimeInstructionTraceImporter(source.metadata, context, {
+            const traceImporter = createRuntimeInstructionTraceImporter(source.metadata, context, {
                 index,
                 onMergeProgress: options.onMergeProgress,
                 onSource: (sha256, profile) => {
@@ -99,9 +99,9 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
             });
             await source.read((chunk) => {
                 options.signal?.throwIfAborted();
-                importer.push(chunk);
+                traceImporter.push(chunk);
             });
-            return importer;
+            return traceImporter;
         });
         options.onStage?.("Validating destination revision before publication…");
         options.signal?.throwIfAborted();
@@ -160,7 +160,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                 sourceSha256: imported.sourceSha256,
                 observedEvents: imported.observedEvents,
                 droppedEvents: imported.droppedEvents,
-                execution: execution.sort((a, b) => a.address - b.address),
+                execution: execution.toSorted((a, b) => a.address - b.address),
                 changed,
                 added: { runtime: addedRuntime, evidence: merged.added.evidence },
             };
@@ -216,11 +216,11 @@ export const commitRuntimeEvidenceBatch = (directory, expected, batch) => {
     try {
         const result = store.transaction(() => {
             assertAnalysisProjectRevision(store, expected);
-            const result = store.mergeEvidenceBatch(batch);
-            if (result.changed) {
+            const merged = store.mergeEvidenceBatch(batch);
+            if (merged.changed) {
                 store.publishManifest(store.manifest());
             }
-            return result;
+            return merged;
         });
         if (result.changed) {
             store.writePointer(directory);

@@ -63,7 +63,7 @@ export const evidenceReferences = (
 ];
 
 const sortedUnique = (values: readonly string[]): readonly string[] =>
-  [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 
 /**
  * Resolves complete evidence records, reverse references, and related persisted conflicts for one
@@ -106,6 +106,6 @@ export const explainProjectEvidence = (
           entry.nodes.includes(recordId) ||
           entry.evidence.some((id) => evidenceSet.has(id))),
     )
-    .sort((left, right) => left.id.localeCompare(right.id));
+    .toSorted((left, right) => left.id.localeCompare(right.id));
   return { shard, record, evidence, referencedBy, conflicts };
 };

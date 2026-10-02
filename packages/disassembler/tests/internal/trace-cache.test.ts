@@ -1,6 +1,8 @@
 import { test } from "../../../../tests/ava-helper.js";
 import { TraceCache } from "../../src/internal/trace-cache.js";
 
+const byKey = (a: [string, number], b: [string, number]) => a[0].localeCompare(b[0]);
+
 test("bounded cache preserves values and reports every eviction across rotating and unique scans", (t) => {
   const metrics = { hits: 0, misses: 0, evictions: 0, peakEntries: 0 };
   const cache = new TraceCache<{ count: number }>(metrics);
@@ -25,8 +27,7 @@ test("bounded cache preserves values and reports every eviction across rotating 
   }
   // Compare ordered arrays: unordered large Map matching can make the assertion
   // itself quadratic even though aggregation is linear.
-  const byKey = (a: [string, number], b: [string, number]) => a[0].localeCompare(b[0]);
-  t.deepEqual([...totals].sort(byKey), [...expected].sort(byKey));
+  t.deepEqual([...totals].toSorted(byKey), [...expected].toSorted(byKey));
   t.is(metrics.peakEntries, 4096);
   t.true(metrics.hits > 28000);
   t.is(metrics.evictions, metrics.misses - 4096);

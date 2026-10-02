@@ -156,7 +156,11 @@ export const deriveDisassemblerBenchmarkBudgets = (
  */
 export const assertDisassemblerBudgetEnvironment = (
   report: DisassemblerBenchmarkBudgetReport,
-  budgets: DisassemblerBenchmarkBudgets,
+  budgets: {
+    readonly schemaVersion: unknown;
+    readonly suite: unknown;
+    readonly environment: DisassemblerBenchmarkBudgets["environment"];
+  },
 ): void => {
   if (budgets.schemaVersion !== 1 || budgets.suite !== "uttori-asm-disassembler") {
     throw new Error("Unsupported disassembler benchmark budget format.");

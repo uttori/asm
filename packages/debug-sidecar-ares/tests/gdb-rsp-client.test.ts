@@ -110,7 +110,7 @@ test("RSP client fails closed when the transport closes with a pending request",
   const response = client.request("m808000,4");
   transport.fail(new Error("ares exited"));
   const error = await t.throwsAsync(response);
-  t.is(error?.message, "ares exited");
+  t.is(error.message, "ares exited");
   t.true(client.closed);
   await t.throwsAsync(client.request("g"), { message: "RSP client is closed." });
 });

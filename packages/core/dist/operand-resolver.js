@@ -1,5 +1,7 @@
 import { isReferenceExpressionNode, renderExpressionNode, renderReferenceExpressionNode, } from "./ir/expression-node.js";
 import { parseOperandSyntax } from "./operand-syntax.js";
+/** Expand results may omit lexical syntax. Fall back to the raw spelling. */
+const syntaxOf = (operand, raw) => operand.syntax ?? parseOperandSyntax(raw);
 export class OperandResolver {
     deps;
     constructor(deps) {
@@ -233,16 +235,22 @@ export class OperandResolver {
         switch (operand.type) {
             case "range":
                 throw new Error(`Range expression is not a numeric operand: ${renderExpressionNode(operand)}`);
-            default:
-                try {
-                    return this.deps.evaluateMath(operand);
-                }
-                catch (error) {
-                    if (this.deps.shouldDeferExpressionEvaluation()) {
-                        return 0;
-                    }
-                    throw error;
-                }
+            case "binary":
+            case "call":
+            case "literal":
+            case "raw":
+            case "string":
+            case "unary":
+                break;
+        }
+        try {
+            return this.deps.evaluateMath(operand);
+        }
+        catch (error) {
+            if (this.deps.shouldDeferExpressionEvaluation()) {
+                return 0;
+            }
+            throw error;
         }
     }
     resolveReferenceValue(reference) {
@@ -339,7 +347,8 @@ export class OperandResolver {
         const raw = operand.trim();
         const expandedOperand = this.expandOperand(raw);
         const { expanded, length } = expandedOperand;
-        const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+        // Encoder tests stub expandOperand with width only. Recover lexical facts from the raw spelling.
+        const syntax = syntaxOf(expandedOperand, raw);
         return {
             mode: "unknown",
             baseExpression: expanded,

@@ -1,7 +1,5 @@
 import { registerHooks } from "node:module";
 
-import type { DebugMap } from "@uttori/asm-core/debug-map";
-
 import { test } from "../../../../tests/ava-helper.js";
 
 const host = {
@@ -10,7 +8,7 @@ const host = {
   texts: ["12×"],
 };
 
-(globalThis as { __uttoriDebugAnnotationsTest?: typeof host }).__uttoriDebugAnnotationsTest = host;
+Object.assign(globalThis, { __uttoriDebugAnnotationsTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -92,7 +90,7 @@ test.serial(
     const lookup = await createDebugInstructionAnnotation({
       target: "fixture",
       output: { sha256: "matching", size: 1024 },
-    } as DebugMap);
+    });
     t.truthy(lookup);
     t.deepEqual(
       host.calls.map(({ operation }) => operation),
@@ -119,7 +117,7 @@ test.serial("debugger deduplicates aliases before applying one total display bud
   const lookup = await createDebugInstructionAnnotation({
     target: "fixture",
     output: { sha256: "matching", size: 1024 },
-  } as DebugMap);
+  });
   const text = await lookup!({
     architecture: "cpu",
     addressSpace: "cpu",

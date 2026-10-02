@@ -18,7 +18,7 @@ export interface AnalysisEvidenceSource {
   readonly reports: readonly ImportReport[];
 }
 
-const sorted = (values: Iterable<string>): string[] => [...new Set(values)].sort();
+const sorted = (values: Iterable<string>): string[] => [...new Set(values)].toSorted();
 const key = (...values: (string | number | undefined)[]): string => JSON.stringify(values);
 
 /**
@@ -87,19 +87,24 @@ export const buildAnalysisSourceCatalog = (
   }
   return (
     [...sources.values()]
-      .map((source) => ({
-        ...source,
-        ...(source.sha256 && importTimes.has(source.sha256)
-          ? { lastImportedAt: importTimes.get(source.sha256) }
-          : {}),
-        names: sorted(source.names),
-        name: sorted(source.names).join(" / "),
-        kinds: [...source.kinds].sort(),
-        evidenceIds: sorted(source.evidenceIds),
-        reports: source.reports.sort((a, b) => a.id.localeCompare(b.id)),
-      }))
+      .map((source) =>
+        Object.assign(
+          {},
+          source,
+          source.sha256 && importTimes.has(source.sha256)
+            ? { lastImportedAt: importTimes.get(source.sha256) }
+            : {},
+          {
+            names: sorted(source.names),
+            name: sorted(source.names).join(" / "),
+            kinds: [...source.kinds].toSorted(),
+            evidenceIds: sorted(source.evidenceIds),
+            reports: source.reports.toSorted((a, b) => a.id.localeCompare(b.id)),
+          },
+        ),
+      )
       // Missing dates cannot establish recency. Keep legacy sources deterministic after dated imports.
-      .sort(
+      .toSorted(
         (a, b) =>
           (b.lastImportedAt ?? -1) - (a.lastImportedAt ?? -1) ||
           a.name.localeCompare(b.name) ||

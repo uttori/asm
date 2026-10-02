@@ -1,6 +1,7 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import { analyzeStaticControlFlow, } from "@uttori/asm-disassembler";
 import { SuperFxDecoder } from "../architectures/superfx-decoder.js";
+import { coverageRecord, effectiveAddressRecords, incompleteReasonRecords, superFxStateRecord, } from "./analysis-record-values.js";
 import { SUPERFX_ROM_ADDRESS_SPACE } from "./superfx-address-space.js";
 import { enterSuperFxAddress, initialSuperFxState, joinSuperFxStates, superFxDecodeState, superFxStateKey, transferSuperFxState, } from "./superfx-state.js";
 const DATA_CLASSIFICATIONS = new Set([
@@ -44,15 +45,10 @@ const applyEntryState = (state, override) => {
  * @returns {readonly StaticControlTarget[]} Control targets.
  */
 const controlsFor = (instruction) => instruction.references
-    .filter((entry) => entry.kind === "branch" || entry.kind === "jump" || entry.kind === "call")
-    .map((entry) => ({
-    kind: entry.kind,
-    ...(entry.address === undefined ? {} : { address: entry.address }),
-    ...(entry.indirect ? { indirect: true } : {}),
-    ...(entry.address === undefined && entry.indirect
-        ? { explanation: "The SuperFX register target is not known statically." }
-        : {}),
-}));
+    .filter((entry) => entry.kind === "branch" || entry.kind === "call" || entry.kind === "jump")
+    .map((entry) => Object.assign({}, { kind: entry.kind }, entry.address === undefined ? {} : { address: entry.address }, Object.assign({}, entry.indirect ? { indirect: true } : {}, entry.address === undefined && entry.indirect
+    ? { explanation: "The SuperFX register target is not known statically." }
+    : {})));
 /**
  * Converts a decoded instruction into a set of effective addresses.
  * @param {DecodedInstruction} instruction Decoded instruction.
@@ -60,9 +56,7 @@ const controlsFor = (instruction) => instruction.references
  */
 const effectiveAddressesFor = (instruction) => instruction.references
     .filter((entry) => entry.kind === "data" || entry.kind === "pointer")
-    .map((entry) => ({
-    operandIndex: entry.operandIndex ?? 0,
-    ...(entry.address === undefined ? {} : { address: entry.address }),
+    .map((entry) => Object.assign({}, { operandIndex: entry.operandIndex ?? 0 }, entry.address === undefined ? {} : { address: entry.address }, {
     volatile: false,
     explanation: entry.address === undefined
         ? "The register-indirect SuperFX RAM address is unresolved."
@@ -87,12 +81,12 @@ const recordsFor = (result, runEvidence) => [
         mnemonic: node.mnemonic,
         mode: node.mode,
         context: node.context,
-        incomingState: node.incomingState,
-        outgoingState: node.outgoingState,
-        effectiveAddresses: node.effectiveAddresses,
+        incomingState: superFxStateRecord(node.incomingState),
+        outgoingState: superFxStateRecord(node.outgoingState),
+        effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
         entryPoint: node.entryPoint,
         evidencePath: node.evidencePath.map((id) => `static:superfx:${id}`),
-        evidence: [...new Set([...node.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...node.evidence, runEvidence])].toSorted(),
     })),
     ...result.edges.map((edge) => ({
         id: `static:superfx:${edge.id}`,
@@ -106,7 +100,7 @@ const recordsFor = (result, runEvidence) => [
         indirect: edge.indirect,
         ...(edge.override ? { override: edge.override } : {}),
         ...(edge.explanation ? { explanation: edge.explanation } : {}),
-        evidence: [...new Set([...edge.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...edge.evidence, runEvidence])].toSorted(),
     })),
     ...result.functions.map((entry) => ({
         id: `static:superfx:${entry.id}`,
@@ -115,7 +109,7 @@ const recordsFor = (result, runEvidence) => [
         address: entry.address,
         source: entry.source,
         evidencePath: entry.evidencePath.map((id) => `static:superfx:${id}`),
-        evidence: [...new Set([...entry.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...entry.evidence, runEvidence])].toSorted(),
     })),
     ...result.conflicts.map((entry) => ({
         id: `static:superfx:${entry.id}`,
@@ -125,7 +119,7 @@ const recordsFor = (result, runEvidence) => [
         conflictKind: entry.kind,
         message: entry.message,
         nodes: entry.nodes.map((id) => `static:superfx:${id}`),
-        evidence: [...new Set([...entry.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...entry.evidence, runEvidence])].toSorted(),
     })),
     ...result.unresolved.map((entry) => ({
         id: `static:superfx:${entry.id}`,
@@ -135,16 +129,16 @@ const recordsFor = (result, runEvidence) => [
         flowKind: entry.kind,
         indirect: entry.indirect,
         reason: entry.reason,
-        evidence: [...new Set([...entry.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...entry.evidence, runEvidence])].toSorted(),
     })),
     {
         id: "static:superfx:summary",
         kind: "summary",
         architecture: "snes.superfx",
         status: result.status,
-        coverage: result.coverage,
+        coverage: coverageRecord(result.coverage),
         processedWorkItems: result.processedWorkItems,
-        incompleteReasons: result.incompleteReasons,
+        incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
         evidence: [runEvidence],
     },
 ];
@@ -164,7 +158,7 @@ const annotationsFor = (result, evidence) => result.nodes.flatMap((node) => {
             end: node.address + 1,
             classification: "opcode",
             architecture: "snes.superfx",
-            evidence: [...new Set([...node.evidence, evidence])].sort(),
+            evidence: [...new Set([...node.evidence, evidence])].toSorted(),
         },
     ];
     if (node.size > 1) {
@@ -175,7 +169,7 @@ const annotationsFor = (result, evidence) => result.nodes.flatMap((node) => {
             end: node.address + node.size,
             classification: "operand",
             architecture: "snes.superfx",
-            evidence: [...new Set([...node.evidence, evidence])].sort(),
+            evidence: [...new Set([...node.evidence, evidence])].toSorted(),
         });
     }
     return records;
@@ -254,7 +248,7 @@ export const analyzeSuperFxRom = (image, options = {}) => {
         .map((entry) => ({
         id: entry.id,
         address: entry.address,
-        targets: [...entry.targets].sort((a, b) => a - b),
+        targets: [...entry.targets].toSorted((a, b) => a - b),
         evidence: entry.evidence,
     }));
     const result = analyzeStaticControlFlow({
@@ -326,7 +320,7 @@ export const analyzeSuperFxRom = (image, options = {}) => {
         ...result,
         records: recordsFor(result, runEvidence),
         annotations: annotationsFor(result, runEvidence),
-        evidenceRecords: [...(options.evidence ?? []), ...evidenceRecords].sort((a, b) => a.id.localeCompare(b.id)),
+        evidenceRecords: [...(options.evidence ?? []), ...evidenceRecords].toSorted((a, b) => a.id.localeCompare(b.id)),
     };
 };
 //# sourceMappingURL=superfx-analysis.js.map

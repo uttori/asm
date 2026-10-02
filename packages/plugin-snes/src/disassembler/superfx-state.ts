@@ -1,7 +1,7 @@
 import type { DecodedInstruction } from "@uttori/asm-core";
 
 import type { SuperFxDecodeState } from "../architectures/superfx-decoder.js";
-import type { SuperFxAltState } from "../architectures/superfx-spec.js";
+import { isSuperFxAltState, type SuperFxAltState } from "../architectures/superfx-spec.js";
 
 export type SuperFxKnown<T extends number> =
   | { readonly kind: "known"; readonly value: T }
@@ -83,13 +83,14 @@ export const transferSuperFxState = (
 ): SuperFxAbstractState => {
   const alt = detailNumber(instruction, "set-superfx-alt");
   if (alt !== undefined) {
-    return {
-      ...state,
-      alt:
-        state.alt.kind === "known"
-          ? known(((state.alt.value | alt) & 3) as SuperFxAltState)
-          : state.alt,
-    };
+    if (state.alt.kind !== "known") {
+      return { ...state, alt: state.alt };
+    }
+    const masked = (state.alt.value | alt) & 3;
+    if (!isSuperFxAltState(masked)) {
+      return { ...state, alt: state.alt };
+    }
+    return { ...state, alt: known(masked) };
   }
   const destination = detailNumber(instruction, "select-superfx-destination");
   if (destination !== undefined) {

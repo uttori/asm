@@ -12,6 +12,26 @@ import { createNormalizedCommand } from "../../src/ir/normalized-command.js";
 const commandNode = (command: string) =>
   createNormalizedCommand(command, command, command.trim().split(/\s+/), "test.asm", 1);
 
+function isCommandNode(value: unknown): value is { keyword?: string; words?: string[] } {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasStageDispatch(value: Assembler): value is Assembler & {
+  layoutInstruction(...args: unknown[]): unknown;
+  emitInstruction(...args: unknown[]): unknown;
+} {
+  return (
+    "layoutInstruction" in value &&
+    typeof value.layoutInstruction === "function" &&
+    "emitInstruction" in value &&
+    typeof value.emitInstruction === "function"
+  );
+}
+
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
 test("macro engine expands fixed and variadic parameters", (t) => {
   const assembler = new Assembler();
 
@@ -440,9 +460,12 @@ test("typed conditional nodes skip inactive branches during execution", (t) => {
     executed.push(command.command);
   });
 
-  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    ["if 0", "db $10", "else", "db $20", "endif"],
-    "typed-conditional.asm",
+  const node = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      ["if 0", "db $10", "else", "db $20", "endif"],
+      "typed-conditional.asm",
+      0,
+    ),
     0,
   );
 
@@ -570,7 +593,7 @@ test("node parser lifts loops and conditionals into typed nodes", (t) => {
   ]);
 
   t.is(nodes.length, 1);
-  const ifNode = nodes[0];
+  const ifNode = elementAt(nodes, 0);
   if (!ifNode || !("type" in ifNode) || ifNode.type !== "if") {
     t.fail();
     return;
@@ -578,7 +601,7 @@ test("node parser lifts loops and conditionals into typed nodes", (t) => {
   t.is(ifNode.branches.length, 2);
   t.is(ifNode.branches[0].kind, "if");
   t.is(ifNode.branches[1].kind, "else");
-  const firstBranchNode = ifNode.branches[0].commands[0];
+  const firstBranchNode = elementAt(ifNode.branches[0].commands, 0);
   t.truthy(
     firstBranchNode &&
       typeof firstBranchNode !== "string" &&
@@ -609,15 +632,18 @@ test("node execution seam dispatches typed command and conditional nodes", (t) =
 
 test("node execution seam does not re-normalize cached command nodes", (t) => {
   const assembler = new Assembler();
-  const [commandNode] = assembler.programModelBuilder.parseCommandStreamToNodes(["db $01"]);
-  if (!commandNode || !("source" in commandNode)) {
+  const parsedCommand = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(["db $01"]),
+    0,
+  );
+  if (!parsedCommand || !("source" in parsedCommand)) {
     t.fail();
     return;
   }
 
   const createLoopNodeStub = stub(assembler.frontEndService, "createLoopCommandNode");
   stub(assembler, "processNormalizedCommand").callsFake(() => {});
-  assembler.lowerAndExecuteRuntimeNodes([commandNode]);
+  assembler.lowerAndExecuteRuntimeNodes([parsedCommand]);
   t.false(createLoopNodeStub.called);
 });
 
@@ -680,7 +706,9 @@ test("stage runner builds program once and executes all stages", (t) => {
   };
 
   const program = stagedAssembler.buildProgramModel("org $808000\ndb $01", "test.asm", 0);
-  const [firstNode, secondNode] = program.nodes as Array<{ keyword?: string; words?: string[] }>;
+  const programNodes = program.nodes.filter(isCommandNode);
+  const firstNode = elementAt(programNodes, 0);
+  const secondNode = elementAt(programNodes, 1);
   t.is(firstNode?.keyword, "org");
   t.deepEqual(firstNode?.words, ["org", "$808000"]);
   t.is(secondNode?.keyword, "db");
@@ -764,9 +792,11 @@ test("stage states keep symbols, control, and plugin state isolated by stage", (
 
 test("instruction dispatch follows active stage capabilities", (t) => {
   const assembler = new Assembler();
-  const internalAssembler = assembler as unknown as Record<string, (...args: unknown[]) => unknown>;
-  const layoutSpy = stub(internalAssembler, "layoutInstruction").returns(true);
-  const emitSpy = stub(internalAssembler, "emitInstruction").returns(true);
+  if (!hasStageDispatch(assembler)) {
+    throw new Error("Instruction dispatch seam is missing.");
+  }
+  const layoutSpy = stub(assembler, "layoutInstruction").returns(true);
+  const emitSpy = stub(assembler, "emitInstruction").returns(true);
   const program = assembler.buildProgramModel("lda #$01", "test.asm", 0);
 
   assembler.runStage("collectDefinitions", program);

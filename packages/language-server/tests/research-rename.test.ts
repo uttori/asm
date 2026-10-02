@@ -33,6 +33,9 @@ test("recipe expression rename preserves literals, grouping, array indexes and f
   );
 });
 
+const structs = (value: unknown) =>
+  renderSnesStructDefines({ ...validateSnesStructMap(value), sourceBytes: new Uint8Array() });
+
 test("RAM, constants, shared fields and struct types persist through repeated unsaved F2 and recipe rendering", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-recipe-f2-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -81,8 +84,6 @@ test("RAM, constants, shared fields and struct types persist through repeated un
     schemaVersion: 1,
     variables: [{ name: "RAM_X", address: "$7E0010", description: "Counter." }],
   };
-  const structs = (value: unknown) =>
-    renderSnesStructDefines({ ...validateSnesStructMap(value), sourceBytes: new Uint8Array() });
   const inputs = {
     "struct-map.json": JSON.stringify(map),
     "ram-map.json": JSON.stringify(ram),
@@ -173,13 +174,12 @@ test("RAM, constants, shared fields and struct types persist through repeated un
   // Re-render just the declarations as a later generation would; normal source edits still assemble.
   buffers = buffers.map((item) => {
     if (item.uri.endsWith("/structs.asm")) {
-      return { ...item, text: structs(renamed) };
+      return Object.assign({}, item, { text: structs(renamed) });
     }
     if (item.uri.endsWith("/ram-defines.asm")) {
-      return {
-        ...item,
+      return Object.assign({}, item, {
         text: renderSnesRamDefines(validateSnesRamMap(JSON.parse(content("ram-map.json")))),
-      };
+      });
     }
     return item;
   });

@@ -6,18 +6,145 @@ import type {
   AnalysisCallGraphEdge,
   AnalysisCallGraphUnresolved,
 } from "../analysis/analysis-graph.js";
-import type {
-  AnalysisControlFlowNodeRecord,
-  AnalysisControlFlowEdgeRecord,
-  AnalysisFunctionRecord,
-  AnalysisUnresolvedRecord,
-  ProjectLabel,
-} from "../model/project-types.js";
-import { decodeSqlitePayload } from "./sqlite-payload.js";
-const decode = <T>(value: unknown): T => JSON.parse(decodeSqlitePayload(value)) as T;
+import {
+  isFiniteNumber,
+  isRecord,
+  isStringArray,
+  requireAnalysisRecord,
+  requireProjectLabel,
+} from "../model/record-shape.js";
+import { parseSqlitePayload } from "./sqlite-payload.js";
+
+function requireNode(value: unknown) {
+  const record = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record.kind !== "cfg-node") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record;
+}
+
+function requireEdge(value: unknown) {
+  const record = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record.kind !== "cfg-edge") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record;
+}
+
+function requireUnresolved(value: unknown) {
+  const record = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record.kind !== "unresolved") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record;
+}
+
+function requireFunctionRecord(value: unknown) {
+  const record = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record.kind !== "function") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record;
+}
+
+function isLabelRefList(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) => isRecord(entry) && typeof entry.id === "string" && typeof entry.name === "string",
+    )
+  );
+}
+
+function isNumberList(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+
+function isCallGraphFunction(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.addressSpace === "string" &&
+    isFiniteNumber(value.address) &&
+    typeof value.source === "string" &&
+    isLabelRefList(value.labels) &&
+    isStringArray(value.nodeIds) &&
+    isNumberList(value.outputOffsets) &&
+    isStringArray(value.incomingCallIds) &&
+    isStringArray(value.outgoingCallIds) &&
+    isStringArray(value.unresolvedIds) &&
+    isStringArray(value.evidence)
+  );
+}
+
+function isCallGraphEdge(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    (value.edgeKind === "call" || value.edgeKind === "interrupt") &&
+    typeof value.addressSpace === "string" &&
+    isFiniteNumber(value.fromAddress) &&
+    isFiniteNumber(value.toAddress) &&
+    typeof value.fromNodeId === "string" &&
+    (value.toNodeId === undefined || typeof value.toNodeId === "string") &&
+    isStringArray(value.callerFunctionIds) &&
+    isStringArray(value.calleeFunctionIds) &&
+    isNumberList(value.fromOutputOffsets) &&
+    isNumberList(value.toOutputOffsets) &&
+    typeof value.indirect === "boolean" &&
+    (value.override === undefined || typeof value.override === "string") &&
+    (value.explanation === undefined || typeof value.explanation === "string") &&
+    isStringArray(value.evidence)
+  );
+}
+
+function isCallGraphUnresolved(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.addressSpace === "string" &&
+    isFiniteNumber(value.address) &&
+    typeof value.flowKind === "string" &&
+    typeof value.indirect === "boolean" &&
+    typeof value.reason === "string" &&
+    isStringArray(value.nodeIds) &&
+    isStringArray(value.ownerFunctionIds) &&
+    isNumberList(value.outputOffsets) &&
+    isStringArray(value.evidence)
+  );
+}
+
+export function isCallGraph(value: unknown): value is AnalysisCallGraph {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.functions) &&
+    value.functions.every(isCallGraphFunction) &&
+    Array.isArray(value.calls) &&
+    value.calls.every(isCallGraphEdge) &&
+    Array.isArray(value.unresolved) &&
+    value.unresolved.every(isCallGraphUnresolved) &&
+    isStringArray(value.orphanCallIds) &&
+    isStringArray(value.orphanUnresolvedIds)
+  );
+}
+
+function requireCallKind(value: string): "call" | "interrupt" {
+  if (value === "call" || value === "interrupt") {
+    return value;
+  }
+  throw new Error("Invalid call graph edge.");
+}
 const unique = (ids: readonly string[]): string[] =>
-  [...new Set(ids)].sort((a, b) => a.localeCompare(b));
-const numbers = (ids: readonly number[]): number[] => [...new Set(ids)].sort((a, b) => a - b);
+  [...new Set(ids)].toSorted((a, b) => a.localeCompare(b));
+const numbers = (ids: readonly number[]): number[] => [...new Set(ids)].toSorted((a, b) => a - b);
+const append = (map: Map<string, string[]>, owner: string, id: string): void => {
+  let ids = map.get(owner);
+  if (!ids) {
+    ids = [];
+    map.set(owner, ids);
+  }
+  ids.push(id);
+};
 /** Index only graph ownership and relevant edges, with bounded payload decoding on rebuild.
  * Context/state payloads never remain in memory. Ownership uses the last function entry in each
  * evidence path. Missing owners remain explicit.
@@ -45,7 +172,7 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
     .prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')")
     .iterate()) {
     if (row.kind === "cfg-node") {
-      const node = decode<AnalysisControlFlowNodeRecord>(row.payload);
+      const node = requireNode(row.payload);
       const path = node.evidencePath.length ? node.evidencePath : [node.id];
       let owner = node.functionEntry;
       for (let i = path.length - 1; i >= 0; i--) {
@@ -59,7 +186,7 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
       }
       putNode.run(node.id, node.addressSpace, node.address, node.fileOffset ?? null, owner ?? null);
     } else {
-      const edge = decode<AnalysisControlFlowEdgeRecord>(row.payload);
+      const edge = requireEdge(row.payload);
       if (
         edge.edgeKind === "unresolved" ||
         (["call", "interrupt"].includes(edge.edgeKind) && edge.toAddress !== undefined)
@@ -91,10 +218,10 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
   for (const row of db
     .prepare("SELECT payload FROM query_graph_edges WHERE kind IN ('call','interrupt')")
     .iterate()) {
-    const edge = decode<AnalysisControlFlowEdgeRecord>(row.payload);
+    const edge = requireEdge(row.payload);
     calls.push({
       id: edge.id,
-      edgeKind: edge.edgeKind as "call" | "interrupt",
+      edgeKind: requireCallKind(edge.edgeKind),
       addressSpace: edge.addressSpace,
       fromAddress: edge.fromAddress,
       toAddress: edge.toAddress!,
@@ -102,7 +229,9 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
       ...(edge.to ? { toNodeId: edge.to } : {}),
       callerFunctionIds: owners(edge.from),
       calleeFunctionIds: unique(
-        functionsAt.all(edge.addressSpace, edge.toAddress!).map((row) => String(row.id)),
+        functionsAt
+          .all(edge.addressSpace, edge.toAddress!)
+          .map((functionRow) => String(functionRow.id)),
       ),
       fromOutputOffsets: offsets([edge.from]),
       toOutputOffsets: offsets(edge.to ? [edge.to] : []),
@@ -117,9 +246,11 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
     "SELECT from_id FROM query_graph_edges WHERE kind='unresolved' AND address_space=? AND from_address=?",
   );
   for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='unresolved'").iterate()) {
-    const record = decode<AnalysisUnresolvedRecord>(row.payload);
+    const record = requireUnresolved(row.payload);
     const nodeIds = unique(
-      unresolvedNodes.all(record.addressSpace, record.address).map((row) => String(row.from_id)),
+      unresolvedNodes
+        .all(record.addressSpace, record.address)
+        .map((nodeRow) => String(nodeRow.from_id)),
     );
     unresolved.push({
       id: record.id,
@@ -137,14 +268,6 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
   const incoming = new Map<string, string[]>(),
     outgoing = new Map<string, string[]>(),
     unresolvedByOwner = new Map<string, string[]>();
-  const append = (map: Map<string, string[]>, owner: string, id: string): void => {
-    let ids = map.get(owner);
-    if (!ids) {
-      ids = [];
-      map.set(owner, ids);
-    }
-    ids.push(id);
-  };
   for (const call of calls) {
     for (const id of call.callerFunctionIds) {
       append(outgoing, id, call.id);
@@ -164,7 +287,7 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
   const labels = db.prepare("SELECT payload FROM labels WHERE address_space=? AND address=?");
   const functions: AnalysisCallGraphFunction[] = [];
   for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='function'").iterate()) {
-    const fn = decode<AnalysisFunctionRecord>(row.payload);
+    const fn = requireFunctionRecord(row.payload);
     const nodes = owned.all(fn.addressSpace, fn.address);
     functions.push({
       id: fn.id,
@@ -173,16 +296,16 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
       source: fn.source,
       labels: labels
         .all(fn.addressSpace, fn.address)
-        .map((row) => {
-          const { id, name } = decode<ProjectLabel>(row.payload);
+        .map((labelRow) => {
+          const { id, name } = requireProjectLabel(parseSqlitePayload(labelRow.payload));
           return { id, name };
         })
-        .sort((a, b) => a.id.localeCompare(b.id)),
-      nodeIds: unique(nodes.map((row) => String(row.id))),
+        .toSorted((a, b) => a.id.localeCompare(b.id)),
+      nodeIds: unique(nodes.map((nodeRow) => String(nodeRow.id))),
       outputOffsets: numbers(
         nodes
-          .filter((row) => row.address === fn.address && row.file_offset !== null)
-          .map((row) => Number(row.file_offset)),
+          .filter((nodeRow) => nodeRow.address === fn.address && nodeRow.file_offset !== null)
+          .map((nodeRow) => Number(nodeRow.file_offset)),
       ),
       incomingCallIds: unique(incoming.get(fn.id) ?? []),
       outgoingCallIds: unique(outgoing.get(fn.id) ?? []),

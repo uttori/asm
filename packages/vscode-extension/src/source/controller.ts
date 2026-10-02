@@ -11,11 +11,7 @@ import {
   type SourceProjectConfiguration,
   type ResearchAnalysisChange,
 } from "@uttori/asm-disassembler";
-import type {
-  PreparedSnesGeneration,
-  SnesSourceBuild,
-  SnesSourceRelocation,
-} from "@uttori/asm-plugin-snes";
+import type { SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import { SNES_MAPPERS } from "@uttori/asm-plugin-snes";
 import {
   commands,
@@ -54,6 +50,103 @@ import { SourceGitFiles } from "./git-files.js";
 import { SourceProcessClient } from "./process-client.js";
 import { findEvidenceSourceRoot, findSourceRoot } from "./project-path.js";
 import { editSourceResearch } from "./research-editor.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSnesMapper(value: string): value is (typeof SNES_MAPPERS)[number] {
+  return (
+    value === "lorom" ||
+    value === "hirom" ||
+    value === "exlorom" ||
+    value === "exhirom" ||
+    value === "sfxrom" ||
+    value === "sa1rom" ||
+    value === "bigsa1rom" ||
+    value === "norom"
+  );
+}
+
+function isLayoutObject(value: unknown): value is { readonly id: string; readonly kind: string } {
+  return isRecord(value) && typeof value.id === "string" && typeof value.kind === "string";
+}
+
+function isSnesSourceBuild(value: unknown): value is SnesSourceBuild {
+  return (
+    isRecord(value) &&
+    typeof value.outputFile === "string" &&
+    typeof value.debugMapFile === "string" &&
+    typeof value.inputSha256 === "string" &&
+    typeof value.outputSize === "number" &&
+    typeof value.debugMapFingerprint === "string" &&
+    isRecord(value.verification) &&
+    typeof value.verification.outputSha256 === "string" &&
+    typeof value.verification.debugMapSha256 === "string" &&
+    typeof value.verification.toolchainSha256 === "string" &&
+    Array.isArray(value.verification.checks) &&
+    value.verification.checks.every((check) => typeof check === "string") &&
+    isRecord(value.contracts) &&
+    typeof value.contracts.cpuStates === "number" &&
+    typeof value.contracts.fixedExtents === "number" &&
+    (value.cacheWarnings === undefined ||
+      (Array.isArray(value.cacheWarnings) &&
+        value.cacheWarnings.every((warning) => typeof warning === "string")))
+  );
+}
+
+function isSourceMergePreview(value: unknown): value is SourceMergePreview {
+  return (
+    isRecord(value) &&
+    typeof value.head === "string" &&
+    typeof value.sourceTree === "string" &&
+    typeof value.candidate === "string" &&
+    typeof value.base === "string" &&
+    typeof value.resultTree === "string" &&
+    typeof value.messages === "string" &&
+    Array.isArray(value.conflicts) &&
+    value.conflicts.every((conflict) => typeof conflict === "string") &&
+    (value.ref === undefined || typeof value.ref === "string")
+  );
+}
+
+function isGenerationCommit(
+  value: unknown,
+): value is { readonly generation: { readonly commit: string } } {
+  return (
+    isRecord(value) &&
+    isRecord(value.generation) &&
+    typeof value.generation.commit === "string" &&
+    value.generation.commit.length > 0
+  );
+}
+
+function isRelocationEdit(value: unknown): value is {
+  readonly path: string;
+  readonly beforeSha256: string;
+  readonly before: string;
+  readonly after: string;
+} {
+  return (
+    isRecord(value) &&
+    typeof value.path === "string" &&
+    typeof value.beforeSha256 === "string" &&
+    typeof value.before === "string" &&
+    typeof value.after === "string"
+  );
+}
+
+function relocationEdits(value: unknown): readonly {
+  readonly path: string;
+  readonly beforeSha256: string;
+  readonly before: string;
+  readonly after: string;
+}[] {
+  if (!isRecord(value) || !Array.isArray(value.edits) || !value.edits.every(isRelocationEdit)) {
+    throw new Error("Invalid source relocation.");
+  }
+  return value.edits;
+}
 
 /** Cached native tree rows keep rendering independent of database and filesystem scans. */
 class SourceRow extends TreeItem {
@@ -408,7 +501,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     const mapper = await window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
       title: "SNES cartridge mapping",
     });
-    if (!mapper) {
+    if (!mapper || (mapper !== "Detect automatically" && !isSnesMapper(mapper))) {
       return;
     }
     this.#busy = "init";
@@ -430,10 +523,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
                 directory: destination.fsPath,
                 rom: rom.fsPath,
                 dizRawFile,
-                mapper:
-                  mapper === "Detect automatically"
-                    ? undefined
-                    : (mapper as (typeof SNES_MAPPERS)[number]),
+                mapper: mapper === "Detect automatically" ? undefined : mapper,
               },
               {
                 signal: abort.signal,
@@ -553,7 +643,9 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       if (
         relative.startsWith(".uttori/") ||
         relative.startsWith(".git/") ||
-        researchRoots.some((root) => relative === root || relative.startsWith(root + "/"))
+        researchRoots.some(
+          (researchRoot) => relative === researchRoot || relative.startsWith(`${researchRoot}/`),
+        )
       ) {
         this.#researchChanged.fire();
       }
@@ -589,7 +681,10 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     if (!result) {
       throw new Error("Select a source project before building or launching.");
     }
-    const build = result as SnesSourceBuild;
+    if (!isSnesSourceBuild(result)) {
+      throw new Error("Invalid source build.");
+    }
+    const build = result;
     return {
       ...build,
       outputChanged: previous?.verification.outputSha256 !== build.verification.outputSha256,
@@ -723,11 +818,17 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     let objectId: string | undefined;
     let expansionSize: number | undefined;
     if (action === "expand") {
-      const layout = JSON.parse(
-        await fs.readFile(path.join(root, this.#configuration!.layout), "utf8"),
-      ) as { size: number };
+      const layoutText = await fs.readFile(path.join(root, this.#configuration!.layout), "utf8");
+      const layoutValue: unknown = JSON.parse(layoutText);
+      if (!isRecord(layoutValue)) {
+        throw new Error("Layout contract is missing a numeric ROM size.");
+      }
+      const romSize = layoutValue.size;
+      if (typeof romSize !== "number") {
+        throw new Error("Layout contract is missing a numeric ROM size.");
+      }
       const capacities = [0x10000, 0x20000, 0x40000, 0x80000, 0x100000, 0x200000, 0x400000]
-        .filter((size) => size > layout.size)
+        .filter((size) => size > romSize)
         .map((size) => ({
           label: `${size / 1024} KiB`,
           size,
@@ -751,10 +852,13 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       if ((await fs.stat(file)).size > 8 * 1024 * 1024) {
         throw new Error("Layout contract exceeds its size budget.");
       }
-      const layout = JSON.parse(await fs.readFile(file, "utf8")) as {
-        objects?: { id: string; kind: string }[];
-      };
-      const choices = (layout.objects ?? []).map((object) => ({
+      const layoutText = await fs.readFile(file, "utf8");
+      const layoutValue: unknown = JSON.parse(layoutText);
+      const objects =
+        isRecord(layoutValue) && Array.isArray(layoutValue.objects)
+          ? layoutValue.objects.filter(isLayoutObject)
+          : [];
+      const choices = objects.map((object) => ({
         label: object.id,
         description: object.kind,
       }));
@@ -793,7 +897,10 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     this.#busy = action;
     this.#changed.fire(undefined);
     try {
-      const overlays = buffers.map(({ path, bytes }) => ({ path, bytes }));
+      const overlays = buffers.map(({ path: overlayPath, bytes }) => ({
+        path: overlayPath,
+        bytes,
+      }));
       if (action === "preview") {
         for (const document of binaryBuffers) {
           overlays.push({
@@ -843,11 +950,17 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
             },
           );
       if (action === "prepare") {
-        this.#candidate = (result as PreparedSnesGeneration).generation.commit;
+        if (!isGenerationCommit(result)) {
+          throw new Error("Invalid source generation.");
+        }
+        this.#candidate = result.generation.commit;
         await this.context.workspaceState.update(`source.candidate:${root}`, this.#candidate);
         this.#preview = undefined;
       } else if (action === "preview") {
-        this.#preview = result as SourceMergePreview;
+        if (!isSourceMergePreview(result)) {
+          throw new Error("Invalid source preview.");
+        }
+        this.#preview = result;
         void window.showInformationMessage(
           `Preview: ${this.#preview.conflicts.length} conflicting files. Commit the reviewed source snapshot before applying.`,
         );
@@ -860,16 +973,17 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         ) {
           throw new Error("Source changed during the build. Rebuild before running or debugging.");
         }
-        this.#build = result as SnesSourceBuild;
+        if (!isSnesSourceBuild(result)) {
+          throw new Error("Invalid source build.");
+        }
+        this.#build = result;
         this.#buildStale = false;
         this.#diagnostics.clear();
         this.#built.fire({ root, build: this.#build });
       } else if (action === "relocate" || action === "expand") {
-        const relocation = result as SnesSourceRelocation;
+        const edits = relocationEdits(result);
         const documents = await Promise.all(
-          relocation.edits.map((edit) =>
-            workspace.openTextDocument(Uri.file(path.join(root, edit.path))),
-          ),
+          edits.map((edit) => workspace.openTextDocument(Uri.file(path.join(root, edit.path)))),
         );
         if (
           this.#root !== root ||
@@ -882,7 +996,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
           );
         }
         const edit = new WorkspaceEdit();
-        for (const [index, change] of relocation.edits.entries()) {
+        for (const [index, change] of edits.entries()) {
           const document = documents[index];
           if (sourceContentHash(document.getText()) !== change.beforeSha256) {
             throw new Error(`Placement source changed: ${change.path}`);

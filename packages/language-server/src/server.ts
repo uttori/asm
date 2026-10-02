@@ -10,7 +10,6 @@ import { crc32 } from "node:zlib";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { createDebugMap } from "@uttori/asm-core/debug-map";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
-import {} from "@uttori/asm-disassembler";
 import plugin65xx from "@uttori/asm-plugin-65xx";
 import {
   discoverProjectConfigurationPath,
@@ -165,8 +164,19 @@ type BuildResult = {
 let settings: ServerSettings = defaultSettings;
 /** Editor overrides kept separate so rereading config files can replace their previous defaults. */
 let editorSettings: ServerSettings = defaultSettings;
-/** Current analysis index, assigned during initialization and after successful environment swaps. */
-let index: WorkspaceIndex;
+/**
+ * Current analysis index. Absent until initialization publishes one, including the bundled fallback
+ * used when the requested project fails to load.
+ */
+let index: WorkspaceIndex | undefined;
+
+/** Document handlers run only after initialization has published an index. */
+function requireIndex(): WorkspaceIndex {
+  if (!index) {
+    throw new Error("Assembly index is not initialized.");
+  }
+  return index;
+}
 /** Client workspace folders as paths; the first is the base for this server's project configuration. */
 let workspaceRoots: string[] = [];
 /** Whether settings can be pulled with workspace/configuration rather than pushed by the client. */
@@ -234,9 +244,18 @@ function stringValue(value: unknown): string | undefined {
  * @returns {readonly string[] | undefined} The original array when every entry is a string, including an empty array.
  */
 function stringArray(value: unknown): readonly string[] | undefined {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string")
+  return Array.isArray(value) && value.every((entry): entry is string => typeof entry === "string")
     ? value
     : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Plugin entry shape is checked by the loader. An array is forwarded intact. */
+function isPluginSettingList(value: unknown): value is readonly PluginModuleSetting[] {
+  return Array.isArray(value);
 }
 
 /**
@@ -248,10 +267,10 @@ function stringArray(value: unknown): readonly string[] | undefined {
  * @returns {ServerSettings} Merged settings, or previous itself when value is not an object.
  */
 export function mergeServerSettings(previous: ServerSettings, value: unknown): ServerSettings {
-  if (!value || typeof value !== "object") {
+  if (!isRecord(value)) {
     return previous;
   }
-  const next = value as Record<string, unknown>;
+  const next = value;
   /**
    * Distinguishes an explicit reset from an omitted editor override.
    * @param {string} key Optional setting being merged.
@@ -260,9 +279,7 @@ export function mergeServerSettings(previous: ServerSettings, value: unknown): S
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
   return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
-    plugins: Array.isArray(next.plugins)
-      ? (next.plugins as readonly PluginModuleSetting[])
-      : previous.plugins,
+    plugins: isPluginSettingList(next.plugins) ? next.plugins : previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
     architecture: has("architecture") ? stringValue(next.architecture) : previous.architecture,
     entryPoints: stringArray(next.entryPoints) ?? previous.entryPoints,
@@ -441,9 +458,10 @@ function scheduleReindex(): void {
   }
   reindexTimer = setTimeout(() => {
     reindexTimer = undefined;
+    const active = requireIndex();
     connection.console.info("Full workspace reindex starting");
-    index.reindex();
-    const status = index.getStatus();
+    active.reindex();
+    const status = active.getStatus();
     connection.console.info(
       `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms ` +
         `(roots=${status.lastReindexRootCount}, analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, ` +
@@ -495,8 +513,15 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
     params.capabilities.workspace?.didChangeConfiguration?.dynamicRegistration,
   );
   workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
+  // Older clients omit workspaceFolders and still send rootUri.
+  // oxlint-disable-next-line typescript/no-deprecated
   if (workspaceRoots.length === 0 && params.rootUri) {
-    workspaceRoots = [uriToPath(params.rootUri)];
+    workspaceRoots = [
+      uriToPath(
+        // oxlint-disable-next-line typescript/no-deprecated
+        params.rootUri,
+      ),
+    ];
   }
   editorSettings = mergeServerSettings(defaultSettings, params.initializationOptions);
   const requested = applyConfigFileDefaults(editorSettings);
@@ -565,8 +590,9 @@ connection.onDidChangeConfiguration((params) => {
     void refreshConfiguration();
     return;
   }
-  const changed = params.settings as { asm?: unknown } | undefined;
-  editorSettings = mergeServerSettings(editorSettings, changed?.asm ?? changed);
+  const changed: unknown = params.settings;
+  const asm = isRecord(changed) ? (changed.asm ?? changed) : changed;
+  editorSettings = mergeServerSettings(editorSettings, asm);
   enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
 });
 
@@ -749,6 +775,16 @@ function buildBinary(
   }
 }
 
+/** LSP executeCommand `arguments` is `any[]`; only a real array is read, and each element stays `unknown`. */
+function isReadonlyUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+/** Reads command arguments through `unknown` so an `any[]` parameter cannot leak into indexing. */
+function executeCommandArguments(source: { readonly arguments?: unknown }): readonly unknown[] {
+  return isReadonlyUnknownArray(source.arguments) ? source.arguments : [];
+}
+
 /**
  * Converts an executeCommand argument to a filesystem path.
  * @param {string | undefined} value URI or path from the client.
@@ -766,8 +802,16 @@ connection.onExecuteCommand(async (params) => {
     return undefined;
   }
   await configurationQueue;
-  const args = (params.arguments ?? []) as Array<string | undefined>;
-  return buildBinary(argumentPath(args[0]), argumentPath(args[1]), argumentPath(args[2]));
+  const args = executeCommandArguments(params);
+  const argument = (argumentIndex: number): string | undefined => {
+    const value = args[argumentIndex];
+    return typeof value === "string" ? value : undefined;
+  };
+  return buildBinary(
+    argumentPath(argument(0)),
+    argumentPath(argument(1)),
+    argumentPath(argument(2)),
+  );
 });
 
 connection.onRequest("asm/projectMetadata", async () => {
@@ -793,7 +837,10 @@ connection.onRequest("asm/projectOutline", async () => {
 
 connection.onRequest<AssetPreviewResponse, void>(
   "asm/assetPreview",
-  async (request: AssetPreviewRequest, token: CancellationToken): Promise<AssetPreviewResponse> => {
+  async (
+    request: AssetPreviewRequest,
+    token?: CancellationToken,
+  ): Promise<AssetPreviewResponse> => {
     await configurationQueue;
     const document = documents.get(request.uri);
     if (!document || document.version !== request.version || !request.uri.startsWith("file:")) {
@@ -804,7 +851,7 @@ connection.onRequest<AssetPreviewResponse, void>(
     const subscription = token?.onCancellationRequested(() => cancellation.abort());
     try {
       const result = await assetPreviews.preview(
-        index,
+        requireIndex(),
         document.getText(),
         request,
         cancellation.signal,
@@ -853,13 +900,14 @@ connection.onRequest("asm/status", async () => {
 
 connection.onDidChangeWatchedFiles((params) => {
   assetPreviews.clear();
+  const active = requireIndex();
   let reload = false;
   for (const change of params.changes) {
     const file = uriToPath(change.uri);
     if (isProjectConfigFile(file)) {
       reload = true;
     } else {
-      index.invalidateFile(file);
+      active.invalidateFile(file);
     }
   }
   if (reload) {
@@ -870,54 +918,62 @@ connection.onDidChangeWatchedFiles((params) => {
 });
 
 documents.onDidOpen((event) => {
+  const active = requireIndex();
   const file = uriToPath(event.document.uri);
-  index.openDocument(file, event.document.getText());
+  active.openDocument(file, event.document.getText());
   publishAllDiagnostics();
-  if (index.isFileDirtyOrUncovered(file)) {
+  if (active.isFileDirtyOrUncovered(file)) {
     scheduleReindex();
   }
 });
 
 documents.onDidChangeContent((event) => {
-  index.updateDocument(uriToPath(event.document.uri), event.document.getText());
+  requireIndex().updateDocument(uriToPath(event.document.uri), event.document.getText());
   scheduleReindex();
 });
 
 documents.onDidClose((event) => {
-  index.closeDocument(uriToPath(event.document.uri));
+  requireIndex().closeDocument(uriToPath(event.document.uri));
   void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
 connection.onCompletion((params) => {
+  const active = requireIndex();
   const document = documents.get(params.textDocument.uri);
   return document
-    ? (assetCompletionsFor(index, document.getText(), params.position) ?? completionsFor(index))
-    : completionsFor(index);
+    ? (assetCompletionsFor(active, document.getText(), params.position) ?? completionsFor(active))
+    : completionsFor(active);
 });
 connection.onHover((params) => {
   const document = documents.get(params.textDocument.uri);
   return document
-    ? hoverFor(index, uriToPath(params.textDocument.uri), params.position, document.getText())
+    ? hoverFor(
+        requireIndex(),
+        uriToPath(params.textDocument.uri),
+        params.position,
+        document.getText(),
+      )
     : null;
 });
 connection.onDefinition((params) =>
-  definitionFor(index, uriToPath(params.textDocument.uri), params.position),
+  definitionFor(requireIndex(), uriToPath(params.textDocument.uri), params.position),
 );
 connection.onReferences((params) =>
   referencesFor(
-    index,
+    requireIndex(),
     uriToPath(params.textDocument.uri),
     params.position,
     params.context.includeDeclaration,
   ),
 );
 connection.onDocumentSymbol((params) =>
-  documentSymbolsFor(index, uriToPath(params.textDocument.uri)),
+  documentSymbolsFor(requireIndex(), uriToPath(params.textDocument.uri)),
 );
 connection.onWorkspaceSymbol((params): SymbolInformation[] => {
+  const active = requireIndex();
   const query = params.query.toLowerCase();
-  return index.getAnalyzedFiles().flatMap((file) =>
-    documentSymbolsFor(index, file)
+  return active.getAnalyzedFiles().flatMap((file) =>
+    documentSymbolsFor(active, file)
       .filter((symbol) => !query || symbol.name.toLowerCase().includes(query))
       .map((symbol) =>
         SymbolInformation.create(
@@ -939,24 +995,25 @@ connection.onSignatureHelp((params) => {
     start: { line: params.position.line, character: 0 },
     end: params.position,
   });
-  return signatureHelpFor(lineText, index);
+  return signatureHelpFor(lineText, requireIndex());
 });
 /** F2 must see the latest buffers even when it immediately follows another rename or typing burst. */
 function flushRenameIndex(): void {
   if (reindexTimer) {
     clearTimeout(reindexTimer);
     reindexTimer = undefined;
-    index.reindex();
+    requireIndex().reindex();
   }
 }
 connection.onPrepareRename((params) => {
   flushRenameIndex();
-  return prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position);
+  return prepareRenameFor(requireIndex(), uriToPath(params.textDocument.uri), params.position);
 });
 connection.onRenameRequest(async (params) => {
   flushRenameIndex();
+  const active = requireIndex();
   const file = uriToPath(params.textDocument.uri);
-  const root = researchRenameRootFor(index, file, params.position);
+  const root = researchRenameRootFor(active, file, params.position);
   const sourceBuffers = documents.all().map((document) => ({
     uri: document.uri,
     version: document.version,
@@ -970,13 +1027,13 @@ connection.onRenameRequest(async (params) => {
   if (sourceBuffers.some((buffer) => documents.get(buffer.uri)?.version !== buffer.version)) {
     throw new Error("Source changed during rename. Retry at the current symbol.");
   }
-  return researchRenameEditsFor(index, file, params.position, params.newName, [
+  return researchRenameEditsFor(active, file, params.position, params.newName, [
     ...sourceBuffers,
     ...researchBuffers,
   ]);
 });
 connection.languages.semanticTokens.on((params) =>
-  semanticTokensFor(index, uriToPath(params.textDocument.uri)),
+  semanticTokensFor(requireIndex(), uriToPath(params.textDocument.uri)),
 );
 connection.onShutdown(() => environmentController.dispose());
 

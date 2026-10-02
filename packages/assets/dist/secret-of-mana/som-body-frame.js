@@ -1,3 +1,4 @@
+const signed7 = (byte) => (byte & 63) - (byte & 64);
 /** Decode pointer-bounded SoM body records; no ROM reads or capture-tool dependencies.
  * @param {Uint8Array | readonly number[]} input Pointer-bounded body bytes.
  * @returns {{header: number, groups: number, tileOffsets: number[], blocks: object[], coordinateOffsets: {x: number, y: number}[], collisionBytes: Uint8Array}} Parsed body record.
@@ -29,7 +30,6 @@ export function decodeBodyFrame(input) {
     if (offset + groups * 2 > bytes.length) {
         throw new Error("Missing sprite block offsets.");
     }
-    const signed7 = (byte) => (byte & 63) - (byte & 64);
     const coordinateOffsets = Array.from({ length: groups }, (_, i) => ({
         y: offset + i * 2,
         x: offset + i * 2 + 1,

@@ -185,7 +185,7 @@ export class NodeStdioSidecarTransport implements DebugSidecarTransport {
       timer.unref();
       void this.#exit.then(() => {
         clearTimeout(timer);
-        resolve(true);
+        return resolve(true);
       });
     });
   }

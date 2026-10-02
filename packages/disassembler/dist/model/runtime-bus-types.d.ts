@@ -40,5 +40,16 @@ export interface RuntimeBusAccess extends Omit<RuntimeBusFact, "addressSpace" | 
  * @returns {RuntimePPUEffect | undefined} Canonical PPU effect when present, for reuse by the importer.
  * Throws on inconsistent actor, channel, phase, effect or out-of-range values. Never mutates the input.
  */
-export declare const validateRuntimeBusFact: (fact: RuntimeBusFact) => RuntimePPUEffect | undefined;
+export declare const validateRuntimeBusFact: (fact: {
+    addressSpace: unknown;
+    address: unknown;
+    pc: unknown;
+    value: unknown;
+    direction: unknown;
+    actor: unknown;
+    channel: unknown;
+    phase: unknown;
+    context: unknown;
+    ppu?: unknown;
+}) => RuntimePPUEffect | undefined;
 //# sourceMappingURL=runtime-bus-types.d.ts.map

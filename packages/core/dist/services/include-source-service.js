@@ -115,7 +115,7 @@ export class IncludeSourceService {
         // If followIncludes is false, we don't want to parse the included file.
         // This is used for editor-style analysis where we don't want to parse the included file.
         // We still record the include edge so that we can provide hover information for the include directive.
-        if (this.host.followIncludes === false) {
+        if (!this.host.followIncludes) {
             this.host.includeStack.pop();
             return;
         }
@@ -136,8 +136,8 @@ export class IncludeSourceService {
             });
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");
-            throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
+            const message = error instanceof Error ? error.message : (stringifyCaught(error) ?? "Unknown error");
+            throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`, { cause: error });
         }
         finally {
             this.host.currentFile = this.host.includeStack.pop() ?? "";
@@ -193,5 +193,8 @@ export class IncludeSourceService {
         this.textCache.set(key, content);
         return content;
     }
+}
+function stringifyCaught(value) {
+    return JSON.stringify(value);
 }
 //# sourceMappingURL=include-source-service.js.map

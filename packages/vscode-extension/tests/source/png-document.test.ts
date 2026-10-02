@@ -12,6 +12,36 @@ import {
 import test from "ava";
 import type { CustomDocumentEditEvent, Uri } from "vscode";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isIndexedImage(value: unknown): value is IndexedImage {
+  return (
+    isRecord(value) &&
+    value.kind === "indexed-image" &&
+    typeof value.width === "number" &&
+    typeof value.height === "number" &&
+    value.indexes instanceof Uint8Array &&
+    Array.isArray(value.palette) &&
+    (value.sourceBitDepth === 1 ||
+      value.sourceBitDepth === 2 ||
+      value.sourceBitDepth === 4 ||
+      value.sourceBitDepth === 8)
+  );
+}
+
+function isUri(value: object): value is Uri {
+  return (
+    "scheme" in value &&
+    value.scheme === "file" &&
+    "fsPath" in value &&
+    typeof value.fsPath === "string" &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  );
+}
+
 registerHooks({
   resolve(specifier, context, next) {
     return specifier === "vscode"
@@ -46,7 +76,10 @@ class Codec extends PngCodec {
     if (image.kind !== "indexed-image") {
       throw new Error("Expected indexed PNG");
     }
-    return image.value as IndexedImage;
+    if (!isIndexedImage(image.value)) {
+      throw new Error("Expected indexed PNG");
+    }
+    return image.value;
   }
   override async encode(bytes: Uint8Array, indexes: Uint8Array): Promise<Uint8Array> {
     return rewriteIndexedPng(bytes, { indexes });
@@ -56,7 +89,10 @@ class Codec extends PngCodec {
 async function fixture() {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-png-document-"));
   const file = path.join(directory, "pixels.png");
-  const uri = { scheme: "file", fsPath: file, toString: () => `file://${file}` } as Uri;
+  const uri = { scheme: "file", fsPath: file, toString: () => `file://${file}` };
+  if (!isUri(uri)) {
+    throw new Error("uri stub");
+  }
   const bytes = createIndexedPng({
     width: 2,
     height: 2,
@@ -133,7 +169,10 @@ test("PNG backup restores the unsaved version and refuses to overwrite external 
     ...f.uri,
     fsPath: path.join(f.directory, "copy.png"),
     toString: () => "file://copy.png",
-  } as Uri;
+  };
+  if (!isUri(copy)) {
+    throw new Error("uri stub");
+  }
   await restored.save(copy);
   t.true(restored.dirty, "Save As must not silently mark the original saved");
   t.deepEqual(await fs.readFile(copy.fsPath), Buffer.from(expected));
@@ -233,7 +272,10 @@ test("atlas painting protects encoded regions and backup/save retain stale-layou
     ...f.uri,
     fsPath: path.join(f.directory, "retained.png"),
     toString: () => "file://retained.png",
-  } as Uri;
+  };
+  if (!isUri(copy)) {
+    throw new Error("uri stub");
+  }
   await restored.save(copy);
   t.deepEqual(await fs.readFile(copy.fsPath), Buffer.from(expected));
   t.deepEqual(await fs.readFile(f.file), Buffer.from(bytes));

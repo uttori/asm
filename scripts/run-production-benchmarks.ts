@@ -14,7 +14,7 @@ import {
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
 } from "../packages/core/src/internal-instrumentation.js";
-import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
+import { aggregateSamples, isBenchmarkSample, type BenchmarkSample } from "./benchmark-report.js";
 import { assembleExternalFixture } from "./external-fixtures.ts";
 
 const snesEnvironment = await createSnesAssemblerEnvironment();
@@ -58,6 +58,47 @@ type FixtureRun = {
   sample: BenchmarkSample;
   actual: Golden;
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function isGolden(value: unknown): value is Golden {
+  return isRecord(value) && typeof value.bytes === "number" && typeof value.sha256 === "string";
+}
+
+function readGoldenMap(value: unknown): Record<string, Golden> {
+  if (!isRecord(value)) {
+    throw new Error("Benchmark goldens must be an object.");
+  }
+  const goldens: Record<string, Golden> = {};
+  for (const [id, entry] of Object.entries(value)) {
+    if (!isGolden(entry)) {
+      throw new Error(`Benchmark golden '${id}' must contain bytes and sha256.`);
+    }
+    goldens[id] = entry;
+  }
+  return goldens;
+}
+
+function isFixtureRun(value: unknown): value is FixtureRun {
+  return isRecord(value) && isBenchmarkSample(value.sample) && isGolden(value.actual);
+}
+
+function readFixtureRun(text: string): FixtureRun {
+  const parsed: unknown = JSON.parse(text);
+  if (!isFixtureRun(parsed)) {
+    throw new Error("Isolated benchmark worker returned an unexpected result.");
+  }
+  return parsed;
+}
+
+function selectedFixture(fixtureId: string): Fixture {
+  const fixture = fixtureById.get(fixtureId);
+  if (!fixture) {
+    throw new Error(`Unknown fixture '${fixtureId}'.`);
+  }
+  return fixture;
+}
 
 const root = process.cwd();
 const goldenPath = path.join(root, "scripts/benchmark-goldens.json");
@@ -145,10 +186,12 @@ function parseOptions(args: string[]): BenchmarkOptions {
       }
     } else if (argument === "--fixture") {
       const fixtureIds = args[++index]?.split(",").filter(Boolean);
-      if (!fixtureIds?.length) {
+      if (!fixtureIds.length) {
         throw new Error("--fixture requires a fixture id or comma-separated fixture ids.");
       }
-      for (const fixtureId of fixtureIds) options.fixtureIds.push(fixtureId);
+      for (const fixtureId of fixtureIds) {
+        options.fixtureIds.push(fixtureId);
+      }
     } else if (argument === "--max-median-ms") {
       options.maxMedianMs = parseNonNegativeInteger(args[++index], argument);
     }
@@ -284,7 +327,7 @@ function runFixtureIsolated(fixture: Fixture, instrumentation: boolean): Fixture
       `Isolated benchmark for ${fixture.id} failed with status ${String(child.status)}: ${child.stderr.trim()}`,
     );
   }
-  return JSON.parse(child.stdout) as FixtureRun;
+  return readFixtureRun(child.stdout);
 }
 
 function gitRevision(): string {
@@ -301,10 +344,11 @@ function formatMilliseconds(value: number): string {
 
 function main(): void {
   const options = parseOptions(process.argv.slice(2));
-  const goldens = JSON.parse(fs.readFileSync(goldenPath, "utf8")) as Record<string, Golden>;
+  const parsedGoldens: unknown = JSON.parse(fs.readFileSync(goldenPath, "utf8"));
+  const goldens = readGoldenMap(parsedGoldens);
   const selectedFixtures =
     options.fixtureIds.length > 0
-      ? options.fixtureIds.map((fixtureId) => fixtureById.get(fixtureId) as Fixture)
+      ? options.fixtureIds.map((fixtureId) => selectedFixture(fixtureId))
       : fixtures;
   const updatedGoldens: Record<string, Golden> = {};
   const benchmarkResults = [];
@@ -378,7 +422,9 @@ function main(): void {
   if (options.updateGoldens) {
     const nextGoldens = { ...goldens };
     for (const [id, golden] of Object.entries(updatedGoldens)) {
-      if (fixtureById.get(id)?.kind === "external") continue;
+      if (fixtureById.get(id)?.kind === "external") {
+        continue;
+      }
       nextGoldens[id] = golden;
     }
     fs.writeFileSync(goldenPath, `${JSON.stringify(nextGoldens, null, 2)}\n`);
@@ -415,8 +461,11 @@ function main(): void {
   const rssLabel = options.instrumentation ? "peak RSS" : "end RSS";
   for (const result of benchmarkResults) {
     let status = "PASS";
-    if (!result.validation.valid) status = "FAIL";
-    else if (!result.performance.valid) status = "SLOW";
+    if (!result.validation.valid) {
+      status = "FAIL";
+    } else if (!result.performance.valid) {
+      status = "SLOW";
+    }
     console.log(
       `${result.id.padEnd(22)} ${status}  median ${formatMilliseconds(result.aggregate.wallMs.median).padStart(11)}  MAD ${formatMilliseconds(result.aggregate.wallMs.medianAbsoluteDeviation).padStart(11)}  range ${formatMilliseconds(result.aggregate.wallMs.min)}–${formatMilliseconds(result.aggregate.wallMs.max)}  ${rssLabel} ${(result.aggregate.peakRssBytes / 1048576).toFixed(1)} MiB  heap ${(result.aggregate.peakHeapUsedBytes / 1048576).toFixed(1)} MiB`,
     );
@@ -442,7 +491,7 @@ function runInternalWorker(args: string[]): boolean {
   const fixtureId = args[workerIndex + 1];
   const fixture = fixtureId ? fixtureById.get(fixtureId) : undefined;
   if (!fixture) {
-    throw new Error(`Unknown internal worker fixture '${String(fixtureId)}'.`);
+    throw new Error(`Unknown internal worker fixture '${fixtureId}'.`);
   }
   const instrumentation = args.includes("--instrumentation=true");
   process.stdout.write(JSON.stringify(runFixture(fixture, instrumentation)));

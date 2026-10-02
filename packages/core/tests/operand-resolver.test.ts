@@ -56,25 +56,25 @@ test("determineValueLength - rejects invalid values", (t) => {
 
   t.throws(
     () => {
-      resolver.determineValueLength(null as unknown as string);
+      resolver.determineValueLength(null);
     },
     { message: /Invalid value type for length determination/ },
   );
   t.throws(
     () => {
-      resolver.determineValueLength(undefined as unknown as string);
+      resolver.determineValueLength(undefined);
     },
     { message: /Invalid value type for length determination/ },
   );
   t.throws(
     () => {
-      resolver.determineValueLength({} as unknown as string);
+      resolver.determineValueLength({});
     },
     { message: /Invalid value type for length determination/ },
   );
   t.throws(
     () => {
-      resolver.determineValueLength(Number.NaN as unknown as string);
+      resolver.determineValueLength(Number.NaN);
     },
     { message: /Invalid value for length determination/ },
   );
@@ -109,9 +109,9 @@ test("isMathExpression - ignores plain operands", (t) => {
   t.false(resolver.isMathExpression("$1000"));
   t.false(resolver.isMathExpression("#$10"));
   t.false(resolver.isMathExpression(""));
-  t.false(resolver.isMathExpression(null as unknown as string));
-  t.false(resolver.isMathExpression(undefined as unknown as string));
-  t.false(resolver.isMathExpression(Number.NaN as unknown as string));
+  t.false(resolver.isMathExpression(null));
+  t.false(resolver.isMathExpression(undefined));
+  t.false(resolver.isMathExpression(Number.NaN));
 });
 
 test("tryResolveLabelInOperand - resolves immediate operands", (t) => {

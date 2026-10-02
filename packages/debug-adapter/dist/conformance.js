@@ -23,20 +23,33 @@ const assertAddress = (actual, expected, context) => {
         fail(`${context}: expected ${expected.architecture}/${expected.addressSpace}/${expected.address.toString(16)}, received ${actual.architecture}/${actual.addressSpace}/${actual.address.toString(16)}.`);
     }
 };
+const CAPABILITY_KEYS = [
+    "pause",
+    "step",
+    "stepKinds",
+    "registers",
+    "memory",
+    "stackFrames",
+    "breakpoints",
+    "disassemble",
+];
 const assertCapability = (actual, expected) => {
-    const spaces = [...actual.addressSpaces].sort();
-    const expectedSpaces = [...expected.addressSpaces].sort();
+    const spaces = [...actual.addressSpaces].toSorted();
+    const expectedSpaces = [...expected.addressSpaces].toSorted();
     if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces)) {
         fail(`${expected.architecture}: expected address spaces ${expectedSpaces.join(", ")}, received ${spaces.join(", ")}.`);
     }
-    const memorySpaces = [...actual.memorySpaces].sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
-    const expectedMemorySpaces = [...expected.memorySpaces].sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
+    const memorySpaces = [...actual.memorySpaces].toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace));
+    const expectedMemorySpaces = [...expected.memorySpaces].toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace));
     if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces)) {
         fail(`${expected.architecture}: expected memory spaces ${JSON.stringify(expectedMemorySpaces)}, received ${JSON.stringify(memorySpaces)}.`);
     }
-    for (const [key, value] of Object.entries(expected.capabilities)) {
-        if (actual[key] !== value) {
-            fail(`${expected.architecture}: expected capability '${key}' to be ${value}.`);
+    for (const key of CAPABILITY_KEYS) {
+        if (!Object.hasOwn(expected.capabilities, key)) {
+            continue;
+        }
+        if (actual[key] !== expected.capabilities[key]) {
+            fail(`${expected.architecture}: expected capability '${key}' to be ${JSON.stringify(expected.capabilities[key])}.`);
         }
     }
 };
@@ -75,9 +88,11 @@ const withTimeout = async (operation, timeoutMs, context) => new Promise((resolv
     operation.then((value) => {
         clearTimeout(timer);
         resolve(value);
+        return;
     }, (error) => {
         clearTimeout(timer);
         reject(error instanceof Error ? error : new Error(String(error)));
+        return;
     });
 });
 const withBackend = async (options, action) => {
@@ -98,9 +113,12 @@ const withBackend = async (options, action) => {
     }
 };
 const eventTypes = (events) => events.map((event) => event.type);
+function reportedProtocol(version) {
+    return version;
+}
 const scenarios = {
     "protocol-and-capabilities": async (options) => withBackend(options, (backend) => {
-        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
+        if (reportedProtocol(backend.protocolVersion) !== DEBUG_BACKEND_PROTOCOL_VERSION) {
             fail(`Expected backend protocol ${String(DEBUG_BACKEND_PROTOCOL_VERSION)}.`);
         }
         if (options.fixture.initialAddress.architecture !== options.fixture.primaryArchitecture ||
@@ -159,7 +177,8 @@ const scenarios = {
     "continue-to-breakpoint": async (options) => withBackend(options, async (backend, events, timeoutMs) => {
         await backend.connect({ reset: true });
         const thread = requireValue((await backend.threads()).find((candidate) => candidate.architecture === options.fixture.primaryArchitecture), "Missing primary thread.");
-        const [breakpoint] = await backend.setBreakpoints([options.fixture.breakpointAddress]);
+        const appliedBreakpoints = await backend.setBreakpoints([options.fixture.breakpointAddress]);
+        const breakpoint = appliedBreakpoints.length > 0 ? appliedBreakpoints[0] : undefined;
         if (!breakpoint?.verified) {
             fail("Conformance breakpoint was not verified.");
         }

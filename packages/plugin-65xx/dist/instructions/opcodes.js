@@ -134,7 +134,9 @@ for (const form of mutableForms) {
     groups.set(key, group);
 }
 for (const group of groups.values()) {
-    const preferred = group.find((form) => form.documented) ?? group[0];
+    const documented = group.find((form) => form.documented);
+    const fallback = group.length > 0 ? group[0] : undefined;
+    const preferred = documented ?? fallback;
     // Duplicate encodings (e.g. unofficial NOP mirrors): prefer the documented
     // opcode when assembling. The full decode table still lists every cell.
     if (preferred) {
@@ -182,6 +184,9 @@ export const nmos6502xCpu = Object.freeze({
     aliases: ["6502x"],
     features: new Set(["nmos", "undocumented"]),
 });
+function cpuVariantForms(cpuId) {
+    return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : undefined;
+}
 /**
  * Looks up the NMOS decode-table form for a byte.
  *
@@ -201,7 +206,7 @@ export function getOpcodeForm(opcode) {
  * @returns {readonly InstructionForm[]} The decode table.
  */
 export function getCpuDecodeTable(cpu) {
-    const variantForms = variantFormsByCpuId[cpu.id];
+    const variantForms = cpuVariantForms(cpu.id);
     if (variantForms) {
         return variantForms;
     }
@@ -214,7 +219,7 @@ export function getCpuDecodeTable(cpu) {
  * @returns {readonly InstructionForm[]} The assembly forms.
  */
 export function getCpuAssemblyForms(cpu) {
-    const variantForms = variantFormsByCpuId[cpu.id];
+    const variantForms = cpuVariantForms(cpu.id);
     if (variantForms) {
         return variantForms;
     }

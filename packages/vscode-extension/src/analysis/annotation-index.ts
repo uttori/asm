@@ -155,7 +155,7 @@ export const instructionAnnotationsForDebugRange = (
       )
       .map((annotation) => [annotation.id, annotation]),
   );
-  return [...unique.values()].sort(
+  return [...unique.values()].toSorted(
     (left, right) =>
       left.addressSpace.localeCompare(right.addressSpace) ||
       left.address - right.address ||

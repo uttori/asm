@@ -15,16 +15,44 @@ function readJournal(repository) {
         return undefined;
     }
     const value = JSON.parse(fs.readFileSync(file, "utf8"));
-    if (value.format !== "uttori-source-merge" ||
-        !["adopt", "regenerate"].includes(value.kind) ||
-        !/^refs\/heads\//.test(value.branch) ||
-        !/^refs\/uttori\/candidates\/[\w-]+$/.test(value.candidateRef)) {
+    if (!isJournalRecord(value)) {
         throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
     }
-    assertSourceObjectId(value.before);
-    assertSourceObjectId(value.candidate);
-    if (value.validatedTree) {
-        assertSourceObjectId(value.validatedTree);
+    const before = value.before;
+    const candidate = value.candidate;
+    const validatedTree = value.validatedTree;
+    if (!isMergeJournal(value)) {
+        throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
+    }
+    assertSourceObjectId(gitObjectId(before));
+    assertSourceObjectId(gitObjectId(candidate));
+    if (validatedTree) {
+        assertSourceObjectId(gitObjectId(validatedTree));
+    }
+    return value;
+}
+function isJournalRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isMergeKind(value) {
+    return value === "adopt" || value === "regenerate";
+}
+function isMergeJournal(value) {
+    if (!isJournalRecord(value)) {
+        return false;
+    }
+    const branch = value.branch;
+    const candidateRef = value.candidateRef;
+    return (value.format === "uttori-source-merge" &&
+        isMergeKind(value.kind) &&
+        typeof branch === "string" &&
+        branch.startsWith("refs/heads/") &&
+        typeof candidateRef === "string" &&
+        /^refs\/uttori\/candidates\/[\w-]+$/.test(candidateRef));
+}
+function gitObjectId(value) {
+    if (typeof value !== "string") {
+        throw new Error("Expected a complete Git object ID.");
     }
     return value;
 }
@@ -246,7 +274,7 @@ export async function adoptSourceGeneration(repository, generation) {
         ]);
         durableReplace(path.join(repository.root, SOURCE_GENERATION_FILE), canonicalJson(generation.descriptor));
         await sourceGit(repository.root, ["add", "--", SOURCE_GENERATION_FILE]);
-        return sourceMergeStatus(repository);
+        return await sourceMergeStatus(repository);
     }
     finally {
         lease.release();
@@ -266,7 +294,7 @@ export async function applySourceGeneration(repository, generation, preview) {
             throw new Error("Regeneration preview is stale. Preview the current checkpoint again.");
         }
         if (generation.commit === preview.base) {
-            return sourceMergeStatus(repository);
+            return await sourceMergeStatus(repository);
         }
         // Receipts may arrive through an untyped CLI or editor message. Revalidate native ancestry
         // instead of trusting that the caller obtained its preview from this process.
@@ -275,7 +303,7 @@ export async function applySourceGeneration(repository, generation, preview) {
         await sourceGit(repository.root, ["merge", "--no-ff", "--no-commit", generation.commit], {
             acceptedCodes: [0, 1],
         });
-        return sourceMergeStatus(repository);
+        return await sourceMergeStatus(repository);
     }
     finally {
         lease.release();
@@ -416,7 +444,7 @@ export async function abortSourceGeneration(repository) {
             throw new Error("There is no matching regeneration merge to abort.");
         }
         await sourceGit(repository.root, ["merge", "--abort"]);
-        return sourceMergeStatus(repository);
+        return await sourceMergeStatus(repository);
     }
     finally {
         lease.release();

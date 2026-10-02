@@ -2,7 +2,7 @@ import type { AssemblerPlugin, AssemblerPluginManifest, PluginDisposable, Plugin
 import { AssemblerEnvironment } from "./environment.js";
 /** In-memory plugin activation. Module text is diagnostic context, never imported by the manager. */
 export interface PluginActivationRequest {
-    readonly plugin: AssemblerPlugin<unknown>;
+    readonly plugin: AssemblerPlugin;
     readonly options?: unknown;
     readonly pluginModule?: string;
 }

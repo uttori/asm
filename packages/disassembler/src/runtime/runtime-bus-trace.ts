@@ -34,6 +34,10 @@ import {
   type RuntimeTransferSummary,
 } from "./runtime-transfer.js";
 
+function isRowRecord(value: object): value is Record<string, unknown> {
+  return !Array.isArray(value);
+}
+
 export const RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace" as const;
 /** Aggregates byte-access variants. Ordered timing and raster history require the capture archive. */
 export const RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1" as const;
@@ -156,52 +160,84 @@ const unsigned = (value: unknown): number | bigint => {
   return number;
 };
 
+function isMetadataRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBusScope(value: unknown): value is RuntimeBusTraceMetadata["scope"] {
+  return (
+    value === "snes.cpu-bus" || value === "snes.cpu-bus-transfers" || value === "snes.cpu-bus-ppu"
+  );
+}
+
+function positiveDecimal(value: unknown): string {
+  if (typeof value !== "string" || unsigned(value) === 0) {
+    if (typeof value !== "string") {
+      throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
+    }
+    throw new Error("Bus trace clock frequency must be positive.");
+  }
+  return value;
+}
+
 /** Normalize only semantic metadata, excluding archive allocation and file framing.
  * @param {unknown} value Producer metadata, possibly with transport-specific fields.
  * @returns {RuntimeBusTraceMetadata} Fresh canonical identity. Invalid metadata throws.
  */
 export const validateRuntimeBusTraceMetadata = (value: unknown): RuntimeBusTraceMetadata => {
-  const meta = value as RuntimeBusTraceMetadata | undefined;
-  if (
-    !meta ||
-    meta.format !== RUNTIME_BUS_TRACE_FORMAT ||
-    meta.schemaVersion !== 1 ||
-    (meta.scope !== "snes.cpu-bus" &&
-      meta.scope !== "snes.cpu-bus-transfers" &&
-      meta.scope !== "snes.cpu-bus-ppu") ||
-    meta.architecture !== "snes.65816" ||
-    meta.addressSpace !== "snes.cpu" ||
-    typeof meta.romContentSha256 !== "string" ||
-    !/^[\da-f]{64}$/.test(meta.romContentSha256) ||
-    typeof meta.session !== "string" ||
-    !/^[\da-f]{32}$/.test(meta.session) ||
-    typeof meta.producer?.id !== "string" ||
-    !meta.producer.id ||
-    typeof meta.producer?.revision !== "string" ||
-    !meta.producer.revision ||
-    meta.clock?.id !== "snes.master"
-  ) {
+  if (!isMetadataRecord(value)) {
     throw new Error("Invalid SNES bus trace metadata.");
   }
-  if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0) {
-    throw new Error("Bus trace clock frequency must be positive.");
+  const producer = isMetadataRecord(value.producer) ? value.producer : undefined;
+  const clock = isMetadataRecord(value.clock) ? value.clock : undefined;
+  const producerId = producer?.id;
+  const producerRevision = producer?.revision;
+  const scope = value.scope;
+  const romContentSha256 = value.romContentSha256;
+  const session = value.session;
+  if (
+    value.format !== RUNTIME_BUS_TRACE_FORMAT ||
+    value.schemaVersion !== 1 ||
+    !isBusScope(scope) ||
+    value.architecture !== "snes.65816" ||
+    value.addressSpace !== "snes.cpu" ||
+    typeof romContentSha256 !== "string" ||
+    !/^[\da-f]{64}$/.test(romContentSha256) ||
+    typeof session !== "string" ||
+    !/^[\da-f]{32}$/.test(session) ||
+    typeof producerId !== "string" ||
+    producerId === "" ||
+    typeof producerRevision !== "string" ||
+    producerRevision === "" ||
+    !clock ||
+    clock.id !== "snes.master"
+  ) {
+    throw new Error("Invalid SNES bus trace metadata.");
   }
   return {
     format: RUNTIME_BUS_TRACE_FORMAT,
     schemaVersion: 1,
-    scope: meta.scope,
+    scope,
     architecture: "snes.65816",
     addressSpace: "snes.cpu",
-    romContentSha256: meta.romContentSha256,
-    producer: { id: meta.producer.id, revision: meta.producer.revision },
-    session: meta.session,
+    romContentSha256,
+    producer: { id: producerId, revision: producerRevision },
+    session,
     clock: {
       id: "snes.master",
-      numerator: meta.clock.numerator,
-      denominator: meta.clock.denominator,
+      numerator: positiveDecimal(clock.numerator),
+      denominator: positiveDecimal(clock.denominator),
     },
   };
 };
+
+function isBusTraceEvent(
+  value: unknown,
+): value is
+  | RuntimeBusAccess
+  | (Omit<RuntimeTransferBoundary, "kind"> & { readonly kind: unknown }) {
+  return typeof value === "object" && value !== null;
+}
 
 /** Validate and aggregate a stream with bounded chunks and a caller-owned, optionally disk-backed index.
  * @param {unknown} metadata Producer identity and clock.
@@ -275,7 +311,10 @@ export const createRuntimeBusTraceImporter = (
       throw new Error("Bus trace importer is no longer writable.");
     }
     try {
-      const accesses = (chunk as { accesses?: unknown } | null)?.accesses;
+      const accesses =
+        typeof chunk === "object" && chunk !== null && isRowRecord(chunk)
+          ? chunk.accesses
+          : undefined;
       if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095) {
         throw new Error("Bus trace chunks require 1–4095 accesses.");
       }
@@ -283,10 +322,10 @@ export const createRuntimeBusTraceImporter = (
       // retaining the whole trace. Joining must add no chunk-boundary bytes.
       const hashLines: string[] = [];
       for (const item of accesses) {
-        if (!item || typeof item !== "object") {
+        if (!isBusTraceEvent(item)) {
           throw new Error("Invalid bus trace event.");
         }
-        const access = item as RuntimeBusAccess | RuntimeTransferBoundary;
+        const access = item;
         const sequence = unsigned(access.sequence);
         const ordinal = unsigned(access.ordinal);
         const cycle = unsigned(access.cycle);
@@ -472,7 +511,7 @@ export const createRuntimeBusTraceImporter = (
           firstCycle,
           lastCycle: firstCycle === null ? null : String(previousCycle),
           ...(counts ? { ppu: counts } : {}),
-          activity: [...activity.values()].map((group) => ({ ...group })),
+          activity: [...activity.values()].map((group) => Object.assign({}, group)),
         });
       }
     } catch (error) {
@@ -581,13 +620,13 @@ export const createRuntimeBusTraceImporter = (
           lastCycle: firstCycle === null ? null : String(previousCycle),
           contexts,
           activity: [...activity.entries()]
-            .sort(([a], [b]) => a.localeCompare(b))
+            .toSorted(([a], [b]) => a.localeCompare(b))
             .map(([, value]) => value),
         },
         batch: {
           ...(storage?.onRecord
             ? {}
-            : { runtime: runtime.sort((a, b) => a.id.localeCompare(b.id)) }),
+            : { runtime: runtime.toSorted((a, b) => a.id.localeCompare(b.id)) }),
           evidence: [
             {
               id: evidenceId,

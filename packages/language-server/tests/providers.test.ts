@@ -106,8 +106,8 @@ test("language-server providers expose navigation, docs, completion, and tokens"
   t.true(semanticTokensLegend.tokenModifiers.includes("definition"));
   t.true(semanticTokenData.length > 0);
   t.true(
-    Array.from({ length: semanticTokenData.length / 5 }, (_, index) =>
-      semanticTokenData.slice(index * 5, index * 5 + 5),
+    Array.from({ length: semanticTokenData.length / 5 }, (_, tokenIndex) =>
+      semanticTokenData.slice(tokenIndex * 5, tokenIndex * 5 + 5),
     ).some((token) => token[3] === tokenTypeIndex && token[4] === 1),
   );
 });
@@ -142,7 +142,7 @@ test("rename edits user symbols but rejects instruction mnemonics", (t) => {
   const changes = edit?.changes?.[pathToUri(file)] ?? [];
   t.is(changes.length, 2);
   t.true(changes.every((change) => change.newText === "Destination"));
-  t.deepEqual(changes.map((change) => change.range.start.line).sort(), [1, 2]);
+  t.deepEqual(changes.map((change) => change.range.start.line).toSorted(), [1, 2]);
 });
 
 test("document symbols keep original source lines when comments precede labels", (t) => {
@@ -202,9 +202,9 @@ test("incsrc and incbin paths are clickable after the local analysis pass", (t) 
 
 test("define references, rename, and sigil-stripped new names", (t) => {
   const defineFile = path.resolve("/virtual/defines.asm");
-  const source = "!version = 0\n  LDA !version\n";
+  const sourceText = "!version = 0\n  LDA !version\n";
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(defineFile, source);
+  index.openDocument(defineFile, sourceText);
 
   const definition = definitionFor(index, defineFile, { line: 1, character: 8 });
   t.is(definition.length, 1);
@@ -254,17 +254,17 @@ test("macro definitions can be renamed and found as references", (t) => {
 });
 
 test("rename at a field declaration cannot bind to an identically named field in another struct", (t) => {
-  const file = path.resolve("/virtual/field-scope.asm");
+  const fieldFile = path.resolve("/virtual/field-scope.asm");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
   index.openDocument(
-    file,
+    fieldFile,
     "struct First 0\n.value: dw\nendstruct\nstruct Second 0\n.value: dw\nendstruct\nLDA Second.value\nLDA First.value\n",
   );
-  const changes = renameEditsFor(index, file, { line: 1, character: 3 }, "word")!.changes![
-    pathToUri(file)
+  const changes = renameEditsFor(index, fieldFile, { line: 1, character: 3 }, "word")!.changes![
+    pathToUri(fieldFile)
   ];
   t.deepEqual(
-    changes.map((change) => change.range.start.line).sort((a, b) => a - b),
+    changes.map((change) => change.range.start.line).toSorted((a, b) => a - b),
     [1, 7],
   );
 });
@@ -286,10 +286,10 @@ test("semantic tokens extend stale prefix matches to the full identifier", (t) =
 });
 
 test("semantic tokens do not overlap on array-valued struct fields", (t) => {
-  const file = path.resolve("/virtual/encoded-header.asm");
+  const headerFile = path.resolve("/virtual/encoded-header.asm");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(file, "struct Header\n  .encoded_stream: db[1462]\nendstruct\n");
-  const tokens = decodeSemanticTokens(semanticTokensFor(index, file).data);
+  index.openDocument(headerFile, "struct Header\n  .encoded_stream: db[1462]\nendstruct\n");
+  const tokens = decodeSemanticTokens(semanticTokensFor(index, headerFile).data);
   t.true(tokens.length > 0);
   for (let i = 1; i < tokens.length; i++) {
     const previous = tokens[i - 1];
@@ -380,7 +380,7 @@ function columnOf(line: string, token: string): number {
 
 test("struct members nest in the outline and are independently targetable", (t) => {
   const structFile = path.resolve("/virtual/object_defines.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "struct obj 0 ;65 bytes / obj",
@@ -394,7 +394,7 @@ test("struct members nest in the outline and are independently targetable", (t) 
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(structFile, source);
+  index.openDocument(structFile, sourceText);
 
   const outline = documentSymbolsFor(index, structFile);
   const obj = outline.find((symbol) => symbol.name === "obj");
@@ -403,7 +403,7 @@ test("struct members nest in the outline and are independently targetable", (t) 
   t.true((obj?.children ?? []).some((child) => child.name === "timer"));
   t.true((obj?.children ?? []).some((child) => child.name === "_13"));
 
-  const useLine = source.split("\n")[8];
+  const useLine = sourceText.split("\n")[8];
   const objColumn = columnOf(useLine, "obj");
   const timerColumn = columnOf(useLine, "timer");
 
@@ -418,15 +418,15 @@ test("struct members nest in the outline and are independently targetable", (t) 
   t.is(timerDefinition.length, 1);
   t.is(timerDefinition[0].range.start.line, 3);
 
-  const objHover = hoverFor(index, structFile, { line: 8, character: objColumn + 1 }, source);
+  const objHover = hoverFor(index, structFile, { line: 8, character: objColumn + 1 }, sourceText);
   t.regex(JSON.stringify(objHover), /struct/);
   t.regex(JSON.stringify(objHover), /65 bytes \/ obj/);
 
   const fieldHover = hoverFor(
     index,
     structFile,
-    { line: 9, character: columnOf(source.split("\n")[9], "_13") + 1 },
-    source,
+    { line: 9, character: columnOf(sourceText.split("\n")[9], "_13") + 1 },
+    sourceText,
   );
   t.regex(JSON.stringify(fieldHover), /physics pointer\?/);
   t.regex(JSON.stringify(fieldHover), /used as a state index/);
@@ -451,7 +451,7 @@ test("struct members nest in the outline and are independently targetable", (t) 
   t.true(changes.every((change) => change.newText === "elapsed"));
   t.false(
     changes.some((change) => {
-      const line = source.split("\n")[change.range.start.line];
+      const line = sourceText.split("\n")[change.range.start.line];
       return line.slice(change.range.start.character, change.range.end.character) === "obj";
     }),
   );
@@ -477,7 +477,7 @@ test("struct members nest in the outline and are independently targetable", (t) 
 
 test("define-rooted struct members and immediate labels are targetable", (t) => {
   const sourceFile = path.resolve("/virtual/object_aliases.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "struct obj 0",
@@ -495,8 +495,8 @@ test("define-rooted struct members and immediate labels are targetable", (t) => 
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(sourceFile, source);
-  const lines = source.split("\n");
+  index.openDocument(sourceFile, sourceText);
+  const lines = sourceText.split("\n");
 
   const flagsLine = 9;
   const defineColumn = columnOf(lines[flagsLine], "!obj_arthur");
@@ -519,7 +519,7 @@ test("define-rooted struct members and immediate labels are targetable", (t) => 
     index,
     sourceFile,
     { line: flagsLine, character: defineColumn + 2 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(defineHover), /obj_arthur/);
 
@@ -527,7 +527,7 @@ test("define-rooted struct members and immediate labels are targetable", (t) => 
     index,
     sourceFile,
     { line: flagsLine, character: flagsColumn + 1 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(flagsHover), /flags2/);
   t.regex(JSON.stringify(flagsHover), /In `obj`/);
@@ -546,7 +546,7 @@ test("define-rooted struct members and immediate labels are targetable", (t) => 
     index,
     sourceFile,
     { line: immediateLine, character: labelColumn + 1 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(labelHover), /coord_offsets_arthur/);
 
@@ -563,7 +563,7 @@ test("define-rooted struct members and immediate labels are targetable", (t) => 
     index,
     sourceFile,
     { line: shiftedLine, character: shiftedLabelColumn + 1 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(shiftedHover), /coord_offsets_arthur/);
 
@@ -603,7 +603,7 @@ test("define-rooted struct members and immediate labels are targetable", (t) => 
 
 test("namespaces and nested labels appear as an outline tree", (t) => {
   const nsFile = path.resolve("/virtual/namespaces.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "namespace Audio",
@@ -617,7 +617,7 @@ test("namespaces and nested labels appear as an outline tree", (t) => {
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(nsFile, source);
+  index.openDocument(nsFile, sourceText);
 
   const outline = documentSymbolsFor(index, nsFile);
   const audio = outline.find((symbol) => symbol.name === "Audio");
@@ -637,7 +637,7 @@ test("sibling dot labels nest flat under their parent global label", (t) => {
   // AFTER each handleLabelDefinition call, so sibling .B51A got containerName
   // "bars_create_B512" instead of "bars_create", causing cascading nesting in the outline.
   const barsFile = path.resolve("/virtual/bars-outline.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "namespace bars",
@@ -658,7 +658,7 @@ test("sibling dot labels nest flat under their parent global label", (t) => {
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(barsFile, source);
+  index.openDocument(barsFile, sourceText);
 
   const outline = documentSymbolsFor(index, barsFile);
   const bars = outline.find((symbol) => symbol.name === "bars");
@@ -667,12 +667,12 @@ test("sibling dot labels nest flat under their parent global label", (t) => {
   const create = (bars?.children ?? []).find((child) => child.name === "create");
   t.truthy(create, "create label is a child of bars");
 
-  const childNames = (create?.children ?? []).map((child) => child.name);
+  const childNames = new Set((create?.children ?? []).map((child) => child.name));
   // All sibling dot labels must be direct children of 'create' — not nested under each other.
-  t.true(childNames.includes("B512"), "B512 is a direct child of create");
-  t.true(childNames.includes("B51A"), "B51A is a direct child of create");
-  t.true(childNames.includes("B52A"), "B52A is a direct child of create");
-  t.true(childNames.includes("B52C"), "B52C is a direct child of create");
+  t.true(childNames.has("B512"), "B512 is a direct child of create");
+  t.true(childNames.has("B51A"), "B51A is a direct child of create");
+  t.true(childNames.has("B52A"), "B52A is a direct child of create");
+  t.true(childNames.has("B52C"), "B52C is a direct child of create");
 
   // No dot label should have another dot label as a child (the cascading nesting bug).
   for (const child of create?.children ?? []) {
@@ -691,7 +691,7 @@ test("sibling dot labels nest flat under their parent global label", (t) => {
 
 test("compound hierarchical labels are independently targetable", (t) => {
   const sourceFile = path.resolve("/virtual/compound-labels.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "_018049:",
@@ -707,8 +707,8 @@ test("compound hierarchical labels are independently targetable", (t) => {
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(sourceFile, source);
-  const lines = source.split("\n");
+  index.openDocument(sourceFile, sourceText);
+  const lines = sourceText.split("\n");
 
   const localUseLine = 4;
   const localColumn = columnOf(lines[localUseLine], ".8053");
@@ -723,7 +723,7 @@ test("compound hierarchical labels are independently targetable", (t) => {
     index,
     sourceFile,
     { line: localUseLine, character: localColumn + 2 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(localHover), /8053/);
 
@@ -748,7 +748,7 @@ test("compound hierarchical labels are independently targetable", (t) => {
     index,
     sourceFile,
     { line: compoundLine, character: parentColumn + 1 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(parentHover), /_018049/);
   t.notRegex(JSON.stringify(parentHover), /_018049_8053/);
@@ -757,7 +757,7 @@ test("compound hierarchical labels are independently targetable", (t) => {
     index,
     sourceFile,
     { line: compoundLine, character: suffixColumn + 1 },
-    source,
+    sourceText,
   );
   t.regex(JSON.stringify(suffixHover), /8053/);
 
@@ -796,7 +796,7 @@ test("compound hierarchical labels are independently targetable", (t) => {
 
 test("dotted local compounds like .idx_beginner hover each segment", (t) => {
   const sourceFile = path.resolve("/virtual/difficulty-tables.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "Tables:",
@@ -810,8 +810,8 @@ test("dotted local compounds like .idx_beginner hover each segment", (t) => {
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(sourceFile, source);
-  const lines = source.split("\n");
+  index.openDocument(sourceFile, sourceText);
+  const lines = sourceText.split("\n");
   const useLine = 4;
   const token = ".idx_beginner";
   const tokenColumn = columnOf(lines[useLine], token);
@@ -827,7 +827,7 @@ test("dotted local compounds like .idx_beginner hover each segment", (t) => {
     "outline nests ..beginner under .idx",
   );
 
-  const idxHover = hoverFor(index, sourceFile, { line: useLine, character: idxColumn }, source);
+  const idxHover = hoverFor(index, sourceFile, { line: useLine, character: idxColumn }, sourceText);
   t.truthy(idxHover, "hover on .idx in .idx_beginner");
   t.regex(JSON.stringify(idxHover), /\*\*\.idx\*\*/);
   t.notRegex(JSON.stringify(idxHover), /beginner/i);
@@ -836,7 +836,7 @@ test("dotted local compounds like .idx_beginner hover each segment", (t) => {
     index,
     sourceFile,
     { line: useLine, character: beginnerColumn },
-    source,
+    sourceText,
   );
   t.truthy(beginnerHover, "hover on beginner in .idx_beginner");
   t.regex(JSON.stringify(beginnerHover), /beginner/i);
@@ -859,21 +859,21 @@ test("dotted local compounds like .idx_beginner hover each segment", (t) => {
   const decoded = decodeSemanticTokens(semanticTokensFor(index, sourceFile).data);
   t.true(
     decoded.some(
-      (token) =>
-        token.line === useLine &&
-        token.char === tokenColumn &&
-        token.type === labelType &&
-        token.length === ".idx".length,
+      (entry) =>
+        entry.line === useLine &&
+        entry.char === tokenColumn &&
+        entry.type === labelType &&
+        entry.length === ".idx".length,
     ),
     "parent segment of .idx_beginner is a label token",
   );
   t.true(
     decoded.some(
-      (token) =>
-        token.line === useLine &&
-        token.char === beginnerColumn &&
-        token.type === labelType &&
-        token.length === "beginner".length,
+      (entry) =>
+        entry.line === useLine &&
+        entry.char === beginnerColumn &&
+        entry.type === labelType &&
+        entry.length === "beginner".length,
     ),
     "sublabel segment of .idx_beginner is a label token",
   );
@@ -890,7 +890,7 @@ test("dotted local compounds like .idx_beginner hover each segment", (t) => {
 
 test("asar directive operands have hover docs", (t) => {
   const sourceFile = path.resolve("/virtual/directive-operands.asm");
-  const source = [
+  const sourceText = [
     "lorom",
     "org $008000",
     "check bankcross full",
@@ -909,11 +909,11 @@ test("asar directive operands have hover docs", (t) => {
     "",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(sourceFile, source);
-  const lines = source.split("\n");
+  index.openDocument(sourceFile, sourceText);
+  const lines = sourceText.split("\n");
   const hoverWord = (line: number, token: string, pattern: RegExp): void => {
     const column = columnOf(lines[line], token);
-    const hover = hoverFor(index, sourceFile, { line, character: column }, source);
+    const hover = hoverFor(index, sourceFile, { line, character: column }, sourceText);
     t.regex(JSON.stringify(hover), pattern, `${token} on line ${line}`);
   };
 

@@ -163,7 +163,10 @@ function openSegment(session: Assembler, state: Nes65xxSessionState, segment: Ld
   if (!loadMemory || !runMemory) {
     throw new Error(`.segment "${segment.name}" references unknown MEMORY.`);
   }
-  const loadStart = segment.start ?? state.memoryCursors[segment.load] ?? loadMemory.start;
+  const loadCursor = Object.hasOwn(state.memoryCursors, segment.load)
+    ? state.memoryCursors[segment.load]
+    : undefined;
+  const loadStart = segment.start ?? loadCursor ?? loadMemory.start;
   session.setWritePosition(loadStart);
   const runStart = segment.run === segment.load ? loadStart : runMemory.start;
   if (runStart !== loadStart) {

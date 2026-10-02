@@ -113,7 +113,7 @@ DaTaStRuCtS Maps
 EnDdAtAsTrUcTs`,
       incremental,
     );
-    t.deepEqual([...assembler.getBinaryOutput().slice(6)], [4, 8, 11, 8, 92, 8, 100, 8]);
+    t.deepEqual(assembler.getBinaryOutput().slice(6), Uint8Array.of(4, 8, 11, 8, 92, 8, 100, 8));
   });
 
   test(`forward expressions, functions and macros work (${mode})`, (t) => {

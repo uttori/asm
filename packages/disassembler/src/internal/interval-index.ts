@@ -44,7 +44,7 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
     // Search order is deliberately separate from semantic order. InputIndex restores the latter.
     this.#entries = values
       .map((value, inputIndex): IndexedInterval<Value> => ({ value, inputIndex }))
-      .sort(
+      .toSorted(
         (left, right) =>
           left.value.start - right.value.start ||
           left.value.end - right.value.end ||
@@ -110,7 +110,7 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
     // Consumers historically observed project input order from Array.filter/find. Preserve it even
     // though the index scans in reverse start order.
     return matches
-      .sort((left, right) => left.inputIndex - right.inputIndex)
+      .toSorted((left, right) => left.inputIndex - right.inputIndex)
       .map(({ value }) => value);
   }
 }

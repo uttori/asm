@@ -97,7 +97,7 @@ export async function editSourceResearch(
     }
     if (action.action === "rename") {
       const matches = (
-        (await commands.executeCommand<SymbolInformation[]>(
+        (await commands.executeCommand<SymbolInformation[] | undefined>(
           "vscode.executeWorkspaceSymbolProvider",
           symbol.name,
         )) ?? []
@@ -138,7 +138,7 @@ export async function editSourceResearch(
         return undefined;
       }
       await workspace.openTextDocument(selected.location.uri);
-      const edit = await commands.executeCommand<WorkspaceEdit>(
+      const edit = await commands.executeCommand<WorkspaceEdit | undefined>(
         "vscode.executeDocumentRenameProvider",
         selected.location.uri,
         selected.location.range.start,

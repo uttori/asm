@@ -119,13 +119,13 @@ const joinValue = (
   if (left.kind === "known" && right.kind === "known") {
     return left.value === right.value
       ? left
-      : { kind: "conflicting", values: [left.value, right.value].sort((a, b) => a - b) };
+      : { kind: "conflicting", values: [left.value, right.value].toSorted((a, b) => a - b) };
   }
   const values = new Set<number>([
     ...(left.kind === "known" ? [left.value] : left.values),
     ...(right.kind === "known" ? [right.value] : right.values),
   ]);
-  return { kind: "conflicting", values: [...values].sort((a, b) => a - b) };
+  return { kind: "conflicting", values: [...values].toSorted((a, b) => a - b) };
 };
 
 const sameEntry = (left: Cpu65816StackEntry, right: Cpu65816StackEntry): boolean =>
@@ -404,88 +404,93 @@ export const transferCpu65816State = (
   instruction: StaticInstruction,
   input: Cpu65816AbstractState,
 ): Cpu65816AbstractState => {
-  let state = input;
+  const state = { ...input };
   for (const effect of instruction.effects) {
     if ((effect.kind === "clearBits" || effect.kind === "setBits") && effect.target === "p") {
       const value = effect.kind === "setBits" ? 1 : 0;
-      state = {
-        ...state,
-        ...(effect.mask & 0x01 ? { carry: known(value) } : {}),
-        ...(effect.mask & 0x10 ? { x: known(value) } : {}),
-        ...(effect.mask & 0x20 ? { m: known(value) } : {}),
-      };
+      Object.assign(
+        state,
+        effect.mask & 0x01 ? { carry: known(value) } : {},
+        effect.mask & 0x10 ? { x: known(value) } : {},
+        effect.mask & 0x20 ? { m: known(value) } : {},
+      );
     } else if (effect.kind === "push") {
       if (effect.source === "p") {
-        state = push(state, {
-          kind: "status",
-          e: state.e,
-          m: state.m,
-          x: state.x,
-          carry: state.carry,
-        });
+        Object.assign(
+          state,
+          push(state, {
+            kind: "status",
+            e: state.e,
+            m: state.m,
+            x: state.x,
+            carry: state.carry,
+          }),
+        );
       } else {
         const bytes = pushedBytes(instruction.mnemonic, state);
         if (bytes === undefined) {
-          state = loseStackPrecision(state);
+          Object.assign(state, loseStackPrecision(state));
           continue;
         }
-        state = push(state, {
-          kind: "value",
-          source: effect.source,
-          bytes,
-          value: sourceValue(effect.source, state),
-        });
+        Object.assign(
+          state,
+          push(state, {
+            kind: "value",
+            source: effect.source,
+            bytes,
+            value: sourceValue(effect.source, state),
+          }),
+        );
       }
     } else if (effect.kind === "pull") {
       const bytes = pulledBytes(effect.target, state);
       if (bytes === undefined) {
-        state = loseStackPrecision(state);
+        Object.assign(state, loseStackPrecision(state));
         continue;
       }
       const [pulledState, entry] = pull(state, bytes);
-      state = pulledState;
+      Object.assign(state, pulledState);
       if (effect.target === "p") {
-        state =
+        Object.assign(
+          state,
           entry?.kind === "status"
             ? {
-                ...state,
                 e: entry.e,
                 m: entry.m,
                 x: entry.x,
                 carry: entry.carry,
               }
-            : { ...state, m: unknown(), x: unknown(), carry: unknown() };
+            : { m: unknown(), x: unknown(), carry: unknown() },
+        );
       } else if (effect.target === "dbr") {
-        state = {
-          ...state,
+        Object.assign(state, {
           dbr:
             entry?.kind === "value" && entry.value.kind === "known"
               ? known(entry.value.value & 0xff)
               : unknown(),
-        };
+        });
       } else if (effect.target === "d") {
-        state = {
-          ...state,
+        Object.assign(state, {
           d: entry?.kind === "value" ? entry.value : unknown(),
-        };
+        });
       }
     } else if (effect.kind === "exchange" && effect.left === "c" && effect.right === "e") {
-      state = { ...state, carry: state.e, e: state.carry };
+      Object.assign(state, { carry: state.e, e: state.carry });
     } else if (effect.kind === "copy" && effect.to === "d") {
-      state = { ...state, d: unknown() };
+      Object.assign(state, { d: unknown() });
     } else if (effect.kind === "copy" && effect.to === "s") {
-      state = { ...state, s: unknown(), stack: { kind: "unknown" } };
+      Object.assign(state, { s: unknown(), stack: { kind: "unknown" } });
     }
   }
 
   if (CARRY_UNKNOWN_MNEMONICS.has(instruction.mnemonic)) {
-    state = { ...state, carry: unknown() };
+    Object.assign(state, { carry: unknown() });
   }
   if (["BRK", "COP", "JSL", "JSR"].includes(instruction.mnemonic)) {
-    state = loseStackPrecision(state);
+    Object.assign(state, loseStackPrecision(state));
   }
   if (instruction.mnemonic === "RTI") {
-    state = { ...state, pbr: unknown(), stack: { kind: "unknown" } };
+    Object.assign(state, { pbr: unknown(), stack: { kind: "unknown" } });
   }
   return normalize(state);
 };

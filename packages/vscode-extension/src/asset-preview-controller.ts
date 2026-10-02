@@ -56,6 +56,10 @@ function escapeHtml(value: string): string {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** Accept only plain catalogue use labels before rendering plugin metadata as HTML.
  * @param {unknown} value Untrusted preview metadata entry.
  * @returns {boolean} Whether the entry has displayable atlas and segment labels.
@@ -63,14 +67,22 @@ function escapeHtml(value: string): string {
 function isPaletteUser(
   value: unknown,
 ): value is { atlas: string; segments: string[]; role?: string } {
-  if (!value || typeof value !== "object") {
+  if (!isRecord(value) || typeof value.atlas !== "string" || !Array.isArray(value.segments)) {
     return false;
   }
-  const user = value as Record<string, unknown>;
+  return value.segments.every((segment: unknown) => typeof segment === "string");
+}
+
+/** Command URIs carry only the current document identity; reject anything else before opening media. */
+function isAssetPreviewRequest(value: unknown): value is AssetPreviewRequest {
   return (
-    typeof user.atlas === "string" &&
-    Array.isArray(user.segments) &&
-    user.segments.every((segment: unknown) => typeof segment === "string")
+    isRecord(value) &&
+    typeof value.uri === "string" &&
+    value.uri.startsWith("file:") &&
+    typeof value.version === "number" &&
+    typeof value.line === "number" &&
+    Number.isSafeInteger(value.line) &&
+    value.line >= 0
   );
 }
 
@@ -217,29 +229,20 @@ export class AssetPreviewController implements Disposable {
    * @returns {Promise<void>} Completes after panel content is ready.
    */
   async open(argument: unknown): Promise<void> {
-    if (!argument || typeof argument !== "object") {
+    if (!isAssetPreviewRequest(argument)) {
       return;
     }
-    const request = argument as Partial<AssetPreviewRequest>;
-    if (
-      typeof request.uri !== "string" ||
-      typeof request.version !== "number" ||
-      !Number.isSafeInteger(request.line) ||
-      (request.line as number) < 0 ||
-      !request.uri.startsWith("file:")
-    ) {
-      return;
-    }
+    const request = argument;
     const document = workspace.textDocuments.find((item) => item.uri.toString() === request.uri);
     if (
       !document ||
       !["uttori-snes", "uttori-65xx"].includes(document.languageId) ||
       document.version !== request.version ||
-      request.line! >= document.lineCount
+      request.line >= document.lineCount
     ) {
       return;
     }
-    const response = await this.request(document, request.line!);
+    const response = await this.request(document, request.line);
     if (!response?.ok || document.version !== request.version) {
       return;
     }
@@ -280,7 +283,7 @@ export class AssetPreviewController implements Disposable {
         typeof media.metadata?.paletteId === "string" &&
         Array.isArray(media.metadata.paletteUsers)
       ) {
-        const users = (media.metadata.paletteUsers as unknown[])
+        const users = media.metadata.paletteUsers
           .filter(isPaletteUser)
           .map(
             (user) =>

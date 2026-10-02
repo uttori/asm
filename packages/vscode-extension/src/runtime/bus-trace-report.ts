@@ -113,7 +113,9 @@ export const renderBusTraceReport = (result: RuntimeBusProjectImportResult): str
     "",
     `- Observed byte accesses: ${result.observedEvents}`,
     `- Dropped accesses: ${result.droppedEvents}`,
-    `- Distinct access variants: ${result.report.imported.busRecords ?? 0}`,
+    `- Distinct access variants: ${
+      Object.hasOwn(result.report.imported, "busRecords") ? result.report.imported.busRecords : 0
+    }`,
     `- Newly added records: ${result.added.runtime}`,
     `- Capture already present: ${result.changed ? "no" : "yes"}`,
     `- First-to-last recorded event span: ${elapsed}`,

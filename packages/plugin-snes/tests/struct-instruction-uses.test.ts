@@ -253,10 +253,11 @@ test("invalid struct use metadata cannot become source expressions or unbounded 
   );
 });
 
+const translate = (address: number) => address & 0x7fff;
+
 test("instruction indexing rejects stale ROMs, bytes, unmapped sites and mapper aliases", (t) => {
   const rom = fixtureRom();
   const map = validateSnesStructMap(inputMap());
-  const translate = (address: number) => address & 0x7fff;
   const index = indexSnesStructInstructionUses(map.instructionUses, rom, translate)!;
   t.deepEqual([...index.keys()], [6, 8, 10]);
   const headeredBytes = new Uint8Array(rom.length + 512);
@@ -416,7 +417,9 @@ test("summaries keep observed access kinds and omit derived access details", (t)
   const input = inputMap();
   const template = observation();
   input.instructionUses[1].observations = ["observed", "trace-derived"].flatMap((provenance) =>
-    ["read", "write", "read-write"].map((access) => ({ ...template, provenance, access })),
+    ["read", "write", "read-write"].map((access) =>
+      Object.assign({}, template, { provenance, access }),
+    ),
   );
   const comments = renderSnesStructUseComments(validateSnesStructMap(input).instructionUses![1]);
   t.is(comments.length, 2);
@@ -660,7 +663,7 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
   t.deepEqual(
     renderSourceFixture(project, rom, outputDirectory, {
       ...options,
-      instructionGroups: [...grouped].sort(([a], [b]) => a - b).map(([, nodes]) => nodes),
+      instructionGroups: [...grouped].toSorted(([a], [b]) => a - b).map(([, nodes]) => nodes),
     }),
     first,
   );

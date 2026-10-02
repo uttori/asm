@@ -19,7 +19,7 @@ import type { FrameLayout, SpriteAtlasSource } from "./som-types.js";
  * @returns {string} Stable identity key.
  */
 function useKey(palette: string, atlas: string, role: string, segments: readonly string[]) {
-  return JSON.stringify([palette, atlas, role, [...segments].sort()]);
+  return JSON.stringify([palette, atlas, role, [...segments].toSorted()]);
 }
 
 /** Cross-check all catalogue users against supplied layouts, independent of filesystem/bank names.
@@ -210,7 +210,8 @@ export function planSpritePaletteEdits(
       return value;
     });
     const highBit = Number.parseInt(record.words[offset], 16) & 0x8000;
-    const word = (highBit | channels[0] | (channels[1] << 5) | (channels[2] << 10))
+    // BGR555 fields occupy disjoint bits.
+    const word = (highBit + channels[0] + (channels[1] << 5) + (channels[2] << 10))
       .toString(16)
       .toUpperCase()
       .padStart(4, "0");

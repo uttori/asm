@@ -273,8 +273,8 @@ for (const boundary of ["payload", "active.lock", "owner.json", "directory"] as 
     const retried = pruneSourceScratch(repository);
     t.deepEqual(retried.removed, boundary === "directory" ? [] : [directory]);
     t.deepEqual(
-      retried.retained.map((item) => item.path).sort(),
-      [active.directory, unknown].sort(),
+      retried.retained.map((item) => item.path).toSorted(),
+      [active.directory, unknown].toSorted(),
     );
     t.false(fs.existsSync(directory));
     t.is(fs.readFileSync(path.join(active.directory, "live-work"), "utf8"), "Live operation");
@@ -321,8 +321,8 @@ test("pin cleanup requires removed linked-worktree administration and keeps live
   fs.renameSync(hiddenPath, linkedPath);
   await sourceGit(repository.root, ["worktree", "remove", linkedPath]);
   const cleanup = await pruneSourcePins(repository);
-  t.deepEqual(cleanup.removed.sort(), [removedCandidate.ref, preview.ref!].sort());
-  t.deepEqual(cleanup.retained.sort(), [currentCandidate.ref, unknown, symbolic].sort());
+  t.deepEqual(cleanup.removed.toSorted(), [removedCandidate.ref, preview.ref!].toSorted());
+  t.deepEqual(cleanup.retained.toSorted(), [currentCandidate.ref, unknown, symbolic].toSorted());
   t.is(
     (await sourceMergeStatus(repository)).head,
     head,
@@ -571,7 +571,7 @@ test("binary and delete conflicts use native index stages and survive garbage co
     files: [{ path: "assets/name with\ttab.bin", bytes: Uint8Array.of(0, 8, 2, 3) }],
   });
   const preview = await previewSourceGeneration(repository, incoming.commit);
-  t.deepEqual([...preview.conflicts].sort(), ["assets/name with\ttab.bin", "main.asm"]);
+  t.deepEqual([...preview.conflicts].toSorted(), ["assets/name with\ttab.bin", "main.asm"]);
   await sourceGit(repository.root, ["gc", "--prune=now"]);
   t.is(
     (await sourceGit(repository.root, ["rev-parse", `${preview.ref}^{tree}`])).stdout

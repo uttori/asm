@@ -100,14 +100,12 @@ test("ACT2 sources reject invalid tails, changed identity, byte limits and cance
   );
   const consumerError = new Error("index budget failed");
   const fresh = await createRuntimeCaptureSource(archive);
-  t.is(
-    await t.throwsAsync(
-      fresh.read(() => {
-        throw consumerError;
-      }),
-    ),
-    consumerError,
+  const thrown = await t.throwsAsync(
+    fresh.read(() => {
+      throw consumerError;
+    }),
   );
+  t.is(thrown, consumerError);
   const changed = Buffer.from(bytes);
   const headerLength = changed.readUInt32LE(4);
   const body = Buffer.from(

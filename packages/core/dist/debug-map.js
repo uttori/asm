@@ -19,24 +19,23 @@ export const createDebugMap = (options) => {
         const portable = relative && !relative.startsWith("..") && !path.isAbsolute(relative) ? relative : absolute;
         return { entry, originalId, portable: portable.split(path.sep).join("/") };
     })
-        .sort((left, right) => left.portable.localeCompare(right.portable));
+        .toSorted((left, right) => left.portable.localeCompare(right.portable));
     const sourceIdByOriginal = new Map();
     const sources = entries.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
         const kind = options.dependencyKinds?.get(entry.name);
-        return {
+        return Object.assign({}, {
             id,
             path: portable,
             size: entry.size,
             crc32: entry.crc,
             sha256: entry.sha256,
-            ...(kind ? { kind } : {}),
-        };
+        }, kind ? { kind } : {});
     });
     const ranges = options.mapping.ranges
         .map(({ fileIdx, ...range }) => ({ ...range, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 }))
         .filter((range) => range.sourceId >= 0)
-        .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace) ||
+        .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace) ||
         left.architecture.localeCompare(right.architecture) ||
         left.start - right.start ||
         left.end - right.end ||
@@ -78,7 +77,7 @@ export const createDebugMap = (options) => {
 };
 /**
  * Recomputes the content fingerprint and output hash for stale-map detection.
- * @param {DebugMap} map Debug map to validate.
+ * @param {UncheckedDebugMap} map Debug map to validate. Format fields are checked here.
  * @param {Uint8Array} output Optional exact output bytes.
  * @returns {readonly string[]} Validation issues.
  */
@@ -86,7 +85,7 @@ export const validateDebugMap = (map, output) => {
     const { fingerprint, ...payload } = map;
     const issues = [];
     if (map.format !== DEBUG_MAP_FORMAT) {
-        issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
+        issues.push(`Unsupported debug-map format '${map.format}'.`);
     }
     if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
         issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);

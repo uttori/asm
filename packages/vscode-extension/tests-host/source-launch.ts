@@ -6,8 +6,22 @@ import { pngImporter, type IndexedImage } from "@uttori/asm-assets/image";
 import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
 import * as vscode from "vscode";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isIndexedImage = (value: unknown): value is IndexedImage =>
+  isRecord(value) &&
+  value.kind === "indexed-image" &&
+  typeof value.width === "number" &&
+  typeof value.height === "number" &&
+  value.indexes instanceof Uint8Array &&
+  Array.isArray(value.palette);
+
 import { paletteView, paletteWordEdit } from "../src/assets/palette-model.js";
 import { readPngGuidance } from "../src/assets/png-guidance.js";
+
+const builds = () =>
+  vscode.commands.executeCommand<{ outputSha256: string }[]>("uttori.tests.builds");
 
 /** Bound every asynchronous editor/backend transition and include the failing phase in diagnostics. */
 async function until(
@@ -56,8 +70,24 @@ export async function runSourceLaunchSmoke(folder: vscode.WorkspaceFolder): Prom
   const index = (await sourceGit(root, ["write-tree"])).stdout;
   const otherRoot = path.join(runtime, "other-source-project");
   let otherWorktree = false;
-  const report: Record<string, unknown> = { editor: vscode.version, runtime, checks: [] };
-  const checks = report.checks as string[];
+  const checks: string[] = [];
+  const report: {
+    editor: string;
+    runtime: string;
+    checks: string[];
+    success: boolean;
+    builds?: { outputSha256: string }[];
+    sessions?: {
+      id: string;
+      noDebug: vscode.DebugSession["configuration"]["noDebug"];
+      outputSha256: vscode.DebugSession["configuration"]["outputSha256"];
+    }[];
+    error?: string;
+    events?: [
+      string,
+      { event?: string; command?: string; success?: boolean; message?: string }[],
+    ][];
+  } = { editor: vscode.version, runtime, checks, success: false };
   const sessions: vscode.DebugSession[] = [];
   const events = new Map<
     string,
@@ -78,8 +108,7 @@ export async function runSourceLaunchSmoke(folder: vscode.WorkspaceFolder): Prom
   });
   const ended = new Set<string>();
   const terminated = vscode.debug.onDidTerminateDebugSession((session) => ended.add(session.id));
-  const builds = () =>
-    vscode.commands.executeCommand<{ outputSha256: string }[]>("uttori.tests.builds");
+
   let watch = false;
   /** Stop only a session launched by this test, and wait for the adapter's complete disconnect. */
   async function stop(session: vscode.DebugSession): Promise<void> {
@@ -147,25 +176,39 @@ export async function runSourceLaunchSmoke(folder: vscode.WorkspaceFolder): Prom
     const built = await vscode.commands.executeCommand<{ ok: boolean; outputSha256: string }>(
       "asm.build",
     );
-    assert.equal(built?.ok, true);
+    assert.equal(built.ok, true);
     assert.equal(
       built.outputSha256,
       "6abc48cc519de82d50edc730ba9ad32bdadc1e26e62f7420c3b75ea7eb033622",
     );
     checks.push("native task and Build command use selected source with no open editor");
     const debug = await launch("asm.debugEmulator", false);
-    const threads = (await debug.customRequest("threads")) as { threads: { id: number }[] };
-    const stack = (await debug.customRequest("stackTrace", {
-      threadId: threads.threads[0].id,
+    const threads: unknown = await debug.customRequest("threads");
+    if (!isRecord(threads) || !Array.isArray(threads.threads)) {
+      assert.fail("threads response must list threads.");
+    }
+    const thread: unknown = threads.threads[0];
+    if (!isRecord(thread) || typeof thread.id !== "number") {
+      assert.fail("threads response is missing a numeric thread id.");
+    }
+    const stack: unknown = await debug.customRequest("stackTrace", {
+      threadId: thread.id,
       startFrame: 0,
       levels: 1,
-    })) as { stackFrames: { instructionPointerReference: string }[] };
-    assert.ok(stack.stackFrames[0].instructionPointerReference);
+    });
+    if (!isRecord(stack) || !Array.isArray(stack.stackFrames)) {
+      assert.fail("stackTrace response must list frames.");
+    }
+    const frame: unknown = stack.stackFrames[0];
+    if (!isRecord(frame) || typeof frame.instructionPointerReference !== "string") {
+      assert.fail("stack frame is missing an instruction pointer.");
+    }
+    assert.ok(frame.instructionPointerReference);
     const previousStops = (events.get(debug.id) ?? []).filter(
       (event) => event.event === "stopped",
     ).length;
     await debug.customRequest("stepIn", {
-      threadId: threads.threads[0].id,
+      threadId: thread.id,
       granularity: "instruction",
     });
     await until(
@@ -211,8 +254,11 @@ export async function runSourceLaunchSmoke(folder: vscode.WorkspaceFolder): Prom
     assert.notEqual(sessions.at(-1)!.configuration.outputSha256, built.outputSha256);
     checks.push("Watch rebuilds palette JSON saves and skips identical output reloads");
     const paletteSessions = sessions.length;
-    const original = pngImporter.import({ bytes: savedPng, mediaType: "image/png" })
-      .value as IndexedImage;
+    const imported = pngImporter.import({ bytes: savedPng, mediaType: "image/png" });
+    if (!isIndexedImage(imported.value)) {
+      assert.fail("PNG import did not produce an indexed image.");
+    }
+    const original = imported.value;
     const region = (await readPngGuidance(png.fsPath, original))!.regions[0];
     const pixel = region.y * original.width + region.x;
     const firstSlot = region.paletteStart + 1;
@@ -229,7 +275,7 @@ export async function runSourceLaunchSmoke(folder: vscode.WorkspaceFolder): Prom
       png.fsPath,
       original.indexes[pixel] === firstSlot ? firstSlot + 1 : firstSlot,
     );
-    assert.equal(draft?.dirty, true);
+    assert.equal(draft.dirty, true);
     await vscode.commands.executeCommand("workbench.action.files.save");
     await until(() => sessions.length > paletteSessions, "native PNG save rebuild and launch");
     assert.notEqual(

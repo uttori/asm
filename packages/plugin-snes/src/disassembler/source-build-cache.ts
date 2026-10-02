@@ -2,6 +2,32 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
+ * Accepts a JSON object. Arrays and null are not build receipts.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Reads an optional receipt string. A non-string field is not a receipt this pruner owns.
+ * @param {Record<string, unknown>} record Parsed receipt.
+ * @param {string} key Field name.
+ * @returns {string | undefined} The string field, or undefined when absent.
+ */
+function receiptString(record: Record<string, unknown>, key: string): string | undefined {
+  const field = record[key];
+  if (field === undefined) {
+    return undefined;
+  }
+  if (typeof field !== "string") {
+    throw new Error("unrecognized build receipt");
+  }
+  return field;
+}
+
+/**
  * Prune only owned build artifacts while the caller holds the publication lease. Three successful
  * generations include the current receipt; failed publications have a recoverable pending receipt.
  * Unknown files, symlinks and malformed ownership records are left alone and reported, never swept.
@@ -37,10 +63,14 @@ export function pruneSnesSourceBuilds(directory: string, current: string): strin
       if (stat.size > 65536) {
         throw new Error("oversized build receipt");
       }
-      const value = JSON.parse(fs.readFileSync(receipt, "utf8")) as {
-        inputSha256?: string;
-        outputFile?: string;
-        debugMapFile?: string;
+      const parsed: unknown = JSON.parse(fs.readFileSync(receipt, "utf8"));
+      if (!isRecord(parsed)) {
+        throw new Error("unrecognized build receipt");
+      }
+      const value = {
+        inputSha256: receiptString(parsed, "inputSha256"),
+        outputFile: receiptString(parsed, "outputFile"),
+        debugMapFile: receiptString(parsed, "debugMapFile"),
       };
       if (
         value.inputSha256 !== entry.name ||

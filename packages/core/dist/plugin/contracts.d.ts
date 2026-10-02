@@ -61,7 +61,11 @@ declare const sessionStateBrand: unique symbol;
 /** Typed slot token returned during registration. Keep it to access each session's live value. */
 export interface SessionStateKey<T> {
     readonly id: string;
-    readonly [sessionStateBrand]: T;
+    /**
+     * Compile-time slot type. The property is absent at runtime; hosts select the
+     * value by `id`, and the brand keeps two slots with the same id string distinct.
+     */
+    readonly [sessionStateBrand]?: T;
 }
 /** Canonical target identity and target-normalized options for a newly created session. */
 export interface SessionCreationContext {

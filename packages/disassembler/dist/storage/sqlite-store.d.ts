@@ -59,7 +59,7 @@ export declare class SqliteAnalysisStore {
      * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
      * @returns {T} Callback result after a successful commit.
      */
-    transaction<T>(action: () => T & (T extends PromiseLike<unknown> ? never : unknown), write?: boolean): T;
+    transaction<T>(action: () => T, write?: boolean): T;
     /**
      * Index trace chunks in a connection-local disk table. This transaction never reads or writes
      * main, allowing other project writers to proceed during asynchronous capture parsing.
@@ -165,7 +165,13 @@ export declare class SqliteAnalysisStore {
      * @param {string} kind Metadata table name from the semantic collection contract.
      * @returns {Array} Decoded metadata in deterministic display order.
      */
-    loadTable<K extends Exclude<ShardKind, "runtime">>(kind: K): AnalysisProjectShards[K];
+    loadTable(kind: "labels"): AnalysisProjectShards["labels"];
+    loadTable(kind: "comments"): AnalysisProjectShards["comments"];
+    loadTable(kind: "regions"): AnalysisProjectShards["regions"];
+    loadTable(kind: "annotations"): AnalysisProjectShards["annotations"];
+    loadTable(kind: "analysis"): AnalysisProjectShards["analysis"];
+    loadTable(kind: "evidence"): AnalysisProjectShards["evidence"];
+    loadTable(kind: "imports"): AnalysisProjectShards["imports"];
     /** Validate a query view against this read snapshot, including every included provenance reference.
      * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
      */
@@ -234,22 +240,12 @@ export declare class SqliteAnalysisStore {
         unresolved: readonly import("../index.ts").AnalysisCallGraphUnresolved[];
         orphanCallIds: readonly string[];
         orphanUnresolvedIds: readonly string[];
-        functions: {
-            id: string;
-            addressSpace: string;
-            address: number;
-            source: string;
-            nodeIds: readonly string[];
-            outputOffsets: readonly number[];
-            incomingCallIds: readonly string[];
-            outgoingCallIds: readonly string[];
-            unresolvedIds: readonly string[];
-            evidence: readonly string[];
+        functions: (import("../index.ts").AnalysisCallGraphFunction & {
             labels: {
                 id: string;
                 name: string;
             }[];
-        }[];
+        })[];
     };
     /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
      * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
@@ -261,7 +257,7 @@ export declare class SqliteAnalysisStore {
      * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
      * @returns {T} Current projected value.
      */
-    cachedProjection<T>(key: string, signature: string, dependencies: readonly ShardKind[], compute: () => T & (T extends PromiseLike<unknown> ? never : unknown), publish?: () => void): T;
+    cachedProjection<T>(key: string, signature: string, dependencies: readonly ShardKind[], compute: () => T & (T extends PromiseLike<unknown> ? never : unknown), publish?: () => void, restore?: (value: unknown) => T): T;
     /** Select a bounded CFG navigation window through its address index.
      * @param {string} space Exact logical address space.
      * @param {number} address Selected PC.

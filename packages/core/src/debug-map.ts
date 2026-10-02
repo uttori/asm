@@ -79,24 +79,27 @@ export const createDebugMap = (options: CreateDebugMapOptions): DebugMap => {
         relative && !relative.startsWith("..") && !path.isAbsolute(relative) ? relative : absolute;
       return { entry, originalId, portable: portable.split(path.sep).join("/") };
     })
-    .sort((left, right) => left.portable.localeCompare(right.portable));
+    .toSorted((left, right) => left.portable.localeCompare(right.portable));
   const sourceIdByOriginal = new Map<number, number>();
   const sources: DebugMapSource[] = entries.map(({ entry, originalId, portable }, id) => {
     sourceIdByOriginal.set(originalId, id);
     const kind = options.dependencyKinds?.get(entry.name);
-    return {
-      id,
-      path: portable,
-      size: entry.size,
-      crc32: entry.crc,
-      sha256: entry.sha256,
-      ...(kind ? { kind } : {}),
-    };
+    return Object.assign(
+      {},
+      {
+        id,
+        path: portable,
+        size: entry.size,
+        crc32: entry.crc,
+        sha256: entry.sha256,
+      },
+      kind ? { kind } : {},
+    );
   });
   const ranges: DebugMapRange[] = options.mapping.ranges
     .map(({ fileIdx, ...range }) => ({ ...range, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 }))
     .filter((range) => range.sourceId >= 0)
-    .sort(
+    .toSorted(
       (left, right) =>
         left.addressSpace.localeCompare(right.addressSpace) ||
         left.architecture.localeCompare(right.architecture) ||
@@ -140,17 +143,26 @@ export const createDebugMap = (options: CreateDebugMapOptions): DebugMap => {
   };
 };
 
+type UncheckedDebugMap = Omit<DebugMap, "format" | "schemaVersion" | "fingerprint"> & {
+  readonly format: string;
+  readonly schemaVersion: number;
+  readonly fingerprint: { readonly algorithm: string; readonly value: string };
+};
+
 /**
  * Recomputes the content fingerprint and output hash for stale-map detection.
- * @param {DebugMap} map Debug map to validate.
+ * @param {UncheckedDebugMap} map Debug map to validate. Format fields are checked here.
  * @param {Uint8Array} output Optional exact output bytes.
  * @returns {readonly string[]} Validation issues.
  */
-export const validateDebugMap = (map: DebugMap, output?: Uint8Array): readonly string[] => {
+export const validateDebugMap = (
+  map: UncheckedDebugMap,
+  output?: Uint8Array,
+): readonly string[] => {
   const { fingerprint, ...payload } = map;
   const issues: string[] = [];
   if (map.format !== DEBUG_MAP_FORMAT) {
-    issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
+    issues.push(`Unsupported debug-map format '${map.format}'.`);
   }
   if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
     issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);

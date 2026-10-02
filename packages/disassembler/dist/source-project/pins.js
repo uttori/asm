@@ -3,6 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceGit } from "./git.js";
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 const ownerId = (gitDirectory) => createHash("sha256").update(gitDirectory).digest("hex").slice(0, 24);
 /** Resolve shared administrative state through Git so linked worktrees share only the pin registry. */
 async function registry(repository) {
@@ -42,7 +45,8 @@ function retiredOwnerFile(common, directory, id) {
         throw new Error("Unknown owner");
     }
     const owner = JSON.parse(fs.readFileSync(file, "utf8"));
-    if (owner.format !== "uttori-source-pin-owner-v1" ||
+    if (!isRecord(owner) ||
+        owner.format !== "uttori-source-pin-owner-v1" ||
         typeof owner.gitDirectory !== "string" ||
         ownerId(owner.gitDirectory) !== id ||
         path.dirname(owner.gitDirectory) !== path.join(common, "worktrees") ||

@@ -8,15 +8,21 @@ export const NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
 export const NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 const INES_MAGIC = [0x4e, 0x45, 0x53, 0x1a];
 /**
+ * Accepts a JSON object. Arrays and null are not option maps.
+ * @param {unknown} value Candidate target options.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
  * Coerces NES target options. Omitted `linkerConfig` uses a 32 KiB `$8000` ROM.
  * Omitted `header` synthesizes a 16-byte iNES header from PRG size.
  * @param {unknown} configured Assembler `targetOptions`.
  * @returns {Nes65xxTargetOptions} Normalized options including a parsed linker.
  */
 export function createNes65xxTargetOptions(configured) {
-    const value = typeof configured === "object" && configured !== null && !Array.isArray(configured)
-        ? configured
-        : {};
+    const value = isRecord(configured) ? configured : {};
     const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim()
         ? value.linkerConfig
         : defaultLd65ConfigText();
@@ -49,18 +55,23 @@ export function createInitialNesState(context) {
     return state;
 }
 /**
+ * Rejects addresses outside the unsigned 16-bit NES CPU space.
+ * @param {number} address Candidate CPU address.
+ * @returns {number} The same address when it is in range.
+ */
+function validate(address) {
+    if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
+        throw new Error(`Address $${address.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+    }
+    return address;
+}
+/**
  * Maps CPU addresses through the current load MEMORY region into the iNES image.
  * Overlay run addresses are never written. `base` keeps the load cursor for stores.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */
 export function createNesAddressSpace({ state }) {
-    const validate = (address) => {
-        if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
-            throw new Error(`Address $${address.toString(16).toUpperCase()} is outside 16-bit NES space.`);
-        }
-        return address;
-    };
     return {
         addressWidth: 16,
         defaultOrigin: 0,
@@ -124,7 +135,7 @@ export function createNesLifecycle({ state }) {
         resetNes65xxStageState(nes);
         session.outputFillByte = nes.fillByte;
         const total = nes.header.length + nes.linker.imageSize;
-        const image = new Array(total).fill(nes.fillByte);
+        const image = Array.from({ length: total }, () => nes.fillByte);
         for (let index = 0; index < nes.header.length; index++) {
             image[index] = nes.header[index] ?? 0;
         }
@@ -167,7 +178,7 @@ function normalizeHeader(configured, imageSize) {
         throw new Error("65xx NES target header must be a byte array.");
     }
     const prgBanks = Math.max(1, Math.ceil(imageSize / 0x4000));
-    const header = new Array(16).fill(0);
+    const header = Array.from({ length: 16 }, () => 0);
     header[0] = INES_MAGIC[0];
     header[1] = INES_MAGIC[1];
     header[2] = INES_MAGIC[2];

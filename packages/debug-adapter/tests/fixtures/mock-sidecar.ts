@@ -18,6 +18,8 @@ const implementation: DebugBackend = crashOn
         if (property === crashOn) {
           return () => {
             process.stderr.write(`mock sidecar crash on ${String(property)}\n`);
+            // This process is a spawned fixture and the status is the result.
+            // oxlint-disable-next-line unicorn/no-process-exit
             process.exit(23);
           };
         }

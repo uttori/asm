@@ -33,8 +33,52 @@ import {
 import { formatInstructionAnnotationDetails } from "../../packages/vscode-extension/src/editor-info/format.js";
 import { benchmarkStatistics } from "../../scripts/benchmark-report.js";
 
+const missingDebugListener = (): void => {
+  throw new Error("Listener missing");
+};
+
 // Above the default V8 argument-count limit, but small enough for routine CI execution.
 const count = 131_072;
+
+/** The expansion path only calls the fields this fixture supplies. */
+function isDirectiveRuntimeHost(value: object): value is DirectiveRuntimeHost {
+  if (
+    !(
+      "isDefinitionCollectionStage" in value &&
+      "collectSourceMetadata" in value &&
+      "characterMappings" in value &&
+      "defineEngine" in value &&
+      "structEngine" in value &&
+      "operandResolver" in value &&
+      "resolvedefines" in value &&
+      "step" in value &&
+      "write2" in value
+    )
+  ) {
+    return false;
+  }
+  return (
+    typeof value.resolvedefines === "function" &&
+    typeof value.step === "function" &&
+    typeof value.write2 === "function"
+  );
+}
+
+/** Local-label lookup only reads the label tables this fixture supplies. */
+function isSymbolScopeHost(value: object): value is SymbolScopeHost {
+  if (
+    !(
+      "enforceResolvedLabels" in value &&
+      "isDefinitionCollectionStage" in value &&
+      "inMacroExpansion" in value &&
+      "forwardLabels" in value &&
+      "backwardLabels" in value
+    )
+  ) {
+    return false;
+  }
+  return typeof value.forwardLabels === "object" && typeof value.backwardLabels === "object";
+}
 const scenarios: Record<string, () => void | Promise<void>> = {
   "numeric-extrema": () => {
     const values = Array.from({ length: count }, (_, index) => index - 100);
@@ -88,7 +132,10 @@ const scenarios: Record<string, () => void | Promise<void>> = {
       write2: (value: number) => {
         emitted.push(value);
       },
-    } as unknown as DirectiveRuntimeHost;
+    };
+    if (!isDirectiveRuntimeHost(host)) {
+      throw new Error("Directive runtime fixture is missing the fields this expansion uses.");
+    }
     const service = new DirectiveRuntimeService(host);
     service.handleDataDirective("dw", ["9,NEST,10"]);
     host.isDefinitionCollectionStage = false;
@@ -101,13 +148,17 @@ const scenarios: Record<string, () => void | Promise<void>> = {
   },
   "local-labels": () => {
     const entries = Array.from({ length: count }, (_, index) => ({ addr: index + 1 }));
-    const service = new SymbolScopeService({
+    const host = {
       enforceResolvedLabels: true,
       isDefinitionCollectionStage: false,
       inMacroExpansion: false,
       forwardLabels: { 1: entries },
       backwardLabels: { 1: entries },
-    } as unknown as SymbolScopeHost);
+    };
+    if (!isSymbolScopeHost(host)) {
+      throw new Error("Symbol scope fixture is missing the label tables this lookup uses.");
+    }
+    const service = new SymbolScopeService(host);
     assert.equal(service.findNextLabel("+", 0), 1);
     assert.equal(service.findNextLabel("+", 1), 1);
     assert.equal(service.findPreviousLabel("-", count + 1), count);
@@ -268,9 +319,7 @@ const scenarios: Record<string, () => void | Promise<void>> = {
     const backend = new ReplayDebugBackend({
       snapshots: [{ threads: [], frames: [], registers: {}, memory: [] }],
     });
-    let emit: (event: DebugBackendEvent) => void = () => {
-      throw new Error("Listener missing");
-    };
+    let emit: (event: DebugBackendEvent) => void = missingDebugListener;
     backend.onEvent = (listener) => {
       emit = listener;
       return { dispose() {} };

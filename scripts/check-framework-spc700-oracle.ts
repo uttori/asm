@@ -15,7 +15,7 @@ if (!fs.existsSync(oraclePath)) {
 }
 
 const oracleSource = fs.readFileSync(oraclePath, "utf8");
-const dynamicBitMnemonicBase: Readonly<Record<number, string>> = {
+const dynamicBitMnemonicBase: Readonly<Partial<Record<number, string>>> = {
   0x0a: "OR",
   0x2a: "OR",
   0x4a: "AND",
@@ -95,9 +95,15 @@ if (
   throw new Error("Synthetic SPC700 upload stream did not round-trip through the native parser.");
 }
 
+/** `encoding: "utf8"` types child streams as string; a failed spawn still returns null. */
+function spawnStreamText(text: unknown): string | null {
+  return typeof text === "string" ? text : null;
+}
+
 const executable = process.env.ASAR_PATH ?? "asar";
 const versionResult = spawnSync(executable, ["--version"], { encoding: "utf8" });
-const versionText = `${versionResult.stdout ?? ""}\n${versionResult.stderr ?? ""}`.trim();
+const versionText =
+  `${spawnStreamText(versionResult.stdout) ?? ""}\n${spawnStreamText(versionResult.stderr) ?? ""}`.trim();
 const executableAvailable =
   versionResult.status === 0 && /(?:^|\s)asar\s+[12]\./i.test(versionText);
 if (!executableAvailable) {

@@ -6,9 +6,7 @@ import { createSourceSpan, createTextSpan } from "../source-location.js";
  * @returns {ExpressionNode} The same node with a root span.
  */
 function attachRootSpan(node, text) {
-    if (!node.span) {
-        node.span = createSourceSpan(0, text.length);
-    }
+    node.span ??= createSourceSpan(0, text.length);
     return node;
 }
 /**
@@ -91,9 +89,17 @@ export function isReferenceExpressionNode(node) {
         case "member":
         case "index":
             return isReferenceExpressionNode(node.object);
+        case "binary":
+        case "call":
+        case "literal":
+        case "range":
+        case "raw":
+        case "string":
+        case "unary":
         default:
-            return false;
+            break;
     }
+    return false;
 }
 /**
  * Renders a reference-expression subtree back into a source-like string.
@@ -319,7 +325,18 @@ const binaryPrecedence = {
     "%": 5,
     "**": 6,
 };
-const unaryOperators = new Set(["<:", "<", ">", "^", "~", "-", "+"]);
+function isUnaryOperator(value) {
+    return (value === "<:" ||
+        value === "<" ||
+        value === ">" ||
+        value === "^" ||
+        value === "~" ||
+        value === "-" ||
+        value === "+");
+}
+function isQuote(value) {
+    return value === '"' || value === "'";
+}
 const binaryOperators = [
     "**",
     "<<",
@@ -458,6 +475,9 @@ function tokenizeExpression(input, source) {
  */
 function readQuotedString(input, start) {
     const quote = input[start];
+    if (!isQuote(quote)) {
+        throw new Error("Expected string literal");
+    }
     let value = "";
     let index = start + 1;
     while (index < input.length) {
@@ -564,7 +584,7 @@ class ExpressionParser {
         if (!token) {
             throw new Error("Unexpected end of expression");
         }
-        if (token.type === "operator" && unaryOperators.has(token.value)) {
+        if (token.type === "operator" && isUnaryOperator(token.value)) {
             this.consume();
             return {
                 type: "unary",
@@ -632,9 +652,15 @@ class ExpressionParser {
                 this.expect("rparen");
                 return expression;
             }
-            default:
-                throw new Error(`Unexpected token ${token.type}`);
+            case "comma":
+            case "dot":
+            case "lbracket":
+            case "operator":
+            case "rbracket":
+            case "rparen":
+                break;
         }
+        throw new Error(`Unexpected token ${token.type}`);
     }
     parsePostfix(expression) {
         let current = expression;

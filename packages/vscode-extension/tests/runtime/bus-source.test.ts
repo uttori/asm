@@ -109,8 +109,8 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   await sourceGit(root, ["config", "user.email", "fixture@localhost"]);
   fs.mkdirSync(path.join(root, ".uttori/research"), { recursive: true });
   fs.mkdirSync(path.join(root, ".uttori-local"));
-  const json = (file: string, value: unknown) =>
-    fs.writeFileSync(path.join(root, file), JSON.stringify(value));
+  const json = (relativePath: string, value: unknown) =>
+    fs.writeFileSync(path.join(root, relativePath), JSON.stringify(value));
   json(".uttori/project.json", {
     format: "uttori-source-project",
     version: 1,

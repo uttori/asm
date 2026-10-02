@@ -4,7 +4,7 @@ import type { FillPadDirectiveContext } from "./types.js";
 /** Repeating fill pattern length. LCM of byte/word/long/dword widths. */
 const FILL_PATTERN_SIZE = 12;
 
-const PATTERN_WIDTH: Record<string, number> = {
+const PATTERN_WIDTH: Partial<Record<string, number>> = {
   fillbyte: 1,
   fillword: 2,
   filllong: 3,

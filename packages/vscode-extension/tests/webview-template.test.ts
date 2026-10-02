@@ -3,7 +3,27 @@ import { registerHooks } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import type { Uri, Webview } from "vscode";
+
 import { test } from "../../../tests/ava-helper.js";
+
+function isWebview(value: object): value is Webview {
+  return (
+    "cspSource" in value &&
+    typeof value.cspSource === "string" &&
+    "asWebviewUri" in value &&
+    typeof value.asWebviewUri === "function"
+  );
+}
+
+function isUri(value: object): value is Uri {
+  return (
+    "fsPath" in value &&
+    typeof value.fsPath === "string" &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  );
+}
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -46,19 +66,20 @@ const render = (
 ) => {
   const root = options.root ?? extensionRoot;
   const assets: string[] = [];
-  const html = renderWebviewTemplate(
-    {
-      cspSource: options.cspSource ?? "https://webview.example",
-      asWebviewUri:
-        options.asWebviewUri ??
-        ((value: { fsPath: string }) => {
-          assets.push(path.relative(root, value.fsPath));
-          return { toString: () => `https://webview.example/${path.basename(value.fsPath)}` };
-        }),
-    } as never,
-    uri(root) as never,
-    name,
-  );
+  const webview = {
+    cspSource: options.cspSource ?? "https://webview.example",
+    asWebviewUri:
+      options.asWebviewUri ??
+      ((value: { fsPath: string }) => {
+        assets.push(path.relative(root, value.fsPath));
+        return { toString: () => `https://webview.example/${path.basename(value.fsPath)}` };
+      }),
+  };
+  const extensionUri = uri(root);
+  if (!isWebview(webview) || !isUri(extensionUri)) {
+    throw new Error("webview template stub");
+  }
+  const html = renderWebviewTemplate(webview, extensionUri, name);
   return { html, assets };
 };
 

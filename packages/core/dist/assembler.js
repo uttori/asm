@@ -298,14 +298,15 @@ export class Assembler {
     traceWrite(event) {
         // Byte writes happen below the command dispatcher, so recover the
         // most specific source context from the active command stack.
-        const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+        const sourceIndex = this.traceCommandStack.length - 1;
+        const traceSource = sourceIndex >= 0 ? this.traceCommandStack[sourceIndex] : undefined;
         this.traceListener?.({
             type: "write",
             ...event,
-            file: source?.file ?? this.currentFile,
-            line: source?.line ?? this.currentLine,
-            raw: source?.raw ?? "",
-            normalized: source?.normalized ?? "",
+            file: traceSource?.file ?? this.currentFile,
+            line: traceSource?.line ?? this.currentLine,
+            raw: traceSource?.raw ?? "",
+            normalized: traceSource?.normalized ?? "",
         });
     }
     /**
@@ -481,7 +482,9 @@ export class Assembler {
                 this.collectExpressionReferences(expression.start, fallbackSpan);
                 this.collectExpressionReferences(expression.end, fallbackSpan);
                 return;
-            default:
+            case "literal":
+            case "raw":
+            case "string":
                 return;
         }
     }
@@ -580,9 +583,14 @@ export class Assembler {
                     this.structNameFromExpression(node.left, seen));
             case "unary":
                 return this.structNameFromExpression(node.argument, seen);
-            default:
-                return undefined;
+            case "call":
+            case "literal":
+            case "range":
+            case "raw":
+            case "string":
+                break;
         }
+        return undefined;
     }
     /**
      * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
@@ -949,7 +957,7 @@ export class Assembler {
      */
     seedOutputFromBaseImage() {
         const seedSize = 512 * 1024;
-        if (!this.baseImage || this.baseImage.length === 0) {
+        if (this.baseImage.length === 0) {
             return;
         }
         for (let i = 0; i < Math.min(seedSize, this.baseImage.length); i++) {
@@ -983,7 +991,7 @@ export class Assembler {
      * in plugin activation disposables and session state cloneable.
      */
     constructor(options) {
-        if (!options?.environment) {
+        if (!options.environment) {
             throw new PluginError("Assembler construction requires a frozen plugin environment.", {
                 code: "PLUGIN_CONFIGURATION_INVALID",
             });
@@ -1081,18 +1089,35 @@ export class Assembler {
         this.mathCore.host = this.expressionHost;
         this.installExpressionFunctions(target.expressionSets);
         this.services = this.createServices();
+        const readCurrentFile = () => this.currentFile;
+        const readCurrentLine = () => this.currentLine;
+        const readInMacroExpansion = () => this.inMacroExpansion;
+        const readIsDefinitionCollectionStage = () => this.isDefinitionCollectionStage;
+        const readSyntaxProfile = () => this.syntaxProfile;
+        const readCollectSourceMetadata = () => this.collectSourceMetadata;
         const frontEndHost = {
             passProgramCache: this.passProgramCache,
             resolveVariadicPlaceholders: (command) => this.macroEngine.resolveVariadicPlaceholders(command),
             shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+            get currentFile() {
+                return readCurrentFile();
+            },
+            get currentLine() {
+                return readCurrentLine();
+            },
+            get inMacroExpansion() {
+                return readInMacroExpansion();
+            },
+            get isDefinitionCollectionStage() {
+                return readIsDefinitionCollectionStage();
+            },
+            get syntaxProfile() {
+                return readSyntaxProfile();
+            },
+            get collectSourceMetadata() {
+                return readCollectSourceMetadata();
+            },
         };
-        Object.defineProperties(frontEndHost, {
-            currentFile: { get: () => this.currentFile },
-            currentLine: { get: () => this.currentLine },
-            inMacroExpansion: { get: () => this.inMacroExpansion },
-            isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage },
-            syntaxProfile: { get: () => this.syntaxProfile },
-        });
         this.frontEndService = new AssemblyFrontEndService(frontEndHost);
         this.programModelBuilder = this.frontEndService.programModelBuilder;
         this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
@@ -1354,7 +1379,7 @@ export class Assembler {
         }
         this.sessionDisposed = true;
         const errors = [];
-        for (const { record, instance } of [...this.activeLifecycles].reverse()) {
+        for (const { record, instance } of [...this.activeLifecycles].toReversed()) {
             try {
                 instance.onSessionDispose?.({ state: this.pluginState, session: this });
             }
@@ -1481,13 +1506,13 @@ export class Assembler {
         return this.macros.get(this.currentMacroName)?.sourceFile;
     }
     canReadBaseImage(position, size) {
-        const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
+        const sourceLength = this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
         return this.canReadByteRange(sourceLength, position, size);
     }
     readBaseImage(position, size, defaultValue) {
         const pos = Math.trunc(position);
         const pcPos = this.outputWriter.toOutputOffset(pos);
-        const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
+        const source = this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
         if (pcPos < 0) {
             if (defaultValue !== undefined) {
                 return defaultValue;
@@ -1686,10 +1711,8 @@ export class Assembler {
         this.activeStageExecutionState.capabilities = descriptor.capabilities;
     }
     getActiveStageCapabilities() {
-        if (!this.activeStageExecutionState) {
-            this.activeStageExecutionState =
-                this.createEphemeralStageExecutionState("collectDefinitions");
-        }
+        this.activeStageExecutionState ??=
+            this.createEphemeralStageExecutionState("collectDefinitions");
         return this.activeStageExecutionState.capabilities;
     }
     get traceStage() {
@@ -2133,9 +2156,7 @@ export class Assembler {
         }
     }
     getOrCreateLoweredProgram(stageState, program) {
-        if (!stageState.loweredProgram) {
-            stageState.loweredProgram = measureInternalPhase("lowerProgram", () => this.commandLoweringService.lowerProgram(program));
-        }
+        stageState.loweredProgram ??= measureInternalPhase("lowerProgram", () => this.commandLoweringService.lowerProgram(program));
         return stageState.loweredProgram;
     }
     /**
@@ -2235,7 +2256,7 @@ export class Assembler {
         catch (e) {
             const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
             const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
-            throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`);
+            throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`, { cause: e });
         }
         // In our assembler, a condition is true if the result is nonzero.
         return result !== 0;
@@ -2286,9 +2307,11 @@ export class Assembler {
                     return this.resolveExpressionInput(this.resolvedefines(expression.value));
                 }
                 return expression;
-            default:
-                return expression;
+            case "literal":
+            case "string":
+                break;
         }
+        return expression;
     }
     /**
      * Resolves reference-style expressions such as identifiers, define references,
@@ -2717,7 +2740,7 @@ export class Assembler {
     cloneRelativeLabels(source) {
         const clone = {};
         for (const [depth, entries] of Object.entries(source)) {
-            clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
+            clone[Number(depth)] = entries.map((entry) => Object.assign({}, entry));
         }
         return clone;
     }
@@ -3023,7 +3046,7 @@ export class Assembler {
         if (loopBlock.loopType === "for") {
             this.executeLoweredForLoop(loopBlock);
         }
-        else if (loopBlock.loopType === "while") {
+        else {
             this.executeLoweredWhileLoop(loopBlock);
         }
     }

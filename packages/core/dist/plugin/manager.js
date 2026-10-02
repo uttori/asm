@@ -45,7 +45,12 @@ const deepFreeze = (value, seen = new Set()) => {
             deepFreeze(item, seen);
         }
     }
-    else {
+    else if (isRecord(value)) {
+        for (const item of Object.values(value)) {
+            deepFreeze(item, seen);
+        }
+    }
+    else if (typeof value === "function") {
         for (const item of Object.values(value)) {
             deepFreeze(item, seen);
         }
@@ -130,26 +135,30 @@ const validateManifest = (manifest, pluginModule) => {
         ...(requires.length === 0 ? {} : { requires }),
     });
 };
+const isPluginActivate = (value) => typeof value === "function";
+const isPluginValidateOptions = (value) => typeof value === "function";
 const validatePlugin = (value, pluginModule) => {
-    if (!isRecord(value) || typeof value.activate !== "function") {
+    if (!isRecord(value) || !isPluginActivate(value.activate)) {
         throw new PluginError(`Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`, {
             code: "PLUGIN_INVALID_EXPORT",
             pluginModule,
         });
     }
     const manifest = validateManifest(value.manifest, pluginModule);
-    if (value.validateOptions !== undefined && typeof value.validateOptions !== "function") {
+    const validateOptions = value.validateOptions;
+    if (validateOptions !== undefined && !isPluginValidateOptions(validateOptions)) {
         throw new PluginError(`Plugin '${manifest.id}' validateOptions must be a function.`, {
             code: "PLUGIN_INVALID_EXPORT",
             pluginId: manifest.id,
             pluginModule,
         });
     }
-    const plugin = value;
     return {
         manifest,
-        ...(plugin.validateOptions ? { validateOptions: plugin.validateOptions.bind(plugin) } : {}),
-        activate: plugin.activate.bind(plugin),
+        ...(isPluginValidateOptions(validateOptions)
+            ? { validateOptions: validateOptions.bind(value) }
+            : {}),
+        activate: value.activate.bind(value),
     };
 };
 const validateContributionId = (id, pluginId) => {
@@ -553,8 +562,7 @@ export class PluginManager {
                         !["string", "integer", "boolean", "enum"].includes(String(field.type)) ||
                         (field.type === "enum" && !Array.isArray(field.enum)) ||
                         (field.required !== undefined && typeof field.required !== "boolean") ||
-                        (field.resource !== undefined &&
-                            (field.resource !== true || field.type !== "string")) ||
+                        (field.resource !== undefined && (!field.resource || field.type !== "string")) ||
                         (field.minimum !== undefined &&
                             (typeof field.minimum !== "number" || !Number.isFinite(field.minimum))) ||
                         (field.maximum !== undefined &&
@@ -712,7 +720,7 @@ export class PluginManager {
         }
         this.#disposed = true;
         const errors = [];
-        for (const plugin of [...this.#activated].reverse()) {
+        for (const plugin of [...this.#activated].toReversed()) {
             try {
                 await plugin.disposable?.dispose();
             }

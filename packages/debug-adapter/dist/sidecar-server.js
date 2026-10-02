@@ -1,14 +1,15 @@
 import { DEBUG_BACKEND_PROTOCOL_VERSION, } from "./contracts.js";
 import { DEFAULT_DEBUG_SIDECAR_LIMITS, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DebugSidecarMessageParser, DebugSidecarMessageQueue, assertDebugSidecarSessionToken, } from "./sidecar-protocol.js";
-const stepKinds = new Set(["instruction", "over", "in", "out"]);
+const isStepKind = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const record = (value, context) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    if (!isRecord(value)) {
         throw new Error(`${context} must be an object.`);
     }
     return value;
 };
 const integer = (value, context, minimum = 0) => {
-    if (!Number.isSafeInteger(value) || value < minimum) {
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
     }
     return value;
@@ -54,6 +55,11 @@ const addresses = (value, context) => {
     }
     return value.map((entry, index) => address(entry, `${context}[${index}]`));
 };
+function assertShutdownCommand(command) {
+    if (command !== "shutdown") {
+        throw new Error(`Unsupported command '${command}'.`);
+    }
+}
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
 /** Authenticated, ordered server that exposes any `DebugBackend` over the neutral wire protocol. */
 export class DebugSidecarServer {
@@ -197,10 +203,11 @@ export class DebugSidecarServer {
             return {};
         }
         if (request.command === "step") {
-            if (!stepKinds.has(args.kind)) {
-                throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+            const kind = args.kind;
+            if (typeof kind !== "string" || !isStepKind(kind)) {
+                throw new Error(`Unsupported step kind '${String(kind)}'.`);
             }
-            await this.#implementation.step(positiveInteger(args.threadId, "Step threadId"), args.kind);
+            await this.#implementation.step(positiveInteger(args.threadId, "Step threadId"), kind);
             return {};
         }
         if (request.command === "threads") {
@@ -255,10 +262,8 @@ export class DebugSidecarServer {
         if (request.command === "ping") {
             return { pong: true };
         }
-        if (request.command === "shutdown") {
-            return {};
-        }
-        throw new Error(`Unsupported command '${String(request.command)}'.`);
+        assertShutdownCommand(request.command);
+        return {};
     }
     #backendEvent(event) {
         if (this.#closed) {
@@ -328,6 +333,7 @@ export class DebugSidecarServer {
                 await this.#write(frame);
                 frame = this.#outgoing.dequeue();
             }
+            return;
         });
         this.#writeTail = write.catch(() => undefined);
         return write;

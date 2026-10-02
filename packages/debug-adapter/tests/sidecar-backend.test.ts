@@ -20,6 +20,25 @@ const mockSidecar = fileURLToPath(new URL("./fixtures/mock-sidecar.ts", import.m
 const workspace = fileURLToPath(new URL("../../../", import.meta.url));
 const capabilities = new ReplayDebugBackend(debugConformanceScript).capabilities;
 
+type Mutable<T> = T extends readonly (infer Item)[]
+  ? Mutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: Mutable<T[Key]> }
+    : T;
+
+function isMutableClone<T>(value: unknown): value is Mutable<T> {
+  return typeof value === "object" && value !== null;
+}
+
+/** structuredClone keeps the source readonly type. Tests need a writable copy of the same data. */
+function mutableClone<T extends object>(value: T): Mutable<T> {
+  const cloned: unknown = structuredClone(value);
+  if (!isMutableClone<T>(cloned)) {
+    throw new Error("Expected a cloned capability object.");
+  }
+  return cloned;
+}
+
 const createBackend = (crashFirstOn?: string): SidecarDebugBackend => {
   let launches = 0;
   return new SidecarDebugBackend({
@@ -61,7 +80,7 @@ test("stdio sidecar crash is isolated, reported, and restartable", async (t) => 
   backend.onEvent((event) => events.push(event));
   await backend.connect({ reset: true });
   const error = await t.throwsAsync(backend.threads());
-  t.regex(error?.message ?? "", /exited with code 23/);
+  t.regex(error.message, /exited with code 23/);
   t.true(events.some((event) => event.type === "terminated" && event.restart));
   t.true(
     events.some(
@@ -81,7 +100,7 @@ test("stdio sidecar crash is isolated, reported, and restartable", async (t) => 
 });
 
 test("sidecar backend rejects memory capability declarations outside known address spaces", (t) => {
-  const malformed = structuredClone(capabilities);
+  const malformed = mutableClone(capabilities);
   malformed.architectures[0]!.memorySpaces[0]!.addressSpace = "snes.undeclared";
   t.throws(
     () =>
@@ -97,7 +116,7 @@ test("sidecar backend rejects memory capability declarations outside known addre
 });
 
 test("sidecar backend rejects duplicate and operation-inconsistent memory capabilities", (t) => {
-  const duplicate = structuredClone(capabilities);
+  const duplicate = mutableClone(capabilities);
   duplicate.architectures[0]!.memorySpaces.push({
     ...duplicate.architectures[0]!.memorySpaces[0]!,
   });
@@ -113,7 +132,7 @@ test("sidecar backend rejects duplicate and operation-inconsistent memory capabi
     { message: /memorySpaces must use unique address spaces/ },
   );
 
-  const inconsistent = structuredClone(capabilities);
+  const inconsistent = mutableClone(capabilities);
   inconsistent.architectures[0]!.memory = false;
   t.throws(
     () =>
@@ -182,7 +201,7 @@ test("stdio sidecar carries explicit bounded trace pulls without asynchronous tr
 });
 
 test("sidecar backend rejects malformed trace capability declarations", (t) => {
-  const undeclared = structuredClone(capabilities);
+  const undeclared = mutableClone(capabilities);
   undeclared.architectures[0]!.trace!.addressSpaces[0] = "snes.undeclared";
   t.throws(
     () =>
@@ -196,7 +215,7 @@ test("sidecar backend rejects malformed trace capability declarations", (t) => {
     { message: /trace.addressSpaces must be declared in addressSpaces/ },
   );
 
-  const unbounded = structuredClone(capabilities);
+  const unbounded = mutableClone(capabilities);
   unbounded.architectures[0]!.trace!.maxBatchEvents =
     unbounded.architectures[0]!.trace!.maxBufferedEvents + 1;
   t.throws(
@@ -211,7 +230,7 @@ test("sidecar backend rejects malformed trace capability declarations", (t) => {
     { message: /maxBatchEvents must not exceed maxBufferedEvents/ },
   );
 
-  const zeroBuffer = structuredClone(capabilities);
+  const zeroBuffer = mutableClone(capabilities);
   zeroBuffer.architectures[0]!.trace!.maxBufferedEvents = 0;
   t.throws(
     () =>
@@ -225,7 +244,7 @@ test("sidecar backend rejects malformed trace capability declarations", (t) => {
     { message: /maxBufferedEvents must be a safe integer/ },
   );
 
-  const zeroBatch = structuredClone(capabilities);
+  const zeroBatch = mutableClone(capabilities);
   zeroBatch.architectures[0]!.trace!.maxBatchEvents = 0;
   t.throws(
     () =>
@@ -239,7 +258,7 @@ test("sidecar backend rejects malformed trace capability declarations", (t) => {
     { message: /maxBatchEvents must be a safe integer/ },
   );
 
-  const empty = structuredClone(capabilities);
+  const empty = mutableClone(capabilities);
   empty.architectures[0]!.trace!.addressSpaces = [];
   t.throws(
     () =>
@@ -253,7 +272,7 @@ test("sidecar backend rejects malformed trace capability declarations", (t) => {
     { message: /trace.addressSpaces must not be empty/ },
   );
 
-  const duplicate = structuredClone(capabilities);
+  const duplicate = mutableClone(capabilities);
   duplicate.architectures[0]!.trace!.addressSpaces.push(
     duplicate.architectures[0]!.trace!.addressSpaces[0]!,
   );

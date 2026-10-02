@@ -45,6 +45,13 @@ import {
 import { test } from "../ava-helper.js";
 import { FuzzRandom, fuzzSeed, type FuzzJson } from "../fuzz-helpers.js";
 
+/** The importer validates untrusted JSON, including values it rejects. JSON values are never functions. */
+function isFuzzTraceArtifact(
+  value: FuzzJson | RuntimeInstructionTraceArtifact,
+): value is RuntimeInstructionTraceArtifact {
+  return typeof value !== "function";
+}
+
 /**
  * Captures an untrusted-boundary result while enforcing the public rule that rejections are Errors.
  * @template T
@@ -56,7 +63,7 @@ const capture = <T>(operation: () => T): { ok: true; value: T } | { ok: false; e
     return { ok: true, value: operation() };
   } catch (error) {
     if (!(error instanceof Error)) {
-      throw new Error(`Boundary threw a non-Error value: ${String(error)}`);
+      throw new Error(`Boundary threw a non-Error value: ${String(error)}`, { cause: error });
     }
     return { ok: false, error };
   }
@@ -117,7 +124,7 @@ test("deterministic decoder fuzz preserves bounds across 65816, SPC700, and Supe
   const random = new FuzzRandom(seed);
   const decoders: ReadonlyArray<{
     readonly name: string;
-    readonly decoder: ArchitectureDecoder<unknown>;
+    readonly decoder: ArchitectureDecoder;
     readonly state: () => unknown;
     readonly logicalMaximum: number;
   }> = [
@@ -207,9 +214,9 @@ test("deterministic project fuzz rejects or validates arbitrary manifests", (t) 
   const random = new FuzzRandom(seed);
   let accepted = 0;
   for (let iteration = 0; iteration < 2_048; iteration++) {
-    const candidate: FuzzJson =
+    const candidate =
       iteration % 16 === 0
-        ? ({
+        ? {
             ...minimalManifest(),
             [random.pick([
               "format",
@@ -220,7 +227,7 @@ test("deterministic project fuzz rejects or validates arbitrary manifests", (t) 
               "addressSpaces",
               "shards",
             ])]: random.json(),
-          } as unknown as FuzzJson)
+          }
         : random.json();
     const migrated = capture(() => parseAnalysisProjectManifest(candidate));
     if (!migrated.ok) {
@@ -310,12 +317,11 @@ test("deterministic trace fuzz validates arbitrary and ordered artifacts", (t) =
   const random = new FuzzRandom(seed);
   const context = { projectRomContentSha256: "b".repeat(64), sourceName: "fuzz.trace.json" };
   for (let iteration = 0; iteration < 1_024; iteration++) {
-    capture(() =>
-      importRuntimeInstructionTrace(
-        random.json() as unknown as RuntimeInstructionTraceArtifact,
-        context,
-      ),
-    );
+    const generated = random.json();
+    if (!isFuzzTraceArtifact(generated)) {
+      throw new Error("Fuzz trace input was not admitted.");
+    }
+    capture(() => importRuntimeInstructionTrace(generated, context));
   }
   for (let iteration = 0; iteration < 512; iteration++) {
     const artifact = validTrace(random);

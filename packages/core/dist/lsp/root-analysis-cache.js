@@ -42,13 +42,16 @@ export class RootAnalysisCache {
         }
         try {
             const payload = measureInternalPhase("cacheDeserialize", () => JSON.parse(readFileSync(file, "utf8")));
+            if (!isCachePayload(payload)) {
+                return undefined;
+            }
             if (payload.version !== CACHE_VERSION || payload.root !== path.resolve(root)) {
                 return undefined;
             }
             if (!identitiesMatch(payload.identity, identity)) {
                 return undefined;
             }
-            const recordedFiles = Object.keys(payload.fileHashes).sort();
+            const recordedFiles = Object.keys(payload.fileHashes).toSorted();
             const currentHashes = {};
             for (const recorded of recordedFiles) {
                 const recordedHash = payload.fileHashes[recorded];
@@ -148,7 +151,7 @@ export class RootAnalysisCache {
  */
 export function fingerprintFor(fileHashes) {
     const material = Object.entries(fileHashes)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .toSorted(([left], [right]) => left.localeCompare(right))
         .map(([file, hash]) => `${file}:${hash}`)
         .join("\n");
     return createHash("sha256").update(material).digest("hex");
@@ -173,6 +176,71 @@ function fingerprintForSorted(sortedFileHashes) {
 export function hashBytes(bytes) {
     return createHash("sha256").update(bytes).digest("hex");
 }
+function isUnknownArray(value) {
+    return Array.isArray(value);
+}
+function isStringRecord(value) {
+    return (typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value) &&
+        Object.values(value).every((entry) => typeof entry === "string"));
+}
+function isNumberRecord(value) {
+    return (typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value) &&
+        Object.values(value).every((entry) => typeof entry === "number"));
+}
+function isCacheIdentity(value) {
+    return (typeof value === "object" &&
+        value !== null &&
+        "target" in value &&
+        typeof value.target === "string" &&
+        "architecture" in value &&
+        typeof value.architecture === "string" &&
+        "converterIdentity" in value &&
+        typeof value.converterIdentity === "string" &&
+        "targetOptionsIdentity" in value &&
+        typeof value.targetOptionsIdentity === "string" &&
+        "includePaths" in value &&
+        isUnknownArray(value.includePaths) &&
+        value.includePaths.every((entry) => typeof entry === "string"));
+}
+function isCachedAnalysis(value) {
+    return (typeof value === "object" &&
+        value !== null &&
+        "followedIncludes" in value &&
+        typeof value.followedIncludes === "boolean" &&
+        "diagnostics" in value &&
+        isUnknownArray(value.diagnostics) &&
+        "symbols" in value &&
+        isUnknownArray(value.symbols) &&
+        "references" in value &&
+        isUnknownArray(value.references) &&
+        "includeEdges" in value &&
+        isUnknownArray(value.includeEdges) &&
+        "assetDependencies" in value &&
+        typeof value.assetDependencies === "object" &&
+        value.assetDependencies !== null &&
+        !Array.isArray(value.assetDependencies));
+}
+function isCachePayload(value) {
+    return (typeof value === "object" &&
+        value !== null &&
+        "version" in value &&
+        typeof value.version === "number" &&
+        "root" in value &&
+        typeof value.root === "string" &&
+        "fingerprint" in value &&
+        typeof value.fingerprint === "string" &&
+        "identity" in value &&
+        isCacheIdentity(value.identity) &&
+        "fileHashes" in value &&
+        isStringRecord(value.fileHashes) &&
+        "analysis" in value &&
+        isCachedAnalysis(value.analysis) &&
+        (!("fileMtimes" in value) || value.fileMtimes === undefined || isNumberRecord(value.fileMtimes)));
+}
 function identitiesMatch(stored, current) {
     if (stored.target !== current.target || stored.architecture !== current.architecture) {
         return false;
@@ -183,8 +251,8 @@ function identitiesMatch(stored, current) {
     if (stored.targetOptionsIdentity !== current.targetOptionsIdentity) {
         return false;
     }
-    const left = [...stored.includePaths].sort();
-    const right = [...current.includePaths].sort();
+    const left = [...stored.includePaths].toSorted();
+    const right = [...current.includePaths].toSorted();
     return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 //# sourceMappingURL=root-analysis-cache.js.map

@@ -422,7 +422,7 @@ export const snesHardwareDefineRecords = () => {
             }
         }
     }
-    return values.sort((left, right) => left.address - right.address || left.symbol.localeCompare(right.symbol));
+    return values.toSorted((left, right) => left.address - right.address || left.symbol.localeCompare(right.symbol));
 };
 /**
  * Returns the complete set of CPU-visible register symbol/address pairs used by generated source.

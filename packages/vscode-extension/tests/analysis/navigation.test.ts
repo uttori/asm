@@ -29,9 +29,7 @@ const host = {
   sourcePath: (_source: { id: number }): string | undefined => undefined,
 };
 
-(
-  globalThis as { __uttoriAnalysisNavigationUiTest?: typeof host }
-).__uttoriAnalysisNavigationUiTest = host;
+Object.assign(globalThis, { __uttoriAnalysisNavigationUiTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {

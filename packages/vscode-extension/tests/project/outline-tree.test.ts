@@ -1,6 +1,12 @@
 import { registerHooks } from "node:module";
 
+import type { LanguageClient } from "vscode-languageclient/node";
+
 import { test } from "../../../../tests/ava-helper.js";
+
+function isLanguageClient(value: object): value is LanguageClient {
+  return "sendRequest" in value && typeof value.sendRequest === "function";
+}
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -65,9 +71,15 @@ registerHooks({
 });
 
 const { ProjectOutlineProvider } = await import("../../src/project/outline-tree.js");
+const { ThemeIcon } = await import("vscode");
 
-const client = (sendRequest: (method: string, ...rest: unknown[]) => unknown) =>
-  ({ sendRequest }) as never;
+const client = (sendRequest: (method: string, ...rest: unknown[]) => unknown): LanguageClient => {
+  const stub = { sendRequest };
+  if (!isLanguageClient(stub)) {
+    throw new Error("language client stub");
+  }
+  return stub;
+};
 
 const range = (
   startLine: number,
@@ -173,7 +185,7 @@ test("getTreeItem opens vscode.open with a Range only when uri and range are pre
     id: "sym",
     label: "Main",
     collapsible: false,
-    icon: { id: "symbol-method" } as never,
+    icon: new ThemeIcon("symbol-method"),
     uri: "file:///boot.asm",
     range: range(1, 2, 3, 4),
   });
@@ -186,7 +198,7 @@ test("getTreeItem opens vscode.open with a Range only when uri and range are pre
     id: "file",
     label: "boot.asm",
     collapsible: true,
-    icon: { id: "file" } as never,
+    icon: new ThemeIcon("file"),
     uri: "file:///boot.asm",
     symbolUri: "file:///boot.asm",
   });
@@ -196,7 +208,7 @@ test("getTreeItem opens vscode.open with a Range only when uri and range are pre
     id: "group",
     label: "Orphans",
     collapsible: true,
-    icon: { id: "folder" } as never,
+    icon: new ThemeIcon("folder"),
   });
   t.is(bare.command, undefined);
 });

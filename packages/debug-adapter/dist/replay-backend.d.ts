@@ -9,7 +9,7 @@ export interface ReplayMemoryRegion {
 export interface ReplaySnapshot {
     readonly threads: readonly DebugThread[];
     readonly frames: readonly DebugStackFrame[];
-    readonly registers: Readonly<Record<number, readonly DebugRegister[]>>;
+    readonly registers: Readonly<Partial<Record<number, readonly DebugRegister[]>>>;
     readonly memory: readonly ReplayMemoryRegion[];
     readonly instructions?: readonly DebugInstruction[];
 }

@@ -9,6 +9,9 @@ import { registerSourcePinOwner } from "./pins.js";
 import { createSourceScratch } from "./scratch.js";
 /** Generated metadata describes the baseline, never a restriction on editing working files. */
 export const SOURCE_GENERATION_FILE = ".uttori/generation.json";
+function isGenerationFileMode(value) {
+    return value === "100644" || value === "100755";
+}
 /**
  * Verify pure payload bytes from Git itself, in bounded batches. Reading a descriptor alone would
  * allow a customized source commit to be used accidentally as the next generation's parent.
@@ -25,13 +28,13 @@ export async function verifySourceGeneration(repository, commit) {
         const [mode, type, blob] = line.slice(0, tab).split(" ");
         const name = line.slice(tab + 1);
         assertSourcePath(name);
-        if (type !== "blob" || (mode !== "100644" && mode !== "100755")) {
+        if (type !== "blob" || !isGenerationFileMode(mode)) {
             throw new Error("Pure generations contain regular files only.");
         }
         return { path: name, mode, blob };
     })
         .filter((entry) => entry.path !== SOURCE_GENERATION_FILE)
-        .sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
+        .toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
     const files = [];
     for (let start = 0; start < entries.length; start += 32) {
         const batch = entries.slice(start, start + 32);
@@ -53,7 +56,6 @@ export async function verifySourceGeneration(repository, commit) {
             }
             files.push({
                 ...entry,
-                mode: entry.mode,
                 sha256: sourceContentHash(result.stdout.subarray(end + 1, end + 1 + size)),
             });
             cursor = end + size + 2;
@@ -64,6 +66,7 @@ export async function verifySourceGeneration(repository, commit) {
         executable: entry.mode === "100755",
         sha256: entry.sha256,
     }))));
+    // oxlint-disable-next-line security/detect-possible-timing-attacks
     if (hash !== descriptor.payloadSha256) {
         throw new Error("Pure generation payload differs from its descriptor. Do not use edited source as a generation parent.");
     }
@@ -106,35 +109,47 @@ export async function pinSourceCandidate(repository, commit, signal) {
         lease.release();
     }
 }
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSha256(value) {
+    return typeof value === "string" && /^[\da-f]{64}$/.test(value);
+}
+function isGenerationInputs(value) {
+    if (!isRecord(value)) {
+        return false;
+    }
+    return (typeof value.project === "string" &&
+        /^[\w.-]+$/.test(value.project) &&
+        isSha256(value.romSha256) &&
+        isSha256(value.evidenceSha256) &&
+        isSha256(value.researchSha256) &&
+        isSha256(value.toolchainSha256) &&
+        isSha256(value.optionsSha256) &&
+        (value.captureCatalogSha256 === undefined || isSha256(value.captureCatalogSha256)));
+}
 /** Validate all externally loaded identity fields before using a descriptor for ancestry selection. */
 export function parseSourceGeneration(value) {
-    const descriptor = value;
-    const inputs = descriptor?.inputs;
-    if (descriptor?.format !== "uttori-source-generation" ||
-        !inputs ||
-        typeof inputs.project !== "string" ||
-        !/^[\w.-]+$/.test(inputs.project)) {
+    if (!isRecord(value)) {
         throw new Error("Invalid source generation descriptor.");
     }
-    for (const hash of [
-        inputs.romSha256,
-        inputs.evidenceSha256,
-        inputs.researchSha256,
-        inputs.toolchainSha256,
-        inputs.optionsSha256,
-        descriptor.payloadSha256,
-        descriptor.id,
-        ...(inputs.captureCatalogSha256 === undefined ? [] : [inputs.captureCatalogSha256]),
-    ]) {
-        if (typeof hash !== "string" || !/^[\da-f]{64}$/.test(hash)) {
-            throw new Error("Invalid source generation content identity.");
-        }
+    const inputs = value.inputs;
+    const project = isRecord(inputs) ? inputs.project : undefined;
+    if (value.format !== "uttori-source-generation" ||
+        !isRecord(inputs) ||
+        typeof project !== "string" ||
+        !/^[\w.-]+$/.test(project)) {
+        throw new Error("Invalid source generation descriptor.");
     }
-    if (sourceContentHash(canonicalJson({ inputs, payloadSha256: descriptor.payloadSha256 })) !==
-        descriptor.id) {
+    const payloadSha256 = value.payloadSha256;
+    const id = value.id;
+    if (!isGenerationInputs(inputs) || !isSha256(payloadSha256) || !isSha256(id)) {
+        throw new Error("Invalid source generation content identity.");
+    }
+    if (sourceContentHash(canonicalJson({ inputs, payloadSha256 })) !== id) {
         throw new Error("Source generation descriptor identity mismatch.");
     }
-    return descriptor;
+    return { format: "uttori-source-generation", inputs, payloadSha256, id };
 }
 /** Read generation metadata from an immutable commit, never the edited worktree. */
 export async function generationAt(repository, commit) {
@@ -156,7 +171,7 @@ export async function retainSourceGeneration(repository, options) {
         }
     }
     const names = new Set();
-    const files = [...options.files].sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
+    const files = [...options.files].toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
     for (const file of files) {
         assertSourcePath(file.path);
         const normalized = file.path.normalize("NFC").toLowerCase();

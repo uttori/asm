@@ -39,6 +39,24 @@ interface SidecarLifecycleOptions {
 
 const session = "fixture-session-".repeat(4);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function readJsonObject(text: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(text);
+  if (!isRecord(parsed)) {
+    throw new Error("Expected a JSON object.");
+  }
+  return parsed;
+}
+
+function hostManifest(value: unknown): Record<string, unknown> {
+  if (!isRecord(value) || !isRecord(value.manifest)) {
+    throw new Error("Sidecar host is missing its runtime manifest.");
+  }
+  return value.manifest;
+}
+
 /**
  * Exercise stdio ordering and shutdown without starting a native emulator.
  * @param {SidecarLifecycleOptions} options Production entry points and a valid runtime identity.
@@ -215,11 +233,11 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
       const finished = once(fixture.output, "finish");
       fixture.input.end(fixture.frame("connect", 1));
       await finished;
-      const host = fixture.createClient.thisValues[0] as { manifest: Record<string, unknown> };
-      t.is(host.manifest.romSha256, expected);
-      const installed = JSON.parse(original) as Record<string, unknown>;
-      t.is(host.manifest.executableSha256, installed.executableSha256);
-      t.deepEqual(host.manifest.resources, installed.resources);
+      const manifest = hostManifest(fixture.createClient.thisValues[0]);
+      t.is(manifest.romSha256, expected);
+      const installed = readJsonObject(original);
+      t.is(manifest.executableSha256, installed.executableSha256);
+      t.deepEqual(manifest.resources, installed.resources);
       t.is(readFileSync(fixture.manifest, "utf8"), original);
     },
   );
@@ -286,13 +304,13 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
         const stderr: Buffer[] = [];
         child.stdout.on("data", (data: Buffer) => stdout.push(data));
         child.stderr.on("data", (data: Buffer) => stderr.push(data));
-        const [code] = await once(child, "close");
+        const [exitCode] = await once(child, "close");
         if (args[0] === "--help") {
-          t.is(code, 0);
+          t.is(exitCode, 0);
           t.regex(Buffer.concat(stdout).toString(), /Usage:/);
           t.is(stderr.length, 0);
         } else {
-          t.is(code, 1);
+          t.is(exitCode, 1);
           t.regex(Buffer.concat(stderr).toString(), /Unknown .* sidecar option/);
           t.is(stdout.length, 0);
         }
@@ -337,8 +355,8 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
       );
       child.stdin.write(fixture.frame("disconnect", 3));
       child.stdin.end(fixture.frame("shutdown", 4));
-      const [code] = await closed;
-      t.is(code, 0);
+      const [exitCode] = await closed;
+      t.is(exitCode, 0);
       t.is(Buffer.concat(errors).toString(), "");
       const responses = new DebugSidecarMessageParser()
         .push(Buffer.concat(output))

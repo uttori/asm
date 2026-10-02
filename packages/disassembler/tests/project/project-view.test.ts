@@ -15,6 +15,10 @@ import {
   type ProjectLabel,
 } from "../../src/index.js";
 
+function isMutableLabels(value: readonly ProjectLabel[]): value is ProjectLabel[] {
+  return Array.isArray(value);
+}
+
 const fixture = (): AnalysisProject => ({
   manifest: {
     format: "uttori-asm-analysis",
@@ -61,7 +65,10 @@ test("explicit view replacements are persisted even when a JavaScript caller reu
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   publishAnalysisProject(directory, fixture());
   const snapshot = loadAnalysisProjectViewSnapshot(directory);
-  const labels = snapshot.view.labels as ProjectLabel[];
+  if (!isMutableLabels(snapshot.view.labels)) {
+    throw new Error("Expected a label array.");
+  }
+  const labels = snapshot.view.labels;
   labels.push({
     id: "entry",
     addressSpace: "rom.file",
@@ -108,7 +115,9 @@ test("project views preserve complete runtime bytes through metadata updates and
   t.throws(() => commitAnalysisProjectViewUpdate(directory, current, { evidence: [] }), {
     message: /missing evidence/,
   });
-  t.throws(() => commitAnalysisProjectViewUpdate(directory, current, { runtime: [] } as any), {
+  const runtimeUpdate: Partial<Omit<AnalysisProjectShards, "runtime">> = {};
+  Object.assign(runtimeUpdate, { runtime: [] });
+  t.throws(() => commitAnalysisProjectViewUpdate(directory, current, runtimeUpdate), {
     message: /cannot replace runtime history/,
   });
   t.is(

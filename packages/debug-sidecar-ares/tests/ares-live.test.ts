@@ -28,6 +28,10 @@ import {
 } from "../src/ares-rsp-backend.js";
 import { aresLiveManifest } from "./fixtures/ares-live-manifest.js";
 
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
 const enabled = process.env.UTTORI_ARES_LIVE === "1";
 const liveTest = enabled ? test.serial : test.serial.skip;
 const superFxEnabled = process.env.UTTORI_ARES_SUPERFX_LIVE === "1";
@@ -67,11 +71,6 @@ const conformanceFixture: DebugBackendConformanceFixture = {
         { addressSpace: "snes.wram", sideEffectFree: true },
         { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
       ],
-      trace: {
-        addressSpaces: ["snes.cpu"],
-        maxBufferedEvents: 65_536,
-        maxBatchEvents: 240,
-      },
       capabilities: {
         pause: true,
         step: true,
@@ -86,14 +85,12 @@ const conformanceFixture: DebugBackendConformanceFixture = {
       architecture: "snes.spc700",
       addressSpaces: ["spc.aram"],
       memorySpaces: [],
-      trace: null,
       capabilities: { pause: false, step: false, registers: false, memory: false },
     },
     {
       architecture: "snes.superfx",
       addressSpaces: ["superfx.ram", "superfx.rom"],
       memorySpaces: [],
-      trace: null,
       capabilities: { pause: false, step: false, registers: false, memory: false },
     },
   ],
@@ -206,8 +203,116 @@ const dapRequest = (
   args: Record<string, unknown> = {},
 ): DapRequest => ({ seq, type: "request", command, arguments: args });
 
-const dapResponse = (messages: readonly DapProtocolMessage[]): DapResponse =>
-  messages[0] as DapResponse;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const dapResponse = (messages: readonly DapProtocolMessage[]): DapResponse => {
+  const message = messages[0];
+  if (message.type !== "response") {
+    throw new Error("Expected a DAP response.");
+  }
+  return message;
+};
+
+const stringField = (record: Record<string, unknown>, key: string): string => {
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new Error(`Expected ${key} to be a string.`);
+  }
+  return value;
+};
+
+const numberField = (record: Record<string, unknown>, key: string): number => {
+  const value = record[key];
+  if (typeof value !== "number") {
+    throw new Error(`Expected ${key} to be a number.`);
+  }
+  return value;
+};
+
+const booleanField = (record: Record<string, unknown>, key: string): boolean => {
+  const value = record[key];
+  if (typeof value !== "boolean") {
+    throw new Error(`Expected ${key} to be a boolean.`);
+  }
+  return value;
+};
+
+const recordField = (record: Record<string, unknown>, key: string): Record<string, unknown> => {
+  const value = record[key];
+  if (!isRecord(value)) {
+    throw new Error(`Expected ${key} to be an object.`);
+  }
+  return value;
+};
+
+const objectArray = (record: Record<string, unknown>, key: string): Record<string, unknown>[] => {
+  const value = record[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected ${key} to be an array.`);
+  }
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new Error(`Expected ${key}[${index}] to be an object.`);
+    }
+    return entry;
+  });
+};
+
+const bodyRecord = (body: unknown): Record<string, unknown> => {
+  if (!isRecord(body)) {
+    throw new Error("Expected a DAP response body.");
+  }
+  return body;
+};
+
+const eventReason = (body: unknown): string | undefined => {
+  if (!isRecord(body) || typeof body.reason !== "string") {
+    return undefined;
+  }
+  return body.reason;
+};
+
+const sourceBreakpoints = (body: unknown) => ({
+  breakpoints: objectArray(bodyRecord(body), "breakpoints").map((entry) => ({
+    verified: booleanField(entry, "verified"),
+    line: numberField(entry, "line"),
+    instructionReference: stringField(entry, "instructionReference"),
+  })),
+});
+
+const stoppedFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => ({
+    id: numberField(entry, "id"),
+    line: numberField(entry, "line"),
+    source: { path: stringField(recordField(entry, "source"), "path") },
+    instructionPointerReference: stringField(entry, "instructionPointerReference"),
+  })),
+});
+
+const sourceFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => ({
+    line: numberField(entry, "line"),
+    source: { path: stringField(recordField(entry, "source"), "path") },
+  })),
+});
+
+const traceBatch = (body: unknown) => {
+  const record = bodyRecord(body);
+  const addresses = record.addresses;
+  if (!Array.isArray(addresses)) {
+    throw new Error("Expected addresses to be an array of numbers.");
+  }
+  return {
+    addresses: addresses.map((entry, index) => {
+      if (typeof entry !== "number") {
+        throw new Error(`Expected addresses[${index}] to be a number.`);
+      }
+      return entry;
+    }),
+    active: booleanField(record, "active"),
+  };
+};
 
 liveTest("pinned ares proof launches through the production host and translator", async (t) => {
   const { backend, host } = createLiveBackend();
@@ -254,13 +359,13 @@ liveTest("pinned ares proof launches through the production host and translator"
     });
     await backend.step(thread!.id, "instruction");
     await stopped;
-    const [stepped] = await backend.stackFrames(thread!.id);
+    const stepped = elementAt(await backend.stackFrames(thread!.id), 0);
     t.not(stepped?.pc.address, frame!.pc.address);
     t.deepEqual(events.slice(-2), ["continued", "stopped"]);
 
     await backend.disconnect({ terminate: false });
     await backend.connect({ reset: false });
-    const [reconnected] = await backend.stackFrames(thread!.id);
+    const reconnected = elementAt(await backend.stackFrames(thread!.id), 0);
     t.is(reconnected?.pc.address, stepped?.pc.address);
   } finally {
     await backend.disconnect({ terminate: true }).catch(() => host.terminate());
@@ -294,7 +399,7 @@ superFxLiveTest(
         threads.map(({ architecture }) => architecture),
         ["snes.65816"],
       );
-      const frame = (await backend.stackFrames(threads[0]?.id ?? -1))[0];
+      const frame = elementAt(await backend.stackFrames(threads[0]?.id ?? -1), 0);
       t.is(frame?.pc.architecture, "snes.65816");
       t.true((await backend.disassemble(frame!.pc, 1)).length === 1);
       await t.throwsAsync(
@@ -358,7 +463,7 @@ liveTest("pinned ares crash is contained and a fresh verified process reconnects
     t.throws(() => backend.threads(), { message: "ares RSP backend is not connected." });
 
     await backend.connect({ reset: true });
-    const [frame] = await backend.stackFrames(1);
+    const frame = elementAt(await backend.stackFrames(1), 0);
     t.is(frame?.pc.address, conformanceFixture.initialAddress.address);
     t.not(host.pid, pid);
   } finally {
@@ -448,15 +553,7 @@ liveTest(
           }),
         ),
       );
-      const breakpoint = (
-        set.body as {
-          breakpoints: Array<{
-            verified: boolean;
-            line: number;
-            instructionReference: string;
-          }>;
-        }
-      ).breakpoints[0];
+      const breakpoint = elementAt(sourceBreakpoints(set.body).breakpoints, 0);
       t.deepEqual(
         { verified: breakpoint?.verified, line: breakpoint?.line },
         { verified: true, line: 2 },
@@ -479,19 +576,12 @@ liveTest(
         `DAP continue failed: ${dapResponse(continued).message ?? "unknown error"}`,
       );
       const stop = await stopped;
-      t.is((stop.body as { reason?: string }).reason, "breakpoint");
+      t.is(eventReason(stop.body), "breakpoint");
 
-      const stack = dapResponse(
-        await session.dispatch(dapRequest(4, "stackTrace", { threadId: 1 })),
-      ).body as {
-        stackFrames: Array<{
-          id: number;
-          line: number;
-          source: { path: string };
-          instructionPointerReference: string;
-        }>;
-      };
-      const frame = stack.stackFrames[0];
+      const stack = stoppedFrames(
+        dapResponse(await session.dispatch(dapRequest(4, "stackTrace", { threadId: 1 }))).body,
+      );
+      const frame = elementAt(stack.stackFrames, 0);
       t.is(frame?.line, 2);
       t.is(frame?.source.path, source);
       t.regex(frame?.instructionPointerReference ?? "", /\|0x8005(?:\||$)/);
@@ -533,13 +623,15 @@ liveTest(
       });
       await session.dispatch(dapRequest(8, "stepIn", { threadId: 1 }));
       const stepStop = await stepped;
-      t.is((stepStop.body as { reason?: string }).reason, "step");
+      t.is(eventReason(stepStop.body), "step");
       t.true(dapResponse(await session.dispatch(dapRequest(9, "uttori/stopTrace"))).success);
       const traced: number[] = [];
       for (let index = 0; index < 8; index++) {
-        const pulled = dapResponse(
-          await session.dispatch(dapRequest(10 + index, "uttori/readTrace", { maxEvents: 240 })),
-        ).body as { addresses: number[]; active: boolean };
+        const pulled = traceBatch(
+          dapResponse(
+            await session.dispatch(dapRequest(10 + index, "uttori/readTrace", { maxEvents: 240 })),
+          ).body,
+        );
         traced.push(...pulled.addresses);
         if (!pulled.active && pulled.addresses.length === 0) {
           break;
@@ -580,17 +672,15 @@ liveTest(
             (message) =>
               message.type === "event" &&
               message.event === "stopped" &&
-              (message.body as { reason?: string } | undefined)?.reason === "pause",
+              eventReason(message.body) === "pause",
           ),
         "The adapter must hide its breakpoint-maintenance pause.",
       );
       const runningBreakpoint = await dynamicStop;
-      t.is((runningBreakpoint.body as { reason?: string }).reason, "breakpoint");
-      const runningStack = dapResponse(
-        await session.dispatch(dapRequest(20, "stackTrace", { threadId: 1 })),
-      ).body as {
-        stackFrames: Array<{ line: number; source: { path: string } }>;
-      };
+      t.is(eventReason(runningBreakpoint.body), "breakpoint");
+      const runningStack = sourceFrames(
+        dapResponse(await session.dispatch(dapRequest(20, "stackTrace", { threadId: 1 }))).body,
+      );
       t.deepEqual(
         {
           line: runningStack.stackFrames[0]?.line,

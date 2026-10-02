@@ -129,25 +129,27 @@ test("analysis projects preserve deterministic records without ROM bytes", async
       message: /ROM identity mismatch/,
     });
     const forbiddenInput = projectFor(rom);
+    const evidence = { ...forbiddenInput.shards.evidence[0]! };
+    Object.assign(evidence, { romBytes: [0xa5] });
     const forbidden = {
       ...forbiddenInput,
       shards: {
         ...forbiddenInput.shards,
-        evidence: [{ ...forbiddenInput.shards.evidence[0], romBytes: [0xa5] }],
+        evidence: [evidence],
       },
-    } as unknown as AnalysisProject;
+    };
     t.throws(() => publishAnalysisProject(temporary, forbidden), {
       message: /ROM byte payload/,
     });
+    const nestedEvidence = { ...forbiddenInput.shards.evidence[0]! };
+    Object.assign(nestedEvidence, { extra: [0, null, { nested: { byteData: [] } }] });
     const nested = {
       ...forbiddenInput,
       shards: {
         ...forbiddenInput.shards,
-        evidence: [
-          { ...forbiddenInput.shards.evidence[0], extra: [0, null, { nested: { byteData: [] } }] },
-        ],
+        evidence: [nestedEvidence],
       },
-    } as unknown as AnalysisProject;
+    };
     t.throws(() => publishAnalysisProject(temporary, nested), {
       message: /shards\.evidence\[0]\.extra\[2]\.nested\.byteData/,
     });

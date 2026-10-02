@@ -28,12 +28,17 @@ const optionalText = (value, field) => {
     }
     return value;
 };
+/**
+ * Accepts an array of non-empty strings. Whitespace-only entries are rejected.
+ * @param {unknown} value Candidate configuration array.
+ * @returns {boolean} True when every element is a non-empty string.
+ */
+const isNonEmptyStringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim() !== "");
 const optionalStringArray = (value, field) => {
     if (value === undefined) {
         return undefined;
     }
-    if (!Array.isArray(value) ||
-        value.some((item) => typeof item !== "string" || item.trim() === "")) {
+    if (!isNonEmptyStringArray(value)) {
         throw configurationError(`Configuration field '${field}' must be an array of strings.`);
     }
     return value;

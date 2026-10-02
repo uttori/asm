@@ -16,10 +16,10 @@ export declare const CAPTURE_CATALOG_SCHEMA = "CREATE TABLE capture_catalog (\n 
  */
 export declare const readStoragePolicy: (db: DatabaseSync) => AnalysisStoragePolicy;
 /** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
- * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields. Unknown fields are rejected.
+ * @param {unknown} value Explicit policy fields. Unknown fields are rejected.
  * @returns {AnalysisStoragePolicy} Complete validated byte limits.
  */
-export declare const validateStoragePolicy: (value: Partial<AnalysisStoragePolicy>) => AnalysisStoragePolicy;
+export declare const validateStoragePolicy: (value: unknown) => AnalysisStoragePolicy;
 /** Lightweight accounting for final reports. Bytes allocated to freelist pages are separately visible. */
 export interface AnalysisStorageSnapshot {
     readonly databaseBytes: number;

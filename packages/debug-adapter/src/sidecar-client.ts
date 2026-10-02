@@ -214,6 +214,8 @@ export class DebugSidecarClient {
     for (const listener of this.#closeListeners) {listener(error);}
     this.#closeListeners.clear();
     this.#eventListeners.clear();
-    if (closeTransport) {void this.#transport.close().catch(() => undefined);}
+    if (closeTransport) {
+      void this.#transport.close().catch(() => undefined);
+    }
   }
 }

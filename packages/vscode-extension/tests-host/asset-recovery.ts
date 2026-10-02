@@ -10,6 +10,23 @@ import type { activate } from "./asset-recovery-driver.js";
 const hash = (value: Uint8Array | string): string =>
   createHash("sha256").update(value).digest("hex");
 
+/** Wait for a predicate to be true or timeout after 20 seconds. */
+async function wait(predicate: () => boolean, label: string): Promise<void> {
+  const end = Date.now() + 20000;
+  while (!predicate() && Date.now() < end) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.ok(predicate(), label);
+}
+
+/** Validate the hot-exit report is an object. */
+function assertReport(value: unknown): asserts value is Record<string, unknown> {
+  assert.ok(
+    typeof value === "object" && value !== null && !Array.isArray(value),
+    "hot-exit report is not an object",
+  );
+}
+
 /** Two isolated editor processes share one disposable profile, exercising VS Code's real hot-exit storage. */
 export async function runAssetRecoverySmoke(
   folder: vscode.WorkspaceFolder,
@@ -42,13 +59,6 @@ export async function runAssetRecoverySmoke(
   );
   assert.ok(driver);
   const { state, paletteEditor } = await driver.activate();
-  const wait = async (predicate: () => boolean, label: string) => {
-    const end = Date.now() + 20000;
-    while (!predicate() && Date.now() < end) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    assert.ok(predicate(), label);
-  };
   await vscode.commands.executeCommand("vscode.openWith", paletteUri, "uttori.paletteSmoke", {
     preview: false,
   });
@@ -101,7 +111,8 @@ export async function runAssetRecoverySmoke(
     // Keep providers registered until shutdown: unregistering them would close the recoverable editors.
     return;
   }
-  const report = JSON.parse(await fs.readFile(reportUri.fsPath, "utf8")) as Record<string, unknown>;
+  const report: unknown = JSON.parse(await fs.readFile(reportUri.fsPath, "utf8"));
+  assertReport(report);
   assert.equal(
     state.restoredFromBackup,
     true,

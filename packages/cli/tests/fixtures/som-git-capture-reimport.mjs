@@ -66,7 +66,7 @@ save();
 const files = fs
   .readdirSync(captureDirectory)
   .filter((name) => name.endsWith(".act2"))
-  .sort(
+  .toSorted(
     (a, b) =>
       fs.statSync(path.join(captureDirectory, a)).size -
       fs.statSync(path.join(captureDirectory, b)).size,
@@ -118,12 +118,12 @@ for (const item of report.captures) {
 }
 if (process.argv.includes("--bind-catalog")) {
   const seed = JSON.parse(fs.readFileSync(path.join(root, ".verification/seed.json"), "utf8"));
-  const snapshot = readSourceCaptureCatalog(
+  const catalogSnapshot = readSourceCaptureCatalog(
     root,
     ".uttori/captures.json",
     seed.romSha256 ?? report.after.manifest.rom.contentSha256,
   );
-  let catalog = snapshot.catalog;
+  let catalog = catalogSnapshot.catalog;
   const store = openAnalysisProjectStore(evidence);
   let imports;
   try {
@@ -153,7 +153,7 @@ if (process.argv.includes("--bind-catalog")) {
     });
     console.log(`Bound verified archive: ${item.name}`);
   }
-  writeSourceCaptureCatalog(root, ".uttori/captures.json", catalog, snapshot.fileSha256);
+  writeSourceCaptureCatalog(root, ".uttori/captures.json", catalog, catalogSnapshot.fileSha256);
   report.portableCatalog = {
     identities: catalog.captures.length,
     boundArchives: catalog.captures.reduce((count, capture) => count + capture.archives.length, 0),

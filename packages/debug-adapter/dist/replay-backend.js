@@ -16,7 +16,7 @@ const replayArchitectureCapabilities = (script) => {
             architectureNames.add(instruction.address.architecture);
         }
     }
-    return [...architectureNames].sort().map((architecture) => {
+    return [...architectureNames].toSorted().map((architecture) => {
         const addressSpaces = new Set();
         let registers = false;
         let disassemble = false;
@@ -38,16 +38,16 @@ const replayArchitectureCapabilities = (script) => {
         }
         const memorySpaces = [...addressSpaces]
             .filter((addressSpace) => script.snapshots.some((snapshot) => snapshot.memory.some((region) => region.addressSpace === addressSpace)))
-            .sort()
+            .toSorted()
             .map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
         return {
             architecture,
-            addressSpaces: [...addressSpaces].sort(),
+            addressSpaces: [...addressSpaces].toSorted(),
             memorySpaces,
             trace: addressSpaces.size === 0
                 ? null
                 : {
-                    addressSpaces: [...addressSpaces].sort(),
+                    addressSpaces: [...addressSpaces].toSorted(),
                     maxBufferedEvents: REPLAY_TRACE_BUFFER_EVENTS,
                     maxBatchEvents: REPLAY_TRACE_BATCH_EVENTS,
                 },
@@ -98,14 +98,14 @@ export class ReplayDebugBackend {
             ? script.architectures.map((capability) => ({
                 ...capability,
                 ...(capability.stepKinds ? { stepKinds: [...capability.stepKinds] } : {}),
-                addressSpaces: [...capability.addressSpaces].sort(),
+                addressSpaces: [...capability.addressSpaces].toSorted(),
                 memorySpaces: [...capability.memorySpaces]
-                    .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace))
+                    .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace))
                     .map((memorySpace) => Object.freeze({ ...memorySpace })),
                 trace: capability.trace
                     ? {
                         ...capability.trace,
-                        addressSpaces: [...capability.trace.addressSpaces].sort(),
+                        addressSpaces: [...capability.trace.addressSpaces].toSorted(),
                     }
                     : null,
             }))
@@ -222,7 +222,7 @@ export class ReplayDebugBackend {
         this.#requireConnected();
         return Promise.resolve(this.#snapshot.frames
             .filter((frame) => frame.threadId === threadId)
-            .map((frame) => ({ ...frame, pc: { ...frame.pc } })));
+            .map((frame) => Object.assign({}, frame, { pc: Object.assign({}, frame.pc) })));
     }
     /**
      * Lists registers associated with a frame.
@@ -231,7 +231,7 @@ export class ReplayDebugBackend {
      */
     registers(frameId) {
         this.#requireConnected();
-        return Promise.resolve((this.#snapshot.registers[frameId] ?? []).map((register) => ({ ...register })));
+        return Promise.resolve((this.#snapshot.registers[frameId] ?? []).map((register) => Object.assign({}, register)));
     }
     /**
      * Reads available bytes from the current snapshot without crossing address spaces.
@@ -271,7 +271,7 @@ export class ReplayDebugBackend {
     setBreakpoints(addresses) {
         this.#requireConnected();
         this.#breakpoints.clear();
-        const sorted = [...addresses].sort((left, right) => left.architecture.localeCompare(right.architecture) ||
+        const sorted = [...addresses].toSorted((left, right) => left.architecture.localeCompare(right.architecture) ||
             left.addressSpace.localeCompare(right.addressSpace) ||
             left.address - right.address);
         for (const address of sorted) {
@@ -299,12 +299,11 @@ export class ReplayDebugBackend {
             .filter((instruction) => instruction.address.architecture === address.architecture &&
             instruction.address.addressSpace === address.addressSpace &&
             instruction.address.address >= address.address)
-            .sort((left, right) => left.address.address - right.address.address)
+            .toSorted((left, right) => left.address.address - right.address.address)
             .slice(0, count)
-            .map((instruction) => ({
-            ...instruction,
-            address: { ...instruction.address },
-            bytes: [...instruction.bytes],
+            .map((instruction) => Object.assign({}, instruction, {
+            address: Object.assign({}, instruction.address),
+            bytes: Array.from(instruction.bytes),
         })));
     }
     /** @inheritdoc */

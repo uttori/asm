@@ -35,7 +35,7 @@ test("65816 declarative table covers each opcode exactly once and generates tool
   t.true(catalog.length > 80);
   t.deepEqual(
     catalog.map((entry) => entry.mnemonic),
-    [...catalog.map((entry) => entry.mnemonic)].sort(),
+    catalog.map((entry) => entry.mnemonic).toSorted(),
   );
   t.is(catalog.find((entry) => entry.mnemonic === "LDA")?.modes.length, 15);
   t.deepEqual(

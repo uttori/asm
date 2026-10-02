@@ -68,22 +68,22 @@ test("sidecar protocol rejects replayed sequences, invalid versions, and malform
   const parser = new DebugSidecarMessageParser();
   parser.push(encodeDebugSidecarMessage(request(2)));
   const replay = t.throws(() => parser.push(encodeDebugSidecarMessage(request(1))));
-  t.regex(replay?.message ?? "", /not greater than 2/);
+  t.regex(replay.message, /not greater than 2/);
 
   const wrongVersion = { ...request(1), version: 99 };
   const version = t.throws(() => assertDebugSidecarMessage(wrongVersion));
-  t.regex(version?.message ?? "", /protocol version/);
+  t.regex(version.message, /protocol version/);
 
   const malformed = new DebugSidecarMessageParser();
   const frame = Buffer.from([0, 0, 0, 1, 0xff]);
   const json = t.throws(() => malformed.push(frame));
-  t.regex(json?.message ?? "", /invalid JSON/);
+  t.regex(json.message, /invalid JSON/);
 
   const oversized = new DebugSidecarMessageParser(limits({ maxFrameBytes: 32 }));
   const header = Buffer.alloc(4);
   header.writeUInt32BE(33);
   const size = t.throws(() => oversized.push(header));
-  t.regex(size?.message ?? "", /above the configured limit/);
+  t.regex(size.message, /above the configured limit/);
 });
 
 test("sidecar request limits reject unsafe emulator work before dispatch", (t) => {
@@ -92,12 +92,12 @@ test("sidecar request limits reject unsafe emulator work before dispatch", (t) =
       request(1, "readMemory", { count: DEFAULT_DEBUG_SIDECAR_LIMITS.maxMemoryReadBytes + 1 }),
     ),
   );
-  t.regex(memory?.message ?? "", /Memory read count/);
+  t.regex(memory.message, /Memory read count/);
 
   const disassembly = t.throws(() =>
     assertDebugSidecarMessage(request(1, "disassemble", { count: -1 })),
   );
-  t.regex(disassembly?.message ?? "", /Disassembly count/);
+  t.regex(disassembly.message, /Disassembly count/);
 
   const breakpoints = t.throws(() =>
     assertDebugSidecarMessage(
@@ -109,14 +109,14 @@ test("sidecar request limits reject unsafe emulator work before dispatch", (t) =
       }),
     ),
   );
-  t.regex(breakpoints?.message ?? "", /Breakpoint count/);
+  t.regex(breakpoints.message, /Breakpoint count/);
 
   const trace = t.throws(() =>
     assertDebugSidecarMessage(
       request(1, "readTrace", { maxEvents: DEFAULT_DEBUG_SIDECAR_LIMITS.maxTraceBatchEvents + 1 }),
     ),
   );
-  t.regex(trace?.message ?? "", /Trace batch size/);
+  t.regex(trace.message, /Trace batch size/);
 });
 
 test("sidecar sessions are unpredictable and outgoing backpressure is bounded", (t) => {
@@ -137,7 +137,7 @@ test("sidecar sessions are unpredictable and outgoing backpressure is bounded", 
   t.is(queue.length, 1);
   t.true(queue.bytes > 0);
   const overflow = t.throws(() => queue.enqueue(request(2)));
-  t.regex(overflow?.message ?? "", /backpressure limit/);
+  t.regex(overflow.message, /backpressure limit/);
   t.truthy(queue.dequeue());
   t.is(queue.length, 0);
   t.is(queue.bytes, 0);

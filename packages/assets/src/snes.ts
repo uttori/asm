@@ -58,8 +58,8 @@ export function decodePlanarTiles(bytes: Uint8Array, depth: PlanarDepth): Tile[]
   const size = depth * 8;
   const count = unitCount(bytes, size, "Planar tile stream");
   return Array.from({ length: count }, (_, tileIndex) =>
-    Array.from({ length: 8 }, (_, row) =>
-      Array.from({ length: 8 }, (_, column) => {
+    Array.from({ length: 8 }, (_row, row) =>
+      Array.from({ length: 8 }, (_column, column) => {
         let pixel = 0;
         for (let plane = 0; plane < depth; plane++) {
           const byte = bytes[tileIndex * size + planeOffset(depth, plane, row)];
@@ -101,8 +101,8 @@ export function encodePlanarTiles(tiles: readonly Tile[], depth: PlanarDepth): U
 export function decodeMode7Tiles(bytes: Uint8Array): Tile[] {
   const count = unitCount(bytes, 64, "Mode 7 tile stream");
   return Array.from({ length: count }, (_, tileIndex) =>
-    Array.from({ length: 8 }, (_, row) =>
-      Array.from({ length: 8 }, (_, column) => bytes[tileIndex * 64 + row * 8 + column]),
+    Array.from({ length: 8 }, (_row, row) =>
+      Array.from({ length: 8 }, (_column, column) => bytes[tileIndex * 64 + row * 8 + column]),
     ),
   );
 }
@@ -221,7 +221,7 @@ export function decodeBrrBlocks(bytes: Uint8Array): BrrBlock[] {
   return Array.from({ length: count }, (_, blockIndex) => {
     const offset = blockIndex * 9;
     const header = bytes[offset];
-    const nibbles = Array.from({ length: 16 }, (_, sampleIndex) => {
+    const nibbles = Array.from({ length: 16 }, (_sample, sampleIndex) => {
       const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
       const nibble = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
       return nibble >= 8 ? nibble - 16 : nibble;
@@ -262,6 +262,9 @@ export function encodeBrrBlocks(blocks: readonly BrrBlock[]): Uint8Array {
   return bytes;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 const sameModelValue = (left: unknown, right: unknown): boolean => {
   if (Object.is(left, right)) {
     return true;
@@ -272,25 +275,102 @@ const sameModelValue = (left: unknown, right: unknown): boolean => {
       left.every((entry, index) => sameModelValue(entry, right[index]))
     );
   }
-  if (
-    !left ||
-    !right ||
-    typeof left !== "object" ||
-    typeof right !== "object" ||
-    Array.isArray(left) ||
-    Array.isArray(right)
-  ) {
+  if (!isRecord(left) || !isRecord(right)) {
     return false;
   }
-  const leftRecord = left as Record<string, unknown>;
-  const rightRecord = right as Record<string, unknown>;
-  const keys = Object.keys(leftRecord);
+  const keys = Object.keys(left);
   return (
-    keys.length === Object.keys(rightRecord).length &&
-    keys.every(
-      (key) => Object.hasOwn(rightRecord, key) && sameModelValue(leftRecord[key], rightRecord[key]),
-    )
+    keys.length === Object.keys(right).length &&
+    keys.every((key) => Object.hasOwn(right, key) && sameModelValue(left[key], right[key]))
   );
+};
+
+const readNumber = (value: unknown, label: string): number => {
+  if (typeof value !== "number") {
+    throw new TypeError(`${label} must be a number.`);
+  }
+  return value;
+};
+
+const readTiles = (value: unknown): Tile[] => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tile model 'tiles' must be an array.");
+  }
+  return value.map((tile, tileIndex) => {
+    if (!Array.isArray(tile)) {
+      throw new TypeError(`Tile ${tileIndex} must be an array of rows.`);
+    }
+    return tile.map((row, rowIndex) => {
+      if (!Array.isArray(row)) {
+        throw new TypeError(`Tile ${tileIndex} row ${rowIndex} must be an array of pixels.`);
+      }
+      return row.map((pixel, column) =>
+        readNumber(pixel, `Tile ${tileIndex} pixel ${column},${rowIndex}`),
+      );
+    });
+  });
+};
+
+const readColors = (value: unknown): Bgr555Color[] => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native palette model 'colors' must be an array.");
+  }
+  return value.map((color, index) => {
+    if (!isRecord(color)) {
+      throw new TypeError(`Color ${index} must be an object.`);
+    }
+    return {
+      red: readNumber(color.red, `Color ${index} red`),
+      green: readNumber(color.green, `Color ${index} green`),
+      blue: readNumber(color.blue, `Color ${index} blue`),
+      unusedHighBit: readNumber(color.unusedHighBit, `Color ${index} unusedHighBit`),
+    };
+  });
+};
+
+const readEntries = (value: unknown): BgMapEntry[] => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'entries' must be an array.");
+  }
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new TypeError(`Entry ${index} must be an object.`);
+    }
+    return {
+      tile: readNumber(entry.tile, `Entry ${index} tile`),
+      palette: readNumber(entry.palette, `Entry ${index} palette`),
+      priority: readNumber(entry.priority, `Entry ${index} priority`),
+      horizontalFlip: readNumber(entry.horizontalFlip, `Entry ${index} horizontalFlip`),
+      verticalFlip: readNumber(entry.verticalFlip, `Entry ${index} verticalFlip`),
+    };
+  });
+};
+
+const readIndexes = (value: unknown): number[] => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'indexes' must be an array.");
+  }
+  return value.map((entry, index) => readNumber(entry, `Index ${index}`));
+};
+
+const readBlocks = (value: unknown): BrrBlock[] => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native BRR model 'blocks' must be an array.");
+  }
+  return value.map((block, index) => {
+    if (!isRecord(block) || !Array.isArray(block.nibbles)) {
+      throw new TypeError(`BRR block ${index} must be an object with nibbles.`);
+    }
+    return {
+      range: readNumber(block.range, `BRR block ${index} range`),
+      filter: readNumber(block.filter, `BRR block ${index} filter`),
+      loop: readNumber(block.loop, `BRR block ${index} loop`),
+      end: readNumber(block.end, `BRR block ${index} end`),
+      nibbles: block.nibbles.map((nibble, sampleIndex) =>
+        readNumber(nibble, `BRR nibble ${sampleIndex}`),
+      ),
+    };
+  });
 };
 
 const nativeEncoder = (
@@ -310,10 +390,10 @@ const nativeEncoder = (
       if (Object.keys(options).length !== 0) {
         throw new Error(`Native encoder '${id}' accepts no options.`);
       }
-      if (!document.value || typeof document.value !== "object" || Array.isArray(document.value)) {
+      if (!isRecord(document.value)) {
         throw new Error(`Native encoder '${id}' requires an object model.`);
       }
-      const value = document.value as Record<string, unknown>;
+      const value = document.value;
       const bytes = encode(value);
       // The exact fidelity record is earned by reconstructing the supplied native model.
       if (!sameModelValue(decode(bytes), value[modelField])) {
@@ -336,7 +416,7 @@ export const snesNativeEncoders: readonly AssetEncoder[] = Object.freeze(
         "snes-planar-tiles",
         "tiles",
         "tiles",
-        (value) => encodePlanarTiles(value.tiles as readonly Tile[], depth),
+        (value) => encodePlanarTiles(readTiles(value.tiles), depth),
         (bytes) => decodePlanarTiles(bytes, depth),
       ),
     ),
@@ -345,7 +425,7 @@ export const snesNativeEncoders: readonly AssetEncoder[] = Object.freeze(
       "snes-mode7-tiles",
       "tiles",
       "tiles",
-      (value) => encodeMode7Tiles(value.tiles as readonly Tile[]),
+      (value) => encodeMode7Tiles(readTiles(value.tiles)),
       decodeMode7Tiles,
     ),
     nativeEncoder(
@@ -353,7 +433,7 @@ export const snesNativeEncoders: readonly AssetEncoder[] = Object.freeze(
       "snes-palette-bgr555",
       "palette",
       "colors",
-      (value) => encodeBgr555(value.colors as readonly Bgr555Color[]),
+      (value) => encodeBgr555(readColors(value.colors)),
       decodeBgr555,
     ),
     nativeEncoder(
@@ -361,7 +441,7 @@ export const snesNativeEncoders: readonly AssetEncoder[] = Object.freeze(
       "snes-bg-tilemap",
       "tilemap",
       "entries",
-      (value) => encodeBgMap(value.entries as readonly BgMapEntry[]),
+      (value) => encodeBgMap(readEntries(value.entries)),
       decodeBgMap,
     ),
     nativeEncoder(
@@ -369,7 +449,7 @@ export const snesNativeEncoders: readonly AssetEncoder[] = Object.freeze(
       "snes-mode7-tilemap",
       "tilemap",
       "indexes",
-      (value) => encodeMode7Map(value.indexes as readonly number[]),
+      (value) => encodeMode7Map(readIndexes(value.indexes)),
       decodeMode7Map,
     ),
     nativeEncoder(
@@ -377,8 +457,8 @@ export const snesNativeEncoders: readonly AssetEncoder[] = Object.freeze(
       "snes-brr",
       "brr",
       "blocks",
-      (value) => encodeBrrBlocks(value.blocks as readonly BrrBlock[]),
+      (value) => encodeBrrBlocks(readBlocks(value.blocks)),
       decodeBrrBlocks,
     ),
-  ].sort((left, right) => left.id.localeCompare(right.id)),
+  ].toSorted((left, right) => left.id.localeCompare(right.id)),
 );

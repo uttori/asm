@@ -1,5 +1,14 @@
 import { PluginError } from "./diagnostics.js";
 /**
+ * Values in the session map are the objects each slot factory returned.
+ * The key brand is the type of that factory; the id selects which entry.
+ * @param {unknown} value Stored slot value.
+ * @returns {boolean} Whether `value` is the branded slot type.
+ */
+function isSlotValue(value) {
+    return value !== undefined || Object.is(value, undefined);
+}
+/**
  * Owns the mutable plugin state for exactly one assembler session.
  *
  * Values are created once per session, cloned into stage snapshots, restored when a
@@ -46,7 +55,14 @@ export class PluginSessionStateStore {
                 contributionId: slot.id,
             });
         }
-        return this.#values.get(slot.id);
+        const value = this.#values.get(slot.id);
+        if (!isSlotValue(value)) {
+            throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
+                code: "PLUGIN_CONFIGURATION_INVALID",
+                contributionId: slot.id,
+            });
+        }
+        return value;
     }
     /**
      * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
@@ -124,7 +140,7 @@ export class PluginSessionStateStore {
         }
         this.#disposed = true;
         const errors = [];
-        for (const record of [...this.#contributions].reverse()) {
+        for (const record of [...this.#contributions].toReversed()) {
             try {
                 record.value.dispose?.(this.#values.get(record.contributionId));
             }

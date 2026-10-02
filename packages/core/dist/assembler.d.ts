@@ -494,7 +494,9 @@ export declare class Assembler {
      * or factory failure. Factory construction is not a resource transaction: keep external resources
      * in plugin activation disposables and session state cloneable.
      */
-    constructor(options: AssemblerOptions);
+    constructor(options: Omit<AssemblerOptions, "environment"> & {
+        environment?: AssemblerOptions["environment"];
+    });
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
     runBeforeDirective(keyword: string, words: readonly string[], raw: string): "continue" | "handled";
     /**

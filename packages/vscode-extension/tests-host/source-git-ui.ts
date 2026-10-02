@@ -18,6 +18,14 @@ interface GitApi {
   openRepository(uri: vscode.Uri): Promise<GitRepository | null>;
 }
 
+const uriField = (value: unknown, key: string): vscode.Uri | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const field = Reflect.get(value, key);
+  return field instanceof vscode.Uri ? field : undefined;
+};
+
 /** Poll an observable editor state; timeouts fail instead of assuming a command completed. */
 async function until(predicate: () => boolean, description: string): Promise<void> {
   const deadline = Date.now() + 30000;
@@ -39,14 +47,21 @@ export async function runSourceGitUiSmoke(folder: vscode.WorkspaceFolder): Promi
   const incoming = `codex/native-incoming-${stamp}`;
   const relative = "disassembly/banks/bank-008.asm";
   const uri = vscode.Uri.file(path.join(root, relative));
-  const report: Record<string, unknown> = {
+  const checks: string[] = [];
+  const report: {
+    editor: string;
+    branch: string;
+    incoming: string;
+    success: boolean;
+    checks: string[];
+    error?: string;
+  } = {
     editor: vscode.version,
     branch,
     incoming,
     success: false,
-    checks: [],
+    checks,
   };
-  const checks = report.checks as string[];
   let added = false;
   let inWorkspace = false;
   try {
@@ -83,7 +98,7 @@ export async function runSourceGitUiSmoke(folder: vscode.WorkspaceFolder): Promi
     await vscode.commands.executeCommand("asm.source.select", vscode.Uri.file(root));
     const before = await vscode.commands.executeCommand<SnesSourceBuild>("asm.source.build");
     assert.ok(
-      before?.outputFile.startsWith(root + path.sep),
+      before.outputFile.startsWith(root + path.sep),
       "Build must use the selected nested source root.",
     );
     assert.equal(
@@ -118,21 +133,19 @@ export async function runSourceGitUiSmoke(folder: vscode.WorkspaceFolder): Promi
     await vscode.commands.executeCommand("git.openMergeEditor", uri);
     // Git owns the merge editor entry point and its index-stage mapping. Production
     // code does not call the private merge editor API or depend on its tab class.
-    type MergeInput = {
-      base?: vscode.Uri;
-      input1?: vscode.Uri;
-      input2?: vscode.Uri;
-      result?: vscode.Uri;
-    };
     const mergeTab = () =>
       vscode.window.tabGroups.all
         .flatMap((group) => group.tabs)
-        .find((tab) => (tab.input as MergeInput | undefined)?.result?.fsPath === uri.fsPath);
+        .find((tab) => uriField(tab.input, "result")?.fsPath === uri.fsPath);
     await until(() => !!mergeTab(), "Native Git did not open a three-way merge tab.");
-    const input = mergeTab()!.input as Required<MergeInput>;
-    const base = await vscode.workspace.openTextDocument(input.base);
-    const first = await vscode.workspace.openTextDocument(input.input1);
-    const second = await vscode.workspace.openTextDocument(input.input2);
+    const input = mergeTab()?.input;
+    const baseUri = uriField(input, "base");
+    const firstUri = uriField(input, "input1");
+    const secondUri = uriField(input, "input2");
+    assert.ok(baseUri && firstUri && secondUri);
+    const base = await vscode.workspace.openTextDocument(baseUri);
+    const first = await vscode.workspace.openTextDocument(firstUri);
+    const second = await vscode.workspace.openTextDocument(secondUri);
     assert.equal(base.getText(), original);
     assert.ok(
       [first.getText(), second.getText()].some((text) =>
@@ -183,12 +196,12 @@ export async function runSourceGitUiSmoke(folder: vscode.WorkspaceFolder): Promi
     );
     await vscode.commands.executeCommand("asm.source.refresh");
     const after = await vscode.commands.executeCommand<SnesSourceBuild>("asm.source.build");
-    assert.ok(after?.outputFile);
+    assert.ok(after.outputFile);
     assert.deepEqual(fs.readFileSync(after.outputFile), fs.readFileSync(before.outputFile));
     await sourceGit(root, ["switch", incoming]);
     await vscode.commands.executeCommand("asm.source.refresh");
     const switched = await vscode.commands.executeCommand<SnesSourceBuild>("asm.source.build");
-    assert.ok(switched?.outputFile);
+    assert.ok(switched.outputFile);
     assert.deepEqual(fs.readFileSync(switched.outputFile), fs.readFileSync(before.outputFile));
     checks.push("external branch switch refreshes source inputs and keeps exact full-ROM builds");
     report.success = true;

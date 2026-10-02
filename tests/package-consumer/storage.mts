@@ -15,7 +15,6 @@ import {
   sourceGit,
   openSourceProject,
   type ProjectLabel,
-  type SqliteAnalysisStore,
 } from "@uttori/asm-disassembler";
 import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import {
@@ -23,14 +22,25 @@ import {
   SnesProjectInitializationCancelledError,
 } from "@uttori/asm-plugin-snes";
 
-/** Compile-only checks: consumers must prepare asynchronous work outside a transaction. */
-const checkCallbackTypes = (store: SqliteAnalysisStore): void => {
-  // @ts-expect-error Async callbacks would escape the transaction's lifetime.
-  void store.transaction(async () => 1);
-  // @ts-expect-error Returning a Promise without async has the same lifetime problem.
-  void store.transaction(() => Promise.resolve(1));
-};
-void checkCallbackTypes;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function isSnesSourceBuild(value: unknown): value is SnesSourceBuild {
+  return isRecord(value) && typeof value.outputFile === "string";
+}
+
+function isPreparedSnesGeneration(value: unknown): value is PreparedSnesGeneration {
+  return (
+    isRecord(value) && isRecord(value.generation) && typeof value.generation.commit === "string"
+  );
+}
+
+function readPhase(value: unknown): string {
+  if (!isRecord(value) || typeof value.phase !== "string") {
+    throw new Error("Source apply result is missing its phase.");
+  }
+  return value.phase;
+}
 
 /** Synthetic LoROM with a reset vector into NOP/NOP/STP and an explicit cartridge header. */
 const fixtureRom = (headerSize: number): Uint8Array => {
@@ -62,10 +72,13 @@ try {
     });
     assert.equal(run.status, 0, `${run.error ?? ""}\n${run.stderr}\n${run.stdout}`);
     const source = path.join(workspace, "source");
-    const built = (await executeSourceOperation({
+    const built = await executeSourceOperation({
       action: "build",
       directory: source,
-    })) as SnesSourceBuild;
+    });
+    if (!isSnesSourceBuild(built)) {
+      throw new Error("Source build did not return an output file.");
+    }
     assert.deepEqual(
       fs.readFileSync(built.outputFile),
       fs.readFileSync(romFile).subarray(headerSize),
@@ -127,21 +140,24 @@ try {
   ]);
   await sourceGit(sourceDirectory, ["commit", "-m", "Declare research maps"]);
   for (let pass = 0; pass < 2; pass++) {
-    const prepared = (await executeSourceOperation({
+    const prepared = await executeSourceOperation({
       action: "prepare",
       directory: sourceDirectory,
-    })) as PreparedSnesGeneration;
+    });
+    if (!isPreparedSnesGeneration(prepared)) {
+      throw new Error("Source prepare did not return a generation commit.");
+    }
     await executeSourceOperation({
       action: "preview",
       directory: sourceDirectory,
       candidate: prepared.generation.commit,
     });
-    const applied = (await executeSourceOperation({
+    const applied = await executeSourceOperation({
       action: "apply",
       directory: sourceDirectory,
       candidate: prepared.generation.commit,
-    })) as { phase: string };
-    if (["merging", "committed"].includes(applied.phase)) {
+    });
+    if (["merging", "committed"].includes(readPhase(applied))) {
       await executeSourceOperation({ action: "finish", directory: sourceDirectory });
     }
     assert.equal(fs.readFileSync(ramFile, "utf8"), ramInput);
@@ -154,10 +170,13 @@ try {
       fs.readFileSync(path.join(sourceDirectory, "source/structs.asm"), "utf8"),
       /Levels/,
     );
-    const built = (await executeSourceOperation({
+    const built = await executeSourceOperation({
       action: "build",
       directory: sourceDirectory,
-    })) as SnesSourceBuild;
+    });
+    if (!isSnesSourceBuild(built)) {
+      throw new Error("Source build did not return an output file.");
+    }
     assert.deepEqual(
       fs.readFileSync(built.outputFile),
       fs.readFileSync(path.join(scratch, "fixture-0.sfc")),
@@ -211,16 +230,13 @@ try {
   assert.throws(() =>
     commitAnalysisProjectViewUpdate(directory, loadAnalysisProjectViewSnapshot(directory), {
       ...updates,
-      labels: updates.labels.map((label) => ({
-        ...label,
-        address: -1,
-      })),
+      labels: updates.labels.map((label) => Object.assign({}, label, { address: -1 })),
     }),
   );
   assert.deepEqual(loadAnalysisProjectSnapshot(directory), saved);
 
   const view = loadAnalysisProjectViewSnapshot(directory);
-  const labels = view.view.labels as ProjectLabel[];
+  const labels: ProjectLabel[] = [...view.view.labels];
   labels.push({
     id: "extra",
     name: "Extra",
@@ -267,7 +283,7 @@ try {
       store.publishManifest(beforeFailure.manifest);
       return true;
     };
-    assert.throws(() => store.transaction(asyncAction as unknown as () => boolean), /synchronous/);
+    assert.throws(() => store.transaction(asyncAction), /synchronous/);
   } finally {
     store.close();
   }

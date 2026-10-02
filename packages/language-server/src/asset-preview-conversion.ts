@@ -1,11 +1,11 @@
 /** Portable conversion used by the editor worker; the assembler uses the same asset library. */
-import { AssetRegistry, convertAsset, type AssetInput } from "@uttori/asm-assets";
+import { AssetRegistry, convertAsset, type AssetInput, type AssetOutput } from "@uttori/asm-assets";
 import {
   decodeBrrPcm,
+  readPcmAudio,
   waveImporter,
   withAudioEncoder,
   writePcmWave,
-  type PcmAudio,
 } from "@uttori/asm-assets/audio";
 import { rawEncoder, rawImporter, jsonImporter } from "@uttori/asm-assets/data";
 import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
@@ -23,14 +23,15 @@ import {
 import {
   convertRoomAsset,
   parseRoomAsset,
+  parseRoomPreview,
   renderRoomAsset,
-  RoomPreview,
 } from "@uttori/asm-assets/secret-of-mana/som-room-assets";
 import {
   parseSpritePaletteCatalog,
   readSpritePaletteCatalog,
   spritePaletteBytes,
   spritePalettePreview,
+  type SpritePaletteRecord,
 } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
 
@@ -128,19 +129,20 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
   const image = inspected.image;
-  if (image.kind !== "indexed-image") {
-    throw new Error("Frame atlas preview requires an indexed PNG.");
-  }
   const rgba = new Uint8Array(image.width * image.height * 4);
   for (let pixel = 0; pixel < image.indexes.length; pixel++) {
-    const color = image.palette[image.indexes[pixel]];
+    const colorIndex = image.indexes[pixel];
+    const color: readonly [number, number, number, number] | undefined =
+      colorIndex >= 0 && colorIndex < image.palette.length ? image.palette[colorIndex] : undefined;
     if (!color) {
       throw new Error(`Frame atlas pixel ${pixel} has no palette color.`);
     }
     rgba.set(color, pixel * 4);
   }
   const paletteId = layout.paletteRefs[layout.segments[segment].palette];
-  const palette = catalog.palettes[paletteId];
+  const palette: SpritePaletteRecord | undefined = Object.hasOwn(catalog.palettes, paletteId)
+    ? catalog.palettes[paletteId]
+    : undefined;
   if (!palette) {
     throw new Error(`Unknown sprite palette ${paletteId}.`);
   }
@@ -210,21 +212,20 @@ function convertSomRoomPreview(input: AssetPreviewInput): AssetPreviewResult {
     throw new Error(`Unknown room output '${output}'.`);
   }
   const resourcePath = input.options.preview;
-  if (typeof resourcePath !== "string" || !input.resources[resourcePath]) {
+  const resource: AssetInput | undefined =
+    typeof resourcePath === "string" && Object.hasOwn(input.resources, resourcePath)
+      ? input.resources[resourcePath]
+      : undefined;
+  if (!resource) {
     throw new Error("Room preview requires its shared preview JSON resource.");
   }
-  const resource = input.resources[resourcePath];
   if (resource.mediaType !== "application/json") {
     throw new Error("Room preview resource must be JSON.");
   }
   const room = parseRoomAsset(input.source);
-  const preview = renderRoomAsset(
-    room,
-    JSON.parse(new TextDecoder().decode(resource.bytes)) as RoomPreview,
-    {
-      layer: input.options.layer,
-    },
-  );
+  const preview = renderRoomAsset(room, parseRoomPreview(resource.bytes), {
+    layer: input.options.layer,
+  });
   return {
     kind: "image",
     sourceBytes: input.source.bytes.length,
@@ -261,7 +262,7 @@ function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
   }
   const converted = convertBrrWave(input.source, input.options).outputs.brr;
   const native = converted.bytes;
-  const sourceAudio = waveImporter.import(input.source).value as PcmAudio;
+  const sourceAudio = readPcmAudio(waveImporter.import(input.source).value);
   const segment = input.format === "som.brr.segment";
   const selected = segment ? sliceBrrSegment(native, input.options) : native;
   const decoded = decodeBrrPcm(native);
@@ -303,7 +304,9 @@ export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResul
   }
   const result = convertAsset(registry, input);
   const outputName = input.output ?? result.primaryOutput;
-  const selected = result.outputs[outputName];
+  const selected: AssetOutput | undefined = Object.hasOwn(result.outputs, outputName)
+    ? result.outputs[outputName]
+    : undefined;
   if (!selected) {
     throw new Error(`Asset format '${input.format}' has no output '${outputName}'.`);
   }
@@ -314,7 +317,9 @@ export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResul
     output: outputName,
     metadata: selected.metadata,
   };
-  const preview = result.outputs.preview;
+  const preview: AssetOutput | undefined = Object.hasOwn(result.outputs, "preview")
+    ? result.outputs.preview
+    : undefined;
   if (preview?.mediaType === "application/x-rgba") {
     const width = Number(preview.metadata?.width);
     const height = Number(preview.metadata?.height);
@@ -339,8 +344,11 @@ export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResul
     };
   }
   if (result.document.kind === "pcm-audio" && result.encoder.id === "snes.brr") {
-    const audio = result.document.value as PcmAudio;
-    const decodedWav = result.outputs.reviewWav?.bytes;
+    const audio = readPcmAudio(result.document.value);
+    const reviewWav: AssetOutput | undefined = Object.hasOwn(result.outputs, "reviewWav")
+      ? result.outputs.reviewWav
+      : undefined;
+    const decodedWav = reviewWav?.bytes;
     if (!decodedWav) {
       throw new Error("BRR preview omitted its decoded review WAVE.");
     }

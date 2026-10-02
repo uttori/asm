@@ -10,6 +10,17 @@ import type { PngDocument } from "../src/assets/png-document.js";
 import { PngEditor } from "../src/assets/png-editor.js";
 import { readPngGuidance } from "../src/assets/png-guidance.js";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isIndexedImage = (value: unknown): value is IndexedImage =>
+  isRecord(value) &&
+  value.kind === "indexed-image" &&
+  typeof value.width === "number" &&
+  typeof value.height === "number" &&
+  value.indexes instanceof Uint8Array &&
+  Array.isArray(value.palette);
+
 /** A real binary custom document with a test-only DOM driver for its pixel canvas. */
 export async function runPngEditorSmoke(
   folder: vscode.WorkspaceFolder,
@@ -19,7 +30,10 @@ export async function runPngEditorSmoke(
   const before = await fs.readFile(uri.fsPath);
   const imported = pngImporter.import({ bytes: before, mediaType: "image/png" });
   assert.equal(imported.kind, "indexed-image");
-  const original = imported.value as IndexedImage;
+  if (!isIndexedImage(imported.value)) {
+    assert.fail("PNG import did not produce an indexed image.");
+  }
+  const original = imported.value;
   const region = (await readPngGuidance(uri.fsPath, original))!.regions[0];
   const pixel = region.y * original.width + region.x;
   const selected =

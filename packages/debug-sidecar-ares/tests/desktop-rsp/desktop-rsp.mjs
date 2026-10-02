@@ -129,6 +129,11 @@ async function execute(action) {
     subscription?.dispose();
   }
 }
+/**
+ * @param {import("node:child_process").ChildProcess} childProcess Child process to check.
+ * @returns {boolean} True while the process has neither exited nor been signaled.
+ */
+const isRunning = (childProcess) => childProcess.exitCode === null && !childProcess.signalCode;
 try {
   client = await connect();
   await delay(150); // A connected socket alone must leave boot held.
@@ -259,7 +264,7 @@ try {
   if (child.exitCode === null && !child.signalCode) {
     child.kill("SIGTERM");
     await Promise.race([new Promise((resolve) => child.once("exit", resolve)), delay(3000)]);
-    if (child.exitCode === null && !child.signalCode) {
+    if (isRunning(child)) {
       child.kill("SIGKILL");
     }
   }

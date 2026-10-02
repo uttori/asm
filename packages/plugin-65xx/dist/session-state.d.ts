@@ -18,9 +18,7 @@ export interface Nes65xxSessionState {
     segmentLoadStart: number;
     segmentRunStart: number;
 }
-/**
- * Branded key for `SessionStateStore.get`. The brand is compile-time only.
- */
+/** Branded key for `SessionStateStore.get`. The brand is compile-time only. */
 export declare const nes65xxSessionStateKey: SessionStateKey<Nes65xxSessionState>;
 /**
  * Deep-clones mutable nested fields so pass clones cannot share cursors.

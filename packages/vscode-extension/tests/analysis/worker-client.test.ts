@@ -9,17 +9,118 @@ import {
   RomImage,
   publishAnalysisProject,
   type AnalysisProject,
-  type RomCoverageMap,
-  type RomCoverageSegment,
-  type InstructionAnalysisAnnotation,
-  type AnalysisSourceSummary,
-  type AnalysisSourceEntry,
-  type AnalysisEvidenceSource,
 } from "@uttori/asm-disassembler";
 import test from "ava";
 import { build } from "esbuild";
 
 import { AnalysisWorkerClient } from "../../src/analysis/worker-client.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSources(
+  value: unknown,
+): value is { readonly sources: readonly { readonly id: string }[] } {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.sources) &&
+    value.sources.every((source) => isRecord(source) && typeof source.id === "string")
+  );
+}
+
+function isSourceSummary(value: unknown): value is {
+  readonly summary: { readonly instructionCount: number; readonly contributionCount: number };
+} {
+  return (
+    isRecord(value) &&
+    isRecord(value.summary) &&
+    typeof value.summary.instructionCount === "number" &&
+    typeof value.summary.contributionCount === "number"
+  );
+}
+
+function isCoverage(value: unknown): value is {
+  readonly summary: { readonly totalBytes: number; readonly classifiedBytes: number };
+  readonly segments: readonly unknown[];
+} {
+  return (
+    isRecord(value) &&
+    isRecord(value.summary) &&
+    typeof value.summary.totalBytes === "number" &&
+    typeof value.summary.classifiedBytes === "number" &&
+    Array.isArray(value.segments)
+  );
+}
+
+function isSegments(
+  value: unknown,
+): value is readonly { readonly start: number; readonly end: number }[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (segment) =>
+        isRecord(segment) && typeof segment.start === "number" && typeof segment.end === "number",
+    )
+  );
+}
+
+function isAnnotationRows(value: unknown): value is readonly {
+  readonly annotation: {
+    readonly stateObservations: readonly { readonly state: unknown; readonly evidence: unknown }[];
+  };
+}[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (row) =>
+        isRecord(row) &&
+        isRecord(row.annotation) &&
+        Array.isArray(row.annotation.stateObservations) &&
+        row.annotation.stateObservations.every((observation) => isRecord(observation)),
+    )
+  );
+}
+
+function isDetails(value: unknown): value is readonly { readonly description: string }[] {
+  return (
+    Array.isArray(value) &&
+    value.every((detail) => isRecord(detail) && typeof detail.description === "string")
+  );
+}
+
+function isPid(value: unknown): value is { readonly pid: number } {
+  return isRecord(value) && typeof value.pid === "number";
+}
+
+function isPidArgs(
+  value: unknown,
+): value is { readonly pid: number; readonly args: readonly string[] } {
+  return (
+    isRecord(value) &&
+    typeof value.pid === "number" &&
+    Array.isArray(value.args) &&
+    value.args.every((arg) => typeof arg === "string")
+  );
+}
+
+async function pidOf(pending: Promise<unknown>): Promise<{ readonly pid: number }> {
+  const value = await pending;
+  if (!isPid(value)) {
+    throw new Error("expected worker pid");
+  }
+  return value;
+}
+
+async function pidArgsOf(
+  pending: Promise<unknown>,
+): Promise<{ readonly pid: number; readonly args: readonly string[] }> {
+  const value = await pending;
+  if (!isPidArgs(value)) {
+    throw new Error("expected worker pid and args");
+  }
+  return value;
+}
 
 test("analysis worker isolates validated shards, serves bounded pages, invalidates and recovers", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-worker-test-"));
@@ -99,12 +200,13 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     database.exec(
       "INSERT INTO analysis (id, kind, payload) VALUES ('invalid', 'conflict', 'invalid json')",
     );
-    let sources: readonly AnalysisEvidenceSource[];
+    let sources: readonly { readonly id: string }[];
     try {
-      ({ sources } = await client.request<{ sources: readonly AnalysisEvidenceSource[] }>(
-        projectDirectory,
-        "sources",
-      ));
+      const catalog = await client.request(projectDirectory, "sources");
+      if (!isSources(catalog)) {
+        throw new Error("expected sources");
+      }
+      ({ sources } = catalog);
       t.is(sources.length, 1, "source listing needs no runtime or CFG table");
       await t.notThrowsAsync(
         client.request(projectDirectory, "sourceSummary", { sourceId: sources[0].id }),
@@ -114,32 +216,26 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       database.close();
     }
     const sourceId = sources![0].id;
-    const sourceSummary = await client.request<{ summary: AnalysisSourceSummary }>(
-      projectDirectory,
-      "sourceSummary",
-      { sourceId },
-    );
+    const sourceSummary = await client.request(projectDirectory, "sourceSummary", { sourceId });
+    if (!isSourceSummary(sourceSummary)) {
+      throw new Error("expected source summary");
+    }
     t.is(sourceSummary.summary.instructionCount, 300);
     t.is(sourceSummary.summary.contributionCount, 600);
-    t.is(
-      (
-        await client.request<AnalysisSourceEntry[]>(projectDirectory, "sourceEntries", {
-          sourceId,
-          sourceGroup: "instructions",
-        })
-      ).length,
-      200,
-    );
-    t.is(
-      (
-        await client.request<AnalysisSourceEntry[]>(projectDirectory, "sourceEntries", {
-          sourceId,
-          sourceGroup: "instructions",
-          offset: 200,
-        })
-      ).length,
-      100,
-    );
+    const instructionPage = await client.request(projectDirectory, "sourceEntries", {
+      sourceId,
+      sourceGroup: "instructions",
+    });
+    const instructionOffset = await client.request(projectDirectory, "sourceEntries", {
+      sourceId,
+      sourceGroup: "instructions",
+      offset: 200,
+    });
+    if (!Array.isArray(instructionPage) || !Array.isArray(instructionOffset)) {
+      throw new Error("expected source entries");
+    }
+    t.is(instructionPage.length, 200);
+    t.is(instructionOffset.length, 100);
     const navigationTarget = {
       projectDirectory,
       target: "fixture",
@@ -167,46 +263,52 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       request,
       "concurrent projections are deduplicated",
     );
-    const map = (await request) as RomCoverageMap;
+    const map = await request;
+    if (!isCoverage(map)) {
+      throw new Error("expected coverage");
+    }
     t.is(map.summary.totalBytes, 1024);
     t.is(map.summary.classifiedBytes, 300);
     t.deepEqual(map.segments, [], "summary does not copy full projection to UI");
-    const first = await client.request<RomCoverageSegment[]>(projectDirectory, "segments");
-    const second = await client.request<RomCoverageSegment[]>(projectDirectory, "segments", {
-      offset: 200,
-    });
+    const first = await client.request(projectDirectory, "segments");
+    const second = await client.request(projectDirectory, "segments", { offset: 200 });
+    if (!isSegments(first) || !isSegments(second)) {
+      throw new Error("expected coverage segments");
+    }
     t.is(first.length, 200);
     t.is(first[0].start, 0);
     t.is(second[0].start, first.at(-1)!.end);
     t.true(second.length <= 200);
-    const [annotations, details] = await Promise.all([
-      client.request<{ line: number; annotation: InstructionAnalysisAnnotation }[]>(
-        projectDirectory,
-        "annotations",
-        {
-          ranges: [
-            {
-              architecture: "fixture",
-              addressSpace: "cpu",
-              start: 0,
-              end: 2,
-              sourceId: 0,
-              line: 1,
-            },
-          ],
-        },
-      ),
-      client.request<{ description: string }[]>(projectDirectory, "details"),
+    const [annotationRows, detailRows] = await Promise.all([
+      client.request(projectDirectory, "annotations", {
+        ranges: [
+          {
+            architecture: "fixture",
+            addressSpace: "cpu",
+            start: 0,
+            end: 2,
+            sourceId: 0,
+            line: 1,
+          },
+        ],
+      }),
+      client.request(projectDirectory, "details"),
     ]);
+    if (!isAnnotationRows(annotationRows) || !isDetails(detailRows)) {
+      throw new Error("expected annotations and details");
+    }
+    const annotations = annotationRows;
+    const details = detailRows;
     t.is(annotations.length, 2);
     t.deepEqual(annotations[0].annotation.stateObservations[0].state, { m: true });
     t.deepEqual(annotations[0].annotation.stateObservations[0].evidence, ["test"]);
     t.is(details.length, 200);
     t.is(details[0].description, "non-file-address-space");
-    t.is(
-      (await client.request<unknown[]>(projectDirectory, "details", { offset: 400 })).length,
-      200,
-    );
+    const detailOffset = await client.request(projectDirectory, "details", { offset: 400 });
+    if (!Array.isArray(detailOffset)) {
+      throw new Error("expected detail page");
+    }
+    t.is(detailOffset.length, 200);
     await t.throwsAsync(client.request(projectDirectory, "segments", { offset: -1 }), {
       message: /offset/,
     });
@@ -217,27 +319,23 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       shards: { ...project.shards, annotations: [] },
     });
     client.invalidate();
+    const revisedSummary = await client.request(projectDirectory, "sourceSummary", { sourceId });
+    const revisedCoverage = await client.request(projectDirectory, "coverage");
+    if (!isSourceSummary(revisedSummary) || !isCoverage(revisedCoverage)) {
+      throw new Error("expected revised source projection");
+    }
     t.is(
-      (
-        await client.request<{ summary: AnalysisSourceSummary }>(
-          projectDirectory,
-          "sourceSummary",
-          { sourceId },
-        )
-      ).summary.contributionCount,
+      revisedSummary.summary.contributionCount,
       0,
       "source counts follow committed database revisions",
     );
-    t.is(
-      (await client.request<RomCoverageMap>(projectDirectory, "coverage")).summary.classifiedBytes,
-      0,
-    );
+    t.is(revisedCoverage.summary.classifiedBytes, 0);
     client.dispose();
-    t.is(
-      (await client.request<RomCoverageMap>(projectDirectory, "coverage")).summary.totalBytes,
-      1024,
-      "worker can restart after termination",
-    );
+    const restarted = await client.request(projectDirectory, "coverage");
+    if (!isCoverage(restarted)) {
+      throw new Error("expected restarted coverage");
+    }
+    t.is(restarted.summary.totalBytes, 1024, "worker can restart after termination");
   } finally {
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
@@ -270,21 +368,21 @@ test("interactive annotations bypass bulk work and retain their process when a b
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
   });
-  const bulk = client.request<{ pid: number }>("busy", "coverage");
-  const annotations = client.request<{ pid: number }>("ready", "annotations");
+  const bulk = pidOf(client.request("busy", "coverage"));
+  const annotations = pidOf(client.request("ready", "annotations"));
   t.is(
     await Promise.race([bulk.then(() => "bulk"), annotations.then(() => "annotations")]),
     "annotations",
   );
   const [background, preview] = await Promise.all([bulk, annotations]);
   t.not(background.pid, preview.pid);
-  const editor = await client.request<{ pid: number }>("ready", "manifest");
+  const editor = await pidOf(client.request("ready", "manifest"));
   t.not(editor.pid, preview.pid);
   t.not(editor.pid, background.pid);
-  t.is((await client.request<{ pid: number }>("ready", "manifest")).pid, editor.pid);
+  t.is((await pidOf(client.request("ready", "manifest"))).pid, editor.pid);
   await t.throwsAsync(client.request("crash", "coverage"));
   t.is(
-    (await client.request<{ pid: number }>("ready", "manifest")).pid,
+    (await pidOf(client.request("ready", "manifest"))).pid,
     editor.pid,
     "bulk failure preserves the manifest worker",
   );
@@ -303,13 +401,13 @@ test("a viewport timeout cannot reject a concurrent project load", async (t) => 
   const timedOut = t.throwsAsync(client.request("timeout", "annotations"), {
     message: /Analysis annotations process exceeded/,
   });
-  const manifest = await client.request<{ pid: number }>("ready", "manifest");
-  const edit = await client.request<{ pid: number }>("ready", "manifest");
+  const manifest = await pidOf(client.request("ready", "manifest"));
+  const edit = await pidOf(client.request("ready", "manifest"));
   t.is(edit.pid, manifest.pid);
   await timedOut;
-  const saved = await client.request<{ pid: number }>("ready", "manifest");
+  const saved = await pidOf(client.request("ready", "manifest"));
   t.is(saved.pid, edit.pid, "preview failure leaves the manifest worker and its queue intact");
-  const preview = await client.request<{ pid: number }>("ready", "debugAnnotations");
+  const preview = await pidOf(client.request("ready", "debugAnnotations"));
   t.not(preview.pid, saved.pid, "preview requests restart in their own worker");
 });
 
@@ -327,11 +425,8 @@ test("projection process gives queued pages their own timeout and keeps the pare
   });
   const start = performance.now();
   const results = await Promise.all(
-    ["coverage", "annotations", "details"].map((operation) =>
-      client.request<{ pid: number; args: string[] }>(
-        "busy",
-        operation as "coverage" | "annotations" | "details",
-      ),
+    (["coverage", "annotations", "details"] as const).map((operation) =>
+      pidArgsOf(client.request("busy", operation)),
     ),
   );
   t.true(performance.now() - start > 1000, "total queue wait exceeds an individual request budget");
@@ -355,7 +450,7 @@ test("projection failures and timeouts report the operation/budget, reject queue
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
   });
-  const first = await client.request<{ pid: number; args: string[] }>("normal", "manifest");
+  const first = await pidArgsOf(client.request("normal", "manifest"));
   t.deepEqual(first.args, ["--max-old-space-size=128"]);
   const failed = await Promise.allSettled([
     client.request("crash", "annotations"),
@@ -363,23 +458,24 @@ test("projection failures and timeouts report the operation/budget, reject queue
   ]);
   for (const result of failed) {
     t.is(result.status, "rejected");
-    if (result.status === "rejected") {
-      t.regex(
-        result.reason.message,
-        /Analysis annotations process exited \(23\).*128 MiB.*test projection failure/s,
-      );
+    if (result.status !== "rejected") {
+      continue;
     }
+    t.regex(
+      result.reason.message,
+      /Analysis annotations process exited \(23\).*128 MiB.*test projection failure/s,
+    );
   }
-  const recovered = await client.request<{ pid: number }>("normal", "details");
+  const recovered = await pidOf(client.request("normal", "details"));
   t.not(recovered.pid, first.pid);
   maxMemoryMiB = 256;
-  const resized = await client.request<{ pid: number; args: string[] }>("normal", "details");
+  const resized = await pidArgsOf(client.request("normal", "details"));
   t.not(resized.pid, recovered.pid, "a changed project budget restarts the process");
   t.deepEqual(resized.args, ["--max-old-space-size=256"]);
   await t.throwsAsync(client.request("timeout", "details"), {
     message: /Analysis details process exceeded 1 seconds.*256 MiB/,
   });
-  t.not((await client.request<{ pid: number }>("normal", "details")).pid, resized.pid);
+  t.not((await pidOf(client.request("normal", "details"))).pid, resized.pid);
   maxMemoryMiB = 0;
   await t.throwsAsync(client.request("normal", "coverage"), {
     message: /asm.analysis.maxMemoryMiB/,

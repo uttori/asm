@@ -32,7 +32,7 @@ export { snesNativeEncoders, pngImporter, waveImporter, withImageEncoders, withA
     logLevel: "silent",
   });
   t.is(result.errors.length, 0);
-  t.true((result.outputFiles?.[0].text.length ?? 0) > 100);
+  t.true(result.outputFiles[0].text.length > 100);
 });
 
 test("PNG and WAVE conversion execute in a browser-like worker without Node globals", async (t) => {

@@ -6,6 +6,7 @@
  * @returns {number} Comparison result.
  */
 const compareKeys = (a, b) => a.localeCompare(b);
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /**
  * Sort keys and omit undefined fields recursively for bounded JSON identities and payloads.
  * @param {unknown} value Bounded JSON-compatible value. Arrays retain their input order.
@@ -17,6 +18,9 @@ export const canonicalValue = (value) => {
     }
     if (Array.isArray(value)) {
         return value.map(canonicalValue);
+    }
+    if (!isRecord(value)) {
+        return value;
     }
     // Rich traces canonicalize millions of small register/access objects.
     // Sorting keys directly avoids three temporary arrays & per-field entry
@@ -50,6 +54,9 @@ export const canonicalValue = (value) => {
     }
     return result;
 };
+function stringifyCanonical(value) {
+    return JSON.stringify(value);
+}
 /**
  * Compact canonical JSON for in-memory equality.
  * Same key order, undefined omission, and escaping as {@link canonicalJson}, without
@@ -57,7 +64,7 @@ export const canonicalValue = (value) => {
  * @param {unknown} value Bounded identity, record, or configuration value.
  * @returns {string} Compact canonical text. Top-level undefined, functions, and symbols become empty.
  */
-export const canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+export const canonicalJsonCompact = (value) => stringifyCanonical(canonicalValue(value)) ?? "";
 /**
  * True when both values have the same canonical JSON identity.
  * Identical references match without serialization.

@@ -65,18 +65,18 @@ export const installQueryCache = (
  * @param {string} signature Configuration/layout fingerprint.
  * @returns {T | undefined} Cached value, or undefined when its inputs changed.
  */
-export const readQueryCache = <T>(
-  db: DatabaseSync,
-  key: string,
-  signature: string,
-): T | undefined => {
+export const readQueryCache = (db: DatabaseSync, key: string, signature: string): unknown => {
   if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
     return undefined;
   }
   const row = db
     .prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?")
     .get(key, signature);
-  return row ? (JSON.parse(String(row.payload)) as T) : undefined;
+  if (!row) {
+    return undefined;
+  }
+  const parsed: unknown = JSON.parse(String(row.payload));
+  return parsed;
 };
 
 /** Publish a complete projection atomically with the read snapshot used to compute it.

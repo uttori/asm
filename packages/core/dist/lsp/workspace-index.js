@@ -97,7 +97,7 @@ export class WorkspaceIndex {
         this.includePaths = options.includePaths ?? ["./"];
         this.architecture =
             options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
-        this.targetOptions = Object.freeze({ ...(options.targetOptions ?? {}) });
+        this.targetOptions = Object.freeze({ ...options.targetOptions });
         this.directiveCatalog = this.toolingCatalog.getDirectives();
         this.directivePrefixes =
             this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ??
@@ -473,7 +473,7 @@ export class WorkspaceIndex {
         }
         catch (error) {
             this.logger?.info(`Analysis failed for ${path.basename(root)} after ${Date.now() - started}ms: ` +
-                `${error instanceof Error ? error.message : String(error)}`);
+                (error instanceof Error ? error.message : String(error)));
             // analyzeSource recovers internally. Guard against unexpected throws so
             // one broken root never blanks out the whole workspace index.
             return undefined;
@@ -609,11 +609,11 @@ export class WorkspaceIndex {
         const formats = this.environment
             .getAssetFormats(this.target)
             .map((item) => `${item.id}@${item.version}`)
-            .sort();
+            .toSorted();
         const transforms = this.environment
             .getAssetTransforms(this.target)
             .map((item) => `${item.id}@${item.version}`)
-            .sort();
+            .toSorted();
         return {
             target: this.target,
             architecture: this.architecture,
@@ -662,7 +662,7 @@ export class WorkspaceIndex {
         }
         const fileHashes = {};
         const fileMtimes = {};
-        for (const file of [...files].sort()) {
+        for (const file of [...files].toSorted()) {
             // For overlay (in-memory) files there is no mtime. Record hash only.
             const overlayContent = this.overlay.get(file);
             if (overlayContent !== undefined) {

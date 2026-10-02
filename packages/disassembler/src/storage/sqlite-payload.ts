@@ -90,14 +90,16 @@ export const decodeSqlitePayload = (value: unknown): string => {
 };
 
 /** Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
+ * Callers validate the decoded value before use.
  * @param {unknown} value Stored TEXT or a supported versioned BLOB.
- * @returns {T} Decoded semantic data; callers still validate the requested record type.
+ * @returns {unknown} Decoded semantic data.
  */
-export const parseSqlitePayload = <T>(value: unknown): T => {
+export const parseSqlitePayload = (value: unknown): unknown => {
   if (types.isUint8Array(value) && isPackedRuntimePayload(value)) {
-    return decodePackedRuntimePayload(value) as T;
+    return decodePackedRuntimePayload(value);
   }
-  return JSON.parse(decodeSqlitePayload(value)) as T;
+  const parsed: unknown = JSON.parse(decodeSqlitePayload(value));
+  return parsed;
 };
 
 /** Exact external ID split. BLOB suffixes represent only canonical lowercase SHA-256 text. */

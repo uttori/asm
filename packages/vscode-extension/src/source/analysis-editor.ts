@@ -33,6 +33,29 @@ export function parseResearchAddress(text: string): number | undefined {
 
 const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
 
+const CPU_STATE_FIELDS = [
+  { label: "E · emulation mode", key: "e" },
+  { label: "M · accumulator width", key: "m" },
+  { label: "X · index width", key: "x" },
+  { label: "Carry", key: "carry" },
+  { label: "Program bank", key: "programBank" },
+  { label: "Data bank", key: "dataBank" },
+  { label: "Direct page", key: "directPage" },
+  { label: "Stack pointer", key: "stackPointer" },
+] as const;
+
+function isFlagKey(key: string): key is "e" | "m" | "x" | "carry" {
+  return key === "e" || key === "m" || key === "x" || key === "carry";
+}
+
+function isRegisterKey(
+  key: string,
+): key is "programBank" | "dataBank" | "directPage" | "stackPointer" {
+  return (
+    key === "programBank" || key === "dataBank" || key === "directPage" || key === "stackPointer"
+  );
+}
+
 /** Cancellation propagates as undefined through each native picker, before any workspace edit exists. */
 async function address(
   title: string,
@@ -55,25 +78,15 @@ async function address(
 
 /** One field at a time keeps the common CPU assumption edit small and preserves every other hint. */
 async function editState(record: IntervalAnnotation): Promise<IntervalAnnotation | undefined> {
-  const field = await window.showQuickPick(
-    [
-      { label: "E · emulation mode", key: "e" },
-      { label: "M · accumulator width", key: "m" },
-      { label: "X · index width", key: "x" },
-      { label: "Carry", key: "carry" },
-      { label: "Program bank", key: "programBank" },
-      { label: "Data bank", key: "dataBank" },
-      { label: "Direct page", key: "directPage" },
-      { label: "Stack pointer", key: "stackPointer" },
-    ],
-    { title: `CPU assumption · ${record.id}` },
-  );
+  const field = await window.showQuickPick(CPU_STATE_FIELDS, {
+    title: `CPU assumption · ${record.id}`,
+  });
   if (!field) {
     return undefined;
   }
-  const key = field.key as keyof NonNullable<IntervalAnnotation["state"]>;
   const state = { ...record.state };
-  if (["e", "m", "x", "carry"].includes(key)) {
+  if (isFlagKey(field.key)) {
+    const key = field.key;
     let labels = ["Set", "Clear"];
     if (key === "e") {
       labels = ["Emulation (8-bit M/X)", "Native"];
@@ -91,7 +104,7 @@ async function editState(record: IntervalAnnotation): Promise<IntervalAnnotation
     if (!choice) {
       return undefined;
     }
-    const flag = key as "e" | "m" | "x" | "carry";
+    const flag = key;
     if (choice.value === undefined) {
       delete state[flag];
     } else {
@@ -102,8 +115,8 @@ async function editState(record: IntervalAnnotation): Promise<IntervalAnnotation
       state.m = true;
       state.x = true;
     }
-  } else {
-    const register = key as "programBank" | "dataBank" | "directPage" | "stackPointer";
+  } else if (isRegisterKey(field.key)) {
+    const register = field.key;
     const maximum = register === "programBank" || register === "dataBank" ? 0xff : 0xffff;
     const value = await window.showInputBox({
       title: field.label,
@@ -260,14 +273,20 @@ export async function editAnalysisResearch(
     (record) =>
       !hint ||
       ("classification" in record.value !== (hint.action === "targets") &&
-        (!(hint.range || hint.ids.length) || hint.ids.includes(record.value.id))),
+        (!(hint.range ?? hint.ids.length) || hint.ids.includes(record.value.id))),
   );
-  const options = relevant.map((record) => ({
+  const options: {
+    readonly label: string;
+    readonly description: string;
+    readonly detail: string;
+    readonly record: (typeof relevant)[number] | undefined;
+    readonly create: "range" | "targets" | undefined;
+  }[] = relevant.map((record) => ({
     label: record.value.id,
     description: record.value.addressSpace,
     detail: record.path,
     record,
-    create: undefined as "range" | "targets" | undefined,
+    create: undefined,
   }));
   const choice =
     hint && options.length === 1

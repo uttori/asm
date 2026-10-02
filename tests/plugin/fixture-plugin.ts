@@ -1,4 +1,25 @@
-import type { CoreDirectiveGroup } from "../../packages/core/src/directive-groups.js";
+import {
+  CORE_DIRECTIVE_GROUPS,
+  type CoreDirectiveGroup,
+} from "../../packages/core/src/directive-groups.js";
+
+function isCoreDirectiveGroup(value: unknown): value is CoreDirectiveGroup {
+  return CORE_DIRECTIVE_GROUPS.some((group) => group === value);
+}
+
+function readCoreDirectiveGroups(value: unknown): CoreDirectiveGroup[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const groups: CoreDirectiveGroup[] = [];
+  for (const entry of value) {
+    if (!isCoreDirectiveGroup(entry)) {
+      throw new Error("coreDirectiveGroups must contain known groups.");
+    }
+    groups.push(entry);
+  }
+  return groups;
+}
 import {
   definePlugin,
   PLUGIN_API_VERSION,
@@ -144,11 +165,8 @@ export const createFixturePlugin = (
         throw new Error("byte must be an unsigned byte");
       }
       const coreDirectiveGroups =
-        typeof configured === "object" &&
-        configured !== null &&
-        "coreDirectiveGroups" in configured &&
-        Array.isArray(configured.coreDirectiveGroups)
-          ? (configured.coreDirectiveGroups as CoreDirectiveGroup[])
+        typeof configured === "object" && configured !== null && "coreDirectiveGroups" in configured
+          ? readCoreDirectiveGroups(configured.coreDirectiveGroups)
           : undefined;
       return { byte, coreDirectiveGroups };
     },

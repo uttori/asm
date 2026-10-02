@@ -1,5 +1,9 @@
 import { incrementInternalCounter, recordInternalCounterPeak, } from "../internal-instrumentation.js";
 import { setCommandKind } from "../ir/normalized-command.js";
+function stackTop(stack) {
+    const topIndex = stack.length - 1;
+    return topIndex >= 0 ? stack[topIndex] : undefined;
+}
 /**
  * Builds reusable program models from command streams.
  */
@@ -124,8 +128,8 @@ export class ProgramModelBuilder {
      * @param {ExecutableNode} node The node.
      */
     pushToCurrent(state, node) {
-        const currentBranch = state.branchStack[state.branchStack.length - 1];
-        const currentLoop = state.loopStack[state.loopStack.length - 1];
+        const currentBranch = stackTop(state.branchStack);
+        const currentLoop = stackTop(state.loopStack);
         if (currentBranch && currentLoop) {
             if (currentLoop.startLine >= currentBranch.startLine) {
                 currentLoop.commands.push(node);
@@ -236,7 +240,7 @@ export class ProgramModelBuilder {
             return;
         }
         if (keyword === "elseif" || keyword === "else") {
-            const currentIf = state.ifStack[state.ifStack.length - 1];
+            const currentIf = stackTop(state.ifStack);
             if (!currentIf) {
                 this.pushToCurrent(state, command);
                 return;
@@ -259,8 +263,8 @@ export class ProgramModelBuilder {
             return;
         }
         if (keyword === "endif") {
-            const currentIf = state.ifStack[state.ifStack.length - 1];
-            const currentLoop = state.loopStack[state.loopStack.length - 1];
+            const currentIf = stackTop(state.ifStack);
+            const currentLoop = stackTop(state.loopStack);
             const whileIsInnermost = this.host.shouldEndifCloseInnermostWhile(currentLoop?.type, currentLoop?.startLine, currentIf?.startLine);
             if (whileIsInnermost) {
                 const loopNode = state.loopStack.pop();

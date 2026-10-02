@@ -52,7 +52,7 @@ export declare class IncludeSourceService {
      * @param {string} filename The target filename.
      * @returns {string} The resolved provider path.
      */
-    resolveIncludePath(filename: string): string;
+    resolveIncludePath(filename: string | null | undefined): string;
     /**
      * Marks and assembles an `include` target.
      * @param {string} filename The target filename.

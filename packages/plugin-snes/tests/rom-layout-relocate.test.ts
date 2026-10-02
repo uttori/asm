@@ -67,10 +67,9 @@ test("table growth allocates deterministically and repairs typed pointer, length
     ...input,
     current,
     objects: [moved],
-    references: input.references.map((reference, index) => ({
-      ...reference,
-      expected: plan.repairs[index]!.after,
-    })),
+    references: input.references.map((reference, index) =>
+      Object.assign({}, reference, { expected: plan.repairs[index]!.after }),
+    ),
   });
   t.is(again.destination, plan.destination);
   t.deepEqual(
@@ -230,9 +229,7 @@ test("placement searches past unreachable space and reserves every reference fie
   const plan = planSnesRelocation({ ...input, references: [...input.references, field] });
   t.is(plan.destination, 0x204);
   t.deepEqual(plan.repairs.at(-1)!.after, [4, 2, 0xc0]);
-  t.throws(
-    () =>
-      planSnesRelocation({ ...input, references: [{ ...near, encoding: "mystery" as "bank16" }] }),
-    { message: /Invalid relocation reference/ },
-  );
+  t.throws(() => planSnesRelocation({ ...input, references: [{ ...near, encoding: "mystery" }] }), {
+    message: /Invalid relocation reference/,
+  });
 });

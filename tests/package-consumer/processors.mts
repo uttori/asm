@@ -30,11 +30,43 @@ interface Vector {
   readonly bytes: readonly number[];
   readonly documented?: boolean;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function isVector(value: unknown): value is Vector {
+  if (!isRecord(value) || typeof value.source !== "string" || !Array.isArray(value.bytes)) {
+    return false;
+  }
+  if (value.documented !== undefined && typeof value.documented !== "boolean") {
+    return false;
+  }
+  return value.bytes.every((byte) => typeof byte === "number");
+}
+
+function readCases(value: unknown, label: string): Vector[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} cases must be an array.`);
+  }
+  return value.map((entry, index) => {
+    if (!isVector(entry)) {
+      throw new Error(`${label} case ${index} is missing source bytes.`);
+    }
+    return entry;
+  });
+}
+
+function readJson(file: string): unknown {
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+
 let vectors = 0;
-const nmos = JSON.parse(fs.readFileSync("ca65-v2.19-nmos-differential.json", "utf8")) as {
-  cases: Vector[];
-};
-for (const entry of nmos.cases) {
+const nmos = readJson("ca65-v2.19-nmos-differential.json");
+if (!isRecord(nmos)) {
+  throw new Error("NMOS differential fixture must be an object.");
+}
+const nmosCases = readCases(nmos.cases, "NMOS");
+for (const entry of nmosCases) {
   assert.deepEqual([...raw(entry.source, entry.documented ? "6502" : "6502x")], entry.bytes);
   vectors++;
 }
@@ -42,11 +74,16 @@ for (const file of [
   "ca65-e11fb5c-cmos-vendor-differential.json",
   "ca65-e11fb5c-huc6280-m740-differential.json",
 ]) {
-  const fixture = JSON.parse(fs.readFileSync(file, "utf8")) as {
-    variants: { cpu: string; cases: Vector[] }[];
-  };
+  const fixture = readJson(file);
+  if (!isRecord(fixture) || !Array.isArray(fixture.variants)) {
+    throw new Error(`${file} is missing variants.`);
+  }
   for (const variant of fixture.variants) {
-    for (const entry of variant.cases) {
+    if (!isRecord(variant) || typeof variant.cpu !== "string") {
+      throw new Error(`${file} variant is missing a CPU.`);
+    }
+    const cases = readCases(variant.cases, variant.cpu);
+    for (const entry of cases) {
       assert.deepEqual(
         [...raw(entry.source, variant.cpu)],
         entry.bytes,
@@ -72,7 +109,7 @@ const nes = assemble('.segment "CODE"\nlda #$12\n.byte $34', {
   targetOptions: {
     linkerConfig:
       "MEMORY { ROM: start = $8000, size = $100, file = %O, fill = yes; }\nSEGMENTS { CODE: load = ROM, type = ro; }",
-    header: [0x4e, 0x45, 0x53, 0x1a, ...new Array<number>(12).fill(0)],
+    header: [0x4e, 0x45, 0x53, 0x1a, ...Array.from({ length: 12 }, () => 0)],
     fillByte: 0xff,
   },
 });

@@ -3,12 +3,18 @@ import { projectSourceLabelNames, validateSourceLabelName } from "../model/proje
 import { parseResearchDocument, validateResearchSnapshot, } from "./inputs.js";
 /** Runtime validation must not widen a readonly typed array to Array<any>. */
 const isArray = (value) => Array.isArray(value);
+function isProjectLabel(value) {
+    return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
+}
 /** Prepare an existing declaration edit while retaining its identity, evidence links and file. */
 export function changeResearchSymbol(snapshot, id, change) {
     validateResearchSnapshot(snapshot);
     const file = snapshot.files.find((input) => input.document.decisions.some((decision) => decision.collection === "labels" && decision.id === id));
     const decision = file?.document.decisions.find((item) => item.collection === "labels" && item.id === id);
     if (!file || !decision?.value) {
+        throw new Error("Choose an existing label declaration. A record tombstone must be restored explicitly in its research file.");
+    }
+    if (!isProjectLabel(decision.value)) {
         throw new Error("Choose an existing label declaration. A record tombstone must be restored explicitly in its research file.");
     }
     const previous = decision.value;
@@ -29,6 +35,9 @@ export function changeResearchSymbol(snapshot, id, change) {
         for (const other of snapshot.decisions) {
             if (other.collection !== "labels" || !other.value || other.id === id) {
                 continue;
+            }
+            if (!isProjectLabel(other.value)) {
+                throw new Error("Invalid research label.");
             }
             const label = other.value;
             for (const name of [label.sourceName ?? label.name, ...(label.aliases ?? [])]) {
@@ -52,6 +61,9 @@ export function changeResearchSymbol(snapshot, id, change) {
     projectSourceLabelNames(snapshot.decisions.flatMap((item) => {
         if (item.collection !== "labels" || !item.value) {
             return [];
+        }
+        if (!isProjectLabel(item.value)) {
+            throw new Error("Invalid research label.");
         }
         return [item.id === id ? symbol : item.value];
     }));
@@ -81,7 +93,11 @@ export function renameResearchSymbol(snapshot, identity, newName, newDocumentPat
     if (decision?.value === null) {
         throw new Error("Restore this suppressed research record before renaming it.");
     }
-    const previous = decision?.value;
+    const previousValue = decision?.value;
+    if (previousValue && !isProjectLabel(previousValue)) {
+        throw new Error("Invalid research label.");
+    }
+    const previous = previousValue;
     if (previous &&
         (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address)) {
         throw new Error("The symbol's original identity changed. Refresh before renaming.");
@@ -105,7 +121,12 @@ export function renameResearchSymbol(snapshot, identity, newName, newDocumentPat
     };
     const labels = snapshot.decisions
         .filter((item) => item.collection === "labels" && item.value !== null && item.id !== identity.id)
-        .map((item) => item.value);
+        .map((item) => {
+        if (item.value === null || !isProjectLabel(item.value)) {
+            throw new Error("Invalid research label.");
+        }
+        return item.value;
+    });
     // Match the exporter's case-insensitive name reservation before producing a source edit.
     if ([...reservedNames].some((name) => name.toLowerCase() === newName.toLowerCase())) {
         throw new Error(`Source name '${newName}' is already used by another symbol.`);
@@ -127,7 +148,7 @@ export function renameResearchSymbol(snapshot, identity, newName, newDocumentPat
         decisions: [
             ...(destination?.document.decisions ?? []).filter((item) => item.collection !== "labels" || item.id !== identity.id),
             { collection: "labels", id: identity.id, value: symbol },
-        ].sort((a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`))),
+        ].toSorted((a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`))),
     });
     return { path: relative, expectedSha256: destination?.sha256 ?? null, document, symbol };
 }

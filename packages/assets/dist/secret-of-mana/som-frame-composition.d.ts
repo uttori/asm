@@ -7,9 +7,6 @@ import type { ExternalTileRef, FrameLayout, FrameRecord } from "./som-types.js";
  * @returns {object[]} Derived 8×8 occurrences.
  */
 export declare function deriveFramePlacements(layout: FrameLayout, frame: FrameRecord): ({
-    segment: string;
-    tile: number;
-    external?: undefined;
     id: string;
     block: string;
     quadrant: number;
@@ -17,18 +14,15 @@ export declare function deriveFramePlacements(layout: FrameLayout, frame: FrameR
     y: number;
     flipX: boolean | undefined;
     flipY: boolean | undefined;
+} & ({
+    segment: string;
+    tile: number;
+    external?: undefined;
 } | {
     segment?: undefined;
     tile?: undefined;
     external: ExternalTileRef;
-    id: string;
-    block: string;
-    quadrant: number;
-    x: number;
-    y: number;
-    flipX: boolean | undefined;
-    flipY: boolean | undefined;
-})[];
+}))[];
 /** Check raw body evidence against editable blocks before interpreting any derived geometry.
  * @param {FrameRecord} frame Pose that may carry a native body record.
  * @returns {void} Nothing; invalid records throw.
@@ -40,9 +34,6 @@ export declare function validateNativeFrame(frame: FrameRecord): void;
  * @returns {object[] | undefined} Derived placements when the pose retains composition.
  */
 export declare function validateFrameComposition(layout: FrameLayout, frame: FrameRecord): ({
-    segment: string;
-    tile: number;
-    external?: undefined;
     id: string;
     block: string;
     quadrant: number;
@@ -50,16 +41,13 @@ export declare function validateFrameComposition(layout: FrameLayout, frame: Fra
     y: number;
     flipX: boolean | undefined;
     flipY: boolean | undefined;
+} & ({
+    segment: string;
+    tile: number;
+    external?: undefined;
 } | {
     segment?: undefined;
     tile?: undefined;
     external: ExternalTileRef;
-    id: string;
-    block: string;
-    quadrant: number;
-    x: number;
-    y: number;
-    flipX: boolean | undefined;
-    flipY: boolean | undefined;
-})[] | undefined;
+}))[] | undefined;
 //# sourceMappingURL=som-frame-composition.d.ts.map

@@ -67,7 +67,7 @@ const joinDirectPage = (
   if (values.size === 1) {
     return known([...values][0]);
   }
-  return { kind: "conflicting", values: [...values].sort((a, b) => a - b) };
+  return { kind: "conflicting", values: [...values].toSorted((a, b) => a - b) };
 };
 
 const sameStackEntry = (left: Spc700StackEntry, right: Spc700StackEntry): boolean =>
@@ -137,30 +137,32 @@ export const transferSpc700State = (
   instruction: StaticInstruction,
   incoming: Spc700AbstractState,
 ): Spc700AbstractState => {
-  let state = incoming;
+  const state = { ...incoming };
   for (const effect of instruction.effects) {
     if (effect.kind === "clearBits" && effect.target === "p" && (effect.mask & 0x20) !== 0) {
-      state = { ...state, directPage: known(0) };
+      Object.assign(state, { directPage: known(0) });
     } else if (effect.kind === "setBits" && effect.target === "p" && (effect.mask & 0x20) !== 0) {
-      state = { ...state, directPage: known(0x100) };
+      Object.assign(state, { directPage: known(0x100) });
     } else if (effect.kind === "push") {
-      state = push(
+      Object.assign(
         state,
-        instruction.mode === "registerP"
-          ? { kind: "status", directPage: state.directPage }
-          : { kind: "unknown" },
+        push(
+          state,
+          instruction.mode === "registerP"
+            ? { kind: "status", directPage: state.directPage }
+            : { kind: "unknown" },
+        ),
       );
     } else if (effect.kind === "pull" && effect.target === "operand-register") {
       const [popped, entry] = pop(state);
-      state =
-        instruction.mode === "registerP"
-          ? {
-              ...popped,
-              directPage: entry?.kind === "status" ? entry.directPage : unknown(),
-            }
-          : popped;
+      Object.assign(state, popped);
+      if (instruction.mode === "registerP") {
+        Object.assign(state, {
+          directPage: entry?.kind === "status" ? entry.directPage : unknown(),
+        });
+      }
     } else if (effect.kind === "pull" && effect.target === "p") {
-      state = { ...state, directPage: unknown(), stack: { entries: [] } };
+      Object.assign(state, { directPage: unknown(), stack: { entries: [] } });
     }
   }
   return state;

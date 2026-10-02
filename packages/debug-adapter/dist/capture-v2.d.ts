@@ -112,7 +112,7 @@ export type CaptureTransportV2 = (request: CaptureRequestV2) => Promise<CaptureR
 export declare const captureScope: (value: unknown) => CaptureScopeV2;
 export declare const captureU64: (value: unknown) => bigint;
 export declare const captureSession: (value: unknown) => string;
-export declare const validateCaptureRequest: (value: CaptureRequestV2) => void;
+export declare function validateCaptureRequest(value: unknown): asserts value is CaptureRequestV2;
 /**
  * Require the requested scope and its reservation size. Never downgrade to a different stream.
  * @param {unknown} value Native capability reply.
@@ -120,14 +120,15 @@ export declare const validateCaptureRequest: (value: CaptureRequestV2) => void;
  * @returns {CaptureCapabilitiesV2} Verified lossless ownership and allocation contract.
  */
 export declare const validateCaptureCapabilities: (value: unknown, scope?: CaptureScopeV2) => CaptureCapabilitiesV2;
-/**
- * Scope is stable for a session. Only legacy instruction positions may omit it.
- * @param {unknown} value Native status or archive terminal frame.
- * @param {string} session Expected identity when an active session is already known.
- * @param {CaptureScopeV2} scope Expected stream. Bus positions must explicitly confirm it.
- * @returns {CapturePositionV2} Validated ownership boundaries and integrity state.
- */
 export declare const validateCapturePosition: (value: unknown, session?: string, scope?: CaptureScopeV2) => CapturePositionV2;
+/**
+ * Accept one wire result after the matching request validator has already run.
+ * Capability replies are rebuilt from the negotiated contract; other results keep
+ * their validated fields, including native file counters carried beside a position.
+ * @param {unknown} value Sidecar or backend capture reply.
+ * @returns {CaptureResultV2} A capabilities, position, hex, or context-state result.
+ */
+export declare function validateCaptureResult(value: unknown): CaptureResultV2;
 /**
  * CRC-32C of an ACT2 envelope or archive JSON frame, without changing caller storage.
  * @param {Uint8Array} bytes Byte view; checksum positions are relative to this view.

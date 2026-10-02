@@ -44,7 +44,7 @@ const capRomBindings = (
   }
   const newestOthers = Object.entries(bindings)
     .filter(([key]) => key !== keepKey)
-    .sort(([, left], [, right]) => right.updatedAt.localeCompare(left.updatedAt))
+    .toSorted(([, left], [, right]) => right.updatedAt.localeCompare(left.updatedAt))
     .slice(0, MAX_ROM_BINDINGS - 1);
   return {
     [keepKey]: bindings[keepKey],

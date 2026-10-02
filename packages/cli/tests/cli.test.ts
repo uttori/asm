@@ -16,6 +16,60 @@ import { test } from "../../../tests/ava-helper.js";
 import { parseCliArguments, runCli } from "../src/index.js";
 import { publishOutputFiles } from "../src/output-files.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDebugMap(value: unknown): value is DebugMap {
+  return (
+    isRecord(value) &&
+    typeof value.format === "string" &&
+    typeof value.schemaVersion === "number" &&
+    isRecord(value.fingerprint) &&
+    typeof value.target === "string" &&
+    isRecord(value.output) &&
+    Array.isArray(value.sources) &&
+    Array.isArray(value.ranges)
+  );
+}
+
+function readDebugMap(text: string): DebugMap {
+  const value: unknown = JSON.parse(text);
+  if (!isDebugMap(value)) {
+    throw new Error("Expected a debug map.");
+  }
+  return value;
+}
+
+function isAnalysisManifest(value: unknown): value is {
+  readonly addressSpaces: readonly { readonly id: string; readonly addressBits: number }[];
+} {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.addressSpaces) &&
+    value.addressSpaces.every(
+      (addressSpace) =>
+        isRecord(addressSpace) &&
+        typeof addressSpace.id === "string" &&
+        typeof addressSpace.addressBits === "number",
+    )
+  );
+}
+
+function readAnalysisManifest(text: string): {
+  readonly addressSpaces: readonly { readonly id: string; readonly addressBits: number }[];
+} {
+  const value: unknown = JSON.parse(text);
+  if (!isAnalysisManifest(value)) {
+    throw new Error("Expected an analysis manifest.");
+  }
+  return value;
+}
+
+function isEvidenceReport(value: unknown): value is { readonly runtimeRecords: number } {
+  return isRecord(value) && typeof value.runtimeRecords === "number";
+}
+
 const loaderFixtures = fileURLToPath(
   new URL("../../plugin-loader-node/tests/fixtures/", import.meta.url),
 );
@@ -461,7 +515,7 @@ test("E2E: documented PNG, palette, tilemap and WAVE source assembles", async (t
   t.is(await runCli([source, output, "--debug"]), 0);
   const bytes = await fs.readFile(output);
   t.is(bytes.length, 354);
-  const map = JSON.parse(await fs.readFile(`${output}.debug.json`, "utf8")) as DebugMap;
+  const map = readDebugMap(await fs.readFile(`${output}.debug.json`, "utf8"));
   t.deepEqual(validateDebugMap(map, bytes), []);
   t.deepEqual(map.sources.filter((entry) => entry.kind === "binary").length, 2);
   t.deepEqual(map.sources.filter((entry) => entry.kind === "resource").length, 1);
@@ -514,7 +568,7 @@ test("E2E: runCli assemble debug builds emit a fingerprinted map for the assembl
   await fs.writeFile(source, "norom\norg $000000\ndb $01, $02\n");
   t.is(await runCli(["assemble", source, output, "--debug-map", mapFile]), 0);
   const outputBytes = new Uint8Array(await fs.readFile(output));
-  const map = JSON.parse(await fs.readFile(mapFile, "utf8")) as DebugMap;
+  const map = readDebugMap(await fs.readFile(mapFile, "utf8"));
   t.deepEqual(validateDebugMap(map, outputBytes), []);
   t.is(map.target, "snes.sfc");
   t.is(map.sources[0]?.path, "main.asm");
@@ -536,10 +590,10 @@ test("E2E: debug snapshots include definitions and binary dependencies without e
   );
   t.is(await runCli([source, output, "--debug"]), 0);
   const outputBytes = new Uint8Array(await fs.readFile(output));
-  const map = JSON.parse(await fs.readFile(`${output}.debug.json`, "utf8")) as DebugMap;
+  const map = readDebugMap(await fs.readFile(`${output}.debug.json`, "utf8"));
   t.deepEqual([...outputBytes], [0xbd, 0x2b, 0, 0xaa]);
   t.deepEqual(validateDebugMap(map, outputBytes), []);
-  t.deepEqual(map.sources.map((entry) => entry.path).sort(), [
+  t.deepEqual(map.sources.map((entry) => entry.path).toSorted(), [
     "defines.asm",
     "main.asm",
     "payload.bin",
@@ -764,9 +818,9 @@ test("E2E: runCli project-validate accepts matching ROMs and rejects identity dr
   const project = path.join(temporary, "fixture.analysis");
   await fs.writeFile(rom, new Uint8Array(0x8000).fill(0xea));
   t.is(await runCli(["disassemble", rom, project, "--mapper=lorom"]), 0);
-  const manifest = JSON.parse(await fs.readFile(path.join(project, "analysis.json"), "utf8")) as {
-    readonly addressSpaces: readonly { readonly id: string; readonly addressBits: number }[];
-  };
+  const manifest = readAnalysisManifest(
+    await fs.readFile(path.join(project, "analysis.json"), "utf8"),
+  );
   t.true(
     manifest.addressSpaces.some(
       (addressSpace) => addressSpace.id === "snes.spc700.aram" && addressSpace.addressBits === 16,
@@ -812,7 +866,7 @@ test.serial(
       0,
     );
     const store = openAnalysisProjectStore(project);
-    const captures = store.captureCatalog() as Array<{ sha256: string }>;
+    const captures = store.captureCatalog();
     store.close();
     t.true(captures.length > 0);
     t.is(await runCli(["project-storage", project, "--cache-max-mib=2"]), 0);
@@ -914,10 +968,11 @@ test("E2E: runCli imports, reports, and reimports a native instruction trace", a
   t.deepEqual(loadAnalysisProject(project), imported);
 
   t.is(await runCli(["evidence-report", project, reportFile]), 0);
-  const report = JSON.parse(await fs.readFile(reportFile, "utf8")) as {
-    readonly runtimeRecords: number;
-  };
-  t.true(report.runtimeRecords > 0);
+  const reportText: unknown = JSON.parse(await fs.readFile(reportFile, "utf8"));
+  if (!isEvidenceReport(reportText)) {
+    throw new Error("Expected an evidence report.");
+  }
+  t.true(reportText.runtimeRecords > 0);
 });
 
 test.serial(

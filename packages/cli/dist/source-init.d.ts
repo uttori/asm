@@ -14,11 +14,6 @@ export interface InitializeSourceOptions {
     readonly toolchainSha256: string;
     readonly loadEnvironment: PrepareSnesGenerationOptions["loadEnvironment"];
 }
-/**
- * Create, analyze and verify a new Git source repository in owned staging, then publish it once.
- * The original ROM stays private. A pure root commit and an ordinary source commit establish
- * cloneable regeneration ancestry without introducing managed-export manifests or folder backups.
- */
 export declare function initializeSnesSourceProject(options: InitializeSourceOptions): Promise<{
     directory: string;
     generation: string;

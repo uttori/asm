@@ -2,7 +2,8 @@ import type { DebugSubscription } from "@uttori/asm-debug-adapter";
 import type { GdbRspTransport } from "./gdb-rsp-client.js";
 /** Options for a private numeric-loopback RSP connection. */
 export interface NodeTcpGdbRspTransportOptions {
-    readonly host?: "127.0.0.1" | "::1";
+    /** Connected only for numeric loopback; any other host is rejected. */
+    readonly host?: string;
     readonly port: number;
     readonly connectTimeoutMs?: number;
     readonly shutdownTimeoutMs?: number;

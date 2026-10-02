@@ -18,7 +18,7 @@ const host = {
   },
 };
 
-(globalThis as { __uttoriCoverageTreeTest?: typeof host }).__uttoriCoverageTreeTest = host;
+Object.assign(globalThis, { __uttoriCoverageTreeTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -272,7 +272,13 @@ test.serial(
     t.is(pages[1]?.label, "Items 201–201");
     const loaded = await provider.getChildren(pages[0]);
     t.deepEqual(
-      loaded.map((node) => (provider.getTreeItem(node).iconPath as { id: string }).id),
+      loaded.map((node) => {
+        const icon = provider.getTreeItem(node).iconPath;
+        if (!icon || typeof icon === "string" || !("id" in icon) || typeof icon.id !== "string") {
+          throw new Error("expected a theme icon");
+        }
+        return icon.id;
+      }),
       ["warning", "question", "debug-alt", "symbol-color"],
     );
     t.is(provider.getTreeItem(loaded[0]).contextValue, "analysisCoverageSegment");

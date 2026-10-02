@@ -123,8 +123,10 @@ png("indexed-4bpp-adam7.png", {
   interlaced: true,
   pixel: (x, y) => [(x + 3 * y) % 16],
 });
+/** Replicate a channel to 5 bits by bit-replicating and scaling to 8 bits. */
+const replicate = (channel: number): number => (channel << 3) | (channel >> 2);
+/** Generate a 4-bit indexed palette with replicated channels. */
 const coloredPalette = Array.from({ length: 16 }, (_, index) => {
-  const replicate = (channel: number): number => (channel << 3) | (channel >> 2);
   return [replicate(index * 2), replicate((15 - index) * 2), replicate(index)];
 });
 png("colored-4bpp.png", {
@@ -281,9 +283,17 @@ const wave = (
   const body = Buffer.concat([Buffer.from("WAVE"), ...chunks]);
   write(name, Buffer.concat([Buffer.from("RIFF"), u32le(body.length), body]));
 };
-wave("pcm8-silence.wav", Array.from({ length: 16 }, () => 128), 8);
+wave(
+  "pcm8-silence.wav",
+  Array.from({ length: 16 }, () => 128),
+  8,
+);
 wave("pcm16-transient.wav", [32767, -32768, ...Array.from({ length: 30 }, () => 0)], 16);
-wave("pcm16-short.wav", Array.from({ length: 15 }, () => 0), 16);
+wave(
+  "pcm16-short.wav",
+  Array.from({ length: 15 }, () => 0),
+  16,
+);
 wave(
   "pcm16-loop.wav",
   Array.from({ length: 512 }, (_, index) => (index % 32) * 512 - 8192),

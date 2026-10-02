@@ -1,29 +1,142 @@
 import { registerHooks } from "node:module";
 
-import type { TextEditor, TextDocument, CancellationToken, Position } from "vscode";
+import type { CancellationToken, Position, TextDocument, TextEditor } from "vscode";
 
 import { test } from "../../../../tests/ava-helper.js";
 import type { LineInformation } from "../../src/editor-info/format.js";
-import type { EditorInformationProvider } from "../../src/editor-info/provider.js";
+import type { EditorInformationService } from "../../src/editor-info/provider.js";
+
+function isTextDocument(value: object): value is TextDocument {
+  return (
+    "uri" in value &&
+    typeof value.uri === "object" &&
+    value.uri !== null &&
+    "languageId" in value &&
+    typeof value.languageId === "string" &&
+    "lineCount" in value &&
+    typeof value.lineCount === "number"
+  );
+}
+
+function isPosition(value: object): value is Position {
+  return (
+    "line" in value &&
+    typeof value.line === "number" &&
+    "character" in value &&
+    typeof value.character === "number"
+  );
+}
+
+function isCancellationToken(value: object): value is CancellationToken {
+  return "isCancellationRequested" in value && typeof value.isCancellationRequested === "boolean";
+}
+
+function isTextEditor(value: object): value is TextEditor {
+  return (
+    "document" in value &&
+    typeof value.document === "object" &&
+    value.document !== null &&
+    isTextDocument(value.document)
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isOverlay(value: unknown): value is {
+  renderOptions: {
+    after: {
+      contentText?: string;
+      margin: string;
+      color: string | { id: string };
+    };
+  };
+} {
+  if (!isRecord(value) || !isRecord(value.renderOptions) || !isRecord(value.renderOptions.after)) {
+    return false;
+  }
+  const after = value.renderOptions.after;
+  const margin = after.margin;
+  const color = after.color;
+  return (
+    typeof margin === "string" &&
+    (typeof color === "string" || (isRecord(color) && typeof color.id === "string"))
+  );
+}
+
+function overlay(value: unknown): {
+  renderOptions: {
+    after: { contentText?: string; margin: string; color: string | { id: string } };
+  };
+} {
+  if (!isOverlay(value)) {
+    throw new Error("expected an overlay decoration");
+  }
+  return value;
+}
+
+function documentContent(value: unknown): string {
+  const content = isRecord(value) ? value.content : undefined;
+  if (typeof content !== "string") {
+    throw new Error("expected an opened document");
+  }
+  return content;
+}
+
+function markdownText(value: unknown): string | undefined {
+  const text = isRecord(value) ? value.value : undefined;
+  return typeof text === "string" ? text : undefined;
+}
 
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 110));
-const host = {
-  settings: {} as Record<string, unknown>,
-  calls: [] as any[][],
-  editor: undefined as any,
-  writes: [] as string[],
+const host: {
+  settings: Record<string, unknown>;
+  calls: unknown[][];
+  editor:
+    | {
+        document: {
+          uri: { scheme: string; fsPath: string };
+          languageId: string;
+          version: number;
+          isDirty: boolean;
+          lineCount: number;
+          lineAt: (line: number) => { text: string; range: object };
+        };
+        selection: { active: { line: number } };
+        visibleRanges: { start: { line: number }; end: { line: number } }[];
+        options: { tabSize: number };
+        setDecorations: (type: unknown, values: unknown[]) => void;
+      }
+    | undefined;
+  writes: string[];
+  invalidations: number;
+  requests: number;
+  hold: Promise<void> | undefined;
+  status: { text: string; tooltip: string; visible: boolean };
+  failure: Error | undefined;
+  noFacts: boolean;
+  reasons: string[];
+  documents: unknown[];
+  section: string | undefined;
+  requirements: unknown[];
+} = {
+  settings: {},
+  calls: [],
+  editor: undefined,
+  writes: [],
   invalidations: 0,
   requests: 0,
-  hold: undefined as Promise<void> | undefined,
-  status: { text: "", tooltip: "", visible: false } as any,
-  failure: undefined as Error | undefined,
+  hold: undefined,
+  status: { text: "", tooltip: "", visible: false },
+  failure: undefined,
   noFacts: false,
-  reasons: [] as string[],
-  documents: [] as any[],
-  section: undefined as string | undefined,
-  requirements: [] as unknown[],
+  reasons: [],
+  documents: [],
+  section: undefined,
+  requirements: [],
 };
-(globalThis as any).__informationHost = host;
+Object.assign(globalThis, { __informationHost: host });
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === "vscode") {
@@ -131,9 +244,11 @@ const setup = (sourceLines = ["RTS"]) => {
     selection: { active: { line: 0 } },
     visibleRanges: [{ start: { line: 0 }, end: { line: sourceLines.length - 1 } }],
     options: { tabSize: 4 },
-    setDecorations: (_type: unknown, values: any[]) => host.calls.push(values),
+    setDecorations: (_type: unknown, values: unknown[]) => host.calls.push(values),
   };
-  const provider = {
+  const provider: EditorInformationService = {
+    buildCompleted: () => {},
+    configurationChanged: () => {},
     lines: async (_file: string, _ranges: unknown, requirements: unknown) => {
       host.requirements.push(requirements);
       host.requests++;
@@ -151,26 +266,39 @@ const setup = (sourceLines = ["RTS"]) => {
     },
     tracks: () => true,
     diagnostics: async () => host.reasons,
-  } as unknown as EditorInformationProvider;
+  };
   return new AnalysisAnnotationController(provider);
 };
-const hover = (controller: InstanceType<typeof AnalysisAnnotationController>) =>
-  controller.provideHover(
-    host.editor.document as TextDocument,
-    { line: 0, character: 1 } as Position,
-    { isCancellationRequested: false } as CancellationToken,
-  );
+const hover = (controller: InstanceType<typeof AnalysisAnnotationController>) => {
+  const editor = host.editor;
+  const position = { line: 0, character: 1 };
+  const token = { isCancellationRequested: false };
+  if (!editor || !isTextEditor(editor) || !isPosition(position) || !isCancellationToken(token)) {
+    throw new Error("editor stub");
+  }
+  return controller.provideHover(editor.document, position, token);
+};
 
 test.serial(
   "compact source overlays have no eager hover dump; independent hover preserves qualified counts",
   async (t) => {
     const controller = setup();
     t.teardown(() => controller.dispose());
-    controller.refresh(host.editor as TextEditor);
+    if (!host.editor || !isTextEditor(host.editor)) {
+      throw new Error("editor stub");
+    }
+    controller.refresh(host.editor);
     await settle();
-    const decoration = host.calls.at(-1)![0];
-    t.is(decoration.renderOptions.after.contentText, "$20964 / $C20964 · exec 0 / 19");
+    const decoration = overlay(host.calls.at(-1)![0]);
+    const contentText = decoration.renderOptions.after.contentText;
+    if (typeof contentText !== "string") {
+      throw new Error("expected overlay text");
+    }
+    t.is(contentText, "$20964 / $C20964 · exec 0 / 19");
     t.is(decoration.renderOptions.after.margin, "0 0 0 77ch");
+    if (!isRecord(decoration.renderOptions.after.color)) {
+      throw new Error("expected overlay color");
+    }
     t.is(decoration.renderOptions.after.color.id, "editorCodeLens.foreground");
     t.false("hoverMessage" in decoration);
     await controller.toggle();
@@ -178,7 +306,7 @@ test.serial(
     t.deepEqual(host.calls.at(-1), []);
     const result = await hover(controller);
     t.is(
-      (result?.contents as any)?.value,
+      markdownText(result?.contents),
       "**Uttori analysis**\n\nOutput Offsets: $20964 / $C20964\nExecution Observations: $20964: 0 / $C20964: 19",
     );
   },
@@ -199,7 +327,13 @@ test.serial(
     release();
     await settle();
     t.deepEqual(host.calls.at(-1), []);
+    if (!host.editor) {
+      throw new Error("editor stub");
+    }
     host.editor.document.isDirty = true;
+    if (!isTextDocument(host.editor.document)) {
+      throw new Error("document stub");
+    }
     controller.documentChanged(host.editor.document);
     t.is(await hover(controller), undefined);
     t.true(host.invalidations > 0);
@@ -219,7 +353,7 @@ test.serial(
     host.settings = { "analysis.annotationColumn": 80, "editorInfo.inline.color": "#FFA65C" };
     controller.refresh();
     await settle();
-    const aligned = host.calls.at(-1)!.map((entry) => entry.renderOptions.after);
+    const aligned = host.calls.at(-1)!.map((entry) => overlay(entry).renderOptions.after);
     t.deepEqual(
       aligned.map((entry) => entry.margin),
       ["0 0 0 73ch", "0 0 0 38ch"],
@@ -229,7 +363,7 @@ test.serial(
     controller.refresh();
     await settle();
     t.deepEqual(
-      host.calls.at(-1)!.map((entry) => entry.renderOptions.after.margin),
+      host.calls.at(-1)!.map((entry) => overlay(entry).renderOptions.after.margin),
       ["0 0 0 13ch", "0 0 0 3ch"],
       "long lines keep their own gap without shifting the short instruction",
     );
@@ -237,9 +371,13 @@ test.serial(
     host.settings["editorInfo.inline.color"] = "editorWarning.foreground";
     controller.refresh();
     await settle();
-    const afterLine = host.calls.at(-1)!.map((entry) => entry.renderOptions.after);
+    const afterLine = host.calls.at(-1)!.map((entry) => overlay(entry).renderOptions.after);
     t.true(afterLine.every((entry) => entry.margin === "0 0 0 3ch"));
-    t.true(afterLine.every((entry) => entry.color.id === "editorWarning.foreground"));
+    t.true(
+      afterLine.every(
+        (entry) => isRecord(entry.color) && entry.color.id === "editorWarning.foreground",
+      ),
+    );
     t.is(host.invalidations, 0, "presentation changes do not invalidate cached facts");
   },
 );
@@ -274,12 +412,15 @@ test.serial(
     t.regex(host.status.text, /Unavailable/);
     t.regex(host.status.tooltip, /other\.asm/);
     await controller.showStatus();
-    t.regex(host.documents.at(-1).content, /other\.asm/);
+    t.regex(documentContent(host.documents.at(-1)), /other\.asm/);
     host.failure = new Error("Analysis annotationSummary process exceeded 60 seconds.");
     controller.refresh();
     await settle();
     t.regex(host.status.text, /Error/);
     t.regex(host.status.tooltip, /exceeded 60 seconds/);
+    if (!host.editor) {
+      throw new Error("editor stub");
+    }
     host.editor.document.isDirty = true;
     controller.refresh();
     t.regex(host.status.text, /Unsaved/);
@@ -297,11 +438,14 @@ test.serial(
     controller.refresh();
     await settle();
     const annotations = host.calls.at(-1)!;
-    t.is(annotations[0].renderOptions.after.margin, "0 0 0 77ch");
-    t.is(annotations[1].renderOptions.after.margin, "0 0 0 3ch");
+    t.is(overlay(annotations[0]).renderOptions.after.margin, "0 0 0 77ch");
+    t.is(overlay(annotations[1]).renderOptions.after.margin, "0 0 0 3ch");
     t.regex(host.status.text, /2 lines/);
     await controller.toggle();
-    t.false(host.settings["editorInfo.inline.enabled"] as boolean);
+    if (typeof host.settings["editorInfo.inline.enabled"] !== "boolean") {
+      throw new Error("expected a boolean inline setting");
+    }
+    t.false(host.settings["editorInfo.inline.enabled"]);
     t.is(host.settings["analysis.showAnnotations"], undefined);
     t.deepEqual(host.writes, ["editorInfo.inline.enabled", "analysis.showAnnotations"]);
   },
@@ -317,7 +461,7 @@ test.serial(
     host.section = "Summary";
     await controller.inspectLine();
     t.deepEqual(host.requirements, [{ counts: true, bytes: true, state: false }]);
-    t.regex(host.documents.at(-1).content, /execution_counts: 0 \/ 19/);
+    t.regex(documentContent(host.documents.at(-1)), /execution_counts: 0 \/ 19/);
     host.section = "Evidence and control flow";
     await controller.inspectLine();
     t.deepEqual(host.requirements.at(-1), { counts: true, bytes: false, state: true });

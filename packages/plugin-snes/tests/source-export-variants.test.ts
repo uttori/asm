@@ -90,7 +90,7 @@ test("immutable rendering reads recipes without publishing ownership or touching
   fs.writeFileSync(path.join(directory, "ram-map.json"), JSON.stringify(ramMap));
   fs.writeFileSync(path.join(directory, "main.asm"), "; Uncommitted user work\n");
   fs.writeFileSync(path.join(directory, "generated-files.json"), "old manifest must not be read");
-  const names = fs.readdirSync(directory).sort();
+  const names = fs.readdirSync(directory).toSorted();
   const original = new Uint8Array(0x8000).fill(0xea);
   const rom = new RomImage(original, { headerSize: 0 });
   const project = projectFor(rom, [capture("observed", [0xea], {})]);
@@ -104,7 +104,7 @@ test("immutable rendering reads recipes without publishing ownership or touching
       emitFile: (file) => rendered.set(file.path, file.bytes),
     },
   );
-  t.deepEqual(fs.readdirSync(directory).sort(), names);
+  t.deepEqual(fs.readdirSync(directory).toSorted(), names);
   t.is(fs.readFileSync(path.join(directory, "main.asm"), "utf8"), "; Uncommitted user work\n");
   t.false(rendered.has("source-ownership.json"));
   t.false(rendered.has("generated-files.json"));
@@ -371,7 +371,7 @@ for (const scenario of [
 
     const reordered = {
       ...project,
-      shards: { ...project.shards, analysis: [...project.shards.analysis].reverse() },
+      shards: { ...project.shards, analysis: [...project.shards.analysis].toReversed() },
     };
     t.deepEqual(renderSourceFixture(reordered, rom, sourceDirectory, options), exported);
     const analysisDirectory = path.join(directory, "analysis");
@@ -469,7 +469,9 @@ test("explicit instruction widths round trip and ignore unrelated captured M/X c
       .equal,
   );
   const changed = runtime.map((record) =>
-    record.bytes.length === 1 ? { ...record, state: { ...record.state, p: 0 } } : record,
+    record.bytes.length === 1
+      ? Object.assign({}, record, { state: Object.assign({}, record.state, { p: 0 }) })
+      : record,
   );
   const second = renderSourceFixture(projectFor(rom, changed), rom, sourceDirectory, options);
   t.is(

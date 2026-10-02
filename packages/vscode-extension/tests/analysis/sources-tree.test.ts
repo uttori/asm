@@ -3,10 +3,7 @@ import { registerHooks } from "node:module";
 import type { AnalysisEvidenceSource } from "@uttori/asm-disassembler";
 
 import { test } from "../../../../tests/ava-helper.js";
-import type {
-  AnalysisSourcesProvider,
-  AnalysisSourcesTreeNode,
-} from "../../src/analysis/sources-tree.js";
+import type { AnalysisSourcesProvider } from "../../src/analysis/sources-tree.js";
 
 const host = {
   calls: [] as {
@@ -16,7 +13,7 @@ const host = {
   sources: [] as AnalysisEvidenceSource[],
 };
 
-(globalThis as { __uttoriAnalysisSourcesTest?: typeof host }).__uttoriAnalysisSourcesTest = host;
+Object.assign(globalThis, { __uttoriAnalysisSourcesTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -168,8 +165,9 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     recordIds: ["node"],
   });
   t.false(children.some(({ label }) => label === "Compared with"));
-  const notes = children.find(
-    ({ label }) => label === "Capture notes & interpretation",
-  ) as AnalysisSourcesTreeNode;
+  const notes = children.find(({ label }) => label === "Capture notes & interpretation");
+  if (!notes) {
+    throw new Error("missing capture notes");
+  }
   t.deepEqual(await provider.getChildren(notes), []);
 });

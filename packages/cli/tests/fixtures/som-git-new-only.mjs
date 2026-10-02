@@ -20,14 +20,13 @@ const cases = [
     head: "4a598e1",
     expectedSha256: "6abc48cc519de82d50edc730ba9ad32bdadc1e26e62f7420c3b75ea7eb033622",
   },
-  ...["code-relocation", "expansion", "compressed-relocation", "authored-assets"].map((name) => ({
-    name,
-    ...JSON.parse(fs.readFileSync(path.join(evidence, name + ".json"))),
-  })),
+  ...["code-relocation", "expansion", "compressed-relocation", "authored-assets"].map((name) =>
+    Object.assign({ name }, JSON.parse(fs.readFileSync(path.join(evidence, name + ".json")))),
+  ),
 ];
 const report = { started: new Date().toISOString(), results: [] };
 const selected = process.argv.slice(2);
-for (const item of cases.filter((item) => !selected.length || selected.includes(item.name))) {
+for (const item of cases.filter((entry) => !selected.length || selected.includes(entry.name))) {
   const directory = path.join(temporary, item.name);
   const branch = `codex/${path.basename(temporary)}-${item.name}`;
   await sourceGit(clone, ["worktree", "add", "-b", branch, directory, item.head]);

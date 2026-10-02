@@ -1,10 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { RuntimeEvidenceRecord } from "../model/project-types.js";
 /** Masks affect grouping only. The representative keeps its original, unmasked register values. */
-type StateMasks = Readonly<Record<string, {
+type StateMasks = Readonly<Partial<Record<string, {
     readonly max: number;
     readonly mask: number;
-}>>;
+}>>>;
 /** The store owns file-identity checks, rollback and connection-local transaction state. */
 type Transaction = (action: () => void, write?: boolean) => void;
 /**

@@ -20,6 +20,96 @@ import { runSourceGitUiSmoke } from "./source-git-ui.js";
 import { runSourceLaunchSmoke } from "./source-launch.js";
 import { runSourceWorkflowSmoke } from "./source-workflow.js";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+type TracedDapMessage = {
+  type?: string;
+  event?: string;
+  command?: string;
+  success?: boolean;
+  message?: string;
+  body?: Record<string, unknown>;
+};
+
+const tracedDapMessage = (value: unknown): TracedDapMessage => {
+  if (!isRecord(value)) {
+    return {};
+  }
+  const message: TracedDapMessage = {};
+  if (typeof value.type === "string") {
+    message.type = value.type;
+  }
+  if (typeof value.event === "string") {
+    message.event = value.event;
+  }
+  if (typeof value.command === "string") {
+    message.command = value.command;
+  }
+  if (typeof value.success === "boolean") {
+    message.success = value.success;
+  }
+  if (typeof value.message === "string") {
+    message.message = value.message;
+  }
+  if (isRecord(value.body)) {
+    message.body = value.body;
+  }
+  return message;
+};
+
+/** Read hover text from MarkdownString, a plain string, or a legacy code-block hover. */
+const hoverContentText = (content: string | object): string => {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (content instanceof vscode.MarkdownString) {
+    return content.value;
+  }
+  const code = Reflect.get(content, "value");
+  return typeof code === "string" ? code : "";
+};
+
+const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
+  if (!isRecord(value)) {
+    assert.fail(`${label} must be an object.`);
+  }
+  return value;
+};
+
+const requireArray = (value: unknown, label: string): unknown[] => {
+  if (!Array.isArray(value)) {
+    assert.fail(`${label} must be an array.`);
+  }
+  return value;
+};
+
+const requireNumber = (value: unknown, label: string): number => {
+  if (typeof value !== "number") {
+    assert.fail(`${label} must be a number.`);
+  }
+  return value;
+};
+
+type LiveSource = { name?: string; path?: string; sourceReference?: number };
+
+const liveSource = (value: unknown): LiveSource | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const source: LiveSource = {};
+  if (typeof value.name === "string") {
+    source.name = value.name;
+  }
+  if (typeof value.path === "string") {
+    source.path = value.path;
+  }
+  if (typeof value.sourceReference === "number") {
+    source.sourceReference = value.sourceReference;
+  }
+  return source;
+};
+
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
   "asm.source.init",
@@ -60,18 +150,11 @@ const REQUIRED_COMMANDS = [
 async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
   // A fresh Electron test host has not yet installed its deferred debug content provider.
   await new Promise((resolve) => setTimeout(resolve, 10_000));
-  const messages: {
-    type?: string;
-    event?: string;
-    command?: string;
-    success?: boolean;
-    message?: string;
-    body?: { threadId?: number; reason?: string };
-  }[] = [];
+  const messages: TracedDapMessage[] = [];
   const tracker = vscode.debug.registerDebugAdapterTrackerFactory("uttori-asm", {
     createDebugAdapterTracker: () => ({
       onDidSendMessage: (raw: unknown) => {
-        const message = raw as (typeof messages)[number];
+        const message = tracedDapMessage(raw);
         messages.push(message);
         console.log(
           JSON.stringify({
@@ -117,8 +200,9 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
     );
     const session = vscode.debug.activeDebugSession;
     assert.ok(session);
-    const threads = (await session.customRequest("threads")) as { threads: { id: number }[] };
-    type LiveSource = { name?: string; path?: string; sourceReference?: number };
+    const threads = requireRecord(await session.customRequest("threads"), "threads");
+    const thread = requireRecord(requireArray(threads.threads, "threads")[0], "thread");
+    const threadId = requireNumber(thread.id, "thread id");
     const waitForVirtualEditor = async (source: LiveSource): Promise<void> => {
       const uri = vscode.debug.asDebugSourceUri(source, session);
       const deadline = Date.now() + 20_000;
@@ -139,29 +223,43 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
         `VS Code did not render virtual source ${source.sourceReference}: ${String(lastError)}`,
       );
     };
-    const stack = (await session.customRequest("stackTrace", {
-      threadId: threads.threads[0].id,
-    })) as { stackFrames: { id: number; line: number; source?: LiveSource }[] };
-    assert.ok(stack.stackFrames[0].source);
-    const frame = stack.stackFrames[0];
-    if (frame.source?.sourceReference) {
-      const source = (await session.customRequest("source", {
-        sourceReference: frame.source.sourceReference,
-      })) as { content: string };
-      assert.ok(source.content.length > 0);
-      await waitForVirtualEditor(frame.source);
+    const stack = requireRecord(
+      await session.customRequest("stackTrace", { threadId }),
+      "stackTrace",
+    );
+    const frame = requireRecord(requireArray(stack.stackFrames, "stack frames")[0], "stack frame");
+    const frameSource = liveSource(frame.source);
+    if (!frameSource) {
+      assert.fail("stack frame is missing its source.");
     }
-    const scopes = (await session.customRequest("scopes", { frameId: frame.id })) as {
-      scopes: { variablesReference: number }[];
-    };
-    const variables = (await session.customRequest("variables", {
-      variablesReference: scopes.scopes[0].variablesReference,
-    })) as { variables: unknown[] };
-    assert.ok(variables.variables.length > 0);
-    const trace = (await session.customRequest("uttori/traceCapabilities")) as {
-      traces: unknown[];
-    };
-    assert.ok(trace.traces.length);
+    const frameId = requireNumber(frame.id, "frame id");
+    if (frameSource.sourceReference) {
+      const source = requireRecord(
+        await session.customRequest("source", {
+          sourceReference: frameSource.sourceReference,
+        }),
+        "source",
+      );
+      if (typeof source.content !== "string") {
+        assert.fail("source content must be a string.");
+      }
+      assert.ok(source.content.length > 0);
+      await waitForVirtualEditor(frameSource);
+    }
+    const scopes = requireRecord(await session.customRequest("scopes", { frameId }), "scopes");
+    const scope = requireRecord(requireArray(scopes.scopes, "scopes")[0], "scope");
+    const variables = requireRecord(
+      await session.customRequest("variables", {
+        variablesReference: requireNumber(scope.variablesReference, "variables reference"),
+      }),
+      "variables",
+    );
+    assert.ok(requireArray(variables.variables, "variables").length > 0);
+    const trace = requireRecord(
+      await session.customRequest("uttori/traceCapabilities"),
+      "trace capabilities",
+    );
+    assert.ok(requireArray(trace.traces, "traces").length);
     assert.deepEqual(
       messages.filter((entry) => entry.type === "response" && entry.success === false),
       [],
@@ -172,36 +270,42 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
       addressSpace: "snes.cpu",
     });
     for (let step = 0; step < 2; step++) {
-      await session.customRequest("stepIn", { threadId: threads.threads[0].id });
-      const stepped = (await session.customRequest("stackTrace", {
-        threadId: threads.threads[0].id,
-      })) as { stackFrames: { source?: LiveSource }[] };
-      const source = stepped.stackFrames[0].source;
+      await session.customRequest("stepIn", { threadId });
+      const stepped = requireRecord(
+        await session.customRequest("stackTrace", { threadId }),
+        "stepped stack",
+      );
+      const steppedFrame = requireRecord(
+        requireArray(stepped.stackFrames, "stepped frames")[0],
+        "stepped frame",
+      );
+      const source = liveSource(steppedFrame.source);
       if (source?.sourceReference) {
         await waitForVirtualEditor(source);
       }
     }
-    const observed = (await session.customRequest("uttori/readTrace", { maxEvents: 240 })) as {
-      addresses: number[];
-      droppedEvents: number;
-    };
+    const observed = requireRecord(
+      await session.customRequest("uttori/readTrace", { maxEvents: 240 }),
+      "trace",
+    );
+    const addresses = requireArray(observed.addresses, "trace addresses");
     await session.customRequest("uttori/stopTrace");
-    assert.ok(observed.addresses.length >= 2);
+    assert.ok(addresses.length >= 2);
     assert.equal(observed.droppedEvents, 0);
     console.log(
       JSON.stringify({
         liveLaunchMs: Date.now() - started,
-        stoppedFrame: stack.stackFrames[0],
+        stoppedFrame: frame,
         trace,
         observed,
       }),
     );
     const hold = Math.min(Number(process.env.UTTORI_VSCODE_LIVE_HOLD_MS ?? 0), 300_000);
     if (hold > 0) {
-      await session.customRequest("continue", { threadId: threads.threads[0].id });
+      await session.customRequest("continue", { threadId });
       console.log("Headed emulator running for interactive verification.");
       await new Promise((resolve) => setTimeout(resolve, hold));
-      await session.customRequest("pause", { threadId: threads.threads[0].id });
+      await session.customRequest("pause", { threadId });
     }
   } finally {
     await vscode.debug.stopDebugging(vscode.debug.activeDebugSession);
@@ -247,15 +351,10 @@ async function verifyReplaySourceBreakpoint(
   debugMapUri: vscode.Uri,
   languageId: string,
 ): Promise<void> {
-  const messages: Array<{
-    type?: string;
-    command?: string;
-    success?: boolean;
-    body?: { breakpoints?: Array<{ verified?: boolean; line?: number }> };
-  }> = [];
+  const messages: TracedDapMessage[] = [];
   const tracker = vscode.debug.registerDebugAdapterTrackerFactory("uttori-asm", {
     createDebugAdapterTracker: () => ({
-      onDidSendMessage: (message: unknown) => messages.push(message as (typeof messages)[number]),
+      onDidSendMessage: (message: unknown) => messages.push(tracedDapMessage(message)),
     }),
   });
   const document = await vscode.workspace.openTextDocument(sourceUri);
@@ -267,10 +366,12 @@ async function verifyReplaySourceBreakpoint(
       false,
       "The editor smoke test must exercise the language breakpoint contribution.",
     );
-    const breakpoints = vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON.contributes
-      ?.breakpoints as Array<{ language?: string }> | undefined;
+    const contributes: unknown =
+      vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON.contributes;
+    const breakpointEntries = isRecord(contributes) ? contributes.breakpoints : undefined;
     assert.ok(
-      breakpoints?.some((entry) => entry.language === languageId),
+      Array.isArray(breakpointEntries) &&
+        breakpointEntries.some((entry) => isRecord(entry) && entry.language === languageId),
       `Packaged extension omitted breakpoint support for ${languageId}.`,
     );
     await vscode.languages.setTextDocumentLanguage(document, languageId);
@@ -316,7 +417,7 @@ async function verifyReplaySourceBreakpoint(
     }
     const response = messages.find((message) => message.command === "setBreakpoints");
     assert.equal(response?.success, true, "VS Code source-breakpoint request failed.");
-    assert.deepEqual(response?.body?.breakpoints, [
+    assert.deepEqual(response.body?.breakpoints, [
       {
         id: 1,
         verified: true,
@@ -488,20 +589,21 @@ export async function run(): Promise<void> {
       const sourceRoots = await sources.getChildren();
       const chest = sourceRoots.find(({ label }) => label === "chest.json");
       assert.ok(chest);
-      const groups = await sources.getChildren(chest);
+      const sourceGroups = await sources.getChildren(chest);
       // Sources show directly observed addresses. Overlap with another capture is retained.
-      const observed = groups.find(({ label }) => label === "Observed instructions");
+      const observed = sourceGroups.find(({ label }) => label === "Observed instructions");
       assert.ok(observed);
       assert.equal(sources.getTreeItem(observed).description, "500");
-      const pages = await sources.getChildren(observed);
-      assert.equal(pages.length, 3);
-      const entries = await sources.getChildren(pages[0]);
+      const sourcePages = await sources.getChildren(observed);
+      assert.equal(sourcePages.length, 3);
+      const entries = await sources.getChildren(sourcePages[0]);
       assert.equal(entries.length, 200);
       assert.equal(sources.getTreeItem(entries[0]).command?.command, "asm.analysis.navigate");
-      const location = sources.getTreeItem(entries[0]).command?.arguments?.[0] as
-        | { address: number }
-        | undefined;
-      assert.equal(location?.address, 0x808000);
+      const location: unknown = sources.getTreeItem(entries[0]).command?.arguments?.[0];
+      if (!isRecord(location)) {
+        assert.fail("Navigate command is missing its address.");
+      }
+      assert.equal(location.address, 0x808000);
       await vscode.commands.executeCommand("uttori-asm.sources.focus");
     } finally {
       sources.dispose();
@@ -515,12 +617,20 @@ export async function run(): Promise<void> {
   const output = await vscode.workspace.fs.readFile(outputUri);
   assert.ok(output.length > 0, "VS Code build command produced no ROM bytes.");
   const debugMapUri = vscode.Uri.joinPath(folder.uri, "main.sfc.debug.json");
-  const debugMap = JSON.parse(
+  const debugMap: unknown = JSON.parse(
     Buffer.from(await vscode.workspace.fs.readFile(debugMapUri)).toString("utf8"),
-  ) as { output?: { size?: number; sha256?: string }; fingerprint?: { value?: string } };
-  assert.equal(debugMap.output?.size, output.length, "Debug map does not identify the built ROM.");
-  assert.match(debugMap.output?.sha256 ?? "", /^[\da-f]{64}$/);
-  assert.match(debugMap.fingerprint?.value ?? "", /^[\da-f]{64}$/);
+  );
+  if (!isRecord(debugMap)) {
+    assert.fail("Debug map must be an object.");
+  }
+  const mappedOutput = isRecord(debugMap.output) ? debugMap.output : undefined;
+  const mappedFingerprint = isRecord(debugMap.fingerprint) ? debugMap.fingerprint : undefined;
+  assert.equal(mappedOutput?.size, output.length, "Debug map does not identify the built ROM.");
+  assert.match(typeof mappedOutput.sha256 === "string" ? mappedOutput.sha256 : "", /^[\da-f]{64}$/);
+  assert.match(
+    typeof mappedFingerprint?.value === "string" ? mappedFingerprint.value : "",
+    /^[\da-f]{64}$/,
+  );
   // Native hover composition must preserve instruction help while contributing only chosen rows.
   const hoverText = async (line: number): Promise<string[]> => {
     const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
@@ -528,10 +638,8 @@ export async function run(): Promise<void> {
       sourceUri,
       new vscode.Position(line, 3),
     );
-    return (hovers ?? []).flatMap((hover) =>
-      hover.contents.map((value) =>
-        (typeof value === "string" ? value : value.value).replaceAll("&nbsp;", " "),
-      ),
+    return hovers.flatMap((hover) =>
+      hover.contents.map((value) => hoverContentText(value).replaceAll("&nbsp;", " ")),
     );
   };
   const informationConfig = vscode.workspace.getConfiguration("asm", sourceUri);
@@ -620,8 +728,9 @@ export async function run(): Promise<void> {
         assetSourceUri,
         new vscode.Position(line, 16),
       );
-      const content = (hovers ?? [])
+      const content = hovers
         .flatMap((hover) => hover.contents)
+        // oxlint-disable-next-line typescript/no-deprecated
         .map((value) => (typeof value === "string" ? value : value.value))
         .join("\n");
       if (content.includes("data:image/png;base64,")) {

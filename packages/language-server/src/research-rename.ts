@@ -34,6 +34,55 @@ export interface RenameBuffer {
   readonly text: string;
 }
 
+/** JSON objects, including arrays, can carry string fields. Null is not an object here. */
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+function isProjectLabel(value: unknown): value is ProjectLabel {
+  if (!isJsonObject(value) || !isUnknownArray(value.evidence)) {
+    return false;
+  }
+  return (
+    typeof value.id === "string" &&
+    typeof value.addressSpace === "string" &&
+    typeof value.address === "number" &&
+    typeof value.name === "string" &&
+    (value.sourceName === undefined || typeof value.sourceName === "string") &&
+    (value.suppressed === undefined || typeof value.suppressed === "boolean") &&
+    value.evidence.every((entry) => typeof entry === "string")
+  );
+}
+
+function isCatalogSymbol(value: unknown): value is SymbolCatalog["symbols"][number] {
+  if (!isJsonObject(value) || !isUnknownArray(value.evidence)) {
+    return false;
+  }
+  return (
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.addressSpace === "string" &&
+    typeof value.address === "number" &&
+    value.evidence.every((entry) => typeof entry === "string")
+  );
+}
+
+function isSymbolCatalog(value: unknown): value is SymbolCatalog {
+  if (!isJsonObject(value) || !isUnknownArray(value.symbols)) {
+    return false;
+  }
+  return (
+    value.format === "uttori-source-symbols" &&
+    value.version === 1 &&
+    typeof value.romSha256 === "string" &&
+    value.symbols.every(isCatalogSymbol)
+  );
+}
+
 /** Compact generation output; original addresses remain stable after source movement. */
 interface SymbolCatalog {
   readonly format: "uttori-source-symbols";
@@ -47,9 +96,6 @@ interface SymbolCatalog {
     readonly evidence: readonly string[];
   }[];
 }
-
-/** Preserve readonly element types while validating external JSON at runtime. */
-const isArray = (value: unknown): boolean => Array.isArray(value);
 
 /** Stop at repository boundaries, including linked-worktree .git files and nested projects. */
 function projectRoot(file: string): string | undefined {
@@ -112,8 +158,9 @@ function layoutRenameEdit(
   if (Buffer.byteLength(before) > 8 * 1024 * 1024) {
     throw new Error("Layout rename exceeds its document budget.");
   }
-  const layout = JSON.parse(before) as Record<string, unknown>;
+  const layout: unknown = JSON.parse(before);
   if (
+    !isJsonObject(layout) ||
     layout.format !== "uttori-snes-layout" ||
     layout.version !== 1 ||
     layout.romSha256 !== romSha256
@@ -126,11 +173,11 @@ function layoutRenameEdit(
     if (records === undefined) {
       continue;
     }
-    if (!Array.isArray(records)) {
+    if (!isUnknownArray(records)) {
       throw new Error(`Invalid layout collection: ${collection}`);
     }
-    for (const record of records as Record<string, unknown>[]) {
-      if (!record || typeof record !== "object") {
+    for (const record of records) {
+      if (!isJsonObject(record)) {
         throw new Error(`Invalid layout record: ${collection}`);
       }
       for (const field of ["startSymbol", "endSymbol"]) {
@@ -251,13 +298,8 @@ export async function researchRenameEditsFor(
   if (fs.statSync(catalogPath).size > 8 * 1024 * 1024) {
     throw new Error("Symbol identity catalog is too large.");
   }
-  const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8")) as SymbolCatalog;
-  if (
-    catalog.format !== "uttori-source-symbols" ||
-    catalog.version !== 1 ||
-    catalog.romSha256 !== project.configuration.romSha256 ||
-    !isArray(catalog.symbols)
-  ) {
+  const catalog: unknown = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+  if (!isSymbolCatalog(catalog) || catalog.romSha256 !== project.configuration.romSha256) {
     throw new Error("Symbol identity catalog does not match this project ROM.");
   }
   const overlays = new Map(
@@ -274,11 +316,16 @@ export async function researchRenameEditsFor(
     { project: project.configuration.id, romSha256: project.configuration.romSha256 },
     overlays,
   );
-  const labels = new Map(
-    snapshot.decisions
-      .filter((item) => item.collection === "labels")
-      .map((item) => [item.id, item.value as ProjectLabel | null]),
-  );
+  const labels = new Map<string, ProjectLabel | null>();
+  for (const item of snapshot.decisions) {
+    if (item.collection !== "labels") {
+      continue;
+    }
+    if (item.value !== null && !isProjectLabel(item.value)) {
+      throw new Error("Research label decision is not a project label.");
+    }
+    labels.set(item.id, item.value);
+  }
   const matches = catalog.symbols.filter((symbol) => {
     const label = labels.get(symbol.id);
     if (label === null || label?.suppressed) {

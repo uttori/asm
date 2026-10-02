@@ -1,4 +1,4 @@
-import { type ScalarArrayOptions } from "./data.js";
+import { type ScalarArrayOptions } from "./data-scalar.js";
 /** One non-overlapping scalar or LSB0 bit field in a fixed-size record. */
 export type StructField = Readonly<{
     name: string;

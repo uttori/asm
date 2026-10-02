@@ -332,7 +332,7 @@ export function prepareSnesSourceRelocation(options) {
         }
         const allocated = placements
             .filter((item) => item.start >= pool.start && item.start < pool.end)
-            .sort((a, b) => a.start - b.start);
+            .toSorted((a, b) => a.start - b.start);
         const lines = file.lines.slice(first + 1, last).filter((line) => line.trim().startsWith(";"));
         let cursor = pool.start;
         for (const item of allocated) {
@@ -366,8 +366,12 @@ export function prepareSnesSourceRelocation(options) {
         const statements = statementRepairs.get(name) ??
             new Map();
         const repairs = statements.get(statement) ?? [];
-        const start = statement.indexOf(reference.expression);
-        repairs.push({ start, end: start + reference.expression.length, text: expression });
+        const expressionStart = statement.indexOf(reference.expression);
+        repairs.push({
+            start: expressionStart,
+            end: expressionStart + reference.expression.length,
+            text: expression,
+        });
         statements.set(statement, repairs);
         statementRepairs.set(name, statements);
         return {
@@ -384,7 +388,7 @@ export function prepareSnesSourceRelocation(options) {
         for (const [statement, repairs] of statements) {
             let after = statement;
             let right = statement.length;
-            for (const repair of repairs.sort((a, b) => b.start - a.start)) {
+            for (const repair of repairs.toSorted((a, b) => b.start - a.start)) {
                 if (repair.end > right) {
                     throw new Error("Reference expressions overlap inside one source statement.");
                 }
@@ -395,9 +399,11 @@ export function prepareSnesSourceRelocation(options) {
         }
         save(name, text.split(/\r?\n/));
     }
-    const extents = (options.build.extents ?? []).map((extent) => extent.id === object.id ? { ...extent, size: encodedLength } : extent);
+    const extents = (options.build.extents ?? []).map((extent) => extent.id === object.id ? Object.assign({}, extent, { size: encodedLength }) : extent);
     const states = (options.build.states ?? []).map((state) => state.offset >= object.start && state.offset < object.start + object.length
-        ? { ...state, offset: plan.destination + state.offset - object.start }
+        ? Object.assign({}, state, {
+            offset: plan.destination + state.offset - object.start,
+        })
         : state);
     const final = inspectSnesSource({
         ...options.build,
@@ -424,7 +430,7 @@ export function prepareSnesSourceRelocation(options) {
     }
     for (let offset = 0; offset < final.output.length; offset++) {
         if (final.output[offset] !== inspected.output[offset] &&
-            !allowed.some(([start, end]) => offset >= start && offset < end)) {
+            !allowed.some(([allowedStart, allowedEnd]) => offset >= allowedStart && offset < allowedEnd)) {
             throw new Error(`Relocation changes undeclared bytes at ${hex(offset)}. Add the missing reference or reconcile source placement.`);
         }
     }
@@ -447,7 +453,7 @@ export function prepareSnesSourceRelocation(options) {
                 ? []
                 : [{ path: name, beforeSha256: sourceContentHash(file.text), before: file.text, after }];
         })
-            .sort((a, b) => a.path.localeCompare(b.path)),
+            .toSorted((a, b) => a.path.localeCompare(b.path)),
     };
 }
 //# sourceMappingURL=source-relocation.js.map

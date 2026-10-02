@@ -2,6 +2,18 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+function errorCode(error) {
+    if (typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string") {
+        return error.code;
+    }
+    return undefined;
+}
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 /** Persist a replacement before exposing it; temporary files always share the destination volume.
  * @param {string} file Destination owned by the caller.
  * @param {string | Uint8Array} bytes Complete replacement bytes.
@@ -38,7 +50,7 @@ function ensureDurableDirectory(directory) {
         fs.mkdirSync(directory);
     }
     catch (error) {
-        if (error.code !== "EEXIST") {
+        if (errorCode(error) !== "EEXIST") {
             throw error;
         }
     }
@@ -76,22 +88,26 @@ export function acquireFileLease(file) {
             fs.linkSync(candidate, file);
         }
         catch (error) {
-            if (error.code !== "EEXIST") {
+            if (errorCode(error) !== "EEXIST") {
                 throw error;
             }
             const previous = fs.readFileSync(file, "utf8");
             const parsed = JSON.parse(previous);
             let dead = false;
-            if (parsed.host === os.hostname() && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
+            if (isRecord(parsed) &&
+                parsed.host === os.hostname() &&
+                typeof parsed.pid === "number" &&
+                Number.isSafeInteger(parsed.pid) &&
+                parsed.pid > 0) {
                 try {
                     process.kill(parsed.pid, 0);
                 }
                 catch (cause) {
-                    dead = cause.code === "ESRCH";
+                    dead = errorCode(cause) === "ESRCH";
                 }
             }
             if (!dead) {
-                throw new Error(`An operation owns ${file}. Retry after it finishes.`);
+                throw new Error(`An operation owns ${file}. Retry after it finishes.`, { cause: error });
             }
             // Serialize reclaimers. A crash during reclamation is itself recoverable through this lease.
             const recovery = acquireFileLease(`${file}.recovery`);

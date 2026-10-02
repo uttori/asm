@@ -4,6 +4,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import {
+  DEBUG_MAP_FORMAT,
+  DEBUG_MAP_SCHEMA_VERSION,
   debugMapRangesForAddress,
   validateDebugMap,
   type DebugMap,
@@ -49,7 +51,44 @@ export interface AnalysisDebugMapCandidate {
  * @returns {readonly string[]} Unique strings sorted with localeCompare.
  */
 const sortedUnique = (values: readonly string[]): readonly string[] =>
-  [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A stored map must be inspectable by validateDebugMap; format and fingerprint stay its job. */
+export function isStoredDebugMap(value: unknown): value is Parameters<typeof validateDebugMap>[0] {
+  return (
+    isRecord(value) &&
+    isRecord(value.fingerprint) &&
+    typeof value.fingerprint.algorithm === "string" &&
+    typeof value.fingerprint.value === "string" &&
+    isRecord(value.output) &&
+    typeof value.output.size === "number" &&
+    typeof value.output.sha256 === "string" &&
+    typeof value.target === "string" &&
+    Array.isArray(value.sources) &&
+    Array.isArray(value.ranges) &&
+    (value.instructions === undefined || Array.isArray(value.instructions)) &&
+    (value.assets === undefined || Array.isArray(value.assets))
+  );
+}
+
+/** validateDebugMap reports mismatches; this admits only a map whose identity fields are current. */
+export function isAcceptedDebugMap(map: Parameters<typeof validateDebugMap>[0]): map is DebugMap {
+  return (
+    map.format === DEBUG_MAP_FORMAT &&
+    map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION &&
+    map.fingerprint.algorithm === "sha256"
+  );
+}
+
+function isIdentityList(
+  value: AnalysisDebugMapIdentity | readonly AnalysisDebugMapIdentity[],
+): value is readonly AnalysisDebugMapIdentity[] {
+  return Array.isArray(value);
+}
 
 /**
  * Resolve a configured relative path against its workspace root, falling back to the process
@@ -123,25 +162,27 @@ export const currentAnalysisSourcePath = (
 export const findAnalysisDebugMapCandidates = async (
   identity: AnalysisDebugMapIdentity | readonly AnalysisDebugMapIdentity[],
 ): Promise<readonly AnalysisDebugMapCandidate[]> => {
-  const identities: readonly AnalysisDebugMapIdentity[] = Array.isArray(identity)
-    ? identity
-    : [identity as AnalysisDebugMapIdentity];
+  const identities = isIdentityList(identity) ? identity : [identity];
   const candidates: AnalysisDebugMapCandidate[] = [];
   for (const descriptor of await discoverAnalysisDebugMapFiles()) {
     try {
-      const map = JSON.parse(fs.readFileSync(descriptor.file, "utf8")) as DebugMap;
+      const parsed: unknown = JSON.parse(fs.readFileSync(descriptor.file, "utf8"));
+      if (!isStoredDebugMap(parsed)) {
+        continue;
+      }
       if (
-        validateDebugMap(map).length > 0 ||
+        validateDebugMap(parsed).length > 0 ||
+        !isAcceptedDebugMap(parsed) ||
         !identities.some(
           (candidate) =>
-            map.target === candidate.target &&
-            map.output.sha256 === candidate.romContentSha256 &&
-            map.output.size === candidate.romContentSize,
+            parsed.target === candidate.target &&
+            parsed.output.sha256 === candidate.romContentSha256 &&
+            parsed.output.size === candidate.romContentSize,
         )
       ) {
         continue;
       }
-      candidates.push({ ...descriptor, map });
+      candidates.push({ ...descriptor, map: parsed });
     } catch {
       // Unrelated or malformed maps are not candidates.
     }
@@ -190,11 +231,13 @@ export const discoverAnalysisDebugMapFiles = async (): Promise<
       if ((await fs.promises.stat(receiptFile)).size > 1024 * 1024) {
         continue;
       }
-      const receipt = JSON.parse(await fs.promises.readFile(receiptFile, "utf8")) as {
-        inputSha256: string;
-        debugMapFile: string;
-      };
-      if (!/^[\da-f]{64}$/.test(receipt.inputSha256)) {
+      const receipt: unknown = JSON.parse(await fs.promises.readFile(receiptFile, "utf8"));
+      if (
+        !isRecord(receipt) ||
+        typeof receipt.inputSha256 !== "string" ||
+        typeof receipt.debugMapFile !== "string" ||
+        !/^[\da-f]{64}$/.test(receipt.inputSha256)
+      ) {
         continue;
       }
       const file = path.join(directory, receipt.inputSha256, "program.sfc.debug.json");

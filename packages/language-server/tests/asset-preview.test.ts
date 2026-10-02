@@ -7,6 +7,19 @@ import { test } from "../../../tests/ava-helper.js";
 import { convertAssetPreview } from "../src/asset-preview-conversion.js";
 import { supportsPortableAssetPreview } from "../src/asset-preview-service.js";
 
+function isPcmAudio(value: unknown): value is PcmAudio {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "samples" in value &&
+    value.samples instanceof Int16Array &&
+    "sampleRate" in value &&
+    typeof value.sampleRate === "number" &&
+    "sourceBitDepth" in value &&
+    (value.sourceBitDepth === 8 || value.sourceBitDepth === 16)
+  );
+}
+
 const fixture = (name: string): Uint8Array =>
   fs.readFileSync(path.resolve("packages/assets/tests/fixtures", name));
 
@@ -72,7 +85,10 @@ test("edited SoM WAVE preview exposes the same decoded audio and fidelity as ass
   const source = fs.readFileSync(
     path.resolve("secret-of-mana/disassembly/assets/audio/brr/034784-waveform-01.wav"),
   );
-  const pcm = waveImporter.import({ bytes: source, mediaType: "audio/wav" }).value as PcmAudio;
+  const pcm = waveImporter.import({ bytes: source, mediaType: "audio/wav" }).value;
+  if (!isPcmAudio(pcm)) {
+    throw new Error("Expected PCM audio.");
+  }
   const samples = pcm.samples.slice();
   samples[0] = 12000;
   const changed = writePcmWave(samples, pcm.sampleRate);

@@ -4,6 +4,7 @@ import type { DatabaseSync, StatementSync } from "node:sqlite";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 
 import type { RuntimeEvidenceRecord } from "../model/project-types.js";
+import { isRecord } from "../model/record-shape.js";
 import {
   sqliteRuntimeIdentity,
   encodeSqlitePayload,
@@ -181,6 +182,14 @@ CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,arch
 END;
 `;
 
+function pairedState(payload: unknown): unknown {
+  const parsed = parseSqlitePayload(payload);
+  if (!isRecord(parsed)) {
+    throw new Error("Invalid paired runtime payload.");
+  }
+  return parsed.state;
+}
+
 /** Bounded prepared writer. Dictionary IDs are transaction-owned by the calling store. */
 export class SqliteRuntimeWriter {
   readonly #findFact: StatementSync;
@@ -247,7 +256,7 @@ export class SqliteRuntimeWriter {
         other.architecture === record.architecture &&
         other.address_space === record.addressSpace &&
         other.address === record.address &&
-        canonicalEquals(parseSqlitePayload<{ state: unknown }>(other.payload).state, record.state)
+        canonicalEquals(pairedState(other.payload), record.state)
       ) {
         if (record.kind === "runtime-cpu-state") {
           this.#pair.run(prefix, other.oid);

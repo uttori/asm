@@ -25,8 +25,15 @@ type AssemblerReferenceTestAccess = {
   evaluateReferenceExpressionNode: (expression: ReferenceExpressionNode) => number;
 };
 
-const stripExpressionSpans = (node: ExpressionNode): ExpressionNode =>
-  JSON.parse(JSON.stringify(node, (key, value) => (key === "span" ? undefined : value)));
+const stripExpressionSpans = (node: unknown): unknown => {
+  const text = JSON.stringify(node, (key, value) => (key === "span" ? undefined : value));
+  const parsed: unknown = JSON.parse(text);
+  return parsed;
+};
+
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
 
 test("normalized command treats a lone colon as a ca65 unnamed label", (t) => {
   const command = createNormalizedCommand(":", ":", [":"], "test.asm", 20);
@@ -331,27 +338,27 @@ test("expression nodes parse leading-dot sublabels", (t) => {
 
 test("typed for nodes preserve parsed range semantics", (t) => {
   const assembler = new Assembler();
-  const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes([
-    "for i = 0..2",
-    "endfor",
-  ]);
+  const loop = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(["for i = 0..2", "endfor"]),
+    0,
+  );
 
   if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
     t.fail();
     return;
   }
 
-  t.deepEqual(stripExpressionSpans(loop.rangeNode as ExpressionNode), {
+  t.deepEqual(stripExpressionSpans(loop.rangeNode), {
     type: "range",
     start: { type: "literal", value: "0" },
     end: { type: "literal", value: "2" },
   });
   t.is(loop.variable, "i");
-  t.deepEqual(stripExpressionSpans(loop.startExpression as ExpressionNode), {
+  t.deepEqual(stripExpressionSpans(loop.startExpression), {
     type: "literal",
     value: "0",
   });
-  t.deepEqual(stripExpressionSpans(loop.endExpression as ExpressionNode), {
+  t.deepEqual(stripExpressionSpans(loop.endExpression), {
     type: "literal",
     value: "2",
   });
@@ -359,9 +366,12 @@ test("typed for nodes preserve parsed range semantics", (t) => {
 
 test("typed while nodes retain normalized loop body commands", (t) => {
   const assembler = new Assembler();
-  const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    ["while !COUNT < 2", "Label = 1 ; comment", "endwhile"],
-    "loop.asm",
+  const loop = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      ["while !COUNT < 2", "Label = 1 ; comment", "endwhile"],
+      "loop.asm",
+      0,
+    ),
     0,
   );
 
@@ -371,7 +381,7 @@ test("typed while nodes retain normalized loop body commands", (t) => {
   }
 
   t.is(loop.commands.length, 1);
-  const bodyCommand = loop.commands[0];
+  const bodyCommand = elementAt(loop.commands, 0);
   if (!bodyCommand || typeof bodyCommand === "string" || "type" in bodyCommand) {
     t.fail();
     return;
@@ -393,9 +403,12 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
   stub(assembler, "processNormalizedCommand").callsFake((command) => {
     executed.push({ command: command.command, value: assembler.defines.get("i") });
   });
-  const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    ["for i = 0..3", "db !i", "endfor"],
-    "loop.asm",
+  const loop = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      ["for i = 0..3", "db !i", "endfor"],
+      "loop.asm",
+      0,
+    ),
     0,
   );
 
@@ -450,7 +463,7 @@ test("tree parser resolves ambiguous endif to innermost while block", (t) => {
   ]);
 
   t.is(nodes.length, 1);
-  const root = nodes[0];
+  const root = elementAt(nodes, 0);
   if (!root || !("type" in root) || root.type !== "if") {
     t.fail();
     return;
@@ -460,14 +473,14 @@ test("tree parser resolves ambiguous endif to innermost while block", (t) => {
   t.truthy(ifBranch);
   t.is(ifBranch.commands.length, 2);
 
-  const whileNode = ifBranch.commands[0];
+  const whileNode = elementAt(ifBranch.commands, 0);
   if (!whileNode || !("type" in whileNode) || whileNode.type !== "while") {
     t.fail();
     return;
   }
   t.is(whileNode.commands.length, 1);
 
-  const trailingCommand = ifBranch.commands[1];
+  const trailingCommand = elementAt(ifBranch.commands, 1);
   if (!trailingCommand || !("source" in trailingCommand)) {
     t.fail();
     return;
@@ -557,9 +570,22 @@ test("leading reference parser extracts a reference prefix from larger expressio
   t.is(renderReferenceExpressionNode(parsed.node), "Player[1 + 1].hp");
 });
 
+function isReferenceAccess(value: Assembler): value is Assembler & AssemblerReferenceTestAccess {
+  return (
+    "resolveReferenceExpressionNode" in value &&
+    typeof value.resolveReferenceExpressionNode === "function" &&
+    "renderResolvedReferenceExpression" in value &&
+    typeof value.renderResolvedReferenceExpression === "function" &&
+    "evaluateReferenceExpressionNode" in value &&
+    typeof value.evaluateReferenceExpressionNode === "function"
+  );
+}
+
 test("assembler reference seam resolves defines and normalizes label paths", (t) => {
   const assembler = new Assembler();
-  const access = assembler as unknown as AssemblerReferenceTestAccess;
+  if (!isReferenceAccess(assembler)) {
+    throw new Error("Assembler reference seam is missing.");
+  }
   assembler.defines.set("IDX", "1");
 
   const reference = parseExpressionNode("Player[!IDX + 1].hp");
@@ -569,20 +595,20 @@ test("assembler reference seam resolves defines and normalizes label paths", (t)
     return;
   }
 
-  const resolved = access.resolveReferenceExpressionNode(reference);
+  const resolved = assembler.resolveReferenceExpressionNode(reference);
   t.true(isReferenceExpressionNode(resolved));
   if (!isReferenceExpressionNode(resolved)) {
     t.fail();
     return;
   }
 
-  const normalized = access.renderResolvedReferenceExpression(resolved);
+  const normalized = assembler.renderResolvedReferenceExpression(resolved);
   t.is(normalized, "Player[2].hp");
 
   stub(assembler.structEngine, "hasStructReference").returns(true);
   const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(99);
-  t.is(access.evaluateReferenceExpressionNode(reference), 99);
+  t.is(assembler.evaluateReferenceExpressionNode(reference), 99);
 });
 
 test("expression host label resolution delegates to canonical reference seam", (t) => {

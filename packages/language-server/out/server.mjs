@@ -50,17 +50,21 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // packages/core/src/canonical-json.ts
-var compareKeys, canonicalValue, canonicalJson;
+var compareKeys, isRecord, canonicalValue, canonicalJson;
 var init_canonical_json = __esm({
   "packages/core/src/canonical-json.ts"() {
     "use strict";
     compareKeys = (a, b) => a.localeCompare(b);
+    isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     canonicalValue = (value) => {
       if (typeof value !== "object" || value === null) {
         return value;
       }
       if (Array.isArray(value)) {
         return value.map(canonicalValue);
+      }
+      if (!isRecord(value)) {
+        return value;
       }
       const input = value;
       const result = {};
@@ -110,21 +114,24 @@ var init_debug_map = __esm({
         const relative2 = path.relative(sourceRoot, absolute);
         const portable = relative2 && !relative2.startsWith("..") && !path.isAbsolute(relative2) ? relative2 : absolute;
         return { entry, originalId, portable: portable.split(path.sep).join("/") };
-      }).sort((left, right) => left.portable.localeCompare(right.portable));
+      }).toSorted((left, right) => left.portable.localeCompare(right.portable));
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
         const kind = options.dependencyKinds?.get(entry.name);
-        return {
-          id,
-          path: portable,
-          size: entry.size,
-          crc32: entry.crc,
-          sha256: entry.sha256,
-          ...kind ? { kind } : {}
-        };
+        return Object.assign(
+          {},
+          {
+            id,
+            path: portable,
+            size: entry.size,
+            crc32: entry.crc,
+            sha256: entry.sha256
+          },
+          kind ? { kind } : {}
+        );
       });
-      const ranges = options.mapping.ranges.map(({ fileIdx, ...range }) => ({ ...range, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 })).filter((range) => range.sourceId >= 0).sort(
+      const ranges = options.mapping.ranges.map(({ fileIdx, ...range }) => ({ ...range, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 })).filter((range) => range.sourceId >= 0).toSorted(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.sourceId - right.sourceId || left.line - right.line
       );
       const payload = {
@@ -5557,7 +5564,8 @@ ${JSON.stringify(message, null, 4)}`);
               }
             }
           }
-          tracer.log(`Sending response '${method} - (${message.id})'. Processing request took ${Date.now() - startTime}ms`, data);
+          const error = message.error ? ` Request failed: ${message.error.message} (${message.error.code}).` : "";
+          tracer.log(`Sending response '${method} - (${message.id})'. Processing request took ${Date.now() - startTime}ms.${error}`, data);
         } else {
           logLSPMessage("send-response", message);
         }
@@ -5897,7 +5905,6 @@ ${JSON.stringify(message, null, 4)}`);
               responsePromises.delete(id);
               responsePromise.reject(new messages_1.ResponseError(messages_1.ErrorCodes.MessageWriteError, error.message ? error.message : "Unknown reason"));
               logger.error(`Sending request failed.`);
-              throw error;
             }
           });
         },
@@ -9693,11 +9700,18 @@ var require_progress = __commonJS({
   "node_modules/vscode-languageserver/lib/common/progress.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ProgressFeature = void 0;
+    exports.ProgressFeature = exports.WorkDoneProgressReporter = void 0;
     exports.attachWorkDone = attachWorkDone;
     exports.attachPartialResult = attachPartialResult;
     var vscode_languageserver_protocol_1 = require_api2();
     var uuid_1 = require_uuid();
+    var WorkDoneProgressReporter;
+    (function(WorkDoneProgressReporter2) {
+      function isNullInstance(reporter) {
+        return reporter instanceof NullProgressReporter;
+      }
+      WorkDoneProgressReporter2.isNullInstance = isNullInstance;
+    })(WorkDoneProgressReporter || (exports.WorkDoneProgressReporter = WorkDoneProgressReporter = {}));
     var WorkDoneProgressReporterImpl = class _WorkDoneProgressReporterImpl {
       _connection;
       _token;
@@ -10225,6 +10239,8 @@ var require_semanticTokens = __commonJS({
       previousResult(id) {
         if (this.id === id) {
           this._prevData = this.getFinalDataDelta();
+        } else {
+          this._prevData = void 0;
         }
         this.initialize();
       }
@@ -12492,7 +12508,14 @@ var require_main2 = __commonJS({
         server.on("error", reject);
         server.listen(port, "127.0.0.1", () => {
           server.removeListener("error", reject);
+          const address3 = server.address();
+          if (address3 === null || typeof address3 === "string") {
+            reject(new Error(`Unexpected server address: ${address3}`));
+            return;
+          }
+          const boundPort = address3.port;
           resolve({
+            port: () => boundPort,
             onConnected: () => {
               return connected;
             }
@@ -12581,10 +12604,14 @@ var require_api3 = __commonJS({
       for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p)) __createBinding(exports2, m, p);
     };
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ProposedFeatures = exports.NotebookDocuments = exports.TextDocuments = exports.SemanticTokensBuilder = void 0;
+    exports.ProposedFeatures = exports.NotebookDocuments = exports.TextDocuments = exports.SemanticTokensBuilder = exports.WorkDoneProgressReporter = void 0;
     var semanticTokens_1 = require_semanticTokens();
     Object.defineProperty(exports, "SemanticTokensBuilder", { enumerable: true, get: function() {
       return semanticTokens_1.SemanticTokensBuilder;
+    } });
+    var progress_1 = require_progress();
+    Object.defineProperty(exports, "WorkDoneProgressReporter", { enumerable: true, get: function() {
+      return progress_1.WorkDoneProgressReporter;
     } });
     __exportStar(require_api2(), exports);
     var textDocuments_1 = require_textDocuments();
@@ -12880,6 +12907,9 @@ ${stack}`);
       console.warn = function warn(...args) {
         logger.warn(serialize(args));
       };
+      console.info = function info(...args) {
+        logger.info(serialize(args));
+      };
     }
   }
 });
@@ -13046,7 +13076,7 @@ var AddressToLineMapping = class {
   }
   /** @returns {readonly SerializableAddressRange[]} Deterministic path-based ranges. */
   serializableRanges() {
-    return this.ranges.map(({ fileIdx, ...range }) => ({ ...range, source: this.fileList[fileIdx]?.name ?? "" })).sort(
+    return this.ranges.map(({ fileIdx, ...range }) => ({ ...range, source: this.fileList[fileIdx]?.name ?? "" })).toSorted(
       (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.source.localeCompare(right.source) || left.line - right.line
     );
   }
@@ -13367,9 +13397,7 @@ var registerFlowControlDirectives = (registry2, context) => {
 
 // packages/core/src/ir/expression-node.ts
 function attachRootSpan(node, text2) {
-  if (!node.span) {
-    node.span = createSourceSpan(0, text2.length);
-  }
+  node.span ??= createSourceSpan(0, text2.length);
   return node;
 }
 function parseExpressionNode(input, source) {
@@ -13443,9 +13471,17 @@ function isReferenceExpressionNode(node) {
     case "member":
     case "index":
       return isReferenceExpressionNode(node.object);
+    case "binary":
+    case "call":
+    case "literal":
+    case "range":
+    case "raw":
+    case "string":
+    case "unary":
     default:
-      return false;
+      break;
   }
+  return false;
 }
 function renderReferenceExpressionNode(node, options = {}) {
   switch (node.type) {
@@ -13627,7 +13663,12 @@ var binaryPrecedence = {
   "%": 5,
   "**": 6
 };
-var unaryOperators = /* @__PURE__ */ new Set(["<:", "<", ">", "^", "~", "-", "+"]);
+function isUnaryOperator(value) {
+  return value === "<:" || value === "<" || value === ">" || value === "^" || value === "~" || value === "-" || value === "+";
+}
+function isQuote(value) {
+  return value === '"' || value === "'";
+}
 var binaryOperators = [
   "**",
   "<<",
@@ -13755,6 +13796,9 @@ function tokenizeExpression(input, source) {
 }
 function readQuotedString(input, start) {
   const quote = input[start];
+  if (!isQuote(quote)) {
+    throw new Error("Expected string literal");
+  }
   let value = "";
   let index2 = start + 1;
   while (index2 < input.length) {
@@ -13846,7 +13890,7 @@ var ExpressionParser = class {
     if (!token) {
       throw new Error("Unexpected end of expression");
     }
-    if (token.type === "operator" && unaryOperators.has(token.value)) {
+    if (token.type === "operator" && isUnaryOperator(token.value)) {
       this.consume();
       return {
         type: "unary",
@@ -13912,9 +13956,15 @@ var ExpressionParser = class {
         this.expect("rparen");
         return expression;
       }
-      default:
-        throw new Error(`Unexpected token ${token.type}`);
+      case "comma":
+      case "dot":
+      case "lbracket":
+      case "operator":
+      case "rbracket":
+      case "rparen":
+        break;
     }
+    throw new Error(`Unexpected token ${token.type}`);
   }
   parsePostfix(expression) {
     let current = expression;
@@ -14319,8 +14369,8 @@ var registerGenericLayoutDirectives = (registry2, context) => {
     }
     const param = words[1].trim();
     if (param.toLowerCase() === "off") {
-      const baseAddress = Number(session.currentTargetBaseAddress);
-      const baseStartAddress = Number(session.currentTargetBaseStartAddress);
+      const baseAddress = session.currentTargetBaseAddress;
+      const baseStartAddress = session.currentTargetBaseStartAddress;
       session.currentTargetAddress = baseAddress;
       session.currentTargetStartAddress = baseStartAddress;
       return;
@@ -14632,7 +14682,8 @@ var splitOnInlineStatementSeparator = (command) => {
       }
     }
     const next = command[i + 1];
-    const after = command[i + 2];
+    const afterIndex = i + 2;
+    const after = afterIndex < command.length ? command[afterIndex] : void 0;
     if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
       const trimmed2 = current.trim();
       if (trimmed2 !== "") {
@@ -14696,13 +14747,10 @@ var splitCommandIntoWords = (command) => {
       if (!inQuotes) {
         inQuotes = true;
         quoteChar = char;
-        currentWord += char;
       } else if (char === quoteChar) {
         inQuotes = false;
-        currentWord += char;
-      } else {
-        currentWord += char;
       }
+      currentWord += char;
     } else if (/\s/.test(char) && !inQuotes) {
       if (currentWord) {
         words.push(currentWord);
@@ -15365,7 +15413,8 @@ function parseAssetCall(command, line) {
         return { kind: "string", value: value2, span: span(start, at) };
       }
       if (character === "\\") {
-        const escaped = command[at++];
+        const escaped = at < command.length ? command[at] : void 0;
+        at++;
         if (escaped === void 0) {
           fail("unterminated string escape");
         }
@@ -15513,12 +15562,20 @@ function parseAssetCall(command, line) {
   if (at !== command.length) {
     fail("unexpected text after call");
   }
-  if (positional.length !== 2 || positional[0].kind !== "string" || positional[1].kind !== "string") {
+  const stringArgument = (argument) => {
+    if (!argument || argument.kind !== "string") {
+      throw new Error(
+        `includeAsset at column ${at + 1}: expected exactly two leading string arguments`
+      );
+    }
+    return argument;
+  };
+  if (positional.length !== 2) {
     fail("expected exactly two leading string arguments");
   }
   return {
-    path: positional[0],
-    format: positional[1],
+    path: stringArgument(positional[0]),
+    format: stringArgument(positional[1]),
     options,
     span: span(callStart, at)
   };
@@ -15827,11 +15884,38 @@ function splitCommaArguments(input) {
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
+function isBinaryOperatorToken(value) {
+  switch (value) {
+    case "**":
+    case "*":
+    case "/":
+    case "%":
+    case "+":
+    case "-":
+    case "<<":
+    case ">>":
+    case "&":
+    case "|":
+    case "^":
+    case "<":
+    case ">":
+    case "<=":
+    case ">=":
+    case "==":
+    case "=":
+    case "!=":
+    case "&&":
+    case "||":
+      return true;
+    default:
+      return false;
+  }
+}
 function getOperator(operators, token) {
-  if (!Object.hasOwn(operators, token)) {
+  if (!isBinaryOperatorToken(token) || !Object.hasOwn(operators, token)) {
     return void 0;
   }
-  return operators[token];
+  return { operator: token, spec: operators[token] };
 }
 var OPERATORS = {
   // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
@@ -16115,9 +16199,17 @@ var MathCore = class {
         return this.isPureExpressionNode(expression.argument);
       case "binary":
         return this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right);
-      default:
-        return false;
+      case "call":
+      case "defineReference":
+      case "identifier":
+      case "index":
+      case "member":
+      case "range":
+      case "raw":
+      case "string":
+        break;
     }
+    return false;
   }
   /**
    * Evaluates a string expression using the legacy parser.
@@ -16190,9 +16282,17 @@ var MathCore = class {
           return argument.value;
         case "raw":
           return argument.value.replace(/^["']|["']$/g, "");
-        default:
-          return renderExpressionNode(argument);
+        case "binary":
+        case "call":
+        case "defineReference":
+        case "index":
+        case "literal":
+        case "member":
+        case "range":
+        case "unary":
+          break;
       }
+      return renderExpressionNode(argument);
     }
     switch (argument.type) {
       case "string":
@@ -16201,16 +16301,24 @@ var MathCore = class {
         return renderExpressionNode(argument);
       case "raw":
         return this.evaluateStringExpression(argument.value);
-      default:
-        if (isReferenceExpressionNode(argument)) {
-          return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
-            renderReferenceExpressionNode(argument, {
-              renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-            })
-          );
-        }
-        return this.evaluateExpressionNode(argument);
+      case "binary":
+      case "call":
+      case "defineReference":
+      case "identifier":
+      case "index":
+      case "literal":
+      case "member":
+      case "unary":
+        break;
     }
+    if (isReferenceExpressionNode(argument)) {
+      return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
+        renderReferenceExpressionNode(argument, {
+          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+        })
+      );
+    }
+    return this.evaluateExpressionNode(argument);
   }
   evaluateUnaryExpressionNode(operator, argument) {
     const value = this.evaluateExpressionNode(argument);
@@ -16359,16 +16467,16 @@ var MathCore = class {
       const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
       const twoOp = getOperator(operators, twoChars);
       if (twoOp) {
-        if (twoOp.priority >= depth) {
-          return twoChars;
+        if (twoOp.spec.priority >= depth) {
+          return twoOp.operator;
         }
         return null;
       }
     }
     const oneChar = this.scanSource[this.scanIndex];
     const oneOp = getOperator(operators, oneChar);
-    if (oneOp && oneOp.priority >= depth) {
-      return oneChar;
+    if (oneOp && oneOp.spec.priority >= depth) {
+      return oneOp.operator;
     }
     return null;
   }
@@ -16419,7 +16527,8 @@ var MathCore = class {
         this.skipWhitespace();
         return ~this.getnum();
       } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
-        const after = this.scanSource[this.scanIndex + 1];
+        const afterIndex = this.scanIndex + 1;
+        const after = afterIndex >= 0 && afterIndex < this.scanSource.length ? this.scanSource[afterIndex] : void 0;
         let isDefineLike = after === "{";
         if (after !== void 0) {
           const code = after.charCodeAt(0);
@@ -17058,6 +17167,7 @@ function parseOperandSyntax(operand) {
 }
 
 // packages/core/src/operand-resolver.ts
+var syntaxOf = (operand, raw) => operand.syntax ?? parseOperandSyntax(raw);
 var OperandResolver = class {
   constructor(deps) {
     this.deps = deps;
@@ -17276,15 +17386,21 @@ var OperandResolver = class {
         throw new Error(
           `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
         );
-      default:
-        try {
-          return this.deps.evaluateMath(operand);
-        } catch (error) {
-          if (this.deps.shouldDeferExpressionEvaluation()) {
-            return 0;
-          }
-          throw error;
-        }
+      case "binary":
+      case "call":
+      case "literal":
+      case "raw":
+      case "string":
+      case "unary":
+        break;
+    }
+    try {
+      return this.deps.evaluateMath(operand);
+    } catch (error) {
+      if (this.deps.shouldDeferExpressionEvaluation()) {
+        return 0;
+      }
+      throw error;
     }
   }
   resolveReferenceValue(reference) {
@@ -17371,7 +17487,7 @@ var OperandResolver = class {
     const raw = operand.trim();
     const expandedOperand = this.expandOperand(raw);
     const { expanded, length } = expandedOperand;
-    const syntax2 = expandedOperand.syntax ?? parseOperandSyntax(raw);
+    const syntax2 = syntaxOf(expandedOperand, raw);
     return {
       mode: "unknown",
       baseExpression: expanded,
@@ -18066,7 +18182,7 @@ var AssemblerEnvironment = class {
       target.lifecycle.flatMap((id) => {
         const lifecycle = this.#lifecycles.get(canonical(id));
         return lifecycle ? [lifecycle] : [];
-      }).sort((left, right) => left.registrationOrder - right.registrationOrder)
+      }).toSorted((left, right) => left.registrationOrder - right.registrationOrder)
     );
   }
   /**
@@ -18124,9 +18240,9 @@ var isValidId = (value, allowLeadingDigit = false) => {
   return !previousWasSeparator;
 };
 var isValidContributionId = (value) => value.includes(".") && isValidId(value, true);
-var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var isArray = (value) => Array.isArray(value);
-var isEmptyOptions = (value) => value === void 0 || isRecord(value) && Object.keys(value).length === 0;
+var isEmptyOptions = (value) => value === void 0 || isRecord2(value) && Object.keys(value).length === 0;
 var deepFreeze = (value, seen = /* @__PURE__ */ new Set()) => {
   if (typeof value !== "object" && typeof value !== "function" || value === null || seen.has(value)) {
     return value;
@@ -18136,7 +18252,11 @@ var deepFreeze = (value, seen = /* @__PURE__ */ new Set()) => {
     for (const item of value) {
       deepFreeze(item, seen);
     }
-  } else {
+  } else if (isRecord2(value)) {
+    for (const item of Object.values(value)) {
+      deepFreeze(item, seen);
+    }
+  } else if (typeof value === "function") {
     for (const item of Object.values(value)) {
       deepFreeze(item, seen);
     }
@@ -18153,7 +18273,7 @@ var validateText = (value, field, pluginId) => {
   return value;
 };
 var validateManifest = (manifest, pluginModule) => {
-  if (!isRecord(manifest)) {
+  if (!isRecord2(manifest)) {
     throw new PluginError("Plugin manifest must be an object.", {
       code: "PLUGIN_INVALID_MANIFEST",
       pluginModule
@@ -18197,7 +18317,7 @@ var validateManifest = (manifest, pluginModule) => {
     });
   }
   const requires = (manifest.requires ?? []).map((dependency) => {
-    if (!isRecord(dependency)) {
+    if (!isRecord2(dependency)) {
       throw new PluginError(`Plugin '${id}' has a malformed dependency.`, {
         code: "PLUGIN_INVALID_MANIFEST",
         pluginId: id,
@@ -18224,8 +18344,10 @@ var validateManifest = (manifest, pluginModule) => {
     ...requires.length === 0 ? {} : { requires }
   });
 };
+var isPluginActivate = (value) => typeof value === "function";
+var isPluginValidateOptions = (value) => typeof value === "function";
 var validatePlugin = (value, pluginModule) => {
-  if (!isRecord(value) || typeof value.activate !== "function") {
+  if (!isRecord2(value) || !isPluginActivate(value.activate)) {
     throw new PluginError(
       `Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`,
       {
@@ -18235,18 +18357,18 @@ var validatePlugin = (value, pluginModule) => {
     );
   }
   const manifest = validateManifest(value.manifest, pluginModule);
-  if (value.validateOptions !== void 0 && typeof value.validateOptions !== "function") {
+  const validateOptions = value.validateOptions;
+  if (validateOptions !== void 0 && !isPluginValidateOptions(validateOptions)) {
     throw new PluginError(`Plugin '${manifest.id}' validateOptions must be a function.`, {
       code: "PLUGIN_INVALID_EXPORT",
       pluginId: manifest.id,
       pluginModule
     });
   }
-  const plugin3 = value;
   return {
     manifest,
-    ...plugin3.validateOptions ? { validateOptions: plugin3.validateOptions.bind(plugin3) } : {},
-    activate: plugin3.activate.bind(plugin3)
+    ...isPluginValidateOptions(validateOptions) ? { validateOptions: validateOptions.bind(value) } : {},
+    activate: value.activate.bind(value)
   };
 };
 var validateContributionId = (id, pluginId) => {
@@ -18308,7 +18430,7 @@ var PluginManager = class {
    */
   async activateModules(requests) {
     const normalized = requests.map((request) => {
-      if (!isRecord(request.module) || !("default" in request.module)) {
+      if (!isRecord2(request.module) || !("default" in request.module)) {
         throw new PluginError(`Module '${request.pluginModule}' has no default export.`, {
           code: "PLUGIN_INVALID_EXPORT",
           pluginModule: request.pluginModule
@@ -18436,7 +18558,7 @@ var PluginManager = class {
     let disposable;
     try {
       disposable = await plugin3.activate(context, frozenOptions);
-      if (disposable !== void 0 && (!isRecord(disposable) || typeof disposable.dispose !== "function")) {
+      if (disposable !== void 0 && (!isRecord2(disposable) || typeof disposable.dispose !== "function")) {
         throw new Error("activate() returned an invalid disposable.");
       }
       this.#validateTransaction(transaction);
@@ -18494,10 +18616,7 @@ var PluginManager = class {
       logger,
       options,
       registerSessionState: (contribution) => {
-        add(
-          transaction.sessionStates,
-          contribution
-        );
+        add(transaction.sessionStates, contribution);
         return Object.freeze({ id: contribution.id });
       },
       registerArchitecture: (contribution) => add(transaction.architectures, contribution),
@@ -18606,7 +18725,7 @@ var PluginManager = class {
       }
       for (const expression of record2.value.functions) {
         validateAliases(expression.aliases, transaction.manifest.id, record2.contributionId);
-        if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord(expression.signature)) {
+        if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord2(expression.signature)) {
           this.#malformed(transaction, record2);
         }
       }
@@ -18614,8 +18733,8 @@ var PluginManager = class {
     for (const record2 of transaction.assetFormats) {
       validateAliases(record2.value.aliases, transaction.manifest.id, record2.contributionId);
       const optionSchema = record2.value.optionSchema;
-      const invalidOptionSchema = optionSchema !== void 0 && (!isRecord(optionSchema) || Object.values(optionSchema).some(
-        (field) => !isRecord(field) || typeof field.summary !== "string" || field.valueSyntax !== void 0 && typeof field.valueSyntax !== "string"
+      const invalidOptionSchema = optionSchema !== void 0 && (!isRecord2(optionSchema) || Object.values(optionSchema).some(
+        (field) => !isRecord2(field) || typeof field.summary !== "string" || field.valueSyntax !== void 0 && typeof field.valueSyntax !== "string"
       ));
       if (!import_semver.default.valid(record2.value.version) || typeof record2.value.convert !== "function" || invalidOptionSchema || record2.value.resourcePaths !== void 0 && typeof record2.value.resourcePaths !== "function" || record2.value.targets !== void 0 && (!isArray(record2.value.targets) || record2.value.targets.some((target) => typeof target !== "string"))) {
         this.#malformed(transaction, record2);
@@ -18624,8 +18743,8 @@ var PluginManager = class {
     for (const record2 of transaction.assetTransforms) {
       validateAliases(record2.value.aliases, transaction.manifest.id, record2.contributionId);
       const schema = record2.value.optionSchema;
-      const invalidSchema = schema !== void 0 && (!isRecord(schema) || Object.values(schema).some(
-        (field) => !isRecord(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (field.resource !== true || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
+      const invalidSchema = schema !== void 0 && (!isRecord2(schema) || Object.values(schema).some(
+        (field) => !isRecord2(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (!field.resource || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
       ));
       if (!import_semver.default.valid(record2.value.version) || typeof record2.value.encode !== "function" || typeof record2.value.decode !== "function" || invalidSchema || record2.value.validateOptions !== void 0 && typeof record2.value.validateOptions !== "function" || record2.value.resourcePaths !== void 0 && typeof record2.value.resourcePaths !== "function" || record2.value.targets !== void 0 && (!isArray(record2.value.targets) || record2.value.targets.some((target) => typeof target !== "string"))) {
         this.#malformed(transaction, record2);
@@ -18750,7 +18869,7 @@ var PluginManager = class {
     }
     this.#disposed = true;
     const errors = [];
-    for (const plugin3 of [...this.#activated].reverse()) {
+    for (const plugin3 of [...this.#activated].toReversed()) {
       try {
         await plugin3.disposable?.dispose();
       } catch (error) {
@@ -18764,6 +18883,9 @@ var PluginManager = class {
 };
 
 // packages/core/src/plugin/session-state.ts
+function isSlotValue(value) {
+  return value !== void 0 || Object.is(value, void 0);
+}
 var PluginSessionStateStore = class {
   #contributions;
   #values;
@@ -18807,7 +18929,14 @@ var PluginSessionStateStore = class {
         contributionId: slot.id
       });
     }
-    return this.#values.get(slot.id);
+    const value = this.#values.get(slot.id);
+    if (!isSlotValue(value)) {
+      throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
+        code: "PLUGIN_CONFIGURATION_INVALID",
+        contributionId: slot.id
+      });
+    }
+    return value;
   }
   /**
    * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
@@ -18883,7 +19012,7 @@ var PluginSessionStateStore = class {
     }
     this.#disposed = true;
     const errors = [];
-    for (const record2 of [...this.#contributions].reverse()) {
+    for (const record2 of [...this.#contributions].toReversed()) {
       try {
         record2.value.dispose?.(this.#values.get(record2.contributionId));
       } catch (error) {
@@ -18898,6 +19027,10 @@ var PluginSessionStateStore = class {
 };
 
 // packages/core/src/services/program-model-builder.ts
+function stackTop(stack) {
+  const topIndex = stack.length - 1;
+  return topIndex >= 0 ? stack[topIndex] : void 0;
+}
 var ProgramModelBuilder = class {
   constructor(host) {
     this.host = host;
@@ -19020,8 +19153,8 @@ var ProgramModelBuilder = class {
    * @param {ExecutableNode} node The node.
    */
   pushToCurrent(state, node) {
-    const currentBranch = state.branchStack[state.branchStack.length - 1];
-    const currentLoop = state.loopStack[state.loopStack.length - 1];
+    const currentBranch = stackTop(state.branchStack);
+    const currentLoop = stackTop(state.loopStack);
     if (currentBranch && currentLoop) {
       if (currentLoop.startLine >= currentBranch.startLine) {
         currentLoop.commands.push(node);
@@ -19125,7 +19258,7 @@ var ProgramModelBuilder = class {
       return;
     }
     if (keyword === "elseif" || keyword === "else") {
-      const currentIf = state.ifStack[state.ifStack.length - 1];
+      const currentIf = stackTop(state.ifStack);
       if (!currentIf) {
         this.pushToCurrent(state, command);
         return;
@@ -19148,8 +19281,8 @@ var ProgramModelBuilder = class {
       return;
     }
     if (keyword === "endif") {
-      const currentIf = state.ifStack[state.ifStack.length - 1];
-      const currentLoop = state.loopStack[state.loopStack.length - 1];
+      const currentIf = stackTop(state.ifStack);
+      const currentLoop = stackTop(state.loopStack);
       const whileIsInnermost = this.host.shouldEndifCloseInnermostWhile(
         currentLoop?.type,
         currentLoop?.startLine,
@@ -19317,6 +19450,18 @@ var AssemblyFrontEndService = class {
 };
 
 // packages/core/src/services/asset-assembly-service.ts
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray(value) {
+  return Array.isArray(value);
+}
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.length > 0;
+}
+function isNonEmptyStringArray(value) {
+  return isUnknownArray(value) && value.every(isNonEmptyString);
+}
 var AssetAssemblyService = class _AssetAssemblyService {
   constructor(session) {
     this.session = session;
@@ -19344,6 +19489,13 @@ var AssetAssemblyService = class _AssetAssemblyService {
    */
   snapshot(path19) {
     return this.#files.get(path19)?.slice();
+  }
+  /** Resolve a string operand after define expansion.
+   * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
+   * @returns {string} Expanded text.
+   */
+  #text(node) {
+    return this.session.defineEngine.resolveDefinesInStringLiteral(node.value);
   }
   /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
    * @param {AssetValueNode} node Typed source value.
@@ -19442,7 +19594,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
       return `[${value.map((item) => this.#stable(item)).join(",")}]`;
     }
     if (value && typeof value === "object") {
-      return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${this.#stable(item)}`).join(",")}}`;
+      return `{${Object.entries(value).toSorted(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${this.#stable(item)}`).join(",")}}`;
     }
     return JSON.stringify(value);
   }
@@ -19499,8 +19651,8 @@ var AssetAssemblyService = class _AssetAssemblyService {
     const options = Object.fromEntries(
       Object.entries(call.options).map(([key, node]) => [key, this.#value(node)])
     );
-    const sourcePath = this.#resolve(this.#value(call.path));
-    const formatName = this.#value(call.format);
+    const sourcePath = this.#resolve(this.#text(call.path));
+    const formatName = this.#text(call.format);
     const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
     if (!format) {
       throw new Error(
@@ -19518,7 +19670,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     let transforms = [];
     if (typeof transformSpec === "string") {
-      const compressOptions = call.options.compressOptions;
+      const compressOptions = Object.hasOwn(call.options, "compressOptions") ? call.options.compressOptions : void 0;
       transforms = [
         { id: transformSpec, options: compressOptions ? this.#value(compressOptions) : {} }
       ];
@@ -19534,7 +19686,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
         continue;
       }
       const suppliedOptions = "options" in item ? item.options : void 0;
-      const transformOptions = suppliedOptions && typeof suppliedOptions === "object" ? suppliedOptions : {};
+      const transformOptions = isRecord3(suppliedOptions) ? suppliedOptions : {};
       const names = [
         ...this.#validateTransformOptions(transform, transformOptions),
         ...transform.resourcePaths?.(transformOptions) ?? []
@@ -19552,8 +19704,8 @@ var AssetAssemblyService = class _AssetAssemblyService {
     const options = Object.fromEntries(
       Object.entries(call.options).map(([key, node]) => [key, this.#value(node)])
     );
-    const sourcePath = this.#resolve(this.#value(call.path));
-    const formatName = this.#value(call.format);
+    const sourcePath = this.#resolve(this.#text(call.path));
+    const formatName = this.#text(call.format);
     const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
     if (!format) {
       throw new Error(
@@ -19571,13 +19723,17 @@ var AssetAssemblyService = class _AssetAssemblyService {
     if (output !== void 0 && typeof output !== "string") {
       throw new Error("includeAsset output must be a string.");
     }
-    if (maxSize !== void 0 && (!Number.isSafeInteger(maxSize) || maxSize < 0)) {
-      throw new Error("includeAsset maxSize must be a non-negative integer.");
+    let boundedSize;
+    if (maxSize !== void 0) {
+      if (typeof maxSize !== "number" || !Number.isSafeInteger(maxSize) || maxSize < 0) {
+        throw new Error("includeAsset maxSize must be a non-negative integer.");
+      }
+      boundedSize = maxSize;
     }
     const resources = {};
     const resourceIdentities = [];
     const declaredResources = format.resourcePaths?.(options) ?? [];
-    if (!Array.isArray(declaredResources) || declaredResources.some((path19) => typeof path19 !== "string" || !path19)) {
+    if (!isNonEmptyStringArray(declaredResources)) {
       throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
     }
     for (const resourceName of declaredResources) {
@@ -19637,7 +19793,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
     } else if (compress !== void 0) {
       transformSpecs = compress;
     }
-    if (!Array.isArray(transformSpecs)) {
+    if (!isUnknownArray(transformSpecs)) {
       throw new Error("includeAsset compress must be an ID or array of { id, options }.");
     }
     if (typeof compress !== "string" && compressOptions !== void 0) {
@@ -19645,31 +19801,29 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     const transforms = [];
     for (const unknownItem of transformSpecs) {
-      if (!unknownItem || typeof unknownItem !== "object" || !("id" in unknownItem) || typeof unknownItem.id !== "string") {
+      if (!isRecord3(unknownItem) || typeof unknownItem.id !== "string") {
         throw new Error("includeAsset transform entries require an id.");
       }
-      const item = unknownItem;
-      const transform = this.session.environment.getAssetTransform(item.id, this.session.targetId);
+      const id = unknownItem.id;
+      const transform = this.session.environment.getAssetTransform(id, this.session.targetId);
       if (!transform) {
         throw new Error(
-          `includeAsset transform '${item.id}' is unavailable on '${this.session.targetId}'.`
+          `includeAsset transform '${id}' is unavailable on '${this.session.targetId}'.`
         );
       }
-      const transformOptions = item.options ?? {};
-      if (!transformOptions || typeof transformOptions !== "object" || Array.isArray(transformOptions)) {
-        throw new Error(`includeAsset transform '${item.id}' options must be an object.`);
+      const transformOptions = unknownItem.options ?? {};
+      if (!isRecord3(transformOptions)) {
+        throw new Error(`includeAsset transform '${id}' options must be an object.`);
       }
-      const validatedOptions = transformOptions;
-      const schemaResources = this.#validateTransformOptions(transform, validatedOptions);
-      transform.validateOptions?.(validatedOptions);
+      const schemaResources = this.#validateTransformOptions(transform, transformOptions);
+      transform.validateOptions?.(transformOptions);
       const transformResources = {};
       const transformResourceIdentities = [];
-      const declared = transform.resourcePaths?.(validatedOptions) ?? [];
-      const resourcePaths = declared;
-      if (!Array.isArray(declared) || declared.some((name) => typeof name !== "string" || !name)) {
+      const declared = transform.resourcePaths?.(transformOptions) ?? [];
+      if (!isNonEmptyStringArray(declared)) {
         throw new Error(`Asset transform '${transform.id}' returned invalid resource paths.`);
       }
-      const names = [.../* @__PURE__ */ new Set([...schemaResources, ...resourcePaths])];
+      const names = [.../* @__PURE__ */ new Set([...schemaResources, ...declared])];
       for (const name of names) {
         const path19 = this.#resolve(name);
         transformResources[name] = {
@@ -19680,7 +19834,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
       }
       transforms.push({
         provider: transform,
-        options: validatedOptions,
+        options: transformOptions,
         resources: transformResources,
         resourceIdentities: transformResourceIdentities
       });
@@ -19735,15 +19889,16 @@ var AssetAssemblyService = class _AssetAssemblyService {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           throw new Error(
-            `Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`
+            `Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`,
+            { cause: error }
           );
         }
       }
       this.#emissions.set(emissionKey, bytes);
     }
-    if (maxSize !== void 0 && bytes.length > maxSize) {
+    if (boundedSize !== void 0 && bytes.length > boundedSize) {
       throw new Error(
-        `includeAsset output is ${bytes.length} bytes, above maxSize ${maxSize}.`
+        `includeAsset output is ${bytes.length} bytes, above maxSize ${boundedSize}.`
       );
     }
     this.lastEmission = {
@@ -19847,14 +20002,11 @@ var CommandLoweringService = class {
         endLine: node.endLine
       };
     }
-    if (node.type !== "if") {
-      throw new Error(`Unknown executable node type: ${String(node.type)}`);
-    }
-    const conditionalNode = node;
+    assertConditionalNode(node);
     return {
       kind: "conditional",
-      header: conditionalNode.header,
-      branches: conditionalNode.branches.map((branch) => ({
+      header: node.header,
+      branches: node.branches.map((branch) => ({
         kind: branch.kind,
         header: branch.header,
         conditionNode: branch.conditionNode,
@@ -19862,8 +20014,8 @@ var CommandLoweringService = class {
         startLine: branch.startLine,
         endLine: branch.endLine
       })),
-      startLine: conditionalNode.startLine,
-      endLine: conditionalNode.endLine
+      startLine: node.startLine,
+      endLine: node.endLine
     };
   }
   /**
@@ -19926,6 +20078,11 @@ var CommandLoweringService = class {
     return command.kind === "opcodeCandidate" ? void 0 : "unknown";
   }
 };
+function assertConditionalNode(node) {
+  if (node.type !== "if") {
+    throw new Error(`Unknown executable node type: ${node.type}`);
+  }
+}
 
 // packages/core/src/services/define-engine.ts
 var DefineEngine = class {
@@ -20122,7 +20279,8 @@ var DefineEngine = class {
     while (index2 < content.length) {
       const char = content[index2];
       if (char === "\\") {
-        const next = content[index2 + 1];
+        const nextIndex = index2 + 1;
+        const next = nextIndex < content.length ? content[nextIndex] : void 0;
         if (next === void 0) {
           result += "\\";
           index2++;
@@ -20234,7 +20392,7 @@ var DefineEngine = class {
       return;
     }
     if (operator === "+=") {
-      value = (this.host.defines.get(identifier2) || "") + value;
+      value = (this.host.defines.get(identifier2) ?? "") + value;
     }
     if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") || value.includes("&") || value.includes("|") || value.includes("^") || value.includes("<<") || value.includes(">>") || value.includes("("))) {
       try {
@@ -20365,7 +20523,7 @@ var DirectiveRuntimeService = class {
       this.estimateDataDirectiveSize(len, params);
       return;
     }
-    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+    const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
     while (pendingValues.length > 0) {
       let value = (pendingValues.pop() ?? "").trim();
       if (value.startsWith('"') || value.startsWith("'")) {
@@ -20453,7 +20611,7 @@ var DirectiveRuntimeService = class {
    * @param {string[]} params Source operands, including defines that may expand to data lists.
    */
   estimateDataDirectiveSize(len, params) {
-    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+    const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
     let estimatedItems = 0;
     while (pendingValues.length > 0) {
       let value = (pendingValues.pop() ?? "").trim();
@@ -20617,10 +20775,11 @@ var FrontEndCommandService = class {
   handleGlobalLabel(command) {
     const { words } = command;
     const directiveArgs = command.parsed.directiveArgs;
-    if ((directiveArgs?.name ?? words[0] ?? "").toLowerCase() !== "global") {
+    const leadingWord = words.length > 0 ? words[0] : void 0;
+    if ((directiveArgs?.name ?? leadingWord ?? "").toLowerCase() !== "global") {
       return false;
     }
-    const payload = directiveArgs?.args?.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
+    const payload = directiveArgs?.args.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
     if (payload.length < 1) {
       throw new Error("global requires a label name");
     }
@@ -20661,8 +20820,10 @@ var FrontEndCommandService = class {
       const dotCount = labelName.startsWith(".") ? labelName.match(/^\.*/)?.[0]?.length ?? 1 : 0;
       const containerName = dotCount > 0 ? this.host.symbolScope.getScopedParentLabel(dotCount) || void 0 : namespace || void 0;
       this.host.symbolScope.handleLabelDefinition(labelName);
+      const consumedSpan = consumedCount >= 0 && consumedCount < command.source.tokenSpans.length ? command.source.tokenSpans[consumedCount] : void 0;
+      const firstSpan = command.source.tokenSpans.length > 0 ? command.source.tokenSpans[0] : void 0;
       this.host.recordSymbolDefinition("label", labelName, {
-        span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+        span: consumedSpan ?? firstSpan ?? command.source.normalizedSpan,
         containerName
       });
       remainingWords.shift();
@@ -20818,7 +20979,7 @@ var IncludeSourceService = class {
     const previousFile = this.host.currentFile;
     this.host.includeStack.push(previousFile);
     this.host.recordIncludeEdge(previousFile, resolvedPath);
-    if (this.host.followIncludes === false) {
+    if (!this.host.followIncludes) {
       this.host.includeStack.pop();
       return;
     }
@@ -20837,8 +20998,8 @@ var IncludeSourceService = class {
         this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
-      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
+      const message = error instanceof Error ? error.message : stringifyCaught(error) ?? "Unknown error";
+      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`, { cause: error });
     } finally {
       this.host.currentFile = this.host.includeStack.pop() ?? "";
     }
@@ -20897,6 +21058,9 @@ var IncludeSourceService = class {
     return content;
   }
 };
+function stringifyCaught(value) {
+  return JSON.stringify(value);
+}
 
 // packages/core/src/services/macro-engine.ts
 var MacroEngine = class {
@@ -20946,7 +21110,8 @@ var MacroEngine = class {
     }
     const [keyword, ...rest] = trimmed.split(/\s+/);
     const normalizedKeyword = keyword.toLowerCase();
-    const current = this.macroExpansionControlStack[this.macroExpansionControlStack.length - 1];
+    const currentIndex = this.macroExpansionControlStack.length - 1;
+    const current = currentIndex >= 0 ? this.macroExpansionControlStack[currentIndex] : void 0;
     const parentActive = this.isMacroExpansionActive();
     const enclosingActive = this.macroExpansionControlStack.slice(0, -1).every((entry) => entry.active);
     const expression = rest.join(" ").trim();
@@ -21120,9 +21285,7 @@ var MacroEngine = class {
               }
             }
           }
-          if (nextAddr === null) {
-            nextAddr = this.host.symbolScope.findNextLabel("?+");
-          }
+          nextAddr ??= this.host.symbolScope.findNextLabel("?+");
           modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
         }
       }
@@ -21138,9 +21301,7 @@ var MacroEngine = class {
               }
             }
           }
-          if (prevAddr === null) {
-            prevAddr = this.host.symbolScope.findPreviousLabel("?-");
-          }
+          prevAddr ??= this.host.symbolScope.findPreviousLabel("?-");
           modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
         }
       }
@@ -21349,7 +21510,7 @@ var MacroEngine = class {
         }
       }
       const defineValue = this.host.defines.get(name);
-      return defineValue !== void 0 ? defineValue : match;
+      return defineValue ?? match;
     };
     if (line.trim().startsWith("!") && line.includes("=")) {
       const defineMatch = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
@@ -21456,7 +21617,7 @@ var MacroEngine = class {
     resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
       const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
         const defineValue = this.host.defines.get(defName);
-        return defineValue !== void 0 ? defineValue : defMatch;
+        return defineValue ?? defMatch;
       });
       const resolvedExpr = this.host.resolvedefines(processedExpr);
       let index2 = this.host.mathCore.math(resolvedExpr);
@@ -21788,7 +21949,8 @@ var DataStructEngine = class {
     if (!match || !definition) {
       throw new Error(`Unknown dataStruct record '${reference}'.`);
     }
-    const index2 = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
+    const indexText = match.length > 2 ? match[2] : void 0;
+    const index2 = indexText === void 0 ? 0 : this.host.operandResolver.getnum(indexText);
     if (!Number.isSafeInteger(index2) || index2 < 0) {
       throw new Error(`Invalid record index '${reference}'.`);
     }
@@ -21806,7 +21968,7 @@ var DataStructEngine = class {
         `dataStruct does not initialize extended layouts ('${definition.name}'). Use raw data directives.`
       );
     }
-    const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
+    const fields = [...definition.fields?.values() ?? []].toSorted((a, b) => a.offset - b.offset);
     let end = 0;
     for (const field of fields) {
       if (field.offset !== end) {
@@ -21876,7 +22038,7 @@ var DataStructEngine = class {
       if (!this.host.canEmitBytes) {
         continue;
       }
-      for (const [index3, expression] of items.entries()) {
+      for (const [itemIndex, expression] of items.entries()) {
         const number = this.host.operandResolver.getnum(expression);
         if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
           throw new Error(
@@ -21885,7 +22047,7 @@ var DataStructEngine = class {
         }
         if (this.host.recordStructField) {
           fields.push({
-            reference: field.array ? `${name}[${index3}]` : name,
+            reference: field.array ? `${name}[${itemIndex}]` : name,
             expression,
             offset: bytes.length,
             width: field.width
@@ -21944,7 +22106,8 @@ var StructEngine = class {
       const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
       if (typed) {
         const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
-        const count = typed[2] === void 0 ? 1 : this.host.operandResolver.getnum(typed[2]);
+        const countText = typed.length > 2 ? typed[2] : void 0;
+        const count = countText === void 0 ? 1 : this.host.operandResolver.getnum(countText);
         if (!Number.isSafeInteger(count) || count < 1 || count * width > 65536) {
           throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
         }
@@ -21956,7 +22119,7 @@ var StructEngine = class {
           offset: currentStruct.offset,
           width,
           count,
-          array: typed[2] !== void 0
+          array: countText !== void 0
         });
       } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
         throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
@@ -22056,14 +22219,16 @@ var StructEngine = class {
     const seen = /* @__PURE__ */ new Set();
     for (let index2 = 1; index2 < words.length; index2 += 2) {
       const option = words[index2].toLowerCase();
-      if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index2 + 1] === void 0) {
+      const parameterIndex = index2 + 1;
+      const parameter = parameterIndex < words.length ? words[parameterIndex] : void 0;
+      if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || parameter === void 0) {
         if (words[1]?.toLowerCase() === "align") {
           throw new Error("endstruct align requires a single alignment parameter.");
         }
         throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
       }
       seen.add(option);
-      const value = this.host.operandResolver.getnum(words[index2 + 1]);
+      const value = this.host.operandResolver.getnum(parameter);
       if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
         throw new Error(
           option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
@@ -22103,10 +22268,8 @@ var StructEngine = class {
         parentStruct.extensionSize = extSize;
       }
       this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
-      this.host.structs.set(currentStruct.name, currentStruct);
-    } else {
-      this.host.structs.set(currentStruct.name, currentStruct);
     }
+    this.host.structs.set(currentStruct.name, currentStruct);
     this.host.restoreStructDefinition();
     this.host.currentStruct = null;
   }
@@ -22255,6 +22418,9 @@ function getStructMetadata(definition, property) {
 }
 
 // packages/core/src/services/symbol-scope-service.ts
+function relativeLabelBucket(table, depth) {
+  return Object.hasOwn(table, depth) ? table[depth] : void 0;
+}
 var SymbolScopeService = class {
   constructor(host) {
     this.host = host;
@@ -22281,8 +22447,7 @@ var SymbolScopeService = class {
    * @returns {string} The storage key.
    */
   qualifySymbolName(name) {
-    const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
-    if (!profile.fileLocalSymbols) {
+    if (!this.host.syntaxProfile.fileLocalSymbols) {
       return name;
     }
     if (this.host.globalSymbols.has(name)) {
@@ -22315,7 +22480,7 @@ var SymbolScopeService = class {
    * @returns {string} The rewritten name.
    */
   toCheapDotLabel(name) {
-    const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+    const prefix = this.host.syntaxProfile.cheapLocalPrefix;
     if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
       return `.${name.slice(prefix.length)}`;
     }
@@ -22404,21 +22569,25 @@ var SymbolScopeService = class {
    */
   handleRelativeLabel(label) {
     const isPositive = label.includes("+");
-    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+    const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
     const targetAddress = this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (this.host.enforceResolvedLabels) {
       if (isPositive) {
-        if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+        const forwardLabels = relativeLabelBucket(this.host.forwardLabels, depth);
+        if (!forwardLabels || forwardLabels.length === 0) {
           throw new Error(`Error: Undefined forward label '${label}'.`);
         }
-      } else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
-        throw new Error(`Error: Undefined backward label '${label}'.`);
+      } else {
+        const backwardLabels = relativeLabelBucket(this.host.backwardLabels, depth);
+        if (!backwardLabels || backwardLabels.length === 0) {
+          throw new Error(`Error: Undefined backward label '${label}'.`);
+        }
       }
       return targetAddress;
     }
     if (isPositive) {
-      if (!this.host.forwardLabels[depth]) {
+      if (!relativeLabelBucket(this.host.forwardLabels, depth)) {
         this.host.forwardLabels[depth] = [];
       }
       if (isMacroLocal && this.host.inMacroExpansion) {
@@ -22430,7 +22599,7 @@ var SymbolScopeService = class {
         this.host.forwardLabels[depth].push({ addr: targetAddress });
       }
     } else {
-      if (!this.host.backwardLabels[depth]) {
+      if (!relativeLabelBucket(this.host.backwardLabels, depth)) {
         this.host.backwardLabels[depth] = [];
       }
       if (isMacroLocal && this.host.inMacroExpansion) {
@@ -22452,15 +22621,16 @@ var SymbolScopeService = class {
   handleUnnamedLabel() {
     const targetAddress = this.host.currentTargetAddress;
     if (this.host.enforceResolvedLabels) {
-      if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+      const forwardLabels = relativeLabelBucket(this.host.forwardLabels, 0);
+      if (!forwardLabels || forwardLabels.length === 0) {
         throw new Error("Error: Undefined unnamed label ':'.");
       }
       return targetAddress;
     }
-    if (!this.host.forwardLabels[0]) {
+    if (!relativeLabelBucket(this.host.forwardLabels, 0)) {
       this.host.forwardLabels[0] = [];
     }
-    if (!this.host.backwardLabels[0]) {
+    if (!relativeLabelBucket(this.host.backwardLabels, 0)) {
       this.host.backwardLabels[0] = [];
     }
     const entry = { addr: targetAddress, unit: this.objectFileKey() };
@@ -22483,7 +22653,10 @@ var SymbolScopeService = class {
     if (!this.host.enforceResolvedLabels) {
       return 0;
     }
-    const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+    const table = relativeLabelBucket(
+      parsed.direction === 1 ? this.host.forwardLabels : this.host.backwardLabels,
+      0
+    );
     if (!table || table.length === 0) {
       throw new Error(
         `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
@@ -22492,7 +22665,7 @@ var SymbolScopeService = class {
     const unit = this.objectFileKey();
     const ordered = table.filter((entry) => !entry.unit || entry.unit === unit).filter(
       (entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress
-    ).map((entry) => entry.addr).sort((left, right) => parsed.direction === 1 ? left - right : right - left);
+    ).map((entry) => entry.addr).toSorted((left, right) => parsed.direction === 1 ? left - right : right - left);
     if (ordered.length < parsed.count) {
       throw new Error(
         `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
@@ -22508,16 +22681,17 @@ var SymbolScopeService = class {
    */
   findNextLabel(label, currentAddressOverride) {
     const isPositive = label.includes("+");
-    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+    const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
     const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (!this.host.enforceResolvedLabels) {
       return 0;
     }
-    if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+    const forwardLabels = relativeLabelBucket(this.host.forwardLabels, depth);
+    if (!forwardLabels || forwardLabels.length === 0) {
       throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
     }
-    const possibleTargets = this.host.forwardLabels[depth].filter((entry) => {
+    const possibleTargets = forwardLabels.filter((entry) => {
       if (isMacroLocal && this.host.inMacroExpansion) {
         return entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance;
       }
@@ -22536,16 +22710,17 @@ var SymbolScopeService = class {
    */
   findPreviousLabel(label, currentAddressOverride) {
     const isPositive = label.includes("+");
-    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+    const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
     const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (this.host.isDefinitionCollectionStage) {
       return 0;
     }
-    if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+    const backwardLabels = relativeLabelBucket(this.host.backwardLabels, depth);
+    if (!backwardLabels || backwardLabels.length === 0) {
       throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
     }
-    const possibleTargets = this.host.backwardLabels[depth].filter((entry) => {
+    const possibleTargets = backwardLabels.filter((entry) => {
       if (isMacroLocal && this.host.inMacroExpansion) {
         return entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance;
       }
@@ -22587,7 +22762,7 @@ var SymbolScopeService = class {
           if (recentMainLabel) {
             const subLabelWithoutDot = labelName.substring(1);
             const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
-            const subAddr = value !== void 0 ? value : this.host.currentTargetAddress;
+            const subAddr = value ?? this.host.currentTargetAddress;
             this.host.labelTable.set(parentChildLabel, {
               value: subAddr,
               isStatic,
@@ -22610,7 +22785,7 @@ var SymbolScopeService = class {
           if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0 && modifiesHierarchy) {
             const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
             const leafLabel = `${leafNamespace}_${label}`;
-            const addr2 = value !== void 0 ? value : this.host.currentTargetAddress;
+            const addr2 = value ?? this.host.currentTargetAddress;
             this.host.labelTable.set(leafLabel, {
               value: addr2,
               isStatic,
@@ -22638,7 +22813,7 @@ var SymbolScopeService = class {
         fullLabel = label;
       }
     }
-    const addr = value !== void 0 ? value : this.host.currentTargetAddress;
+    const addr = value ?? this.host.currentTargetAddress;
     if (this.host.isDefinitionCollectionStage) {
       if (modifiesHierarchy && !label.startsWith(".")) {
         this.host.currentParentLabel = fullLabel;
@@ -23395,14 +23570,15 @@ var Assembler = class _Assembler {
    * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
    */
   traceWrite(event) {
-    const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+    const sourceIndex = this.traceCommandStack.length - 1;
+    const traceSource = sourceIndex >= 0 ? this.traceCommandStack[sourceIndex] : void 0;
     this.traceListener?.({
       type: "write",
       ...event,
-      file: source?.file ?? this.currentFile,
-      line: source?.line ?? this.currentLine,
-      raw: source?.raw ?? "",
-      normalized: source?.normalized ?? ""
+      file: traceSource?.file ?? this.currentFile,
+      line: traceSource?.line ?? this.currentLine,
+      raw: traceSource?.raw ?? "",
+      normalized: traceSource?.normalized ?? ""
     });
   }
   /**
@@ -23580,7 +23756,9 @@ var Assembler = class _Assembler {
         this.collectExpressionReferences(expression.start, fallbackSpan);
         this.collectExpressionReferences(expression.end, fallbackSpan);
         return;
-      default:
+      case "literal":
+      case "raw":
+      case "string":
         return;
     }
   }
@@ -23678,9 +23856,14 @@ var Assembler = class _Assembler {
         return this.structNameFromExpression(node.right, seen) ?? this.structNameFromExpression(node.left, seen);
       case "unary":
         return this.structNameFromExpression(node.argument, seen);
-      default:
-        return void 0;
+      case "call":
+      case "literal":
+      case "range":
+      case "raw":
+      case "string":
+        break;
     }
+    return void 0;
   }
   /**
    * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
@@ -24062,7 +24245,7 @@ var Assembler = class _Assembler {
    */
   seedOutputFromBaseImage() {
     const seedSize = 512 * 1024;
-    if (!this.baseImage || this.baseImage.length === 0) {
+    if (this.baseImage.length === 0) {
       return;
     }
     for (let i = 0; i < Math.min(seedSize, this.baseImage.length); i++) {
@@ -24096,7 +24279,7 @@ var Assembler = class _Assembler {
    * in plugin activation disposables and session state cloneable.
    */
   constructor(options) {
-    if (!options?.environment) {
+    if (!options.environment) {
       throw new PluginError("Assembler construction requires a frozen plugin environment.", {
         code: "PLUGIN_CONFIGURATION_INVALID"
       });
@@ -24195,18 +24378,35 @@ var Assembler = class _Assembler {
     this.mathCore.host = this.expressionHost;
     this.installExpressionFunctions(target.expressionSets);
     this.services = this.createServices();
+    const readCurrentFile = () => this.currentFile;
+    const readCurrentLine = () => this.currentLine;
+    const readInMacroExpansion = () => this.inMacroExpansion;
+    const readIsDefinitionCollectionStage = () => this.isDefinitionCollectionStage;
+    const readSyntaxProfile = () => this.syntaxProfile;
+    const readCollectSourceMetadata = () => this.collectSourceMetadata;
     const frontEndHost = {
       passProgramCache: this.passProgramCache,
       resolveVariadicPlaceholders: (command) => this.macroEngine.resolveVariadicPlaceholders(command),
-      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+      get currentFile() {
+        return readCurrentFile();
+      },
+      get currentLine() {
+        return readCurrentLine();
+      },
+      get inMacroExpansion() {
+        return readInMacroExpansion();
+      },
+      get isDefinitionCollectionStage() {
+        return readIsDefinitionCollectionStage();
+      },
+      get syntaxProfile() {
+        return readSyntaxProfile();
+      },
+      get collectSourceMetadata() {
+        return readCollectSourceMetadata();
+      }
     };
-    Object.defineProperties(frontEndHost, {
-      currentFile: { get: () => this.currentFile },
-      currentLine: { get: () => this.currentLine },
-      inMacroExpansion: { get: () => this.inMacroExpansion },
-      isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage },
-      syntaxProfile: { get: () => this.syntaxProfile }
-    });
     this.frontEndService = new AssemblyFrontEndService(frontEndHost);
     this.programModelBuilder = this.frontEndService.programModelBuilder;
     this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
@@ -24495,7 +24695,7 @@ var Assembler = class _Assembler {
     }
     this.sessionDisposed = true;
     const errors = [];
-    for (const { record: record2, instance } of [...this.activeLifecycles].reverse()) {
+    for (const { record: record2, instance } of [...this.activeLifecycles].toReversed()) {
       try {
         instance.onSessionDispose?.({ state: this.pluginState, session: this });
       } catch (cause) {
@@ -24619,13 +24819,13 @@ var Assembler = class _Assembler {
     return this.macros.get(this.currentMacroName)?.sourceFile;
   }
   canReadBaseImage(position, size) {
-    const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
+    const sourceLength = this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
   readBaseImage(position, size, defaultValue) {
     const pos = Math.trunc(position);
     const pcPos = this.outputWriter.toOutputOffset(pos);
-    const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
+    const source = this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
     if (pcPos < 0) {
       if (defaultValue !== void 0) {
         return defaultValue;
@@ -24837,9 +25037,7 @@ var Assembler = class _Assembler {
     this.activeStageExecutionState.capabilities = descriptor3.capabilities;
   }
   getActiveStageCapabilities() {
-    if (!this.activeStageExecutionState) {
-      this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
-    }
+    this.activeStageExecutionState ??= this.createEphemeralStageExecutionState("collectDefinitions");
     return this.activeStageExecutionState.capabilities;
   }
   get traceStage() {
@@ -25277,12 +25475,10 @@ var Assembler = class _Assembler {
     }
   }
   getOrCreateLoweredProgram(stageState, program) {
-    if (!stageState.loweredProgram) {
-      stageState.loweredProgram = measureInternalPhase(
-        "lowerProgram",
-        () => this.commandLoweringService.lowerProgram(program)
-      );
-    }
+    stageState.loweredProgram ??= measureInternalPhase(
+      "lowerProgram",
+      () => this.commandLoweringService.lowerProgram(program)
+    );
     return stageState.loweredProgram;
   }
   /**
@@ -25375,7 +25571,8 @@ var Assembler = class _Assembler {
       const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
       throw new Error(
-        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`
+        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`,
+        { cause: e }
       );
     }
     return result !== 0;
@@ -25426,9 +25623,11 @@ var Assembler = class _Assembler {
           return this.resolveExpressionInput(this.resolvedefines(expression.value));
         }
         return expression;
-      default:
-        return expression;
+      case "literal":
+      case "string":
+        break;
     }
+    return expression;
   }
   /**
    * Resolves reference-style expressions such as identifiers, define references,
@@ -25840,7 +26039,7 @@ var Assembler = class _Assembler {
   cloneRelativeLabels(source) {
     const clone = {};
     for (const [depth, entries3] of Object.entries(source)) {
-      clone[Number(depth)] = entries3.map((entry) => ({ ...entry }));
+      clone[Number(depth)] = entries3.map((entry) => Object.assign({}, entry));
     }
     return clone;
   }
@@ -26145,7 +26344,7 @@ var Assembler = class _Assembler {
   executeLoweredLoop(loopBlock) {
     if (loopBlock.loopType === "for") {
       this.executeLoweredForLoop(loopBlock);
-    } else if (loopBlock.loopType === "while") {
+    } else {
       this.executeLoweredWhileLoop(loopBlock);
     }
   }
@@ -26498,13 +26697,16 @@ var RootAnalysisCache = class {
         "cacheDeserialize",
         () => JSON.parse(readFileSync(file, "utf8"))
       );
+      if (!isCachePayload(payload)) {
+        return void 0;
+      }
       if (payload.version !== CACHE_VERSION || payload.root !== path4.resolve(root)) {
         return void 0;
       }
       if (!identitiesMatch(payload.identity, identity)) {
         return void 0;
       }
-      const recordedFiles = Object.keys(payload.fileHashes).sort();
+      const recordedFiles = Object.keys(payload.fileHashes).toSorted();
       const currentHashes = {};
       for (const recorded of recordedFiles) {
         const recordedHash = payload.fileHashes[recorded];
@@ -26592,6 +26794,24 @@ function fingerprintForSorted(sortedFileHashes) {
 function hashBytes2(bytes) {
   return createHash2("sha256").update(bytes).digest("hex");
 }
+function isUnknownArray2(value) {
+  return Array.isArray(value);
+}
+function isStringRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && Object.values(value).every((entry) => typeof entry === "string");
+}
+function isNumberRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && Object.values(value).every((entry) => typeof entry === "number");
+}
+function isCacheIdentity(value) {
+  return typeof value === "object" && value !== null && "target" in value && typeof value.target === "string" && "architecture" in value && typeof value.architecture === "string" && "converterIdentity" in value && typeof value.converterIdentity === "string" && "targetOptionsIdentity" in value && typeof value.targetOptionsIdentity === "string" && "includePaths" in value && isUnknownArray2(value.includePaths) && value.includePaths.every((entry) => typeof entry === "string");
+}
+function isCachedAnalysis(value) {
+  return typeof value === "object" && value !== null && "followedIncludes" in value && typeof value.followedIncludes === "boolean" && "diagnostics" in value && isUnknownArray2(value.diagnostics) && "symbols" in value && isUnknownArray2(value.symbols) && "references" in value && isUnknownArray2(value.references) && "includeEdges" in value && isUnknownArray2(value.includeEdges) && "assetDependencies" in value && typeof value.assetDependencies === "object" && value.assetDependencies !== null && !Array.isArray(value.assetDependencies);
+}
+function isCachePayload(value) {
+  return typeof value === "object" && value !== null && "version" in value && typeof value.version === "number" && "root" in value && typeof value.root === "string" && "fingerprint" in value && typeof value.fingerprint === "string" && "identity" in value && isCacheIdentity(value.identity) && "fileHashes" in value && isStringRecord(value.fileHashes) && "analysis" in value && isCachedAnalysis(value.analysis) && (!("fileMtimes" in value) || value.fileMtimes === void 0 || isNumberRecord(value.fileMtimes));
+}
 function identitiesMatch(stored, current) {
   if (stored.target !== current.target || stored.architecture !== current.architecture) {
     return false;
@@ -26602,8 +26822,8 @@ function identitiesMatch(stored, current) {
   if (stored.targetOptionsIdentity !== current.targetOptionsIdentity) {
     return false;
   }
-  const left = [...stored.includePaths].sort();
-  const right = [...current.includePaths].sort();
+  const left = [...stored.includePaths].toSorted();
+  const right = [...current.includePaths].toSorted();
   return left.length === right.length && left.every((value, index2) => value === right[index2]);
 }
 
@@ -26692,7 +26912,7 @@ var WorkspaceIndex = class {
     this.entryPoints = (options.entryPoints ?? []).map((entry) => path5.resolve(entry));
     this.includePaths = options.includePaths ?? ["./"];
     this.architecture = options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
-    this.targetOptions = Object.freeze({ ...options.targetOptions ?? {} });
+    this.targetOptions = Object.freeze({ ...options.targetOptions });
     this.directiveCatalog = this.toolingCatalog.getDirectives();
     this.directivePrefixes = this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ?? ASAR_SYNTAX_PROFILE.directivePrefixes;
     this.logger = options.logger;
@@ -27070,7 +27290,7 @@ var WorkspaceIndex = class {
       return analysis;
     } catch (error) {
       this.logger?.info(
-        `Analysis failed for ${path5.basename(root)} after ${Date.now() - started}ms: ${error instanceof Error ? error.message : String(error)}`
+        `Analysis failed for ${path5.basename(root)} after ${Date.now() - started}ms: ` + (error instanceof Error ? error.message : String(error))
       );
       return void 0;
     } finally {
@@ -27193,8 +27413,8 @@ var WorkspaceIndex = class {
    * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
    */
   cacheIdentity() {
-    const formats = this.environment.getAssetFormats(this.target).map((item) => `${item.id}@${item.version}`).sort();
-    const transforms = this.environment.getAssetTransforms(this.target).map((item) => `${item.id}@${item.version}`).sort();
+    const formats = this.environment.getAssetFormats(this.target).map((item) => `${item.id}@${item.version}`).toSorted();
+    const transforms = this.environment.getAssetTransforms(this.target).map((item) => `${item.id}@${item.version}`).toSorted();
     return {
       target: this.target,
       architecture: this.architecture,
@@ -27242,7 +27462,7 @@ var WorkspaceIndex = class {
     }
     const fileHashes = {};
     const fileMtimes = {};
-    for (const file of [...files].sort()) {
+    for (const file of [...files].toSorted()) {
       const overlayContent = this.overlay.get(file);
       if (overlayContent !== void 0) {
         fileHashes[file] = hashBytes2(new Uint8Array(Buffer.from(overlayContent, "utf8")));
@@ -27595,7 +27815,7 @@ function buildInstructionCatalog(forms) {
     entries3.push(form);
     grouped.set(form.mnemonic, entries3);
   }
-  return [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries3]) => ({
+  return [...grouped.entries()].toSorted(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries3]) => ({
     mnemonic,
     summary: summaries[mnemonic] ?? (entries3.some((entry) => !entry.documented) ? "Undocumented NMOS 6502 instruction." : `${mnemonic} instruction.`),
     modes: entries3.map((form) => ({
@@ -27654,9 +27874,22 @@ function getOperandCodec(mode3) {
     case "immediateAbsolute":
     case "immediateAbsoluteIndexedX":
       return "immediate-unsigned16";
-    default:
+    case "immediate":
+    case "zeroPage":
+    case "zeroPageIndexedX":
+    case "zeroPageIndexedY":
+    case "zeroPageIndirect":
+    case "zeroPageIndirectLong":
+    case "indexedIndirectX":
+    case "indirectIndexedY":
+    case "zeroPageIndirectIndexedZ":
+    case "stackRelative":
+    case "stackRelativeIndirectIndexedY":
+    case "basePageIndirectIndexedZ":
       return "unsigned8";
   }
+  const leftover = mode3;
+  throw new Error(`Unsupported addressing mode: ${String(leftover)}`);
 }
 function getOperandFields(codec) {
   switch (codec) {
@@ -29319,7 +29552,8 @@ function opcodeFor(row, modeIndex) {
     return row[2];
   }
   const [, , base, eaTable] = row;
-  const extension = ca65EaTable[eaTable]?.[modeIndex];
+  const eaRow = eaTable >= 0 && eaTable < ca65EaTable.length ? ca65EaTable[eaTable] : void 0;
+  const extension = eaRow !== void 0 && modeIndex >= 0 && modeIndex < eaRow.length ? eaRow[modeIndex] : void 0;
   if (extension === void 0) {
     throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
   }
@@ -29820,7 +30054,9 @@ for (const form of mutableForms) {
   groups.set(key, group);
 }
 for (const group of groups.values()) {
-  const preferred = group.find((form) => form.documented) ?? group[0];
+  const documented = group.find((form) => form.documented);
+  const fallback = group.length > 0 ? group[0] : void 0;
+  const preferred = documented ?? fallback;
   if (preferred) {
     preferred.canonical = true;
   }
@@ -29863,8 +30099,11 @@ var nmos6502xCpu = Object.freeze({
   aliases: ["6502x"],
   features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
 });
+function cpuVariantForms(cpuId) {
+  return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : void 0;
+}
 function getCpuAssemblyForms(cpu) {
-  const variantForms = variantFormsByCpuId[cpu.id];
+  const variantForms = cpuVariantForms(cpu.id);
   if (variantForms) {
     return variantForms;
   }
@@ -29886,6 +30125,54 @@ var absoluteToDirect = {
   indirect: "zeroPageIndirect",
   absoluteIndexedIndirect: "indexedIndirectX"
 };
+var addressingModes = {
+  implied: true,
+  accumulator: true,
+  immediate: true,
+  zeroPage: true,
+  zeroPageIndexedX: true,
+  zeroPageIndexedY: true,
+  absolute: true,
+  absoluteIndexedX: true,
+  absoluteIndexedY: true,
+  absoluteLongIndexedX: true,
+  indirect: true,
+  zeroPageIndirect: true,
+  zeroPageIndirectLong: true,
+  indexedIndirectX: true,
+  indirectIndexedY: true,
+  absoluteIndexedIndirect: true,
+  zeroPageIndirectIndexedZ: true,
+  stackRelative: true,
+  stackRelativeIndirectIndexedY: true,
+  relative: true,
+  relative16: true,
+  zeroPageRelative: true,
+  accumulatorRelative: true,
+  zeroPageImmediate: true,
+  specialPage: true,
+  blockTransfer: true,
+  immediateZeroPage: true,
+  immediateZeroPageIndexedX: true,
+  immediateAbsolute: true,
+  immediateAbsoluteIndexedX: true,
+  basePageIndirectIndexedZ: true,
+  quadAccumulator: true
+};
+function isAddressingMode(value) {
+  for (const mode3 of Object.keys(addressingModes)) {
+    if (value === mode3) {
+      return true;
+    }
+  }
+  return false;
+}
+function mappedAddressingMode(table, mode3) {
+  if (mode3 === void 0 || !isAddressingMode(mode3)) {
+    return void 0;
+  }
+  return table[mode3];
+}
 var aliasToMnemonic = /* @__PURE__ */ new Map();
 for (const form of nmos6502DecodeTable) {
   for (const alias of form.aliases ?? []) {
@@ -29983,16 +30270,38 @@ var Arch65xx = class {
     const operand = words.slice(1).join(" ");
     return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
+  /**
+   * Estimates the size of a resolved instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {number} The estimated size in bytes.
+   */
   estimateInstruction(instruction) {
     return this.estimateResolved(instruction.mnemonic, instruction.loweredOperand);
   }
+  /**
+   * Encodes a resolved instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {boolean} True if encoded.
+   */
   encodeInstruction(instruction) {
     return this.encodeResolved(instruction.mnemonic, instruction.loweredOperand);
   }
+  /**
+   * Estimates the size of a resolved instruction.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {number} The estimated size in bytes.
+   */
   estimateResolved(rawMnemonic, operand) {
     const resolved = this.resolveForm(rawMnemonic, operand);
     return resolved ? modeSize(resolved) : 0;
   }
+  /**
+   * Encodes a resolved instruction.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {boolean} True if encoded.
+   */
   encodeResolved(rawMnemonic, operand) {
     const resolved = this.resolveForm(rawMnemonic, operand);
     if (!resolved) {
@@ -30089,6 +30398,12 @@ var Arch65xx = class {
     }
     return false;
   }
+  /**
+   * Reads compound values from operands.
+   * @param {InstructionForm} form The instruction form.
+   * @param {readonly string[]} operands The operands.
+   * @returns {readonly number[]} The compound values.
+   */
   readCompoundValues(form, operands) {
     const expect = (count, description) => {
       if (operands.length !== count) {
@@ -30169,10 +30484,23 @@ var Arch65xx = class {
           )
         ];
       }
+      case "none":
+      case "relative16":
+      case "relative8":
+      case "special-page":
+      case "unsigned16-le":
+      case "unsigned24-le":
+      case "unsigned8":
       default:
         return [];
     }
   }
+  /**
+   * Resolves a form for a mnemonic and operand.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {InstructionForm | undefined} The resolved form.
+   */
   resolveForm(rawMnemonic, operand) {
     const parsed = parseMnemonic(rawMnemonic);
     let mnemonic = parsed.mnemonic;
@@ -30230,19 +30558,21 @@ var Arch65xx = class {
       }
     }
     if (forcedWidth) {
-      const byteMode = mode3 ? absoluteToDirect[mode3] : void 0;
-      const wordMode = mode3 ? directToAbsolute[mode3] : void 0;
+      const byteMode = mappedAddressingMode(absoluteToDirect, mode3);
+      const wordMode = mappedAddressingMode(directToAbsolute, mode3);
       const alreadyRequestedWidth = forcedWidth === 1 && mode3?.startsWith("zeroPage") || forcedWidth === 2 && (mode3 === "absolute" || mode3 === "indirect" || mode3?.startsWith("absoluteIndexed"));
       if (!byteMode && !wordMode && !alreadyRequestedWidth) {
         throw this.context.diagnostics.error(
           `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode3}.`
         );
       }
-      mode3 = forcedWidth === 1 ? absoluteToDirect[mode3] ?? mode3 : directToAbsolute[mode3] ?? mode3;
+      const promoted = forcedWidth === 1 ? byteMode : wordMode;
+      mode3 = promoted ?? mode3;
     }
     let form = forms.find((entry) => entry.mode === mode3);
-    if (!form && mode3 && directToAbsolute[mode3]) {
-      form = forms.find((entry) => entry.mode === directToAbsolute[mode3]);
+    const widened = mappedAddressingMode(directToAbsolute, mode3);
+    if (!form && widened) {
+      form = forms.find((entry) => entry.mode === widened);
     }
     if (!form) {
       const accepted = forms.map((entry) => entry.mode).join(", ");
@@ -30252,6 +30582,14 @@ var Arch65xx = class {
     }
     return form;
   }
+  /**
+   * Reads an expression value.
+   * @param {string} expression The expression.
+   * @param {1 | 2 | 3} width The width.
+   * @param {string} description The description.
+   * @param {boolean} immediate Whether the expression is immediate.
+   * @returns {number} The value.
+   */
   readExpressionValue(expression, width, description, immediate3) {
     const value = this.context.operands.getnum(expression);
     const minimum = width === 1 && immediate3 ? -128 : 0;
@@ -30268,6 +30606,13 @@ var Arch65xx = class {
     }
     return value & maximum;
   }
+  /**
+   * Reads a branch delta.
+   * @param {LoweredOperand} operand The operand.
+   * @param {number} relativeBaseOffset The relative base offset.
+   * @param {1 | 2} width The width.
+   * @returns {number} The branch delta.
+   */
   readBranchDelta(operand, relativeBaseOffset, width) {
     return this.readBranchExpression(
       operand.baseExpression ?? operand.expanded,
@@ -30275,6 +30620,13 @@ var Arch65xx = class {
       width
     );
   }
+  /**
+   * Reads a branch expression.
+   * @param {string} expression The expression.
+   * @param {number} relativeBaseOffset The relative base offset.
+   * @param {1 | 2} width The width.
+   * @returns {number} The branch expression.
+   */
   readBranchExpression(expression, relativeBaseOffset, width) {
     if (!this.context.branches.enforceResolvedLabels()) {
       return 0;
@@ -30307,9 +30659,19 @@ var Arch65xx = class {
 
 // packages/plugin-65xx/src/ca65-profile.ts
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
-var ca65SessionStateKey = {
-  id: CA65_65XX_SESSION_STATE_ID
-};
+function isSessionStateKey(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey(id) {
+  const key = { id };
+  if (!isSessionStateKey(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var ca65SessionStateKey = createSessionStateKey(
+  CA65_65XX_SESSION_STATE_ID
+);
 function createCa65SessionState() {
   return {
     defaultArchitecture: "65xx.6502",
@@ -30458,7 +30820,7 @@ function rewriteCa65Command(command, context) {
     if (!header) {
       return rewritten;
     }
-    const params = splitArguments(header[2] ?? "").join(",");
+    const params = splitArguments(header[2]).join(",");
     return `${indent}macro ${header[1]}(${params})`;
   }
   if (keyword === "endmacro") {
@@ -30588,7 +30950,8 @@ function openSegment(session, state, segment) {
   if (!loadMemory || !runMemory) {
     throw new Error(`.segment "${segment.name}" references unknown MEMORY.`);
   }
-  const loadStart = segment.start ?? state.memoryCursors[segment.load] ?? loadMemory.start;
+  const loadCursor = Object.hasOwn(state.memoryCursors, segment.load) ? state.memoryCursors[segment.load] : void 0;
+  const loadStart = segment.start ?? loadCursor ?? loadMemory.start;
   session.setWritePosition(loadStart);
   const runStart = segment.run === segment.load ? loadStart : runMemory.start;
   if (runStart !== loadStart) {
@@ -30628,10 +30991,10 @@ function handleImport(session, words) {
   markGlobalSymbols(session, words, ".import");
 }
 function handleByte(session, words) {
-  session.directiveRuntime.handleDataDirective("db", [...words.slice(1)]);
+  session.directiveRuntime.handleDataDirective("db", words.slice(1));
 }
 function handleAddr(session, words) {
-  session.directiveRuntime.handleDataDirective("dw", [...words.slice(1)]);
+  session.directiveRuntime.handleDataDirective("dw", words.slice(1));
 }
 function emitMappedBytes(session, words, write, width) {
   const params = parameterList(words);
@@ -30664,7 +31027,7 @@ function handleDbyt(session, words) {
   );
 }
 function handleDword(session, words, width = 4) {
-  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", [...words.slice(1)]);
+  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", words.slice(1));
 }
 function handleSetcpu(session, state, words) {
   const name = unquote(words.slice(1).join(" ").trim());
@@ -30970,9 +31333,17 @@ function parseCa65AddressSizePrefix(operand) {
 
 // packages/plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
-var nes65xxSessionStateKey = {
-  id: NES_65XX_SESSION_STATE_ID
-};
+function isSessionStateKey2(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey2(id) {
+  const key = { id };
+  if (!isSessionStateKey2(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var nes65xxSessionStateKey = createSessionStateKey2(NES_65XX_SESSION_STATE_ID);
 function cloneNes65xxSessionState(value) {
   return {
     ...value,
@@ -31188,8 +31559,11 @@ var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
 var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 var INES_MAGIC = [78, 69, 83, 26];
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 function createNes65xxTargetOptions(configured) {
-  const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
+  const value = isRecord4(configured) ? configured : {};
   const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim() ? value.linkerConfig : defaultLd65ConfigText();
   const linker = parseLd65Config(linkerConfig);
   const fillByte = typeof value.fillByte === "number" && Number.isInteger(value.fillByte) ? value.fillByte & 255 : 255;
@@ -31211,15 +31585,13 @@ function createInitialNesState(context) {
   resetNes65xxStageState(state);
   return state;
 }
+function validate(address3) {
+  if (!Number.isInteger(address3) || address3 < 0 || address3 > 65535) {
+    throw new Error(`Address $${address3.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+  }
+  return address3;
+}
 function createNesAddressSpace({ state }) {
-  const validate = (address3) => {
-    if (!Number.isInteger(address3) || address3 < 0 || address3 > 65535) {
-      throw new Error(
-        `Address $${address3.toString(16).toUpperCase()} is outside 16-bit NES space.`
-      );
-    }
-    return address3;
-  };
   return {
     addressWidth: 16,
     defaultOrigin: 0,
@@ -31274,7 +31646,7 @@ function createNesLifecycle({ state }) {
     resetNes65xxStageState(nes);
     session.outputFillByte = nes.fillByte;
     const total = nes.header.length + nes.linker.imageSize;
-    const image = new Array(total).fill(nes.fillByte);
+    const image = Array.from({ length: total }, () => nes.fillByte);
     for (let index2 = 0; index2 < nes.header.length; index2++) {
       image[index2] = nes.header[index2] ?? 0;
     }
@@ -31310,7 +31682,7 @@ function normalizeHeader(configured, imageSize) {
     throw new Error("65xx NES target header must be a byte array.");
   }
   const prgBanks = Math.max(1, Math.ceil(imageSize / 16384));
-  const header = new Array(16).fill(0);
+  const header = Array.from({ length: 16 }, () => 0);
   header[0] = INES_MAGIC[0];
   header[1] = INES_MAGIC[1];
   header[2] = INES_MAGIC[2];
@@ -31417,20 +31789,20 @@ var directive = (id, keywords, handler) => {
     tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword))
   };
 };
+function validate2(address3) {
+  if (!Number.isInteger(address3) || address3 < 0 || address3 > 65535) {
+    throw new Error(`Address $${address3.toString(16).toUpperCase()} is outside flat16.`);
+  }
+  return address3;
+}
 function createFlat65xxAddressSpace({ options }) {
   const { origin } = createRaw65xxTargetOptions(options);
-  const validate = (address3) => {
-    if (!Number.isInteger(address3) || address3 < 0 || address3 > 65535) {
-      throw new Error(`Address $${address3.toString(16).toUpperCase()} is outside flat16.`);
-    }
-    return address3;
-  };
   return {
     addressWidth: 16,
     defaultOrigin: origin,
-    normalizeForWrite: validate,
+    normalizeForWrite: validate2,
     advance(address3, amount) {
-      return validate(address3 + amount);
+      return validate2(address3 + amount);
     },
     toOutputOffset(address3) {
       return Number.isInteger(address3) && address3 >= origin && address3 <= 65535 ? address3 - origin : -1;
@@ -31440,8 +31812,8 @@ function createFlat65xxAddressSpace({ options }) {
       return Number.isInteger(offset) && offset >= 0 && address3 <= 65535 ? address3 : -1;
     },
     validateWrite(address3, width) {
-      validate(address3);
-      validate(address3 + width - 1);
+      validate2(address3);
+      validate2(address3 + width - 1);
       if (address3 < origin) {
         throw new Error(
           `Address $${address3.toString(16).toUpperCase()} precedes raw origin $${origin.toString(16).toUpperCase()}.`
@@ -31450,11 +31822,19 @@ function createFlat65xxAddressSpace({ options }) {
     }
   };
 }
+function updatePredicates(session, architecture) {
+  for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
+    session.globalSymbols.add(symbol);
+    session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
+  }
+}
 function register65xxContributions(context) {
   for (const [cpu, forms] of [
     [nmos6502Cpu, nmos6502Forms],
     [nmos6502xCpu, nmos6502xForms],
-    ...variantCpus.map((cpu2) => [cpu2, variantFormsByCpuId[cpu2.id] ?? []])
+    ...variantCpus.map(
+      (variantCpu) => [variantCpu, variantFormsByCpuId[variantCpu.id] ?? []]
+    )
   ]) {
     const catalog = buildInstructionCatalog(forms);
     context.registerArchitecture({
@@ -31532,12 +31912,6 @@ function register65xxContributions(context) {
   context.registerLifecycle({
     id: CA65_65XX_LIFECYCLE_ID,
     create: () => {
-      const updatePredicates = (session, architecture) => {
-        for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
-          session.globalSymbols.add(symbol);
-          session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
-        }
-      };
       return {
         onSessionCreated: ({ session, state }) => {
           const profile = state.get(ca65SessionStateKey);
@@ -31782,7 +32156,7 @@ var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
   "baseImage"
 ]);
 var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
-var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var configurationError = (message, cause) => new PluginError(message, {
   code: "PLUGIN_CONFIGURATION_INVALID",
   cause
@@ -31796,18 +32170,19 @@ var optionalText = (value, field) => {
   }
   return value;
 };
+var isNonEmptyStringArray2 = (value) => Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim() !== "");
 var optionalStringArray = (value, field) => {
   if (value === void 0) {
     return void 0;
   }
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
+  if (!isNonEmptyStringArray2(value)) {
     throw configurationError(`Configuration field '${field}' must be an array of strings.`);
   }
   return value;
 };
 var validatePluginEntry = (value, index2) => {
   const entry = `plugins[${index2}]`;
-  if (!isRecord2(value)) {
+  if (!isRecord5(value)) {
     throw configurationError(`Configuration entry '${entry}' must be an object.`);
   }
   const unknown = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
@@ -31819,7 +32194,7 @@ var validatePluginEntry = (value, index2) => {
   if (typeof value.module !== "string" || value.module.trim() === "") {
     throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
   }
-  if (value.options !== void 0 && !isRecord2(value.options)) {
+  if (value.options !== void 0 && !isRecord5(value.options)) {
     throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
   }
   return {
@@ -31828,7 +32203,7 @@ var validatePluginEntry = (value, index2) => {
   };
 };
 var validateProjectConfiguration = (value) => {
-  if (!isRecord2(value)) {
+  if (!isRecord5(value)) {
     throw configurationError("Project configuration must be a JSON object.");
   }
   const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
@@ -31902,12 +32277,12 @@ import { realpath } from "node:fs/promises";
 import { createRequire, registerHooks } from "node:module";
 import path7 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord6 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var toOptionsRecord = (value, entry) => {
   if (value === void 0) {
     return {};
   }
-  if (!isRecord3(value)) {
+  if (!isRecord6(value)) {
     throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
       code: "PLUGIN_CONFIGURATION_INVALID"
     });
@@ -31915,7 +32290,7 @@ var toOptionsRecord = (value, entry) => {
   return { ...value };
 };
 var pluginIdFromNamespace = (namespace) => {
-  if (!isRecord3(namespace) || !isRecord3(namespace.default) || !isRecord3(namespace.default.manifest)) {
+  if (!isRecord6(namespace) || !isRecord6(namespace.default) || !isRecord6(namespace.default.manifest)) {
     return void 0;
   }
   return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
@@ -31924,9 +32299,9 @@ var stableValue = (value) => {
   if (Array.isArray(value)) {
     return value.map(stableValue);
   }
-  if (isRecord3(value)) {
+  if (isRecord6(value)) {
     return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, stableValue(value[key])])
+      Object.keys(value).toSorted().map((key) => [key, stableValue(value[key])])
     );
   }
   return value;
@@ -31949,10 +32324,12 @@ var moduleLoadError = (request, message, resolvedModule, cause) => new PluginErr
 var resolveExternalModule = async (request) => {
   try {
     if (request.module.startsWith("file:")) {
-      return normalizeFileUrl(new URL(request.module));
+      return await normalizeFileUrl(new URL(request.module));
     }
     if (path7.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
-      return normalizeFileUrl(pathToFileURL(path7.resolve(request.baseDirectory, request.module)));
+      return await normalizeFileUrl(
+        pathToFileURL(path7.resolve(request.baseDirectory, request.module))
+      );
     }
     const parent = pathToFileURL(path7.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
     const marker = "uttori:resolve-project-plugin";
@@ -32023,24 +32400,27 @@ var NodePluginLoader = class {
     const configPlugins = loadedConfig.configuration.plugins ?? [];
     const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
     const requests = [
-      ...configPlugins.map((request, index2) => ({
-        ...request,
-        baseDirectory: loadedConfig.directory,
-        source: "configuration",
-        configEntry: `plugins[${index2}]`
-      })),
-      ...defaultPlugins.map((request, index2) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "host-default",
-        configEntry: `hostDefaults.plugins[${index2}]`
-      })),
-      ...(options.pluginModules ?? []).map((request, index2) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "override",
-        configEntry: `pluginModules[${index2}]`
-      }))
+      ...configPlugins.map(
+        (request, index2) => Object.assign({}, request, {
+          baseDirectory: loadedConfig.directory,
+          source: "configuration",
+          configEntry: `plugins[${index2}]`
+        })
+      ),
+      ...defaultPlugins.map(
+        (request, index2) => Object.assign({}, request, {
+          baseDirectory: cwd,
+          source: "host-default",
+          configEntry: `hostDefaults.plugins[${index2}]`
+        })
+      ),
+      ...(options.pluginModules ?? []).map(
+        (request, index2) => Object.assign({}, request, {
+          baseDirectory: cwd,
+          source: "override",
+          configEntry: `pluginModules[${index2}]`
+        })
+      )
     ];
     if (options.activateBundledPlugins && options.bundledPlugins) {
       const requested = new Set(requests.map((request) => request.module));
@@ -32170,7 +32550,7 @@ var NodePluginLoader = class {
         targetOptions: targetOptions2,
         includePaths: Object.freeze(includePaths)
       });
-      const current = {};
+      let current;
       const loaded = Object.freeze({
         environment,
         target,
@@ -32180,18 +32560,21 @@ var NodePluginLoader = class {
         configuration,
         diagnostics: Object.freeze([]),
         dispose: async () => {
+          if (current === void 0) {
+            return;
+          }
           if (this.#current === current) {
             this.#current = void 0;
           }
           await this.#disposeEntry(current);
         }
       });
-      Object.assign(current, {
+      current = {
         snapshot: preliminarySnapshot,
         manager,
         loaded,
         disposed: false
-      });
+      };
       this.#current = current;
       return loaded;
     } catch (error) {
@@ -32294,6 +32677,9 @@ var cpu65816Modes = Object.freeze({
   indlong: mode("absoluteIndirectLong", "[addr]", 3),
   block: mode("blockMove", "srcBank,destBank", 3)
 });
+function isCpu65816ModeKey(value) {
+  return Object.hasOwn(cpu65816Modes, value);
+}
 var opcodeRows = [
   "BRK:sig ORA:dix COP:sig ORA:sr TSB:dp ORA:dp ASL:dp ORA:dil PHP:imp ORA:immM ASL:acc PHD:imp TSB:abs ORA:abs ASL:abs ORA:long",
   "BPL:rel8 ORA:diy ORA:dpi ORA:sriy TRB:dp ORA:dpx ASL:dpx ORA:dily CLC:imp ORA:aby INC:acc TCS:imp TRB:abs ORA:abx ASL:abx ORA:longx",
@@ -32507,11 +32893,10 @@ if (entries.length !== 256) {
 var cpu65816Specifications = Object.freeze(
   entries.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const modeKey = modeKeyText;
-    const definition = cpu65816Modes[modeKey];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isCpu65816ModeKey(modeKeyText)) {
       throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
     }
+    const definition = cpu65816Modes[modeKeyText];
     let operandStatusEffect;
     if (mnemonic === "REP") {
       operandStatusEffect = "clearBits";
@@ -32555,7 +32940,9 @@ function buildCpu65816Catalog() {
       });
     }
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted(
+    (left, right) => left.mnemonic.localeCompare(right.mnemonic)
+  );
 }
 
 // packages/plugin-snes/src/architectures/65816-decoder.ts
@@ -32589,6 +32976,9 @@ var readLittleEndian = (bytes, offset, width) => {
   }
   return value >>> 0;
 };
+function byteAt(bytes, index2) {
+  return index2 >= 0 && index2 < bytes.length ? bytes[index2] : void 0;
+}
 var signed = (value, width) => {
   const signBit = 1 << width * 8 - 1;
   const modulus = 2 ** (width * 8);
@@ -32601,7 +32991,8 @@ var addressOperand = (value, width) => ({
   width
 });
 var operandsFor = (specification2, bytes, logicalAddress) => {
-  const value8 = bytes[1] ?? 0;
+  const firstOperandByte = byteAt(bytes, 1);
+  const value8 = firstOperandByte ?? 0;
   const value16 = readLittleEndian(bytes, 1, 2);
   const value24 = readLittleEndian(bytes, 1, 3);
   switch (specification2.mode) {
@@ -32669,14 +33060,14 @@ var operandsFor = (specification2, bytes, logicalAddress) => {
     case "blockMove":
       return [
         { kind: "bank", value: value8, width: 1 },
-        { kind: "bank", value: bytes[2] ?? 0, width: 1 }
+        { kind: "bank", value: byteAt(bytes, 2) ?? 0, width: 1 }
       ];
     default:
       return [];
   }
 };
 var targetFor = (specification2, operands, state, logicalAddress) => {
-  const operand = operands[0];
+  const operand = operands.length > 0 ? operands[0] : void 0;
   if (!operand) {
     return void 0;
   }
@@ -32796,7 +33187,7 @@ var Cpu65816Decoder = class {
         availableBytes
       };
     }
-    const specification2 = cpu65816Specifications[opcode];
+    const specification2 = opcode >= 0 && opcode < cpu65816Specifications.length ? cpu65816Specifications[opcode] : void 0;
     if (!specification2) {
       return {
         kind: "error",
@@ -32937,6 +33328,9 @@ var spc700Modes = Object.freeze({
   dpxY: mode2("directIndexedXRegisterY", "dp+X,Y", 2),
   absY: mode2("absoluteRegisterY", "addr,Y", 3)
 });
+function isSpc700ModeKey(value) {
+  return Object.hasOwn(spc700Modes, value);
+}
 var opcodeRows2 = [
   "NOP:imp TCALL:tc SET0:dpBit BBS0:dpBitRel OR:aDp OR:aAbs OR:aIndX OR:aDpxi OR:aImm OR:dpDp OR1:cBit ASL:dp ASL:abs PUSH:regP TSET:absA BRK:imp",
   "BPL:rel TCALL:tc CLR0:dpBit BBC0:dpBitRel OR:aDpx OR:aAbx OR:aAby OR:aDpiy OR:dpImm OR:xy DECW:dpWord ASL:dpx ASL:regA DEC:regX CMP:xAbs JMP:jmpAbx",
@@ -33086,10 +33480,10 @@ if (entries2.length !== 256) {
 var spc700Specifications = Object.freeze(
   entries2.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const definition = spc700Modes[modeKeyText];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isSpc700ModeKey(modeKeyText)) {
       throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
     }
+    const definition = spc700Modes[modeKeyText];
     const summaryKey = mnemonic.replace(/[0-7]$/, "0");
     return Object.freeze({
       id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -33126,10 +33520,15 @@ function buildSpc700Catalog() {
       });
     }
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted(
+    (left, right) => left.mnemonic.localeCompare(right.mnemonic)
+  );
 }
 
 // packages/plugin-snes/src/architectures/superfx-spec.ts
+function isSuperFxAltState(value) {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
 var syntaxFor = (encoding) => {
   switch (encoding) {
     case "implied":
@@ -33584,14 +33983,14 @@ var superFxFusedSpecifications = Object.freeze([
     { length: 16 },
     (_, source) => Array.from(
       { length: 16 },
-      (_2, destination) => fused("MOVE", [32 + source, 16 + destination], "registerRegister", destination, source)
+      (_item, destination) => fused("MOVE", [32 + source, 16 + destination], "registerRegister", destination, source)
     )
   ).flat(),
   ...Array.from(
     { length: 16 },
     (_, destination) => Array.from(
       { length: 16 },
-      (_2, source) => fused(
+      (_item, source) => fused(
         "MOVES",
         [32 + destination, 176 + source],
         "registerRegister",
@@ -33704,7 +34103,9 @@ function buildSuperFxCatalog() {
   for (const entry of conveniences) {
     grouped.set(entry.mnemonic, entry);
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted(
+    (left, right) => left.mnemonic.localeCompare(right.mnemonic)
+  );
 }
 
 // packages/plugin-snes/src/tooling/instruction-catalog.ts
@@ -33913,6 +34314,11 @@ function classifySuperFxOperand(resolver, operand) {
 }
 
 // packages/plugin-snes/src/architectures/65816.ts
+var isOperandWidth = (value) => value === 1 || value === 2;
+var isLogicOpcode = (value) => value === "ORA" || value === "AND" || value === "EOR" || value === "CMP" || value === "CPX" || value === "CPY";
+var isStoreOpcode = (value) => value === "STX" || value === "STY" || value === "STZ";
+var isBitOpcode = (value) => value === "BIT" || value === "TSB" || value === "TRB";
+var isGenericOpcode = (value) => value === "BRK" || value === "COP" || value === "PEA" || value === "PEI" || value === "REP" || value === "SEP" || value === "WDM";
 var lower65816Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyExpanded65816Operand(resolver, lowered);
@@ -34408,7 +34814,6 @@ var Arch65816 = class {
         } else if (len === 3) {
           this.assembler.write3(this.assembler.operandResolver.getnum(baseOperand));
         }
-        return true;
       } else if (isIndexedMemory(loweredOperand, "y")) {
         const forcedIndexedY = {
           ADC: { 2: 121 },
@@ -34421,7 +34826,6 @@ var Arch65816 = class {
         }
         this.assembler.write1(forcedIndexedY[opcode][len]);
         this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
-        return true;
       } else {
         const forcedNonIndexed = {
           ADC: { 1: 101, 2: 109, 3: 111 },
@@ -34440,8 +34844,8 @@ var Arch65816 = class {
         } else if (len === 3) {
           this.assembler.write3(this.assembler.operandResolver.getnum(operand));
         }
-        return true;
       }
+      return true;
     }
     if (loweredOperand.mode === "absoluteIndexedX") {
       const absoluteIndexedXOpcodes = {
@@ -34798,10 +35202,9 @@ var Arch65816 = class {
       EOR: 89,
       CMP: 217
     };
-    if (!(opcode in opcodes)) {
+    if (!isLogicOpcode(opcode)) {
       return false;
     }
-    const logicOpcode = opcode;
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
@@ -34810,7 +35213,7 @@ var Arch65816 = class {
     if (loweredOperand.immediate) {
       mode3 = "immediate";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
-      this.assembler.write1(opcodes[logicOpcode].immediate);
+      this.assembler.write1(opcodes[opcode].immediate);
       const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
       if (width === 1) {
         this.assembler.write1(address3);
@@ -34829,79 +35232,77 @@ var Arch65816 = class {
       const explicitOperand = forcedIndexedMode ? baseOperand : resolvedOperand;
       if (forcedIndexedMode === "x") {
         if (len === 1) {
-          const forcedOpcode = dpXMap[logicOpcode];
+          const forcedOpcode = dpXMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
           }
           this.assembler.write1(forcedOpcode);
           this.assembler.write1(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 2) {
-          const forcedOpcode = absXMap[logicOpcode];
+          const forcedOpcode = absXMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
           }
           this.assembler.write1(forcedOpcode);
           this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
-          const forcedOpcode = absXMap[logicOpcode];
+          const forcedOpcode = absXMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
           }
           this.assembler.write1(forcedOpcode + 2);
           this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
-        return true;
       } else if (forcedIndexedMode === "y") {
         if (len !== 2) {
-          throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+          throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
-        const forcedOpcode = absYMap[logicOpcode];
+        const forcedOpcode = absYMap[opcode];
         if (forcedOpcode === void 0) {
-          throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+          throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
         this.assembler.write1(forcedOpcode);
         this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
-        return true;
       } else {
         if (len === 1) {
-          this.assembler.write1(dpMap[logicOpcode]);
+          this.assembler.write1(dpMap[opcode]);
           this.assembler.write1(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 2) {
-          this.assembler.write1(absMap[logicOpcode]);
+          this.assembler.write1(absMap[opcode]);
           this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
-          const forcedOpcode = absLongMap[logicOpcode];
+          const forcedOpcode = absLongMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced non-indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced non-indexed mode.`);
           }
           this.assembler.write1(forcedOpcode);
           this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
-        return true;
       }
+      return true;
     }
-    if (loweredOperand.mode === "absoluteIndexedX" && opcodes[logicOpcode].absoluteX) {
+    if (loweredOperand.mode === "absoluteIndexedX" && opcodes[opcode].absoluteX) {
       mode3 = "absoluteX";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "absoluteIndexedY" && opcodes[logicOpcode].absoluteY) {
+    } else if (loweredOperand.mode === "absoluteIndexedY" && opcodes[opcode].absoluteY) {
       mode3 = "absoluteY";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "absoluteLong") {
       mode3 = "absoluteLong";
       address3 = this.assembler.operandResolver.getnum(resolvedOperand);
-    } else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[logicOpcode].absoluteLongX) {
+    } else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[opcode].absoluteLongX) {
       mode3 = "absoluteLongX";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "stackRelative" && opcodes[logicOpcode].stackRelative) {
+    } else if (loweredOperand.mode === "stackRelative" && opcodes[opcode].stackRelative) {
       mode3 = "stackRelative";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "stackRelativeIndexedIndirectY" && opcodes[logicOpcode].stackRelativeIndirectY) {
+    } else if (loweredOperand.mode === "stackRelativeIndexedIndirectY" && opcodes[opcode].stackRelativeIndirectY) {
       mode3 = "stackRelativeIndirectY";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (/^\$[\dA-Fa-f]{2}$/.test(resolvedOperand)) {
       mode3 = "direct";
       address3 = this.assembler.operandResolver.getnum(resolvedOperand);
-    } else if (loweredOperand.mode === "directPageIndexedX" && opcodes[logicOpcode].directX) {
+    } else if (loweredOperand.mode === "directPageIndexedX" && opcodes[opcode].directX) {
       mode3 = "directX";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indexedIndirectX") {
@@ -34913,10 +35314,10 @@ var Arch65816 = class {
     } else if (loweredOperand.mode === "directPageIndirect") {
       mode3 = "indirect";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "indirectLong" && opcodes[logicOpcode].directIndirectLong) {
+    } else if (loweredOperand.mode === "indirectLong" && opcodes[opcode].directIndirectLong) {
       mode3 = "directIndirectLong";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "indirectLongIndexedY" && opcodes[logicOpcode].directIndirectLongY) {
+    } else if (loweredOperand.mode === "indirectLongIndexedY" && opcodes[opcode].directIndirectLongY) {
       mode3 = "directIndirectLongY";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectLong") {
@@ -34931,12 +35332,12 @@ var Arch65816 = class {
     } else {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
-    const opcodeByte = opcodes[logicOpcode][mode3];
+    const opcodeByte = opcodes[opcode][mode3];
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
     }
     this.assembler.write1(opcodeByte);
-    if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode3 === "directIndirectLong") {
+    if (mode3 === "directIndirectLong") {
       this.assembler.write1(address3);
     } else if (["absolute", "absoluteX", "absoluteY", "directIndirectLong"].includes(mode3)) {
       this.assembler.write2(address3);
@@ -35035,7 +35436,7 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleArithmeticOperations(opcode, operand, len, explicitlen) {
-    const operandText = operand?.trim() || "A";
+    const operandText = operand.trim() || "A";
     const accumulatorOpcodes = {
       ASL: 10,
       LSR: 74,
@@ -35083,14 +35484,6 @@ var Arch65816 = class {
           throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
         this.assembler.write1(forcedIndexed[opcode][len]);
-        if (len === 1) {
-          this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else if (len === 2) {
-          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else {
-          throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
-        }
-        return true;
       } else {
         const forcedNonIndexed = {
           ASL: { 1: 6, 2: 14 },
@@ -35104,15 +35497,15 @@ var Arch65816 = class {
           throw new Error(`Opcode ${opcode} not supported in forced non-indexed mode.`);
         }
         this.assembler.write1(forcedNonIndexed[opcode][len]);
-        if (len === 1) {
-          this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else if (len === 2) {
-          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else {
-          throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
-        }
-        return true;
       }
+      if (len === 1) {
+        this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
+      } else if (len === 2) {
+        this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
+      } else {
+        throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
+      }
+      return true;
     }
     if (/^\$[\da-f]{2}$/i.test(normalizedOperand) && loweredOperand.mode === "directPageIndexedX") {
       const dpIndexedXOpcodes = {
@@ -35247,8 +35640,8 @@ var Arch65816 = class {
       return true;
     }
     if (isLDX) {
+      address3 = this.assembler.operandResolver.getnum(operand);
       if (!isIndexed) {
-        address3 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 174;
           this.assembler.write1(opcodeByte);
@@ -35259,7 +35652,6 @@ var Arch65816 = class {
           this.assembler.write1(address3);
         }
       } else {
-        address3 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 190;
           this.assembler.write1(opcodeByte);
@@ -35271,8 +35663,8 @@ var Arch65816 = class {
         }
       }
     } else if (isLDY) {
+      address3 = this.assembler.operandResolver.getnum(operand);
       if (!isIndexed) {
-        address3 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 172;
           this.assembler.write1(opcodeByte);
@@ -35283,7 +35675,6 @@ var Arch65816 = class {
           this.assembler.write1(address3);
         }
       } else {
-        address3 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 188;
           this.assembler.write1(opcodeByte);
@@ -35352,13 +35743,13 @@ var Arch65816 = class {
         if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
           return { mode: currentOpcode, address: resolvedAddress & 65535 };
         }
-        let mode4 = currentOpcode;
+        let jumpMode = currentOpcode;
         if (currentOpcode === "JMP") {
-          mode4 = "JML";
+          jumpMode = "JML";
         } else if (currentOpcode === "JSR") {
-          mode4 = "JSL";
+          jumpMode = "JSL";
         }
-        return { mode: mode4, address: resolvedAddress };
+        return { mode: jumpMode, address: resolvedAddress };
       }
       return { mode: currentOpcode, address: resolvedAddress };
     };
@@ -35445,40 +35836,39 @@ var Arch65816 = class {
       STZ: { direct: 100, directX: 116, absolute: 156, absoluteX: 158 }
       // STZ DP, DP Indexed X, Absolute, Absolute Indexed X
     };
-    if (!(opcode in storeOpcodes)) {
+    if (!isStoreOpcode(opcode)) {
       return false;
     }
-    const storeOpcode = opcode;
-    const storeModeMap = storeOpcodes[storeOpcode];
+    const storeModeMap = storeOpcodes[opcode];
     const getForcedOpcode = (map, fallback) => {
-      const forced = map[len];
+      const forced = isOperandWidth(len) ? map[len] : void 0;
       return forced ?? fallback;
     };
     let address3 = 0;
-    const isIndexed = storeOpcode === "STX" && isIndexedMemory(loweredOperand, "y") || storeOpcode === "STY" && isIndexedMemory(loweredOperand, "x") || storeOpcode === "STZ" && isIndexedMemory(loweredOperand, "x");
+    const isIndexed = opcode === "STX" && isIndexedMemory(loweredOperand, "y") || opcode === "STY" && isIndexedMemory(loweredOperand, "x") || opcode === "STZ" && isIndexedMemory(loweredOperand, "x");
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
     }
     if (explicitlen) {
       if (isIndexed) {
-        if (storeOpcode === "STZ") {
+        if (opcode === "STZ") {
           const forcedSTZIndexed = { 1: 116, 2: 158 };
           this.assembler.write1(getForcedOpcode(forcedSTZIndexed, 158));
-        } else if (storeOpcode === "STX") {
+        } else if (opcode === "STX") {
           const forcedSTXIndexed = { 1: 150 };
           this.assembler.write1(getForcedOpcode(forcedSTXIndexed, 150));
-        } else if (storeOpcode === "STY") {
+        } else {
           const forcedSTYIndexed = { 1: 148 };
           this.assembler.write1(getForcedOpcode(forcedSTYIndexed, 148));
         }
       } else {
-        if (storeOpcode === "STX") {
+        if (opcode === "STX") {
           const forcedSTX = { 1: 134, 2: 142 };
           this.assembler.write1(getForcedOpcode(forcedSTX, 142));
-        } else if (storeOpcode === "STY") {
+        } else if (opcode === "STY") {
           const forcedSTY = { 1: 132, 2: 140 };
           this.assembler.write1(getForcedOpcode(forcedSTY, 140));
-        } else if (storeOpcode === "STZ") {
+        } else {
           const forcedSTZ = { 1: 100, 2: 156 };
           this.assembler.write1(getForcedOpcode(forcedSTZ, 156));
         }
@@ -35502,46 +35892,42 @@ var Arch65816 = class {
     }
     if (!isIndexed && (loweredOperand.mode === "absolute" || /^\$[\dA-Fa-f]{3,4}$/.test(operand))) {
       address3 = this.assembler.operandResolver.getnum(operand);
-      this.assembler.write1(storeOpcodes[storeOpcode].absolute);
+      this.assembler.write1(storeOpcodes[opcode].absolute);
       this.assembler.write2(address3);
       return true;
     } else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
       address3 = this.assembler.operandResolver.getnum(operand);
-      this.assembler.write1(storeOpcodes[storeOpcode].direct);
+      this.assembler.write1(storeOpcodes[opcode].direct);
       this.assembler.write1(address3);
       return true;
     } else if (isIndexed) {
-      if (storeOpcode === "STX") {
-        address3 = this.assembler.operandResolver.getnum(operand);
+      address3 = this.assembler.operandResolver.getnum(operand);
+      if (opcode === "STX") {
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          this.assembler.write1(storeOpcodes[storeOpcode].absolute);
+          this.assembler.write1(storeOpcodes[opcode].absolute);
           this.assembler.write2(address3);
         } else {
-          this.assembler.write1(storeOpcodes[storeOpcode].directY);
+          this.assembler.write1(storeOpcodes[opcode].directY);
           this.assembler.write1(address3);
         }
-        return true;
-      } else if (storeOpcode === "STY") {
-        address3 = this.assembler.operandResolver.getnum(operand);
+      } else if (opcode === "STY") {
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          this.assembler.write1(storeOpcodes[storeOpcode].absolute);
+          this.assembler.write1(storeOpcodes[opcode].absolute);
           this.assembler.write2(address3);
         } else {
-          this.assembler.write1(storeOpcodes[storeOpcode].directX);
+          this.assembler.write1(storeOpcodes[opcode].directX);
           this.assembler.write1(address3);
         }
-        return true;
-      } else if (storeOpcode === "STZ") {
-        address3 = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{3,4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
-          this.assembler.write1(storeOpcodes[storeOpcode].absoluteX);
+      } else {
+        if (/^\$[\da-f]{3,4}$/i.test(operand)) {
+          this.assembler.write1(storeOpcodes[opcode].absoluteX);
           this.assembler.write2(address3);
         } else {
-          this.assembler.write1(storeOpcodes[storeOpcode].directX);
+          this.assembler.write1(storeOpcodes[opcode].directX);
           this.assembler.write1(address3);
         }
-        return true;
       }
+      return true;
     }
     throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
   }
@@ -35602,12 +35988,13 @@ var Arch65816 = class {
       TSB: { direct: 4, absolute: 12 },
       TRB: { direct: 20, absolute: 28 }
     };
-    if (!(opcode in opcodes)) {
+    if (!isBitOpcode(opcode)) {
       return false;
     }
-    const bitOpcode = opcode;
+    const forcedMap = forcedMaps[opcode];
+    const bitModes = opcodes[opcode];
     const getForcedBitOpcode = (map, fallback) => {
-      const forced = map[len];
+      const forced = isOperandWidth(len) ? map[len] : void 0;
       return forced ?? fallback;
     };
     let address3 = 0;
@@ -35615,14 +36002,14 @@ var Arch65816 = class {
     if (operand.startsWith("#")) {
       address3 = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
-        const immediate3 = forcedMaps[bitOpcode].immediate;
+        const immediate3 = forcedMap.immediate;
         if (immediate3 === void 0) {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
         this.assembler.write1(immediate3);
         outLength = len === 1 ? 1 : 2;
       } else {
-        const immediate3 = opcodes[bitOpcode].immediate;
+        const immediate3 = bitModes.immediate;
         if (immediate3 === void 0) {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
@@ -35634,37 +36021,33 @@ var Arch65816 = class {
       address3 = this.assembler.operandResolver.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {
-          if (!forcedMaps[bitOpcode].directX) {
+          if (!forcedMap.directX) {
             throw new Error(`Opcode ${opcode} does not support indexed addressing in forced mode.`);
           }
           this.assembler.write1(
             getForcedBitOpcode(
-              forcedMaps[bitOpcode].directX,
-              forcedMaps[bitOpcode].directX[2] ?? forcedMaps[bitOpcode].directX[1] ?? 0
+              forcedMap.directX,
+              forcedMap.directX[2] ?? forcedMap.directX[1] ?? 0
             )
           );
-          outLength = len === 1 ? 1 : 2;
         } else {
           this.assembler.write1(
-            getForcedBitOpcode(
-              forcedMaps[bitOpcode].direct,
-              forcedMaps[bitOpcode].direct[2] ?? forcedMaps[bitOpcode].direct[1] ?? 0
-            )
+            getForcedBitOpcode(forcedMap.direct, forcedMap.direct[2] ?? forcedMap.direct[1] ?? 0)
           );
-          outLength = len === 1 ? 1 : 2;
         }
+        outLength = len === 1 ? 1 : 2;
       } else {
-        if (isIndexed && loweredOperand.mode === "directPageIndexedX" && /^\$[\da-f]{1,2}$/i.test(normalizedOperand) && opcodes[bitOpcode].directX) {
-          this.assembler.write1(opcodes[bitOpcode].directX);
+        if (isIndexed && loweredOperand.mode === "directPageIndexedX" && /^\$[\da-f]{1,2}$/i.test(normalizedOperand) && bitModes.directX) {
+          this.assembler.write1(bitModes.directX);
           outLength = 1;
         } else if (/^\$[\da-f]{1,2}$/i.test(normalizedOperand)) {
-          this.assembler.write1(opcodes[bitOpcode].direct);
+          this.assembler.write1(bitModes.direct);
           outLength = 1;
         } else if (/^\$[\da-f]{4}$/i.test(normalizedOperand)) {
-          if (isIndexed && opcodes[bitOpcode].absoluteX) {
-            this.assembler.write1(opcodes[bitOpcode].absoluteX);
+          if (isIndexed && bitModes.absoluteX) {
+            this.assembler.write1(bitModes.absoluteX);
           } else {
-            this.assembler.write1(opcodes[bitOpcode].absolute);
+            this.assembler.write1(bitModes.absolute);
           }
           outLength = 2;
         } else {
@@ -35697,9 +36080,8 @@ var Arch65816 = class {
       SEP: 226,
       WDM: 66
     };
-    if (opcode in opcodeMap) {
-      const genericOpcode = opcode;
-      const opcodeByte = opcodeMap[genericOpcode];
+    if (isGenericOpcode(opcode)) {
+      const opcodeByte = opcodeMap[opcode];
       if ((opcode === "REP" || opcode === "SEP") && (len !== 1 || num < 0 || num > 255)) {
         throw new Error("Error: invalid_number");
       }
@@ -35778,7 +36160,6 @@ var Arch65816 = class {
       }
       this.assembler.write1(branchOpcodes2[opcode]);
       this.assembler.write2(relativeAddress);
-      return true;
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
         throw this.assembler.diagnostics.error(
@@ -35791,8 +36172,8 @@ var Arch65816 = class {
       }
       this.assembler.write1(branchOpcodes2[opcode]);
       this.assembler.write1(signedByte2);
-      return true;
     }
+    return true;
   }
   /**
    * Fallback TSB/TRB encoder (tests call this directly). Live encode uses
@@ -35832,7 +36213,7 @@ var Arch65816 = class {
     if (dot === -1) {
       return { name: opcode, explicitLength: void 0 };
     }
-    const suffix = opcode[dot + 1];
+    const suffix = dot + 1 < opcode.length ? opcode[dot + 1] : void 0;
     if (suffix === void 0) {
       throw new Error(`Error: Invalid opcode length in '${opcode}'.`);
     }
@@ -35875,6 +36256,9 @@ var readLittleEndian2 = (bytes, offset, width) => {
   }
   return value >>> 0;
 };
+function byteAt2(bytes, index2) {
+  return index2 >= 0 && index2 < bytes.length ? bytes[index2] : void 0;
+}
 var signedByte = (value) => value & 128 ? value - 256 : value;
 var register2 = (name) => ({ kind: "register", register: name });
 var address = (value, width) => ({
@@ -35915,7 +36299,8 @@ var fixedRegisters = {
   indirectXY: ["X", "Y"]
 };
 var operandsFor2 = (specification2, bytes, logicalAddress) => {
-  const byte = bytes[1] ?? 0;
+  const firstOperandByte = byteAt2(bytes, 1);
+  const byte = firstOperandByte ?? 0;
   const word2 = readLittleEndian2(bytes, 1, 2);
   const fixed = fixedRegisters[specification2.mode];
   if (fixed) {
@@ -35932,7 +36317,7 @@ var operandsFor2 = (specification2, bytes, logicalAddress) => {
       return [
         address(byte, 1),
         bit(Number(specification2.mnemonic.at(-1))),
-        relative(bytes[2] ?? 0, logicalAddress, bytes.length)
+        relative(byteAt2(bytes, 2) ?? 0, logicalAddress, bytes.length)
       ];
     case "accumulatorDirect":
     case "accumulatorDirectIndexedX":
@@ -35948,15 +36333,15 @@ var operandsFor2 = (specification2, bytes, logicalAddress) => {
     case "accumulatorImmediate":
       return [register2("A"), immediate(byte)];
     case "directDirect":
-      return [address(bytes[2] ?? 0, 1), address(byte, 1)];
+      return [address(byteAt2(bytes, 2) ?? 0, 1), address(byte, 1)];
     case "carryMemoryBit":
     case "carryInvertedMemoryBit": {
-      const [memory, bit2] = bitAddress(bytes);
-      return [register2("C"), memory, bit2];
+      const [memory, bitOperand] = bitAddress(bytes);
+      return [register2("C"), memory, bitOperand];
     }
     case "memoryBitCarry": {
-      const [memory, bit2] = bitAddress(bytes);
-      return [memory, bit2, register2("C")];
+      const [memory, bitOperand] = bitAddress(bytes);
+      return [memory, bitOperand, register2("C")];
     }
     case "memoryBit":
       return bitAddress(bytes);
@@ -35972,7 +36357,7 @@ var operandsFor2 = (specification2, bytes, logicalAddress) => {
     case "absoluteAccumulator":
       return [address(word2, 2), register2("A")];
     case "directImmediate":
-      return [address(bytes[2] ?? 0, 1), immediate(byte)];
+      return [address(byteAt2(bytes, 2) ?? 0, 1), immediate(byte)];
     case "registerXAbsolute":
       return [register2("X"), address(word2, 2)];
     case "registerXDirect":
@@ -35989,7 +36374,7 @@ var operandsFor2 = (specification2, bytes, logicalAddress) => {
       return [register2("Y"), immediate(byte)];
     case "directRelative":
     case "directIndexedXRelative":
-      return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+      return [address(byte, 1), relative(byteAt2(bytes, 2) ?? 0, logicalAddress, bytes.length)];
     case "registerYRelative":
       return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
     case "registerYADirect":
@@ -36109,7 +36494,7 @@ var Spc700Decoder = class {
         availableBytes
       };
     }
-    const specification2 = spc700Specifications[opcode];
+    const specification2 = opcode >= 0 && opcode < spc700Specifications.length ? spc700Specifications[opcode] : void 0;
     if (!specification2) {
       return {
         kind: "error",
@@ -36417,10 +36802,15 @@ function parseBitBranchOpcode(opcode) {
   if (!match) {
     return void 0;
   }
-  if (match[2] === void 0) {
-    return { family: match[1] };
+  const familyText = match[1];
+  if (familyText !== "BBS" && familyText !== "BBC") {
+    return void 0;
   }
-  return { family: match[1], mnemonicBit: Number(match[2]) };
+  const mnemonicBitText = match.length > 2 ? match[2] : void 0;
+  if (mnemonicBitText === void 0) {
+    return { family: familyText };
+  }
+  return { family: familyText, mnemonicBit: Number(mnemonicBitText) };
 }
 var wordOpsWithYaLeft = {
   CMPW: 90,
@@ -36436,9 +36826,12 @@ var singleWordOps = {
   INCW: 58
 };
 var NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
+function isNumberedBitFamily(value) {
+  return value === "NOT" || value === "OR" || value === "AND" || value === "EOR" || value === "MOV";
+}
 function parseNumberedBitOpcode(opcode) {
   const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
-  if (!match) {
+  if (!match || !isNumberedBitFamily(match[1])) {
     return void 0;
   }
   return {
@@ -36473,6 +36866,7 @@ function parseSpcBitNumber(raw) {
   }
   return Number(trimmed);
 }
+var isMovMemoryKey = (value) => value === "A,$" || value === "A,$+X" || value === "X,$" || value === "Y,$" || value === "$,A" || value === "$+X,A" || value === "$,X" || value === "$,Y";
 var ArchSPC700 = class {
   assembler;
   constructor(context) {
@@ -36491,12 +36885,11 @@ var ArchSPC700 = class {
    * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction) {
-    const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction.mnemonic,
       instruction.operandText,
       instruction.loweredOperand,
-      loweredOperands
+      instruction.loweredOperands
     );
   }
   /**
@@ -36505,12 +36898,11 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   encodeInstruction(instruction) {
-    const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
       instruction.mnemonic,
       instruction.operands,
       instruction.loweredOperand,
-      loweredOperands
+      instruction.loweredOperands
     );
   }
   /**
@@ -37499,18 +37891,17 @@ var ArchSPC700 = class {
     }
     if (upper === "JMP") {
       const trimmed = operand.trim().toUpperCase();
+      let val;
       if (loweredOperand?.mode === "directPageIndexedXIndirect" || trimmed.startsWith("(") && trimmed.endsWith("+X)")) {
         this.assembler.write1(31);
         const inner = loweredOperand?.baseExpression ?? operand.trim().slice(1, operand.trim().length - 3).trim();
-        const val = resolveOperand(inner);
-        this.assembler.write2(val);
-        return true;
+        val = resolveOperand(inner);
       } else {
         this.assembler.write1(95);
-        const val = resolveOperand(operand);
-        this.assembler.write2(val);
-        return true;
+        val = resolveOperand(operand);
       }
+      this.assembler.write2(val);
+      return true;
     }
     return false;
   }
@@ -37543,7 +37934,6 @@ var ArchSPC700 = class {
           this.assembler.write1(200);
           const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 255;
           this.assembler.write1(imm);
-          return true;
         } else {
           const val = parseInt(tail.replace(/\$/g, ""), 16) & 65535;
           if (explicitlen) {
@@ -37563,15 +37953,14 @@ var ArchSPC700 = class {
               this.assembler.write2(val);
             }
           }
-          return true;
         }
+        return true;
       }
       if (leftOperandIsY) {
         if (rightLowered?.immediate ?? tail.startsWith("#")) {
           this.assembler.write1(173);
           const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 255;
           this.assembler.write1(imm);
-          return true;
         } else {
           const val = parseInt(tail.replace(/\$/g, ""), 16) & 65535;
           if (explicitlen) {
@@ -37591,8 +37980,8 @@ var ArchSPC700 = class {
               this.assembler.write2(val);
             }
           }
-          return true;
         }
+        return true;
       }
     }
     if (upper === "MOV") {
@@ -37679,15 +38068,19 @@ var ArchSPC700 = class {
       "$,X": { byte: 216, word: 201 },
       "$,Y": { byte: 203, word: 204 }
     };
-    let key = null;
+    let key;
     if (/^\$[\da-f]+$/i.test(left)) {
-      key = `$,${right.toUpperCase()}`;
+      const candidate = `$,${right.toUpperCase()}`;
+      key = isMovMemoryKey(candidate) ? candidate : void 0;
     } else if (/^\$[\da-f]+\+x$/i.test(left)) {
-      key = `$+X,${right.toUpperCase()}`;
+      const candidate = `$+X,${right.toUpperCase()}`;
+      key = isMovMemoryKey(candidate) ? candidate : void 0;
     } else if (/^\$[\da-f]+$/i.test(right)) {
-      key = `${left.toUpperCase()},$`;
+      const candidate = `${left.toUpperCase()},$`;
+      key = isMovMemoryKey(candidate) ? candidate : void 0;
     } else if (/^\$[\da-f]+\+x$/i.test(right)) {
-      key = `${left.toUpperCase()},$+X`;
+      const candidate = `${left.toUpperCase()},$+X`;
+      key = isMovMemoryKey(candidate) ? candidate : void 0;
     }
     if (key && hasOwn(memoryMoves, key)) {
       const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
@@ -37839,9 +38232,13 @@ var ArchSPC700 = class {
       if (!baseExpression) {
         return null;
       }
+      const index2 = match[2].toUpperCase();
+      if (index2 !== "X" && index2 !== "Y") {
+        return null;
+      }
       return {
         value: this.assembler.operandResolver.getnum(baseExpression),
-        index: match[2].toUpperCase(),
+        index: index2,
         length: getAddressSize(baseExpression)
       };
     };
@@ -38387,7 +38784,10 @@ var truncated = (context, requiredBytes) => ({
   requiredBytes,
   availableBytes: availableAt(context)
 });
-var prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
+var prefixAlt = (opcode) => {
+  const alt = opcode - 60;
+  return opcode >= 61 && opcode <= 63 && isSuperFxAltState(alt) ? alt : void 0;
+};
 var SuperFxDecoder = class {
   decode(context) {
     const opcode = context.source.readByte(context.offset);
@@ -38694,12 +39094,11 @@ var ArchSuperFX = class {
    * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction) {
-    const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction.mnemonic,
       instruction.operands,
       instruction.loweredOperand,
-      loweredOperands
+      instruction.loweredOperands
     );
   }
   /**
@@ -38708,12 +39107,11 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was encoded.
    */
   encodeInstruction(instruction) {
-    const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
       instruction.mnemonic,
       instruction.operands,
       instruction.loweredOperand,
-      loweredOperands
+      instruction.loweredOperands
     );
   }
   /**
@@ -38749,10 +39147,12 @@ var ArchSuperFX = class {
     if (hasOwn2(PREFIXED_OPCODES, opcode)) {
       return 2;
     }
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const secondLowered = loweredOperands[1];
-    const leftOp = firstLowered?.expanded ?? operands[0] ?? "";
-    const rightOp = secondLowered?.expanded ?? operands[1] ?? "";
+    const firstLowered = loweredOperands.length > 0 ? loweredOperands[0] : loweredOperand;
+    const secondLowered = loweredOperands.length > 1 ? loweredOperands[1] : void 0;
+    const firstOperand = operands.length > 0 ? operands[0] : void 0;
+    const secondOperand = operands.length > 1 ? operands[1] : void 0;
+    const leftOp = firstLowered?.expanded ?? firstOperand ?? "";
+    const rightOp = secondLowered?.expanded ?? secondOperand ?? "";
     if (operands.length <= 1 && hasOwn2(SHORT_BRANCH_OPCODES, opcode)) {
       return 2;
     }
@@ -38882,8 +39282,10 @@ var ArchSuperFX = class {
    */
   encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
     const opcode = mnemonic.toUpperCase();
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const secondLowered = loweredOperands[1];
+    const firstLowered = loweredOperands.length > 0 ? loweredOperands[0] : loweredOperand;
+    const secondLowered = loweredOperands.length > 1 ? loweredOperands[1] : void 0;
+    const firstOperand = operands.length > 0 ? operands[0] : void 0;
+    const secondOperand = operands.length > 1 ? operands[1] : void 0;
     const operand = firstLowered?.expanded ?? "";
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
     if (hasOwn2(IMPLIED_OPCODES, opcode) || hasOwn2(PREFIXED_OPCODES, opcode)) {
@@ -38898,8 +39300,8 @@ var ArchSuperFX = class {
     if (operands.length === 2) {
       return this.handleTwoOperandOpcode(
         opcode,
-        firstLowered?.expanded ?? operands[0],
-        secondLowered?.expanded ?? operands[1],
+        firstLowered?.expanded ?? firstOperand ?? "",
+        secondLowered?.expanded ?? secondOperand ?? "",
         firstLowered,
         secondLowered
       );
@@ -39031,23 +39433,18 @@ var ArchSuperFX = class {
       switch (opcode) {
         case "MOVEB":
           this.rangeCheck(0, reg2r, 11);
-          if (reg1parr === 0) {
-            this.assembler.write1(ALT1);
-            this.assembler.write1(48 + reg2r);
-          } else {
+          if (reg1parr !== 0) {
             this.assembler.write1(176 + reg1parr);
-            this.assembler.write1(ALT1);
-            this.assembler.write1(48 + reg2r);
           }
+          this.assembler.write1(ALT1);
+          this.assembler.write1(48 + reg2r);
           return true;
         case "MOVEW":
           this.rangeCheck(0, reg2r, 11);
-          if (reg1parr === 0) {
-            this.assembler.write1(48 + reg2r);
-          } else {
+          if (reg1parr !== 0) {
             this.assembler.write1(176 + reg1parr);
-            this.assembler.write1(48 + reg2r);
           }
+          this.assembler.write1(48 + reg2r);
           return true;
       }
     }
@@ -39055,23 +39452,18 @@ var ArchSuperFX = class {
       switch (opcode) {
         case "MOVEB":
           this.rangeCheck(0, reg2parr, 11);
-          if (reg1r === 0) {
-            this.assembler.write1(ALT1);
-            this.assembler.write1(64 + reg2parr);
-          } else {
+          if (reg1r !== 0) {
             this.assembler.write1(16 + reg1r);
-            this.assembler.write1(ALT1);
-            this.assembler.write1(64 + reg2parr);
           }
+          this.assembler.write1(ALT1);
+          this.assembler.write1(64 + reg2parr);
           return true;
         case "MOVEW":
           this.rangeCheck(0, reg2parr, 11);
-          if (reg1r === 0) {
-            this.assembler.write1(64 + reg2parr);
-          } else {
+          if (reg1r !== 0) {
             this.assembler.write1(16 + reg1r);
-            this.assembler.write1(64 + reg2parr);
           }
+          this.assembler.write1(64 + reg2parr);
           return true;
       }
     }
@@ -39091,12 +39483,11 @@ var ArchSuperFX = class {
           this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
+          this.assembler.write1(ALT1);
           if (isShortRamAddress(addrVal)) {
-            this.assembler.write1(ALT1);
             this.assembler.write1(160 + reg1r);
             this.assembler.write1(this.moveShortAddressByte(addrVal));
           } else {
-            this.assembler.write1(ALT1);
             this.assembler.write1(240 + reg1r);
             this.assembler.write2(addrVal);
           }
@@ -39125,12 +39516,11 @@ var ArchSuperFX = class {
           this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
+          this.assembler.write1(ALT2);
           if (isShortRamAddress(addrVal)) {
-            this.assembler.write1(ALT2);
             this.assembler.write1(160 + reg2r);
             this.assembler.write1(this.moveShortAddressByte(addrVal));
           } else {
-            this.assembler.write1(ALT2);
             this.assembler.write1(240 + reg2r);
             this.assembler.write2(addrVal);
           }
@@ -39187,33 +39577,30 @@ var ArchSuperFX = class {
         return null;
       }
       str = str.slice(1);
-      const regnum = this.parseRegisterNumber(str.replace(/\)$/, ""));
-      if (regnum === -1) {
+      const regnum2 = this.parseRegisterNumber(str.replace(/\)$/, ""));
+      if (regnum2 === -1) {
         return null;
       }
-      return regnum;
+      return regnum2;
     }
     if (type === "r") {
       if (!str.toLowerCase().startsWith("r")) {
         return null;
       }
-      const regnum = this.parseRegisterNumber(str.slice(1));
-      if (regnum === -1) {
+      const regnum2 = this.parseRegisterNumber(str.slice(1));
+      if (regnum2 === -1) {
         return null;
       }
-      return regnum;
+      return regnum2;
     }
-    if (type === "hash") {
-      if (!str.startsWith("#")) {
-        return null;
-      }
-      const regnum = this.assembler.operandResolver.getnum(str.slice(1));
-      if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        return null;
-      }
-      return regnum;
+    if (!str.startsWith("#")) {
+      return null;
     }
-    return null;
+    const regnum = this.assembler.operandResolver.getnum(str.slice(1));
+    if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
+      return null;
+    }
+    return regnum;
   }
   /**
    * Parses the register number. E.g. '5', '10', '15'. Returns -1 if invalid.
@@ -46226,7 +46613,7 @@ function decodePlanarTiles(bytes, depth) {
     { length: count },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, row) => Array.from({ length: 8 }, (_3, column) => {
+      (_row, row) => Array.from({ length: 8 }, (_column, column) => {
         let pixel = 0;
         for (let plane = 0; plane < depth; plane++) {
           const byte = bytes[tileIndex * size + planeOffset(depth, plane, row)];
@@ -46260,7 +46647,7 @@ function decodeMode7Tiles(bytes) {
     { length: count },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, row) => Array.from({ length: 8 }, (_3, column) => bytes[tileIndex * 64 + row * 8 + column])
+      (_row, row) => Array.from({ length: 8 }, (_column, column) => bytes[tileIndex * 64 + row * 8 + column])
     )
   );
 }
@@ -46330,7 +46717,7 @@ function decodeBrrBlocks(bytes) {
   return Array.from({ length: count }, (_, blockIndex) => {
     const offset = blockIndex * 9;
     const header = bytes[offset];
-    const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
+    const nibbles = Array.from({ length: 16 }, (_sample, sampleIndex) => {
       const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
       const nibble2 = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
       return nibble2 >= 8 ? nibble2 - 16 : nibble2;
@@ -46360,6 +46747,7 @@ function encodeBrrBlocks(blocks) {
   });
   return bytes;
 }
+var isRecord7 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var sameModelValue = (left, right) => {
   if (Object.is(left, right)) {
     return true;
@@ -46367,15 +46755,93 @@ var sameModelValue = (left, right) => {
   if (Array.isArray(left) && Array.isArray(right)) {
     return left.length === right.length && left.every((entry, index2) => sameModelValue(entry, right[index2]));
   }
-  if (!left || !right || typeof left !== "object" || typeof right !== "object" || Array.isArray(left) || Array.isArray(right)) {
+  if (!isRecord7(left) || !isRecord7(right)) {
     return false;
   }
-  const leftRecord = left;
-  const rightRecord = right;
-  const keys = Object.keys(leftRecord);
-  return keys.length === Object.keys(rightRecord).length && keys.every(
-    (key) => Object.hasOwn(rightRecord, key) && sameModelValue(leftRecord[key], rightRecord[key])
-  );
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && sameModelValue(left[key], right[key]));
+};
+var readNumber = (value, label) => {
+  if (typeof value !== "number") {
+    throw new TypeError(`${label} must be a number.`);
+  }
+  return value;
+};
+var readTiles = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tile model 'tiles' must be an array.");
+  }
+  return value.map((tile, tileIndex) => {
+    if (!Array.isArray(tile)) {
+      throw new TypeError(`Tile ${tileIndex} must be an array of rows.`);
+    }
+    return tile.map((row, rowIndex) => {
+      if (!Array.isArray(row)) {
+        throw new TypeError(`Tile ${tileIndex} row ${rowIndex} must be an array of pixels.`);
+      }
+      return row.map(
+        (pixel, column) => readNumber(pixel, `Tile ${tileIndex} pixel ${column},${rowIndex}`)
+      );
+    });
+  });
+};
+var readColors = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native palette model 'colors' must be an array.");
+  }
+  return value.map((color, index2) => {
+    if (!isRecord7(color)) {
+      throw new TypeError(`Color ${index2} must be an object.`);
+    }
+    return {
+      red: readNumber(color.red, `Color ${index2} red`),
+      green: readNumber(color.green, `Color ${index2} green`),
+      blue: readNumber(color.blue, `Color ${index2} blue`),
+      unusedHighBit: readNumber(color.unusedHighBit, `Color ${index2} unusedHighBit`)
+    };
+  });
+};
+var readEntries = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'entries' must be an array.");
+  }
+  return value.map((entry, index2) => {
+    if (!isRecord7(entry)) {
+      throw new TypeError(`Entry ${index2} must be an object.`);
+    }
+    return {
+      tile: readNumber(entry.tile, `Entry ${index2} tile`),
+      palette: readNumber(entry.palette, `Entry ${index2} palette`),
+      priority: readNumber(entry.priority, `Entry ${index2} priority`),
+      horizontalFlip: readNumber(entry.horizontalFlip, `Entry ${index2} horizontalFlip`),
+      verticalFlip: readNumber(entry.verticalFlip, `Entry ${index2} verticalFlip`)
+    };
+  });
+};
+var readIndexes = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'indexes' must be an array.");
+  }
+  return value.map((entry, index2) => readNumber(entry, `Index ${index2}`));
+};
+var readBlocks = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native BRR model 'blocks' must be an array.");
+  }
+  return value.map((block, index2) => {
+    if (!isRecord7(block) || !Array.isArray(block.nibbles)) {
+      throw new TypeError(`BRR block ${index2} must be an object with nibbles.`);
+    }
+    return {
+      range: readNumber(block.range, `BRR block ${index2} range`),
+      filter: readNumber(block.filter, `BRR block ${index2} filter`),
+      loop: readNumber(block.loop, `BRR block ${index2} loop`),
+      end: readNumber(block.end, `BRR block ${index2} end`),
+      nibbles: block.nibbles.map(
+        (nibble2, sampleIndex) => readNumber(nibble2, `BRR nibble ${sampleIndex}`)
+      )
+    };
+  });
 };
 var nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
   id,
@@ -46386,7 +46852,7 @@ var nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.fre
     if (Object.keys(options).length !== 0) {
       throw new Error(`Native encoder '${id}' accepts no options.`);
     }
-    if (!document2.value || typeof document2.value !== "object" || Array.isArray(document2.value)) {
+    if (!isRecord7(document2.value)) {
       throw new Error(`Native encoder '${id}' requires an object model.`);
     }
     const value = document2.value;
@@ -46409,7 +46875,7 @@ var snesNativeEncoders = Object.freeze(
         "snes-planar-tiles",
         "tiles",
         "tiles",
-        (value) => encodePlanarTiles(value.tiles, depth),
+        (value) => encodePlanarTiles(readTiles(value.tiles), depth),
         (bytes) => decodePlanarTiles(bytes, depth)
       )
     ),
@@ -46418,7 +46884,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-mode7-tiles",
       "tiles",
       "tiles",
-      (value) => encodeMode7Tiles(value.tiles),
+      (value) => encodeMode7Tiles(readTiles(value.tiles)),
       decodeMode7Tiles
     ),
     nativeEncoder(
@@ -46426,7 +46892,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-palette-bgr555",
       "palette",
       "colors",
-      (value) => encodeBgr555(value.colors),
+      (value) => encodeBgr555(readColors(value.colors)),
       decodeBgr555
     ),
     nativeEncoder(
@@ -46434,7 +46900,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-bg-tilemap",
       "tilemap",
       "entries",
-      (value) => encodeBgMap(value.entries),
+      (value) => encodeBgMap(readEntries(value.entries)),
       decodeBgMap
     ),
     nativeEncoder(
@@ -46442,7 +46908,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-mode7-tilemap",
       "tilemap",
       "indexes",
-      (value) => encodeMode7Map(value.indexes),
+      (value) => encodeMode7Map(readIndexes(value.indexes)),
       decodeMode7Map
     ),
     nativeEncoder(
@@ -46450,10 +46916,10 @@ var snesNativeEncoders = Object.freeze(
       "snes-brr",
       "brr",
       "blocks",
-      (value) => encodeBrrBlocks(value.blocks),
+      (value) => encodeBrrBlocks(readBlocks(value.blocks)),
       decodeBrrBlocks
     )
-  ].sort((left, right) => left.id.localeCompare(right.id))
+  ].toSorted((left, right) => left.id.localeCompare(right.id))
 );
 
 // packages/assets/src/brr-codec.ts
@@ -46567,6 +47033,34 @@ function encodeBrrPcm(samples, loop) {
 // packages/assets/src/audio.ts
 var MAX_WAVE_BYTES = 16 * 1024 * 1024;
 var MAX_SAMPLES = 1024 * 1024;
+var isRecord8 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var PCM_MODEL_ERROR = "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.";
+function readPcmAudio(value) {
+  if (!isRecord8(value)) {
+    throw new Error(PCM_MODEL_ERROR);
+  }
+  const samples = value.samples;
+  const sampleRate = value.sampleRate;
+  const sourceBitDepth = value.sourceBitDepth;
+  if (!(samples instanceof Int16Array) || typeof sampleRate !== "number" || !Number.isSafeInteger(sampleRate) || sampleRate < 1 || sampleRate > 384e3 || sourceBitDepth !== 8 && sourceBitDepth !== 16) {
+    throw new Error(PCM_MODEL_ERROR);
+  }
+  let loop;
+  if (value.loop !== void 0) {
+    const sourceLoop = value.loop;
+    if (!isRecord8(sourceLoop) || typeof sourceLoop.start !== "number" || typeof sourceLoop.end !== "number") {
+      throw new Error(PCM_MODEL_ERROR);
+    }
+    loop = { start: sourceLoop.start, end: sourceLoop.end };
+  }
+  return {
+    kind: "pcm-audio",
+    sampleRate,
+    sourceBitDepth,
+    samples,
+    ...loop === void 0 ? {} : { loop }
+  };
+}
 var u16le = (bytes, offset) => bytes[offset] | bytes[offset + 1] << 8;
 var u32le = (bytes, offset) => bytes[offset] + bytes[offset + 1] * 256 + bytes[offset + 2] * 65536 + bytes[offset + 3] * 16777216 >>> 0;
 var ascii = (bytes, offset, length) => String.fromCharCode(...bytes.subarray(offset, offset + length));
@@ -46741,12 +47235,7 @@ function withAudioEncoder(native) {
         if (document2.kind !== "pcm-audio") {
           return encoder.encode(document2, rawOptions, resources);
         }
-        if (!document2.value || typeof document2.value !== "object" || !("samples" in document2.value) || !(document2.value.samples instanceof Int16Array) || !("sampleRate" in document2.value) || typeof document2.value.sampleRate !== "number" || !Number.isSafeInteger(document2.value.sampleRate) || document2.value.sampleRate < 1 || document2.value.sampleRate > 384e3 || !("sourceBitDepth" in document2.value) || document2.value.sourceBitDepth !== 8 && document2.value.sourceBitDepth !== 16) {
-          throw new Error(
-            "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth."
-          );
-        }
-        const audio = document2.value;
+        const audio = readPcmAudio(document2.value);
         const options = resolveBrrAudioOptions(rawOptions, audio);
         const originalCount = audio.samples.length;
         if (originalCount === 0) {
@@ -46823,7 +47312,7 @@ function withAudioEncoder(native) {
             snrDb,
             loopPeakError
           },
-          normalizedOptions: { padding: options.padding, loop: loop ?? false }
+          normalizedOptions: { padding: options.padding, loop }
         };
       }
     });
@@ -49159,7 +49648,12 @@ var pngImporter = Object.freeze({
 });
 
 // packages/assets/src/image-conversion.ts
-var isRecord4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+var isRecord9 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+var isPlanarDepth = (value) => value === 2 || value === 3 || value === 4 || value === 8;
+var isSourceBitDepth = (value) => value === 1 || value === 2 || value === 4 || value === 8;
+var isRgbaTuple = (value) => Array.isArray(value) && value.length === 4 && value.every(
+  (channel) => typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255
+);
 var readInteger = (value, label, minimum, maximum) => {
   if (typeof value !== "number") {
     throw new RangeError(`${label} must be a number.`);
@@ -49192,7 +49686,7 @@ var readLayout = (raw) => {
   if (raw === void 0) {
     return { tileOrder: "row-major" };
   }
-  if (!isRecord4(raw)) {
+  if (!isRecord9(raw)) {
     throw new Error("layout must be an object.");
   }
   const tileOrder = raw.tileOrder ?? "row-major";
@@ -49252,7 +49746,7 @@ var readOptions = (raw, indexed) => {
     throw new Error("Invalid paletteExpansion profile.");
   }
   const map = raw.tilemap === void 0 ? {} : raw.tilemap;
-  if (!isRecord4(map) || Object.keys(map).some(
+  if (!isRecord9(map) || Object.keys(map).some(
     (key) => ![
       "layout",
       "startTileIndex",
@@ -49290,7 +49784,7 @@ var externalPalette = (input) => {
     throw new Error("External palette JSON exceeds 64 KiB.");
   }
   const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.bytes));
-  if (!isRecord4(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
+  if (!isRecord9(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
     throw new Error("External palette requires version 1 and 1\u2013256 RGB8 colors.");
   }
   const transparentIndex = readInteger(
@@ -49323,7 +49817,7 @@ function selectPalette(image, options, resources, capacity) {
       indexes = image.indexes.slice();
       sourceToNative = colors.map((_, index2) => index2);
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette) ? resources[options.palette] : void 0;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -49389,7 +49883,7 @@ function selectPalette(image, options, resources, capacity) {
         indexes[pixel] = index2;
       }
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette) ? resources[options.palette] : void 0;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -49499,7 +49993,7 @@ function mapOrder(width, height, layout2) {
   return order;
 }
 function imageModel(document2) {
-  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord4(document2.value)) {
+  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord9(document2.value)) {
     throw new Error("Image encoder requires imported PNG pixels.");
   }
   const value = document2.value;
@@ -49508,20 +50002,40 @@ function imageModel(document2) {
   }
   const pixels = value.width * value.height;
   if (document2.kind === "indexed-image") {
-    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || ![1, 2, 4, 8].includes(Number(value.sourceBitDepth))) {
+    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || !isSourceBitDepth(value.sourceBitDepth)) {
       throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
     }
+    const palette = [];
     for (const [index2, color] of value.palette.entries()) {
-      if (!Array.isArray(color) || color.length !== 4 || color.some(
-        (channel) => typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255
-      )) {
+      if (!isRgbaTuple(color)) {
         throw new Error(`Indexed image palette entry ${index2} is not RGBA8.`);
       }
+      const entry = [
+        color[0],
+        color[1],
+        color[2],
+        color[3]
+      ];
+      palette.push(entry);
     }
-  } else if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+    return {
+      kind: "indexed-image",
+      width: value.width,
+      height: value.height,
+      indexes: value.indexes,
+      palette,
+      sourceBitDepth: value.sourceBitDepth
+    };
+  }
+  if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
     throw new Error("RGBA image model has invalid pixel bytes.");
   }
-  return value;
+  return {
+    kind: "rgba-image",
+    width: value.width,
+    height: value.height,
+    rgba: value.rgba
+  };
 }
 function encodeImage(document2, rawOptions, resources, format) {
   const image = imageModel(document2);
@@ -49545,21 +50059,30 @@ function encodeImage(document2, rawOptions, resources, format) {
   const widthTiles = image.width / 8;
   const heightTiles = image.height / 8;
   const coordinates = tileCoordinates(widthTiles, heightTiles, options.layout);
-  const indexByCoordinate = new Array(coordinates.length);
+  const indexByCoordinate = Array.from({ length: coordinates.length }, () => 0);
   const tiles = coordinates.map(([tx, ty], storageIndex) => {
     indexByCoordinate[ty * widthTiles + tx] = storageIndex;
     return Array.from(
       { length: 8 },
-      (_, row) => Array.from({ length: 8 }, (_2, column) => {
+      (_, row) => Array.from({ length: 8 }, (_column, column) => {
         const sourceX = options.tilemap.horizontalFlip ? 7 - column : column;
         const sourceY = options.tilemap.verticalFlip ? 7 - row : row;
         return selection.indexes[(ty * 8 + sourceY) * image.width + tx * 8 + sourceX];
       })
     );
   });
-  const tileBytes = mode7 ? encodeMode7Tiles(tiles) : encodePlanarTiles(tiles, depth);
+  let tileBytes;
+  let decodedTiles;
+  if (mode7) {
+    tileBytes = encodeMode7Tiles(tiles);
+    decodedTiles = decodeMode7Tiles(tileBytes);
+  } else if (isPlanarDepth(depth)) {
+    tileBytes = encodePlanarTiles(tiles, depth);
+    decodedTiles = decodePlanarTiles(tileBytes, depth);
+  } else {
+    throw new Error(`Unsupported planar tile format '${format}'.`);
+  }
   const paletteBytes = encodeBgr555(colors);
-  const decodedTiles = mode7 ? decodeMode7Tiles(tileBytes) : decodePlanarTiles(tileBytes, depth);
   const decodedColors = decodeBgr555(paletteBytes);
   const preview = new Uint8Array(image.width * image.height * 4);
   for (let ty = 0; ty < heightTiles; ty++) {
@@ -49638,7 +50161,12 @@ function encodeImage(document2, rawOptions, resources, format) {
       tilemap: { bytes: tilemapBytes, mediaType: "application/octet-stream", metadata },
       preview: { bytes: preview, mediaType: "application/x-rgba", metadata }
     },
-    normalizedOptions: options
+    normalizedOptions: {
+      palette: options.palette,
+      paletteExpansion: options.paletteExpansion,
+      layout: options.layout,
+      tilemap: options.tilemap
+    }
   };
 }
 function withImageEncoders(native) {
@@ -49742,7 +50270,8 @@ function handleA16(session) {
   getActiveArch65816(session)?.setAccumulatorWidth(true);
 }
 function handleAccu(session, words) {
-  const widthToken = words[1]?.trim();
+  const widthArgument = words.length > 1 ? words[1] : void 0;
+  const widthToken = widthArgument?.trim();
   if (widthToken === "8") {
     handleA8(session);
   } else if (widthToken === "16") {
@@ -49758,7 +50287,8 @@ function handleI16(session) {
   getActiveArch65816(session)?.setIndexWidth(true);
 }
 function handleIndex(session, words) {
-  const widthToken = words[1]?.trim();
+  const widthArgument = words.length > 1 ? words[1] : void 0;
+  const widthToken = widthArgument?.trim();
   if (widthToken === "8") {
     handleI8(session);
   } else if (widthToken === "16") {
@@ -50081,9 +50611,17 @@ var createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, st
 
 // packages/plugin-snes/src/session-state.ts
 var SNES_SESSION_STATE_ID = "snes.session-state";
-var snesSessionStateKey = {
-  id: SNES_SESSION_STATE_ID
-};
+function isSessionStateKey3(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey3(id) {
+  const key = { id };
+  if (!isSessionStateKey3(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var snesSessionStateKey = createSessionStateKey3(SNES_SESSION_STATE_ID);
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -50968,17 +51506,20 @@ var readExpressions = {
     }))
   ]
 };
+var isRecord10 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isChecksumMode = (value) => value === "asar" || value === "simple";
+var isBankCrossingHandler = (value) => typeof value === "function";
 var targetOptions = (configured) => {
-  const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
+  const value = isRecord10(configured) ? configured : {};
   const checksumMode = value.checksumMode ?? "asar";
-  if (checksumMode !== "asar" && checksumMode !== "simple") {
+  if (!isChecksumMode(checksumMode)) {
     throw new Error("checksumMode must be 'asar' or 'simple'.");
   }
   return {
     checksumMode,
     checksumEnabled: value.checksumEnabled === void 0 ? true : value.checksumEnabled === true,
     asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true,
-    onBankCrossing: typeof value.onBankCrossing === "function" ? value.onBankCrossing : void 0
+    onBankCrossing: isBankCrossingHandler(value.onBankCrossing) ? value.onBankCrossing : void 0
   };
 };
 var createInitialState = (context) => {
@@ -51362,8 +51903,8 @@ var legacySourceLabelName = (name) => `L_${name.replaceAll(/\W/g, "_").replaceAl
 var projectSourceLabelNames = (labels, reserved = []) => {
   const names = /* @__PURE__ */ new Map();
   const used = new Set([...reserved].map((name) => name.toLowerCase()));
-  const sorted = labels.filter((label) => !label.suppressed).sort((a, b) => a.id.localeCompare(b.id));
-  for (const label of sorted.filter((label2) => label2.sourceName === void 0)) {
+  const sorted = labels.filter((label) => !label.suppressed).toSorted((a, b) => a.id.localeCompare(b.id));
+  for (const label of sorted.filter((candidate) => candidate.sourceName === void 0)) {
     const base = legacySourceLabelName(label.name);
     let name = base;
     let suffix = 2;
@@ -51373,7 +51914,7 @@ var projectSourceLabelNames = (labels, reserved = []) => {
     used.add(name.toLowerCase());
     names.set(label.id, name);
   }
-  for (const label of sorted.filter((label2) => label2.sourceName !== void 0)) {
+  for (const label of sorted.filter((candidate) => candidate.sourceName !== void 0)) {
     const name = label.sourceName;
     validateSourceLabelName(name);
     if (used.has(name.toLowerCase())) {
@@ -51401,92 +51942,156 @@ function assertSourcePath(relative2) {
 }
 
 // packages/disassembler/src/model/metadata-validation.ts
+function isRecord11(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringList(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isInteger(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+function isSafeInteger(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isStateRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function stateEntries(state) {
+  if (typeof state === "string") {
+    const entries4 = [];
+    for (let index2 = 0; index2 < state.length; index2 += 1) {
+      entries4.push([String(index2), state[index2]]);
+    }
+    return entries4;
+  }
+  if (!isStateRecord(state)) {
+    return [];
+  }
+  const entries3 = [];
+  for (const field of Object.keys(state)) {
+    entries3.push([field, state[field]]);
+  }
+  return entries3;
+}
+var CLASSIFICATIONS = [
+  "unreached",
+  "opcode",
+  "operand",
+  "data8",
+  "data16",
+  "data24",
+  "data32",
+  "pointer16",
+  "pointer24",
+  "pointer32",
+  "graphics",
+  "music",
+  "compressed",
+  "asset",
+  "empty",
+  "text"
+];
 var validateEditableMetadataRecord = (shard, record2) => {
-  if (!record2 || typeof record2.id !== "string" || !/^\w[\w./:-]*$/.test(record2.id) || !Array.isArray(record2.evidence) || record2.evidence.some((id) => typeof id !== "string")) {
+  if (!isRecord11(record2) || typeof record2.id !== "string" || !/^\w[\w./:-]*$/.test(record2.id) || !isStringList(record2.evidence)) {
     throw new Error("Metadata needs a stable record ID and evidence list.");
   }
-  if ("address" in record2 && (!Number.isSafeInteger(record2.address) || record2.address < 0)) {
+  const address3 = record2.address;
+  if ("address" in record2 && !(isSafeInteger(address3) && address3 >= 0)) {
     throw new Error("Metadata needs a nonnegative integer address.");
   }
   if (typeof record2.addressSpace !== "string") {
     throw new Error("Metadata needs a named address space.");
   }
   if (shard === "labels") {
-    if (!("name" in record2) || typeof record2.name !== "string" || !record2.name || !("address" in record2) || "kind" in record2) {
+    const name = record2.name;
+    if (typeof name !== "string" || name === "" || !("address" in record2) || "kind" in record2) {
       throw new Error("Invalid label metadata.");
     }
-    const label = record2;
-    if (label.sourceName !== void 0) {
-      validateSourceLabelName(label.sourceName);
+    const sourceName = record2.sourceName;
+    if (sourceName !== void 0) {
+      if (typeof sourceName !== "string") {
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+        );
+      }
+      validateSourceLabelName(sourceName);
     }
-    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+    if (record2.suppressed !== void 0 && typeof record2.suppressed !== "boolean") {
       throw new Error("Invalid label suppression flag.");
     }
-    for (const value of [label.comment, label.inlineComment]) {
+    for (const value of [record2.comment, record2.inlineComment]) {
       if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
         throw new Error("Invalid label comment.");
       }
     }
   } else if (shard === "comments") {
-    if (!("text" in record2) || typeof record2.text !== "string" || !record2.text.trim() || record2.text.includes("\0") || !("address" in record2) || "kind" in record2) {
+    const text2 = record2.text;
+    if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record2) || "kind" in record2) {
       throw new Error("A standalone comment needs nonempty text.");
     }
   } else if (shard === "annotations") {
-    if (!("classification" in record2) || ![
-      "unreached",
-      "opcode",
-      "operand",
-      "data8",
-      "data16",
-      "data24",
-      "data32",
-      "pointer16",
-      "pointer24",
-      "pointer32",
-      "graphics",
-      "music",
-      "compressed",
-      "asset",
-      "empty",
-      "text"
-    ].includes(record2.classification) || typeof record2.architecture !== "string" || !record2.architecture) {
+    const classification = record2.classification;
+    const architecture = record2.architecture;
+    if (typeof classification !== "string" || !CLASSIFICATIONS.some((candidate) => candidate === classification) || typeof architecture !== "string" || architecture === "") {
       throw new Error("Invalid classification metadata.");
     }
-    if (!Number.isSafeInteger(record2.start) || !Number.isSafeInteger(record2.end) || record2.start < 0 || record2.end <= record2.start) {
+    const start = record2.start;
+    const end = record2.end;
+    if (!(isSafeInteger(start) && isSafeInteger(end) && start >= 0 && end > start)) {
       throw new Error("Classification bounds must describe a nonempty half-open interval.");
     }
-    for (const [field, value] of Object.entries(record2.state ?? {})) {
-      if (["e", "m", "x", "carry"].includes(field)) {
+    const state = record2.state ?? {};
+    for (const [field, value] of stateEntries(state)) {
+      if (field === "e" || field === "m" || field === "x" || field === "carry") {
         if (typeof value !== "boolean") {
           throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
         }
       } else {
-        const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
-        if (!["programBank", "dataBank", "directPage", "stackPointer"].includes(field) || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+        const maximum = field === "programBank" || field === "dataBank" ? 255 : 65535;
+        if (field !== "programBank" && field !== "dataBank" && field !== "directPage" && field !== "stackPointer" || !(isInteger(value) && value >= 0 && value <= maximum)) {
           throw new Error(`Invalid state field '${field}'.`);
         }
       }
     }
-    if (record2.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
+    const points = record2.points;
+    if (Array.isArray(points) && points.some(
+      (point) => point !== "in" && point !== "out" && point !== "end" && point !== "read" || typeof point !== "string"
+    )) {
       throw new Error("Invalid entry-point metadata.");
     }
-  } else if (shard === "analysis") {
-    if (!("kind" in record2) || !["target-override", "target-set"].includes(record2.kind) || !Array.isArray(record2.targets) || record2.targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+  } else {
+    const kind = record2.kind;
+    const targets = record2.targets;
+    if (kind !== "target-override" && kind !== "target-set" || !Array.isArray(targets) || targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
       throw new Error("Only target overrides and target sets are editable analysis records.");
     }
-    if (record2.kind === "target-set" && (typeof record2.name !== "string" || !record2.name.trim())) {
+    if (kind === "target-set" && (typeof record2.name !== "string" || !record2.name.trim())) {
       throw new Error("A target set needs a name.");
     }
-    if (record2.kind === "target-override" && !Number.isSafeInteger(record2.address)) {
+    if (kind === "target-override" && !Number.isSafeInteger(record2.address)) {
       throw new Error("A target override needs an instruction anchor.");
     }
-  } else {
-    throw new Error("This collection is not editable metadata.");
   }
 };
 
 // packages/disassembler/src/research-inputs/inputs.ts
 var isArray2 = (value) => Array.isArray(value);
+function isRecord12(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray3(value) {
+  return Array.isArray(value);
+}
+function isResearchCollection(value) {
+  return RESEARCH_COLLECTIONS.some((collection) => collection === value);
+}
+function isSafeInteger2(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isConfidence(value) {
+  return value === "certain" || value === "high" || value === "medium" || value === "low" || value === "unknown";
+}
 var RESEARCH_COLLECTIONS = [
   "labels",
   "comments",
@@ -51508,7 +52113,7 @@ function validateResearchSnapshot(snapshot) {
     }
     keys.add(key);
   }
-  const decisions = [...snapshot.decisions].sort(compareDecisions);
+  const decisions = [...snapshot.decisions].toSorted(compareDecisions);
   if (snapshot.hash !== sourceContentHash(
     canonicalJson({ project: snapshot.project, romSha256: snapshot.romSha256, decisions })
   )) {
@@ -51517,68 +52122,85 @@ function validateResearchSnapshot(snapshot) {
 }
 var compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 function validateResearchDecision(decision) {
-  if (!decision || !RESEARCH_COLLECTIONS.includes(decision.collection) || typeof decision.id !== "string" || !/^\w[\w./:-]*$/.test(decision.id)) {
+  if (!isRecord12(decision)) {
+    throw new Error("Research decisions require a known collection and stable ID.");
+  }
+  const collection = decision.collection;
+  const id = decision.id;
+  if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
   const record2 = decision.value;
   if (record2 === null) {
     return;
   }
-  if (!record2 || record2.id !== decision.id) {
-    throw new Error(`Research record identity mismatch: ${decision.id}`);
+  if (!isRecord12(record2) || record2.id !== id) {
+    throw new Error(`Research record identity mismatch: ${id}`);
   }
-  if (decision.collection === "evidence") {
-    const evidence = record2;
-    if (evidence.source !== "manual" || typeof evidence.sourceId !== "string" || !evidence.sourceId || !["certain", "high", "medium", "low", "unknown"].includes(evidence.confidence) || evidence.detail !== void 0 && typeof evidence.detail !== "string") {
+  if (collection === "evidence") {
+    const sourceId = record2.sourceId;
+    const detail = record2.detail;
+    if (record2.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record2.confidence) || detail !== void 0 && typeof detail !== "string") {
       throw new Error("Research files may author only valid manual evidence.");
     }
     return;
   }
-  if (!("evidence" in record2) || !isArray2(record2.evidence) || record2.evidence.some((id) => typeof id !== "string")) {
-    throw new Error(`Research record ${decision.id} needs an evidence list.`);
+  const evidence = record2.evidence;
+  if (!isUnknownArray3(evidence) || evidence.some((entry) => typeof entry !== "string")) {
+    throw new Error(`Research record ${id} needs an evidence list.`);
   }
-  if (decision.collection === "regions") {
-    if (!("start" in record2) || !("end" in record2) || !("name" in record2) || typeof record2.name !== "string" || !record2.name || !Number.isSafeInteger(record2.start) || !Number.isSafeInteger(record2.end) || record2.start < 0 || record2.end <= record2.start) {
-      throw new Error(`Invalid research region: ${decision.id}`);
+  if (collection === "regions") {
+    const name = record2.name;
+    const start = record2.start;
+    const end = record2.end;
+    if (typeof name !== "string" || name === "" || !(isSafeInteger2(start) && isSafeInteger2(end) && start >= 0 && end > start)) {
+      throw new Error(`Invalid research region: ${id}`);
     }
   } else {
-    validateEditableMetadataRecord(
-      decision.collection,
-      record2
-    );
+    validateEditableMetadataRecord(collection, record2);
   }
-  if (decision.collection === "labels") {
-    const label = record2;
-    if (label.aliases !== void 0) {
-      if (!isArray2(label.aliases)) {
-        throw new Error("Symbol aliases must be an array.");
+  if (collection === "labels" && record2.aliases !== void 0) {
+    const aliases3 = record2.aliases;
+    if (!isUnknownArray3(aliases3)) {
+      throw new Error("Symbol aliases must be an array.");
+    }
+    for (const alias of aliases3) {
+      if (typeof alias !== "string") {
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+        );
       }
-      for (const alias of label.aliases) {
-        validateSourceLabelName(alias);
-      }
-      if (new Set(label.aliases).size !== label.aliases.length) {
-        throw new Error("Symbol aliases must be unique.");
-      }
+      validateSourceLabelName(alias);
+    }
+    if (new Set(aliases3).size !== aliases3.length) {
+      throw new Error("Symbol aliases must be unique.");
     }
   }
 }
 function parseResearchDocument(value) {
-  const document2 = value;
-  if (!document2 || document2.format !== "uttori-research" || document2.version !== 1 || typeof document2.project !== "string" || !/^[\w.-]+$/.test(document2.project) || typeof document2.romSha256 !== "string" || !/^[\da-f]{64}$/.test(document2.romSha256) || !isArray2(document2.decisions) || Object.keys(document2).some(
+  if (!isRecord12(value)) {
+    throw new Error("Invalid research document header.");
+  }
+  const project = value.project;
+  const romSha256 = value.romSha256;
+  const decisions = value.decisions;
+  if (value.format !== "uttori-research" || value.version !== 1 || typeof project !== "string" || !/^[\w.-]+$/.test(project) || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray3(decisions) || Object.keys(value).some(
     (key) => !["format", "version", "project", "romSha256", "decisions"].includes(key)
   )) {
     throw new Error("Invalid research document header.");
   }
+  const parsed = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const decision of document2.decisions) {
+  for (const decision of decisions) {
     validateResearchDecision(decision);
     const key = `${decision.collection}:${decision.id}`;
     if (seen.has(key)) {
       throw new Error(`Duplicate research decision: ${key}`);
     }
     seen.add(key);
+    parsed.push(decision);
   }
-  return document2;
+  return { format: "uttori-research", version: 1, project, romSha256, decisions: parsed };
 }
 function researchPath(root, relative2) {
   assertSourcePath(relative2);
@@ -51604,7 +52226,7 @@ function readResearchInputs(root, roots, identity, overlays = /* @__PURE__ */ ne
     const overlay = overlays.get(relative2);
     const stat = fs2.existsSync(file) ? fs2.lstatSync(file) : void 0;
     if (stat?.isDirectory()) {
-      for (const entry of fs2.readdirSync(file).sort()) {
+      for (const entry of fs2.readdirSync(file).toSorted()) {
         visit(`${relative2}/${entry}`);
       }
       return;
@@ -51750,37 +52372,55 @@ async function sourceRepository(directory) {
 init_canonical_json();
 import fs3 from "node:fs";
 import path11 from "node:path";
-var isArray3 = (value) => Array.isArray(value);
-function parseSourceProject(value) {
-  const config = value;
-  if (!config || config.format !== "uttori-source-project" || config.version !== 1 || typeof config.id !== "string" || !/^[\w.-]+$/.test(config.id) || typeof config.target !== "string" || !config.target || typeof config.romSha256 !== "string" || !/^[\da-f]{64}$/.test(config.romSha256) || !isArray3(config.sourceRoots) || !config.sourceRoots.length || !isArray3(config.researchRoots) || !config.researchRoots.length) {
+function isUnknownArray4(value) {
+  return Array.isArray(value);
+}
+function isRecord13(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSafeInteger3(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function assertSourceProjectConfiguration(value) {
+  if (!isRecord13(value)) {
+    throw new Error("Invalid Git source project configuration.");
+  }
+  const id = value.id;
+  const target = value.target;
+  const romSha256 = value.romSha256;
+  const sourceRoots = value.sourceRoots;
+  const researchRoots = value.researchRoots;
+  if (value.format !== "uttori-source-project" || value.version !== 1 || typeof id !== "string" || !/^[\w.-]+$/.test(id) || typeof target !== "string" || target === "" || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray4(sourceRoots) || sourceRoots.length === 0 || !isUnknownArray4(researchRoots) || researchRoots.length === 0) {
     throw new Error("Invalid Git source project configuration.");
   }
   for (const name of [
-    ...config.sourceRoots,
-    ...config.researchRoots,
-    config.buildConfig,
-    config.layout,
-    config.captures
+    ...sourceRoots,
+    ...researchRoots,
+    value.buildConfig,
+    value.layout,
+    value.captures
   ]) {
     if (typeof name !== "string") {
       throw new Error("Source project paths must be strings.");
     }
     assertSourcePath(name);
   }
-  if (config.limits !== void 0) {
-    if (!config.limits || typeof config.limits !== "object" || Array.isArray(config.limits)) {
+  if (value.limits !== void 0) {
+    if (!isRecord13(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
-    for (const [name, limit] of Object.entries(config.limits)) {
-      if (!["captureBytes", "analysisWorkItems", "analysisCallDepth"].includes(name) || !Number.isSafeInteger(limit) || limit < (name === "analysisCallDepth" ? 0 : 1)) {
+    for (const [name, limit] of Object.entries(value.limits)) {
+      if (name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth" || !(isSafeInteger3(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))) {
         throw new Error(
           `Invalid source work limit: ${name}. Use an integer within the supported range.`
         );
       }
     }
   }
-  return config;
+}
+function parseSourceProject(value) {
+  assertSourceProjectConfiguration(value);
+  return value;
 }
 async function openSourceProject(directory) {
   const repository = await sourceRepository(directory);
@@ -51800,6 +52440,9 @@ async function openSourceProject(directory) {
 }
 
 // packages/disassembler/src/research-inputs/symbols.ts
+function isProjectLabel(value) {
+  return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
+}
 function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, reservedNames = []) {
   validateResearchSnapshot(snapshot);
   validateSourceLabelName(newName);
@@ -51818,7 +52461,11 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
   if (decision?.value === null) {
     throw new Error("Restore this suppressed research record before renaming it.");
   }
-  const previous = decision?.value;
+  const previousValue = decision?.value;
+  if (previousValue && !isProjectLabel(previousValue)) {
+    throw new Error("Invalid research label.");
+  }
+  const previous = previousValue;
   if (previous && (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address)) {
     throw new Error("The symbol's original identity changed. Refresh before renaming.");
   }
@@ -51843,7 +52490,12 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
   };
   const labels = snapshot.decisions.filter(
     (item) => item.collection === "labels" && item.value !== null && item.id !== identity.id
-  ).map((item) => item.value);
+  ).map((item) => {
+    if (item.value === null || !isProjectLabel(item.value)) {
+      throw new Error("Invalid research label.");
+    }
+    return item.value;
+  });
   if ([...reservedNames].some((name) => name.toLowerCase() === newName.toLowerCase())) {
     throw new Error(`Source name '${newName}' is already used by another symbol.`);
   }
@@ -51866,7 +52518,7 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
         (item) => item.collection !== "labels" || item.id !== identity.id
       ),
       { collection: "labels", id: identity.id, value: symbol }
-    ].sort(
+    ].toSorted(
       (a, b) => Buffer.compare(
         Buffer.from(`${a.collection}:${a.id}`),
         Buffer.from(`${b.collection}:${b.id}`)
@@ -51879,6 +52531,7 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
 // packages/plugin-snes/src/disassembler/ram-map.ts
 var SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
 var SNES_RAM_MAP_SCHEMA_VERSION = 1;
+var isRecord14 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var cleanText = (value, field) => {
   const cleaned = value.replaceAll(/\s+/g, " ").trim();
@@ -51924,33 +52577,31 @@ var parseAddress = (value, memory) => {
   return address3;
 };
 var validateSnesRamMap = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord14(value)) {
     throw new Error("RAM map must be a JSON object.");
   }
-  const file = value;
-  if (file.format !== SNES_RAM_MAP_FORMAT) {
+  if (value.format !== SNES_RAM_MAP_FORMAT) {
     throw new Error("Invalid SNES RAM-map format.");
   }
-  if (file.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
-    throw new Error(`Unsupported SNES RAM-map schema ${String(file.schemaVersion)}.`);
+  if (value.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
+    throw new Error(`Unsupported SNES RAM-map schema ${String(value.schemaVersion)}.`);
   }
-  if (!Array.isArray(file.variables)) {
+  if (!Array.isArray(value.variables)) {
     throw new Error("RAM map must contain a variables array.");
   }
-  if (file.includeSourceInformation !== void 0 && typeof file.includeSourceInformation !== "boolean") {
+  if (value.includeSourceInformation !== void 0 && typeof value.includeSourceInformation !== "boolean") {
     throw new Error("RAM-map includeSourceInformation must be a boolean.");
   }
   const names = /* @__PURE__ */ new Set();
   const addresses = /* @__PURE__ */ new Set();
-  const variables = file.variables.map((input, index2) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) {
+  const variables = value.variables.map((input, index2) => {
+    if (!isRecord14(input)) {
       throw new Error(`RAM-map variable ${index2 + 1} must be an object.`);
     }
-    const record2 = input;
-    if (typeof record2.name !== "string") {
+    if (typeof input.name !== "string") {
       throw new Error(`RAM-map variable ${index2 + 1} name must be a string.`);
     }
-    const name = cleanText(record2.name, `variable ${index2 + 1} name`);
+    const name = cleanText(input.name, `variable ${index2 + 1} name`);
     if (!/^[A-Z_a-z]\w*$/.test(name)) {
       throw new Error(`RAM-map variable name '${name}' is not an assembler identifier.`);
     }
@@ -51959,46 +52610,46 @@ var validateSnesRamMap = (value) => {
       throw new Error(`Duplicate RAM-map variable name '${name}'.`);
     }
     names.add(nameKey);
-    if (typeof record2.address !== "string" && typeof record2.address !== "number") {
+    if (typeof input.address !== "string" && typeof input.address !== "number") {
       throw new Error(`RAM-map variable '${name}' must have a string or integer address.`);
     }
-    const memory = record2.memory ?? "wram";
+    const memory = input.memory ?? "wram";
     if (memory !== "wram" && memory !== "sram") {
       throw new Error(`RAM-map memory for '${name}' must be 'wram' or 'sram'.`);
     }
-    const address3 = parseAddress(record2.address, memory);
+    const address3 = parseAddress(input.address, memory);
     if (addresses.has(address3)) {
       throw new Error(`Duplicate RAM-map address '${hex(address3)}'. Combine aliases in one entry.`);
     }
     addresses.add(address3);
-    const size = record2.size ?? 1;
+    const size = input.size ?? 1;
     const end = memory === "sram" ? sramWindowEnd(address3) : 8388608;
     if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 1 || address3 + size > end) {
       throw new Error(`Invalid size for RAM-map variable '${name}'.`);
     }
-    if (record2.category !== void 0 && typeof record2.category !== "string") {
+    if (input.category !== void 0 && typeof input.category !== "string") {
       throw new Error(`RAM-map category for '${name}' must be a string.`);
     }
-    const category = record2.category === void 0 ? void 0 : cleanText(record2.category, `${name} category`);
-    if (typeof record2.description !== "string") {
+    const category = input.category === void 0 ? void 0 : cleanText(input.category, `${name} category`);
+    if (typeof input.description !== "string") {
       throw new Error(`RAM-map description for '${name}' must be a string.`);
     }
-    const description = cleanText(record2.description, `${name} description`);
-    if (record2.notes !== void 0 && !Array.isArray(record2.notes)) {
+    const description = cleanText(input.description, `${name} description`);
+    if (input.notes !== void 0 && !Array.isArray(input.notes)) {
       throw new Error(`RAM-map notes for '${name}' must be an array.`);
     }
-    const notes2 = (record2.notes ?? []).map((note) => {
+    const notes2 = (input.notes ?? []).map((note) => {
       if (typeof note !== "string") {
         throw new Error(`RAM-map notes for '${name}' must be strings.`);
       }
       return cleanText(note, `${name} note`);
     });
     let sources;
-    if (record2.sources !== void 0) {
-      if (!Array.isArray(record2.sources)) {
+    if (input.sources !== void 0) {
+      if (!Array.isArray(input.sources)) {
         throw new Error(`RAM-map sources for '${name}' must be an array.`);
       }
-      sources = record2.sources.map((source) => {
+      sources = input.sources.map((source) => {
         if (typeof source !== "string") {
           throw new Error(`RAM-map sources for '${name}' must be strings.`);
         }
@@ -52008,7 +52659,7 @@ var validateSnesRamMap = (value) => {
     return {
       name,
       address: address3,
-      ...record2.memory === void 0 ? {} : { memory },
+      ...input.memory === void 0 ? {} : { memory },
       size,
       ...category ? { category } : {},
       description,
@@ -52016,7 +52667,7 @@ var validateSnesRamMap = (value) => {
       ...sources === void 0 ? {} : { sources }
     };
   });
-  const sorted = variables.sort(
+  const sorted = variables.toSorted(
     (left, right) => left.address - right.address || left.name.localeCompare(right.name)
   );
   for (let index2 = 1; index2 < sorted.length; index2++) {
@@ -52032,6 +52683,12 @@ var validateSnesRamMap = (value) => {
 };
 
 // packages/plugin-snes/src/disassembler/struct-expressions.ts
+var checked = (value, expression) => {
+  if (!Number.isSafeInteger(value)) {
+    throw new Error("Struct expression must evaluate to exact safe integers.");
+  }
+  return { value, expression };
+};
 var SnesStructExpressionResolver = class {
   layouts;
   bindings;
@@ -52066,12 +52723,6 @@ var SnesStructExpressionResolver = class {
     const owners = /* @__PURE__ */ new Set();
     let references = 0;
     let nodes = 0;
-    const checked = (value, expression) => {
-      if (!Number.isSafeInteger(value)) {
-        throw new Error("Struct expression must evaluate to exact safe integers.");
-      }
-      return { value, expression };
-    };
     const reference = (node) => {
       let root = node;
       let fieldName;
@@ -52137,23 +52788,23 @@ var SnesStructExpressionResolver = class {
           return reference(node);
         case "call": {
           const name = node.callee.name;
-          const arg = node.arguments[0];
-          if (node.arguments.length !== 1 || !arg) {
+          const callArgument = node.arguments.length === 1 ? node.arguments[0] : void 0;
+          if (!callArgument) {
             throw new Error(`Struct expression ${name}() requires one argument.`);
           }
           if (name === "bank") {
-            const resolved2 = visit(arg);
+            const resolved2 = visit(callArgument);
             return checked(resolved2.value >> 16 & 255, `bank(${resolved2.expression})`);
           }
-          if (arg.type !== "identifier") {
+          if (callArgument.type !== "identifier") {
             throw new Error("Struct reflection requires a layout or binding name.");
           }
           if (name !== "sizeof" && name !== "countof" && name !== "bytesof" && name !== "startof" && name !== "endof") {
             throw new Error(`Unsupported struct expression function '${name}'.`);
           }
-          reference(arg);
-          const binding = this.bindings.get(arg.name);
-          const layout2 = binding?.structure ?? this.layouts.get(arg.name);
+          reference(callArgument);
+          const binding = this.bindings.get(callArgument.name);
+          const layout2 = binding?.structure ?? this.layouts.get(callArgument.name);
           if (!layout2) {
             throw new Error(
               "Struct reflection requires a layout or binding, not a scalar constant."
@@ -52165,7 +52816,7 @@ var SnesStructExpressionResolver = class {
             indexRange: { first: binding?.firstIndex ?? 0, count: binding?.count ?? 1 }
           };
           const value = name === "sizeof" ? layout2.size : getStructMetadata(definition, name);
-          return checked(value, `${name}(${arg.name})`);
+          return checked(value, `${name}(${callArgument.name})`);
         }
         case "unary": {
           const arg = visit(node.argument);
@@ -52230,14 +52881,27 @@ var SnesStructExpressionResolver = class {
             case ">>":
               value = left.value >> right.value;
               break;
-            default:
+            case "**":
+            case "<":
+            case ">":
+            case "<=":
+            case ">=":
+            case "==":
+            case "=":
+            case "!=":
+            case "&&":
+            case "||":
               throw new Error(`Unsupported struct expression operator '${node.operator}'.`);
           }
           return checked(value, `(${left.expression} ${node.operator} ${right.expression})`);
         }
-        default:
+        case "defineReference":
+        case "range":
+        case "raw":
+        case "string":
           throw new Error("Unsupported struct expression syntax.");
       }
+      throw new Error("Unsupported struct expression syntax.");
     };
     const resolved = visit(parseExpressionNode(input));
     if (!references) {
@@ -52270,7 +52934,7 @@ function describeSnesStructAccess(binding, address3, width) {
         high = middle;
       }
     }
-    const candidate = structure.fields[low - 1];
+    const candidate = low > 0 ? structure.fields[low - 1] : void 0;
     const field = candidate && offset < candidate.offset + candidate.size ? candidate : void 0;
     const suffix = binding.count === 1 && index2 === 0 ? "" : `[${index2}]`;
     const record2 = `${binding.name}${suffix}`;
@@ -52298,8 +52962,9 @@ function describeSnesStructAccess(binding, address3, width) {
 }
 
 // packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
+var isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var record = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord15(value)) {
     throw new Error("Struct instruction-use entries must be objects.");
   }
   return value;
@@ -52410,14 +53075,16 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
       ...memoryOperand ? { memoryOperand } : {},
       observations
     };
-  }).sort((a, b) => a.address - b.address);
+  }).toSorted((a, b) => a.address - b.address);
 };
 
 // packages/plugin-snes/src/disassembler/struct-map.ts
 var widths = { db: 1, dw: 2, dl: 3, dd: 4 };
 var comment = (value) => value.replaceAll(/\s+/g, " ").trim();
+var isRecord16 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isStringList2 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var object = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord16(value)) {
     throw new Error("Struct-map records must be objects.");
   }
   return value;
@@ -52438,7 +53105,7 @@ var notes = (value) => {
   if (value === void 0) {
     return [];
   }
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+  if (!isStringList2(value)) {
     throw new Error("Struct-map notes must be an array of strings.");
   }
   return value.map(comment);
@@ -52468,8 +53135,8 @@ var validateSnesStructMap = (value) => {
     throw new Error("Struct map requires structures and bindings arrays.");
   }
   const names = /* @__PURE__ */ new Set();
-  const uniqueName = (value2) => {
-    const name = identifier(value2);
+  const uniqueName = (nameInput) => {
+    const name = identifier(nameInput);
     if (names.has(name.toLowerCase())) {
       throw new Error(`Duplicate struct-map name '${name}'.`);
     }
@@ -52504,7 +53171,8 @@ var validateSnesStructMap = (value) => {
           throw new Error(`Invalid field type '${id}.${name}'.`);
         }
         const match = field.type.match(/^(db|dw|dl|dd)(?:\[([1-9]\d*)])?$/i);
-        if (!match || widths[match[1].toLowerCase()] * Number(match[2] ?? 1) !== fieldSize) {
+        const repeatText = match !== null && match.length > 2 ? match[2] : void 0;
+        if (!match || widths[match[1].toLowerCase()] * Number(repeatText ?? 1) !== fieldSize) {
           throw new Error(`Field type '${id}.${name}' must match its size (${fieldSize} bytes).`);
         }
         type = field.type.toLowerCase();
@@ -52516,7 +53184,7 @@ var validateSnesStructMap = (value) => {
         ...type === void 0 ? {} : { type },
         ...field.description === void 0 ? {} : { description: comment(field.description) }
       };
-    }).sort((a, b) => a.offset - b.offset);
+    }).toSorted((a, b) => a.offset - b.offset);
     let end = 0;
     for (const field of fields) {
       if (field.offset < end || field.offset + field.size > size) {
@@ -52563,14 +53231,14 @@ var validateSnesStructMap = (value) => {
         entryComments: entryComments(entry.entryComments, firstIndex, count)
       }
     };
-  }).sort((a, b) => a.address - b.address);
+  }).toSorted((a, b) => a.address - b.address);
   for (let index2 = 1; index2 < bindings.length; index2++) {
     const previous = bindings[index2 - 1];
     if (bindings[index2].address < previous.address + previous.structure.size * previous.count) {
       throw new Error(`Struct bindings '${previous.name}' and '${bindings[index2].name}' overlap.`);
     }
   }
-  const romBindings = bindings.filter((binding) => binding.fileOffset !== void 0).sort((a, b) => a.fileOffset - b.fileOffset);
+  const romBindings = bindings.filter((binding) => binding.fileOffset !== void 0).toSorted((a, b) => a.fileOffset - b.fileOffset);
   for (let index2 = 1; index2 < romBindings.length; index2++) {
     const previous = romBindings[index2 - 1];
     if (romBindings[index2].fileOffset < previous.fileOffset + previous.structure.size * previous.count) {
@@ -52938,11 +53606,14 @@ function assetCallAt(text2, position) {
 function assetSpanContains(node, character) {
   return character >= node.span.start && character <= node.span.end;
 }
+function assetOption(options, key) {
+  return Object.hasOwn(options, key) ? options[key] : void 0;
+}
 function assetPathAt(call, character) {
   if (assetSpanContains(call.path, character)) {
     return call.path.value;
   }
-  const palette = call.options.palette;
+  const palette = assetOption(call.options, "palette");
   if (palette?.kind === "string" && assetSpanContains(palette, character) && palette.value !== "embedded" && palette.value !== "auto") {
     return palette.value;
   }
@@ -53006,12 +53677,15 @@ function splitLines(text2) {
   }
   return lines;
 }
+function lineAt(lines, line) {
+  return line >= 0 && line < lines.length ? lines[line] : void 0;
+}
 function preciseRange(index2, file, line, name, fallback) {
   const text2 = index2.getFileText(file);
   if (!text2) {
     return fallback;
   }
-  const rawLine = splitLines(text2)[line];
+  const rawLine = lineAt(splitLines(text2), line);
   if (rawLine === void 0) {
     return fallback;
   }
@@ -53044,7 +53718,7 @@ function preciseRangeWithSigil(index2, file, line, name, fallback) {
   if (!text2) {
     return fallback;
   }
-  const rawLine = splitLines(text2)[line];
+  const rawLine = lineAt(splitLines(text2), line);
   if (rawLine === void 0) {
     return fallback;
   }
@@ -53129,7 +53803,7 @@ function findCompoundSuffixColumn(lineText, segment) {
   return -1;
 }
 function wordAt(text2, position) {
-  const line = splitLines(text2)[position.line];
+  const line = lineAt(splitLines(text2), position.line);
   if (line === void 0) {
     return void 0;
   }
@@ -53168,7 +53842,7 @@ function includeOriginRange(index2, file, position, target) {
   if (!text2) {
     return void 0;
   }
-  const line = splitLines(text2)[position.line];
+  const line = lineAt(splitLines(text2), position.line);
   if (line === void 0) {
     return void 0;
   }
@@ -53251,7 +53925,7 @@ function compoundLeafCandidates(symbols, word2, file) {
     const inFile = symbol.location.file === file ? 1 : 0;
     return inFile * 1e6 + symbol.name.length;
   };
-  return [...exact, ...bySuffix].sort((left, right) => rank2(right) - rank2(left));
+  return [...exact, ...bySuffix].toSorted((left, right) => rank2(right) - rank2(left));
 }
 function hierarchyChainForSymbol(symbols, leaf) {
   const chain = [];
@@ -53316,7 +53990,7 @@ function compoundSegmentRanges(index2, file, line, word2) {
   if (!text2) {
     return void 0;
   }
-  const lineText = splitLines(text2)[line];
+  const lineText = lineAt(splitLines(text2), line);
   if (lineText === void 0) {
     return void 0;
   }
@@ -53341,7 +54015,7 @@ function hierarchicalSegmentAt(index2, file, position, word2) {
   if (!text2) {
     return void 0;
   }
-  const line = splitLines(text2)[position.line];
+  const line = lineAt(splitLines(text2), position.line);
   if (line === void 0) {
     return void 0;
   }
@@ -53351,10 +54025,10 @@ function hierarchicalSegmentAt(index2, file, position, word2) {
   }
   const relative2 = position.character - start;
   let consumed = 0;
-  for (let index3 = 0; index3 < aligned.parts.length; index3++) {
-    const partEnd = consumed + aligned.parts[index3].length;
-    if (relative2 < partEnd || index3 === aligned.parts.length - 1) {
-      const chainIndex = aligned.chainOffset + index3;
+  for (let partIndex = 0; partIndex < aligned.parts.length; partIndex++) {
+    const partEnd = consumed + aligned.parts[partIndex].length;
+    if (relative2 < partEnd || partIndex === aligned.parts.length - 1) {
+      const chainIndex = aligned.chainOffset + partIndex;
       const full = aligned.chain[chainIndex];
       const parent = chainIndex > 0 ? aligned.chain[chainIndex - 1] : void 0;
       if (!parent) {
@@ -53534,7 +54208,7 @@ function definitionFor(index2, file, position) {
   if (assetPath) {
     const target = resolveIncludeTarget2(index2, file, assetPath);
     if (target) {
-      const node = assetSpanContains(assetCall.path, position.character) ? assetCall.path : assetCall.options.palette;
+      const node = assetSpanContains(assetCall.path, position.character) ? assetCall.path : assetOption(assetCall.options, "palette");
       const start = node?.span.start ?? position.character;
       const end = node?.span.end ?? position.character;
       const origin = import_vscode_languageserver.Range.create(position.line, start, position.line, end);
@@ -53614,7 +54288,7 @@ function hoverFor(index2, file, position, text2) {
   if (assetCall && position.character >= assetCall.span.start && position.character <= assetCall.span.end) {
     const registered = index2.environment.getAssetFormat(assetCall.format.value, index2.target);
     const displayPath = assetCall.path.value.replace(/`/g, "\\`");
-    const selectedOutput = assetCall.options.output;
+    const selectedOutput = assetOption(assetCall.options, "output");
     const outputName = selectedOutput?.kind === "string" ? selectedOutput.value : "primary";
     if (assetSpanContains(assetCall.path, position.character)) {
       const resolved = resolveIncludeTarget2(index2, file, assetCall.path.value);
@@ -53923,9 +54597,11 @@ function referenceMatchesRenameTarget(reference, target) {
     case "label":
     case "struct":
     case "structMember":
-    default:
+    case "namespace":
       return reference.kind === "label";
   }
+  const leftover = target.symbol.kind;
+  throw new Error(`Unsupported rename symbol kind: ${String(leftover)}`);
 }
 function semanticTokensFor(index2, file) {
   const tokens = [];
@@ -54118,7 +54794,7 @@ function symbolAnnotation(index2, symbol) {
     leading.unshift(sourceLine.replace(/^\s*;\s?/, "").trimEnd());
   }
   const trailing = lineCommentText(lines[line] ?? "");
-  const parts = [...leading.filter((entry) => entry.length > 0)];
+  const parts = leading.filter((entry) => entry.length > 0);
   if (trailing) {
     parts.push(trailing);
   }
@@ -54414,7 +55090,7 @@ var AssetPreviewService = class {
       const hash = createHash4("sha256");
       hash.update(format.id).update(format.version).update(JSON.stringify(allOptions)).update(output ?? "");
       hash.update(source.bytes);
-      for (const [name, resource] of Object.entries(resources).sort(
+      for (const [name, resource] of Object.entries(resources).toSorted(
         ([a], [b]) => a.localeCompare(b)
       )) {
         hash.update(name).update(resource.bytes);
@@ -54464,7 +55140,7 @@ var sameFileContent = (file, content) => {
   try {
     return Buffer.from(content).equals(fs5.readFileSync(file));
   } catch (error) {
-    if (error.code === "ENOENT") {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return false;
     }
     throw error;
@@ -54575,6 +55251,9 @@ function formatElapsed(startedAt) {
 // packages/language-server/src/project-environment.ts
 import { existsSync as existsSync3 } from "node:fs";
 import path15 from "node:path";
+function isPluginModuleRequest(value) {
+  return typeof value === "object" && value !== null && "module" in value && typeof value.module === "string";
+}
 var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
   if (typeof entry === "string") {
     if (!entry.trim()) {
@@ -54582,13 +55261,13 @@ var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) =
     }
     return { module: entry };
   }
-  if (!entry || typeof entry !== "object" || typeof entry.module !== "string") {
+  if (!isPluginModuleRequest(entry)) {
     throw new Error(`Plugin setting at index ${index2} must be a module string or object.`);
   }
-  return {
-    module: entry.module,
-    ...entry.options === void 0 ? {} : { options: entry.options }
-  };
+  return Object.assign(
+    { module: entry.module },
+    entry.options === void 0 ? {} : { options: entry.options }
+  );
 });
 var ProjectEnvironmentController = class {
   /**
@@ -54721,6 +55400,48 @@ var import_vscode_languageserver2 = __toESM(require_api3(), 1);
 // packages/language-server/src/recipe-rename.ts
 import fs6 from "node:fs";
 import path16 from "node:path";
+function isRecord17(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isNamed(value) {
+  return isRecord17(value) && typeof value.name === "string";
+}
+function isRamMap(value) {
+  return isRecord17(value) && Array.isArray(value.variables) && value.variables.every(isNamed);
+}
+function isStructure(value) {
+  return isRecord17(value) && typeof value.id === "string" && Array.isArray(value.fields) && value.fields.every(isNamed);
+}
+function isBinding(value) {
+  return isRecord17(value) && typeof value.name === "string" && typeof value.structure === "string";
+}
+function isObservation(value) {
+  return isRecord17(value) && typeof value.target === "string";
+}
+function isInstructionUse(value) {
+  if (!isRecord17(value)) {
+    return false;
+  }
+  if (value.operand !== void 0 && typeof value.operand !== "string") {
+    return false;
+  }
+  if (value.memoryOperand !== void 0 && typeof value.memoryOperand !== "string") {
+    return false;
+  }
+  return value.observations === void 0 || Array.isArray(value.observations) && value.observations.every(isObservation);
+}
+function isStructMap(value) {
+  if (!isRecord17(value) || !Array.isArray(value.structures) || !Array.isArray(value.bindings)) {
+    return false;
+  }
+  if (!value.structures.every(isStructure) || !value.bindings.every(isBinding)) {
+    return false;
+  }
+  if (value.constants !== void 0 && !(Array.isArray(value.constants) && value.constants.every(isNamed))) {
+    return false;
+  }
+  return value.instructionUses === void 0 || Array.isArray(value.instructionUses) && value.instructionUses.every(isInstructionUse);
+}
 function renameRecipeExpression(expression, oldName, newName, containers) {
   const tokens = [
     ...expression.matchAll(
@@ -54759,7 +55480,7 @@ function renameRecipeExpression(expression, oldName, newName, containers) {
     }
   }
   let output = expression;
-  for (const offset of edits.reverse()) {
+  for (const offset of edits.toReversed()) {
     output = output.slice(0, offset) + newName + output.slice(offset + oldName.length);
   }
   return output;
@@ -54794,6 +55515,9 @@ function sourceRecipeRename(root, sourceRoot, definition, newName, buffers) {
     }
     const map2 = JSON.parse(input2.before);
     validateSnesRamMap(map2);
+    if (!isRamMap(map2)) {
+      throw new Error("RAM map must contain a variables array.");
+    }
     const variable = map2.variables.find((item) => item.name === definition.name);
     if (!variable) {
       return void 0;
@@ -54814,6 +55538,9 @@ function sourceRecipeRename(root, sourceRoot, definition, newName, buffers) {
   }
   const map = JSON.parse(input.before);
   const before = validateSnesStructMap(map);
+  if (!isStructMap(map)) {
+    throw new Error("Struct map requires structures and bindings arrays.");
+  }
   let fieldContainers;
   if (definition.kind === "structMember") {
     const binding = map.bindings.find((item) => item.name === definition.containerName);
@@ -54878,7 +55605,30 @@ function sourceRecipeRename(root, sourceRoot, definition, newName, buffers) {
 }
 
 // packages/language-server/src/research-rename.ts
-var isArray4 = (value) => Array.isArray(value);
+function isJsonObject(value) {
+  return typeof value === "object" && value !== null;
+}
+function isUnknownArray5(value) {
+  return Array.isArray(value);
+}
+function isProjectLabel2(value) {
+  if (!isJsonObject(value) || !isUnknownArray5(value.evidence)) {
+    return false;
+  }
+  return typeof value.id === "string" && typeof value.addressSpace === "string" && typeof value.address === "number" && typeof value.name === "string" && (value.sourceName === void 0 || typeof value.sourceName === "string") && (value.suppressed === void 0 || typeof value.suppressed === "boolean") && value.evidence.every((entry) => typeof entry === "string");
+}
+function isCatalogSymbol(value) {
+  if (!isJsonObject(value) || !isUnknownArray5(value.evidence)) {
+    return false;
+  }
+  return typeof value.id === "string" && typeof value.name === "string" && typeof value.addressSpace === "string" && typeof value.address === "number" && value.evidence.every((entry) => typeof entry === "string");
+}
+function isSymbolCatalog(value) {
+  if (!isJsonObject(value) || !isUnknownArray5(value.symbols)) {
+    return false;
+  }
+  return value.format === "uttori-source-symbols" && value.version === 1 && typeof value.romSha256 === "string" && value.symbols.every(isCatalogSymbol);
+}
 function projectRoot(file) {
   let directory = path17.dirname(file);
   while (true) {
@@ -54914,7 +55664,7 @@ function layoutRenameEdit(root, name, romSha256, oldName, newName, buffers, fiel
     throw new Error("Layout rename exceeds its document budget.");
   }
   const layout2 = JSON.parse(before);
-  if (layout2.format !== "uttori-snes-layout" || layout2.version !== 1 || layout2.romSha256 !== romSha256) {
+  if (!isJsonObject(layout2) || layout2.format !== "uttori-snes-layout" || layout2.version !== 1 || layout2.romSha256 !== romSha256) {
     throw new Error("Layout does not match the source project's ROM identity.");
   }
   let changed = false;
@@ -54923,11 +55673,11 @@ function layoutRenameEdit(root, name, romSha256, oldName, newName, buffers, fiel
     if (records === void 0) {
       continue;
     }
-    if (!Array.isArray(records)) {
+    if (!isUnknownArray5(records)) {
       throw new Error(`Invalid layout collection: ${collection}`);
     }
     for (const record2 of records) {
-      if (!record2 || typeof record2 !== "object") {
+      if (!isJsonObject(record2)) {
         throw new Error(`Invalid layout record: ${collection}`);
       }
       for (const field of ["startSymbol", "endSymbol"]) {
@@ -55028,7 +55778,7 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
     throw new Error("Symbol identity catalog is too large.");
   }
   const catalog = JSON.parse(fs7.readFileSync(catalogPath, "utf8"));
-  if (catalog.format !== "uttori-source-symbols" || catalog.version !== 1 || catalog.romSha256 !== project.configuration.romSha256 || !isArray4(catalog.symbols)) {
+  if (!isSymbolCatalog(catalog) || catalog.romSha256 !== project.configuration.romSha256) {
     throw new Error("Symbol identity catalog does not match this project ROM.");
   }
   const overlays = new Map(
@@ -55043,9 +55793,16 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
     { project: project.configuration.id, romSha256: project.configuration.romSha256 },
     overlays
   );
-  const labels = new Map(
-    snapshot.decisions.filter((item) => item.collection === "labels").map((item) => [item.id, item.value])
-  );
+  const labels = /* @__PURE__ */ new Map();
+  for (const item of snapshot.decisions) {
+    if (item.collection !== "labels") {
+      continue;
+    }
+    if (item.value !== null && !isProjectLabel2(item.value)) {
+      throw new Error("Research label decision is not a project label.");
+    }
+    labels.set(item.id, item.value);
+  }
   const matches = catalog.symbols.filter((symbol2) => {
     const label = labels.get(symbol2.id);
     if (label === null || label?.suppressed) {
@@ -55115,6 +55872,12 @@ var defaultSettings = {
 var settings = defaultSettings;
 var editorSettings = defaultSettings;
 var index;
+function requireIndex() {
+  if (!index) {
+    throw new Error("Assembly index is not initialized.");
+  }
+  return index;
+}
 var workspaceRoots = [];
 var hasConfigurationCapability = false;
 var hasDidChangeConfigurationDynamicRegistration = false;
@@ -55139,15 +55902,21 @@ function stringValue(value) {
 function stringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : void 0;
 }
+function isRecord18(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isPluginSettingList(value) {
+  return Array.isArray(value);
+}
 function mergeServerSettings(previous, value) {
-  if (!value || typeof value !== "object") {
+  if (!isRecord18(value)) {
     return previous;
   }
   const next = value;
   const has = (key) => Object.prototype.hasOwnProperty.call(next, key);
   return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
-    plugins: Array.isArray(next.plugins) ? next.plugins : previous.plugins,
+    plugins: isPluginSettingList(next.plugins) ? next.plugins : previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
     architecture: has("architecture") ? stringValue(next.architecture) : previous.architecture,
     entryPoints: stringArray(next.entryPoints) ?? previous.entryPoints,
@@ -55246,9 +56015,10 @@ function scheduleReindex() {
   }
   reindexTimer = setTimeout(() => {
     reindexTimer = void 0;
+    const active = requireIndex();
     connection.console.info("Full workspace reindex starting");
-    index.reindex();
-    const status = index.getStatus();
+    active.reindex();
+    const status = active.getStatus();
     connection.console.info(
       `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms (roots=${status.lastReindexRootCount}, analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`
     );
@@ -55291,7 +56061,12 @@ connection.onInitialize(async (params) => {
   );
   workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
   if (workspaceRoots.length === 0 && params.rootUri) {
-    workspaceRoots = [uriToPath(params.rootUri)];
+    workspaceRoots = [
+      uriToPath(
+        // oxlint-disable-next-line typescript/no-deprecated
+        params.rootUri
+      )
+    ];
   }
   editorSettings = mergeServerSettings(defaultSettings, params.initializationOptions);
   const requested = applyConfigFileDefaults(editorSettings);
@@ -55352,7 +56127,8 @@ connection.onDidChangeConfiguration((params) => {
     return;
   }
   const changed = params.settings;
-  editorSettings = mergeServerSettings(editorSettings, changed?.asm ?? changed);
+  const asm = isRecord18(changed) ? changed.asm ?? changed : changed;
+  editorSettings = mergeServerSettings(editorSettings, asm);
   enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
 });
 function defaultOutputPath(file) {
@@ -55495,6 +56271,12 @@ function buildBinary(requestedFile, output, baseImage) {
     return { ok: false, message };
   }
 }
+function isReadonlyUnknownArray(value) {
+  return Array.isArray(value);
+}
+function executeCommandArguments(source) {
+  return isReadonlyUnknownArray(source.arguments) ? source.arguments : [];
+}
 function argumentPath(value) {
   if (!value) {
     return void 0;
@@ -55506,8 +56288,16 @@ connection.onExecuteCommand(async (params) => {
     return void 0;
   }
   await configurationQueue;
-  const args = params.arguments ?? [];
-  return buildBinary(argumentPath(args[0]), argumentPath(args[1]), argumentPath(args[2]));
+  const args = executeCommandArguments(params);
+  const argument = (argumentIndex) => {
+    const value = args[argumentIndex];
+    return typeof value === "string" ? value : void 0;
+  };
+  return buildBinary(
+    argumentPath(argument(0)),
+    argumentPath(argument(1)),
+    argumentPath(argument(2))
+  );
 });
 connection.onRequest("asm/projectMetadata", async () => {
   await configurationQueue;
@@ -55540,7 +56330,7 @@ connection.onRequest(
     const subscription = token?.onCancellationRequested(() => cancellation.abort());
     try {
       const result = await assetPreviews.preview(
-        index,
+        requireIndex(),
         document2.getText(),
         request,
         cancellation.signal
@@ -55587,13 +56377,14 @@ connection.onRequest("asm/status", async () => {
 });
 connection.onDidChangeWatchedFiles((params) => {
   assetPreviews.clear();
+  const active = requireIndex();
   let reload = false;
   for (const change of params.changes) {
     const file = uriToPath(change.uri);
     if (isProjectConfigFile(file)) {
       reload = true;
     } else {
-      index.invalidateFile(file);
+      active.invalidateFile(file);
     }
   }
   if (reload) {
@@ -55603,47 +56394,55 @@ connection.onDidChangeWatchedFiles((params) => {
   }
 });
 documents.onDidOpen((event) => {
+  const active = requireIndex();
   const file = uriToPath(event.document.uri);
-  index.openDocument(file, event.document.getText());
+  active.openDocument(file, event.document.getText());
   publishAllDiagnostics();
-  if (index.isFileDirtyOrUncovered(file)) {
+  if (active.isFileDirtyOrUncovered(file)) {
     scheduleReindex();
   }
 });
 documents.onDidChangeContent((event) => {
-  index.updateDocument(uriToPath(event.document.uri), event.document.getText());
+  requireIndex().updateDocument(uriToPath(event.document.uri), event.document.getText());
   scheduleReindex();
 });
 documents.onDidClose((event) => {
-  index.closeDocument(uriToPath(event.document.uri));
+  requireIndex().closeDocument(uriToPath(event.document.uri));
   void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 connection.onCompletion((params) => {
+  const active = requireIndex();
   const document2 = documents.get(params.textDocument.uri);
-  return document2 ? assetCompletionsFor(index, document2.getText(), params.position) ?? completionsFor(index) : completionsFor(index);
+  return document2 ? assetCompletionsFor(active, document2.getText(), params.position) ?? completionsFor(active) : completionsFor(active);
 });
 connection.onHover((params) => {
   const document2 = documents.get(params.textDocument.uri);
-  return document2 ? hoverFor(index, uriToPath(params.textDocument.uri), params.position, document2.getText()) : null;
+  return document2 ? hoverFor(
+    requireIndex(),
+    uriToPath(params.textDocument.uri),
+    params.position,
+    document2.getText()
+  ) : null;
 });
 connection.onDefinition(
-  (params) => definitionFor(index, uriToPath(params.textDocument.uri), params.position)
+  (params) => definitionFor(requireIndex(), uriToPath(params.textDocument.uri), params.position)
 );
 connection.onReferences(
   (params) => referencesFor3(
-    index,
+    requireIndex(),
     uriToPath(params.textDocument.uri),
     params.position,
     params.context.includeDeclaration
   )
 );
 connection.onDocumentSymbol(
-  (params) => documentSymbolsFor(index, uriToPath(params.textDocument.uri))
+  (params) => documentSymbolsFor(requireIndex(), uriToPath(params.textDocument.uri))
 );
 connection.onWorkspaceSymbol((params) => {
+  const active = requireIndex();
   const query = params.query.toLowerCase();
-  return index.getAnalyzedFiles().flatMap(
-    (file) => documentSymbolsFor(index, file).filter((symbol) => !query || symbol.name.toLowerCase().includes(query)).map(
+  return active.getAnalyzedFiles().flatMap(
+    (file) => documentSymbolsFor(active, file).filter((symbol) => !query || symbol.name.toLowerCase().includes(query)).map(
       (symbol) => import_node.SymbolInformation.create(
         symbol.name,
         symbol.kind,
@@ -55663,23 +56462,24 @@ connection.onSignatureHelp((params) => {
     start: { line: params.position.line, character: 0 },
     end: params.position
   });
-  return signatureHelpFor(lineText, index);
+  return signatureHelpFor(lineText, requireIndex());
 });
 function flushRenameIndex() {
   if (reindexTimer) {
     clearTimeout(reindexTimer);
     reindexTimer = void 0;
-    index.reindex();
+    requireIndex().reindex();
   }
 }
 connection.onPrepareRename((params) => {
   flushRenameIndex();
-  return prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position);
+  return prepareRenameFor(requireIndex(), uriToPath(params.textDocument.uri), params.position);
 });
 connection.onRenameRequest(async (params) => {
   flushRenameIndex();
+  const active = requireIndex();
   const file = uriToPath(params.textDocument.uri);
-  const root = researchRenameRootFor(index, file, params.position);
+  const root = researchRenameRootFor(active, file, params.position);
   const sourceBuffers = documents.all().map((document2) => ({
     uri: document2.uri,
     version: document2.version,
@@ -55689,13 +56489,13 @@ connection.onRenameRequest(async (params) => {
   if (sourceBuffers.some((buffer) => documents.get(buffer.uri)?.version !== buffer.version)) {
     throw new Error("Source changed during rename. Retry at the current symbol.");
   }
-  return researchRenameEditsFor(index, file, params.position, params.newName, [
+  return researchRenameEditsFor(active, file, params.position, params.newName, [
     ...sourceBuffers,
     ...researchBuffers
   ]);
 });
 connection.languages.semanticTokens.on(
-  (params) => semanticTokensFor(index, uriToPath(params.textDocument.uri))
+  (params) => semanticTokensFor(requireIndex(), uriToPath(params.textDocument.uri))
 );
 connection.onShutdown(() => environmentController.dispose());
 documents.listen(connection);

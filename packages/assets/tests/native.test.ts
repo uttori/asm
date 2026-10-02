@@ -34,7 +34,7 @@ import {
 
 test("native tile layouts retain independent golden bytes for 2/3/4/8bpp and Mode 7", (t) => {
   for (const depth of [2, 3, 4, 8] as const) {
-    const tile = Array.from({ length: 8 }, () => new Array<number>(8).fill(0));
+    const tile = Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => 0));
     tile[0][0] = 2 ** depth - 1;
     const bytes = encodePlanarTiles([tile], depth);
     const offsets =
@@ -74,7 +74,7 @@ test("native palette, maps and BRR preserve all packed fields", (t) => {
 });
 
 test("native and scalar creation rejects values that would be truncated", (t) => {
-  const tile = Array.from({ length: 8 }, () => new Array<number>(8).fill(0));
+  const tile = Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => 0));
   tile[0][0] = 16;
   t.throws(() => encodePlanarTiles([tile], 4), { instanceOf: RangeError });
   t.throws(() => decodePlanarTiles(Uint8Array.of(0), 4), { instanceOf: RangeError });

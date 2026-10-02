@@ -15,18 +15,22 @@ import { validateCapturePosition } from "../../../debug-adapter/src/capture-v2.t
 import { GdbRspClient } from "../../../debug-sidecar-ares/src/gdb-rsp-client.ts";
 import { NodeTcpGdbRspTransport } from "../../../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts";
 
+const hex = (text) => Buffer.from(text).toString("hex");
+
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const root = path.join(application, "experiments/secret-of-mana-git-workflow-full");
 const mode = process.argv[2] ?? "original";
 if (mode === "manual") {
   await import("./som-git-runtime-manual.mjs");
+  // This process is a spawned fixture and the status is the result.
+  // oxlint-disable-next-line unicorn/no-process-exit
   process.exit(0);
 }
 if (mode === "original-all" || mode === "expanded-all") {
   for (const capture of fs
     .readdirSync(path.join(root, "disassembly/captures"))
     .filter((file) => file.endsWith(".act2"))
-    .sort()) {
+    .toSorted()) {
     const modes = mode === "original-all" ? ["original"] : ["source-baseline", "expanded"];
     for (const scenario of modes) {
       const result = spawnSync(
@@ -41,10 +45,14 @@ if (mode === "original-all" || mode === "expanded-all") {
         { stdio: "inherit" },
       );
       if (result.status !== 0) {
+        // This process is a spawned fixture and the status is the result.
+        // oxlint-disable-next-line unicorn/no-process-exit
         process.exit(result.status ?? 1);
       }
     }
   }
+  // This process is a spawned fixture and the status is the result.
+  // oxlint-disable-next-line unicorn/no-process-exit
   process.exit(0);
 }
 assert.ok(
@@ -307,7 +315,6 @@ try {
   if (mode !== "original" && !expansionScenario && !compressedScenario) {
     assert.equal(await client.request("Z0,c8e24d,1"), "OK");
   }
-  const hex = (text) => Buffer.from(text).toString("hex");
   assert.equal(
     await client.request(
       [

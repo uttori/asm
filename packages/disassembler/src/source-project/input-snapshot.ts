@@ -14,7 +14,7 @@ export function createSourceInputSnapshot(
   const paths = new Set<string>();
   let size = 0;
   const entries = [...files]
-    .sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)))
+    .toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)))
     .map((file) => {
       assertSourcePath(file.path);
       const identity = file.path.normalize("NFC").toLowerCase();
@@ -43,17 +43,18 @@ export function createSourceInputSnapshot(
   };
 }
 
+function isSnapshotRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** Decode an immutable snapshot for inspection/reproduction. This function never writes into the source checkout. */
 export function readSourceInputSnapshot(bytes: Uint8Array): readonly SourceGenerationFile[] {
   if (bytes.length > MAX_INPUT_BYTES * 1.5) {
     throw new Error("Generation input snapshot exceeds its serialized budget.");
   }
-  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as {
-    format?: string;
-    version?: number;
-    files?: { path: string; sha256: string; base64: string }[];
-  };
+  const value: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   if (
+    !isSnapshotRecord(value) ||
     value.format !== "uttori-generation-input-snapshot" ||
     value.version !== 1 ||
     !Array.isArray(value.files) ||
@@ -61,19 +62,25 @@ export function readSourceInputSnapshot(bytes: Uint8Array): readonly SourceGener
   ) {
     throw new Error("Invalid generation input snapshot.");
   }
-  const files = value.files.map((file) => {
-    if (!file || typeof file.path !== "string" || typeof file.base64 !== "string") {
+  const files = value.files.map((entry: unknown) => {
+    if (
+      !isSnapshotRecord(entry) ||
+      typeof entry.path !== "string" ||
+      typeof entry.base64 !== "string"
+    ) {
       throw new Error("Invalid generation input snapshot entry.");
     }
-    const contents = Buffer.from(file.base64, "base64");
+    const sha256 = entry.sha256;
+    const contents = Buffer.from(entry.base64, "base64");
     // Node's decoder accepts malformed/truncated base64. Canonical re-encoding rejects that ambiguity.
     if (
-      contents.toString("base64") !== file.base64 ||
-      sourceContentHash(contents) !== file.sha256
+      typeof sha256 !== "string" ||
+      contents.toString("base64") !== entry.base64 ||
+      sourceContentHash(contents) !== sha256
     ) {
-      throw new Error(`Generation input snapshot content changed: ${file.path}`);
+      throw new Error(`Generation input snapshot content changed: ${entry.path}`);
     }
-    return { path: file.path, bytes: contents };
+    return { path: entry.path, bytes: contents };
   });
   createSourceInputSnapshot(files);
   return files;

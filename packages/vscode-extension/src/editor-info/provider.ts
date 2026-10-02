@@ -3,28 +3,98 @@ import { readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 
 import {
+  DEBUG_MAP_FORMAT,
+  DEBUG_MAP_SCHEMA_VERSION,
   validateDebugMap,
   type DebugMap,
   type DebugMapRange,
   type DebugMapInstruction,
 } from "@uttori/asm-core/debug-map";
 import type {
-  AnalysisProjectManifest,
   InstructionAnalysisAnnotation,
   InstructionExecutionSummaryRow,
 } from "@uttori/asm-disassembler";
 
 import type { EditorLocation, InformationRequirements, LineInformation } from "./format.js";
 
+/** Fields the information provider reads from an analysis manifest. */
+export interface EditorProjectManifest {
+  readonly target: string;
+  readonly rom: { readonly contentSha256: string; readonly contentSize: number };
+  readonly addressSpaces: readonly { readonly id: string; readonly kind: string }[];
+}
+
 /** Discovery is supplied by the host, keeping filesystem/provider behavior independently testable. */
 export interface EditorInformationHost {
   discoverMaps(): Promise<readonly { file: string; sourceRoots: readonly string[] }[]>;
-  projects(): Promise<readonly { directory: string; manifest: AnalysisProjectManifest }[]>;
-  request<T>(
+  projects(): Promise<readonly { directory: string; manifest: EditorProjectManifest }[]>;
+  request(
     directory: string,
     operation: "annotationSummary" | "annotations",
     options: { ranges: readonly DebugMapRange[] },
-  ): Promise<T>;
+  ): Promise<unknown>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A stored map must be inspectable by validateDebugMap; format and fingerprint stay its job. */
+function isStoredDebugMap(value: unknown): value is Parameters<typeof validateDebugMap>[0] {
+  return (
+    isRecord(value) &&
+    isRecord(value.fingerprint) &&
+    typeof value.fingerprint.algorithm === "string" &&
+    typeof value.fingerprint.value === "string" &&
+    isRecord(value.output) &&
+    typeof value.output.size === "number" &&
+    typeof value.output.sha256 === "string" &&
+    typeof value.target === "string" &&
+    Array.isArray(value.sources) &&
+    Array.isArray(value.ranges) &&
+    (value.instructions === undefined || Array.isArray(value.instructions)) &&
+    (value.assets === undefined || Array.isArray(value.assets))
+  );
+}
+
+/** validateDebugMap reports mismatches; this admits only a map whose identity fields are current. */
+function isAcceptedDebugMap(map: Parameters<typeof validateDebugMap>[0]): map is DebugMap {
+  return (
+    map.format === DEBUG_MAP_FORMAT &&
+    map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION &&
+    map.fingerprint.algorithm === "sha256"
+  );
+}
+
+function isExecutionSummaryRow(value: unknown): value is InstructionExecutionSummaryRow {
+  return (
+    isRecord(value) &&
+    typeof value.rangeIndex === "number" &&
+    typeof value.limited === "boolean" &&
+    Array.isArray(value.locations) &&
+    value.locations.every(
+      (location) =>
+        isRecord(location) &&
+        typeof location.addressSpace === "string" &&
+        typeof location.address === "number" &&
+        typeof location.executionCount === "number" &&
+        Array.isArray(location.outputOffsets) &&
+        location.outputOffsets.every((offset) => typeof offset === "number"),
+    )
+  );
+}
+
+function isAnnotationRow(
+  value: unknown,
+): value is { readonly line: number; readonly annotation: InstructionAnalysisAnnotation } {
+  return (
+    isRecord(value) &&
+    typeof value.line === "number" &&
+    isRecord(value.annotation) &&
+    typeof value.annotation.id === "string" &&
+    (value.annotation.detailsLimited === undefined ||
+      typeof value.annotation.detailsLimited === "boolean")
+  );
 }
 
 /** UI-facing queries expose only visible facts; implementations may keep full maps in a worker. */
@@ -148,10 +218,10 @@ export class EditorInformationProvider {
    * @param {Function} operation Deferred host request.
    * @returns {Promise<T>} Shared result; rejection removes the in-flight entry for retry.
    */
-  async #request<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  async #request(key: string, operation: () => Promise<unknown>): Promise<unknown> {
     const existing = this.#pending.get(key);
     if (existing) {
-      return existing as Promise<T>;
+      return existing;
     }
     const pending = operation();
     this.#pending.set(key, pending);
@@ -201,15 +271,21 @@ export class EditorInformationProvider {
           reject("Debug map exceeds the 64 MiB inspection budget.");
           continue;
         }
-        const map = JSON.parse(await readFile(file, "utf8")) as DebugMap;
-        const errors = validateDebugMap(map);
-        if (errors.length) {
+        const parsed: unknown = JSON.parse(await readFile(file, "utf8"));
+        if (!isStoredDebugMap(parsed)) {
+          throw new Error(
+            "Debug map is not an object with fingerprint, output, sources, and ranges.",
+          );
+        }
+        const errors = validateDebugMap(parsed);
+        if (errors.length || !isAcceptedDebugMap(parsed)) {
           reject(`Invalid debug map: ${errors.join("; ")}`);
           continue;
         }
+        const map = parsed;
         // Prefer the map's own ancestors before other workspace roots. Identical relative paths
         // in two workspace folders must not attach one project's addresses to the other file.
-        const resolutionRoots = [...new Set([path.dirname(file), ...roots])].sort(
+        const resolutionRoots = [...new Set([path.dirname(file), ...roots])].toSorted(
           (a, b) =>
             Number(file.startsWith(path.resolve(b) + path.sep)) -
               Number(file.startsWith(path.resolve(a) + path.sep)) || b.length - a.length,
@@ -464,12 +540,11 @@ export class EditorInformationProvider {
           const missing = ranges.filter((range) => !this.#summaries.has(summaryKey(range)));
           if (missing.length) {
             const rows = await this.#request(`${identity}:counts:${JSON.stringify(missing)}`, () =>
-              this.host.request<readonly InstructionExecutionSummaryRow[]>(
-                project.directory,
-                "annotationSummary",
-                { ranges: missing },
-              ),
+              this.host.request(project.directory, "annotationSummary", { ranges: missing }),
             );
+            if (!Array.isArray(rows) || !rows.every(isExecutionSummaryRow)) {
+              throw new Error("Analysis execution summary is unavailable.");
+            }
             if (epoch !== this.#epoch) {
               return new Map();
             }
@@ -484,10 +559,11 @@ export class EditorInformationProvider {
           const missing = ranges.filter((range) => !this.#details.has(summaryKey(range)));
           if (missing.length) {
             const rows = await this.#request(`${identity}:details:${JSON.stringify(missing)}`, () =>
-              this.host.request<
-                readonly { line: number; annotation: InstructionAnalysisAnnotation }[]
-              >(project.directory, "annotations", { ranges: missing }),
+              this.host.request(project.directory, "annotations", { ranges: missing }),
             );
+            if (!Array.isArray(rows) || !rows.every(isAnnotationRow)) {
+              throw new Error("Analysis annotations are unavailable.");
+            }
             if (epoch !== this.#epoch) {
               return new Map();
             }

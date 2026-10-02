@@ -10,7 +10,7 @@ import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plug
 
 import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 import { runWithInternalInstrumentation } from "../packages/core/src/internal-instrumentation.js";
-import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
+import { aggregateSamples, isBenchmarkSample, type BenchmarkSample } from "./benchmark-report.js";
 import { getFixtureStatus } from "./external-fixtures.ts";
 
 const root = process.cwd();
@@ -19,6 +19,46 @@ const chouDir = path.join(root, chouSpec.submodulePath);
 const chouEntryPoint = path.join(chouDir, chouSpec.entrypoint);
 
 type RunMode = "cold" | "warm" | "warm-validate";
+
+function isRunMode(value: string | undefined): value is RunMode {
+  return value === "cold" || value === "warm" || value === "warm-validate";
+}
+
+function isIndexingSample(value: unknown): value is IndexingSample {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (
+    !("cachedRoots" in value) ||
+    typeof value.cachedRoots !== "number" ||
+    !("analyzedRoots" in value) ||
+    typeof value.analyzedRoots !== "number" ||
+    !("fileCount" in value) ||
+    typeof value.fileCount !== "number" ||
+    !("symbolCount" in value) ||
+    typeof value.symbolCount !== "number" ||
+    !("referenceCount" in value) ||
+    typeof value.referenceCount !== "number"
+  ) {
+    return false;
+  }
+  return isBenchmarkSample(value);
+}
+
+function readIndexingSamples(text: string): IndexingSample[] {
+  const parsed: unknown = JSON.parse(text);
+  if (!Array.isArray(parsed)) {
+    throw new Error("Isolated indexing worker returned an unexpected result.");
+  }
+  const samples: IndexingSample[] = [];
+  for (const entry of parsed) {
+    if (!isIndexingSample(entry)) {
+      throw new Error("Isolated indexing worker returned an unexpected result.");
+    }
+    samples.push(entry);
+  }
+  return samples;
+}
 
 type IndexingBenchmarkOptions = {
   warmups: number;
@@ -188,13 +228,15 @@ function runIsolated(
       maxBuffer: 10 * 1024 * 1024,
     },
   );
-  if (child.error) throw child.error;
+  if (child.error) {
+    throw child.error;
+  }
   if (child.status !== 0) {
     throw new Error(
       `Isolated worker for [chou/${mode}] failed (status=${String(child.status)}): ${child.stderr.trim()}`,
     );
   }
-  return JSON.parse(child.stdout) as IndexingSample[];
+  return readIndexingSamples(child.stdout);
 }
 
 function gitRevision(): string {
@@ -223,8 +265,8 @@ function parseOptions(args: string[]): IndexingBenchmarkOptions {
     } else if (arg === "--json") {
       options.jsonPath = args[++i];
     } else if (arg === "--mode") {
-      const mode = args[++i] as RunMode;
-      if (!["cold", "warm", "warm-validate"].includes(mode)) {
+      const mode = args[++i];
+      if (!isRunMode(mode)) {
         throw new Error(`Unknown mode '${mode}'. Valid: cold, warm, warm-validate`);
       }
       options.modes = [mode];
@@ -277,7 +319,7 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
 
   const topLevel = entries
     .filter(([name]) => !CHILD_PHASES.has(name))
-    .sort(([, a], [, b]) => b - a);
+    .toSorted(([, a], [, b]) => b - a);
 
   // Instrumentation can add phases. Compute display widths without variadic argument growth.
   const numLen = entries.reduce((width, [, ms]) => Math.max(width, ms.toFixed(1).length), 0) + 3; // " ms"
@@ -288,7 +330,7 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
     const children = (PHASE_CHILDREN[name] ?? [])
       .map((child) => [child, phasesMs[child] ?? 0] as [string, number])
       .filter(([, childMs]) => childMs > 0)
-      .sort(([, a], [, b]) => b - a);
+      .toSorted(([, a], [, b]) => b - a);
 
     const msStr = `${ms.toFixed(1)} ms`;
     console.log(`  ${name.padEnd(nameLen - 2)} ${msStr.padStart(numLen)}`);
@@ -304,7 +346,7 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
       ([name]) =>
         CHILD_PHASES.has(name) && !topLevel.some(([p]) => (PHASE_CHILDREN[p] ?? []).includes(name)),
     )
-    .sort(([, a], [, b]) => b - a);
+    .toSorted(([, a], [, b]) => b - a);
   for (const [name, ms] of orphans) {
     const msStr = `${ms.toFixed(1)} ms`;
     console.log(`  ${name.padEnd(nameLen - 2)} ${msStr.padStart(numLen)}  (orphan sub-phase)`);
@@ -376,9 +418,7 @@ async function main(): Promise<void> {
     // When --phase-report is set, also print a combined phase table using the median rep.
     if (options.phaseReport && samples.length > 0) {
       const medianRep = samples[Math.floor(samples.length / 2)];
-      if (medianRep) {
-        printPhaseTable(`${mode} median rep`, medianRep.phasesMs);
-      }
+      printPhaseTable(`${mode} median rep`, medianRep.phasesMs);
     }
   }
 
@@ -426,9 +466,14 @@ async function main(): Promise<void> {
  */
 async function runInternalWorker(args: string[]): Promise<boolean> {
   const workerIndex = args.indexOf("--internal-worker");
-  if (workerIndex < 0) return false;
+  if (workerIndex < 0) {
+    return false;
+  }
 
-  const mode = args[workerIndex + 1] as RunMode;
+  const mode = args[workerIndex + 1];
+  if (!isRunMode(mode)) {
+    throw new Error(`Unknown mode '${mode}'. Valid: cold, warm, warm-validate`);
+  }
   const reps = Number(args[args.indexOf("--reps") + 1] || 1);
   const warmups = Number(args[args.indexOf("--warmups") + 1] || 0);
   const cacheDir = args[args.indexOf("--cache-dir") + 1] ?? "";

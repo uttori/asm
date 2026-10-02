@@ -1,6 +1,10 @@
 import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
 
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
 test("command lowering preserves loop structure and typed children", (t) => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel(
@@ -9,8 +13,8 @@ test("command lowering preserves loop structure and typed children", (t) => {
   );
 
   const lowered = assembler.commandLoweringService.lowerProgram(program);
-  const forLoop = lowered.nodes[0];
-  const whileLoop = lowered.nodes[1];
+  const forLoop = elementAt(lowered.nodes, 0);
+  const whileLoop = elementAt(lowered.nodes, 1);
 
   t.is(forLoop?.kind, "loop");
   if (forLoop?.kind === "loop") {
@@ -42,7 +46,7 @@ test("command lowering preserves if elseif and else branches", (t) => {
   );
 
   const lowered = assembler.commandLoweringService.lowerProgram(program);
-  const conditional = lowered.nodes[0];
+  const conditional = elementAt(lowered.nodes, 0);
 
   t.is(conditional?.kind, "conditional");
   if (conditional?.kind !== "conditional") {
@@ -68,8 +72,8 @@ test("include and incbin metadata survives the direct lowering boundary", (t) =>
   );
 
   const lowered = assembler.commandLoweringService.lowerProgram(program);
-  const include = lowered.nodes[0];
-  const incbin = lowered.nodes[1];
+  const include = elementAt(lowered.nodes, 0);
+  const incbin = elementAt(lowered.nodes, 1);
 
   t.is(include?.kind, "directive");
   if (include?.kind === "directive") {
@@ -99,7 +103,7 @@ test("lowered passthrough nodes name their preprocessing requirement", (t) => {
 
   for (const { source, reason } of cases) {
     const program = assembler.buildProgramModel(source, `${reason}.asm`);
-    const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
+    const lowered = elementAt(assembler.commandLoweringService.lowerProgram(program).nodes, 0);
     t.is(lowered?.kind, "command", source);
     if (lowered?.kind === "command") {
       t.is(lowered.passthroughReason, reason, source);
@@ -110,8 +114,8 @@ test("lowered passthrough nodes name their preprocessing requirement", (t) => {
 test("lowered passthrough shares immutable input and dispatch mutates only its execution copy", (t) => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel("Entry:", "immutable.asm");
-  const sourceCommand = program.nodes[0];
-  const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
+  const sourceCommand = elementAt(program.nodes, 0);
+  const lowered = elementAt(assembler.commandLoweringService.lowerProgram(program).nodes, 0);
 
   t.is(lowered?.kind, "command");
   if (lowered?.kind !== "command" || !sourceCommand || !("source" in sourceCommand)) {
@@ -161,7 +165,7 @@ test("registered lowered dot directives take precedence over sublabel syntax", (
     calls.push(words.join(" "));
   });
   const program = assembler.buildProgramModel(".width 16", "dot-directive.asm");
-  const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
+  const lowered = elementAt(assembler.commandLoweringService.lowerProgram(program).nodes, 0);
   t.is(lowered?.kind, "directive");
   if (lowered?.kind === "directive") {
     assembler.dispatchLoweredNode(lowered);

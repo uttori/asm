@@ -16,7 +16,7 @@ test("input snapshots retain exact recipe bytes in a deterministic inspectable p
     },
   ];
   const snapshot = createSourceInputSnapshot(files);
-  t.deepEqual(snapshot, createSourceInputSnapshot([...files].reverse()));
+  t.deepEqual(snapshot, createSourceInputSnapshot([...files].toReversed()));
   const restored = readSourceInputSnapshot(snapshot.bytes);
   for (const file of files) {
     t.deepEqual(restored.find((entry) => entry.path === file.path)?.bytes, file.bytes);

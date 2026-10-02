@@ -45,6 +45,7 @@ const waitWithTimeout = async (promise, timeoutMs) => new Promise((resolve) => {
     void promise.then((value) => {
         clearTimeout(timer);
         resolve(value);
+        return;
     });
 });
 class NodeAresProcessHandle {
@@ -90,6 +91,9 @@ class NodeAresProcessHandle {
 const nodeSha256 = async (file) => {
     const digest = createHash("sha256");
     for await (const chunk of createReadStream(file)) {
+        if (!Buffer.isBuffer(chunk)) {
+            throw new Error(`Expected binary bytes while hashing ${file}.`);
+        }
         digest.update(chunk);
     }
     return digest.digest("hex");
@@ -132,11 +136,32 @@ export const nodeAresProcessRuntime = Object.freeze({
         timer.unref();
     }),
 });
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const manifestRecord = (value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
+    if (!isRecord(value)) {
         throw new Error("Ares runtime manifest must be an object.");
     }
     return value;
+};
+const NODE_PLATFORMS = [
+    "aix",
+    "android",
+    "darwin",
+    "freebsd",
+    "haiku",
+    "linux",
+    "openbsd",
+    "sunos",
+    "win32",
+    "cygwin",
+    "netbsd",
+];
+const manifestPlatform = (value) => {
+    const platform = NODE_PLATFORMS.find((candidate) => candidate === value);
+    if (!platform) {
+        throw new Error(`Ares manifest platform '${value}' is not a Node platform.`);
+    }
+    return platform;
 };
 const manifestString = (value, name) => {
     if (typeof value !== "string" || value.length === 0) {
@@ -166,8 +191,8 @@ export const parseAresRuntimeManifest = (value) => {
     if (!Array.isArray(manifest.resources)) {
         throw new Error("Ares runtime manifest resources must be an array.");
     }
-    const resources = Object.freeze(manifest.resources.map((value, index) => {
-        const resource = manifestRecord(value);
+    const resources = Object.freeze(manifest.resources.map((entry, index) => {
+        const resource = manifestRecord(entry);
         const resourcePath = checkedResourcePath(manifestString(resource.path, `Ares resource ${index} path`));
         return Object.freeze({
             path: resourcePath,
@@ -188,7 +213,7 @@ export const parseAresRuntimeManifest = (value) => {
         patchSha256: checkedSha256(manifestString(manifest.patchSha256, "Ares patch SHA-256"), "Ares patch SHA-256"),
         executableSha256: checkedSha256(manifestString(manifest.executableSha256, "Ares executable SHA-256"), "Ares executable SHA-256"),
         romSha256: checkedSha256(manifestString(manifest.romSha256, "ROM SHA-256"), "ROM SHA-256"),
-        platform: manifestString(manifest.platform, "Ares manifest platform"),
+        platform: manifestPlatform(manifestString(manifest.platform, "Ares manifest platform")),
         architecture: manifestString(manifest.architecture, "Ares manifest architecture"),
         buildConfiguration,
         resources,
@@ -397,7 +422,7 @@ export class AresProcessHost {
             actual = checkedSha256(await this.#runtime.sha256(file), `Observed ${context} SHA-256`);
         }
         catch (error) {
-            throw new Error(`Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`);
+            throw new Error(`Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`, { cause: error });
         }
         if (actual !== expected) {
             throw new Error(`Ares ${context} SHA-256 mismatch: expected ${expected}, received ${actual}.`);

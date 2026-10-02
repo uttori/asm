@@ -26,28 +26,35 @@ export const captureSession = (value) => {
     }
     return value;
 };
-export const validateCaptureRequest = (value) => {
-    if (!value || typeof value !== "object") {
+function isFieldRecord(value) {
+    return typeof value === "object" && value !== null;
+}
+const bounded = (text, max) => typeof text === "string" &&
+    text.length > 0 &&
+    !text.includes("\0") &&
+    new TextEncoder().encode(text).length <= max;
+export function validateCaptureRequest(value) {
+    if (!isFieldRecord(value)) {
         throw new Error("Invalid capture request.");
     }
     if (value.operation === "context") {
         let fields = ["operation", "action"];
-        if (["prepare", "replay", "restore"].includes(value.action)) {
+        const action = value.action;
+        if (action === "prepare" || action === "replay" || action === "restore") {
             fields.push("directory", "romContentSha256", "producer");
-            const request = value;
             // Reuse the same bounded local path and immutable identity contract as ACT2.
             validateCaptureRequest({
                 operation: "file-start",
-                file: request.directory,
-                romContentSha256: request.romContentSha256,
-                producer: request.producer,
+                file: value.directory,
+                romContentSha256: value.romContentSha256,
+                producer: value.producer,
                 bufferBytes: 8388608,
             });
         }
-        else if (value.action === "start" || value.action === "stop" || value.action === "mark") {
+        else if (action === "start" || action === "stop" || action === "mark") {
             fields.push("session");
             captureSession(value.session);
-            if (value.action === "mark") {
+            if (action === "mark") {
                 fields.push("label");
                 if (typeof value.label !== "string" ||
                     !value.label.trim() ||
@@ -57,7 +64,7 @@ export const validateCaptureRequest = (value) => {
                 }
             }
         }
-        else if (value.action !== "abort" && value.action !== "status") {
+        else if (action !== "abort" && action !== "status") {
             throw new Error("Unsupported capture context action.");
         }
         if (Object.keys(value).some((key) => !fields.includes(key))) {
@@ -96,16 +103,16 @@ export const validateCaptureRequest = (value) => {
             bufferBytes: value.bufferBytes,
             scope: value.scope,
         });
-        const bounded = (text, max) => typeof text === "string" &&
-            text.length > 0 &&
-            !text.includes("\0") &&
-            new TextEncoder().encode(text).length <= max;
+        const producer = value.producer;
         if (!bounded(value.file, 4096) ||
+            typeof value.file !== "string" ||
             !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) ||
+            typeof value.romContentSha256 !== "string" ||
             !/^[\da-f]{64}$/.test(value.romContentSha256) ||
-            !bounded(value.producer?.id, 256) ||
-            !bounded(value.producer?.revision, 1024) ||
-            Object.keys(value.producer).some((key) => !["id", "revision"].includes(key))) {
+            !isFieldRecord(producer) ||
+            !bounded(producer.id, 256) ||
+            !bounded(producer.revision, 1024) ||
+            Object.keys(producer).some((key) => !["id", "revision"].includes(key))) {
             throw new Error("Native file capture requires an absolute bounded path and exact ROM/producer identity.");
         }
         return;
@@ -135,24 +142,24 @@ export const validateCaptureRequest = (value) => {
         return;
     }
     if (value.operation === "start") {
-        if (!Number.isSafeInteger(value.bufferBytes) ||
-            value.bufferBytes < 4718656 ||
-            value.bufferBytes > 64 * 1024 * 1024) {
+        const bufferBytes = value.bufferBytes;
+        if (typeof bufferBytes !== "number" ||
+            !Number.isSafeInteger(bufferBytes) ||
+            bufferBytes < 4718656 ||
+            bufferBytes > 64 * 1024 * 1024) {
             throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
         }
         return;
     }
     captureSession(value.session);
-    if ([
-        "status",
-        "stop",
-        "abort",
-        "release",
-        "file-status",
-        "file-stop",
-        "file-abort",
-        "file-release",
-    ].includes(value.operation)) {
+    if (value.operation === "status" ||
+        value.operation === "stop" ||
+        value.operation === "abort" ||
+        value.operation === "release" ||
+        value.operation === "file-status" ||
+        value.operation === "file-stop" ||
+        value.operation === "file-abort" ||
+        value.operation === "file-release") {
         return;
     }
     if (value.operation === "read" || value.operation === "ack") {
@@ -165,7 +172,7 @@ export const validateCaptureRequest = (value) => {
         return;
     }
     throw new Error("Unsupported capture operation.");
-};
+}
 /**
  * Require the requested scope and its reservation size. Never downgrade to a different stream.
  * @param {unknown} value Native capability reply.
@@ -194,8 +201,7 @@ export const validateCaptureCapabilities = (value, scope = "snes.65816.instructi
         overheadBytes: 4194304,
         resumeSession: false,
     };
-    if (!value ||
-        typeof value !== "object" ||
+    if (!isFieldRecord(value) ||
         Object.entries(expected).some(([key, item]) => value[key] !== item)) {
         throw new Error("Unsupported capture scope, reserve, or ownership contract.");
     }
@@ -211,57 +217,103 @@ export const validateCaptureCapabilities = (value, scope = "snes.65816.instructi
  * @param {CaptureScopeV2} scope Expected stream. Bus positions must explicitly confirm it.
  * @returns {CapturePositionV2} Validated ownership boundaries and integrity state.
  */
-export const validateCapturePosition = (value, session, scope) => {
-    if (!value || typeof value !== "object") {
+function assertCapturePosition(value, session, scope) {
+    if (!isFieldRecord(value)) {
         throw new Error("Invalid capture position.");
     }
-    const p = value;
-    captureSession(p.session);
-    if (session !== undefined && p.session !== session) {
+    captureSession(value.session);
+    if (session !== undefined && value.session !== session) {
         throw new Error("Capture session changed.");
     }
-    if (p.scope !== undefined) {
-        captureScope(p.scope);
+    if (value.scope !== undefined) {
+        captureScope(value.scope);
     }
-    if (scope !== undefined && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
+    const positionScope = value.scope === undefined ? "snes.65816.instructions" : value.scope;
+    if (scope !== undefined && positionScope !== captureScope(scope)) {
         throw new Error("Capture scope changed or was not confirmed by the producer.");
     }
-    if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(p.state)) {
+    const state = value.state;
+    if (state !== "armed" &&
+        state !== "recording" &&
+        state !== "throttled" &&
+        state !== "stopping" &&
+        state !== "draining" &&
+        state !== "complete" &&
+        state !== "incomplete") {
         throw new Error("Invalid capture state.");
     }
     const bounds = [
-        p.releasedThrough,
-        p.durableThrough,
-        p.acceptedThrough,
-        p.deliveredThrough,
-        p.producedThrough,
+        value.releasedThrough,
+        value.durableThrough,
+        value.acceptedThrough,
+        value.deliveredThrough,
+        value.producedThrough,
     ].map(captureU64);
-    if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
+    if (bounds.some((bound, index) => index > 0 && bound < bounds[index - 1])) {
         throw new Error("Capture ownership boundaries are inconsistent.");
     }
-    if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
+    if (captureU64(value.chunkThrough) > captureU64(value.producedChunks)) {
         throw new Error("Capture chunk boundary is inconsistent.");
     }
-    captureU64(p.throttleCount);
-    if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
+    captureU64(value.throttleCount);
+    if (!captureU64(value.clockNumerator) || !captureU64(value.clockDenominator)) {
         throw new Error("Invalid capture clock domain.");
     }
-    if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
+    if (value.droppedInScope !== "0" || typeof value.error !== "string" || value.error.length > 256) {
         throw new Error("Capture integrity failed.");
     }
-    if (![p.bufferedBytes, p.allocatedBytes].every((v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024) ||
-        p.bufferedBytes > p.allocatedBytes) {
+    const bufferedBytes = value.bufferedBytes;
+    const allocatedBytes = value.allocatedBytes;
+    if (typeof bufferedBytes !== "number" ||
+        typeof allocatedBytes !== "number" ||
+        !Number.isSafeInteger(bufferedBytes) ||
+        !Number.isSafeInteger(allocatedBytes) ||
+        bufferedBytes < 0 ||
+        allocatedBytes < 0 ||
+        bufferedBytes > 64 * 1024 * 1024 ||
+        allocatedBytes > 64 * 1024 * 1024 ||
+        bufferedBytes > allocatedBytes) {
         throw new Error("Capture allocation exceeds its bounds.");
     }
-    if (p.state === "complete" &&
-        (p.error ||
-            p.bufferedBytes ||
+    if (state === "complete" &&
+        (value.error ||
+            bufferedBytes ||
             new Set(bounds.map(String)).size !== 1 ||
-            p.chunkThrough !== p.producedChunks)) {
+            value.chunkThrough !== value.producedChunks)) {
         throw new Error("Capture terminal totals do not reconcile.");
     }
-    return p;
+}
+export const validateCapturePosition = (value, session, scope) => {
+    assertCapturePosition(value, session, scope);
+    return value;
 };
+/**
+ * Accept one wire result after the matching request validator has already run.
+ * Capability replies are rebuilt from the negotiated contract; other results keep
+ * their validated fields, including native file counters carried beside a position.
+ * @param {unknown} value Sidecar or backend capture reply.
+ * @returns {CaptureResultV2} A capabilities, position, hex, or context-state result.
+ */
+export function validateCaptureResult(value) {
+    if (!isFieldRecord(value)) {
+        throw new Error("Capture result must be an object.");
+    }
+    if (typeof value.hex === "string" &&
+        value.version === undefined &&
+        value.session === undefined &&
+        value.contextState === undefined) {
+        return { hex: value.hex };
+    }
+    if (typeof value.contextState === "string" &&
+        value.version === undefined &&
+        value.session === undefined) {
+        return { contextState: value.contextState };
+    }
+    if (value.version === 2) {
+        return validateCaptureCapabilities(value, captureScope(value.scope));
+    }
+    return validateCapturePosition(value);
+}
 /**
  * CRC-32C of an ACT2 envelope or archive JSON frame, without changing caller storage.
  * @param {Uint8Array} bytes Byte view; checksum positions are relative to this view.
@@ -319,10 +371,17 @@ export function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructi
         through: String(through),
     };
     if (scope === "snes.cpu-bus") {
+        const accesses = [];
+        for (const access of decodeBusAccesses(b, first, count)) {
+            if ("kind" in access) {
+                throw new Error("Bus capture chunk contains a transfer marker.");
+            }
+            accesses.push(access);
+        }
         return {
             ...identity,
             scope,
-            accesses: decodeBusAccesses(b, first, count),
+            accesses,
         };
     }
     if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu") {

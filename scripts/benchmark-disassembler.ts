@@ -52,7 +52,11 @@ import {
 } from "@uttori/asm-plugin-snes";
 
 import { SECRET_OF_MANA_ANALYSIS_FIXTURE } from "../fixtures/fixture-manifest.js";
-import { aggregateOperationSamples, type OperationBenchmarkSample } from "./benchmark-report.js";
+import {
+  aggregateOperationSamples,
+  isBenchmarkSample,
+  type OperationBenchmarkSample,
+} from "./benchmark-report.js";
 import {
   assertDisassemblerBudgetEnvironment,
   evaluateDisassemblerBenchmarkBudgets,
@@ -112,6 +116,132 @@ type WorkerResult = {
   readonly gcAvailable: boolean;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function isObservation(value: unknown): value is OperationObservation {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (entry) =>
+        typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean",
+    )
+  );
+}
+
+function isWorkerResult(value: unknown): value is WorkerResult {
+  return (
+    isRecord(value) &&
+    isBenchmarkSample(value.sample) &&
+    isObservation(value.observation) &&
+    typeof value.gcAvailable === "boolean"
+  );
+}
+
+function readWorkerResult(text: string): WorkerResult {
+  const parsed: unknown = JSON.parse(text);
+  if (!isWorkerResult(parsed)) {
+    throw new Error("Isolated benchmark worker returned an unexpected result.");
+  }
+  return parsed;
+}
+
+function readString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new Error(`Budget field ${key} must be a string.`);
+  }
+  return value;
+}
+
+function readNumber(record: Record<string, unknown>, key: string): number {
+  const value = record[key];
+  if (typeof value !== "number") {
+    throw new Error(`Budget field ${key} must be a number.`);
+  }
+  return value;
+}
+
+function readRecord(record: Record<string, unknown>, key: string): Record<string, unknown> {
+  const value = record[key];
+  if (!isRecord(value)) {
+    throw new Error(`Budget field ${key} must be an object.`);
+  }
+  return value;
+}
+
+function literalField<const Expected extends string>(
+  record: Record<string, unknown>,
+  key: string,
+  expected: Expected,
+): Expected {
+  if (record[key] !== expected) {
+    throw new Error(`Budget field ${key} must be '${expected}'.`);
+  }
+  return expected;
+}
+
+function readBudgets(value: unknown): DisassemblerBenchmarkBudgets {
+  if (!isRecord(value) || value.schemaVersion !== 1 || value.suite !== "uttori-asm-disassembler") {
+    throw new Error("Unsupported disassembler benchmark budget format.");
+  }
+  const sourceReport = readRecord(value, "sourceReport");
+  const environment = readRecord(value, "environment");
+  const policy = readRecord(value, "policy");
+  const wallTime = readRecord(policy, "wallTime");
+  const boundaryRss = readRecord(policy, "boundaryRss");
+  if (!Array.isArray(value.fixtures)) {
+    throw new Error("Budget fixtures must be an array.");
+  }
+  return {
+    schemaVersion: 1,
+    suite: "uttori-asm-disassembler",
+    sourceReport: {
+      path: readString(sourceReport, "path"),
+      sha256: readString(sourceReport, "sha256"),
+    },
+    environment: {
+      platform: readString(environment, "platform"),
+      arch: readString(environment, "arch"),
+      nodeMajor: readNumber(environment, "nodeMajor"),
+      cpuModel: readString(environment, "cpuModel"),
+    },
+    policy: {
+      wallTime: {
+        aggregate: literalField(wallTime, "aggregate", "median"),
+        sourceStatistic: literalField(wallTime, "sourceStatistic", "p95"),
+        multiplier: readNumber(wallTime, "multiplier"),
+        minimumHeadroomMs: readNumber(wallTime, "minimumHeadroomMs"),
+      },
+      boundaryRss: {
+        aggregate: literalField(boundaryRss, "aggregate", "max"),
+        sourceStatistic: literalField(boundaryRss, "sourceStatistic", "max"),
+        multiplier: readNumber(boundaryRss, "multiplier"),
+        minimumHeadroomBytes: readNumber(boundaryRss, "minimumHeadroomBytes"),
+        roundingBytes: readNumber(boundaryRss, "roundingBytes"),
+      },
+    },
+    fixtures: value.fixtures.map((fixture, index) => {
+      if (!isRecord(fixture) || !Array.isArray(fixture.operations)) {
+        throw new Error(`Budget fixture ${index} is invalid.`);
+      }
+      return {
+        id: readString(fixture, "id"),
+        operations: fixture.operations.map((operation, operationIndex) => {
+          if (!isRecord(operation)) {
+            throw new Error(`Budget fixture ${index} operation ${operationIndex} is invalid.`);
+          }
+          return {
+            id: readString(operation, "id"),
+            maxMedianWallMs: readNumber(operation, "maxMedianWallMs"),
+            maxBoundaryRssBytes: readNumber(operation, "maxBoundaryRssBytes"),
+          };
+        }),
+      };
+    }),
+  };
+}
+
 type OperationValue = {
   /** Keeps the operation result reachable through the ending memory sample. */
   readonly retained: unknown;
@@ -150,7 +280,8 @@ const fixtures: readonly Fixture[] = [
   },
 ];
 const fixtureById = new Map(fixtures.map((fixture) => [fixture.id, fixture]));
-const operationSet = new Set<string>(OPERATION_IDS);
+const isOperationId = (value: string): value is OperationId =>
+  OPERATION_IDS.some((id) => id === value);
 
 const emptyShards = (): AnalysisProjectShards => ({
   analysis: [],
@@ -215,12 +346,12 @@ const parseOptions = (args: readonly string[]): BenchmarkOptions => {
       }
     } else if (argument === "--operation") {
       for (const operation of parseCommaList(args[++index], argument)) {
-        if (!operationSet.has(operation)) {
+        if (!isOperationId(operation)) {
           throw new Error(
             `Unknown operation '${operation}'. Available operations: ${OPERATION_IDS.join(", ")}.`,
           );
         }
-        requestedOperations.push(operation as OperationId);
+        requestedOperations.push(operation);
       }
     } else if (argument === "--json") {
       jsonPath = args[++index];
@@ -579,6 +710,14 @@ const prepareDapEventFlow = (eventCount: number): (() => OperationValue) => {
   };
 };
 
+function unexpectedBenchmarkOperation(
+  operation: OperationId,
+): asserts operation is "source-export" {
+  if (operation !== "source-export") {
+    throw new Error("Unhandled benchmark operation.");
+  }
+}
+
 /**
  * Prepares one isolated operation while keeping all prerequisites outside its timed boundary.
  *
@@ -727,27 +866,25 @@ const prepareOperation = (
       };
     };
   }
-  if (operation === "source-export") {
-    const manifestBytes = fs.readFileSync(path.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
-    return () => {
-      const exported = exportSnes65816Source(loaded, rom, path.join(temporary, "source"), {
-        sourceProjectSha256: sourceExportSha256(manifestBytes),
-        emitFile: (file) => {
-          const target = path.join(temporary, "source", file.path);
-          fs.mkdirSync(path.dirname(target), { recursive: true });
-          fs.writeFileSync(target, file.bytes);
-        },
-      });
-      if (exported.spans.reduce((total, span) => total + span.end - span.start, 0) < rom.length) {
-        throw new Error("Source export did not cover the complete ROM.");
-      }
-      return {
-        retained: exported,
-        observation: { generatedFiles: exported.files.length, spans: exported.spans.length },
-      };
+  unexpectedBenchmarkOperation(operation);
+  const manifestBytes = fs.readFileSync(path.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
+  return () => {
+    const exported = exportSnes65816Source(loaded, rom, path.join(temporary, "source"), {
+      sourceProjectSha256: sourceExportSha256(manifestBytes),
+      emitFile: (file) => {
+        const target = path.join(temporary, "source", file.path);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, file.bytes);
+      },
+    });
+    if (exported.spans.reduce((total, span) => total + span.end - span.start, 0) < rom.length) {
+      throw new Error("Source export did not cover the complete ROM.");
+    }
+    return {
+      retained: exported,
+      observation: { generatedFiles: exported.files.length, spans: exported.spans.length },
     };
-  }
-  throw new Error("Unhandled benchmark operation.");
+  };
 };
 
 /**
@@ -820,7 +957,7 @@ const runIsolated = (fixture: Fixture, operation: OperationId): WorkerResult => 
       `Isolated ${fixture.id}/${operation} benchmark failed with status ${String(child.status)}: ${child.stderr.trim()}`,
     );
   }
-  return JSON.parse(child.stdout) as WorkerResult;
+  return readWorkerResult(child.stdout);
 };
 
 const gitText = (args: readonly string[]): string => {
@@ -854,7 +991,8 @@ const main = (): void => {
   if (options.budgetsPath) {
     const budgetsPath = path.resolve(root, options.budgetsPath);
     const bytes = fs.readFileSync(budgetsPath);
-    budgets = JSON.parse(bytes.toString("utf8")) as DisassemblerBenchmarkBudgets;
+    const parsedBudgets: unknown = JSON.parse(bytes.toString("utf8"));
+    budgets = readBudgets(parsedBudgets);
     assertDisassemblerBudgetEnvironment(
       { suite: "uttori-asm-disassembler", environment, benchmarks: [] },
       budgets,
@@ -969,12 +1107,12 @@ const internalWorker = (args: readonly string[]): boolean => {
   const operation = args[index + 2];
   const fixture = fixtureId ? fixtureById.get(fixtureId) : undefined;
   if (!fixture) {
-    throw new Error(`Unknown internal fixture '${String(fixtureId)}'.`);
+    throw new Error(`Unknown internal fixture '${fixtureId}'.`);
   }
-  if (!operation || !operationSet.has(operation)) {
-    throw new Error(`Unknown internal operation '${String(operation)}'.`);
+  if (!operation || !isOperationId(operation)) {
+    throw new Error(`Unknown internal operation '${operation}'.`);
   }
-  process.stdout.write(JSON.stringify(runWorker(fixture, operation as OperationId)));
+  process.stdout.write(JSON.stringify(runWorker(fixture, operation)));
   return true;
 };
 

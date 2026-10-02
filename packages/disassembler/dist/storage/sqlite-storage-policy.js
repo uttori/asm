@@ -1,4 +1,13 @@
 import fs from "node:fs";
+function errorCode(error) {
+    if (typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string") {
+        return error.code;
+    }
+    return undefined;
+}
 /** Default cache allocation and unlimited durable database storage. */
 export const DEFAULT_ANALYSIS_STORAGE_POLICY = {
     cacheMaxBytes: 256 * 1024 ** 2,
@@ -20,6 +29,12 @@ export const CAPTURE_CATALOG_SCHEMA = `CREATE TABLE capture_catalog (
   imported_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL,
   observed_events INTEGER NOT NULL, dropped_events INTEGER NOT NULL DEFAULT 0
 ) WITHOUT ROWID;`;
+function isSafeInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isPolicyRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 /** Stored and displayed independently of semantic edit revisions. Invalid persisted limits fail closed.
  * @param {DatabaseSync} db Open project connection.
  * @returns {AnalysisStoragePolicy} Validated persisted limits merged with defaults.
@@ -29,22 +44,28 @@ export const readStoragePolicy = (db) => {
     return validateStoragePolicy(value ? JSON.parse(String(value)) : {});
 };
 /** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
- * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields. Unknown fields are rejected.
+ * @param {unknown} value Explicit policy fields. Unknown fields are rejected.
  * @returns {AnalysisStoragePolicy} Complete validated byte limits.
  */
 export const validateStoragePolicy = (value) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    if (!isPolicyRecord(value)) {
         throw new Error("Storage policy must be an object containing explicit limits.");
     }
-    const policy = { ...DEFAULT_ANALYSIS_STORAGE_POLICY, ...value };
-    for (const [key, count] of Object.entries(policy)) {
+    let cacheMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.cacheMaxBytes;
+    let databaseMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.databaseMaxBytes;
+    for (const [key, count] of Object.entries(value)) {
         if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key) ||
-            !Number.isSafeInteger(count) ||
-            count < 0) {
+            !(isSafeInteger(count) && count >= 0)) {
             throw new Error(`Invalid storage limit '${key}'. Use nonnegative integer byte limits.`);
         }
+        if (key === "cacheMaxBytes") {
+            cacheMaxBytes = count;
+        }
+        else if (key === "databaseMaxBytes") {
+            databaseMaxBytes = count;
+        }
     }
-    return policy;
+    return { cacheMaxBytes, databaseMaxBytes };
 };
 /** Read bounded SQL aggregates. File sizes include allocated WAL capacity, not additional retained evidence.
  * @param {DatabaseSync} db Project connection inside the owning read snapshot.
@@ -64,7 +85,7 @@ export const storageSnapshot = (db, file) => {
         walBytes = fs.statSync(`${file}-wal`).size;
     }
     catch (error) {
-        if (error.code !== "ENOENT") {
+        if (errorCode(error) !== "ENOENT") {
             throw error;
         }
     }
@@ -181,8 +202,7 @@ export const maintainStorageCaches = (db) => {
     }
     const budget = readStoragePolicy(db).cacheMaxBytes;
     const evicted = retireStorageCaches(db);
-    const entries = CACHES.map((cache) => ({
-        ...cache,
+    const entries = CACHES.map((cache) => Object.assign({}, cache, {
         bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0),
     }));
     let cacheBytes = entries.reduce((n, cache) => n + cache.bytes, 0) + cacheTableBytes(db, "query_cache");

@@ -63,10 +63,10 @@ export interface RuntimeTransferSummary {
     readonly omittedWindows: number;
 }
 /** Normalize boundary fields for deterministic hashing. Common event ordering is validated by the importer.
- * @param {RuntimeTransferBoundary} marker Untrusted marker from a transport-neutral source.
+ * @param {unknown} marker Untrusted marker from a transport-neutral source.
  * @returns {RuntimeTransferBoundary} Canonical marker. Inconsistent counts/configuration throw.
  */
-export declare const validateRuntimeTransferBoundary: (marker: RuntimeTransferBoundary) => RuntimeTransferBoundary;
+export declare const validateRuntimeTransferBoundary: (marker: unknown) => RuntimeTransferBoundary;
 /** Correlate explicit boundaries with payload accesses using at most sixteen open windows.
  * @returns {object} Streaming accumulator. Finish preserves partial windows at capture edges.
  */

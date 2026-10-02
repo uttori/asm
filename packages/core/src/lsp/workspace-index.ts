@@ -606,7 +606,7 @@ export class WorkspaceIndex {
     } catch (error) {
       this.logger?.info(
         `Analysis failed for ${path.basename(root)} after ${Date.now() - started}ms: ` +
-          `${error instanceof Error ? error.message : String(error)}`,
+          (error instanceof Error ? error.message : String(error)),
       );
       // analyzeSource recovers internally. Guard against unexpected throws so
       // one broken root never blanks out the whole workspace index.
@@ -764,11 +764,11 @@ export class WorkspaceIndex {
     const formats = this.environment
       .getAssetFormats(this.target)
       .map((item) => `${item.id}@${item.version}`)
-      .sort();
+      .toSorted();
     const transforms = this.environment
       .getAssetTransforms(this.target)
       .map((item) => `${item.id}@${item.version}`)
-      .sort();
+      .toSorted();
     return {
       target: this.target,
       architecture: this.architecture,
@@ -822,7 +822,7 @@ export class WorkspaceIndex {
     }
     const fileHashes: Record<string, string> = {};
     const fileMtimes: Record<string, number> = {};
-    for (const file of [...files].sort()) {
+    for (const file of [...files].toSorted()) {
       // For overlay (in-memory) files there is no mtime. Record hash only.
       const overlayContent = this.overlay.get(file);
       if (overlayContent !== undefined) {

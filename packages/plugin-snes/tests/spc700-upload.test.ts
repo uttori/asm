@@ -71,9 +71,10 @@ test("SPC700 upload parser models the assembler's multi-block NSPC stream", (t) 
       wraps: false,
     },
   ]);
-  t.deepEqual(Array.from(rom.read(stream.startOffset, stream.endOffset - stream.startOffset)!), [
-    ...bytes.slice(2, 23),
-  ]);
+  t.deepEqual(
+    Array.from(rom.read(stream.startOffset, stream.endOffset - stream.startOffset)!),
+    bytes.slice(2, 23),
+  );
 
   const [segment] = materializeSpc700UploadBlock(rom, stream.blocks[1]);
   t.is(segment.image.loadAddress, 0x5000);

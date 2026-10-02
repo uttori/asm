@@ -23,7 +23,7 @@ export const evidenceReferences = (shards, evidenceId) => [
         .filter((record) => record.evidence.includes(evidenceId))
         .map((record) => `runtime:${record.id}`),
 ];
-const sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+const sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 /**
  * Resolves complete evidence records, reverse references, and related persisted conflicts for one
  * stable project record. This is target-neutral and performs no mapper/address inference.
@@ -59,7 +59,7 @@ export const explainProjectEvidence = (shards, shard, recordId) => {
         (entry.id === recordId ||
             entry.nodes.includes(recordId) ||
             entry.evidence.some((id) => evidenceSet.has(id))))
-        .sort((left, right) => left.id.localeCompare(right.id));
+        .toSorted((left, right) => left.id.localeCompare(right.id));
     return { shard, record, evidence, referencedBy, conflicts };
 };
 //# sourceMappingURL=project-evidence.js.map

@@ -62,7 +62,8 @@ export function handleA16(session) {
  * @returns {void}
  */
 export function handleAccu(session, words) {
-    const widthToken = words[1]?.trim();
+    const widthArgument = words.length > 1 ? words[1] : undefined;
+    const widthToken = widthArgument?.trim();
     if (widthToken === "8") {
         handleA8(session);
     }
@@ -101,7 +102,8 @@ export function handleI16(session) {
  * @returns {void}
  */
 export function handleIndex(session, words) {
-    const widthToken = words[1]?.trim();
+    const widthArgument = words.length > 1 ? words[1] : undefined;
+    const widthToken = widthArgument?.trim();
     if (widthToken === "8") {
         handleI8(session);
     }

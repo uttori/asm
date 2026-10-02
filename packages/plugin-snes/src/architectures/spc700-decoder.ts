@@ -23,6 +23,11 @@ const readLittleEndian = (bytes: Uint8Array, offset: number, width: number): num
   return value >>> 0;
 };
 
+/** Operand byte at `index`, or undefined when the fetched instruction is shorter. */
+function byteAt(bytes: Uint8Array, index: number): number | undefined {
+  return index >= 0 && index < bytes.length ? bytes[index] : undefined;
+}
+
 const signedByte = (value: number): number => (value & 0x80 ? value - 0x100 : value);
 
 const register = (name: string): DecodedOperand => ({ kind: "register", register: name });
@@ -47,7 +52,7 @@ const bitAddress = (bytes: Uint8Array): readonly [DecodedOperand, DecodedOperand
   return [address(encoded & 0x1fff, 2), bit(encoded >>> 13)];
 };
 
-const fixedRegisters: Readonly<Record<string, readonly string[]>> = {
+const fixedRegisters: Partial<Record<string, readonly string[]>> = {
   registerA: ["A"],
   registerX: ["X"],
   registerY: ["Y"],
@@ -72,7 +77,8 @@ const operandsFor = (
   bytes: Uint8Array,
   logicalAddress: number,
 ): readonly DecodedOperand[] => {
-  const byte = bytes[1] ?? 0;
+  const firstOperandByte = byteAt(bytes, 1);
+  const byte = firstOperandByte ?? 0;
   const word = readLittleEndian(bytes, 1, 2);
   const fixed = fixedRegisters[specification.mode];
   if (fixed) {
@@ -90,7 +96,7 @@ const operandsFor = (
       return [
         address(byte, 1),
         bit(Number(specification.mnemonic.at(-1))),
-        relative(bytes[2] ?? 0, logicalAddress, bytes.length),
+        relative(byteAt(bytes, 2) ?? 0, logicalAddress, bytes.length),
       ];
     case "accumulatorDirect":
     case "accumulatorDirectIndexedX":
@@ -106,15 +112,15 @@ const operandsFor = (
     case "accumulatorImmediate":
       return [register("A"), immediate(byte)];
     case "directDirect":
-      return [address(bytes[2] ?? 0, 1), address(byte, 1)];
+      return [address(byteAt(bytes, 2) ?? 0, 1), address(byte, 1)];
     case "carryMemoryBit":
     case "carryInvertedMemoryBit": {
-      const [memory, bit] = bitAddress(bytes);
-      return [register("C"), memory, bit];
+      const [memory, bitOperand] = bitAddress(bytes);
+      return [register("C"), memory, bitOperand];
     }
     case "memoryBitCarry": {
-      const [memory, bit] = bitAddress(bytes);
-      return [memory, bit, register("C")];
+      const [memory, bitOperand] = bitAddress(bytes);
+      return [memory, bitOperand, register("C")];
     }
     case "memoryBit":
       return bitAddress(bytes);
@@ -130,7 +136,7 @@ const operandsFor = (
     case "absoluteAccumulator":
       return [address(word, 2), register("A")];
     case "directImmediate":
-      return [address(bytes[2] ?? 0, 1), immediate(byte)];
+      return [address(byteAt(bytes, 2) ?? 0, 1), immediate(byte)];
     case "registerXAbsolute":
       return [register("X"), address(word, 2)];
     case "registerXDirect":
@@ -147,7 +153,7 @@ const operandsFor = (
       return [register("Y"), immediate(byte)];
     case "directRelative":
     case "directIndexedXRelative":
-      return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+      return [address(byte, 1), relative(byteAt(bytes, 2) ?? 0, logicalAddress, bytes.length)];
     case "registerYRelative":
       return [register("Y"), relative(byte, logicalAddress, bytes.length)];
     case "registerYADirect":
@@ -286,7 +292,10 @@ export class Spc700Decoder implements ArchitectureDecoder<Spc700DecodeState> {
         availableBytes,
       };
     }
-    const specification = spc700Specifications[opcode];
+    const specification =
+      opcode >= 0 && opcode < spc700Specifications.length
+        ? spc700Specifications[opcode]
+        : undefined;
     if (!specification) {
       return {
         kind: "error",
@@ -330,7 +339,8 @@ const formatOperands = (instruction: DecodedInstruction): string => {
     hex(values.find((_, index) => instruction.operands[index].kind === "address") ?? 0, 1);
   const abs = () =>
     hex(values.find((_, index) => instruction.operands[index].kind === "address") ?? 0, 2);
-  const bit = () => values.find((_, index) => instruction.operands[index].kind === "bit") ?? 0;
+  const bitNumber = () =>
+    values.find((_, index) => instruction.operands[index].kind === "bit") ?? 0;
   const relativeTarget = () => hex(target ?? 0, 2);
 
   switch (instruction.mode) {
@@ -356,13 +366,13 @@ const formatOperands = (instruction: DecodedInstruction): string => {
     case "directDirect":
       return `${hex(values[0], 1)},${hex(values[1], 1)}`;
     case "carryMemoryBit":
-      return `C,${abs()}.${bit()}`;
+      return `C,${abs()}.${bitNumber()}`;
     case "carryInvertedMemoryBit":
-      return `C,/${abs()}.${bit()}`;
+      return `C,/${abs()}.${bitNumber()}`;
     case "memoryBitCarry":
-      return `${abs()}.${bit()},C`;
+      return `${abs()}.${bitNumber()},C`;
     case "memoryBit":
-      return `${abs()}.${bit()}`;
+      return `${abs()}.${bitNumber()}`;
     case "direct":
     case "directWord":
       return dp();

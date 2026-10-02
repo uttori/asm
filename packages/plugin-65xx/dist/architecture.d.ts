@@ -37,14 +37,70 @@ export declare class Arch65xx implements ArchitectureEncoder {
      * @returns {boolean} True if encoded.
      */
     encode(words: readonly string[]): boolean;
+    /**
+     * Estimates the size of a resolved instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {number} The estimated size in bytes.
+     */
     estimateInstruction(instruction: LoweredInstruction): number;
+    /**
+     * Encodes a resolved instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {boolean} True if encoded.
+     */
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    /**
+     * Estimates the size of a resolved instruction.
+     * @param {string} rawMnemonic The raw mnemonic.
+     * @param {LoweredOperand} operand The operand.
+     * @returns {number} The estimated size in bytes.
+     */
     private estimateResolved;
+    /**
+     * Encodes a resolved instruction.
+     * @param {string} rawMnemonic The raw mnemonic.
+     * @param {LoweredOperand} operand The operand.
+     * @returns {boolean} True if encoded.
+     */
     private encodeResolved;
+    /**
+     * Reads compound values from operands.
+     * @param {InstructionForm} form The instruction form.
+     * @param {readonly string[]} operands The operands.
+     * @returns {readonly number[]} The compound values.
+     */
     private readCompoundValues;
+    /**
+     * Resolves a form for a mnemonic and operand.
+     * @param {string} rawMnemonic The raw mnemonic.
+     * @param {LoweredOperand} operand The operand.
+     * @returns {InstructionForm | undefined} The resolved form.
+     */
     private resolveForm;
+    /**
+     * Reads an expression value.
+     * @param {string} expression The expression.
+     * @param {1 | 2 | 3} width The width.
+     * @param {string} description The description.
+     * @param {boolean} immediate Whether the expression is immediate.
+     * @returns {number} The value.
+     */
     private readExpressionValue;
+    /**
+     * Reads a branch delta.
+     * @param {LoweredOperand} operand The operand.
+     * @param {number} relativeBaseOffset The relative base offset.
+     * @param {1 | 2} width The width.
+     * @returns {number} The branch delta.
+     */
     private readBranchDelta;
+    /**
+     * Reads a branch expression.
+     * @param {string} expression The expression.
+     * @param {number} relativeBaseOffset The relative base offset.
+     * @param {1 | 2} width The width.
+     * @returns {number} The branch expression.
+     */
     private readBranchExpression;
 }
 //# sourceMappingURL=architecture.d.ts.map

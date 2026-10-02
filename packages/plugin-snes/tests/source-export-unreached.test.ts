@@ -458,12 +458,13 @@ test("captured ROM instructions supersede unreached in memory and SQL without pr
     capture("static-return", 0x808005, [0x60]),
   ])
     .filter((record) => record.kind === "cfg-node")
-    .map((record) => ({
-      ...record,
-      id: "static:cfg:808005",
-      entryPoint: "entry:static",
-      evidencePath: ["static:cfg:808005"],
-    }));
+    .map((record) =>
+      Object.assign({}, record, {
+        id: "static:cfg:808005",
+        entryPoint: "entry:static",
+        evidencePath: ["static:cfg:808005"],
+      }),
+    );
   const input = {
     ...project,
     shards: { ...project.shards, analysis: [...project.shards.analysis, ...staticAnalysis] },

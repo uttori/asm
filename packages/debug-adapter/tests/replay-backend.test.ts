@@ -7,6 +7,10 @@ import {
   type ReplaySnapshot,
 } from "../src/index.js";
 
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
 const cpu = (address: number, accumulator: string): ReplaySnapshot => ({
   threads: [
     { id: 1, name: "65816", architecture: "snes.65816" },
@@ -111,18 +115,22 @@ test("ReplayDebugBackend steps, pauses, stops on breakpoints, and reconnects", a
   t.is((await backend.registers(10))[0]?.value, "0001");
   await backend.pause(1);
 
-  const [breakpoint] = await backend.setBreakpoints([
-    {
-      architecture: "snes.65816",
-      addressSpace: "snes.cpu",
-      address: 0x808002,
-    },
-  ]);
+  const breakpoint = elementAt(
+    await backend.setBreakpoints([
+      {
+        architecture: "snes.65816",
+        addressSpace: "snes.cpu",
+        address: 0x808002,
+      },
+    ]),
+    0,
+  );
   t.true(breakpoint?.verified);
   await backend.continue(1);
   t.is(backend.position, 2);
-  t.is(events.at(-1)?.type, "stopped");
-  t.is(events.at(-1)?.type === "stopped" ? events.at(-1)?.reason : undefined, "breakpoint");
+  const stopped = events.at(-1);
+  t.is(stopped?.type, "stopped");
+  t.is(stopped?.type === "stopped" ? stopped.reason : undefined, "breakpoint");
 
   await backend.disconnect({ terminate: false });
   await backend.connect({ reset: false });

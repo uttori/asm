@@ -152,11 +152,11 @@ const importSpecifiers = (
   }
   const bareImportPattern = /\bimport[\t ]*["']([^\n\r"']+)["']/g;
   for (const match of sourceFile.text.matchAll(bareImportPattern)) {
-    add(match[1], [], match.index ?? 0);
+    add(match[1], [], match.index);
   }
   const dynamicImportPattern = /\bimport[\t ]*\([\t ]*["']([^\n\r"']+)["']/g;
   for (const match of sourceFile.text.matchAll(dynamicImportPattern)) {
-    add(match[1], [], match.index ?? 0);
+    add(match[1], [], match.index);
   }
   return imports;
 };
@@ -174,12 +174,23 @@ const splitIdentifier = (identifier: string): string[] =>
     .filter(Boolean)
     .map((part) => part.toLowerCase());
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 /** Derive the allowed plugin import paths from the core package public exports. */
 const coreExportSpecifiers = (root: string): Set<string> => {
   const packageFile = path.join(root, "packages/core/package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageFile, "utf8")) as {
-    name: string;
-    exports?: Record<string, unknown>;
+  const parsed: unknown = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+  if (!isRecord(parsed) || typeof parsed.name !== "string") {
+    throw new Error("Core package.json is missing a name.");
+  }
+  const exportsValue = parsed.exports;
+  if (exportsValue !== undefined && !isRecord(exportsValue)) {
+    throw new Error("Core package.json exports must be an object.");
+  }
+  const packageJson = {
+    name: parsed.name,
+    ...(exportsValue === undefined ? {} : { exports: exportsValue }),
   };
   const specifiers = new Set<string>();
   for (const exportPath of Object.keys(packageJson.exports ?? { ".": true })) {
@@ -245,7 +256,7 @@ function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundary
     };
     for (const match of sourceFile.text.matchAll(/[$A-Z_a-z][\w$]*|\b\d+\b/g)) {
       for (const part of splitIdentifier(match[0])) {
-        addIdentifierViolation(part, match.index ?? 0);
+        addIdentifierViolation(part, match.index);
       }
     }
   }
@@ -390,9 +401,9 @@ test("package boundary checker rejects core plugin imports and SNES identifiers"
     'import snes from "@uttori/asm-plugin-snes";\nexport const mapper = "lorom";\n',
   );
 
-  const codes = collectPackageBoundaryViolations(root).map((violation) => violation.code);
-  t.true(codes.includes("CORE_IMPORTS_PLUGIN"));
-  t.true(codes.includes("CORE_CONTAINS_SNES_IDENTIFIER"));
+  const codes = new Set(collectPackageBoundaryViolations(root).map((violation) => violation.code));
+  t.true(codes.has("CORE_IMPORTS_PLUGIN"));
+  t.true(codes.has("CORE_CONTAINS_SNES_IDENTIFIER"));
 });
 
 test("package boundary checker rejects private core imports from plugins", (t) => {

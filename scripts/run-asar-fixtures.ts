@@ -69,7 +69,7 @@ function compare(fixture: string): FixtureResult {
 const available = fs
   .readdirSync(tests)
   .filter((name) => name.endsWith(".asm"))
-  .sort();
+  .toSorted();
 const requested = process.argv[2];
 const fixtures = requested ? [`${requested}.asm`] : available;
 for (const fixture of fixtures) {

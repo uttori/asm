@@ -60,7 +60,7 @@ export function reverseTransforms(registry, encoded, steps, maxOutputBytes) {
         throw new RangeError("Encoded bytes exceed output byte limit.");
     }
     let bytes = encoded.slice();
-    for (const step of [...steps].reverse()) {
+    for (const step of [...steps].toReversed()) {
         bytes = registry.get(step.id).decode(bytes, step.options ?? {}, maxOutputBytes);
         if (!(bytes instanceof Uint8Array) || bytes.length > maxOutputBytes) {
             throw new Error(`Transform '${step.id}' exceeded decoded byte limit ${maxOutputBytes}.`);

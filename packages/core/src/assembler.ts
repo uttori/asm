@@ -545,14 +545,15 @@ export class Assembler {
   traceWrite(event: Omit<AssemblerTraceWriteEvent, "type">): void {
     // Byte writes happen below the command dispatcher, so recover the
     // most specific source context from the active command stack.
-    const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+    const sourceIndex = this.traceCommandStack.length - 1;
+    const traceSource = sourceIndex >= 0 ? this.traceCommandStack[sourceIndex] : undefined;
     this.traceListener?.({
       type: "write",
       ...event,
-      file: source?.file ?? this.currentFile,
-      line: source?.line ?? this.currentLine,
-      raw: source?.raw ?? "",
-      normalized: source?.normalized ?? "",
+      file: traceSource?.file ?? this.currentFile,
+      line: traceSource?.line ?? this.currentLine,
+      raw: traceSource?.raw ?? "",
+      normalized: traceSource?.normalized ?? "",
     });
   }
 
@@ -765,7 +766,9 @@ export class Assembler {
         this.collectExpressionReferences(expression.start, fallbackSpan);
         this.collectExpressionReferences(expression.end, fallbackSpan);
         return;
-      default:
+      case "literal":
+      case "raw":
+      case "string":
         return;
     }
   }
@@ -876,9 +879,14 @@ export class Assembler {
         );
       case "unary":
         return this.structNameFromExpression(node.argument, seen);
-      default:
-        return undefined;
+      case "call":
+      case "literal":
+      case "range":
+      case "raw":
+      case "string":
+        break;
     }
+    return undefined;
   }
 
   /**
@@ -1302,7 +1310,7 @@ export class Assembler {
    */
   seedOutputFromBaseImage(): void {
     const seedSize = 512 * 1024;
-    if (!this.baseImage || this.baseImage.length === 0) {
+    if (this.baseImage.length === 0) {
       return;
     }
 
@@ -1339,8 +1347,12 @@ export class Assembler {
    * or factory failure. Factory construction is not a resource transaction: keep external resources
    * in plugin activation disposables and session state cloneable.
    */
-  constructor(options: AssemblerOptions) {
-    if (!options?.environment) {
+  constructor(
+    options: Omit<AssemblerOptions, "environment"> & {
+      environment?: AssemblerOptions["environment"];
+    },
+  ) {
+    if (!options.environment) {
       throw new PluginError("Assembler construction requires a frozen plugin environment.", {
         code: "PLUGIN_CONFIGURATION_INVALID",
       });
@@ -1444,7 +1456,13 @@ export class Assembler {
     this.mathCore.host = this.expressionHost;
     this.installExpressionFunctions(target.expressionSets);
     this.services = this.createServices();
-    const frontEndHost = {
+    const readCurrentFile = (): string => this.currentFile;
+    const readCurrentLine = (): number => this.currentLine;
+    const readInMacroExpansion = (): boolean => this.inMacroExpansion;
+    const readIsDefinitionCollectionStage = (): boolean => this.isDefinitionCollectionStage;
+    const readSyntaxProfile = (): SyntaxProfile => this.syntaxProfile;
+    const readCollectSourceMetadata = (): boolean => this.collectSourceMetadata;
+    const frontEndHost: AssemblyFrontEndHost = {
       passProgramCache: this.passProgramCache,
       resolveVariadicPlaceholders: (command: string) =>
         this.macroEngine.resolveVariadicPlaceholders(command),
@@ -1453,14 +1471,25 @@ export class Assembler {
         loopStartLine?: number,
         ifStartLine?: number,
       ) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
-    } as AssemblyFrontEndHost;
-    Object.defineProperties(frontEndHost, {
-      currentFile: { get: (): string => this.currentFile },
-      currentLine: { get: (): number => this.currentLine },
-      inMacroExpansion: { get: (): boolean => this.inMacroExpansion },
-      isDefinitionCollectionStage: { get: (): boolean => this.isDefinitionCollectionStage },
-      syntaxProfile: { get: (): SyntaxProfile => this.syntaxProfile },
-    });
+      get currentFile() {
+        return readCurrentFile();
+      },
+      get currentLine() {
+        return readCurrentLine();
+      },
+      get inMacroExpansion() {
+        return readInMacroExpansion();
+      },
+      get isDefinitionCollectionStage() {
+        return readIsDefinitionCollectionStage();
+      },
+      get syntaxProfile() {
+        return readSyntaxProfile();
+      },
+      get collectSourceMetadata() {
+        return readCollectSourceMetadata();
+      },
+    };
     this.frontEndService = new AssemblyFrontEndService(frontEndHost);
     this.programModelBuilder = this.frontEndService.programModelBuilder;
     this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
@@ -1776,7 +1805,7 @@ export class Assembler {
     }
     this.sessionDisposed = true;
     const errors: unknown[] = [];
-    for (const { record, instance } of [...this.activeLifecycles].reverse()) {
+    for (const { record, instance } of [...this.activeLifecycles].toReversed()) {
       try {
         instance.onSessionDispose?.({ state: this.pluginState, session: this });
       } catch (cause) {
@@ -1924,14 +1953,14 @@ export class Assembler {
 
   canReadBaseImage(position: number, size: number): number {
     const sourceLength =
-      this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
+      this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
 
   readBaseImage(position: number, size: number, defaultValue?: number): number {
     const pos = Math.trunc(position);
     const pcPos = this.outputWriter.toOutputOffset(pos);
-    const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
+    const source = this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
     if (pcPos < 0) {
       if (defaultValue !== undefined) {
         return defaultValue;
@@ -2168,10 +2197,8 @@ export class Assembler {
   }
 
   getActiveStageCapabilities(): StageExecutionCapabilities {
-    if (!this.activeStageExecutionState) {
-      this.activeStageExecutionState =
-        this.createEphemeralStageExecutionState("collectDefinitions");
-    }
+    this.activeStageExecutionState ??=
+      this.createEphemeralStageExecutionState("collectDefinitions");
     return this.activeStageExecutionState.capabilities;
   }
 
@@ -2715,11 +2742,9 @@ export class Assembler {
     stageState: StageExecutionState,
     program: ProgramModel,
   ): LoweredProgram {
-    if (!stageState.loweredProgram) {
-      stageState.loweredProgram = measureInternalPhase("lowerProgram", () =>
-        this.commandLoweringService.lowerProgram(program),
-      );
-    }
+    stageState.loweredProgram ??= measureInternalPhase("lowerProgram", () =>
+      this.commandLoweringService.lowerProgram(program),
+    );
     return stageState.loweredProgram;
   }
 
@@ -2832,6 +2857,7 @@ export class Assembler {
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
       throw new Error(
         `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`,
+        { cause: e },
       );
     }
     // In our assembler, a condition is true if the result is nonzero.
@@ -2887,9 +2913,11 @@ export class Assembler {
           return this.resolveExpressionInput(this.resolvedefines(expression.value));
         }
         return expression;
-      default:
-        return expression;
+      case "literal":
+      case "string":
+        break;
     }
+    return expression;
   }
 
   /**
@@ -3373,7 +3401,7 @@ export class Assembler {
   } {
     const clone: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
     for (const [depth, entries] of Object.entries(source)) {
-      clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
+      clone[Number(depth)] = entries.map((entry) => Object.assign({}, entry));
     }
     return clone;
   }
@@ -3710,7 +3738,7 @@ export class Assembler {
   executeLoweredLoop(loopBlock: LoweredLoopNode): void {
     if (loopBlock.loopType === "for") {
       this.executeLoweredForLoop(loopBlock);
-    } else if (loopBlock.loopType === "while") {
+    } else {
       this.executeLoweredWhileLoop(loopBlock);
     }
   }

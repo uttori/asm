@@ -213,7 +213,9 @@ try {
   fs.writeFileSync(path.join(root, imagePath), edited.bytes);
   const sourceFile = path.join(root, bank);
   const sourceText = fs.readFileSync(sourceFile, "utf8");
-  const line = sourceText.split("\n").find((line) => line.includes(`segment: "${segment}"`));
+  const line = sourceText
+    .split("\n")
+    .find((sourceLine) => sourceLine.includes(`segment: "${segment}"`));
   assert.ok(line);
   fs.writeFileSync(
     sourceFile,

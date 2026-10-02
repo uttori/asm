@@ -82,17 +82,43 @@ export interface CaptureFileSummary {
 }
 
 const pause = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 10));
-const metadataValid = (m: CaptureFileMetadata): void => {
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A consumer rejection is assigned and then rethrown; the outer catch must still see it. */
+function consumerRejected(failed: boolean): boolean {
+  return failed;
+}
+
+function metadataValid(m: unknown): void {
+  if (!isRecord(m)) {
+    throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
+  const producer = m.producer;
   if (
     m.architecture !== "snes.65816" ||
     m.addressSpace !== "snes.cpu" ||
+    typeof m.romContentSha256 !== "string" ||
     !/^[\da-f]{64}$/.test(m.romContentSha256) ||
-    !m.producer?.id ||
-    !m.producer.revision
+    !isRecord(producer) ||
+    typeof producer.id !== "string" ||
+    !producer.id ||
+    typeof producer.revision !== "string" ||
+    !producer.revision
   ) {
     throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
   }
-};
+}
+
+function captureOutputFormat(value: unknown): "json" | "act2" {
+  const format = value ?? "json";
+  if (format !== "json" && format !== "act2") {
+    throw new Error("Unsupported capture output format.");
+  }
+  return format;
+}
 const jsonFrame = (magic: string, value: unknown): Buffer => {
   const body = Buffer.from(JSON.stringify(value));
   if (body.length > 65536) {
@@ -104,6 +130,12 @@ const jsonFrame = (magic: string, value: unknown): Buffer => {
   header.writeUInt32LE(captureCrc32c(body), 8);
   return Buffer.concat([header, body]);
 };
+
+const emptyStageTiming = (): { calls: number; totalMs: number; maxMs: number } => ({
+  calls: 0,
+  totalMs: 0,
+  maxMs: 0,
+});
 
 /** One bounded chunk at a time. Acceptance follows data sync AND checkpoint sync. */
 export class LosslessCaptureFileRecorder {
@@ -158,21 +190,20 @@ export class LosslessCaptureFileRecorder {
     };
     this.#position = position;
     if (measureStages) {
-      const stage = () => ({ calls: 0, totalMs: 0, maxMs: 0 });
       this.#timings = {
         started: performance.now(),
         bytes: 0,
         stages: {
-          read: stage(),
-          decode: stage(),
-          dataWrite: stage(),
-          dataSync: stage(),
-          checkpointWrite: stage(),
-          checkpointSync: stage(),
-          ack: stage(),
-          status: stage(),
-          idle: stage(),
-          finalize: stage(),
+          read: emptyStageTiming(),
+          decode: emptyStageTiming(),
+          dataWrite: emptyStageTiming(),
+          dataSync: emptyStageTiming(),
+          checkpointWrite: emptyStageTiming(),
+          checkpointSync: emptyStageTiming(),
+          ack: emptyStageTiming(),
+          status: emptyStageTiming(),
+          idle: emptyStageTiming(),
+          finalize: emptyStageTiming(),
         },
       };
     }
@@ -201,10 +232,7 @@ export class LosslessCaptureFileRecorder {
   ): Promise<LosslessCaptureFileRecorder> {
     metadataValid(options);
     const scope = captureScope(options.scope ?? "snes.65816.instructions");
-    const format = options.format ?? "json";
-    if (format !== "json" && format !== "act2") {
-      throw new Error("Unsupported capture output format.");
-    }
+    const format = captureOutputFormat(options.format);
     // Reject before reserving files or arming the producer: legacy instruction JSON
     // cannot represent bus-only records without discarding their evidence.
     if (scope !== "snes.65816.instructions" && format !== "act2") {
@@ -530,35 +558,47 @@ const checkCaptureSize = (size: number, options: CaptureFileReadOptions): void =
  * @param {unknown} value Decoded, checksummed JSON header.
  * @returns {CaptureFileHeader} Supported archive identity and ownership contract.
  */
-const validateCaptureFileHeader = (value: unknown): CaptureFileHeader => {
-  if (!value || typeof value !== "object") {
+function headerAllocationAccepted(value: unknown): boolean {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 4718656 &&
+    value <= 64 * 1024 * 1024
+  );
+}
+
+function assertCaptureFileHeader(value: unknown): asserts value is CaptureFileHeader {
+  if (!isRecord(value)) {
     throw new Error("Missing capture session header.");
   }
-  const header = value as CaptureFileHeader;
-  metadataValid(header);
-  captureSession(header.session);
-  captureScope(header.scope);
+  metadataValid(value);
+  captureSession(value.session);
+  captureScope(value.scope);
+  const clock = value.clock;
   if (
-    header.clock?.id !== "snes.master" ||
-    !captureU64(header.clock.numerator) ||
-    !captureU64(header.clock.denominator)
+    !isRecord(clock) ||
+    clock.id !== "snes.master" ||
+    !captureU64(clock.numerator) ||
+    !captureU64(clock.denominator)
   ) {
     throw new Error("Invalid session clock domain.");
   }
   if (
-    header.format !== "uttori-ares-capture" ||
-    header.version !== 2 ||
-    header.ownership !== "durable-prefix" ||
-    header.compression !== "none" ||
-    header.checksum !== "crc32c" ||
-    header.maxChunkBytes !== 262144 ||
-    !Number.isSafeInteger(header.allocatedBytes) ||
-    header.allocatedBytes < 4718656 ||
-    header.allocatedBytes > 64 * 1024 * 1024
+    value.format !== "uttori-ares-capture" ||
+    value.version !== 2 ||
+    value.ownership !== "durable-prefix" ||
+    value.compression !== "none" ||
+    value.checksum !== "crc32c" ||
+    value.maxChunkBytes !== 262144 ||
+    !headerAllocationAccepted(value.allocatedBytes)
   ) {
     throw new Error("Unsupported capture session contract.");
   }
-  return header;
+}
+
+const validateCaptureFileHeader = (value: unknown): CaptureFileHeader => {
+  assertCaptureFileHeader(value);
+  return value;
 };
 
 /**
@@ -710,8 +750,9 @@ export const recoverCaptureFile = async (
           throw new Error("Noncontiguous capture history.");
         }
       } else if (magic === "ACK2") {
-        const checkpoint = (await json(prefix)) as Record<string, unknown>;
+        const checkpoint = await json(prefix);
         if (
+          !isRecord(checkpoint) ||
           !pending ||
           checkpoint.session !== header.session ||
           checkpoint.chunkThrough !== pending.sequence ||
@@ -772,7 +813,7 @@ export const recoverCaptureFile = async (
     }
   } catch (error) {
     options.signal?.throwIfAborted();
-    if (consumerFailed) {
+    if (consumerRejected(consumerFailed)) {
       throw error;
     }
     return {
@@ -1089,8 +1130,9 @@ export class NativeCaptureFileCursor {
         if (ackPrefix.toString("ascii", 0, 4) !== "ACK2") {
           throw new Error("Native capture chunk has no checkpoint.");
         }
-        const ack = (await json(ackPrefix)) as Record<string, unknown>;
+        const ack = await json(ackPrefix);
         if (
+          !isRecord(ack) ||
           ack.session !== this.header.session ||
           ack.chunkThrough !== chunk.sequence ||
           ack.eventThrough !== chunk.through
@@ -1125,21 +1167,59 @@ const nativePosition = (
   session?: string,
   scope?: CaptureScopeV2,
 ): NativeCaptureFilePosition => {
-  const position = validateCapturePosition(value, session, scope) as NativeCaptureFilePosition;
-  if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
+  const position = validateCapturePosition(value, session, scope);
+  if (!isRecord(value)) {
     throw new Error("Invalid native file state.");
   }
-  captureU64(position.fileBytes);
-  captureU64(position.fileBatches);
-  if (position.fileProfile) {
-    for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"] as const) {
-      captureU64(position.fileProfile[field]);
-    }
+  const fileState = value.fileState;
+  if (
+    fileState !== "preparing" &&
+    fileState !== "writing" &&
+    fileState !== "complete" &&
+    fileState !== "incomplete"
+  ) {
+    throw new Error("Invalid native file state.");
   }
-  if ((position.state === "complete") !== (position.fileState === "complete")) {
+  const fileBytes = value.fileBytes;
+  const fileBatches = value.fileBatches;
+  captureU64(fileBytes);
+  captureU64(fileBatches);
+  if (typeof fileBytes !== "string" || typeof fileBatches !== "string") {
+    throw new Error("Invalid native file counters.");
+  }
+  let fileProfile: NativeCaptureFilePosition["fileProfile"];
+  if (value.fileProfile) {
+    if (!isRecord(value.fileProfile)) {
+      throw new Error("Invalid native file profile.");
+    }
+    const sealNs = value.fileProfile.sealNs;
+    const copyNs = value.fileProfile.copyNs;
+    const writeNs = value.fileProfile.writeNs;
+    const syncNs = value.fileProfile.syncNs;
+    captureU64(sealNs);
+    captureU64(copyNs);
+    captureU64(writeNs);
+    captureU64(syncNs);
+    if (
+      typeof sealNs !== "string" ||
+      typeof copyNs !== "string" ||
+      typeof writeNs !== "string" ||
+      typeof syncNs !== "string"
+    ) {
+      throw new Error("Invalid native file profile.");
+    }
+    fileProfile = { sealNs, copyNs, writeNs, syncNs };
+  }
+  if ((position.state === "complete") !== (fileState === "complete")) {
     throw new Error("Native file publication and producer completion disagree.");
   }
-  return position;
+  return {
+    ...position,
+    fileState,
+    fileBytes,
+    fileBatches,
+    ...(fileProfile ? { fileProfile } : {}),
+  };
 };
 
 /** Controls a local native ACT2 writer. No event bytes cross RSP/DAP and no live

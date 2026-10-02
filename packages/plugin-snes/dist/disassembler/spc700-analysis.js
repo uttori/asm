@@ -1,6 +1,7 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import { analyzeStaticControlFlow, } from "@uttori/asm-disassembler";
 import { Spc700Decoder } from "../architectures/spc700-decoder.js";
+import { coverageRecord, effectiveAddressRecords, incompleteReasonRecords, spc700StateRecord, } from "./analysis-record-values.js";
 import { SPC700_ARAM_ADDRESS_SPACE } from "./spc700-address-space.js";
 import { identifySpc700HardwareRegister } from "./spc700-hardware-registers.js";
 import { applySpc700StateOverride, joinSpc700States, spc700DecodeState, spc700StateKey, transferSpc700State, unknownSpc700State, } from "./spc700-state.js";
@@ -76,14 +77,9 @@ const controlsFor = (instruction, image) => {
     }
     return instruction.references
         .filter((reference) => reference.kind === "branch" || reference.kind === "call" || reference.kind === "jump")
-        .map((reference) => ({
-        kind: controlTargetKind(reference.kind),
-        ...(reference.address === undefined ? {} : { address: reference.address }),
-        ...(reference.indirect ? { indirect: true } : {}),
-        ...(reference.address === undefined
-            ? { explanation: "The decoded indirect target is not known statically." }
-            : {}),
-    }));
+        .map((reference) => Object.assign({}, { kind: controlTargetKind(reference.kind) }, reference.address === undefined ? {} : { address: reference.address }, Object.assign({}, reference.indirect ? { indirect: true } : {}, reference.address === undefined
+        ? { explanation: "The decoded indirect target is not known statically." }
+        : {})));
 };
 const isIndexedOrIndirect = (mode) => mode.includes("Indexed") || mode.includes("Indirect");
 const effectiveAddressesFor = (instruction) => instruction.references
@@ -110,14 +106,12 @@ const effectiveAddressesFor = (instruction) => instruction.references
             explanation: `${hardware.symbol} is volatile SPC700 memory-mapped I/O.`,
         };
     }
-    return {
-        operandIndex,
-        ...(indexed ? { baseAddress: reference.address } : { address: reference.address }),
+    return Object.assign({}, { operandIndex }, indexed ? { baseAddress: reference.address } : { address: reference.address }, {
         volatile: false,
         explanation: indexed
             ? "The encoded address is only a base. Indexing or indirection prevents a static effective address."
             : "Address resolves within the 16-bit SPC700 memory space.",
-    };
+    });
 });
 const annotationState = (state) => state.directPage.kind === "known" ? { directPage: state.directPage.value } : {};
 const recordsFor = (result, runEvidence) => [
@@ -133,12 +127,12 @@ const recordsFor = (result, runEvidence) => [
         mnemonic: node.mnemonic,
         mode: node.mode,
         context: node.context,
-        incomingState: node.incomingState,
-        outgoingState: node.outgoingState,
-        effectiveAddresses: node.effectiveAddresses,
+        incomingState: spc700StateRecord(node.incomingState),
+        outgoingState: spc700StateRecord(node.outgoingState),
+        effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
         entryPoint: node.entryPoint,
         evidencePath: node.evidencePath.map((id) => `static:spc700:${id}`),
-        evidence: [...new Set([...node.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...node.evidence, runEvidence])].toSorted(),
     })),
     ...result.edges.map((edge) => ({
         id: `static:spc700:${edge.id}`,
@@ -152,7 +146,7 @@ const recordsFor = (result, runEvidence) => [
         indirect: edge.indirect,
         ...(edge.override ? { override: edge.override } : {}),
         ...(edge.explanation ? { explanation: edge.explanation } : {}),
-        evidence: [...new Set([...edge.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...edge.evidence, runEvidence])].toSorted(),
     })),
     ...result.functions.map((fn) => ({
         id: `static:spc700:${fn.id}`,
@@ -161,7 +155,7 @@ const recordsFor = (result, runEvidence) => [
         address: fn.address,
         source: fn.source,
         evidencePath: fn.evidencePath.map((id) => `static:spc700:${id}`),
-        evidence: [...new Set([...fn.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...fn.evidence, runEvidence])].toSorted(),
     })),
     ...result.conflicts.map((conflict) => ({
         id: `static:spc700:${conflict.id}`,
@@ -171,7 +165,7 @@ const recordsFor = (result, runEvidence) => [
         conflictKind: conflict.kind,
         message: conflict.message,
         nodes: conflict.nodes.map((id) => `static:spc700:${id}`),
-        evidence: [...new Set([...conflict.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...conflict.evidence, runEvidence])].toSorted(),
     })),
     ...result.unresolved.map((flow) => ({
         id: `static:spc700:${flow.id}`,
@@ -181,16 +175,16 @@ const recordsFor = (result, runEvidence) => [
         flowKind: flow.kind,
         indirect: flow.indirect,
         reason: flow.reason,
-        evidence: [...new Set([...flow.evidence, runEvidence])].sort(),
+        evidence: [...new Set([...flow.evidence, runEvidence])].toSorted(),
     })),
     {
         id: "static:spc700:summary",
         kind: "summary",
         architecture: "snes.spc700",
         status: result.status,
-        coverage: result.coverage,
+        coverage: coverageRecord(result.coverage),
         processedWorkItems: result.processedWorkItems,
-        incompleteReasons: result.incompleteReasons,
+        incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
         evidence: [runEvidence],
     },
 ];
@@ -203,7 +197,7 @@ const annotationsFor = (result, runEvidence) => {
     }
     for (const node of result.nodes) {
         const address = node.address.toString(16).padStart(4, "0");
-        const evidence = [...new Set([...node.evidence, runEvidence])].sort();
+        const evidence = [...new Set([...node.evidence, runEvidence])].toSorted();
         const state = annotationState(stateByAddress.get(node.address) ?? node.incomingState);
         output.set(`static:spc700:opcode:${address}`, {
             id: `static:spc700:opcode:${address}`,
@@ -227,7 +221,7 @@ const annotationsFor = (result, runEvidence) => {
             });
         }
     }
-    return [...output.values()].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    return [...output.values()].toSorted((left, right) => left.start - right.start || left.id.localeCompare(right.id));
 };
 /**
  * Runs conservative SPC700 CFG analysis over one contiguous ARAM image.
@@ -274,7 +268,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
             // Imported evidence is input-sized even though the CPU address space is only 64 KiB.
             rank: annotation.evidence.reduce((rank, id) => Math.max(rank, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]), 0),
         }))
-            .sort((left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id));
+            .toSorted((left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id));
         let state = base;
         const consumed = [];
         for (const { annotation } of matching) {
@@ -284,7 +278,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
                 consumed.push(id);
             }
         }
-        return { state, evidence: [...new Set(consumed)].sort() };
+        return { state, evidence: [...new Set(consumed)].toSorted() };
     };
     const seeds = [];
     for (const label of options.labels ?? []) {
@@ -297,7 +291,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
             address: label.address,
             kind: "imported-label",
             state: seeded.state,
-            evidence: [...new Set([...label.evidence, ...seeded.evidence])].sort(),
+            evidence: [...new Set([...label.evidence, ...seeded.evidence])].toSorted(),
             detail: label.name,
         });
     }
@@ -312,7 +306,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
             address: annotation.start,
             kind: "manual",
             state: seeded.state,
-            evidence: [...new Set([...annotation.evidence, ...seeded.evidence])].sort(),
+            evidence: [...new Set([...annotation.evidence, ...seeded.evidence])].toSorted(),
         });
     }
     for (const entry of options.entryPoints ?? []) {
@@ -332,7 +326,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
             address: entry.address,
             kind: "configured",
             state: applySpc700StateOverride(seeded.state, entry.state ?? {}),
-            evidence: [...new Set([...(entry.evidence ?? [evidenceId]), ...seeded.evidence])].sort(),
+            evidence: [...new Set([...(entry.evidence ?? [evidenceId]), ...seeded.evidence])].toSorted(),
         });
     }
     for (const targetSet of options.targetSets ?? []) {
@@ -346,7 +340,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
                 address,
                 kind: "target-set",
                 state: seeded.state,
-                evidence: [...new Set([...targetSet.evidence, ...seeded.evidence])].sort(),
+                evidence: [...new Set([...targetSet.evidence, ...seeded.evidence])].toSorted(),
             });
         }
     }
@@ -355,7 +349,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
         .map((override) => ({
         id: override.id,
         address: override.address,
-        targets: [...override.targets].sort((left, right) => left - right),
+        targets: [...override.targets].toSorted((left, right) => left - right),
         evidence: override.evidence,
     }));
     const result = analyzeStaticControlFlow({
@@ -433,7 +427,7 @@ export const analyzeSpc700Aram = (image, options = {}) => {
         ...result,
         records: recordsFor(result, runEvidence),
         annotations: annotationsFor(result, runEvidence),
-        evidenceRecords: [...evidenceRecords.values()].sort((left, right) => left.id.localeCompare(right.id)),
+        evidenceRecords: [...evidenceRecords.values()].toSorted((left, right) => left.id.localeCompare(right.id)),
     };
 };
 //# sourceMappingURL=spc700-analysis.js.map

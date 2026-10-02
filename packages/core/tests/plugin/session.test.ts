@@ -7,6 +7,27 @@ import { PluginManager, type SessionStateKey } from "../../src/plugin/index.js";
 
 type FixtureState = { count: number; history: { values: number[] } };
 
+function isFixtureState(value: unknown): value is FixtureState {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "count" in value &&
+    typeof value.count === "number" &&
+    "history" in value &&
+    typeof value.history === "object" &&
+    value.history !== null &&
+    "values" in value.history &&
+    Array.isArray(value.history.values)
+  );
+}
+
+function readFixtureState(value: unknown): FixtureState {
+  if (!isFixtureState(value)) {
+    throw new Error("Expected fixture session state.");
+  }
+  return value;
+}
+
 const fixtureStateKey = { id: "fixture.state" } as SessionStateKey<FixtureState>;
 
 test("environment-driven fixture sessions emit bytes with isolated factories and state", async (t) => {
@@ -42,17 +63,19 @@ test("environment-driven fixture sessions emit bytes with isolated factories and
   });
 
   const index = new WorkspaceIndex({ environment, target: "fixture" });
-  const completionLabels = buildCompletionEntries(
-    index.architecture,
-    { getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name) },
-    index.directiveCatalog,
-    index.toolingCatalog.getExpressionFunctions(),
-  ).map((entry) => entry.label);
-  t.true(completionLabels.includes("fixturebyte"));
-  t.true(completionLabels.includes("fixturevalue"));
-  t.true(completionLabels.includes("fixture_value"));
-  t.false(completionLabels.includes("lorom"));
-  t.false(completionLabels.includes("snestopc"));
+  const completionLabels = new Set(
+    buildCompletionEntries(
+      index.architecture,
+      { getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name) },
+      index.directiveCatalog,
+      index.toolingCatalog.getExpressionFunctions(),
+    ).map((entry) => entry.label),
+  );
+  t.true(completionLabels.has("fixturebyte"));
+  t.true(completionLabels.has("fixturevalue"));
+  t.true(completionLabels.has("fixture_value"));
+  t.false(completionLabels.has("lorom"));
+  t.false(completionLabels.has("snestopc"));
 
   assembler.assembleSource("org $0000\nfix", "fixture.asm");
   t.deepEqual([...assembler.getBinaryOutput()], [0x7f]);
@@ -91,15 +114,15 @@ test("stage snapshots preserve and independently clone nontrivial plugin state",
 
   assembler.assembleProgram(program);
 
-  const collect = assembler.stageExecutionStates
-    .get("collectDefinitions")
-    ?.pluginState.get(fixtureStateKey.id) as FixtureState;
-  const layout = assembler.stageExecutionStates
-    .get("resolveLayout")
-    ?.pluginState.get(fixtureStateKey.id) as FixtureState;
-  const emit = assembler.stageExecutionStates
-    .get("emitProgram")
-    ?.pluginState.get(fixtureStateKey.id) as FixtureState;
+  const collect = readFixtureState(
+    assembler.stageExecutionStates.get("collectDefinitions")?.pluginState.get(fixtureStateKey.id),
+  );
+  const layout = readFixtureState(
+    assembler.stageExecutionStates.get("resolveLayout")?.pluginState.get(fixtureStateKey.id),
+  );
+  const emit = readFixtureState(
+    assembler.stageExecutionStates.get("emitProgram")?.pluginState.get(fixtureStateKey.id),
+  );
 
   t.deepEqual(collect.history.values, [1]);
   t.deepEqual(layout.history.values, [1, 1]);

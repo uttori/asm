@@ -29,16 +29,32 @@ function expandChannel(value: number) {
   return (value << 3) | (value >>> 2);
 }
 
-/** Validate one address-owned run of BGR555 words, regardless of its display shape.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @param {string} id Six-digit ROM address.
+/** Version 1 catalogues store palette records on an object.
+ * @param {unknown} value Parsed catalogue JSON.
+ * @returns {boolean} Whether version and the palette map are present.
+ */
+function isSpritePaletteCatalog(value: unknown): value is SpritePaletteCatalog {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || !("palettes" in value)) {
+    return false;
+  }
+  const palettes = value.palettes;
+  return value.version === 1 && typeof palettes === "object" && palettes !== null;
+}
+
+/**
+ * Validate one address-owned run of BGR555 words, regardless of its display shape.
+ * @param {unknown} catalog Shared palette catalogue.
+ * @param {unknown} id Six-digit ROM address.
  * @returns {SpritePaletteRecord} The address-owned record.
  */
-function paletteRecord(catalog: SpritePaletteCatalog, id: string): SpritePaletteRecord {
-  if (catalog?.version !== 1 || !catalog.palettes || typeof id !== "string") {
+function paletteRecord(catalog: unknown, id: unknown): SpritePaletteRecord {
+  if (!isSpritePaletteCatalog(catalog) || typeof id !== "string") {
     throw new Error("Palette catalogue requires version 1 palette records.");
   }
-  const palette = catalog.palettes[id];
+  const palette = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : undefined;
   if (
     !palette ||
     palette.romAddress !== id ||
@@ -144,18 +160,16 @@ export function spritePalettePreview(catalog: SpritePaletteCatalog, id: string) 
  * @returns {SpritePaletteCatalog} Parsed version 1 catalogue.
  */
 export function parseSpritePaletteCatalog(bytes: Uint8Array): SpritePaletteCatalog {
-  let catalog: SpritePaletteCatalog;
+  let parsed: unknown;
   try {
-    catalog = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-    ) as SpritePaletteCatalog;
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch (error) {
     throw new Error("Invalid sprite palette catalogue.", { cause: error });
   }
-  if (catalog?.version !== 1 || !catalog.palettes || typeof catalog.palettes !== "object") {
+  if (!isSpritePaletteCatalog(parsed)) {
     throw new Error("Sprite palette catalogue must contain version 1 palette records.");
   }
-  return catalog;
+  return parsed;
 }
 
 /** Parse a palette sidecar named by includeAsset; every atlas shares this resource.
@@ -170,7 +184,9 @@ export function readSpritePaletteCatalog(
   if (typeof options.palettes !== "string" || !options.palettes.endsWith(".json")) {
     throw new Error("Sprite frames require a shared palettes JSON resource.");
   }
-  const resource = resources[options.palettes];
+  const resource = Object.hasOwn(resources, options.palettes)
+    ? resources[options.palettes]
+    : undefined;
   if (!resource) {
     throw new Error(`Missing sprite palette catalogue: ${options.palettes}.`);
   }

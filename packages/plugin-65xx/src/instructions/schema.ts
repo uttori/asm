@@ -176,9 +176,22 @@ export function getOperandCodec(mode: AddressingMode): OperandCodecId {
     case "immediateAbsolute":
     case "immediateAbsoluteIndexedX":
       return "immediate-unsigned16";
-    default:
+    case "immediate":
+    case "zeroPage":
+    case "zeroPageIndexedX":
+    case "zeroPageIndexedY":
+    case "zeroPageIndirect":
+    case "zeroPageIndirectLong":
+    case "indexedIndirectX":
+    case "indirectIndexedY":
+    case "zeroPageIndirectIndexedZ":
+    case "stackRelative":
+    case "stackRelativeIndirectIndexedY":
+    case "basePageIndirectIndexedZ":
       return "unsigned8";
   }
+  const leftover: never = mode;
+  throw new Error(`Unsupported addressing mode: ${String(leftover)}`);
 }
 
 /**

@@ -45,7 +45,7 @@ const translation = (options) => {
     }
     return {
         byteToToken,
-        tokenToByte: tokenToByte.sort(([a], [b]) => b.length - a.length || a.localeCompare(b)),
+        tokenToByte: tokenToByte.toSorted(([a], [b]) => b.length - a.length || a.localeCompare(b)),
     };
 };
 /** Decode native single-byte text without replacing unknown values.

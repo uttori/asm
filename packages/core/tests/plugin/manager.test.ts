@@ -2,6 +2,7 @@ import { test } from "../../../../tests/ava-helper.js";
 import { createFixturePlugin } from "../../../../tests/plugin/fixture-plugin.js";
 import type { FixturePluginOptions } from "../../../../tests/plugin/fixture-plugin.js";
 import { directiveCatalog } from "../../src/lsp/directive-catalog.js";
+import type { ArchitectureContribution } from "../../src/plugin/contracts.js";
 import {
   definePlugin,
   PluginError,
@@ -12,6 +13,17 @@ import {
 
 const errorCode = (error: unknown): string | undefined =>
   error instanceof PluginError ? error.code : undefined;
+
+const pluginError = (error: unknown): PluginError => {
+  if (!(error instanceof PluginError)) {
+    throw new Error("Expected PluginError.");
+  }
+  return error;
+};
+
+function isArchitectureContribution(value: object): value is ArchitectureContribution {
+  return "id" in value && typeof value.id === "string";
+}
 
 test("activation accepts decoder-only architectures and rejects malformed optional factories", async (t) => {
   for (const malformed of [false, true]) {
@@ -27,24 +39,31 @@ test("activation accepts decoder-only architectures and rejects malformed option
               apiVersion: PLUGIN_API_VERSION,
             },
             activate(context) {
-              context.registerArchitecture({
+              const contribution = {
                 id: "fixture.decoder-cpu",
                 displayName: "Decoder CPU",
-                unknownInstructionBehavior: "throw",
+                unknownInstructionBehavior: "throw" as const,
                 splitOperands: () => [],
-                classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
+                classifyOperand: (
+                  { operands }: { operands: { lowerOperand(operand: string): string } },
+                  operand: string,
+                ) => operands.lowerOperand(operand),
                 createDecoder: malformed
-                  ? (42 as never)
+                  ? 42
                   : () => ({
-                      decode: ({ offset }) => ({
-                        kind: "error",
+                      decode: ({ offset }: { offset: number }) => ({
+                        kind: "error" as const,
                         code: "invalidOpcode",
                         message: "fixture",
                         offset,
                       }),
                     }),
                 instructions: [],
-              });
+              };
+              if (!isArchitectureContribution(contribution)) {
+                throw new Error("Expected an architecture contribution.");
+              }
+              context.registerArchitecture(contribution);
             },
           }),
         },
@@ -72,11 +91,13 @@ test("plugin manager activates a complete fixture plugin and freezes its environ
   t.true(Object.isFrozen(environment));
   t.true(Object.isFrozen(environment.manifests));
   t.true(Object.isFrozen(environment.getArchitecture("fixture.one-byte")));
-  const architecture = environment.getArchitecture("fixture.one-byte") as {
-    displayName: string;
-  };
+  const architecture = environment.getArchitecture("fixture.one-byte");
+  if (!architecture) {
+    t.fail();
+    return;
+  }
   t.throws(() => {
-    architecture.displayName = "mutated";
+    Object.defineProperty(architecture, "displayName", { value: "mutated" });
   });
   t.is(environment.resolveTargetId("fixture"), "fixture.raw-target");
   t.is(environment.resolveArchitectureId("fixture.raw-target", "fixture-cpu"), "fixture.one-byte");
@@ -107,17 +128,22 @@ test("plugin manager validates module default exports and API versions", async (
   );
   t.is(errorCode(missingDefault), "PLUGIN_INVALID_EXPORT");
 
-  const incompatible = createFixturePlugin({
-    manifest: {
-      id: "fixture.incompatible",
-      name: "Incompatible",
-      version: "1.0.0",
-      apiVersion: 2 as typeof PLUGIN_API_VERSION,
-    },
-  });
   const apiError = await t.throwsAsync(
     new PluginManager().activateModules([
-      { module: { default: incompatible }, pluginModule: "incompatible" },
+      {
+        module: {
+          default: {
+            manifest: {
+              id: "fixture.incompatible",
+              name: "Incompatible",
+              version: "1.0.0",
+              apiVersion: 2,
+            },
+            activate() {},
+          },
+        },
+        pluginModule: "incompatible",
+      },
     ]),
   );
   t.is(errorCode(apiError), "PLUGIN_API_INCOMPATIBLE");
@@ -245,7 +271,7 @@ test("plugin IDs and contribution IDs are globally unique", async (t) => {
   await manager.activatePlugins([{ plugin: owner }]);
   const contributionError = await t.throwsAsync(manager.activatePlugins([{ plugin: intruder }]));
   t.is(errorCode(contributionError), "PLUGIN_CONTRIBUTION_DUPLICATE");
-  t.is((contributionError as PluginError).pluginId, "fixture.intruder");
+  t.is(pluginError(contributionError).pluginId, "fixture.intruder");
 });
 
 test("contribution namespaces may begin with a digit for hardware families", async (t) => {
@@ -402,7 +428,7 @@ test("target and architecture aliases fail with owner-rich diagnostics", async (
   await targetManager.activatePlugins([{ plugin: duplicateTargetAlias }]);
   const targetError = t.throws(() => targetManager.freeze());
   t.is(errorCode(targetError), "PLUGIN_ALIAS_DUPLICATE");
-  t.is((targetError as PluginError).targetId, "fixture.second-target");
+  t.is(pluginError(targetError).targetId, "fixture.second-target");
 
   const duplicateArchitectureAlias = createFixturePlugin();
   const activateArchitectures = duplicateArchitectureAlias.activate.bind(
@@ -437,7 +463,7 @@ test("target and architecture aliases fail with owner-rich diagnostics", async (
   await architectureManager.activatePlugins([{ plugin: duplicateArchitectureAlias }]);
   const architectureError = t.throws(() => architectureManager.freeze());
   t.is(errorCode(architectureError), "PLUGIN_ALIAS_DUPLICATE");
-  t.is((architectureError as PluginError).targetId, "fixture.alias-target");
+  t.is(pluginError(architectureError).targetId, "fixture.alias-target");
 });
 
 test("plugin disposal runs in reverse activation order and is idempotent", async (t) => {

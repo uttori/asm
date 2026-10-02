@@ -16,6 +16,7 @@ import {
   type SourceGenerationFile,
   type ResearchDecision,
   RESEARCH_COLLECTIONS,
+  type ResearchCollection,
   type SourceProjectConfiguration,
   RomImage,
   sourceStatus,
@@ -50,6 +51,30 @@ export interface InitializeSourceOptions {
  * The original ROM stays private. A pure root commit and an ordinary source commit establish
  * cloneable regeneration ancestry without introducing managed-export manifests or folder backups.
  */
+type ImportedResearchCollection = Exclude<ResearchCollection, "evidence">;
+
+function importedResearchRecords(
+  store: ReturnType<typeof openAnalysisProjectStore>,
+  collection: ImportedResearchCollection,
+) {
+  switch (collection) {
+    case "labels":
+      return store.loadTable("labels");
+    case "comments":
+      return store.loadTable("comments");
+    case "regions":
+      return store.loadTable("regions");
+    case "annotations":
+      return store.loadTable("annotations");
+    case "analysis":
+      return store.analysisByKinds(["target-override", "target-set"]);
+    default: {
+      const leftover: never = collection;
+      throw new Error(`Unsupported research collection: ${String(leftover)}`);
+    }
+  }
+}
+
 export async function initializeSnesSourceProject(options: InitializeSourceOptions) {
   const destination = path.resolve(options.directory);
   if (fs.existsSync(destination)) {
@@ -143,10 +168,7 @@ export async function initializeSnesSourceProject(options: InitializeSourceOptio
           if (collection === "evidence") {
             continue;
           }
-          const records =
-            collection === "analysis"
-              ? imported.analysisByKinds(["target-override", "target-set"])
-              : imported.loadTable(collection);
+          const records = importedResearchRecords(imported, collection);
           for (const record of records) {
             decisions.push({
               collection,

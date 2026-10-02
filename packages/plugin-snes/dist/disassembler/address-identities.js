@@ -47,7 +47,7 @@ const mirrorsForOffset = (fileOffset, context, canonical) => {
         }
     }
     mirrors.add(canonical);
-    return [...mirrors].sort((left, right) => left - right);
+    return [...mirrors].toSorted((left, right) => left - right);
 };
 /**
  * Maps a headerless ROM file offset to its CPU identity.

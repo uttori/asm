@@ -256,7 +256,7 @@ try {
   } else if (mode === "rename-table") {
     const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
     const priorBuild = json(".verification/relocation-grow.json").operations.find(
-      (operation) => operation.action === "build",
+      (entry) => entry.action === "build",
     ).result;
     // Only the accepted build's source graph belongs to this test. Historical generated interfaces
     // are still awaiting cleanup and must not become duplicate live declarations in the index.
@@ -268,7 +268,9 @@ try {
     }
     const declarationFile = path.join(root, "disassembly/structs.asm");
     const text = fs.readFileSync(declarationFile, "utf8");
-    const line = text.split("\n").findIndex((line) => line.startsWith("struct ChestTrapHandlers "));
+    const line = text
+      .split("\n")
+      .findIndex((textLine) => textLine.startsWith("struct ChestTrapHandlers "));
     assert.ok(line >= 0);
     const edits = await researchRenameEditsFor(
       index,

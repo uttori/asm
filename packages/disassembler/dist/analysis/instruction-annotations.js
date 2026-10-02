@@ -1,6 +1,6 @@
 import { canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
-const sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
-const sortedNumbers = (values) => values ? [...new Set(values)].sort((left, right) => left - right) : [];
+const sortedStrings = (values) => values ? [...new Set(values)].toSorted((left, right) => left.localeCompare(right)) : [];
+const sortedNumbers = (values) => values ? [...new Set(values)].toSorted((left, right) => left - right) : [];
 const valueKey = (value, present) => present ? canonicalJsonCompact(value) : "<absent>";
 const locationKey = (addressSpace, address) => `${addressSpace}:${address}`;
 /**
@@ -32,7 +32,7 @@ const addAll = (target, values) => {
 };
 const numberField = (record, name) => {
     const value = record[name];
-    return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 };
 const effectiveAddress = (value) => {
     const operandIndex = numberField(value, "operandIndex");
@@ -57,6 +57,27 @@ const effectiveAddress = (value) => {
 };
 const annotationState = (annotation) => annotation.state;
 const runtimeState = (record) => record.state;
+/**
+ * Finds the first indexed value whose numeric key is at least `target`.
+ * @param {readonly T[]} values Sorted indexed values.
+ * @param {number} target Inclusive lower-bound key.
+ * @param {(value: T) => number} at Numeric key selector.
+ * @returns {number} First matching index, or `values.length` when none exists.
+ */
+const lowerBound = (values, target, at) => {
+    let low = 0;
+    let high = values.length;
+    while (low < high) {
+        const middle = low + Math.floor((high - low) / 2);
+        if (at(values[middle]) < target) {
+            low = middle + 1;
+        }
+        else {
+            high = middle;
+        }
+    }
+    return low;
+};
 /**
  * Builds a conservative, target-neutral instruction annotation projection.
  * Exact logical addresses and explicit output offsets are joined. No mapper translation is attempted.
@@ -253,27 +274,6 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
         values.sort((left, right) => left.address - right.address);
     }
     outputIndex.sort((left, right) => left.offset - right.offset);
-    /**
-     * Finds the first indexed value whose numeric key is at least `target`.
-     * @param {readonly T[]} values Sorted indexed values.
-     * @param {number} target Inclusive lower-bound key.
-     * @param {(value: T) => number} at Numeric key selector.
-     * @returns {number} First matching index, or `values.length` when none exists.
-     */
-    const lowerBound = (values, target, at) => {
-        let low = 0;
-        let high = values.length;
-        while (low < high) {
-            const middle = low + Math.floor((high - low) / 2);
-            if (at(values[middle]) < target) {
-                low = middle + 1;
-            }
-            else {
-                high = middle;
-            }
-        }
-        return low;
-    };
     const attachToRange = (addressSpace, start, end, callback) => {
         const direct = directIndex.get(addressSpace) ?? [];
         // Start at the first possible direct address rather than revisiting every projected instruction.
@@ -340,7 +340,7 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
         }
         // Every optional construction collection is normalized back to the original public shape here.
         // consumers never observe missing arrays, maps, or nondeterministic insertion order.
-        return {
+        return Object.assign({
             id: `instruction:${instruction.addressSpace}:${instruction.address}`,
             addressSpace: instruction.addressSpace,
             address: instruction.address,
@@ -348,65 +348,57 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
             architectures: sortedStrings(instruction.architectures),
             nodeIds: sortedStrings(instruction.nodeIds),
             effectiveAddresses: [...(instruction.effectiveAddresses?.values() ?? [])]
-                .map(({ value, nodeIds, evidence }) => ({
-                ...value,
+                .map(({ value, nodeIds, evidence }) => Object.assign({}, value, {
                 nodeIds: sortedStrings(nodeIds),
                 evidence: sortedStrings(evidence),
             }))
-                .sort((left, right) => left.operandIndex - right.operandIndex ||
-                (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) ||
+                .toSorted((left, right) => left.operandIndex - right.operandIndex ||
+                (left.address ?? left.baseAddress ?? -1) -
+                    (right.address ?? right.baseAddress ?? -1) ||
                 left.explanation.localeCompare(right.explanation)),
             stateTransitions: [...(instruction.stateTransitions?.values() ?? [])]
                 // Reuse canonical keys from aggregation. Serializing states inside the comparator repeats
                 // that work O(n log n) times and creates substantial garbage on full runtime captures.
-                .sort((left, right) => left.field.localeCompare(right.field) ||
+                .toSorted((left, right) => left.field.localeCompare(right.field) ||
                 left.beforeKey.localeCompare(right.beforeKey) ||
                 left.afterKey.localeCompare(right.afterKey))
-                .map(({ field, before, after, nodeIds, evidence }) => ({
-                field,
-                ...(before === undefined ? {} : { before }),
-                ...(after === undefined ? {} : { after }),
+                .map(({ field, before, after, nodeIds, evidence }) => Object.assign(Object.assign({}, { field }, before === undefined ? {} : { before }, after === undefined ? {} : { after }), {
                 nodeIds: sortedStrings(nodeIds),
                 evidence: sortedStrings(evidence),
             })),
             stateObservations: [...(instruction.stateObservations?.values() ?? [])]
-                .sort((left, right) => left.source.localeCompare(right.source) ||
+                .toSorted((left, right) => left.source.localeCompare(right.source) ||
                 left.architecture.localeCompare(right.architecture) ||
                 left.stateKey.localeCompare(right.stateKey))
-                .map(({ source, architecture, state, count, recordIds, evidence }) => ({
-                source,
-                architecture,
-                state,
-                ...(count === undefined ? {} : { count }),
+                .map(({ source, architecture, state, count, recordIds, evidence }) => Object.assign({}, { source, architecture, state }, count === undefined ? {} : { count }, {
                 recordIds: sortedStrings(recordIds),
                 evidence: sortedStrings(evidence),
             })),
             executionCount: instruction.executionCount,
-            ...(instruction.comments
-                ? { comments: [...instruction.comments].sort((a, b) => a.id.localeCompare(b.id)) }
-                : {}),
+        }, instruction.comments
+            ? { comments: instruction.comments.toSorted((a, b) => a.id.localeCompare(b.id)) }
+            : {}, {
             executionRecordIds: sortedStrings(instruction.executionRecordIds),
-            runtimeCoverage: [...coverage.values()].sort((left, right) => left.coverage.localeCompare(right.coverage)),
+            runtimeCoverage: [...coverage.values()].toSorted((left, right) => left.coverage.localeCompare(right.coverage)),
             memoryAccesses: [...(instruction.memoryAccesses?.values() ?? [])]
-                .map(({ value, count, recordIds, evidence }) => ({
-                ...value,
+                .map(({ value, count, recordIds, evidence }) => Object.assign({}, value, {
                 count,
                 recordIds: sortedStrings(recordIds),
                 evidence: sortedStrings(evidence),
             }))
-                .sort((left, right) => left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) ||
+                .toSorted((left, right) => left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) ||
                 left.accessedAddress - right.accessedAddress ||
                 left.access.localeCompare(right.access) ||
                 left.width - right.width ||
                 (left.value ?? -1) - (right.value ?? -1)),
             evidence: sortedStrings(instruction.evidence),
-        };
+        });
     });
     return {
-        instructions: finalized.sort((left, right) => left.addressSpace.localeCompare(right.addressSpace) ||
+        instructions: finalized.toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace) ||
             left.address - right.address ||
             left.id.localeCompare(right.id)),
-        diagnostics: diagnostics.sort((left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)),
+        diagnostics: diagnostics.toSorted((left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)),
     };
 };
 //# sourceMappingURL=instruction-annotations.js.map

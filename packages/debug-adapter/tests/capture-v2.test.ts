@@ -134,7 +134,7 @@ test("ACT2 decodes exact u64 sequences and variants, rejects malformed envelopes
     validateCapturePosition({ ...position("2", "1", "complete"), durableThrough: "1" }),
   );
   t.throws(() =>
-    validateCaptureRequest({ operation: "start", bufferBytes: 4718656, scope: "bus" } as never),
+    validateCaptureRequest({ operation: "start", bufferBytes: 4718656, scope: "bus" }),
   );
 });
 
@@ -272,7 +272,7 @@ test("durable writer checkpoints before ack, drains on stop, and exports both RA
       "ack is sent only after validated checkpoints exist on disk",
     );
     const json = JSON.parse(await readFile(file, "utf8"));
-    t.true(json.chunks.every((c: { active: boolean }) => c.active === false));
+    t.true(json.chunks.every((c: { active: boolean }) => ! c.active));
     t.deepEqual(
       json.chunks.map((c: { details: { bytes: number[] }[] }) => c.details[0]!.bytes),
       [[0xe8], [0xca]],

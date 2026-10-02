@@ -9,6 +9,18 @@ import type { ImportReport } from "../model/project-types.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath } from "./git.js";
 
+function errorCode(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+  return undefined;
+}
+
 /** Portable archive identity. The filename is a discovery hint, never a machine-specific location. */
 export interface SourceCaptureArchive {
   readonly name: string;
@@ -39,7 +51,17 @@ export interface SourceCaptureCatalog {
 
 const hashPattern = /^[\da-f]{64}$/;
 /** Runtime array check without widening the validated readonly contract to any[]. */
-const isArray = (value: unknown): boolean => Array.isArray(value);
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function observedCount(counts: Readonly<Record<string, number>>, key: string): number | undefined {
+  return Object.hasOwn(counts, key) ? counts[key] : undefined;
+}
 const validHash = (value: unknown): value is string =>
   typeof value === "string" && hashPattern.test(value);
 const validCount = (value: unknown): value is number =>
@@ -68,7 +90,7 @@ function catalogPath(root: string, name: string): string {
         throw new Error("Capture catalogs cannot follow symlinks.");
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errorCode(error) !== "ENOENT") {
         throw error;
       }
     }
@@ -76,61 +98,85 @@ function catalogPath(root: string, name: string): string {
   return current;
 }
 
-/** Validate before trusting a catalog from a branch, clone or external private-input bundle. */
-export function parseSourceCaptureCatalog(value: unknown, romSha256: string): SourceCaptureCatalog {
-  const catalog = value as SourceCaptureCatalog;
+function assertSourceCaptureCatalog(
+  value: unknown,
+  romSha256: string,
+): asserts value is SourceCaptureCatalog {
+  if (!isRecord(value)) {
+    throw new Error("Invalid source capture catalog or original-ROM identity.");
+  }
+  const catalogRom = value.romSha256;
+  const captureEntries = value.captures;
   if (
-    !catalog ||
-    catalog.format !== "uttori-capture-catalog" ||
-    catalog.version !== 1 ||
-    !validHash(catalog.romSha256) ||
-    catalog.romSha256 !== romSha256 ||
-    !isArray(catalog.captures) ||
-    catalog.captures.length > 10000
+    value.format !== "uttori-capture-catalog" ||
+    value.version !== 1 ||
+    !validHash(catalogRom) ||
+    catalogRom !== romSha256 ||
+    !isUnknownArray(captureEntries) ||
+    captureEntries.length > 10000
   ) {
     throw new Error("Invalid source capture catalog or original-ROM identity.");
   }
   const identities = new Set<string>();
   const archiveOwners = new Map<string, string>();
-  for (const capture of catalog.captures) {
+  for (const entry of captureEntries) {
+    if (!isRecord(entry)) {
+      throw new Error("Invalid or duplicate canonical capture identity.");
+    }
+    const sha256 = entry.sha256;
+    const sourceName = entry.sourceName;
+    const profile = entry.profile;
+    const observedEvents = entry.observedEvents;
+    const droppedEvents = entry.droppedEvents;
+    const archiveEntries = entry.archives;
     if (
-      !capture ||
-      !validHash(capture.sha256) ||
-      identities.has(capture.sha256) ||
-      !validName(capture.sourceName) ||
-      typeof capture.profile !== "string" ||
-      !capture.profile ||
-      capture.profile.length > 128 ||
-      !validCount(capture.observedEvents) ||
-      !validCount(capture.droppedEvents) ||
-      !isArray(capture.archives) ||
-      capture.archives.length > 32
+      !validHash(sha256) ||
+      identities.has(sha256) ||
+      !validName(sourceName) ||
+      typeof profile !== "string" ||
+      profile === "" ||
+      profile.length > 128 ||
+      !validCount(observedEvents) ||
+      !validCount(droppedEvents) ||
+      !isUnknownArray(archiveEntries) ||
+      archiveEntries.length > 32
     ) {
       throw new Error("Invalid or duplicate canonical capture identity.");
     }
-    identities.add(capture.sha256);
+    identities.add(sha256);
     const archiveIds = new Set<string>();
-    for (const archive of capture.archives) {
+    for (const archiveEntry of archiveEntries) {
+      if (!isRecord(archiveEntry)) {
+        throw new Error("Invalid or duplicate capture archive binding.");
+      }
+      const name = archiveEntry.name;
+      const archiveSha = archiveEntry.sha256;
+      const bytes = archiveEntry.bytes;
+      const companion = archiveEntry.companionSha256;
       if (
-        !archive ||
-        !validName(archive.name) ||
-        !validHash(archive.sha256) ||
-        !validCount(archive.bytes) ||
-        archive.bytes === 0 ||
-        (archive.companionSha256 !== undefined && !validHash(archive.companionSha256)) ||
-        archiveIds.has(archive.sha256)
+        !validName(name) ||
+        !validHash(archiveSha) ||
+        !validCount(bytes) ||
+        bytes === 0 ||
+        (companion !== undefined && !validHash(companion)) ||
+        archiveIds.has(archiveSha)
       ) {
         throw new Error("Invalid or duplicate capture archive binding.");
       }
-      const owner = archiveOwners.get(archive.sha256);
-      if (owner && owner !== capture.sha256) {
+      const owner = archiveOwners.get(archiveSha);
+      if (owner && owner !== sha256) {
         throw new Error("One archive is bound to conflicting canonical capture identities.");
       }
-      archiveOwners.set(archive.sha256, capture.sha256);
-      archiveIds.add(archive.sha256);
+      archiveOwners.set(archiveSha, sha256);
+      archiveIds.add(archiveSha);
     }
   }
-  return catalog;
+}
+
+/** Validate before trusting a catalog from a branch, clone or external private-input bundle. */
+export function parseSourceCaptureCatalog(value: unknown, romSha256: string): SourceCaptureCatalog {
+  assertSourceCaptureCatalog(value, romSha256);
+  return value;
 }
 
 /** Catalog absence is explicit during first import or extraction; malformed existing data never resets. */
@@ -151,7 +197,7 @@ export function readSourceCaptureCatalog(
     }
     bytes = fs.readFileSync(file);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errorCode(error) !== "ENOENT") {
       throw error;
     }
     return { catalog: { format: "uttori-capture-catalog", version: 1, romSha256, captures: [] } };
@@ -179,7 +225,10 @@ export function reconcileSourceCaptureCatalog(
       sha256: report.sourceSha256,
       sourceName,
       profile: report.indexProfile ?? "full",
-      observedEvents: report.imported.busEvents ?? report.imported.executionEvents ?? 0,
+      observedEvents:
+        observedCount(report.imported, "busEvents") ??
+        observedCount(report.imported, "executionEvents") ??
+        0,
       droppedEvents:
         report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0,
       archives: captures.get(report.sourceSha256)?.archives ?? [],
@@ -208,7 +257,7 @@ export function reconcileSourceCaptureCatalog(
     if (!prior) {
       captures.set(capture.sha256, {
         ...capture,
-        archives: [...capture.archives, binding.archive].sort((a, b) =>
+        archives: [...capture.archives, binding.archive].toSorted((a, b) =>
           a.sha256.localeCompare(b.sha256),
         ),
       });
@@ -217,7 +266,7 @@ export function reconcileSourceCaptureCatalog(
   return parseSourceCaptureCatalog(
     {
       ...catalog,
-      captures: [...captures.values()].sort((a, b) => a.sha256.localeCompare(b.sha256)),
+      captures: [...captures.values()].toSorted((a, b) => a.sha256.localeCompare(b.sha256)),
     },
     catalog.romSha256,
   );
@@ -274,9 +323,11 @@ export async function fingerprintSourceCapture(
   const hash = createHash("sha256");
   let bytes = 0;
   for await (const chunk of fs.createReadStream(file, { signal })) {
-    const buffer = chunk as Buffer;
-    hash.update(buffer);
-    bytes += buffer.length;
+    if (!Buffer.isBuffer(chunk)) {
+      throw new Error("Capture archive read failed.");
+    }
+    hash.update(chunk);
+    bytes += chunk.length;
     if (bytes > maxBytes) {
       throw new Error("Capture archive grew beyond the project's byte budget.");
     }
@@ -301,7 +352,7 @@ export async function fingerprintSourceCapture(
     }
     companionSha256 = sourceContentHash(fs.readFileSync(manifestFile));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errorCode(error) !== "ENOENT") {
       throw error;
     }
   }

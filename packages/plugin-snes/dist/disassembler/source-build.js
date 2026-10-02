@@ -194,7 +194,7 @@ export function buildSnesSource(options) {
         path: path.relative(root, file.name).replaceAll(path.sep, "/"),
         sha256: file.sha256,
     }))
-        .sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
+        .toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
     const outputSha256 = sourceContentHash(output);
     const inputSha256 = sourceContentHash(canonicalJson({
         sources,

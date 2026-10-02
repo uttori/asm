@@ -2,6 +2,17 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
 import path from "node:path";
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+const digestFile = async (file, signal) => {
+    const hash = createHash("sha256");
+    for await (const bytes of createReadStream(file, { signal })) {
+        if (!Buffer.isBuffer(bytes)) {
+            throw new Error(`Expected binary capture context data in ${path.basename(file)}.`);
+        }
+        hash.update(bytes);
+    }
+    return hash.digest("hex");
+};
 /** Coordinates paused context boundaries with either ACT2 sink. The native
  * companion writes into a newly reserved directory; manifest.json is published
  * only after the ACT2 archive and every companion file are complete and synced. */
@@ -85,12 +96,16 @@ export class CaptureContextRecorder {
      */
     async finish(summary) {
         const boundaries = JSON.parse(await readFile(path.join(this.directory, "boundaries.json"), "utf8"));
+        if (!isRecord(boundaries)) {
+            throw new Error("Capture context boundaries must be an object.");
+        }
+        const boundaryEnd = isRecord(boundaries.end) ? boundaries.end.eventThrough : undefined;
         if (boundaries.session !== summary.position.session ||
-            boundaries.end?.eventThrough !== summary.position.producedThrough) {
+            boundaryEnd !== summary.position.producedThrough) {
             throw new Error("Capture context boundary does not match the completed ACT2 archive.");
         }
         const files = {};
-        for (const name of (await readdir(this.directory)).sort()) {
+        for (const name of (await readdir(this.directory)).toSorted()) {
             if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(name)) {
                 throw new Error(`Unexpected capture context artifact: ${name}.`);
             }
@@ -105,10 +120,7 @@ export class CaptureContextRecorder {
             if (name === "inputs.bin" && stat.size % 18) {
                 throw new Error("Controller evidence has an incomplete row.");
             }
-            const hash = createHash("sha256");
-            for await (const bytes of createReadStream(file)) {
-                hash.update(bytes);
-            }
+            const sha256 = await digestFile(file);
             const handle = await open(file, "r+");
             try {
                 await handle.sync();
@@ -116,7 +128,7 @@ export class CaptureContextRecorder {
             finally {
                 await handle.close();
             }
-            files[name] = { bytes: stat.size, sha256: hash.digest("hex") };
+            files[name] = { bytes: stat.size, sha256 };
         }
         for (const name of [
             "start.bst",
@@ -200,14 +212,17 @@ export const verifyCaptureContext = async (directory, identity, signal) => {
         throw new Error("Invalid capture context manifest.");
     }
     const manifest = JSON.parse(await readFile(metadataFile, "utf8"));
-    const producer = manifest.producer;
+    if (!isRecord(manifest)) {
+        throw new Error("Invalid capture context manifest.");
+    }
+    const producer = isRecord(manifest.producer) ? manifest.producer : undefined;
     if (manifest.format !== "uttori-capture-context" ||
         manifest.version !== 1 ||
         manifest.romContentSha256 !== identity.romContentSha256 ||
-        producer?.id !== identity.producer.id ||
-        producer?.revision !== identity.producer.revision ||
-        !manifest.files ||
-        typeof manifest.files !== "object") {
+        !isRecord(producer) ||
+        producer.id !== identity.producer.id ||
+        producer.revision !== identity.producer.revision ||
+        !isRecord(manifest.files)) {
         throw new Error("Capture context requires the matching ROM and emulator build.");
     }
     const files = manifest.files;
@@ -229,9 +244,11 @@ export const verifyCaptureContext = async (directory, identity, signal) => {
     for (const [name, artifact] of Object.entries(files)) {
         signal?.throwIfAborted();
         if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(name) ||
-            !artifact ||
+            !isRecord(artifact) ||
+            typeof artifact.bytes !== "number" ||
             !Number.isSafeInteger(artifact.bytes) ||
             artifact.bytes < 0 ||
+            typeof artifact.sha256 !== "string" ||
             !/^[\da-f]{64}$/.test(artifact.sha256)) {
             throw new Error("Invalid capture context artifact descriptor.");
         }
@@ -244,11 +261,7 @@ export const verifyCaptureContext = async (directory, identity, signal) => {
             (name === "inputs.bin" && stat.size % 18)) {
             throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
-        const hash = createHash("sha256");
-        for await (const bytes of createReadStream(file, { signal })) {
-            hash.update(bytes);
-        }
-        if (hash.digest("hex") !== artifact.sha256) {
+        if ((await digestFile(file, signal)) !== artifact.sha256) {
             throw new Error(`Capture context checksum mismatch: ${name}.`);
         }
     }

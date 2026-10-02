@@ -2,6 +2,9 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { verifyCaptureContext } from "@uttori/asm-debug-adapter";
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 /**
  * A present companion is part of the import's integrity boundary. Bind its verified artifacts to
  * the primary archive's exact session and terminal count; a different capture of the same ROM
@@ -27,16 +30,21 @@ export async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
     }
     const before = await readFile(manifestFile, "utf8");
     const manifest = JSON.parse(before);
+    if (!isRecord(manifest)) {
+        throw new Error("Capture companion does not match this archive's scope, session, or final event boundary.");
+    }
+    const boundaries = isRecord(manifest.boundaries) ? manifest.boundaries : undefined;
+    const end = boundaries && isRecord(boundaries.end) ? boundaries.end : undefined;
     if (!recovery.complete ||
         manifest.archive !== path.basename(file) ||
         manifest.scope !== recovery.header.scope ||
-        manifest.boundaries?.session !== recovery.header.session ||
-        manifest.boundaries.end?.eventThrough !== recovery.eventThrough) {
+        boundaries?.session !== recovery.header.session ||
+        end?.eventThrough !== recovery.eventThrough) {
         throw new Error("Capture companion does not match this archive's scope, session, or final event boundary.");
     }
     await verifyCaptureContext(directory, recovery.header, signal);
-    const boundaries = JSON.parse(await readFile(path.join(directory, "boundaries.json"), "utf8"));
-    if (!canonicalEquals(boundaries, manifest.boundaries) ||
+    const boundaryArtifact = JSON.parse(await readFile(path.join(directory, "boundaries.json"), "utf8"));
+    if (!canonicalEquals(boundaryArtifact, manifest.boundaries) ||
         (await readFile(manifestFile, "utf8")) !== before) {
         throw new Error("Capture companion changed or its manifest and boundary artifact disagree.");
     }

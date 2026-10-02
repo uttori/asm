@@ -3,7 +3,8 @@ import type { IndexedPixels } from "../indexed-edit.js";
 import type { AssetInput } from "../registry.js";
 import { type SpritePaletteCatalog } from "./som-sprite-palettes.js";
 import type { FrameLayout, FrameLayoutScope } from "./som-types.js";
-/** Validate one assembly segment, or all segments and editor metadata in whole-atlas mode.
+/**
+ * Validate one assembly segment, or all segments and editor metadata in whole-atlas mode.
  * @param {FrameLayout} layout Frame atlas sidecar.
  * @param {string} [segmentName] Segment validated for assembly.
  * @param {boolean} [whole] Validate every segment and frame record.

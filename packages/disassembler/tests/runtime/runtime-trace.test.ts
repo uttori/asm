@@ -29,6 +29,32 @@ const artifact = (): RuntimeInstructionTraceArtifact => ({
   ],
 });
 
+function isTraceRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isTraceChunkList(value: unknown): value is Record<string, unknown>[] {
+  return Array.isArray(value) && value.every(isTraceRecord);
+}
+
+function isNumberList(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "number");
+}
+
+function traceChunk(value: Record<string, unknown>): Record<string, unknown> {
+  if (!isTraceChunkList(value.chunks) || !value.chunks[0]) {
+    throw new Error("Expected a trace chunk.");
+  }
+  return value.chunks[0];
+}
+
+function traceAddresses(chunk: Record<string, unknown>): number[] {
+  if (!isNumberList(chunk.addresses)) {
+    throw new Error("Expected trace addresses.");
+  }
+  return chunk.addresses;
+}
+
 const emptyShards = (): AnalysisProjectShards => ({
   analysis: [],
   annotations: [],
@@ -117,17 +143,16 @@ test("default full indexing retains register variants, status bits and exact obs
     ),
   );
   t.deepEqual(
-    instructions.map((r) => r.state.x).sort((a, b) => Number(a) - Number(b)),
+    instructions.map((r) => r.state.x).toSorted((a, b) => Number(a) - Number(b)),
     details.map((r) => r.state.x),
   );
   t.is(imported.report.indexProfile, undefined);
   const merged = mergeRuntimeEvidence(emptyShards(), imported.batch);
   t.false(mergeRuntimeEvidence(merged.shards, imported.batch).changed);
   // Runtime callers can bypass TypeScript. Reject unsupported modes before consuming a trace.
-  t.throws(
-    () => importRuntimeInstructionTrace(trace, { ...context, indexMode: "sample" as "full" }),
-    { message: /Only full/ },
-  );
+  t.throws(() => importRuntimeInstructionTrace(trace, { ...context, indexMode: "sample" }), {
+    message: /Only full/,
+  });
 });
 
 test("trace indexes fail at an explicit record budget without sampling or exhausting a Map", (t) => {
@@ -196,7 +221,7 @@ test("rich traces retain byte variants, state, bus actors and explicit loss with
     sourceName: "rich.json",
   });
   const runtime = imported.batch.runtime;
-  t.is(runtime.filter((record) => record.kind === "runtime-execution")[0]?.count, 2);
+  t.is(runtime.find((record) => record.kind === "runtime-execution")?.count, 2);
   t.is(runtime.filter((record) => record.kind === "runtime-instruction").length, 2);
   t.is(runtime.filter((record) => record.kind === "runtime-cpu-state").length, 2);
   const memory = runtime.filter((record) => record.kind === "runtime-memory-access");
@@ -321,24 +346,34 @@ test("runtime trace import validates every untrusted artifact boundary", (t) => 
     { mutate: (value) => (value.producer = null), message: /producer must be an object/ },
     { mutate: (value) => (value.chunks = null), message: /chunks must be an array/ },
     {
-      mutate: (value) => ((value.chunks as Array<Record<string, unknown>>)[0]!.addresses = null),
+      mutate: (value) => {
+        traceChunk(value).addresses = null;
+      },
       message: /addresses must be an array/,
     },
     {
-      mutate: (value) => ((value.chunks as Array<Record<string, unknown>>)[0]!.active = "yes"),
+      mutate: (value) => {
+        traceChunk(value).active = "yes";
+      },
       message: /active must be boolean/,
     },
     {
-      mutate: (value) => ((value.chunks as Array<Record<string, unknown>>)[0]!.sequenceStart = 0),
+      mutate: (value) => {
+        traceChunk(value).sequenceStart = 0;
+      },
       message: /sequenceStart/,
     },
     {
-      mutate: (value) =>
-        (((value.chunks as Array<Record<string, unknown>>)[0]!.addresses as number[])[0] = -1),
+      mutate: (value) => {
+        const list = traceAddresses(traceChunk(value));
+        list[0] = -1;
+      },
       message: /address 0/,
     },
     {
-      mutate: (value) => ((value.chunks as Array<Record<string, unknown>>)[0]!.droppedEvents = -1),
+      mutate: (value) => {
+        traceChunk(value).droppedEvents = -1;
+      },
       message: /droppedEvents/,
     },
     {
@@ -356,13 +391,12 @@ test("runtime trace import validates every untrusted artifact boundary", (t) => 
     },
   ];
   for (const { mutate, message } of cases) {
-    const value = structuredClone(artifact()) as unknown as Record<string, unknown>;
+    const value: unknown = structuredClone(artifact());
+    if (!isTraceRecord(value)) {
+      throw new Error("Expected a trace object.");
+    }
     mutate(value);
-    t.throws(
-      () =>
-        importRuntimeInstructionTrace(value as unknown as RuntimeInstructionTraceArtifact, context),
-      { message },
-    );
+    t.throws(() => importRuntimeInstructionTrace(value, context), { message });
   }
 });
 

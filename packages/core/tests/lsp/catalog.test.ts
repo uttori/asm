@@ -160,13 +160,15 @@ test("workspace index analyses SLIDE.SRC and follows includes", (t) => {
     "expected programStart label",
   );
 
-  const edgeTargets = index
-    .getIncludeEdges()
-    .filter((edge) => edge.fromFile === slideRoot)
-    .map((edge) => path.basename(edge.toFile).toLowerCase());
-  t.true(edgeTargets.includes("compress.src"));
-  t.true(edgeTargets.includes("frames.src"));
-  t.true(edgeTargets.includes("animate.src"));
+  const edgeTargets = new Set(
+    index
+      .getIncludeEdges()
+      .filter((edge) => edge.fromFile === slideRoot)
+      .map((edge) => path.basename(edge.toFile).toLowerCase()),
+  );
+  t.true(edgeTargets.has("compress.src"));
+  t.true(edgeTargets.has("frames.src"));
+  t.true(edgeTargets.has("animate.src"));
 
   const analyzedBasenames = index
     .getAnalyzedFiles()

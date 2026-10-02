@@ -295,7 +295,8 @@ const contextKey = (context: readonly CallFrame[]): string =>
 const nodeIdFor = (address: number, context: readonly CallFrame[]): string =>
   `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
 
-const sortedUnique = (values: readonly string[]): readonly string[] => [...new Set(values)].sort();
+const sortedUnique = (values: readonly string[]): readonly string[] =>
+  [...new Set(values)].toSorted();
 
 /**
  * Semantic priority shared by the work heap and historical deterministic traversal.
@@ -362,9 +363,9 @@ class StaticWorkQueue<State> {
   }
 
   shift(): WorkItem<State> | undefined {
-    const first = this.#values[0];
+    const firstSlot = this.#values.length > 0 ? this.#values[0] : undefined;
     const last = this.#values.pop();
-    if (!first || !last) {
+    if (!firstSlot || !last) {
       return undefined;
     }
     if (this.#values.length > 0) {
@@ -389,7 +390,7 @@ class StaticWorkQueue<State> {
       }
       this.#values[index] = last;
     }
-    return first.item;
+    return firstSlot.item;
   }
 
   #compare(left: QueuedWork<State>, right: QueuedWork<State>): number {
@@ -456,7 +457,7 @@ export const analyzeStaticControlFlow = <State>(
   }
 
   const overrides = new Map<number, StaticTargetOverride>();
-  for (const override of [...(options.targetOverrides ?? [])].sort(
+  for (const override of [...(options.targetOverrides ?? [])].toSorted(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id),
   )) {
     if (overrides.has(override.address)) {
@@ -469,7 +470,7 @@ export const analyzeStaticControlFlow = <State>(
   // incrementally by StaticWorkQueue instead of repeatedly sorting the complete pending worklist.
   const queue = new StaticWorkQueue(
     [...seeds]
-      .sort((left, right) => left.address - right.address || left.id.localeCompare(right.id))
+      .toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id))
       .map((seed) => ({
         address: seed.address,
         state: seed.state,
@@ -618,7 +619,7 @@ export const analyzeStaticControlFlow = <State>(
       }
     }
     if (overlapping.size > 0) {
-      const related = [...overlapping, nodeId].sort();
+      const related = [...overlapping, nodeId].toSorted();
       addConflict({
         id: `conflict:instruction-boundary:${hexAddress(item.address)}:${related.join("+")}`,
         kind: "instruction-boundary",
@@ -792,23 +793,23 @@ export const analyzeStaticControlFlow = <State>(
       reachedOffsets.add(offset);
     }
   }
-  const sortedNodes = [...nodes.values()].sort(
+  const sortedNodes = [...nodes.values()].toSorted(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id),
   );
-  const sortedFunctions = [...functions.values()].sort(
+  const sortedFunctions = [...functions.values()].toSorted(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id),
   );
   return {
     status: incompleteReasons.size === 0 ? "complete" : "incomplete",
     nodes: sortedNodes,
-    edges: [...edges.values()].sort(
+    edges: [...edges.values()].toSorted(
       (left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id),
     ),
     functions: sortedFunctions,
-    conflicts: [...conflicts.values()].sort(
+    conflicts: [...conflicts.values()].toSorted(
       (left, right) => left.address - right.address || left.id.localeCompare(right.id),
     ),
-    unresolved: [...unresolved.values()].sort(
+    unresolved: [...unresolved.values()].toSorted(
       (left, right) => left.address - right.address || left.id.localeCompare(right.id),
     ),
     coverage: {
@@ -821,7 +822,7 @@ export const analyzeStaticControlFlow = <State>(
           ? 0
           : Number(((reachedOffsets.size / adapter.backingSize) * 100).toFixed(6)),
     },
-    incompleteReasons: [...incompleteReasons.values()].sort(
+    incompleteReasons: [...incompleteReasons.values()].toSorted(
       (left, right) => left.address - right.address || left.kind.localeCompare(right.kind),
     ),
     processedWorkItems,

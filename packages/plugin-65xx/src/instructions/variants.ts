@@ -87,7 +87,11 @@ function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
     return row[2];
   }
   const [, , base, eaTable] = row;
-  const extension = ca65EaTable[eaTable]?.[modeIndex];
+  const eaRow = eaTable >= 0 && eaTable < ca65EaTable.length ? ca65EaTable[eaTable] : undefined;
+  const extension =
+    eaRow !== undefined && modeIndex >= 0 && modeIndex < eaRow.length
+      ? eaRow[modeIndex]
+      : undefined;
   if (extension === undefined) {
     throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
   }

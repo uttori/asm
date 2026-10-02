@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isFiniteNumber, isRecord } from "../model/record-shape.js";
 import { parseSqlitePayload } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow } from "./sqlite-records.js";
@@ -115,6 +116,9 @@ export const runtimeSummaryInputSql = (incremental) => {
 const registerVariantKey = (db, fields, masks) => {
     db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
         const record = parseSqlitePayload(payload);
+        if (!isRecord(record) || !isByteList(record.bytes) || !isRecord(record.state)) {
+            throw new Error("Invalid instruction variant payload.");
+        }
         const state = {};
         for (const key of fields) {
             const value = record.state[key];
@@ -134,6 +138,9 @@ const registerVariantKey = (db, fields, masks) => {
         return JSON.stringify([record.bytes, state]);
     });
 };
+function isByteList(value) {
+    return Array.isArray(value) && value.every(isFiniteNumber);
+}
 /** A base token survives append-only changes; the pending set distinguishes it from a current result.
  * @param {DatabaseSync} db Connection holding the consuming snapshot.
  * @param {string} signature Exact decoder configuration and summary layout.

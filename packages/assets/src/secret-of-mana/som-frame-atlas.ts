@@ -40,7 +40,142 @@ function rectangle(
   }
 }
 
-/** Validate one assembly segment, or all segments and editor metadata in whole-atlas mode.
+/** Version, segment map, and integer dimensions required before any segment is read.
+ * @param {unknown} value Candidate frame-atlas sidecar.
+ * @returns {boolean} Whether the envelope can be validated as a version-one layout.
+ */
+function isVersionOneLayout(value: unknown): value is FrameLayout {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (
+    !("version" in value) ||
+    !("segments" in value) ||
+    !("width" in value) ||
+    !("height" in value)
+  ) {
+    return false;
+  }
+  return (
+    value.version === 1 &&
+    Boolean(value.segments) &&
+    Number.isInteger(value.width) &&
+    Number.isInteger(value.height)
+  );
+}
+
+/** Accept only the omitted mode or the native-strip mode.
+ * @param {unknown} value `tileSources` field from a sidecar.
+ * @returns {boolean} Whether the mode is known.
+ */
+function isKnownTileSource(value: unknown): boolean {
+  return value === undefined || value === "native-strip";
+}
+
+/** One RGBA8 color, as stored in an atlas index palette.
+ * @param {unknown} color Candidate palette entry.
+ * @returns {boolean} Whether `color` is four integer channels in byte range.
+ */
+function isRgba8(color: unknown): boolean {
+  if (!Array.isArray(color) || color.length !== 4) {
+    return false;
+  }
+  for (const channel of color) {
+    if (typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Two finite integers, the shape stored for a frame origin.
+ * @param {unknown} value Candidate origin pair.
+ * @returns {boolean} Whether `value` is a safe-integer pair.
+ */
+function isIntegerPair(value: unknown): value is readonly [number, number] {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+  for (const component of value) {
+    if (typeof component !== "number" || !Number.isSafeInteger(component)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isIndexedSourceDepth(value: unknown): value is IndexedImage["sourceBitDepth"] {
+  return value === 1 || value === 2 || value === 4 || value === 8;
+}
+
+function isRgbaTuple(value: unknown): value is readonly [number, number, number, number] {
+  return (
+    Array.isArray(value) &&
+    value.length === 4 &&
+    value.every(
+      (channel): channel is number =>
+        typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255,
+    )
+  );
+}
+
+function readIndexedImage(value: unknown): IndexedImage {
+  if (
+    !isRecord(value) ||
+    value.kind !== "indexed-image" ||
+    typeof value.width !== "number" ||
+    typeof value.height !== "number" ||
+    !(value.indexes instanceof Uint8Array) ||
+    !Array.isArray(value.palette) ||
+    !isIndexedSourceDepth(value.sourceBitDepth)
+  ) {
+    throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
+  }
+  const palette: (readonly [number, number, number, number])[] = [];
+  for (const color of value.palette) {
+    if (!isRgbaTuple(color)) {
+      throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
+    }
+    const entry: readonly [number, number, number, number] = [
+      color[0],
+      color[1],
+      color[2],
+      color[3],
+    ];
+    palette.push(entry);
+  }
+  return {
+    kind: "indexed-image",
+    width: value.width,
+    height: value.height,
+    indexes: value.indexes,
+    palette,
+    sourceBitDepth: value.sourceBitDepth,
+  };
+}
+
+/** Blank external tiles are 64 zero indexes. Missing indexes are not blank.
+ * @param {unknown} indexes Candidate index list.
+ * @returns {boolean} Whether every index is zero and the list has tile length.
+ */
+function isBlankExternalIndexes(indexes: unknown): boolean {
+  if (!Array.isArray(indexes) || indexes.length !== 64) {
+    return false;
+  }
+  for (const value of indexes) {
+    if (value !== 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Validate one assembly segment, or all segments and editor metadata in whole-atlas mode.
  * @param {FrameLayout} layout Frame atlas sidecar.
  * @param {string} [segmentName] Segment validated for assembly.
  * @param {boolean} [whole] Validate every segment and frame record.
@@ -50,12 +185,7 @@ export function validateFrameLayout(
   layout: FrameLayout,
   { segmentName, whole = false }: FrameLayoutScope = {},
 ) {
-  if (
-    layout?.version !== 1 ||
-    !layout.segments ||
-    !Number.isInteger(layout.width) ||
-    !Number.isInteger(layout.height)
-  ) {
+  if (!isVersionOneLayout(layout)) {
     throw new Error("Frame atlas requires a version 1 layout with dimensions and segments.");
   }
   if (
@@ -72,12 +202,7 @@ export function validateFrameLayout(
     layout.indexPalette !== undefined &&
     (!Array.isArray(layout.indexPalette) ||
       layout.indexPalette.length !== layout.guideIndex ||
-      layout.indexPalette.some(
-        (color) =>
-          !Array.isArray(color) ||
-          color.length !== 4 ||
-          color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255),
-      ))
+      layout.indexPalette.some((color) => !isRgba8(color)))
   ) {
     throw new Error("Frame atlas indexPalette must bind every native slot to an RGBA8 color.");
   }
@@ -90,12 +215,12 @@ export function validateFrameLayout(
       throw new Error("Frame atlas palette variant refers to an invalid source group.");
     }
   }
-  if (layout.tileSources !== undefined && layout.tileSources !== "native-strip") {
+  if (!isKnownTileSource(layout.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
   }
   const names = whole ? Object.keys(layout.segments) : [segmentName ?? ""];
   for (const name of names) {
-    const segment = layout.segments[name];
+    const segment = Object.hasOwn(layout.segments, name) ? layout.segments[name] : undefined;
     if (!segment || !Array.isArray(segment.tiles) || segment.tiles.length === 0) {
       throw new Error(`Unknown or empty frame atlas segment: ${name}.`);
     }
@@ -199,7 +324,7 @@ export function validateFrameLayout(
         nativeRecords.set(record.address, record);
       }
     }
-    const ordered = [...nativeRecords.values()].sort((a, b) => a.address - b.address);
+    const ordered = [...nativeRecords.values()].toSorted((a, b) => a.address - b.address);
     for (let i = 1; i < ordered.length; i++) {
       if (ordered[i].address < ordered[i - 1].end) {
         throw new Error("Overlapping native frame records.");
@@ -267,16 +392,7 @@ export function inspectFrameAtlas(
   options: FrameLayoutScope = {},
 ): InspectedFrameAtlas {
   validateFrameLayout(layout, options);
-  const imported = pngImporter.import(source).value;
-  if (
-    !imported ||
-    typeof imported !== "object" ||
-    !("kind" in imported) ||
-    imported.kind !== "indexed-image"
-  ) {
-    throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
-  }
-  let image = imported as IndexedImage;
+  let image = readIndexedImage(pngImporter.import(source).value);
   if (image.width !== layout.width || image.height !== layout.height) {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
@@ -288,10 +404,8 @@ export function inspectFrameAtlas(
     spritePaletteColors(catalog, variant.palette);
   }
   const matches = (expected: readonly (readonly number[])[]): boolean =>
-    expected.every(
-      (color, index) =>
-        image.palette[index]?.length === 4 &&
-        color.every((component, channel) => component === image.palette[index][channel]),
+    expected.every((color, index) =>
+      color.every((component, channel) => component === image.palette[index][channel]),
     );
   if (!matches(colors) && (!layout.indexPalette || !matches(layout.indexPalette))) {
     throw new Error(
@@ -304,7 +418,7 @@ export function inspectFrameAtlas(
   const tiles = new Map<string, IndexedPixels[]>();
   const names = options.whole ? Object.keys(layout.segments) : [options.segmentName ?? ""];
   for (const name of names) {
-    const segment = layout.segments[name];
+    const segment = Object.hasOwn(layout.segments, name) ? layout.segments[name] : undefined;
     if (!segment) {
       throw new Error(`Unknown or empty frame atlas segment: ${name}.`);
     }
@@ -392,12 +506,7 @@ export function refreshFrameAtlas(inspected: InspectedFrameAtlas) {
   }
   for (const frame of frames) {
     validateFrameComposition(layout, frame);
-    if (
-      !Array.isArray(frame.origin) ||
-      frame.origin.length !== 2 ||
-      frame.origin.some((v: number) => !Number.isSafeInteger(v)) ||
-      !Array.isArray(frame.placements)
-    ) {
+    if (!isIntegerPair(frame.origin) || !Array.isArray(frame.placements)) {
       throw new Error(
         `Frame ${frame.id} lacks retained composition; enrich it from evidence first.`,
       );
@@ -418,8 +527,7 @@ export function refreshFrameAtlas(inspected: InspectedFrameAtlas) {
         // tiles are supported here; a missing nonblank reference must not disappear.
         if (
           !/^[\dA-F]{6}$/.test(occurrence.external.romAddress) ||
-          occurrence.external.indexes?.length !== 64 ||
-          occurrence.external.indexes.some((v: number) => v !== 0)
+          !isBlankExternalIndexes(occurrence.external.indexes)
         ) {
           throw new Error(`Unresolved external tile in ${frame.id}.`);
         }
@@ -472,7 +580,7 @@ export function refreshFrameAtlas(inspected: InspectedFrameAtlas) {
         source: `${name}:${index}`,
         x: strip.bounds[0] + (index % strip.columns) * strip.step,
         y: strip.bounds[1] + Math.floor(index / strip.columns) * strip.step,
-        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i),
+        indexMap: Array.from({ length: 16 }, (_entry, i) => segment.palette * 16 + i),
       }),
     );
   }
@@ -509,15 +617,18 @@ export function readFrameLayout(
   if (typeof options.layout !== "string" || !options.layout.endsWith(".json")) {
     throw new Error("Frame atlas layout must name a JSON sidecar.");
   }
-  const resource = resources[options.layout];
+  const resource = Object.hasOwn(resources, options.layout) ? resources[options.layout] : undefined;
   if (!resource) {
     throw new Error(`Missing frame atlas layout: ${options.layout}.`);
   }
-  let layout: FrameLayout;
+  let parsed: unknown;
   try {
-    layout = JSON.parse(new TextDecoder().decode(resource.bytes)) as FrameLayout;
+    parsed = JSON.parse(new TextDecoder().decode(resource.bytes));
   } catch (error) {
     throw new Error(`Invalid frame atlas layout: ${options.layout}.`, { cause: error });
   }
-  return layout;
+  if (!isVersionOneLayout(parsed)) {
+    throw new Error("Frame atlas requires a version 1 layout with dimensions and segments.");
+  }
+  return parsed;
 }

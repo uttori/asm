@@ -5,5 +5,5 @@ import type { DebugTraceInstructionDetail } from "./contracts.js";
  * @param {number} count Expected instruction count.
  * @returns {readonly DebugTraceInstructionDetail[]} Validated details.
  */
-export declare const validateDebugTraceDetails: (value: unknown, count: number) => readonly DebugTraceInstructionDetail[];
+export declare function validateDebugTraceDetails(value: unknown, count: number): readonly DebugTraceInstructionDetail[];
 //# sourceMappingURL=trace-detail-validation.d.ts.map

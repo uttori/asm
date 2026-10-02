@@ -96,7 +96,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       this.extensionUri,
       "panel",
     );
-    webviewView.webview.onDidReceiveMessage((message: { type?: string; value?: unknown }) => {
+    webviewView.webview.onDidReceiveMessage((message: unknown) => {
       void this.onMessage(message);
     });
     webviewView.onDidChangeVisibility(() => {
@@ -134,8 +134,8 @@ export class ProjectPanelProvider implements WebviewViewProvider {
    * @param {string} message.type The type of message.
    * @param {unknown} message.value The value of the message.
    */
-  async onMessage(message: { type?: string; value?: unknown }): Promise<void> {
-    if (!message || typeof message.type !== "string" || this.#pending.has(message.type)) {
+  async onMessage(message: unknown): Promise<void> {
+    if (!isPanelMessage(message) || this.#pending.has(message.type)) {
       return;
     }
     this.#pending.add(message.type);
@@ -160,7 +160,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
    * @param {string} message.type The type of message.
    * @param {unknown} message.value The value of the message.
    */
-  private async executeMessage(message: { type?: string; value?: unknown }): Promise<void> {
+  private async executeMessage(message: { type: string; value?: unknown }): Promise<void> {
     switch (message.type) {
       case "ready":
       case "refresh":
@@ -327,6 +327,13 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     await workspace.getConfiguration("asm").update(key, value, ConfigurationTarget.Workspace);
     await this.refresh();
   }
+}
+
+/** Webview posts are untrusted. Ignore anything that is not an object with a string type. */
+function isPanelMessage(value: unknown): value is { type: string; value?: unknown } {
+  return (
+    typeof value === "object" && value !== null && "type" in value && typeof value.type === "string"
+  );
 }
 
 /**

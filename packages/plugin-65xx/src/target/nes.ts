@@ -28,6 +28,15 @@ export const NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 const INES_MAGIC = [0x4e, 0x45, 0x53, 0x1a];
 
 /**
+ * Accepts a JSON object. Arrays and null are not option maps.
+ * @param {unknown} value Candidate target options.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
  * NES target options. Plugin activation stays origin-only for the raw target.
  * These fields are per-session `targetOptions`.
  */
@@ -45,10 +54,7 @@ export interface Nes65xxTargetOptions extends Readonly<Record<string, unknown>> 
  * @returns {Nes65xxTargetOptions} Normalized options including a parsed linker.
  */
 export function createNes65xxTargetOptions(configured: unknown): Nes65xxTargetOptions {
-  const value =
-    typeof configured === "object" && configured !== null && !Array.isArray(configured)
-      ? (configured as Record<string, unknown>)
-      : {};
+  const value = isRecord(configured) ? configured : {};
   const linkerConfig =
     typeof value.linkerConfig === "string" && value.linkerConfig.trim()
       ? value.linkerConfig
@@ -87,20 +93,24 @@ export function createInitialNesState(context: {
 }
 
 /**
+ * Rejects addresses outside the unsigned 16-bit NES CPU space.
+ * @param {number} address Candidate CPU address.
+ * @returns {number} The same address when it is in range.
+ */
+function validate(address: number): number {
+  if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
+    throw new Error(`Address $${address.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+  }
+  return address;
+}
+
+/**
  * Maps CPU addresses through the current load MEMORY region into the iNES image.
  * Overlay run addresses are never written. `base` keeps the load cursor for stores.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */
 export function createNesAddressSpace({ state }: TargetFactoryContext): TargetAddressSpace {
-  const validate = (address: number): number => {
-    if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
-      throw new Error(
-        `Address $${address.toString(16).toUpperCase()} is outside 16-bit NES space.`,
-      );
-    }
-    return address;
-  };
   return {
     addressWidth: 16,
     defaultOrigin: 0,

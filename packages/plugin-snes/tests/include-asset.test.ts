@@ -335,7 +335,13 @@ test("one conversion supplies multiple selected parts across passes and re-reads
         id: "example.parts",
         version: "1.0.0",
         targets: ["snes.sfc"],
-        resourcePaths: (options) => [options.dictionary as string],
+        resourcePaths: (options) => {
+          const dictionary = options.dictionary;
+          if (typeof dictionary !== "string") {
+            throw new Error("Asset dictionary option must be a string.");
+          }
+          return [dictionary];
+        },
         convert: (source, _options, resources) => {
           calls++;
           return {

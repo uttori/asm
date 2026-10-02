@@ -15,6 +15,31 @@ import {
 import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import * as vscode from "vscode";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isProjectLabel = (value: unknown): value is ProjectLabel =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.addressSpace === "string" &&
+  typeof value.address === "number" &&
+  typeof value.name === "string" &&
+  Array.isArray(value.evidence) &&
+  (value.sourceName === undefined || typeof value.sourceName === "string");
+
+/** Native undo can resolve before all document-change notifications reach the extension host. */
+async function restored(document: vscode.TextDocument, expected: string): Promise<void> {
+  const deadline = Date.now() + 5000;
+  while (document.getText() !== expected && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.equal(
+    document.getText(),
+    expected,
+    `Native undo did not restore ${document.uri.toString()}`,
+  );
+}
+
 /** Exercise real buffers, F2, native undo, tasks and background source commands in the seeded full clone. */
 export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Promise<void> {
   const root = folder.uri.fsPath;
@@ -38,15 +63,26 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
   );
   const initialTree = (await sourceGit(root, ["write-tree"])).stdout.toString();
   assert.equal((await sourceGit(root, ["status", "--porcelain"])).stdout.length, 0);
-  const report: Record<string, unknown> = {
+  const checks: string[] = [];
+  const timings: Record<string, number> = {};
+  const report: {
+    editor: string;
+    node: string;
+    started: string;
+    checks: string[];
+    timings: Record<string, number>;
+    success: boolean;
+    error?: string;
+    phaseTimerDelayMs?: Record<string, { samples: number; maximum?: number; p95?: number }>;
+    hostTimerDelayMs?: { samples: number; maximum?: number; p95?: number };
+  } = {
     editor: vscode.version,
     node: process.versions.node,
     started: new Date().toISOString(),
-    checks: [],
-    timings: {},
+    checks,
+    timings,
+    success: false,
   };
-  const checks = report.checks as string[];
-  const timings = report.timings as Record<string, number>;
   const delays: number[] = [];
   const phaseDelays = new Map<string, number[]>();
   let activeCommand = "editor updates";
@@ -81,18 +117,7 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       activeCommand = "editor updates";
     }
   }
-  /** Native undo can resolve before all document-change notifications reach the extension host. */
-  async function restored(document: vscode.TextDocument, expected: string): Promise<void> {
-    const deadline = Date.now() + 5000;
-    while (document.getText() !== expected && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-    assert.equal(
-      document.getText(),
-      expected,
-      `Native undo did not restore ${document.uri.toString()}`,
-    );
-  }
+
   try {
     await command("asm.source.select", folder.uri);
     const tasks = await vscode.tasks.fetchTasks({ type: "uttori-source" });
@@ -155,15 +180,21 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       file.document.decisions.some(
         (item) =>
           item.collection === "labels" &&
-          (item.value as ProjectLabel | null)?.sourceName === "LocalRandomByte",
+          isProjectLabel(item.value) &&
+          item.value.sourceName === "LocalRandomByte",
       ),
     );
     assert.ok(names);
-    const symbol = names.document.decisions.find(
+    const labelDecision = names.document.decisions.find(
       (item) =>
         item.collection === "labels" &&
-        (item.value as ProjectLabel | null)?.sourceName === "LocalRandomByte",
-    )!.value as ProjectLabel;
+        isProjectLabel(item.value) &&
+        item.value.sourceName === "LocalRandomByte",
+    );
+    if (!labelDecision || !isProjectLabel(labelDecision.value)) {
+      assert.fail("LocalRandomByte label was not found.");
+    }
+    const symbol = labelDecision.value;
     const nameUri = vscode.Uri.file(path.join(root, names.path));
     const nameDocument = await vscode.workspace.openTextDocument(nameUri);
     snapshots.set(nameUri.toString(), nameDocument.getText());
@@ -171,17 +202,25 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       symbolId: symbol.id,
       change: { kind: "aliases", aliases: ["HostRandomAlias"] },
     });
-    assert.equal(aliased?.kind, "edit");
+    assert.equal(aliased.kind, "edit");
     assert.match(nameDocument.getText(), /HostRandomAlias/);
     const aliasedText = nameDocument.getText();
     const suppressed = await command<SourceResearchResult>("asm.source.editResearch", {
       symbolId: symbol.id,
       change: { kind: "suppression", suppressed: true },
     });
-    assert.equal(suppressed?.kind, "edit");
-    const changedSymbol = JSON.parse(nameDocument.getText()).decisions.find(
-      (item: { id: string }) => item.id === symbol.id,
-    ).value as ProjectLabel;
+    assert.equal(suppressed.kind, "edit");
+    const savedResearch: unknown = JSON.parse(nameDocument.getText());
+    if (!isRecord(savedResearch) || !Array.isArray(savedResearch.decisions)) {
+      assert.fail("Research decisions must be an array.");
+    }
+    const decision = savedResearch.decisions.find(
+      (item) => isRecord(item) && item.id === symbol.id,
+    );
+    if (!isRecord(decision) || !isRecord(decision.value)) {
+      assert.fail(`Research decision ${symbol.id} is missing its label.`);
+    }
+    const changedSymbol = decision.value;
     assert.deepEqual(changedSymbol.aliases, ["HostRandomAlias"]);
     assert.equal(changedSymbol.suppressed, true);
     assert.equal(changedSymbol.analysisEntryPoint, symbol.analysisEntryPoint);
@@ -217,7 +256,7 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
           reason: `Native editor assumption check with carry ${carry}.`,
         },
       );
-      assert.equal(result?.kind, "edit");
+      assert.equal(result.kind, "edit");
     }
     analysisHistory.push(nameDocument.getText());
     const targets = await command<SourceResearchResult>("asm.source.editAnalysis", {
@@ -235,7 +274,7 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       },
       reason: "Native editor indirect-target declaration check.",
     });
-    assert.equal(targets?.kind, "edit");
+    assert.equal(targets.kind, "edit");
     assert.equal(nameDocument.isDirty, true);
     const decisions = JSON.parse(nameDocument.getText()).decisions;
     const assumption = decisions.find(
@@ -309,7 +348,7 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
         new vscode.Position(line, column + 1),
         item.name,
       );
-      assert.ok(renamed?.size);
+      assert.ok(renamed.size);
       const before = new Map<string, string>();
       for (const [changedUri, edits] of renamed.entries()) {
         const changedDocument = await vscode.workspace.openTextDocument(changedUri);
@@ -368,7 +407,7 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       fs.rmSync(cacheNoise, { force: true });
       fs.rmSync(reportNoise, { force: true });
     }
-    assert.ok(built?.outputFile);
+    assert.ok(built.outputFile);
     assert.equal(
       sourceContentHash(fs.readFileSync(built.outputFile)),
       "6abc48cc519de82d50edc730ba9ad32bdadc1e26e62f7420c3b75ea7eb033622",
@@ -437,9 +476,15 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       vscode.Uri.joinPath(folder.uri, ".uttori/layout.json"),
     );
     const beforeLayout = layoutDocument.getText();
-    const invalidLayout = JSON.parse(beforeLayout) as { extents: { size: number }[] };
-    assert.ok(invalidLayout.extents.length);
-    invalidLayout.extents[0].size++;
+    const invalidLayout: unknown = JSON.parse(beforeLayout);
+    if (!isRecord(invalidLayout) || !Array.isArray(invalidLayout.extents)) {
+      assert.fail("Layout extents must be an array.");
+    }
+    const extent: unknown = invalidLayout.extents[0];
+    if (!isRecord(extent) || typeof extent.size !== "number") {
+      assert.fail("Layout extent is missing a numeric size.");
+    }
+    extent.size++;
     try {
       const invalid = new vscode.WorkspaceEdit();
       invalid.replace(
@@ -495,7 +540,7 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       assert.equal(await vscode.workspace.applyEdit(restore), true);
       assert.equal(await layoutDocument.save(), true);
     }
-    assert.ok((await command<SnesSourceBuild>("asm.source.build"))?.outputFile);
+    assert.ok((await command<SnesSourceBuild>("asm.source.build")).outputFile);
     assert.equal(
       vscode.languages
         .getDiagnostics()
@@ -506,14 +551,14 @@ export async function runSourceWorkflowSmoke(folder: vscode.WorkspaceFolder): Pr
       "invalid fixed extent creates a source-linked Problem with relocation/layout quick fixes; restoring the contract clears it on build",
     );
     const prepared = await command<PreparedSnesGeneration>("asm.source.prepare");
-    assert.ok(prepared?.generation.commit);
+    assert.ok(prepared.generation.commit);
     candidate = prepared.generation.commit;
     const comment = new vscode.WorkspaceEdit();
     comment.insert(bank.uri, new vscode.Position(0, 0), "; Unsaved native preview verification.\n");
     assert.equal(await vscode.workspace.applyEdit(comment), true);
     await vscode.window.showTextDocument(bank);
     const preview = await command<SourceMergePreview>("asm.source.preview");
-    assert.ok(preview?.sourceTree);
+    assert.ok(preview.sourceTree);
     assert.equal(bank.isDirty, true);
     assert.match(bank.getText(), /^; Unsaved native preview verification\./);
     assert.equal((await sourceGit(root, ["write-tree"])).stdout.toString(), initialTree);

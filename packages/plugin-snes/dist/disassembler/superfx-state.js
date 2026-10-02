@@ -1,3 +1,4 @@
+import { isSuperFxAltState } from "../architectures/superfx-spec.js";
 const known = (value) => ({ kind: "known", value });
 const unknown = () => ({ kind: "unknown" });
 export const initialSuperFxState = (programBank) => ({
@@ -40,12 +41,14 @@ const detailNumber = (instruction, name) => {
 export const transferSuperFxState = (instruction, state) => {
     const alt = detailNumber(instruction, "set-superfx-alt");
     if (alt !== undefined) {
-        return {
-            ...state,
-            alt: state.alt.kind === "known"
-                ? known(((state.alt.value | alt) & 3))
-                : state.alt,
-        };
+        if (state.alt.kind !== "known") {
+            return { ...state, alt: state.alt };
+        }
+        const masked = (state.alt.value | alt) & 3;
+        if (!isSuperFxAltState(masked)) {
+            return { ...state, alt: state.alt };
+        }
+        return { ...state, alt: known(masked) };
     }
     const destination = detailNumber(instruction, "select-superfx-destination");
     if (destination !== undefined) {

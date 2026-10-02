@@ -5,10 +5,20 @@ const SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isResearchCollection(value) {
+    return (value === "labels" ||
+        value === "comments" ||
+        value === "annotations" ||
+        value === "regions" ||
+        value === "analysis" ||
+        value === "evidence");
+}
 /** SQL table names must come from a fixed allowlist even when restored from local cache rows. */
 const collectionName = (value) => {
-    if (typeof value !== "string" ||
-        !["labels", "comments", "annotations", "regions", "analysis", "evidence"].includes(value)) {
+    if (typeof value !== "string" || !isResearchCollection(value)) {
         throw new Error("Invalid research projection collection.");
     }
     return value;
@@ -19,6 +29,9 @@ const recordValue = (payload) => payload == null ? null : JSON.parse(decodeSqlit
 function analysisInput(collection, value) {
     if (value === null || collection === "comments") {
         return null;
+    }
+    if (!isRecord(value)) {
+        throw new Error("Invalid research record.");
     }
     const record = value;
     if (collection === "labels") {
@@ -103,7 +116,7 @@ export function projectResearchInputs(database, snapshot, insert) {
             .get(decision.id);
         if (collection === "evidence" && before) {
             const observation = recordValue(before.payload);
-            if (observation.source !== "manual") {
+            if (!isRecord(observation) || observation.source !== "manual") {
                 throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
             }
         }

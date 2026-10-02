@@ -140,11 +140,19 @@ function assetSpanContains(node: AssetValueNode, character: number): boolean {
  * @param {number} character Zero-based cursor column.
  * @returns {string | undefined} User-spelled path when selected.
  */
+/** Option names that the statement did not write are absent. */
+function assetOption(
+  options: Readonly<Record<string, AssetValueNode>>,
+  key: string,
+): AssetValueNode | undefined {
+  return Object.hasOwn(options, key) ? options[key] : undefined;
+}
+
 function assetPathAt(call: ParsedAssetCall, character: number): string | undefined {
   if (assetSpanContains(call.path, character)) {
     return call.path.value;
   }
-  const palette = call.options.palette;
+  const palette = assetOption(call.options, "palette");
   if (
     palette?.kind === "string" &&
     assetSpanContains(palette, character) &&
@@ -246,6 +254,11 @@ function splitLines(text: string): readonly string[] {
   return lines;
 }
 
+/** Lines outside the split document are absent. */
+function lineAt(lines: readonly string[], line: number): string | undefined {
+  return line >= 0 && line < lines.length ? lines[line] : undefined;
+}
+
 /**
  * Recomputes a token's range in the raw document so it does not inherit the
  * column offset introduced by command normalization (which strips leading
@@ -268,7 +281,7 @@ function preciseRange(
   if (!text) {
     return fallback;
   }
-  const rawLine = splitLines(text)[line];
+  const rawLine = lineAt(splitLines(text), line);
   if (rawLine === undefined) {
     return fallback;
   }
@@ -321,7 +334,7 @@ function preciseRangeWithSigil(
   if (!text) {
     return fallback;
   }
-  const rawLine = splitLines(text)[line];
+  const rawLine = lineAt(splitLines(text), line);
   if (rawLine === undefined) {
     return fallback;
   }
@@ -462,7 +475,7 @@ function findCompoundSuffixColumn(lineText: string, segment: string): number {
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#position
  */
 function wordAt(text: string, position: Position): string | undefined {
-  const line = splitLines(text)[position.line];
+  const line = lineAt(splitLines(text), position.line);
   if (line === undefined) {
     return undefined;
   }
@@ -526,7 +539,7 @@ function includeOriginRange(
   if (!text) {
     return undefined;
   }
-  const line = splitLines(text)[position.line];
+  const line = lineAt(splitLines(text), position.line);
   if (line === undefined) {
     return undefined;
   }
@@ -652,7 +665,7 @@ function compoundLeafCandidates(
     const inFile = symbol.location.file === file ? 1 : 0;
     return inFile * 1_000_000 + symbol.name.length;
   };
-  return [...exact, ...bySuffix].sort((left, right) => rank(right) - rank(left));
+  return [...exact, ...bySuffix].toSorted((left, right) => rank(right) - rank(left));
 }
 
 /**
@@ -775,7 +788,7 @@ function compoundSegmentRanges(
   if (!text) {
     return undefined;
   }
-  const lineText = splitLines(text)[line];
+  const lineText = lineAt(splitLines(text), line);
   if (lineText === undefined) {
     return undefined;
   }
@@ -815,7 +828,7 @@ function hierarchicalSegmentAt(
   if (!text) {
     return undefined;
   }
-  const line = splitLines(text)[position.line];
+  const line = lineAt(splitLines(text), position.line);
   if (line === undefined) {
     return undefined;
   }
@@ -825,10 +838,10 @@ function hierarchicalSegmentAt(
   }
   const relative = position.character - start;
   let consumed = 0;
-  for (let index = 0; index < aligned.parts.length; index++) {
-    const partEnd = consumed + aligned.parts[index].length;
-    if (relative < partEnd || index === aligned.parts.length - 1) {
-      const chainIndex = aligned.chainOffset + index;
+  for (let partIndex = 0; partIndex < aligned.parts.length; partIndex++) {
+    const partEnd = consumed + aligned.parts[partIndex].length;
+    if (relative < partEnd || partIndex === aligned.parts.length - 1) {
+      const chainIndex = aligned.chainOffset + partIndex;
       const full = aligned.chain[chainIndex];
       const parent = chainIndex > 0 ? aligned.chain[chainIndex - 1] : undefined;
       if (!parent) {
@@ -1099,7 +1112,7 @@ export function definitionFor(
     if (target) {
       const node = assetSpanContains(assetCall.path, position.character)
         ? assetCall.path
-        : assetCall.options.palette;
+        : assetOption(assetCall.options, "palette");
       const start = node?.span.start ?? position.character;
       const end = node?.span.end ?? position.character;
       const origin = Range.create(position.line, start, position.line, end);
@@ -1227,7 +1240,7 @@ export function hoverFor(
   ) {
     const registered = index.environment.getAssetFormat(assetCall.format.value, index.target);
     const displayPath = assetCall.path.value.replace(/`/g, "\\`");
-    const selectedOutput = assetCall.options.output;
+    const selectedOutput = assetOption(assetCall.options, "output");
     const outputName = selectedOutput?.kind === "string" ? selectedOutput.value : "primary";
     if (assetSpanContains(assetCall.path, position.character)) {
       const resolved = resolveIncludeTarget(index, file, assetCall.path.value);
@@ -1709,9 +1722,11 @@ function referenceMatchesRenameTarget(
     case "label":
     case "struct":
     case "structMember":
-    default:
+    case "namespace":
       return reference.kind === "label";
   }
+  const leftover: never = target.symbol.kind;
+  throw new Error(`Unsupported rename symbol kind: ${String(leftover)}`);
 }
 
 /**

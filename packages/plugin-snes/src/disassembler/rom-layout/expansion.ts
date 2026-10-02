@@ -15,6 +15,9 @@ export interface SnesRomExpansionPolicy {
 export const expansionHeaderOffset = (policy: SnesRomExpansionPolicy): number =>
   policy.mapper === "lorom" ? 0x7fc0 : 0xffc0;
 
+const powerOfTwo = (value: number) =>
+  Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
+
 /** Reject unsupported capacities before allocation, including accidental shrinkage and mapper changes. */
 export function assertSnesRomExpansion(
   original: Uint8Array,
@@ -27,8 +30,6 @@ export function assertSnesRomExpansion(
     }
     return;
   }
-  const powerOfTwo = (value: number) =>
-    Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
   if (
     !["hirom", "lorom"].includes(policy.mapper) ||
     ![original.length, size, policy.maximumSize].every(powerOfTwo) ||
@@ -38,8 +39,7 @@ export function assertSnesRomExpansion(
     policy.maximumSize > 0x400000 ||
     !Number.isInteger(policy.fillByte) ||
     policy.fillByte < 0 ||
-    policy.fillByte > 255 ||
-    policy.checksum !== "recalculate"
+    policy.fillByte > 255
   ) {
     throw new Error(
       "Expansion requires power-of-two LoROM/HiROM capacities up to 4 MiB, a byte fill and recalculated checksum.",
@@ -113,7 +113,7 @@ export function checkSnesRomExpansion(
   }
   const allocated = objects
     .filter((object) => object.start + object.length > original.length)
-    .sort((a, b) => a.start - b.start);
+    .toSorted((a, b) => a.start - b.start);
   let index = 0;
   for (let offset = original.length; offset < size; offset++) {
     while (index < allocated.length && allocated[index].start + allocated[index].length <= offset) {

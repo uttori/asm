@@ -1,6 +1,11 @@
 import { decodeBgMap, decodeBgr555, decodeMode7Tiles, decodePlanarTiles, encodeBgr555, encodeBgMap, encodeMode7Map, encodeMode7Tiles, encodePlanarTiles, } from "./snes.js";
 import { integer } from "./validation.js";
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+const isPlanarDepth = (value) => value === 2 || value === 3 || value === 4 || value === 8;
+const isSourceBitDepth = (value) => value === 1 || value === 2 || value === 4 || value === 8;
+const isRgbaTuple = (value) => Array.isArray(value) &&
+    value.length === 4 &&
+    value.every((channel) => typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255);
 const readInteger = (value, label, minimum, maximum) => {
     if (typeof value !== "number") {
         throw new RangeError(`${label} must be a number.`);
@@ -179,7 +184,9 @@ function selectPalette(image, options, resources, capacity) {
             sourceToNative = colors.map((_, index) => index);
         }
         else {
-            const resource = resources[options.palette];
+            const resource = Object.hasOwn(resources, options.palette)
+                ? resources[options.palette]
+                : undefined;
             if (!resource) {
                 throw new Error(`Missing palette resource '${options.palette}'.`);
             }
@@ -247,7 +254,9 @@ function selectPalette(image, options, resources, capacity) {
             }
         }
         else {
-            const resource = resources[options.palette];
+            const resource = Object.hasOwn(resources, options.palette)
+                ? resources[options.palette]
+                : undefined;
             if (!resource) {
                 throw new Error(`Missing palette resource '${options.palette}'.`);
             }
@@ -389,7 +398,13 @@ export function decodeBgScreenMap(bytes, width, height) {
     if (encoded.length !== width * height) {
         throw new Error("BG screen map byte count is invalid.");
     }
-    const logical = new Array(encoded.length);
+    const logical = Array.from({ length: encoded.length }, () => ({
+        tile: 0,
+        palette: 0,
+        priority: 0,
+        horizontalFlip: 0,
+        verticalFlip: 0,
+    }));
     order.forEach((position, index) => {
         logical[position] = encoded[index];
     });
@@ -399,7 +414,7 @@ export function decodeBgScreenMap(bytes, width, height) {
  * @param {readonly number[]} indexes Row-major tile indexes.
  * @param {number} width Width in cells.
  * @param {number} height Height in cells.
- * @param {"full" | "partial"} layout Hardware map or partial upload contract.
+ * @param {string} layout `"full"` for the hardware map, or `"partial"` for an upload rectangle.
  * @returns {Uint8Array} Owned native map bytes.
  */
 export function encodeMode7MapLayout(indexes, width, height, layout) {
@@ -439,24 +454,40 @@ function imageModel(document) {
             !Array.isArray(value.palette) ||
             value.palette.length < 1 ||
             value.palette.length > 256 ||
-            ![1, 2, 4, 8].includes(Number(value.sourceBitDepth))) {
+            !isSourceBitDepth(value.sourceBitDepth)) {
             throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
         }
+        const palette = [];
         for (const [index, color] of value.palette.entries()) {
-            if (!Array.isArray(color) ||
-                color.length !== 4 ||
-                color.some((channel) => typeof channel !== "number" ||
-                    !Number.isInteger(channel) ||
-                    channel < 0 ||
-                    channel > 255)) {
+            if (!isRgbaTuple(color)) {
                 throw new Error(`Indexed image palette entry ${index} is not RGBA8.`);
             }
+            const entry = [
+                color[0],
+                color[1],
+                color[2],
+                color[3],
+            ];
+            palette.push(entry);
         }
+        return {
+            kind: "indexed-image",
+            width: value.width,
+            height: value.height,
+            indexes: value.indexes,
+            palette,
+            sourceBitDepth: value.sourceBitDepth,
+        };
     }
-    else if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+    if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
         throw new Error("RGBA image model has invalid pixel bytes.");
     }
-    return value;
+    return {
+        kind: "rgba-image",
+        width: value.width,
+        height: value.height,
+        rgba: value.rgba,
+    };
 }
 /** Build tiles, CGRAM, map, and composed preview from one exact palette/index decision.
  * @param {AssetDocument} document Imported PNG pixels.
@@ -487,23 +518,30 @@ function encodeImage(document, rawOptions, resources, format) {
     const widthTiles = image.width / 8;
     const heightTiles = image.height / 8;
     const coordinates = tileCoordinates(widthTiles, heightTiles, options.layout);
-    const indexByCoordinate = new Array(coordinates.length);
+    const indexByCoordinate = Array.from({ length: coordinates.length }, () => 0);
     const tiles = coordinates.map(([tx, ty], storageIndex) => {
         indexByCoordinate[ty * widthTiles + tx] = storageIndex;
-        return Array.from({ length: 8 }, (_, row) => Array.from({ length: 8 }, (_, column) => {
+        return Array.from({ length: 8 }, (_, row) => Array.from({ length: 8 }, (_column, column) => {
             // Pre-invert map flips so the displayed image remains pixel-exact.
             const sourceX = options.tilemap.horizontalFlip ? 7 - column : column;
             const sourceY = options.tilemap.verticalFlip ? 7 - row : row;
             return selection.indexes[(ty * 8 + sourceY) * image.width + tx * 8 + sourceX];
         }));
     });
-    const tileBytes = mode7
-        ? encodeMode7Tiles(tiles)
-        : encodePlanarTiles(tiles, depth);
+    let tileBytes;
+    let decodedTiles;
+    if (mode7) {
+        tileBytes = encodeMode7Tiles(tiles);
+        decodedTiles = decodeMode7Tiles(tileBytes);
+    }
+    else if (isPlanarDepth(depth)) {
+        tileBytes = encodePlanarTiles(tiles, depth);
+        decodedTiles = decodePlanarTiles(tileBytes, depth);
+    }
+    else {
+        throw new Error(`Unsupported planar tile format '${format}'.`);
+    }
     const paletteBytes = encodeBgr555(colors);
-    const decodedTiles = mode7
-        ? decodeMode7Tiles(tileBytes)
-        : decodePlanarTiles(tileBytes, depth);
     const decodedColors = decodeBgr555(paletteBytes);
     const preview = new Uint8Array(image.width * image.height * 4);
     for (let ty = 0; ty < heightTiles; ty++) {
@@ -582,7 +620,12 @@ function encodeImage(document, rawOptions, resources, format) {
             tilemap: { bytes: tilemapBytes, mediaType: "application/octet-stream", metadata },
             preview: { bytes: preview, mediaType: "application/x-rgba", metadata },
         },
-        normalizedOptions: options,
+        normalizedOptions: {
+            palette: options.palette,
+            paletteExpansion: options.paletteExpansion,
+            layout: options.layout,
+            tilemap: options.tilemap,
+        },
     };
 }
 /** Compose PNG-aware tile encoders with native JSON encoders under the same IDs.

@@ -152,7 +152,7 @@ const littleEndian = (hex: string): number => {
   if (!bytes || bytes.join("") !== hex) {
     throw new Error("Malformed little-endian register data.");
   }
-  return Number.parseInt([...bytes].reverse().join(""), 16);
+  return Number.parseInt(bytes.toReversed().join(""), 16);
 };
 
 const registerHex = (value: number, bits: number): string =>
@@ -160,6 +160,8 @@ const registerHex = (value: number, bits: number): string =>
     .toString(16)
     .toUpperCase()
     .padStart(Math.ceil(bits / 4), "0");
+
+const encode = (value: string): string => Buffer.from(value, "utf8").toString("hex");
 
 const parseRegisters = (payload: string): RegisterSnapshot => {
   if (!/^[\dA-Fa-f]{32}$/.test(payload)) {
@@ -619,7 +621,7 @@ export class AresRspDebugBackend implements DebugBackend {
       }
       this.#requireStopped();
       const fields = ["qUttoriContext", request.action];
-      const encode = (value: string): string => Buffer.from(value, "utf8").toString("hex");
+
       if ("directory" in request) {
         if (
           request.romContentSha256 !== identity.romSha256 ||
@@ -720,7 +722,7 @@ export class AresRspDebugBackend implements DebugBackend {
           );
         }
         await this.capture({ operation: "file-capabilities", scope });
-        const encode = (value: string): string => Buffer.from(value, "utf8").toString("hex");
+
         fields.push(
           request.bufferBytes,
           scopes[scope!],
@@ -1104,6 +1106,7 @@ export class AresRspDebugBackend implements DebugBackend {
                     : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n",
               });
             }
+            return;
           },
           (error: unknown) => {
             this.#emit({

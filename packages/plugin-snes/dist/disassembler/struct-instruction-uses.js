@@ -1,7 +1,13 @@
 import { omitResearchReferences } from "./source-layout.js";
 import { describeSnesStructAccess, SnesStructExpressionResolver, } from "./struct-expressions.js";
+/**
+ * Accepts a JSON object. Arrays and null are not instruction-use records.
+ * @param {unknown} value Candidate record.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const record = (value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
+    if (!isRecord(value)) {
         throw new Error("Struct instruction-use entries must be objects.");
     }
     return value;
@@ -132,7 +138,7 @@ export const validateSnesStructInstructionUses = (value, structures, bindings, c
             observations,
         };
     })
-        .sort((a, b) => a.address - b.address);
+        .toSorted((a, b) => a.address - b.address);
 };
 /**
  * Index only annotated instructions, O(uses), rather than scanning uses for every CFG variant.
@@ -209,7 +215,7 @@ export const applySnesStructInstructionOperand = (instruction, source, use) => {
             absoluteLongIndexedX: [3, "", ",x"],
         };
         const mode = modes[instruction.mode];
-        const operand = instruction.operands[0];
+        const operand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
         if (!mode ||
             instruction.operands.length !== 1 ||
             operand?.kind !== "address" ||
@@ -224,7 +230,7 @@ export const applySnesStructInstructionOperand = (instruction, source, use) => {
     if (!use.operand) {
         return source;
     }
-    const operand = instruction.operands[0];
+    const operand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
     // REP/SEP have fixed byte status masks, represented as signature operands by the decoder.
     // Do not broaden this to BRK/COP/WDM signatures, which are not ordinary immediate values.
     const statusMask = instruction.mode === "signature" && ["REP", "SEP"].includes(instruction.mnemonic);

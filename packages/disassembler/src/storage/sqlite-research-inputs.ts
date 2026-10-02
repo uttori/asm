@@ -11,15 +11,27 @@ const SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isResearchCollection(value: string): value is ResearchCollection {
+  return (
+    value === "labels" ||
+    value === "comments" ||
+    value === "annotations" ||
+    value === "regions" ||
+    value === "analysis" ||
+    value === "evidence"
+  );
+}
+
 /** SQL table names must come from a fixed allowlist even when restored from local cache rows. */
 const collectionName = (value: unknown): ResearchCollection => {
-  if (
-    typeof value !== "string" ||
-    !["labels", "comments", "annotations", "regions", "analysis", "evidence"].includes(value)
-  ) {
+  if (typeof value !== "string" || !isResearchCollection(value)) {
     throw new Error("Invalid research projection collection.");
   }
-  return value as ResearchCollection;
+  return value;
 };
 
 /** Decode only selected metadata. A null shadow denotes that no imported record existed. */
@@ -31,7 +43,10 @@ function analysisInput(collection: ResearchCollection, value: unknown): unknown 
   if (value === null || collection === "comments") {
     return null;
   }
-  const record = value as Record<string, unknown>;
+  if (!isRecord(value)) {
+    throw new Error("Invalid research record.");
+  }
+  const record = value;
   if (collection === "labels") {
     if (record.analysisEntryPoint === false) {
       return null;
@@ -136,8 +151,8 @@ export function projectResearchInputs(
       .prepare(`SELECT payload FROM ${collection} WHERE id=?`)
       .get(decision.id);
     if (collection === "evidence" && before) {
-      const observation = recordValue(before.payload) as { source?: string };
-      if (observation.source !== "manual") {
+      const observation = recordValue(before.payload);
+      if (!isRecord(observation) || observation.source !== "manual") {
         throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
       }
     }

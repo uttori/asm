@@ -25,7 +25,7 @@ const validateTile = (tile, label, maximum) => {
 export function decodePlanarTiles(bytes, depth) {
     const size = depth * 8;
     const count = unitCount(bytes, size, "Planar tile stream");
-    return Array.from({ length: count }, (_, tileIndex) => Array.from({ length: 8 }, (_, row) => Array.from({ length: 8 }, (_, column) => {
+    return Array.from({ length: count }, (_, tileIndex) => Array.from({ length: 8 }, (_row, row) => Array.from({ length: 8 }, (_column, column) => {
         let pixel = 0;
         for (let plane = 0; plane < depth; plane++) {
             const byte = bytes[tileIndex * size + planeOffset(depth, plane, row)];
@@ -60,7 +60,7 @@ export function encodePlanarTiles(tiles, depth) {
  */
 export function decodeMode7Tiles(bytes) {
     const count = unitCount(bytes, 64, "Mode 7 tile stream");
-    return Array.from({ length: count }, (_, tileIndex) => Array.from({ length: 8 }, (_, row) => Array.from({ length: 8 }, (_, column) => bytes[tileIndex * 64 + row * 8 + column])));
+    return Array.from({ length: count }, (_, tileIndex) => Array.from({ length: 8 }, (_row, row) => Array.from({ length: 8 }, (_column, column) => bytes[tileIndex * 64 + row * 8 + column])));
 }
 /** Encode Mode 7's row-major byte-per-pixel tiles.
  * @param {Tile[]} tiles Display-order pixels, each exactly 8×8.
@@ -165,7 +165,7 @@ export function decodeBrrBlocks(bytes) {
     return Array.from({ length: count }, (_, blockIndex) => {
         const offset = blockIndex * 9;
         const header = bytes[offset];
-        const nibbles = Array.from({ length: 16 }, (_, sampleIndex) => {
+        const nibbles = Array.from({ length: 16 }, (_sample, sampleIndex) => {
             const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
             const nibble = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
             return nibble >= 8 ? nibble - 16 : nibble;
@@ -203,6 +203,7 @@ export function encodeBrrBlocks(blocks) {
     });
     return bytes;
 }
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const sameModelValue = (left, right) => {
     if (Object.is(left, right)) {
         return true;
@@ -211,19 +212,90 @@ const sameModelValue = (left, right) => {
         return (left.length === right.length &&
             left.every((entry, index) => sameModelValue(entry, right[index])));
     }
-    if (!left ||
-        !right ||
-        typeof left !== "object" ||
-        typeof right !== "object" ||
-        Array.isArray(left) ||
-        Array.isArray(right)) {
+    if (!isRecord(left) || !isRecord(right)) {
         return false;
     }
-    const leftRecord = left;
-    const rightRecord = right;
-    const keys = Object.keys(leftRecord);
-    return (keys.length === Object.keys(rightRecord).length &&
-        keys.every((key) => Object.hasOwn(rightRecord, key) && sameModelValue(leftRecord[key], rightRecord[key])));
+    const keys = Object.keys(left);
+    return (keys.length === Object.keys(right).length &&
+        keys.every((key) => Object.hasOwn(right, key) && sameModelValue(left[key], right[key])));
+};
+const readNumber = (value, label) => {
+    if (typeof value !== "number") {
+        throw new TypeError(`${label} must be a number.`);
+    }
+    return value;
+};
+const readTiles = (value) => {
+    if (!Array.isArray(value)) {
+        throw new TypeError("Native tile model 'tiles' must be an array.");
+    }
+    return value.map((tile, tileIndex) => {
+        if (!Array.isArray(tile)) {
+            throw new TypeError(`Tile ${tileIndex} must be an array of rows.`);
+        }
+        return tile.map((row, rowIndex) => {
+            if (!Array.isArray(row)) {
+                throw new TypeError(`Tile ${tileIndex} row ${rowIndex} must be an array of pixels.`);
+            }
+            return row.map((pixel, column) => readNumber(pixel, `Tile ${tileIndex} pixel ${column},${rowIndex}`));
+        });
+    });
+};
+const readColors = (value) => {
+    if (!Array.isArray(value)) {
+        throw new TypeError("Native palette model 'colors' must be an array.");
+    }
+    return value.map((color, index) => {
+        if (!isRecord(color)) {
+            throw new TypeError(`Color ${index} must be an object.`);
+        }
+        return {
+            red: readNumber(color.red, `Color ${index} red`),
+            green: readNumber(color.green, `Color ${index} green`),
+            blue: readNumber(color.blue, `Color ${index} blue`),
+            unusedHighBit: readNumber(color.unusedHighBit, `Color ${index} unusedHighBit`),
+        };
+    });
+};
+const readEntries = (value) => {
+    if (!Array.isArray(value)) {
+        throw new TypeError("Native tilemap model 'entries' must be an array.");
+    }
+    return value.map((entry, index) => {
+        if (!isRecord(entry)) {
+            throw new TypeError(`Entry ${index} must be an object.`);
+        }
+        return {
+            tile: readNumber(entry.tile, `Entry ${index} tile`),
+            palette: readNumber(entry.palette, `Entry ${index} palette`),
+            priority: readNumber(entry.priority, `Entry ${index} priority`),
+            horizontalFlip: readNumber(entry.horizontalFlip, `Entry ${index} horizontalFlip`),
+            verticalFlip: readNumber(entry.verticalFlip, `Entry ${index} verticalFlip`),
+        };
+    });
+};
+const readIndexes = (value) => {
+    if (!Array.isArray(value)) {
+        throw new TypeError("Native tilemap model 'indexes' must be an array.");
+    }
+    return value.map((entry, index) => readNumber(entry, `Index ${index}`));
+};
+const readBlocks = (value) => {
+    if (!Array.isArray(value)) {
+        throw new TypeError("Native BRR model 'blocks' must be an array.");
+    }
+    return value.map((block, index) => {
+        if (!isRecord(block) || !Array.isArray(block.nibbles)) {
+            throw new TypeError(`BRR block ${index} must be an object with nibbles.`);
+        }
+        return {
+            range: readNumber(block.range, `BRR block ${index} range`),
+            filter: readNumber(block.filter, `BRR block ${index} filter`),
+            loop: readNumber(block.loop, `BRR block ${index} loop`),
+            end: readNumber(block.end, `BRR block ${index} end`),
+            nibbles: block.nibbles.map((nibble, sampleIndex) => readNumber(nibble, `BRR nibble ${sampleIndex}`)),
+        };
+    });
 };
 const nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
     id,
@@ -234,7 +306,7 @@ const nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.f
         if (Object.keys(options).length !== 0) {
             throw new Error(`Native encoder '${id}' accepts no options.`);
         }
-        if (!document.value || typeof document.value !== "object" || Array.isArray(document.value)) {
+        if (!isRecord(document.value)) {
             throw new Error(`Native encoder '${id}' requires an object model.`);
         }
         const value = document.value;
@@ -252,11 +324,11 @@ const nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.f
 });
 /** Native model encoders use the canonical short IDs and need no ROM or assembler. */
 export const snesNativeEncoders = Object.freeze([
-    ...[2, 3, 4, 8].map((depth) => nativeEncoder(`snes.tile.${depth}bpp`, "snes-planar-tiles", "tiles", "tiles", (value) => encodePlanarTiles(value.tiles, depth), (bytes) => decodePlanarTiles(bytes, depth))),
-    nativeEncoder("snes.tile.mode7", "snes-mode7-tiles", "tiles", "tiles", (value) => encodeMode7Tiles(value.tiles), decodeMode7Tiles),
-    nativeEncoder("snes.palette.bgr555", "snes-palette-bgr555", "palette", "colors", (value) => encodeBgr555(value.colors), decodeBgr555),
-    nativeEncoder("snes.tilemap.bg", "snes-bg-tilemap", "tilemap", "entries", (value) => encodeBgMap(value.entries), decodeBgMap),
-    nativeEncoder("snes.tilemap.mode7", "snes-mode7-tilemap", "tilemap", "indexes", (value) => encodeMode7Map(value.indexes), decodeMode7Map),
-    nativeEncoder("snes.brr", "snes-brr", "brr", "blocks", (value) => encodeBrrBlocks(value.blocks), decodeBrrBlocks),
-].sort((left, right) => left.id.localeCompare(right.id)));
+    ...[2, 3, 4, 8].map((depth) => nativeEncoder(`snes.tile.${depth}bpp`, "snes-planar-tiles", "tiles", "tiles", (value) => encodePlanarTiles(readTiles(value.tiles), depth), (bytes) => decodePlanarTiles(bytes, depth))),
+    nativeEncoder("snes.tile.mode7", "snes-mode7-tiles", "tiles", "tiles", (value) => encodeMode7Tiles(readTiles(value.tiles)), decodeMode7Tiles),
+    nativeEncoder("snes.palette.bgr555", "snes-palette-bgr555", "palette", "colors", (value) => encodeBgr555(readColors(value.colors)), decodeBgr555),
+    nativeEncoder("snes.tilemap.bg", "snes-bg-tilemap", "tilemap", "entries", (value) => encodeBgMap(readEntries(value.entries)), decodeBgMap),
+    nativeEncoder("snes.tilemap.mode7", "snes-mode7-tilemap", "tilemap", "indexes", (value) => encodeMode7Map(readIndexes(value.indexes)), decodeMode7Map),
+    nativeEncoder("snes.brr", "snes-brr", "brr", "blocks", (value) => encodeBrrBlocks(readBlocks(value.blocks)), decodeBrrBlocks),
+].toSorted((left, right) => left.id.localeCompare(right.id)));
 //# sourceMappingURL=snes.js.map

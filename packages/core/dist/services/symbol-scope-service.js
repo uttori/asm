@@ -1,4 +1,6 @@
-import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
+function relativeLabelBucket(table, depth) {
+    return Object.hasOwn(table, depth) ? table[depth] : undefined;
+}
 export class SymbolScopeService {
     host;
     constructor(host) {
@@ -25,8 +27,7 @@ export class SymbolScopeService {
      * @returns {string} The storage key.
      */
     qualifySymbolName(name) {
-        const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
-        if (!profile.fileLocalSymbols) {
+        if (!this.host.syntaxProfile.fileLocalSymbols) {
             return name;
         }
         if (this.host.globalSymbols.has(name)) {
@@ -59,7 +60,7 @@ export class SymbolScopeService {
      * @returns {string} The rewritten name.
      */
     toCheapDotLabel(name) {
-        const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+        const prefix = this.host.syntaxProfile.cheapLocalPrefix;
         if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
             return `.${name.slice(prefix.length)}`;
         }
@@ -158,22 +159,26 @@ export class SymbolScopeService {
      */
     handleRelativeLabel(label) {
         const isPositive = label.includes("+");
-        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
         const targetAddress = this.host.currentTargetAddress;
         const isMacroLocal = label.startsWith("?");
         if (this.host.enforceResolvedLabels) {
             if (isPositive) {
-                if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+                const forwardLabels = relativeLabelBucket(this.host.forwardLabels, depth);
+                if (!forwardLabels || forwardLabels.length === 0) {
                     throw new Error(`Error: Undefined forward label '${label}'.`);
                 }
             }
-            else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
-                throw new Error(`Error: Undefined backward label '${label}'.`);
+            else {
+                const backwardLabels = relativeLabelBucket(this.host.backwardLabels, depth);
+                if (!backwardLabels || backwardLabels.length === 0) {
+                    throw new Error(`Error: Undefined backward label '${label}'.`);
+                }
             }
             return targetAddress;
         }
         if (isPositive) {
-            if (!this.host.forwardLabels[depth]) {
+            if (!relativeLabelBucket(this.host.forwardLabels, depth)) {
                 this.host.forwardLabels[depth] = [];
             }
             if (isMacroLocal && this.host.inMacroExpansion) {
@@ -187,7 +192,7 @@ export class SymbolScopeService {
             }
         }
         else {
-            if (!this.host.backwardLabels[depth]) {
+            if (!relativeLabelBucket(this.host.backwardLabels, depth)) {
                 this.host.backwardLabels[depth] = [];
             }
             if (isMacroLocal && this.host.inMacroExpansion) {
@@ -210,15 +215,16 @@ export class SymbolScopeService {
     handleUnnamedLabel() {
         const targetAddress = this.host.currentTargetAddress;
         if (this.host.enforceResolvedLabels) {
-            if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+            const forwardLabels = relativeLabelBucket(this.host.forwardLabels, 0);
+            if (!forwardLabels || forwardLabels.length === 0) {
                 throw new Error("Error: Undefined unnamed label ':'.");
             }
             return targetAddress;
         }
-        if (!this.host.forwardLabels[0]) {
+        if (!relativeLabelBucket(this.host.forwardLabels, 0)) {
             this.host.forwardLabels[0] = [];
         }
-        if (!this.host.backwardLabels[0]) {
+        if (!relativeLabelBucket(this.host.backwardLabels, 0)) {
             this.host.backwardLabels[0] = [];
         }
         const entry = { addr: targetAddress, unit: this.objectFileKey() };
@@ -241,7 +247,7 @@ export class SymbolScopeService {
         if (!this.host.enforceResolvedLabels) {
             return 0;
         }
-        const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+        const table = relativeLabelBucket(parsed.direction === 1 ? this.host.forwardLabels : this.host.backwardLabels, 0);
         if (!table || table.length === 0) {
             throw new Error(`Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`);
         }
@@ -250,7 +256,7 @@ export class SymbolScopeService {
             .filter((entry) => !entry.unit || entry.unit === unit)
             .filter((entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress)
             .map((entry) => entry.addr)
-            .sort((left, right) => (parsed.direction === 1 ? left - right : right - left));
+            .toSorted((left, right) => (parsed.direction === 1 ? left - right : right - left));
         if (ordered.length < parsed.count) {
             throw new Error(`Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`);
         }
@@ -264,16 +270,17 @@ export class SymbolScopeService {
      */
     findNextLabel(label, currentAddressOverride) {
         const isPositive = label.includes("+");
-        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
         const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
         const isMacroLocal = label.startsWith("?");
         if (!this.host.enforceResolvedLabels) {
             return 0;
         }
-        if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+        const forwardLabels = relativeLabelBucket(this.host.forwardLabels, depth);
+        if (!forwardLabels || forwardLabels.length === 0) {
             throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
         }
-        const possibleTargets = this.host.forwardLabels[depth]
+        const possibleTargets = forwardLabels
             .filter((entry) => {
             if (isMacroLocal && this.host.inMacroExpansion) {
                 return (entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance);
@@ -298,16 +305,17 @@ export class SymbolScopeService {
      */
     findPreviousLabel(label, currentAddressOverride) {
         const isPositive = label.includes("+");
-        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
         const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
         const isMacroLocal = label.startsWith("?");
         if (this.host.isDefinitionCollectionStage) {
             return 0;
         }
-        if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+        const backwardLabels = relativeLabelBucket(this.host.backwardLabels, depth);
+        if (!backwardLabels || backwardLabels.length === 0) {
             throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
         }
-        const possibleTargets = this.host.backwardLabels[depth]
+        const possibleTargets = backwardLabels
             .filter((entry) => {
             if (isMacroLocal && this.host.inMacroExpansion) {
                 return (entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance);
@@ -354,7 +362,7 @@ export class SymbolScopeService {
                     if (recentMainLabel) {
                         const subLabelWithoutDot = labelName.substring(1);
                         const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
-                        const subAddr = value !== undefined ? value : this.host.currentTargetAddress;
+                        const subAddr = value ?? this.host.currentTargetAddress;
                         this.host.labelTable.set(parentChildLabel, {
                             value: subAddr,
                             isStatic,
@@ -387,7 +395,7 @@ export class SymbolScopeService {
                         modifiesHierarchy) {
                         const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
                         const leafLabel = `${leafNamespace}_${label}`;
-                        const addr = value !== undefined ? value : this.host.currentTargetAddress;
+                        const addr = value ?? this.host.currentTargetAddress;
                         this.host.labelTable.set(leafLabel, {
                             value: addr,
                             isStatic,
@@ -416,7 +424,7 @@ export class SymbolScopeService {
                 fullLabel = label;
             }
         }
-        const addr = value !== undefined ? value : this.host.currentTargetAddress;
+        const addr = value ?? this.host.currentTargetAddress;
         if (this.host.isDefinitionCollectionStage) {
             if (modifiesHierarchy && !label.startsWith(".")) {
                 this.host.currentParentLabel = fullLabel;

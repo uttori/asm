@@ -86,20 +86,22 @@ test("targets compose core runtime and tooling directive groups", async (t) => {
   ]);
   const environment = manager.freeze();
   const assembler = new Assembler({ environment, target: "fixture" });
-  const toolingKeywords = environment
-    .getToolingCatalog("fixture")
-    .getDirectives()
-    .map((directive) => directive.keyword);
+  const toolingKeywords = new Set(
+    environment
+      .getToolingCatalog("fixture")
+      .getDirectives()
+      .map((directive) => directive.keyword),
+  );
 
   t.true(assembler.directiveRegistry.has("db"));
   t.true(assembler.directiveRegistry.has("org"));
   t.false(assembler.directiveRegistry.has("include"));
   t.false(assembler.directiveRegistry.has("assert"));
-  t.true(toolingKeywords.includes("db"));
-  t.true(toolingKeywords.includes("org"));
-  t.false(toolingKeywords.includes("include"));
-  t.false(toolingKeywords.includes("assert"));
-  t.true(toolingKeywords.includes("fixturebyte"));
+  t.true(toolingKeywords.has("db"));
+  t.true(toolingKeywords.has("org"));
+  t.false(toolingKeywords.has("include"));
+  t.false(toolingKeywords.has("assert"));
+  t.true(toolingKeywords.has("fixturebyte"));
 
   assembler.dispose();
   await manager.dispose();

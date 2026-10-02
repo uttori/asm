@@ -14,6 +14,16 @@ import {
 /** Editor plugin entry: a module specifier alone, or a specifier with activation options. */
 export type PluginModuleSetting = string | PluginModuleRequest;
 
+/** Editor settings are JSON. Accept a module string or an object with a string module. */
+function isPluginModuleRequest(value: unknown): value is PluginModuleRequest {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "module" in value &&
+    typeof value.module === "string"
+  );
+}
+
 /** Host-resolved settings used to load plugins and construct a matching workspace index. */
 export interface ProjectEnvironmentSettings {
   /** Base directory for config discovery, relative plugin/include paths, and the index cache. */
@@ -63,7 +73,7 @@ export interface ProjectEnvironmentControllerOptions {
  * @throws {Error} A shorthand string is blank or an object has no string module specifier.
  */
 const configuredPluginModules = (
-  plugins: readonly PluginModuleSetting[] | undefined,
+  plugins: readonly unknown[] | undefined,
 ): readonly PluginModuleRequest[] =>
   (plugins ?? []).map((entry, index) => {
     if (typeof entry === "string") {
@@ -72,13 +82,13 @@ const configuredPluginModules = (
       }
       return { module: entry };
     }
-    if (!entry || typeof entry !== "object" || typeof entry.module !== "string") {
+    if (!isPluginModuleRequest(entry)) {
       throw new Error(`Plugin setting at index ${index} must be a module string or object.`);
     }
-    return {
-      module: entry.module,
-      ...(entry.options === undefined ? {} : { options: entry.options }),
-    };
+    return Object.assign(
+      { module: entry.module },
+      entry.options === undefined ? {} : { options: entry.options },
+    );
   });
 
 /**

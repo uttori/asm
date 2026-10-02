@@ -55,7 +55,7 @@ const markdownDocuments = (root: string): string[] => {
   for (const directory of DOCUMENT_DIRECTORIES) {
     visit(directory);
   }
-  return [...new Set(documents)].sort();
+  return [...new Set(documents)].toSorted();
 };
 
 /**
@@ -176,11 +176,7 @@ const localTarget = (
       path.relative(path.dirname(document), path.resolve(process.cwd(), pathname)) + fragment;
   }
   const colon = target.indexOf(":");
-  let hasScheme =
-    colon > 0 &&
-    target[0] !== undefined &&
-    target[0].toLowerCase() >= "a" &&
-    target[0].toLowerCase() <= "z";
+  let hasScheme = colon > 0 && target[0].toLowerCase() >= "a" && target[0].toLowerCase() <= "z";
   for (let index = 1; hasScheme && index < colon; index++) {
     hasScheme = schemeCharacter(target[index] ?? "");
   }

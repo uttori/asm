@@ -7,6 +7,25 @@ import { validateEditableMetadataRecord } from "../model/metadata-validation.js"
 import { validateSourceLabelName } from "../model/project-labels.js";
 /** Check runtime shape without widening typed readonly arrays to any[]. */
 const isArray = (value) => Array.isArray(value);
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray(value) {
+    return Array.isArray(value);
+}
+function isResearchCollection(value) {
+    return RESEARCH_COLLECTIONS.some((collection) => collection === value);
+}
+function isSafeInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isConfidence(value) {
+    return (value === "certain" ||
+        value === "high" ||
+        value === "medium" ||
+        value === "low" ||
+        value === "unknown");
+}
 /** Only explicit human decisions belong in these files; captures and derived CFG do not. */
 export const RESEARCH_COLLECTIONS = [
     "labels",
@@ -35,7 +54,7 @@ export function validateResearchSnapshot(snapshot) {
         }
         keys.add(key);
     }
-    const decisions = [...snapshot.decisions].sort(compareDecisions);
+    const decisions = [...snapshot.decisions].toSorted(compareDecisions);
     if (snapshot.hash !==
         sourceContentHash(canonicalJson({ project: snapshot.project, romSha256: snapshot.romSha256, decisions }))) {
         throw new Error("Research snapshot content differs from its identity.");
@@ -45,90 +64,96 @@ export function validateResearchSnapshot(snapshot) {
 const compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 /** Reject unsupported record kinds before the generic project validator accesses their fields. */
 export function validateResearchDecision(decision) {
-    if (!decision ||
-        !RESEARCH_COLLECTIONS.includes(decision.collection) ||
-        typeof decision.id !== "string" ||
-        !/^\w[\w./:-]*$/.test(decision.id)) {
+    if (!isRecord(decision)) {
+        throw new Error("Research decisions require a known collection and stable ID.");
+    }
+    const collection = decision.collection;
+    const id = decision.id;
+    if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
         throw new Error("Research decisions require a known collection and stable ID.");
     }
     const record = decision.value;
     if (record === null) {
         return;
     }
-    if (!record || record.id !== decision.id) {
-        throw new Error(`Research record identity mismatch: ${decision.id}`);
+    if (!isRecord(record) || record.id !== id) {
+        throw new Error(`Research record identity mismatch: ${id}`);
     }
-    if (decision.collection === "evidence") {
-        const evidence = record;
-        if (evidence.source !== "manual" ||
-            typeof evidence.sourceId !== "string" ||
-            !evidence.sourceId ||
-            !["certain", "high", "medium", "low", "unknown"].includes(evidence.confidence) ||
-            (evidence.detail !== undefined && typeof evidence.detail !== "string")) {
+    if (collection === "evidence") {
+        const sourceId = record.sourceId;
+        const detail = record.detail;
+        if (record.source !== "manual" ||
+            typeof sourceId !== "string" ||
+            sourceId === "" ||
+            !isConfidence(record.confidence) ||
+            (detail !== undefined && typeof detail !== "string")) {
             throw new Error("Research files may author only valid manual evidence.");
         }
         return;
     }
-    if (!("evidence" in record) ||
-        !isArray(record.evidence) ||
-        record.evidence.some((id) => typeof id !== "string")) {
-        throw new Error(`Research record ${decision.id} needs an evidence list.`);
+    const evidence = record.evidence;
+    if (!isUnknownArray(evidence) || evidence.some((entry) => typeof entry !== "string")) {
+        throw new Error(`Research record ${id} needs an evidence list.`);
     }
-    if (decision.collection === "regions") {
-        if (!("start" in record) ||
-            !("end" in record) ||
-            !("name" in record) ||
-            typeof record.name !== "string" ||
-            !record.name ||
-            !Number.isSafeInteger(record.start) ||
-            !Number.isSafeInteger(record.end) ||
-            record.start < 0 ||
-            record.end <= record.start) {
-            throw new Error(`Invalid research region: ${decision.id}`);
+    if (collection === "regions") {
+        const name = record.name;
+        const start = record.start;
+        const end = record.end;
+        if (typeof name !== "string" ||
+            name === "" ||
+            !(isSafeInteger(start) && isSafeInteger(end) && start >= 0 && end > start)) {
+            throw new Error(`Invalid research region: ${id}`);
         }
     }
     else {
-        validateEditableMetadataRecord(decision.collection, record);
+        validateEditableMetadataRecord(collection, record);
     }
-    if (decision.collection === "labels") {
-        const label = record;
-        if (label.aliases !== undefined) {
-            if (!isArray(label.aliases)) {
-                throw new Error("Symbol aliases must be an array.");
+    if (collection === "labels" && record.aliases !== undefined) {
+        const aliases = record.aliases;
+        if (!isUnknownArray(aliases)) {
+            throw new Error("Symbol aliases must be an array.");
+        }
+        for (const alias of aliases) {
+            if (typeof alias !== "string") {
+                throw new Error("Use a global label name containing letters, digits, and underscores, starting with a letter or underscore.");
             }
-            for (const alias of label.aliases) {
-                validateSourceLabelName(alias);
-            }
-            if (new Set(label.aliases).size !== label.aliases.length) {
-                throw new Error("Symbol aliases must be unique.");
-            }
+            validateSourceLabelName(alias);
+        }
+        if (new Set(aliases).size !== aliases.length) {
+            throw new Error("Symbol aliases must be unique.");
         }
     }
 }
 /** Parse a versioned authoring document; unknown top-level fields are rejected to catch misspellings. */
 export function parseResearchDocument(value) {
-    const document = value;
-    if (!document ||
-        document.format !== "uttori-research" ||
-        document.version !== 1 ||
-        typeof document.project !== "string" ||
-        !/^[\w.-]+$/.test(document.project) ||
-        typeof document.romSha256 !== "string" ||
-        !/^[\da-f]{64}$/.test(document.romSha256) ||
-        !isArray(document.decisions) ||
-        Object.keys(document).some((key) => !["format", "version", "project", "romSha256", "decisions"].includes(key))) {
+    if (!isRecord(value)) {
         throw new Error("Invalid research document header.");
     }
+    const project = value.project;
+    const romSha256 = value.romSha256;
+    const decisions = value.decisions;
+    if (value.format !== "uttori-research" ||
+        value.version !== 1 ||
+        typeof project !== "string" ||
+        !/^[\w.-]+$/.test(project) ||
+        typeof romSha256 !== "string" ||
+        !/^[\da-f]{64}$/.test(romSha256) ||
+        !isUnknownArray(decisions) ||
+        Object.keys(value).some((key) => !["format", "version", "project", "romSha256", "decisions"].includes(key))) {
+        throw new Error("Invalid research document header.");
+    }
+    const parsed = [];
     const seen = new Set();
-    for (const decision of document.decisions) {
+    for (const decision of decisions) {
         validateResearchDecision(decision);
         const key = `${decision.collection}:${decision.id}`;
         if (seen.has(key)) {
             throw new Error(`Duplicate research decision: ${key}`);
         }
         seen.add(key);
+        parsed.push(decision);
     }
-    return document;
+    return { format: "uttori-research", version: 1, project, romSha256, decisions: parsed };
 }
 /** Resolve existing authoring paths without following symlinks outside the selected repository. */
 function researchPath(root, relative) {
@@ -156,7 +181,7 @@ export function readResearchInputs(root, roots, identity, overlays = new Map()) 
         const overlay = overlays.get(relative);
         const stat = fs.existsSync(file) ? fs.lstatSync(file) : undefined;
         if (stat?.isDirectory()) {
-            for (const entry of fs.readdirSync(file).sort()) {
+            for (const entry of fs.readdirSync(file).toSorted()) {
                 visit(`${relative}/${entry}`);
             }
             return;

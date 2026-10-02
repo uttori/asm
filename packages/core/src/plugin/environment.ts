@@ -633,7 +633,7 @@ export class AssemblerEnvironment {
           const lifecycle = this.#lifecycles.get(canonical(id));
           return lifecycle ? [lifecycle] : [];
         })
-        .sort((left, right) => left.registrationOrder - right.registrationOrder),
+        .toSorted((left, right) => left.registrationOrder - right.registrationOrder),
     );
   }
 

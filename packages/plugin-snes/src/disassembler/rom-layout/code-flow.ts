@@ -85,7 +85,7 @@ export function checkSnesCodeFlow(
           instruction.outputOffset >= object.start &&
           instruction.outputOffset < object.start + object.length,
       )
-      .sort((a, b) => a.outputOffset! - b.outputOffset!);
+      .toSorted((a, b) => a.outputOffset! - b.outputOffset!);
     const byOffset = new Map<number, InstructionSourceInfo>();
     const byAddress = new Map<number, number>();
     let through = object.start;
@@ -170,10 +170,9 @@ export function checkSnesCodeFlow(
       const assumption = assumptions.get(offset);
       if (
         assumption &&
-        ["e", "m", "x"].some((flag) => {
-          const key = flag as keyof WidthState;
-          return assumption[key] !== undefined && assumption[key] !== state[key];
-        })
+        ((assumption.e !== undefined && assumption.e !== state.e) ||
+          (assumption.m !== undefined && assumption.m !== state.m) ||
+          (assumption.x !== undefined && assumption.x !== state.x))
       ) {
         fail(
           `${object.id}: a declared CPU state contradicts the preceding control flow.`,

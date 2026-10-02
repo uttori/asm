@@ -47,6 +47,10 @@ const readLittleEndian = (bytes, offset, width) => {
     }
     return value >>> 0;
 };
+/** Operand byte at `index`, or undefined when the fetched instruction is shorter. */
+function byteAt(bytes, index) {
+    return index >= 0 && index < bytes.length ? bytes[index] : undefined;
+}
 /**
  * Converts a little-endian value to a signed value.
  * @param {number} value The little-endian value.
@@ -85,7 +89,8 @@ const addressOperand = (value, width) => ({
  * @returns {readonly DecodedOperand[]} The operands for the instruction.
  */
 const operandsFor = (specification, bytes, logicalAddress) => {
-    const value8 = bytes[1] ?? 0;
+    const firstOperandByte = byteAt(bytes, 1);
+    const value8 = firstOperandByte ?? 0;
     const value16 = readLittleEndian(bytes, 1, 2);
     const value24 = readLittleEndian(bytes, 1, 3);
     switch (specification.mode) {
@@ -154,7 +159,7 @@ const operandsFor = (specification, bytes, logicalAddress) => {
             // The project's native/Asar-compatible source syntax follows encoded byte order.
             return [
                 { kind: "bank", value: value8, width: 1 },
-                { kind: "bank", value: bytes[2] ?? 0, width: 1 },
+                { kind: "bank", value: byteAt(bytes, 2) ?? 0, width: 1 },
             ];
         default:
             return [];
@@ -169,7 +174,7 @@ const operandsFor = (specification, bytes, logicalAddress) => {
  * @returns {number | undefined} The target address, or undefined if the target is not a valid address.
  */
 const targetFor = (specification, operands, state, logicalAddress) => {
-    const operand = operands[0];
+    const operand = operands.length > 0 ? operands[0] : undefined;
     if (!operand) {
         return undefined;
     }
@@ -321,7 +326,9 @@ export class Cpu65816Decoder {
                 availableBytes,
             };
         }
-        const specification = cpu65816Specifications[opcode];
+        const specification = opcode >= 0 && opcode < cpu65816Specifications.length
+            ? cpu65816Specifications[opcode]
+            : undefined;
         if (!specification) {
             return {
                 kind: "error",
@@ -406,7 +413,7 @@ export function formatCpu65816Instruction(instruction) {
     if (instruction.architecture !== "snes.65816") {
         throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
     }
-    const operand = instruction.operands[0];
+    const operand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
     const value = operand?.value ?? 0;
     let text = "";
     switch (instruction.mode) {

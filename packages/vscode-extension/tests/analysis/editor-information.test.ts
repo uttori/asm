@@ -7,6 +7,30 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { createDebugMap, validateDebugMap } from "@uttori/asm-core/debug-map";
 import type { WorkspaceConfiguration } from "vscode";
 
+function isLineInformation(value: object): value is LineInformation {
+  return (
+    "identity" in value &&
+    typeof value.identity === "string" &&
+    "label" in value &&
+    typeof value.label === "string" &&
+    "ranges" in value &&
+    Array.isArray(value.ranges) &&
+    "locations" in value &&
+    Array.isArray(value.locations) &&
+    "instructions" in value &&
+    Array.isArray(value.instructions)
+  );
+}
+
+function isWorkspaceConfiguration(value: object): value is WorkspaceConfiguration {
+  return (
+    "get" in value &&
+    typeof value.get === "function" &&
+    "inspect" in value &&
+    typeof value.inspect === "function"
+  );
+}
+
 import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
 import {
@@ -147,12 +171,12 @@ test("count queries are selected lazily, reused across display changes, and qual
           target: map.target,
           rom: { contentSha256: map.output.sha256, contentSize: map.output.size },
           addressSpaces: [{ id: "rom.file", kind: "file" }],
-        } as any,
+        },
       },
     ],
-    request: async <T>(_directory: string, operation: string, { ranges }: any): Promise<T> => {
+    request: async (_directory, operation, { ranges }) => {
       calls.push(operation);
-      return ranges.map((range: any, rangeIndex: number) => ({
+      return ranges.map((range, rangeIndex) => ({
         rangeIndex,
         limited: false,
         locations: [
@@ -169,7 +193,7 @@ test("count queries are selected lazily, reused across display changes, and qual
             outputOffsets: [range.outputStart],
           },
         ],
-      })) as T;
+      }));
     },
   };
   const provider = new EditorInformationProvider(host);
@@ -216,7 +240,10 @@ test("template grammar hides unavailable fragments, escapes literals, bounds com
       { operands: [{ expression: "x", value: 0 }] },
       { operands: [{ expression: "x", value: 0 }] },
     ],
-  } as unknown as LineInformation;
+  };
+  if (!isLineInformation(alternatives)) {
+    throw new Error("expected line information");
+  }
   t.is(informationField("operand_value", alternatives), undefined);
 });
 
@@ -228,7 +255,10 @@ test("preset defaults preserve explicit empty arrays and legacy off; malformed s
   const config = {
     get: (key: string, fallback: unknown) => values[key] ?? fallback,
     inspect: (key: string) => ({ workspaceFolderValue: values[key] }),
-  } as unknown as WorkspaceConfiguration;
+  };
+  if (!isWorkspaceConfiguration(config)) {
+    throw new Error("expected workspace configuration");
+  }
   t.false(readEditorInformationConfiguration(config).inlineEnabled);
   t.is(readEditorInformationConfiguration(config).placement, "aligned");
   t.true(templateRequirements(readEditorInformationConfiguration(config).parts).bytes);

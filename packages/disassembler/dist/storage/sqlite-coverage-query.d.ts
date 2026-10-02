@@ -8,6 +8,7 @@ export type SqliteCoverageSummary = Omit<RomCoverageMap, "segments" | "unproject
     readonly diagnostics: readonly never[];
     readonly detailCount: number;
 };
+export declare function isSqliteCoverageSummary(value: unknown): value is SqliteCoverageSummary;
 export declare const coverageSignature: (manifest: AnalysisProjectManifest) => string;
 /** Read a current header without acquiring a writer lock.
  * @param {DatabaseSync} db Project connection.

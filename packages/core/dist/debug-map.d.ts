@@ -55,13 +55,21 @@ export interface CreateDebugMapOptions {
  * @returns {DebugMap} Fingerprinted debug map.
  */
 export declare const createDebugMap: (options: CreateDebugMapOptions) => DebugMap;
+type UncheckedDebugMap = Omit<DebugMap, "format" | "schemaVersion" | "fingerprint"> & {
+    readonly format: string;
+    readonly schemaVersion: number;
+    readonly fingerprint: {
+        readonly algorithm: string;
+        readonly value: string;
+    };
+};
 /**
  * Recomputes the content fingerprint and output hash for stale-map detection.
- * @param {DebugMap} map Debug map to validate.
+ * @param {UncheckedDebugMap} map Debug map to validate. Format fields are checked here.
  * @param {Uint8Array} output Optional exact output bytes.
  * @returns {readonly string[]} Validation issues.
  */
-export declare const validateDebugMap: (map: DebugMap, output?: Uint8Array) => readonly string[];
+export declare const validateDebugMap: (map: UncheckedDebugMap, output?: Uint8Array) => readonly string[];
 /**
  * Resolves a logical runtime address, falling back to an output offset for mirrors.
  * @param {DebugMap} map Debug map.
@@ -83,4 +91,5 @@ export declare const debugMapRangesForAddress: (map: DebugMap, addressSpace: str
  * @returns {readonly DebugMapRange[]} Matching logical ranges.
  */
 export declare const debugMapRangesForSource: (map: DebugMap, sourcePath: string, line: number, architecture?: string) => readonly DebugMapRange[];
+export {};
 //# sourceMappingURL=debug-map.d.ts.map

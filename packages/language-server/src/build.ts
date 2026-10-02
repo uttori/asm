@@ -59,7 +59,7 @@ const sameFileContent = (file: string, content: Uint8Array): boolean => {
   try {
     return Buffer.from(content).equals(fs.readFileSync(file));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return false;
     }
     throw error;

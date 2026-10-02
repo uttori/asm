@@ -7689,7 +7689,7 @@ function decodePlanarTiles(bytes, depth) {
     { length: count },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, row) => Array.from({ length: 8 }, (_3, column) => {
+      (_row, row) => Array.from({ length: 8 }, (_column, column) => {
         let pixel = 0;
         for (let plane = 0; plane < depth; plane++) {
           const byte = bytes[tileIndex * size + planeOffset(depth, plane, row)];
@@ -7723,7 +7723,7 @@ function decodeMode7Tiles(bytes) {
     { length: count },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, row) => Array.from({ length: 8 }, (_3, column) => bytes[tileIndex * 64 + row * 8 + column])
+      (_row, row) => Array.from({ length: 8 }, (_column, column) => bytes[tileIndex * 64 + row * 8 + column])
     )
   );
 }
@@ -7793,7 +7793,7 @@ function decodeBrrBlocks(bytes) {
   return Array.from({ length: count }, (_, blockIndex) => {
     const offset = blockIndex * 9;
     const header = bytes[offset];
-    const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
+    const nibbles = Array.from({ length: 16 }, (_sample, sampleIndex) => {
       const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
       const nibble = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
       return nibble >= 8 ? nibble - 16 : nibble;
@@ -7823,6 +7823,7 @@ function encodeBrrBlocks(blocks) {
   });
   return bytes;
 }
+var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var sameModelValue = (left, right) => {
   if (Object.is(left, right)) {
     return true;
@@ -7830,15 +7831,93 @@ var sameModelValue = (left, right) => {
   if (Array.isArray(left) && Array.isArray(right)) {
     return left.length === right.length && left.every((entry, index) => sameModelValue(entry, right[index]));
   }
-  if (!left || !right || typeof left !== "object" || typeof right !== "object" || Array.isArray(left) || Array.isArray(right)) {
+  if (!isRecord(left) || !isRecord(right)) {
     return false;
   }
-  const leftRecord = left;
-  const rightRecord = right;
-  const keys = Object.keys(leftRecord);
-  return keys.length === Object.keys(rightRecord).length && keys.every(
-    (key) => Object.hasOwn(rightRecord, key) && sameModelValue(leftRecord[key], rightRecord[key])
-  );
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && sameModelValue(left[key], right[key]));
+};
+var readNumber = (value, label) => {
+  if (typeof value !== "number") {
+    throw new TypeError(`${label} must be a number.`);
+  }
+  return value;
+};
+var readTiles = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tile model 'tiles' must be an array.");
+  }
+  return value.map((tile, tileIndex) => {
+    if (!Array.isArray(tile)) {
+      throw new TypeError(`Tile ${tileIndex} must be an array of rows.`);
+    }
+    return tile.map((row, rowIndex) => {
+      if (!Array.isArray(row)) {
+        throw new TypeError(`Tile ${tileIndex} row ${rowIndex} must be an array of pixels.`);
+      }
+      return row.map(
+        (pixel, column) => readNumber(pixel, `Tile ${tileIndex} pixel ${column},${rowIndex}`)
+      );
+    });
+  });
+};
+var readColors = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native palette model 'colors' must be an array.");
+  }
+  return value.map((color, index) => {
+    if (!isRecord(color)) {
+      throw new TypeError(`Color ${index} must be an object.`);
+    }
+    return {
+      red: readNumber(color.red, `Color ${index} red`),
+      green: readNumber(color.green, `Color ${index} green`),
+      blue: readNumber(color.blue, `Color ${index} blue`),
+      unusedHighBit: readNumber(color.unusedHighBit, `Color ${index} unusedHighBit`)
+    };
+  });
+};
+var readEntries = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'entries' must be an array.");
+  }
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new TypeError(`Entry ${index} must be an object.`);
+    }
+    return {
+      tile: readNumber(entry.tile, `Entry ${index} tile`),
+      palette: readNumber(entry.palette, `Entry ${index} palette`),
+      priority: readNumber(entry.priority, `Entry ${index} priority`),
+      horizontalFlip: readNumber(entry.horizontalFlip, `Entry ${index} horizontalFlip`),
+      verticalFlip: readNumber(entry.verticalFlip, `Entry ${index} verticalFlip`)
+    };
+  });
+};
+var readIndexes = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'indexes' must be an array.");
+  }
+  return value.map((entry, index) => readNumber(entry, `Index ${index}`));
+};
+var readBlocks = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native BRR model 'blocks' must be an array.");
+  }
+  return value.map((block, index) => {
+    if (!isRecord(block) || !Array.isArray(block.nibbles)) {
+      throw new TypeError(`BRR block ${index} must be an object with nibbles.`);
+    }
+    return {
+      range: readNumber(block.range, `BRR block ${index} range`),
+      filter: readNumber(block.filter, `BRR block ${index} filter`),
+      loop: readNumber(block.loop, `BRR block ${index} loop`),
+      end: readNumber(block.end, `BRR block ${index} end`),
+      nibbles: block.nibbles.map(
+        (nibble, sampleIndex) => readNumber(nibble, `BRR nibble ${sampleIndex}`)
+      )
+    };
+  });
 };
 var nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
   id,
@@ -7849,7 +7928,7 @@ var nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.fre
     if (Object.keys(options).length !== 0) {
       throw new Error(`Native encoder '${id}' accepts no options.`);
     }
-    if (!document2.value || typeof document2.value !== "object" || Array.isArray(document2.value)) {
+    if (!isRecord(document2.value)) {
       throw new Error(`Native encoder '${id}' requires an object model.`);
     }
     const value = document2.value;
@@ -7872,7 +7951,7 @@ var snesNativeEncoders = Object.freeze(
         "snes-planar-tiles",
         "tiles",
         "tiles",
-        (value) => encodePlanarTiles(value.tiles, depth),
+        (value) => encodePlanarTiles(readTiles(value.tiles), depth),
         (bytes) => decodePlanarTiles(bytes, depth)
       )
     ),
@@ -7881,7 +7960,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-mode7-tiles",
       "tiles",
       "tiles",
-      (value) => encodeMode7Tiles(value.tiles),
+      (value) => encodeMode7Tiles(readTiles(value.tiles)),
       decodeMode7Tiles
     ),
     nativeEncoder(
@@ -7889,7 +7968,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-palette-bgr555",
       "palette",
       "colors",
-      (value) => encodeBgr555(value.colors),
+      (value) => encodeBgr555(readColors(value.colors)),
       decodeBgr555
     ),
     nativeEncoder(
@@ -7897,7 +7976,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-bg-tilemap",
       "tilemap",
       "entries",
-      (value) => encodeBgMap(value.entries),
+      (value) => encodeBgMap(readEntries(value.entries)),
       decodeBgMap
     ),
     nativeEncoder(
@@ -7905,7 +7984,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-mode7-tilemap",
       "tilemap",
       "indexes",
-      (value) => encodeMode7Map(value.indexes),
+      (value) => encodeMode7Map(readIndexes(value.indexes)),
       decodeMode7Map
     ),
     nativeEncoder(
@@ -7913,10 +7992,10 @@ var snesNativeEncoders = Object.freeze(
       "snes-brr",
       "brr",
       "blocks",
-      (value) => encodeBrrBlocks(value.blocks),
+      (value) => encodeBrrBlocks(readBlocks(value.blocks)),
       decodeBrrBlocks
     )
-  ].sort((left, right) => left.id.localeCompare(right.id))
+  ].toSorted((left, right) => left.id.localeCompare(right.id))
 );
 
 // packages/assets/src/brr-codec.ts
@@ -8030,6 +8109,34 @@ function encodeBrrPcm(samples, loop) {
 // packages/assets/src/audio.ts
 var MAX_WAVE_BYTES = 16 * 1024 * 1024;
 var MAX_SAMPLES = 1024 * 1024;
+var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var PCM_MODEL_ERROR = "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.";
+function readPcmAudio(value) {
+  if (!isRecord2(value)) {
+    throw new Error(PCM_MODEL_ERROR);
+  }
+  const samples = value.samples;
+  const sampleRate = value.sampleRate;
+  const sourceBitDepth = value.sourceBitDepth;
+  if (!(samples instanceof Int16Array) || typeof sampleRate !== "number" || !Number.isSafeInteger(sampleRate) || sampleRate < 1 || sampleRate > 384e3 || sourceBitDepth !== 8 && sourceBitDepth !== 16) {
+    throw new Error(PCM_MODEL_ERROR);
+  }
+  let loop;
+  if (value.loop !== void 0) {
+    const sourceLoop = value.loop;
+    if (!isRecord2(sourceLoop) || typeof sourceLoop.start !== "number" || typeof sourceLoop.end !== "number") {
+      throw new Error(PCM_MODEL_ERROR);
+    }
+    loop = { start: sourceLoop.start, end: sourceLoop.end };
+  }
+  return {
+    kind: "pcm-audio",
+    sampleRate,
+    sourceBitDepth,
+    samples,
+    ...loop === void 0 ? {} : { loop }
+  };
+}
 var u16le = (bytes, offset) => bytes[offset] | bytes[offset + 1] << 8;
 var u32le = (bytes, offset) => bytes[offset] + bytes[offset + 1] * 256 + bytes[offset + 2] * 65536 + bytes[offset + 3] * 16777216 >>> 0;
 var ascii = (bytes, offset, length) => String.fromCharCode(...bytes.subarray(offset, offset + length));
@@ -8204,12 +8311,7 @@ function withAudioEncoder(native) {
         if (document2.kind !== "pcm-audio") {
           return encoder.encode(document2, rawOptions, resources);
         }
-        if (!document2.value || typeof document2.value !== "object" || !("samples" in document2.value) || !(document2.value.samples instanceof Int16Array) || !("sampleRate" in document2.value) || typeof document2.value.sampleRate !== "number" || !Number.isSafeInteger(document2.value.sampleRate) || document2.value.sampleRate < 1 || document2.value.sampleRate > 384e3 || !("sourceBitDepth" in document2.value) || document2.value.sourceBitDepth !== 8 && document2.value.sourceBitDepth !== 16) {
-          throw new Error(
-            "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth."
-          );
-        }
-        const audio = document2.value;
+        const audio = readPcmAudio(document2.value);
         const options = resolveBrrAudioOptions(rawOptions, audio);
         const originalCount = audio.samples.length;
         if (originalCount === 0) {
@@ -8286,7 +8388,7 @@ function withAudioEncoder(native) {
             snrDb,
             loopPeakError
           },
-          normalizedOptions: { padding: options.padding, loop: loop ?? false }
+          normalizedOptions: { padding: options.padding, loop }
         };
       }
     });
@@ -10685,11 +10787,11 @@ function mappedIndex(index, map) {
   if (!map) {
     return index;
   }
-  const value = map[index];
-  if (value === void 0 || value === null) {
+  const mappedSlot = Number.isInteger(index) && index >= 0 && index < map.length ? map[index] : void 0;
+  if (mappedSlot === void 0 || mappedSlot === null) {
     throw new RangeError(`Unmapped palette index ${index}.`);
   }
-  return integer(value, "Mapped palette index", 0, 255);
+  return integer(mappedSlot, "Mapped palette index", 0, 255);
 }
 function extractIndexedRegion(image, region) {
   validateIndexedPixels(image);
@@ -10737,7 +10839,12 @@ function expandIndexedGrid(block) {
 }
 
 // packages/assets/src/image-conversion.ts
-var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+var isRecord3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+var isPlanarDepth = (value) => value === 2 || value === 3 || value === 4 || value === 8;
+var isSourceBitDepth = (value) => value === 1 || value === 2 || value === 4 || value === 8;
+var isRgbaTuple = (value) => Array.isArray(value) && value.length === 4 && value.every(
+  (channel) => typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255
+);
 var readInteger = (value, label, minimum, maximum) => {
   if (typeof value !== "number") {
     throw new RangeError(`${label} must be a number.`);
@@ -10770,7 +10877,7 @@ var readLayout = (raw) => {
   if (raw === void 0) {
     return { tileOrder: "row-major" };
   }
-  if (!isRecord(raw)) {
+  if (!isRecord3(raw)) {
     throw new Error("layout must be an object.");
   }
   const tileOrder = raw.tileOrder ?? "row-major";
@@ -10830,7 +10937,7 @@ var readOptions = (raw, indexed) => {
     throw new Error("Invalid paletteExpansion profile.");
   }
   const map = raw.tilemap === void 0 ? {} : raw.tilemap;
-  if (!isRecord(map) || Object.keys(map).some(
+  if (!isRecord3(map) || Object.keys(map).some(
     (key) => ![
       "layout",
       "startTileIndex",
@@ -10868,7 +10975,7 @@ var externalPalette = (input) => {
     throw new Error("External palette JSON exceeds 64 KiB.");
   }
   const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.bytes));
-  if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
+  if (!isRecord3(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
     throw new Error("External palette requires version 1 and 1\u2013256 RGB8 colors.");
   }
   const transparentIndex = readInteger(
@@ -10901,7 +11008,7 @@ function selectPalette(image, options, resources, capacity) {
       indexes = image.indexes.slice();
       sourceToNative = colors.map((_, index) => index);
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette) ? resources[options.palette] : void 0;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -10967,7 +11074,7 @@ function selectPalette(image, options, resources, capacity) {
         indexes[pixel] = index;
       }
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette) ? resources[options.palette] : void 0;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -11077,7 +11184,7 @@ function mapOrder(width, height, layout2) {
   return order;
 }
 function imageModel(document2) {
-  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord(document2.value)) {
+  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord3(document2.value)) {
     throw new Error("Image encoder requires imported PNG pixels.");
   }
   const value = document2.value;
@@ -11086,20 +11193,40 @@ function imageModel(document2) {
   }
   const pixels = value.width * value.height;
   if (document2.kind === "indexed-image") {
-    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || ![1, 2, 4, 8].includes(Number(value.sourceBitDepth))) {
+    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || !isSourceBitDepth(value.sourceBitDepth)) {
       throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
     }
+    const palette = [];
     for (const [index, color] of value.palette.entries()) {
-      if (!Array.isArray(color) || color.length !== 4 || color.some(
-        (channel) => typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255
-      )) {
+      if (!isRgbaTuple(color)) {
         throw new Error(`Indexed image palette entry ${index} is not RGBA8.`);
       }
+      const entry = [
+        color[0],
+        color[1],
+        color[2],
+        color[3]
+      ];
+      palette.push(entry);
     }
-  } else if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+    return {
+      kind: "indexed-image",
+      width: value.width,
+      height: value.height,
+      indexes: value.indexes,
+      palette,
+      sourceBitDepth: value.sourceBitDepth
+    };
+  }
+  if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
     throw new Error("RGBA image model has invalid pixel bytes.");
   }
-  return value;
+  return {
+    kind: "rgba-image",
+    width: value.width,
+    height: value.height,
+    rgba: value.rgba
+  };
 }
 function encodeImage(document2, rawOptions, resources, format) {
   const image = imageModel(document2);
@@ -11123,21 +11250,30 @@ function encodeImage(document2, rawOptions, resources, format) {
   const widthTiles = image.width / 8;
   const heightTiles = image.height / 8;
   const coordinates = tileCoordinates(widthTiles, heightTiles, options.layout);
-  const indexByCoordinate = new Array(coordinates.length);
+  const indexByCoordinate = Array.from({ length: coordinates.length }, () => 0);
   const tiles = coordinates.map(([tx, ty], storageIndex) => {
     indexByCoordinate[ty * widthTiles + tx] = storageIndex;
     return Array.from(
       { length: 8 },
-      (_, row) => Array.from({ length: 8 }, (_2, column) => {
+      (_, row) => Array.from({ length: 8 }, (_column, column) => {
         const sourceX = options.tilemap.horizontalFlip ? 7 - column : column;
         const sourceY = options.tilemap.verticalFlip ? 7 - row : row;
         return selection.indexes[(ty * 8 + sourceY) * image.width + tx * 8 + sourceX];
       })
     );
   });
-  const tileBytes = mode7 ? encodeMode7Tiles(tiles) : encodePlanarTiles(tiles, depth);
+  let tileBytes;
+  let decodedTiles;
+  if (mode7) {
+    tileBytes = encodeMode7Tiles(tiles);
+    decodedTiles = decodeMode7Tiles(tileBytes);
+  } else if (isPlanarDepth(depth)) {
+    tileBytes = encodePlanarTiles(tiles, depth);
+    decodedTiles = decodePlanarTiles(tileBytes, depth);
+  } else {
+    throw new Error(`Unsupported planar tile format '${format}'.`);
+  }
   const paletteBytes = encodeBgr555(colors);
-  const decodedTiles = mode7 ? decodeMode7Tiles(tileBytes) : decodePlanarTiles(tileBytes, depth);
   const decodedColors = decodeBgr555(paletteBytes);
   const preview = new Uint8Array(image.width * image.height * 4);
   for (let ty = 0; ty < heightTiles; ty++) {
@@ -11216,7 +11352,12 @@ function encodeImage(document2, rawOptions, resources, format) {
       tilemap: { bytes: tilemapBytes, mediaType: "application/octet-stream", metadata },
       preview: { bytes: preview, mediaType: "application/x-rgba", metadata }
     },
-    normalizedOptions: options
+    normalizedOptions: {
+      palette: options.palette,
+      paletteExpansion: options.paletteExpansion,
+      layout: options.layout,
+      tilemap: options.tilemap
+    }
   };
 }
 function withImageEncoders(native) {
@@ -11344,6 +11485,7 @@ function encodeBossGraphics(data) {
 }
 
 // packages/assets/src/secret-of-mana/som-body-frame.ts
+var signed7 = (byte) => (byte & 63) - (byte & 64);
 function decodeBodyFrame(input) {
   if (!Array.isArray(input) && !(input instanceof Uint8Array) || input.length < 2 || input.length > 157 || [...input].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
     throw new Error("Invalid bounded body frame bytes.");
@@ -11367,7 +11509,6 @@ function decodeBodyFrame(input) {
   if (offset + groups * 2 > bytes.length) {
     throw new Error("Missing sprite block offsets.");
   }
-  const signed7 = (byte) => (byte & 63) - (byte & 64);
   const coordinateOffsets = Array.from({ length: groups }, (_, i) => ({
     y: offset + i * 2,
     x: offset + i * 2 + 1
@@ -11394,8 +11535,19 @@ function decodeBodyFrame(input) {
 }
 
 // packages/assets/src/secret-of-mana/som-frame-composition.ts
-function isSegmentTile(ref) {
-  return Array.isArray(ref);
+function isUnknownArray(value) {
+  return Array.isArray(value);
+}
+function isIntegerPair(value) {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+  for (const component of value) {
+    if (typeof component !== "number" || !Number.isSafeInteger(component)) {
+      return false;
+    }
+  }
+  return true;
 }
 function placementValue(p) {
   return [
@@ -11428,10 +11580,11 @@ function deriveFramePlacements(layout2, frame) {
     external.set(e.romAddress, e);
   }
   const resolve = (ref) => {
-    if (isSegmentTile(ref)) {
+    if (isUnknownArray(ref)) {
       const segmentName = ref[0];
       const tile = ref[1];
-      if (ref.length !== 2 || typeof segmentName !== "string" || typeof tile !== "number" || !Number.isSafeInteger(tile) || tile < 0 || tile >= (layout2.segments[segmentName]?.tiles.length ?? 0)) {
+      const segment = typeof segmentName === "string" && Object.hasOwn(layout2.segments, segmentName) ? layout2.segments[segmentName] : void 0;
+      if (ref.length !== 2 || typeof segmentName !== "string" || typeof tile !== "number" || !Number.isSafeInteger(tile) || tile < 0 || tile >= (segment?.tiles.length ?? 0)) {
         throw new Error(`Invalid expanded graphics reference: ${frame.id}.`);
       }
       return { segment: segmentName, tile };
@@ -11455,9 +11608,6 @@ function deriveFramePlacements(layout2, frame) {
     }
     return { external: structuredClone(e) };
   };
-  if (!frame.blocks) {
-    throw new Error(`Invalid native block: ${frame.id}.`);
-  }
   const ids = /* @__PURE__ */ new Set();
   return frame.blocks.flatMap((block) => {
     if (typeof block.id !== "string" || !block.id || ids.has(block.id) || ![8, 16, 32, 64].includes(block.size) || !Array.isArray(block.tiles) || block.tiles.length !== (block.size / 8) ** 2 || typeof block.flipX !== "boolean" || typeof block.flipY !== "boolean") {
@@ -11471,16 +11621,21 @@ function deriveFramePlacements(layout2, frame) {
       cellWidth: 8,
       cellHeight: 8,
       cells: references.map((_, index) => ({ source: String(index) }))
-    }).map((p, index) => ({
-      id: `${block.id}:tile-${index}`,
-      block: block.id,
-      quadrant: index,
-      x: p.x,
-      y: p.y,
-      flipX: p.flipX,
-      flipY: p.flipY,
-      ...references[index]
-    }));
+    }).map(
+      (p, index) => Object.assign(
+        {},
+        {
+          id: `${block.id}:tile-${index}`,
+          block: block.id,
+          quadrant: index,
+          x: p.x,
+          y: p.y,
+          flipX: p.flipX,
+          flipY: p.flipY
+        },
+        references[index]
+      )
+    );
   });
 }
 function validateNativeFrame(frame) {
@@ -11507,9 +11662,7 @@ function validateNativeFrame(frame) {
       }
       const relative = decoded.tileOffsets[index * 4 + quadrant];
       const base = address & 16711680 | address - relative & 65535;
-      if (graphicsBase === void 0) {
-        graphicsBase = base;
-      }
+      graphicsBase ??= base;
       if (base !== graphicsBase) {
         throw new Error(`Native tile references disagree: ${frame.id}/${block.id}.`);
       }
@@ -11522,7 +11675,7 @@ function validateFrameComposition(layout2, frame) {
     return void 0;
   }
   const placements = frame.placements;
-  if (!Array.isArray(frame.origin) || frame.origin.length !== 2 || frame.origin.some((v) => !Number.isSafeInteger(v)) || !placements) {
+  if (!isIntegerPair(frame.origin) || !placements) {
     throw new Error(`Incomplete retained composition: ${frame.id}.`);
   }
   const expected = deriveFramePlacements(layout2, frame);
@@ -11539,11 +11692,21 @@ function validateFrameComposition(layout2, frame) {
 function expandChannel(value) {
   return value << 3 | value >>> 2;
 }
+function isSpritePaletteCatalog(value) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || !("palettes" in value)) {
+    return false;
+  }
+  const palettes = value.palettes;
+  return value.version === 1 && typeof palettes === "object" && palettes !== null;
+}
 function paletteRecord(catalog, id) {
-  if (catalog?.version !== 1 || !catalog.palettes || typeof id !== "string") {
+  if (!isSpritePaletteCatalog(catalog) || typeof id !== "string") {
     throw new Error("Palette catalogue requires version 1 palette records.");
   }
-  const palette = catalog.palettes[id];
+  const palette = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
   if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) || !Array.isArray(palette.words) || palette.words.length < 1 || palette.words.length > 256 || palette.words.some((word) => typeof word !== "string" || !/^[\dA-Fa-f]{4}$/.test(word))) {
     throw new Error(`Unknown or invalid ROM palette ${id}.`);
   }
@@ -11616,24 +11779,22 @@ function spritePalettePreview(catalog, id) {
   return { rgba, width, height };
 }
 function parseSpritePaletteCatalog(bytes) {
-  let catalog;
+  let parsed;
   try {
-    catalog = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes)
-    );
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch (error) {
     throw new Error("Invalid sprite palette catalogue.", { cause: error });
   }
-  if (catalog?.version !== 1 || !catalog.palettes || typeof catalog.palettes !== "object") {
+  if (!isSpritePaletteCatalog(parsed)) {
     throw new Error("Sprite palette catalogue must contain version 1 palette records.");
   }
-  return catalog;
+  return parsed;
 }
 function readSpritePaletteCatalog(options, resources) {
   if (typeof options.palettes !== "string" || !options.palettes.endsWith(".json")) {
     throw new Error("Sprite frames require a shared palettes JSON resource.");
   }
-  const resource = resources[options.palettes];
+  const resource = Object.hasOwn(resources, options.palettes) ? resources[options.palettes] : void 0;
   if (!resource) {
     throw new Error(`Missing sprite palette catalogue: ${options.palettes}.`);
   }
@@ -11646,8 +11807,68 @@ function rectangle(bounds, width, height, label) {
     throw new Error(`Invalid ${label} bounds.`);
   }
 }
+function isVersionOneLayout(value) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || !("segments" in value) || !("width" in value) || !("height" in value)) {
+    return false;
+  }
+  return value.version === 1 && Boolean(value.segments) && Number.isInteger(value.width) && Number.isInteger(value.height);
+}
+function isKnownTileSource(value) {
+  return value === void 0 || value === "native-strip";
+}
+function isRgba8(color) {
+  if (!Array.isArray(color) || color.length !== 4) {
+    return false;
+  }
+  for (const channel of color) {
+    if (typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255) {
+      return false;
+    }
+  }
+  return true;
+}
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isIndexedSourceDepth(value) {
+  return value === 1 || value === 2 || value === 4 || value === 8;
+}
+function isRgbaTuple2(value) {
+  return Array.isArray(value) && value.length === 4 && value.every(
+    (channel) => typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255
+  );
+}
+function readIndexedImage(value) {
+  if (!isRecord4(value) || value.kind !== "indexed-image" || typeof value.width !== "number" || typeof value.height !== "number" || !(value.indexes instanceof Uint8Array) || !Array.isArray(value.palette) || !isIndexedSourceDepth(value.sourceBitDepth)) {
+    throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
+  }
+  const palette = [];
+  for (const color of value.palette) {
+    if (!isRgbaTuple2(color)) {
+      throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
+    }
+    const entry = [
+      color[0],
+      color[1],
+      color[2],
+      color[3]
+    ];
+    palette.push(entry);
+  }
+  return {
+    kind: "indexed-image",
+    width: value.width,
+    height: value.height,
+    indexes: value.indexes,
+    palette,
+    sourceBitDepth: value.sourceBitDepth
+  };
+}
 function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
-  if (layout2?.version !== 1 || !layout2.segments || !Number.isInteger(layout2.width) || !Number.isInteger(layout2.height)) {
+  if (!isVersionOneLayout(layout2)) {
     throw new Error("Frame atlas requires a version 1 layout with dimensions and segments.");
   }
   if (!Array.isArray(layout2.paletteRefs) || layout2.paletteRefs.length < 1 || layout2.paletteRefs.length > 15) {
@@ -11656,9 +11877,7 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   if (layout2.guideIndex !== layout2.paletteRefs.length * 16) {
     throw new Error("Frame atlas guide index must follow the source palette groups.");
   }
-  if (layout2.indexPalette !== void 0 && (!Array.isArray(layout2.indexPalette) || layout2.indexPalette.length !== layout2.guideIndex || layout2.indexPalette.some(
-    (color) => !Array.isArray(color) || color.length !== 4 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)
-  ))) {
+  if (layout2.indexPalette !== void 0 && (!Array.isArray(layout2.indexPalette) || layout2.indexPalette.length !== layout2.guideIndex || layout2.indexPalette.some((color) => !isRgba8(color)))) {
     throw new Error("Frame atlas indexPalette must bind every native slot to an RGBA8 color.");
   }
   for (const variant of layout2.paletteVariants ?? []) {
@@ -11666,12 +11885,12 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
       throw new Error("Frame atlas palette variant refers to an invalid source group.");
     }
   }
-  if (layout2.tileSources !== void 0 && layout2.tileSources !== "native-strip") {
+  if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
   for (const name of names) {
-    const segment = layout2.segments[name];
+    const segment = Object.hasOwn(layout2.segments, name) ? layout2.segments[name] : void 0;
     if (!segment || !Array.isArray(segment.tiles) || segment.tiles.length === 0) {
       throw new Error(`Unknown or empty frame atlas segment: ${name}.`);
     }
@@ -11747,7 +11966,7 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
         nativeRecords.set(record.address, record);
       }
     }
-    const ordered = [...nativeRecords.values()].sort((a, b) => a.address - b.address);
+    const ordered = [...nativeRecords.values()].toSorted((a, b) => a.address - b.address);
     for (let i = 1; i < ordered.length; i++) {
       if (ordered[i].address < ordered[i - 1].end) {
         throw new Error("Overlapping native frame records.");
@@ -11778,11 +11997,7 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
 }
 function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   validateFrameLayout(layout2, options);
-  const imported = pngImporter.import(source).value;
-  if (!imported || typeof imported !== "object" || !("kind" in imported) || imported.kind !== "indexed-image") {
-    throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
-  }
-  let image = imported;
+  let image = readIndexedImage(pngImporter.import(source).value);
   if (image.width !== layout2.width || image.height !== layout2.height) {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
@@ -11794,7 +12009,7 @@ function inspectFrameAtlas(source, layout2, catalog, options = {}) {
     spritePaletteColors(catalog, variant.palette);
   }
   const matches = (expected) => expected.every(
-    (color, index) => image.palette[index]?.length === 4 && color.every((component, channel) => component === image.palette[index][channel])
+    (color, index) => color.every((component, channel) => component === image.palette[index][channel])
   );
   if (!matches(colors) && (!layout2.indexPalette || !matches(layout2.indexPalette))) {
     throw new Error(
@@ -11805,7 +12020,7 @@ function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   const tiles = /* @__PURE__ */ new Map();
   const names = options.whole ? Object.keys(layout2.segments) : [options.segmentName ?? ""];
   for (const name of names) {
-    const segment = layout2.segments[name];
+    const segment = Object.hasOwn(layout2.segments, name) ? layout2.segments[name] : void 0;
     if (!segment) {
       throw new Error(`Unknown or empty frame atlas segment: ${name}.`);
     }
@@ -11851,17 +12066,20 @@ function readFrameLayout(options, resources) {
   if (typeof options.layout !== "string" || !options.layout.endsWith(".json")) {
     throw new Error("Frame atlas layout must name a JSON sidecar.");
   }
-  const resource = resources[options.layout];
+  const resource = Object.hasOwn(resources, options.layout) ? resources[options.layout] : void 0;
   if (!resource) {
     throw new Error(`Missing frame atlas layout: ${options.layout}.`);
   }
-  let layout2;
+  let parsed;
   try {
-    layout2 = JSON.parse(new TextDecoder().decode(resource.bytes));
+    parsed = JSON.parse(new TextDecoder().decode(resource.bytes));
   } catch (error) {
     throw new Error(`Invalid frame atlas layout: ${options.layout}.`, { cause: error });
   }
-  return layout2;
+  if (!isVersionOneLayout(parsed)) {
+    throw new Error("Frame atlas requires a version 1 layout with dimensions and segments.");
+  }
+  return parsed;
 }
 
 // packages/assets/src/secret-of-mana/som-lz.ts
@@ -11926,10 +12144,13 @@ function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTE
     copyRuns
   };
 }
+function assertLzOptions(options) {
+  assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
+}
 function compressSomLz(source, options = {}) {
   assert(source instanceof Uint8Array, "Expected byte input.");
   assert(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
-  assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
+  assertLzOptions(options);
   assert(
     Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)),
     "Unknown LZ option."
@@ -12044,30 +12265,62 @@ function encodeMode(source, mode, unusedHeaderByte) {
 
 // packages/assets/src/secret-of-mana/som-room-assets.ts
 import assert2 from "node:assert/strict";
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isRoomEntity(value) {
+  return isRecord5(value);
+}
+function isRoomPiece(value) {
+  return isRecord5(value);
+}
+function isRoomPreview(value) {
+  return isRecord5(value) && value.format === "som.room.preview" && value.version === 1 && isRecord5(value.tilesets) && isRecord5(value.layouts);
+}
+function isRoomAsset(value) {
+  return isRecord5(value) && Array.isArray(value.entities) && value.entities.every(isRoomEntity) && Array.isArray(value.pieces) && value.pieces.every(isRoomPiece) && Array.isArray(value.triggers) && value.triggers.every((item) => typeof item === "number");
+}
 function integer2(value, maximum, name) {
-  assert2(
-    Number.isInteger(value) && value >= 0 && value <= maximum,
-    `${name} must be 0..${maximum}.`
-  );
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+    assert2.fail(`${name} must be 0..${maximum}.`);
+  }
   return value;
 }
 function parseRoomAsset(source) {
   assert2.equal(source.mediaType, "application/json", "Room source must be JSON.");
-  const room = JSON.parse(new TextDecoder().decode(source.bytes));
-  assert2.equal(room.format, "som.room");
-  assert2.equal(room.version, 1);
-  integer2(room.id, 510, "room id");
+  const parsed = JSON.parse(new TextDecoder().decode(source.bytes));
+  if (!isRecord5(parsed)) {
+    assert2.fail("Room source must be a JSON object.");
+  }
+  assert2.equal(parsed.format, "som.room");
+  assert2.equal(parsed.version, 1);
+  integer2(parsed.id, 510, "room id");
   assert2(
-    Array.isArray(room.header) && room.header.length === 8,
+    Array.isArray(parsed.header) && parsed.header.length === 8,
     "Room header requires eight bytes."
   );
-  for (const byte of room.header) {
+  for (const byte of parsed.header) {
     integer2(byte, 255, "header byte");
   }
   for (const key of ["entities", "pieces", "triggers"]) {
-    assert2(Array.isArray(room[key]), `Missing room ${key}.`);
+    assert2(Array.isArray(parsed[key]), `Missing room ${key}.`);
   }
-  return room;
+  if (!isRoomAsset(parsed)) {
+    assert2.fail("Room entities, pieces, and triggers must match the room record.");
+  }
+  return parsed;
+}
+function parseRoomPreview(bytes) {
+  const parsed = JSON.parse(new TextDecoder().decode(bytes));
+  if (!isRecord5(parsed)) {
+    assert2.fail("Room preview resource must be a JSON object.");
+  }
+  assert2.equal(parsed.format, "som.room.preview");
+  assert2.equal(parsed.version, 1);
+  if (!isRoomPreview(parsed)) {
+    assert2.fail("Room preview resource must include tileset and layout records.");
+  }
+  return parsed;
 }
 function condition(record) {
   const variable = integer2(record.variable, 255, "story variable");
@@ -12168,11 +12421,10 @@ function renderRoomAsset(room, preview, { layer, story } = {}) {
     integer2(piece.x, 127, "piece x");
     integer2(piece.y, 127, "piece y");
     assert2(piece.layer === 1 || piece.layer === 2, "Piece layer must be 1 or 2.");
-    const layout2 = preview.layouts[piece.layout];
-    assert2(
-      layout2 && layout2.tiles.length === layout2.width * layout2.height,
-      "Missing or incomplete layout preview."
-    );
+    const layout2 = Object.hasOwn(preview.layouts, piece.layout) ? preview.layouts[piece.layout] : void 0;
+    if (!layout2 || layout2.tiles.length !== layout2.width * layout2.height) {
+      assert2(false, "Missing or incomplete layout preview.");
+    }
     integer2(layout2.width, 128, "layout width");
     integer2(layout2.height, 128, "layout height");
     assert2(layout2.width && layout2.height, "Layout dimensions must be positive.");
@@ -12403,10 +12655,14 @@ function convertBossImage(source, options, resources = {}) {
   const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
   let original;
   if (options.native !== void 0) {
-    if (typeof options.native !== "string" || !options.native || !resources[options.native]) {
+    if (typeof options.native !== "string" || !options.native) {
       throw new Error("Boss native data requires an explicit original compressed resource.");
     }
-    original = resources[options.native].bytes;
+    const nativeResource = Object.hasOwn(resources, options.native) ? resources[options.native] : void 0;
+    if (!nativeResource) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    original = nativeResource.bytes;
   } else {
     original = nativeBossChunk(source.bytes, chunkName);
   }
@@ -12450,7 +12706,7 @@ function convertBossImage(source, options, resources = {}) {
 }
 function readBrrWave(source) {
   const document2 = waveImporter.import(source);
-  const audio = document2.value;
+  const audio = readPcmAudio(document2.value);
   const bytes = source.bytes;
   if (bytes.length < 12 || String.fromCharCode(...bytes.subarray(0, 4)) !== "RIFF" || String.fromCharCode(...bytes.subarray(8, 12)) !== "WAVE") {
     throw new Error("SoM BRR asset requires a RIFF/WAVE file.");
@@ -12570,7 +12826,7 @@ function decodeActor3bppNative(bytes) {
     { length: bytes.length / 24 },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, y) => Array.from({ length: 8 }, (_3, x) => {
+      (_row, y) => Array.from({ length: 8 }, (_column, x) => {
         const offset = tileIndex * 24 + y * 3;
         const bit = 7 - x;
         return bytes[offset] >>> bit & 1 | (bytes[offset + 1] >>> bit & 1) << 1 | (bytes[offset + 2] >>> bit & 1) << 2;
@@ -12826,19 +13082,17 @@ function convertSomFramePreview(input) {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
   const image = inspected.image;
-  if (image.kind !== "indexed-image") {
-    throw new Error("Frame atlas preview requires an indexed PNG.");
-  }
   const rgba = new Uint8Array(image.width * image.height * 4);
   for (let pixel = 0; pixel < image.indexes.length; pixel++) {
-    const color = image.palette[image.indexes[pixel]];
+    const colorIndex = image.indexes[pixel];
+    const color = colorIndex >= 0 && colorIndex < image.palette.length ? image.palette[colorIndex] : void 0;
     if (!color) {
       throw new Error(`Frame atlas pixel ${pixel} has no palette color.`);
     }
     rgba.set(color, pixel * 4);
   }
   const paletteId = layout2.paletteRefs[layout2.segments[segment].palette];
-  const palette = catalog.palettes[paletteId];
+  const palette = Object.hasOwn(catalog.palettes, paletteId) ? catalog.palettes[paletteId] : void 0;
   if (!palette) {
     throw new Error(`Unknown sprite palette ${paletteId}.`);
   }
@@ -12897,21 +13151,17 @@ function convertSomRoomPreview(input) {
     throw new Error(`Unknown room output '${output}'.`);
   }
   const resourcePath = input.options.preview;
-  if (typeof resourcePath !== "string" || !input.resources[resourcePath]) {
+  const resource = typeof resourcePath === "string" && Object.hasOwn(input.resources, resourcePath) ? input.resources[resourcePath] : void 0;
+  if (!resource) {
     throw new Error("Room preview requires its shared preview JSON resource.");
   }
-  const resource = input.resources[resourcePath];
   if (resource.mediaType !== "application/json") {
     throw new Error("Room preview resource must be JSON.");
   }
   const room = parseRoomAsset(input.source);
-  const preview = renderRoomAsset(
-    room,
-    JSON.parse(new TextDecoder().decode(resource.bytes)),
-    {
-      layer: input.options.layer
-    }
-  );
+  const preview = renderRoomAsset(room, parseRoomPreview(resource.bytes), {
+    layer: input.options.layer
+  });
   return {
     kind: "image",
     sourceBytes: input.source.bytes.length,
@@ -12941,7 +13191,7 @@ function convertSomBrrPreview(input) {
   }
   const converted = convertBrrWave(input.source, input.options).outputs.brr;
   const native = converted.bytes;
-  const sourceAudio = waveImporter.import(input.source).value;
+  const sourceAudio = readPcmAudio(waveImporter.import(input.source).value);
   const segment = input.format === "som.brr.segment";
   const selected = segment ? sliceBrrSegment(native, input.options) : native;
   const decoded = decodeBrrPcm(native);
@@ -12978,7 +13228,7 @@ function convertAssetPreview(input) {
   }
   const result = convertAsset(registry2, input);
   const outputName = input.output ?? result.primaryOutput;
-  const selected = result.outputs[outputName];
+  const selected = Object.hasOwn(result.outputs, outputName) ? result.outputs[outputName] : void 0;
   if (!selected) {
     throw new Error(`Asset format '${input.format}' has no output '${outputName}'.`);
   }
@@ -12989,7 +13239,7 @@ function convertAssetPreview(input) {
     output: outputName,
     metadata: selected.metadata
   };
-  const preview = result.outputs.preview;
+  const preview = Object.hasOwn(result.outputs, "preview") ? result.outputs.preview : void 0;
   if (preview?.mediaType === "application/x-rgba") {
     const width = Number(preview.metadata?.width);
     const height = Number(preview.metadata?.height);
@@ -13014,8 +13264,9 @@ function convertAssetPreview(input) {
     };
   }
   if (result.document.kind === "pcm-audio" && result.encoder.id === "snes.brr") {
-    const audio = result.document.value;
-    const decodedWav = result.outputs.reviewWav?.bytes;
+    const audio = readPcmAudio(result.document.value);
+    const reviewWav = Object.hasOwn(result.outputs, "reviewWav") ? result.outputs.reviewWav : void 0;
+    const decodedWav = reviewWav?.bytes;
     if (!decodedWav) {
       throw new Error("BRR preview omitted its decoded review WAVE.");
     }

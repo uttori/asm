@@ -7,7 +7,7 @@ const contextKey = (context) => context
     .map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`)
     .join("/");
 const nodeIdFor = (address, context) => `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
-const sortedUnique = (values) => [...new Set(values)].sort();
+const sortedUnique = (values) => [...new Set(values)].toSorted();
 /**
  * Semantic priority shared by the work heap and historical deterministic traversal.
  * Do not add insertion order here: the heap supplies it only as a final stability tie-breaker, so
@@ -60,9 +60,9 @@ class StaticWorkQueue {
         this.#values[index] = queued;
     }
     shift() {
-        const first = this.#values[0];
+        const firstSlot = this.#values.length > 0 ? this.#values[0] : undefined;
         const last = this.#values.pop();
-        if (!first || !last) {
+        if (!firstSlot || !last) {
             return undefined;
         }
         if (this.#values.length > 0) {
@@ -86,7 +86,7 @@ class StaticWorkQueue {
             }
             this.#values[index] = last;
         }
-        return first.item;
+        return firstSlot.item;
     }
     #compare(left, right) {
         return sortWork(left.item, right.item) || left.sequence - right.sequence;
@@ -133,7 +133,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         throw new Error("maxCallDepth must be a non-negative safe integer.");
     }
     const overrides = new Map();
-    for (const override of [...(options.targetOverrides ?? [])].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id))) {
+    for (const override of [...(options.targetOverrides ?? [])].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id))) {
         if (overrides.has(override.address)) {
             throw new Error(`More than one target override exists at $${hexAddress(override.address)}.`);
         }
@@ -142,7 +142,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     // Sort seeds once to retain the historical entry-point order. Every later insertion is ordered
     // incrementally by StaticWorkQueue instead of repeatedly sorting the complete pending worklist.
     const queue = new StaticWorkQueue([...seeds]
-        .sort((left, right) => left.address - right.address || left.id.localeCompare(right.id))
+        .toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id))
         .map((seed) => ({
         address: seed.address,
         state: seed.state,
@@ -279,7 +279,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             }
         }
         if (overlapping.size > 0) {
-            const related = [...overlapping, nodeId].sort();
+            const related = [...overlapping, nodeId].toSorted();
             addConflict({
                 id: `conflict:instruction-boundary:${hexAddress(item.address)}:${related.join("+")}`,
                 kind: "instruction-boundary",
@@ -448,15 +448,15 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             reachedOffsets.add(offset);
         }
     }
-    const sortedNodes = [...nodes.values()].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id));
-    const sortedFunctions = [...functions.values()].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id));
+    const sortedNodes = [...nodes.values()].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id));
+    const sortedFunctions = [...functions.values()].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id));
     return {
         status: incompleteReasons.size === 0 ? "complete" : "incomplete",
         nodes: sortedNodes,
-        edges: [...edges.values()].sort((left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id)),
+        edges: [...edges.values()].toSorted((left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id)),
         functions: sortedFunctions,
-        conflicts: [...conflicts.values()].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)),
-        unresolved: [...unresolved.values()].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)),
+        conflicts: [...conflicts.values()].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id)),
+        unresolved: [...unresolved.values()].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id)),
         coverage: {
             instructionCount: sortedNodes.length,
             functionCount: sortedFunctions.length,
@@ -466,7 +466,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
                 ? 0
                 : Number(((reachedOffsets.size / adapter.backingSize) * 100).toFixed(6)),
         },
-        incompleteReasons: [...incompleteReasons.values()].sort((left, right) => left.address - right.address || left.kind.localeCompare(right.kind)),
+        incompleteReasons: [...incompleteReasons.values()].toSorted((left, right) => left.address - right.address || left.kind.localeCompare(right.kind)),
         processedWorkItems,
     };
 };

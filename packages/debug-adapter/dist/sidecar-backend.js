@@ -1,9 +1,16 @@
 import { DEBUG_BACKEND_PROTOCOL_VERSION, } from "./contracts.js";
 import { validateDebugTraceDetails } from "./trace-detail-validation.js";
-const stopReasons = new Set(["entry", "pause", "step", "breakpoint", "exception"]);
-const stepKinds = new Set(["instruction", "over", "in", "out"]);
+const isStopReason = (value) => value === "entry" ||
+    value === "pause" ||
+    value === "step" ||
+    value === "breakpoint" ||
+    value === "exception";
+const stepKindNames = new Set(["instruction", "over", "in", "out"]);
+const isStepKind = (value) => stepKindNames.has(value);
+const isOutputCategory = (value) => value === "console" || value === "stdout" || value === "stderr";
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const record = (value, context) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    if (!isRecord(value)) {
         throw new Error(`${context} must be an object.`);
     }
     return value;
@@ -20,6 +27,23 @@ const string = (value, context) => {
     }
     return value;
 };
+const readStepKinds = (value, context) => {
+    if (value === undefined) {
+        return undefined;
+    }
+    const values = array(value, context).map((entry, index) => string(entry, `${context}[${index}]`));
+    const kinds = [];
+    for (const entry of values) {
+        if (!isStepKind(entry)) {
+            throw new Error(`${context} contains an unsupported step kind.`);
+        }
+        kinds.push(entry);
+    }
+    if (new Set(kinds).size !== kinds.length) {
+        throw new Error(`${context} must be unique.`);
+    }
+    return kinds;
+};
 const boolean = (value, context) => {
     if (typeof value !== "boolean") {
         throw new Error(`${context} must be boolean.`);
@@ -27,7 +51,7 @@ const boolean = (value, context) => {
     return value;
 };
 const integer = (value, context, minimum = 0) => {
-    if (!Number.isSafeInteger(value) || value < minimum) {
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
     }
     return value;
@@ -63,7 +87,7 @@ const architectureCapabilities = (value, context) => {
             sideEffectFree: boolean(memorySpace.sideEffectFree, `${context}.memorySpaces[${index}].sideEffectFree`),
         };
     })
-        .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
+        .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace));
     if (new Set(memorySpaces.map(({ addressSpace }) => addressSpace)).size !== memorySpaces.length) {
         throw new Error(`${context}.memorySpaces must use unique address spaces.`);
     }
@@ -79,10 +103,10 @@ const architectureCapabilities = (value, context) => {
         if (candidate.trace === null) {
             return null;
         }
-        const value = record(candidate.trace, `${context}.trace`);
-        const traceAddressSpaces = array(value.addressSpaces, `${context}.trace.addressSpaces`)
+        const traceRecord = record(candidate.trace, `${context}.trace`);
+        const traceAddressSpaces = array(traceRecord.addressSpaces, `${context}.trace.addressSpaces`)
             .map((entry, index) => string(entry, `${context}.trace.addressSpaces[${index}]`))
-            .sort();
+            .toSorted();
         if (traceAddressSpaces.length === 0) {
             throw new Error(`${context}.trace.addressSpaces must not be empty.`);
         }
@@ -92,8 +116,8 @@ const architectureCapabilities = (value, context) => {
         if (traceAddressSpaces.some((addressSpace) => !addressSpaces.includes(addressSpace))) {
             throw new Error(`${context}.trace.addressSpaces must be declared in addressSpaces.`);
         }
-        const maxBufferedEvents = positiveInteger(value.maxBufferedEvents, `${context}.trace.maxBufferedEvents`);
-        const maxBatchEvents = positiveInteger(value.maxBatchEvents, `${context}.trace.maxBatchEvents`);
+        const maxBufferedEvents = positiveInteger(traceRecord.maxBufferedEvents, `${context}.trace.maxBufferedEvents`);
+        const maxBatchEvents = positiveInteger(traceRecord.maxBatchEvents, `${context}.trace.maxBatchEvents`);
         if (maxBatchEvents > maxBufferedEvents) {
             throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);
         }
@@ -101,28 +125,17 @@ const architectureCapabilities = (value, context) => {
             addressSpaces: traceAddressSpaces,
             maxBufferedEvents,
             maxBatchEvents,
-            ...(value.instructionDetails === undefined
+            ...(traceRecord.instructionDetails === undefined
                 ? {}
-                : { instructionDetails: boolean(value.instructionDetails, "Trace instructionDetails") }),
+                : {
+                    instructionDetails: boolean(traceRecord.instructionDetails, "Trace instructionDetails"),
+                }),
         };
     })();
-    const stepKinds = (() => {
-        if (candidate.stepKinds === undefined) {
-            return undefined;
-        }
-        const values = array(candidate.stepKinds, `${context}.stepKinds`).map((entry, index) => string(entry, `${context}.stepKinds[${index}]`));
-        const allowed = new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry))) {
-            throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        }
-        if (new Set(values).size !== values.length) {
-            throw new Error(`${context}.stepKinds must be unique.`);
-        }
-        return values;
-    })();
+    const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
     return {
         architecture: string(candidate.architecture, `${context}.architecture`),
-        addressSpaces: [...addressSpaces].sort(),
+        addressSpaces: [...addressSpaces].toSorted(),
         memorySpaces,
         trace,
         pause: boolean(candidate.pause, `${context}.pause`),
@@ -139,24 +152,11 @@ const backendCapabilities = (value, context) => {
     const candidate = record(value, context);
     const architectures = array(candidate.architectures, `${context}.architectures`)
         .map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`))
-        .sort((left, right) => left.architecture.localeCompare(right.architecture));
+        .toSorted((left, right) => left.architecture.localeCompare(right.architecture));
     if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length) {
         throw new Error(`${context}.architectures must use unique architecture identifiers.`);
     }
-    const stepKinds = (() => {
-        if (candidate.stepKinds === undefined) {
-            return undefined;
-        }
-        const values = array(candidate.stepKinds, `${context}.stepKinds`).map((entry, index) => string(entry, `${context}.stepKinds[${index}]`));
-        const allowed = new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry))) {
-            throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        }
-        if (new Set(values).size !== values.length) {
-            throw new Error(`${context}.stepKinds must be unique.`);
-        }
-        return values;
-    })();
+    const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
     return Object.freeze({
         pause: boolean(candidate.pause, `${context}.pause`),
         step: boolean(candidate.step, `${context}.step`),
@@ -280,12 +280,12 @@ const backendEvent = (message) => {
     const body = record(message.body, `Sidecar '${message.event}' event body`);
     if (message.event === "stopped") {
         const reason = string(body.reason, "Stopped event reason");
-        if (!stopReasons.has(reason)) {
+        if (!isStopReason(reason)) {
             throw new Error(`Unsupported stop reason '${reason}'.`);
         }
         return {
             type: "stopped",
-            reason: reason,
+            reason,
             threadId: positiveInteger(body.threadId, "Stopped event threadId"),
         };
     }
@@ -306,7 +306,7 @@ const backendEvent = (message) => {
         type: "output",
         category: (() => {
             const category = string(body.category, "Output event category");
-            if (!new Set(["console", "stdout", "stderr"]).has(category)) {
+            if (!isOutputCategory(category)) {
                 throw new Error(`Unsupported output category '${category}'.`);
             }
             return category;
@@ -379,20 +379,16 @@ export class SidecarDebugBackend {
     }
     /** @inheritdoc */
     async pause(threadId) {
-        await this.#requireConnected().request("pause", {
-            ...(threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") }),
-        });
+        await this.#requireConnected().request("pause", threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") });
     }
     /** @inheritdoc */
     async continue(threadId) {
-        await this.#requireConnected().request("continue", {
-            ...(threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") }),
-        });
+        await this.#requireConnected().request("continue", threadId === undefined ? {} : { threadId: positiveInteger(threadId, "Thread id") });
     }
     /** @inheritdoc */
     async step(threadId, kind) {
-        if (!stepKinds.has(kind)) {
-            throw new Error(`Unsupported step kind '${String(kind)}'.`);
+        if (!stepKindNames.has(kind)) {
+            throw new Error(`Unsupported step kind '${kind}'.`);
         }
         await this.#requireConnected().request("step", {
             threadId: positiveInteger(threadId, "Thread id"),
@@ -475,7 +471,7 @@ export class SidecarDebugBackend {
     /** @inheritdoc */
     async capture(request) {
         validateCaptureRequest(request);
-        return (await this.#requireConnected().request("capture", { ...request }));
+        return validateCaptureResult(await this.#requireConnected().request("capture", { ...request }));
     }
     async startTrace(options) {
         const architecture = string(options.architecture, "Trace architecture");
@@ -602,5 +598,5 @@ export class SidecarDebugBackend {
         }
     }
 }
-import { validateCaptureRequest, } from "./capture-v2.js";
+import { validateCaptureRequest, validateCaptureResult, } from "./capture-v2.js";
 //# sourceMappingURL=sidecar-backend.js.map

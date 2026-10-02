@@ -8,15 +8,15 @@ import { DirectiveRegistry } from "../../src/directives/registry.js";
 import type { DirectiveRegistryContexts } from "../../src/directives/registry.js";
 import type { ArchitectureDirectiveContext } from "../../src/directives/types.js";
 import type { DirectiveRuntimeService } from "../../src/services/directive-runtime-service.js";
-import { createOperandResolver } from "./test-stubs.js";
+import { createOperandResolver, testDouble } from "./test-stubs.js";
 
 const createLayoutHarness = () => {
   const calls: string[][] = [];
-  const runtime = {
+  const runtime = testDouble<DirectiveRuntimeService>({
     handleOrg: (args: string[]) => calls.push(["org", ...args]),
     handlePushPC: () => calls.push(["pushpc"]),
     handlePullPC: () => calls.push(["pullpc"]),
-  } as DirectiveRuntimeService;
+  });
   const session = {
     currentTargetAddress: 0x8000,
     currentTargetBaseAddress: 0x8100,
@@ -124,7 +124,9 @@ test("base requires one in-range parameter and supports off", (t) => {
 test("arch without selectArchitecture writes session.arch and enforces the target set", (t) => {
   const session: ArchitectureDirectiveContext["session"] = {
     arch: "old",
-    architectureRegistry: {
+    architectureRegistry: testDouble<
+      ArchitectureDirectiveContext["session"]["architectureRegistry"]
+    >({
       getCanonicalName: (name: string) => {
         if (name === "65816") {
           return "snes.65816";
@@ -134,7 +136,7 @@ test("arch without selectArchitecture writes session.arch and enforces the targe
         }
         return undefined;
       },
-    } as ArchitectureDirectiveContext["session"]["architectureRegistry"],
+    }),
     availableArchitectures: new Set(["snes.65816"]),
     targetDisplayName: "SNES",
   };

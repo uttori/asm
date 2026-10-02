@@ -53,6 +53,85 @@ export type BenchmarkAggregate = {
   counters: Record<keyof BenchmarkSample["counters"], BenchmarkStatistics>;
 };
 
+const COUNTER_NAMES: readonly (keyof BenchmarkSample["counters"])[] = [
+  "passProgramCacheHits",
+  "passProgramCacheMisses",
+  "passProgramCachePeakSize",
+  "normalizedCommandClones",
+  "actualReparses",
+  "includeReads",
+  "includeBytesRead",
+  "includeTextCacheHits",
+  "includeResolutionCacheHits",
+  "expressionEvaluations",
+  "expressionStringEvaluations",
+  "expressionUniqueStringEvaluations",
+  "expressionNodeEvaluations",
+  "expressionUniqueNodeEvaluations",
+  "pureExpressionEvaluations",
+  "pureExpressionUniqueNodes",
+  "pureStringExpressionEvaluations",
+  "pureStringExpressionUniqueValues",
+  "pureStringExpressionCacheHits",
+  "pureStringExpressionCacheMisses",
+  "macroExpansions",
+  "macroLinesProcessed",
+  "passthroughDispatches",
+  "loweredProgramBuilds",
+  "runtimeNodesLowered",
+  "referenceCollections",
+  "addressMappings",
+  "assemblerConstructions",
+  "sessionConstructions",
+  "cacheWriteBytes",
+];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function isCounterName(value: string): value is keyof BenchmarkSample["counters"] {
+  return COUNTER_NAMES.some((name) => name === value);
+}
+
+function isStatistics(value: unknown): value is BenchmarkStatistics {
+  return (
+    isRecord(value) &&
+    typeof value.min === "number" &&
+    typeof value.median === "number" &&
+    typeof value.p95 === "number" &&
+    typeof value.max === "number" &&
+    typeof value.medianAbsoluteDeviation === "number"
+  );
+}
+
+/** Present keys must be known counters. Missing keys stay absent, matching partial fixtures. */
+function isCounterAggregate(
+  value: Partial<BenchmarkAggregate["counters"]>,
+): value is BenchmarkAggregate["counters"] {
+  return Object.entries(value).every(
+    ([name, statistics]) => isCounterName(name) && isStatistics(statistics),
+  );
+}
+
+export function isBenchmarkSample(value: unknown): value is BenchmarkSample {
+  if (
+    !isRecord(value) ||
+    typeof value.wallMs !== "number" ||
+    typeof value.peakRssBytes !== "number" ||
+    typeof value.peakHeapUsedBytes !== "number" ||
+    !isRecord(value.phasesMs) ||
+    !isRecord(value.counters)
+  ) {
+    return false;
+  }
+  if (!Object.values(value.phasesMs).every((entry) => typeof entry === "number")) {
+    return false;
+  }
+  return Object.entries(value.counters).every(
+    ([name, entry]) => isCounterName(name) && typeof entry === "number",
+  );
+}
+
 /**
  * Computes a nearest-rank percentile from numeric samples.
  * @param {number[]} values The sample values.
@@ -63,7 +142,7 @@ export function percentile(values: number[], percentileValue: number): number {
   if (values.length === 0) {
     return 0;
   }
-  const sorted = [...values].sort((left, right) => left - right);
+  const sorted = values.toSorted((left, right) => left - right);
   const index = Math.max(0, Math.ceil(percentileValue * sorted.length) - 1);
   return sorted[index] ?? 0;
 }
@@ -102,20 +181,19 @@ export function aggregateOperationSamples(
 ): OperationBenchmarkAggregate {
   // Keep the field list explicit so a newly added measurement cannot silently enter or disappear
   // from retained reports through Object.keys ordering or an accidental non-numeric property.
-  const fields: readonly (keyof OperationBenchmarkSample)[] = [
-    "wallMs",
-    "baselineRssBytes",
-    "baselineHeapUsedBytes",
-    "endRssBytes",
-    "endHeapUsedBytes",
-    "boundaryMaxRssBytes",
-    "boundaryMaxHeapUsedBytes",
-    "rssDeltaBytes",
-    "heapUsedDeltaBytes",
-  ];
-  return Object.fromEntries(
-    fields.map((field) => [field, benchmarkStatistics(samples.map((sample) => sample[field]))]),
-  ) as OperationBenchmarkAggregate;
+  const statistics = (field: keyof OperationBenchmarkSample): BenchmarkStatistics =>
+    benchmarkStatistics(samples.map((sample) => sample[field]));
+  return {
+    wallMs: statistics("wallMs"),
+    baselineRssBytes: statistics("baselineRssBytes"),
+    baselineHeapUsedBytes: statistics("baselineHeapUsedBytes"),
+    endRssBytes: statistics("endRssBytes"),
+    endHeapUsedBytes: statistics("endHeapUsedBytes"),
+    boundaryMaxRssBytes: statistics("boundaryMaxRssBytes"),
+    boundaryMaxHeapUsedBytes: statistics("boundaryMaxHeapUsedBytes"),
+    rssDeltaBytes: statistics("rssDeltaBytes"),
+    heapUsedDeltaBytes: statistics("heapUsedDeltaBytes"),
+  };
 }
 
 /**
@@ -124,10 +202,19 @@ export function aggregateOperationSamples(
  * @returns {BenchmarkAggregate} The aggregated report values.
  */
 export function aggregateSamples(samples: BenchmarkSample[]): BenchmarkAggregate {
-  const phaseNames = [...new Set(samples.flatMap((sample) => Object.keys(sample.phasesMs)))].sort();
-  const counterNames = Object.keys(samples[0]?.counters ?? {}) as Array<
-    keyof BenchmarkSample["counters"]
-  >;
+  const phaseNames = [
+    ...new Set(samples.flatMap((sample) => Object.keys(sample.phasesMs))),
+  ].toSorted();
+  const counters: Partial<BenchmarkAggregate["counters"]> = {};
+  for (const name of Object.keys(samples[0]?.counters ?? {})) {
+    if (!isCounterName(name)) {
+      throw new Error(`Unknown benchmark counter '${name}'.`);
+    }
+    counters[name] = benchmarkStatistics(samples.map((sample) => sample.counters[name]));
+  }
+  if (!isCounterAggregate(counters)) {
+    throw new Error("Benchmark counters must be numeric distributions.");
+  }
   return {
     wallMs: benchmarkStatistics(samples.map((sample) => sample.wallMs)),
     peakRssBytes: samples.reduce((maximum, sample) => Math.max(maximum, sample.peakRssBytes), 0),
@@ -141,11 +228,6 @@ export function aggregateSamples(samples: BenchmarkSample[]): BenchmarkAggregate
         benchmarkStatistics(samples.map((sample) => sample.phasesMs[name] ?? 0)),
       ]),
     ),
-    counters: Object.fromEntries(
-      counterNames.map((name) => [
-        name,
-        benchmarkStatistics(samples.map((sample) => sample.counters[name])),
-      ]),
-    ) as BenchmarkAggregate["counters"],
+    counters,
   };
 }

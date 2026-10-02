@@ -1,5 +1,4 @@
 import { test } from "../../../tests/ava-helper.js";
-
 import {
   cmos65c02Forms,
   cmos65sc02Forms,
@@ -92,6 +91,9 @@ test("opcode form materialization validates raw operand bytes", (t) => {
   t.throws(() => getOpcodeForm(0x100), { instanceOf: RangeError });
 });
 
+const has = (forms: typeof cmos65sc02Forms, mnemonic: string, mode = "implied") =>
+  forms.some((form) => form.mnemonic === mnemonic && form.mode === mode);
+
 test("CMOS and vendor-extension tables expose complete and distinct ca65 architecture sets", (t) => {
   t.is(mos6502DtvForms.length, 192);
   t.is(cmos65sc02Forms.length, 182);
@@ -101,8 +103,6 @@ test("CMOS and vendor-extension tables expose complete and distinct ca65 archite
   t.is(commodore4510Forms.length, 263);
   t.is(mega65Gs02Forms.length, 350);
 
-  const has = (forms: typeof cmos65sc02Forms, mnemonic: string, mode = "implied") =>
-    forms.some((form) => form.mnemonic === mnemonic && form.mode === mode);
   t.false(has(cmos65sc02Forms, "RMB0", "zeroPage"));
   t.true(has(cmos65c02Forms, "RMB0", "zeroPage"));
   t.false(has(cmos65c02Forms, "WAI"));

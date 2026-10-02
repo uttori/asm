@@ -78,7 +78,7 @@ export function buildInstructionCatalog(forms) {
         grouped.set(form.mnemonic, entries);
     }
     return [...grouped.entries()]
-        .sort(([left], [right]) => left.localeCompare(right))
+        .toSorted(([left], [right]) => left.localeCompare(right))
         .map(([mnemonic, entries]) => ({
         mnemonic,
         summary: summaries[mnemonic] ??

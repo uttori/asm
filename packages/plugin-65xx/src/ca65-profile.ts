@@ -16,9 +16,33 @@ export interface Ca65SessionState {
 }
 
 export const CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
-export const ca65SessionStateKey = {
-  id: CA65_65XX_SESSION_STATE_ID,
-} as SessionStateKey<Ca65SessionState>;
+
+/**
+ * Attaches the compile-time session-state brand. The brand is not a runtime property;
+ * a non-empty id is the only value `SessionStateStore` reads.
+ * @param {{ readonly id: string }} value Key candidate.
+ * @returns {boolean} True when the id can identify a session slot.
+ */
+function isSessionStateKey<T>(value: { readonly id: string }): value is SessionStateKey<T> {
+  return value.id.length > 0;
+}
+
+/**
+ * Builds the branded ca65 session slot key.
+ * @param {string} id Plugin-owned slot id.
+ * @returns {SessionStateKey<T>} Key for `SessionStateStore.get`.
+ */
+function createSessionStateKey<T>(id: string): SessionStateKey<T> {
+  const key = { id };
+  if (!isSessionStateKey<T>(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+
+export const ca65SessionStateKey = createSessionStateKey<Ca65SessionState>(
+  CA65_65XX_SESSION_STATE_ID,
+);
 
 export function createCa65SessionState(): Ca65SessionState {
   return {
@@ -188,7 +212,7 @@ export function rewriteCa65Command(command: string, context: SyntaxRewriteContex
     if (!header) {
       return rewritten;
     }
-    const params = splitArguments(header[2] ?? "").join(",");
+    const params = splitArguments(header[2]).join(",");
     return `${indent}macro ${header[1]}(${params})`;
   }
   if (keyword === "endmacro") {

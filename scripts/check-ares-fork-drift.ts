@@ -124,16 +124,16 @@ const parseArguments = (arguments_: readonly string[]): Options => {
       selectedCurrent = true;
       continue;
     }
-    const name = optionNames.get(argument ?? "");
+    const name = optionNames.get(argument);
     if (!name) {
-      throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
+      throw new Error(`Unknown argument '${argument}'.\n${usage}`);
     }
     if (seen.has(name)) {
-      throw new Error(`Duplicate argument '${String(argument)}'.`);
+      throw new Error(`Duplicate argument '${argument}'.`);
     }
     const value = arguments_[++index];
     if (!value || value.startsWith("--")) {
-      throw new Error(`Argument '${String(argument)}' requires a path.`);
+      throw new Error(`Argument '${argument}' requires a path.`);
     }
     parsed[name] = path.resolve(value);
     seen.add(name);
@@ -236,10 +236,10 @@ const headlessChangedFiles = gitText(options.repo, [
 ])
   .split("\n")
   .filter(Boolean)
-  .sort();
+  .toSorted();
 assertEqual(
   JSON.stringify(headlessChangedFiles),
-  JSON.stringify([...HEADLESS_PATCH_FILES].sort()),
+  JSON.stringify([...HEADLESS_PATCH_FILES].toSorted()),
   "Headless patch file allowlist",
 );
 assertEqual(
@@ -276,10 +276,10 @@ const changedFiles = gitText(options.repo, [
 ])
   .split("\n")
   .filter(Boolean)
-  .sort();
+  .toSorted();
 assertEqual(
   JSON.stringify(changedFiles),
-  JSON.stringify([...PATCH_FILES].sort()),
+  JSON.stringify([...PATCH_FILES].toSorted()),
   "Patch file allowlist",
 );
 assertEqual(

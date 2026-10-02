@@ -152,10 +152,10 @@ type InstructionMutable = {
 };
 
 const sortedStrings = (values?: Iterable<string>): readonly string[] =>
-  values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
+  values ? [...new Set(values)].toSorted((left, right) => left.localeCompare(right)) : [];
 
 const sortedNumbers = (values?: Iterable<number>): readonly number[] =>
-  values ? [...new Set(values)].sort((left, right) => left - right) : [];
+  values ? [...new Set(values)].toSorted((left, right) => left - right) : [];
 
 const valueKey = (value: unknown, present: boolean): string =>
   present ? canonicalJsonCompact(value) : "<absent>";
@@ -199,7 +199,7 @@ const numberField = (
   name: string,
 ): number | undefined => {
   const value = record[name];
-  return Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : undefined;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 };
 
 const effectiveAddress = (
@@ -235,6 +235,27 @@ const annotationState = (
 
 const runtimeState = (record: RuntimeCpuStateRecord): Readonly<Record<string, RuntimeStateValue>> =>
   record.state;
+
+/**
+ * Finds the first indexed value whose numeric key is at least `target`.
+ * @param {readonly T[]} values Sorted indexed values.
+ * @param {number} target Inclusive lower-bound key.
+ * @param {(value: T) => number} at Numeric key selector.
+ * @returns {number} First matching index, or `values.length` when none exists.
+ */
+const lowerBound = <T>(values: readonly T[], target: number, at: (value: T) => number): number => {
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (at(values[middle]) < target) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+};
 
 /**
  * Builds a conservative, target-neutral instruction annotation projection.
@@ -459,30 +480,6 @@ export const buildInstructionAnalysisAnnotations = (
     values.sort((left, right) => left.address - right.address);
   }
   outputIndex.sort((left, right) => left.offset - right.offset);
-  /**
-   * Finds the first indexed value whose numeric key is at least `target`.
-   * @param {readonly T[]} values Sorted indexed values.
-   * @param {number} target Inclusive lower-bound key.
-   * @param {(value: T) => number} at Numeric key selector.
-   * @returns {number} First matching index, or `values.length` when none exists.
-   */
-  const lowerBound = <T>(
-    values: readonly T[],
-    target: number,
-    at: (value: T) => number,
-  ): number => {
-    let low = 0;
-    let high = values.length;
-    while (low < high) {
-      const middle = low + Math.floor((high - low) / 2);
-      if (at(values[middle]) < target) {
-        low = middle + 1;
-      } else {
-        high = middle;
-      }
-    }
-    return low;
-  };
   const attachToRange = (
     addressSpace: string,
     start: number,
@@ -580,91 +577,108 @@ export const buildInstructionAnalysisAnnotations = (
     }
     // Every optional construction collection is normalized back to the original public shape here.
     // consumers never observe missing arrays, maps, or nondeterministic insertion order.
-    return {
-      id: `instruction:${instruction.addressSpace}:${instruction.address}`,
-      addressSpace: instruction.addressSpace,
-      address: instruction.address,
-      outputOffsets: sortedNumbers(instruction.outputOffsets),
-      architectures: sortedStrings(instruction.architectures),
-      nodeIds: sortedStrings(instruction.nodeIds),
-      effectiveAddresses: [...(instruction.effectiveAddresses?.values() ?? [])]
-        .map(({ value, nodeIds, evidence }) => ({
-          ...value,
-          nodeIds: sortedStrings(nodeIds),
-          evidence: sortedStrings(evidence),
-        }))
-        .sort(
-          (left, right) =>
-            left.operandIndex - right.operandIndex ||
-            (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) ||
-            left.explanation.localeCompare(right.explanation),
+    return Object.assign(
+      {
+        id: `instruction:${instruction.addressSpace}:${instruction.address}`,
+        addressSpace: instruction.addressSpace,
+        address: instruction.address,
+        outputOffsets: sortedNumbers(instruction.outputOffsets),
+        architectures: sortedStrings(instruction.architectures),
+        nodeIds: sortedStrings(instruction.nodeIds),
+        effectiveAddresses: [...(instruction.effectiveAddresses?.values() ?? [])]
+          .map(({ value, nodeIds, evidence }) =>
+            Object.assign({}, value, {
+              nodeIds: sortedStrings(nodeIds),
+              evidence: sortedStrings(evidence),
+            }),
+          )
+          .toSorted(
+            (left, right) =>
+              left.operandIndex - right.operandIndex ||
+              (left.address ?? left.baseAddress ?? -1) -
+                (right.address ?? right.baseAddress ?? -1) ||
+              left.explanation.localeCompare(right.explanation),
+          ),
+        stateTransitions: [...(instruction.stateTransitions?.values() ?? [])]
+          // Reuse canonical keys from aggregation. Serializing states inside the comparator repeats
+          // that work O(n log n) times and creates substantial garbage on full runtime captures.
+          .toSorted(
+            (left, right) =>
+              left.field.localeCompare(right.field) ||
+              left.beforeKey.localeCompare(right.beforeKey) ||
+              left.afterKey.localeCompare(right.afterKey),
+          )
+          .map(({ field, before, after, nodeIds, evidence }) =>
+            Object.assign(
+              Object.assign(
+                {},
+                { field },
+                before === undefined ? {} : { before },
+                after === undefined ? {} : { after },
+              ),
+              {
+                nodeIds: sortedStrings(nodeIds),
+                evidence: sortedStrings(evidence),
+              },
+            ),
+          ),
+        stateObservations: [...(instruction.stateObservations?.values() ?? [])]
+          .toSorted(
+            (left, right) =>
+              left.source.localeCompare(right.source) ||
+              left.architecture.localeCompare(right.architecture) ||
+              left.stateKey.localeCompare(right.stateKey),
+          )
+          .map(({ source, architecture, state, count, recordIds, evidence }) =>
+            Object.assign(
+              {},
+              { source, architecture, state },
+              count === undefined ? {} : { count },
+              {
+                recordIds: sortedStrings(recordIds),
+                evidence: sortedStrings(evidence),
+              },
+            ),
+          ),
+        executionCount: instruction.executionCount,
+      },
+      instruction.comments
+        ? { comments: instruction.comments.toSorted((a, b) => a.id.localeCompare(b.id)) }
+        : {},
+      {
+        executionRecordIds: sortedStrings(instruction.executionRecordIds),
+        runtimeCoverage: [...coverage.values()].toSorted((left, right) =>
+          left.coverage.localeCompare(right.coverage),
         ),
-      stateTransitions: [...(instruction.stateTransitions?.values() ?? [])]
-        // Reuse canonical keys from aggregation. Serializing states inside the comparator repeats
-        // that work O(n log n) times and creates substantial garbage on full runtime captures.
-        .sort(
-          (left, right) =>
-            left.field.localeCompare(right.field) ||
-            left.beforeKey.localeCompare(right.beforeKey) ||
-            left.afterKey.localeCompare(right.afterKey),
-        )
-        .map(({ field, before, after, nodeIds, evidence }) => ({
-          field,
-          ...(before === undefined ? {} : { before }),
-          ...(after === undefined ? {} : { after }),
-          nodeIds: sortedStrings(nodeIds),
-          evidence: sortedStrings(evidence),
-        })),
-      stateObservations: [...(instruction.stateObservations?.values() ?? [])]
-        .sort(
-          (left, right) =>
-            left.source.localeCompare(right.source) ||
-            left.architecture.localeCompare(right.architecture) ||
-            left.stateKey.localeCompare(right.stateKey),
-        )
-        .map(({ source, architecture, state, count, recordIds, evidence }) => ({
-          source,
-          architecture,
-          state,
-          ...(count === undefined ? {} : { count }),
-          recordIds: sortedStrings(recordIds),
-          evidence: sortedStrings(evidence),
-        })),
-      executionCount: instruction.executionCount,
-      ...(instruction.comments
-        ? { comments: [...instruction.comments].sort((a, b) => a.id.localeCompare(b.id)) }
-        : {}),
-      executionRecordIds: sortedStrings(instruction.executionRecordIds),
-      runtimeCoverage: [...coverage.values()].sort((left, right) =>
-        left.coverage.localeCompare(right.coverage),
-      ),
-      memoryAccesses: [...(instruction.memoryAccesses?.values() ?? [])]
-        .map(({ value, count, recordIds, evidence }) => ({
-          ...value,
-          count,
-          recordIds: sortedStrings(recordIds),
-          evidence: sortedStrings(evidence),
-        }))
-        .sort(
-          (left, right) =>
-            left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) ||
-            left.accessedAddress - right.accessedAddress ||
-            left.access.localeCompare(right.access) ||
-            left.width - right.width ||
-            (left.value ?? -1) - (right.value ?? -1),
-        ),
-      evidence: sortedStrings(instruction.evidence),
-    };
+        memoryAccesses: [...(instruction.memoryAccesses?.values() ?? [])]
+          .map(({ value, count, recordIds, evidence }) =>
+            Object.assign({}, value, {
+              count,
+              recordIds: sortedStrings(recordIds),
+              evidence: sortedStrings(evidence),
+            }),
+          )
+          .toSorted(
+            (left, right) =>
+              left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) ||
+              left.accessedAddress - right.accessedAddress ||
+              left.access.localeCompare(right.access) ||
+              left.width - right.width ||
+              (left.value ?? -1) - (right.value ?? -1),
+          ),
+        evidence: sortedStrings(instruction.evidence),
+      },
+    );
   });
 
   return {
-    instructions: finalized.sort(
+    instructions: finalized.toSorted(
       (left, right) =>
         left.addressSpace.localeCompare(right.addressSpace) ||
         left.address - right.address ||
         left.id.localeCompare(right.id),
     ),
-    diagnostics: diagnostics.sort(
+    diagnostics: diagnostics.toSorted(
       (left, right) =>
         left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message),
     ),

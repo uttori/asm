@@ -31,10 +31,15 @@ const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeSta
       : undefined;
   };
   const p = value("p", 255);
-  const e = value("e", 1) as 0 | 1 | undefined;
+  const emulation = value("e", 1);
+  const e = emulation === 0 || emulation === 1 ? emulation : undefined;
   let widths: Pick<Cpu65816DecodeState, "m" | "x"> = {};
   if (p !== undefined) {
-    widths = { m: ((p >> 5) & 1) as 0 | 1, x: ((p >> 4) & 1) as 0 | 1 };
+    const memoryWidth = (p >> 5) & 1;
+    const indexWidth = (p >> 4) & 1;
+    if ((memoryWidth === 0 || memoryWidth === 1) && (indexWidth === 0 || indexWidth === 1)) {
+      widths = { m: memoryWidth, x: indexWidth };
+    }
   }
   if (e === 1) {
     widths = { m: 1, x: 1 };
@@ -47,6 +52,12 @@ const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeSta
     ...(value("d", 65535) === undefined ? {} : { directPage: value("d", 65535) }),
   };
 };
+
+// Preserve bank/width conventions shared by the static CFG consumers.
+const known = (entry: number | boolean | "unknown" | undefined): Record<string, unknown> =>
+  entry === undefined || entry === "unknown"
+    ? { kind: "unknown" }
+    : { kind: "known", value: Number(entry) };
 
 /**
  * Decode captured code from any CPU bus location, including WRAM and cartridge RAM.
@@ -91,7 +102,7 @@ export const analyzeSnesRuntimeCode = (
     if (duplicate) {
       nodes.set(id, {
         ...duplicate,
-        evidence: [...new Set([...duplicate.evidence, ...sample.evidence])].sort(),
+        evidence: [...new Set([...duplicate.evidence, ...sample.evidence])].toSorted(),
       });
       continue;
     }
@@ -122,11 +133,6 @@ export const analyzeSnesRuntimeCode = (
       fileOffset >= 0 &&
       fileOffset + sample.bytes.length <= rom.length &&
       sample.bytes.every((byte, index) => romBytes[fileOffset + index] === byte);
-    // Preserve bank/width conventions shared by the static CFG consumers.
-    const known = (entry: number | boolean | "unknown" | undefined): Record<string, unknown> =>
-      entry === undefined || entry === "unknown"
-        ? { kind: "unknown" }
-        : { kind: "known", value: Number(entry) };
     const incomingState = {
       e: known(state.e),
       m: known(state.m),
@@ -153,7 +159,7 @@ export const analyzeSnesRuntimeCode = (
       outgoingState: {},
       entryPoint: `captured:${sample.evidence[0]}`,
       evidencePath: [id],
-      evidence: [...new Set([...(prior?.evidence ?? []), ...sample.evidence])].sort(),
+      evidence: [...new Set([...(prior?.evidence ?? []), ...sample.evidence])].toSorted(),
       effectiveAddresses: instruction.references
         .filter((ref) => ref.kind === "data" || ref.kind === "pointer")
         .map((ref) => {
@@ -167,15 +173,21 @@ export const analyzeSnesRuntimeCode = (
           if (ref.address !== undefined) {
             resolved = indexed ? { baseAddress: ref.address } : { address: ref.address };
           }
-          return {
-            operandIndex: ref.operandIndex ?? 0,
-            ...resolved,
-            volatile: !!hardware,
-            ...(hardware ? { symbol: hardware.symbol } : {}),
-            explanation: indexed
-              ? "Captured instruction has an unresolved indexed/indirect operand. Consult observed bus accesses."
-              : "Decoded from execution-time bytes and processor state.",
-          };
+          return Object.assign(
+            {},
+            { operandIndex: ref.operandIndex ?? 0 },
+            resolved,
+            Object.assign(
+              {},
+              { volatile: !!hardware },
+              hardware ? { symbol: hardware.symbol } : {},
+              {
+                explanation: indexed
+                  ? "Captured instruction has an unresolved indexed/indirect operand. Consult observed bus accesses."
+                  : "Decoded from execution-time bytes and processor state.",
+              },
+            ),
+          );
         }),
     });
     instructions.set(id, instruction);
@@ -298,9 +310,9 @@ export const analyzeSnesRuntimeCode = (
         message:
           "Captured executions disagree on instruction bytes or decoding. All variants and their trace evidence are retained.",
         nodes: variants.map((node) => node.id),
-        evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort(),
+        evidence: [...new Set(variants.flatMap((node) => node.evidence))].toSorted(),
       });
     }
   }
-  return records.sort((a, b) => a.id.localeCompare(b.id));
+  return records.toSorted((a, b) => a.id.localeCompare(b.id));
 };

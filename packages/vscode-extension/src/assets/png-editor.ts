@@ -18,6 +18,27 @@ import type { BinaryDrafts } from "./binary-drafts.js";
 import { PngCodec } from "./png-codec.js";
 import { PngDocument, type PixelStroke } from "./png-document.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A paint message is the stroke itself plus the webview discriminant. */
+function isPixelStroke(value: unknown): value is PixelStroke & { type: "paint" } {
+  return (
+    isRecord(value) &&
+    value.type === "paint" &&
+    typeof value.version === "number" &&
+    typeof value.index === "number" &&
+    Array.isArray(value.pixels) &&
+    value.pixels.every((pixel) => typeof pixel === "number")
+  );
+}
+
+/** Cancellation can arrive during the awaited filesystem write. */
+function cancellationRequested(token: CancellationToken): boolean {
+  return token.isCancellationRequested;
+}
+
 /** Native binary-document lifecycle around a bounded indexed PNG canvas. */
 export class PngEditor implements CustomEditorProvider<PngDocument> {
   readonly #edited = new EventEmitter<CustomDocumentEditEvent<PngDocument>>();
@@ -92,15 +113,14 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
     };
     const changed = document.onDidChange(update);
     const received = panel.webview.onDidReceiveMessage((value: unknown) => {
-      if (!value || typeof value !== "object") {
+      if (!isRecord(value)) {
         return;
       }
-      const message = value as Record<string, unknown>;
-      if (message.type === "ready") {
+      if (value.type === "ready") {
         update();
-      } else if (message.type === "paint") {
+      } else if (isPixelStroke(value)) {
         try {
-          document.paint(message as unknown as PixelStroke);
+          document.paint(value);
           update();
         } catch (error) {
           update();
@@ -142,7 +162,7 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
       throw new Error("PNG backup cancelled.");
     }
     await workspace.fs.writeFile(context.destination, document.backup());
-    if (token.isCancellationRequested) {
+    if (cancellationRequested(token)) {
       await workspace.fs.delete(context.destination);
       throw new Error("PNG backup cancelled.");
     }

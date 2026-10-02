@@ -1,135 +1,180 @@
 import { validateSourceLabelName } from "./project-labels.js";
-import type { EditableMetadataRecord, MetadataShard } from "./project-types.js";
+import type { MetadataShard } from "./project-types.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function isSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+
+function isStateRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** Own enumerable fields, including array indexes and string code units. */
+function stateEntries(state: unknown): readonly (readonly [string, unknown])[] {
+  if (typeof state === "string") {
+    const entries: [string, string][] = [];
+    for (let index = 0; index < state.length; index += 1) {
+      entries.push([String(index), state[index]]);
+    }
+    return entries;
+  }
+  if (!isStateRecord(state)) {
+    return [];
+  }
+  const entries: [string, unknown][] = [];
+  for (const field of Object.keys(state)) {
+    entries.push([field, state[field]]);
+  }
+  return entries;
+}
+
+const CLASSIFICATIONS = [
+  "unreached",
+  "opcode",
+  "operand",
+  "data8",
+  "data16",
+  "data24",
+  "data32",
+  "pointer16",
+  "pointer24",
+  "pointer32",
+  "graphics",
+  "music",
+  "compressed",
+  "asset",
+  "empty",
+  "text",
+] as const;
 
 /**
  * Require the editable record shape before accessing it. General project validation supplements
  * these checks with address-space bounds, codec constraints, and evidence-reference validation.
  * @param {MetadataShard} shard Collection selected by the caller.
- * @param {EditableMetadataRecord} record Candidate native record.
+ * @param {unknown} record Candidate native record.
  */
-export const validateEditableMetadataRecord = (
-  shard: MetadataShard,
-  record: EditableMetadataRecord,
-): void => {
+export const validateEditableMetadataRecord = (shard: MetadataShard, record: unknown): void => {
   if (
-    !record ||
+    !isRecord(record) ||
     typeof record.id !== "string" ||
     !/^\w[\w./:-]*$/.test(record.id) ||
-    !Array.isArray(record.evidence) ||
-    record.evidence.some((id) => typeof id !== "string")
+    !isStringList(record.evidence)
   ) {
     throw new Error("Metadata needs a stable record ID and evidence list.");
   }
-  if ("address" in record && (!Number.isSafeInteger(record.address) || record.address < 0)) {
+  const address = record.address;
+  if ("address" in record && !(isSafeInteger(address) && address >= 0)) {
     throw new Error("Metadata needs a nonnegative integer address.");
   }
   if (typeof record.addressSpace !== "string") {
     throw new Error("Metadata needs a named address space.");
   }
   if (shard === "labels") {
-    if (
-      !("name" in record) ||
-      typeof record.name !== "string" ||
-      !record.name ||
-      !("address" in record) ||
-      "kind" in record
-    ) {
+    const name = record.name;
+    if (typeof name !== "string" || name === "" || !("address" in record) || "kind" in record) {
       throw new Error("Invalid label metadata.");
     }
-    const label = record;
-    if (label.sourceName !== undefined) {
-      validateSourceLabelName(label.sourceName);
+    const sourceName = record.sourceName;
+    if (sourceName !== undefined) {
+      if (typeof sourceName !== "string") {
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore.",
+        );
+      }
+      validateSourceLabelName(sourceName);
     }
-    if (label.suppressed !== undefined && typeof label.suppressed !== "boolean") {
+    if (record.suppressed !== undefined && typeof record.suppressed !== "boolean") {
       throw new Error("Invalid label suppression flag.");
     }
-    for (const value of [label.comment, label.inlineComment]) {
+    for (const value of [record.comment, record.inlineComment]) {
       if (value !== undefined && (typeof value !== "string" || value.includes("\0"))) {
         throw new Error("Invalid label comment.");
       }
     }
   } else if (shard === "comments") {
+    const text = record.text;
     if (
-      !("text" in record) ||
-      typeof record.text !== "string" ||
-      !record.text.trim() ||
-      record.text.includes("\0") ||
+      typeof text !== "string" ||
+      !text.trim() ||
+      text.includes("\0") ||
       !("address" in record) ||
       "kind" in record
     ) {
       throw new Error("A standalone comment needs nonempty text.");
     }
   } else if (shard === "annotations") {
+    const classification = record.classification;
+    const architecture = record.architecture;
     if (
-      !("classification" in record) ||
-      ![
-        "unreached",
-        "opcode",
-        "operand",
-        "data8",
-        "data16",
-        "data24",
-        "data32",
-        "pointer16",
-        "pointer24",
-        "pointer32",
-        "graphics",
-        "music",
-        "compressed",
-        "asset",
-        "empty",
-        "text",
-      ].includes(record.classification) ||
-      typeof record.architecture !== "string" ||
-      !record.architecture
+      typeof classification !== "string" ||
+      !CLASSIFICATIONS.some((candidate) => candidate === classification) ||
+      typeof architecture !== "string" ||
+      architecture === ""
     ) {
       throw new Error("Invalid classification metadata.");
     }
-    if (
-      !Number.isSafeInteger(record.start) ||
-      !Number.isSafeInteger(record.end) ||
-      record.start < 0 ||
-      record.end <= record.start
-    ) {
+    const start = record.start;
+    const end = record.end;
+    if (!(isSafeInteger(start) && isSafeInteger(end) && start >= 0 && end > start)) {
       throw new Error("Classification bounds must describe a nonempty half-open interval.");
     }
-    for (const [field, value] of Object.entries(record.state ?? {})) {
-      if (["e", "m", "x", "carry"].includes(field)) {
+    const state = record.state ?? {};
+    for (const [field, value] of stateEntries(state)) {
+      if (field === "e" || field === "m" || field === "x" || field === "carry") {
         if (typeof value !== "boolean") {
           throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
         }
       } else {
-        const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
+        const maximum = field === "programBank" || field === "dataBank" ? 255 : 65535;
         if (
-          !["programBank", "dataBank", "directPage", "stackPointer"].includes(field) ||
-          typeof value !== "number" ||
-          !Number.isInteger(value) ||
-          value < 0 ||
-          value > maximum
+          (field !== "programBank" &&
+            field !== "dataBank" &&
+            field !== "directPage" &&
+            field !== "stackPointer") ||
+          !(isInteger(value) && value >= 0 && value <= maximum)
         ) {
           throw new Error(`Invalid state field '${field}'.`);
         }
       }
     }
-    if (record.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
+    const points = record.points;
+    if (
+      Array.isArray(points) &&
+      points.some(
+        (point) =>
+          (point !== "in" && point !== "out" && point !== "end" && point !== "read") ||
+          typeof point !== "string",
+      )
+    ) {
       throw new Error("Invalid entry-point metadata.");
     }
-  } else if (shard === "analysis") {
+  } else {
+    const kind = record.kind;
+    const targets = record.targets;
     if (
-      !("kind" in record) ||
-      !["target-override", "target-set"].includes(record.kind) ||
-      !Array.isArray(record.targets) ||
-      record.targets.some((value) => !Number.isSafeInteger(value) || value < 0)
+      (kind !== "target-override" && kind !== "target-set") ||
+      !Array.isArray(targets) ||
+      targets.some((value) => !Number.isSafeInteger(value) || value < 0)
     ) {
       throw new Error("Only target overrides and target sets are editable analysis records.");
     }
-    if (record.kind === "target-set" && (typeof record.name !== "string" || !record.name.trim())) {
+    if (kind === "target-set" && (typeof record.name !== "string" || !record.name.trim())) {
       throw new Error("A target set needs a name.");
     }
-    if (record.kind === "target-override" && !Number.isSafeInteger(record.address)) {
+    if (kind === "target-override" && !Number.isSafeInteger(record.address)) {
       throw new Error("A target override needs an instruction anchor.");
     }
-  } else {
-    throw new Error("This collection is not editable metadata.");
   }
 };

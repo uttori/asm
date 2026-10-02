@@ -54,7 +54,7 @@ export const createSnesDebugAddressResolvers = (
       if (!mapped || address.outputOffset !== mapped.fileOffset + rom.identity.headerSize) {
         return [address];
       }
-      return mapped.mirrors.map((alias) => ({ ...address, address: alias }));
+      return mapped.mirrors.map((alias) => Object.assign({}, address, { address: alias }));
     },
     sourceOutputOffset: (address) => {
       const mapped = identity(address);

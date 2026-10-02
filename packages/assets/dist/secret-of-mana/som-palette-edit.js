@@ -11,7 +11,7 @@ import { spritePaletteBytes, spritePaletteColors, } from "./som-sprite-palettes.
  * @returns {string} Stable identity key.
  */
 function useKey(palette, atlas, role, segments) {
-    return JSON.stringify([palette, atlas, role, [...segments].sort()]);
+    return JSON.stringify([palette, atlas, role, [...segments].toSorted()]);
 }
 /** Cross-check all catalogue users against supplied layouts, independent of filesystem/bank names.
  * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
@@ -175,7 +175,8 @@ export function planSpritePaletteEdits(catalog, atlases, edits) {
             return value;
         });
         const highBit = Number.parseInt(record.words[offset], 16) & 0x8000;
-        const word = (highBit | channels[0] | (channels[1] << 5) | (channels[2] << 10))
+        // BGR555 fields occupy disjoint bits.
+        const word = (highBit + channels[0] + (channels[1] << 5) + (channels[2] << 10))
             .toString(16)
             .toUpperCase()
             .padStart(4, "0");

@@ -151,7 +151,8 @@ const splitOnInlineStatementSeparator = (command) => {
             }
         }
         const next = command[i + 1];
-        const after = command[i + 2];
+        const afterIndex = i + 2;
+        const after = afterIndex < command.length ? command[afterIndex] : undefined;
         if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
             const trimmed = current.trim();
             if (trimmed !== "") {
@@ -238,15 +239,11 @@ export const splitCommandIntoWords = (command) => {
             if (!inQuotes) {
                 inQuotes = true;
                 quoteChar = char;
-                currentWord += char;
             }
             else if (char === quoteChar) {
                 inQuotes = false;
-                currentWord += char;
             }
-            else {
-                currentWord += char;
-            }
+            currentWord += char;
         }
         else if (/\s/.test(char) && !inQuotes) {
             if (currentWord) {

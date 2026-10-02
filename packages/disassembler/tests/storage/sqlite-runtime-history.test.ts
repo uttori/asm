@@ -17,8 +17,8 @@ test("history blocks preserve storage types and reject corrupt, oversized, and i
   const encoded = encodeRuntimeHistory(values);
   const decoded = decodeRuntimeHistory(encoded);
   t.deepEqual(
-    decoded.map((v) => (v instanceof Uint8Array ? [...v] : v)),
-    values.map((v) => (v instanceof Uint8Array ? [...v] : v)),
+    decoded.map((v) => (v instanceof Uint8Array ? Array.from(v) : v)),
+    values.map((v) => (v instanceof Uint8Array ? Array.from(v) : v)),
   );
   const corrupt = Buffer.from(encoded);
   corrupt[12] ^= 1;
@@ -47,7 +47,11 @@ test("history packing closes a byte-limited cursor before sealing and resuming i
     t.is(db.prepare("SELECT COUNT(*) n FROM runtime_history").get()!.n, values.length);
     const payloads = db.prepare("SELECT payload FROM runtime_facts ORDER BY fid").all();
     for (const [index, row] of payloads.entries()) {
-      t.deepEqual(Buffer.from(row.payload as Uint8Array), values[index]);
+      const payload = row.payload;
+      if (!(payload instanceof Uint8Array)) {
+        throw new Error("Expected history bytes.");
+      }
+      t.deepEqual(Buffer.from(payload), values[index]);
     }
   } finally {
     db.close();
@@ -56,22 +60,23 @@ test("history packing closes a byte-limited cursor before sealing and resuming i
   }
 });
 
+const record = (index: number) => ({
+  id: `full:${index}`,
+  kind: "runtime-instruction" as const,
+  architecture: "snes.65816",
+  addressSpace: "snes.cpu",
+  address: 0xc08000,
+  bytes: [0xea],
+  state: { a: index, x: 123, y: 0, s: 511, p: 0x31, e: 0, d: 0, db: 126, pb: 192, pc: 32768 },
+  count: index + 1,
+  evidence: ["capture"],
+});
+
 test("full register history shares descriptors, compresses, survives reopen and rolls back reused block IDs", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-history-"));
   const file = path.join(directory, "analysis.sqlite");
   const store = new SqliteAnalysisStore(file);
   const db = new DatabaseSync(file);
-  const record = (index: number) => ({
-    id: `full:${index}`,
-    kind: "runtime-instruction" as const,
-    architecture: "snes.65816",
-    addressSpace: "snes.cpu",
-    address: 0xc08000,
-    bytes: [0xea],
-    state: { a: index, x: 123, y: 0, s: 511, p: 0x31, e: 0, d: 0, db: 126, pb: 192, pc: 32768 },
-    count: index + 1,
-    evidence: ["capture"],
-  });
   try {
     store.transaction(() => {
       for (let i = 0; i < 1500; i++) {

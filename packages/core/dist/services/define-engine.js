@@ -203,7 +203,8 @@ export class DefineEngine {
         while (index < content.length) {
             const char = content[index];
             if (char === "\\") {
-                const next = content[index + 1];
+                const nextIndex = index + 1;
+                const next = nextIndex < content.length ? content[nextIndex] : undefined;
                 if (next === undefined) {
                     result += "\\";
                     index++;
@@ -318,7 +319,7 @@ export class DefineEngine {
             return;
         }
         if (operator === "+=") {
-            value = (this.host.defines.get(identifier) || "") + value;
+            value = (this.host.defines.get(identifier) ?? "") + value;
         }
         if (operator !== "#=" &&
             (value.includes("+") ||

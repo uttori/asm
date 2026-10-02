@@ -17,6 +17,9 @@ test("CRC32 facade preserves unsigned values, byte views and numeric-array input
   const table = CRC32.makeCRCTable();
   t.is(table.length, 256);
   t.is(table[1], 0x77073096);
+  // Locks the deprecated static table against makeCRCTable().
+  // oxlint-disable-next-line typescript/no-deprecated
   t.deepEqual(table, CRC32.table);
+  // oxlint-disable-next-line typescript/no-deprecated
   t.not(table, CRC32.table);
 });

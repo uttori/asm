@@ -5,11 +5,16 @@ import {
   parseResearchDocument,
   validateResearchSnapshot,
   type ResearchDocument,
+  type ResearchRecord,
   type ResearchSnapshot,
 } from "./inputs.js";
 
 /** Runtime validation must not widen a readonly typed array to Array<any>. */
 const isArray = (value: unknown): boolean => Array.isArray(value);
+
+function isProjectLabel(value: ResearchRecord): value is ProjectLabel {
+  return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
+}
 
 /** Original address is stable through source relocation; ordinary spelling changes never replace the ID. */
 export interface ResearchSymbolIdentity {
@@ -54,7 +59,12 @@ export function changeResearchSymbol(
       "Choose an existing label declaration. A record tombstone must be restored explicitly in its research file.",
     );
   }
-  const previous = decision.value as ProjectLabel;
+  if (!isProjectLabel(decision.value)) {
+    throw new Error(
+      "Choose an existing label declaration. A record tombstone must be restored explicitly in its research file.",
+    );
+  }
+  const previous = decision.value;
   let symbol: ProjectLabel;
   if (change.kind === "aliases") {
     if (!isArray(change.aliases) || change.aliases.length > 64) {
@@ -73,7 +83,10 @@ export function changeResearchSymbol(
       if (other.collection !== "labels" || !other.value || other.id === id) {
         continue;
       }
-      const label = other.value as ProjectLabel;
+      if (!isProjectLabel(other.value)) {
+        throw new Error("Invalid research label.");
+      }
+      const label = other.value;
       for (const name of [label.sourceName ?? label.name, ...(label.aliases ?? [])]) {
         if (names.has(name.toLowerCase())) {
           throw new Error(`Alias '${name}' belongs to another research symbol.`);
@@ -94,7 +107,10 @@ export function changeResearchSymbol(
       if (item.collection !== "labels" || !item.value) {
         return [];
       }
-      return [item.id === id ? symbol : (item.value as ProjectLabel)];
+      if (!isProjectLabel(item.value)) {
+        throw new Error("Invalid research label.");
+      }
+      return [item.id === id ? symbol : item.value];
     }),
   );
   const document = parseResearchDocument({
@@ -140,7 +156,11 @@ export function renameResearchSymbol(
   if (decision?.value === null) {
     throw new Error("Restore this suppressed research record before renaming it.");
   }
-  const previous = decision?.value as ProjectLabel | undefined;
+  const previousValue = decision?.value;
+  if (previousValue && !isProjectLabel(previousValue)) {
+    throw new Error("Invalid research label.");
+  }
+  const previous = previousValue;
   if (
     previous &&
     (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address)
@@ -170,7 +190,12 @@ export function renameResearchSymbol(
     .filter(
       (item) => item.collection === "labels" && item.value !== null && item.id !== identity.id,
     )
-    .map((item) => item.value as ProjectLabel);
+    .map((item) => {
+      if (item.value === null || !isProjectLabel(item.value)) {
+        throw new Error("Invalid research label.");
+      }
+      return item.value;
+    });
   // Match the exporter's case-insensitive name reservation before producing a source edit.
   if ([...reservedNames].some((name) => name.toLowerCase() === newName.toLowerCase())) {
     throw new Error(`Source name '${newName}' is already used by another symbol.`);
@@ -194,7 +219,7 @@ export function renameResearchSymbol(
         (item) => item.collection !== "labels" || item.id !== identity.id,
       ),
       { collection: "labels", id: identity.id, value: symbol },
-    ].sort((a, b) =>
+    ].toSorted((a, b) =>
       Buffer.compare(
         Buffer.from(`${a.collection}:${a.id}`),
         Buffer.from(`${b.collection}:${b.id}`),

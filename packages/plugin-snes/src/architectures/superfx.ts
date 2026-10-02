@@ -248,12 +248,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction: LoweredInstruction): number {
-    const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction.mnemonic,
       instruction.operands,
       instruction.loweredOperand,
-      loweredOperands,
+      instruction.loweredOperands,
     );
   }
 
@@ -263,12 +262,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @returns {boolean} True if the instruction was encoded.
    */
   encodeInstruction(instruction: LoweredInstruction): boolean {
-    const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
       instruction.mnemonic,
       instruction.operands,
       instruction.loweredOperand,
-      loweredOperands,
+      instruction.loweredOperands,
     );
   }
 
@@ -312,10 +310,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return 2;
     }
 
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const secondLowered = loweredOperands[1];
-    const leftOp = firstLowered?.expanded ?? operands[0] ?? "";
-    const rightOp = secondLowered?.expanded ?? operands[1] ?? "";
+    const firstLowered = loweredOperands.length > 0 ? loweredOperands[0] : loweredOperand;
+    const secondLowered = loweredOperands.length > 1 ? loweredOperands[1] : undefined;
+    const firstOperand = operands.length > 0 ? operands[0] : undefined;
+    const secondOperand = operands.length > 1 ? operands[1] : undefined;
+    const leftOp = firstLowered?.expanded ?? firstOperand ?? "";
+    const rightOp = secondLowered?.expanded ?? secondOperand ?? "";
 
     if (operands.length <= 1 && hasOwn(SHORT_BRANCH_OPCODES, opcode)) {
       return 2;
@@ -473,8 +473,10 @@ export class ArchSuperFX implements ArchitectureEncoder {
     loweredOperands: LoweredOperand[] = [],
   ): boolean {
     const opcode = mnemonic.toUpperCase();
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const secondLowered = loweredOperands[1];
+    const firstLowered = loweredOperands.length > 0 ? loweredOperands[0] : loweredOperand;
+    const secondLowered = loweredOperands.length > 1 ? loweredOperands[1] : undefined;
+    const firstOperand = operands.length > 0 ? operands[0] : undefined;
+    const secondOperand = operands.length > 1 ? operands[1] : undefined;
     const operand = firstLowered?.expanded ?? "";
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
 
@@ -492,8 +494,8 @@ export class ArchSuperFX implements ArchitectureEncoder {
     if (operands.length === 2) {
       return this.handleTwoOperandOpcode(
         opcode,
-        firstLowered?.expanded ?? operands[0],
-        secondLowered?.expanded ?? operands[1],
+        firstLowered?.expanded ?? firstOperand ?? "",
+        secondLowered?.expanded ?? secondOperand ?? "",
         firstLowered,
         secondLowered,
       );
@@ -663,23 +665,18 @@ export class ArchSuperFX implements ArchitectureEncoder {
       switch (opcode) {
         case "MOVEB":
           this.rangeCheck(0, reg2r, 11);
-          if (reg1parr === 0) {
-            this.assembler.write1(ALT1);
-            this.assembler.write1(0x30 + reg2r);
-          } else {
+          if (reg1parr !== 0) {
             this.assembler.write1(0xb0 + reg1parr);
-            this.assembler.write1(ALT1);
-            this.assembler.write1(0x30 + reg2r);
           }
+          this.assembler.write1(ALT1);
+          this.assembler.write1(0x30 + reg2r);
           return true;
         case "MOVEW":
           this.rangeCheck(0, reg2r, 11);
-          if (reg1parr === 0) {
-            this.assembler.write1(0x30 + reg2r);
-          } else {
+          if (reg1parr !== 0) {
             this.assembler.write1(0xb0 + reg1parr);
-            this.assembler.write1(0x30 + reg2r);
           }
+          this.assembler.write1(0x30 + reg2r);
           return true;
       }
     }
@@ -688,23 +685,18 @@ export class ArchSuperFX implements ArchitectureEncoder {
       switch (opcode) {
         case "MOVEB":
           this.rangeCheck(0, reg2parr, 11);
-          if (reg1r === 0) {
-            this.assembler.write1(ALT1);
-            this.assembler.write1(0x40 + reg2parr);
-          } else {
+          if (reg1r !== 0) {
             this.assembler.write1(0x10 + reg1r);
-            this.assembler.write1(ALT1);
-            this.assembler.write1(0x40 + reg2parr);
           }
+          this.assembler.write1(ALT1);
+          this.assembler.write1(0x40 + reg2parr);
           return true;
         case "MOVEW":
           this.rangeCheck(0, reg2parr, 11);
-          if (reg1r === 0) {
-            this.assembler.write1(0x40 + reg2parr);
-          } else {
+          if (reg1r !== 0) {
             this.assembler.write1(0x10 + reg1r);
-            this.assembler.write1(0x40 + reg2parr);
           }
+          this.assembler.write1(0x40 + reg2parr);
           return true;
       }
     }
@@ -730,12 +722,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
           return true;
         case "MOVE":
           // Auto LMS vs LM. Short-form byte honors Asar compat. Explicit LMS above does not.
+          this.assembler.write1(ALT1);
           if (isShortRamAddress(addrVal)) {
-            this.assembler.write1(ALT1);
             this.assembler.write1(0xa0 + reg1r);
             this.assembler.write1(this.moveShortAddressByte(addrVal));
           } else {
-            this.assembler.write1(ALT1);
             this.assembler.write1(0xf0 + reg1r);
             this.assembler.write2(addrVal);
           }
@@ -773,12 +764,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
           return true;
         case "MOVE":
           // Auto SMS vs SM. Short-form byte honors Asar compat. Explicit SMS above does not.
+          this.assembler.write1(ALT2);
           if (isShortRamAddress(addrVal)) {
-            this.assembler.write1(ALT2);
             this.assembler.write1(0xa0 + reg2r);
             this.assembler.write1(this.moveShortAddressByte(addrVal));
           } else {
-            this.assembler.write1(ALT2);
             this.assembler.write1(0xf0 + reg2r);
             this.assembler.write2(addrVal);
           }
@@ -869,18 +859,14 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return regnum;
     }
 
-    if (type === "hash") {
-      if (!str.startsWith("#")) {
-        return null;
-      }
-      const regnum = this.assembler.operandResolver.getnum(str.slice(1));
-      if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        return null;
-      }
-      return regnum;
+    if (!str.startsWith("#")) {
+      return null;
     }
-
-    return null;
+    const regnum = this.assembler.operandResolver.getnum(str.slice(1));
+    if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
+      return null;
+    }
+    return regnum;
   }
 
   /**

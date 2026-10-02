@@ -49,7 +49,7 @@ export const projectAnalysisNavigation = (
         record.addressSpace === target.addressSpace &&
         matchesArchitecture(record.specificationId),
     )
-    .sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
+    .toSorted((a, b) => a.address - b.address || a.id.localeCompare(b.id));
   let index = nodes.findIndex(({ address }) => address >= target.address);
   if (index < 0) {
     index = Math.max(0, nodes.length - 1);

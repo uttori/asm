@@ -26,9 +26,12 @@ test("synthetic WRAM images resolve cross-image symbols at their CPU bases", (t)
 
 test("synthetic BRR reference vectors have independently specified PCM samples", (t) => {
   const silence = decodeBrr(new Uint8Array(readFileSync(path.join(fixtures, "brr-silence.bin"))));
-  t.deepEqual(silence.samples, new Array<number>(16).fill(0));
+  t.deepEqual(
+    silence.samples,
+    Array.from({ length: 16 }, () => 0),
+  );
   const transient = decodeBrr(
     new Uint8Array(readFileSync(path.join(fixtures, "brr-transient.bin"))),
   );
-  t.deepEqual(transient.samples, [28672, -32768, ...new Array<number>(14).fill(0)]);
+  t.deepEqual(transient.samples, [28672, -32768, ...Array.from({ length: 14 }, () => 0)]);
 });

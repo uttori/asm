@@ -1,7 +1,5 @@
 /** Native analysis annotations supplied to the target-neutral inline DAP session. */
-import type { DebugMap } from "@uttori/asm-core/debug-map";
 import type { DebugAddress } from "@uttori/asm-debug-adapter";
-import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
 
 import { findAnalysisProjectDirectories } from "../analysis/coverage-tree.js";
 import { analysisWorker } from "../analysis/worker-client.js";
@@ -28,6 +26,36 @@ interface DebugAnnotation {
  */
 const locationKey = (addressSpace: string, address: number): string => `${addressSpace}:${address}`;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDebugManifest(value: unknown): value is {
+  readonly target: string;
+  readonly rom: { readonly contentSha256: string; readonly contentSize: number };
+} {
+  return (
+    isRecord(value) &&
+    typeof value.target === "string" &&
+    isRecord(value.rom) &&
+    typeof value.rom.contentSha256 === "string" &&
+    typeof value.rom.contentSize === "number"
+  );
+}
+
+function isDebugAnnotation(value: unknown): value is DebugAnnotation {
+  return (
+    isRecord(value) &&
+    typeof value.addressSpace === "string" &&
+    typeof value.address === "number" &&
+    typeof value.text === "string" &&
+    Array.isArray(value.outputOffsets) &&
+    value.outputOffsets.every((offset) => typeof offset === "number") &&
+    Array.isArray(value.architectures) &&
+    value.architectures.every((architecture) => typeof architecture === "string")
+  );
+}
+
 /**
  * Append to a location bucket while preserving all matching records; mutates the supplied map.
  * @param {Map<Key, Value[]>} map Mutable buckets retaining insertion order.
@@ -47,19 +75,20 @@ const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): voi
  * Creates a lazy DAP annotation lookup from exact ROM-matched native projects.
  * Requests for one disassembly page are batched. Startup never projects the entire runtime history.
  * Invalid, foreign, and nonmatching projects contribute nothing to debugger presentation.
- * @param {DebugMap} map Loaded debug map for the session ROM.
+ * @param {object} map Loaded debug-map target and ROM output identity.
  * @returns {Promise<Function | undefined>} Optional asynchronous address-to-annotation renderer.
  */
-export const createDebugInstructionAnnotation = async (
-  map: DebugMap,
-): Promise<((address: DebugAddress) => Promise<string | undefined>) | undefined> => {
+export const createDebugInstructionAnnotation = async (map: {
+  readonly target: string;
+  readonly output: { readonly sha256: string; readonly size: number };
+}): Promise<((address: DebugAddress) => Promise<string | undefined>) | undefined> => {
   const directories: string[] = [];
   for (const directory of await findAnalysisProjectDirectories()) {
     try {
-      const manifest = await analysisWorker().request<AnalysisProjectManifest>(
-        directory,
-        "manifest",
-      );
+      const manifest = await analysisWorker().request(directory, "manifest");
+      if (!isDebugManifest(manifest)) {
+        continue;
+      }
       if (
         manifest.target !== map.target ||
         manifest.rom.contentSha256 !== map.output.sha256 ||
@@ -97,11 +126,12 @@ export const createDebugInstructionAnnotation = async (
       }));
       for (const directory of directories) {
         try {
-          const annotations = await analysisWorker().request<DebugAnnotation[]>(
-            directory,
-            "debugAnnotations",
-            { ranges },
-          );
+          const annotations = await analysisWorker().request(directory, "debugAnnotations", {
+            ranges,
+          });
+          if (!Array.isArray(annotations) || !annotations.every(isDebugAnnotation)) {
+            throw new Error("Analysis annotations are unavailable.");
+          }
           for (const annotation of annotations) {
             append(byAddress, locationKey(annotation.addressSpace, annotation.address), annotation);
             for (const output of annotation.outputOffsets) {

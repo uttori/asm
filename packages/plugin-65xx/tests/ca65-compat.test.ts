@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "../../../tests/ava-helper.js";
 
 import { Assembler } from "@uttori/asm-core";
+
+import { test } from "../../../tests/ava-helper.js";
 import {
   CA65_RAW_65XX_TARGET_ID,
   create65xxAssemblerEnvironment,
@@ -37,7 +38,9 @@ function assembleCa65Raw(
     return assembler.getBinaryOutput();
   } finally {
     assembler.dispose();
-    if (directory) {fs.rmSync(directory, { recursive: true, force: true });}
+    if (directory) {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
   }
 }
 
@@ -58,7 +61,7 @@ function assembleNes(source: string, extra?: { files?: Record<string, string> })
     architecture: "65xx.6502",
     targetOptions: {
       linkerConfig: TINY_CFG,
-      header: new Array(16).fill(0),
+      header: Array.from({ length: 16 }, () => 0),
       fillByte: 0xff,
     },
     collectSourceMetadata: false,
@@ -88,8 +91,8 @@ function assembleNes(source: string, extra?: { files?: Record<string, string> })
 test("NES target prefills header and $FF, then emits ca65 .byte / lda", (t) => {
   const output = assembleNes(['.segment "CODE"', "lda #$12", ".byte $34, $56"].join("\n"));
   t.is(output.length, 16 + 0x100);
-  t.deepEqual([...output.slice(0, 16)], new Array(16).fill(0));
-  t.deepEqual([...output.slice(16, 20)], [0xa9, 0x12, 0x34, 0x56]);
+  t.deepEqual(output.slice(0, 16), new Uint8Array(16));
+  t.deepEqual(output.slice(16, 20), Uint8Array.of(0xa9, 0x12, 0x34, 0x56));
   t.true(output.slice(20).every((byte) => byte === 0xff));
 });
 
@@ -104,7 +107,7 @@ test("ca65 := assignment and unary < > encode as immediates", (t) => {
       "lda #>Label",
     ].join("\n"),
   );
-  t.deepEqual([...output.slice(16, 22)], [0xa9, 0x10, 0xa9, 0x34, 0xa9, 0x12]);
+  t.deepEqual(output.slice(16, 22), Uint8Array.of(0xa9, 0x10, 0xa9, 0x34, 0xa9, 0x12));
 });
 
 test("ca65 zp equates $00-$FF encode as zero-page not absolute", (t) => {
@@ -113,7 +116,7 @@ test("ca65 zp equates $00-$FF encode as zero-page not absolute", (t) => {
       "\n",
     ),
   );
-  t.deepEqual([...output.slice(16, 20)], [0xa5, 0xe0, 0xa5, 0x10]);
+  t.deepEqual(output.slice(16, 20), Uint8Array.of(0xa5, 0xe0, 0xa5, 0x10));
 });
 
 test("ca65 abs equates $100+ encode as absolute not zero-page", (t) => {
@@ -126,7 +129,7 @@ test("ca65 abs equates $100+ encode as absolute not zero-page", (t) => {
       "sta NoteOffsetSongNoise",
     ].join("\n"),
   );
-  t.deepEqual([...output.slice(16, 22)], [0xad, 0xf5, 0x05, 0x8d, 0x0d, 0x06]);
+  t.deepEqual(output.slice(16, 22), Uint8Array.of(0xad, 0xf5, 0x05, 0x8d, 0x0d, 0x06));
 });
 
 test("ca65 BNE :+ over abs LDA/STA/BNE :- matches ca65 skip length", (t) => {
@@ -147,8 +150,8 @@ test("ca65 BNE :+ over abs LDA/STA/BNE :- matches ca65 skip length", (t) => {
   // bne :+ skips lda abs (3) + sta abs (3) + bne (2) = 8
   // bne :- from $8008 back to unnamed at $8000 is -10
   t.deepEqual(
-    [...output.slice(16, 16 + 11)],
-    [0xd0, 0x08, 0xad, 0xf5, 0x05, 0x8d, 0x0d, 0x06, 0xd0, 0xf6, 0xea],
+    output.slice(16, 16 + 11),
+    Uint8Array.of(0xd0, 0x08, 0xad, 0xf5, 0x05, 0x8d, 0x0d, 0x06, 0xd0, 0xf6, 0xea),
   );
 });
 
@@ -156,12 +159,12 @@ test("ca65 a: prefix forces absolute even for zp equates", (t) => {
   const output = assembleNes(
     ['.segment "CODE"', "ObjState := $AC", "lda a:ObjState, y", "sta a:ObjState"].join("\n"),
   );
-  t.deepEqual([...output.slice(16, 22)], [0xb9, 0xac, 0x00, 0x8d, 0xac, 0x00]);
+  t.deepEqual(output.slice(16, 22), Uint8Array.of(0xb9, 0xac, 0x00, 0x8d, 0xac, 0x00));
 });
 
 test("ca65 cheap locals @name attach to the current global", (t) => {
   const output = assembleNes(['.segment "CODE"', "DriveAudio:", "@Play:", "bne @Play"].join("\n"));
-  t.deepEqual([...output.slice(16, 18)], [0xd0, 0xfe]);
+  t.deepEqual(output.slice(16, 18), Uint8Array.of(0xd0, 0xfe));
 });
 
 test("ca65 unnamed labels : / :+ / :- / :++ resolve nth next and previous", (t) => {
@@ -190,8 +193,23 @@ test("ca65 unnamed labels : / :+ / :- / :++ resolve nth next and previous", (t) 
   // $800a : nop
   // $800b : jmp :- (4c 0a 80) to previous unnamed $800a
   t.deepEqual(
-    [...output.slice(16, 16 + 14)],
-    [0x90, 0x01, 0xea, 0xa9, 0x01, 0xd0, 0xfc, 0xf0, 0x02, 0xea, 0xea, 0x4c, 0x0a, 0x80],
+    output.slice(16, 16 + 14),
+    Uint8Array.of(
+      0x90,
+      0x01,
+      0xea,
+      0xa9,
+      0x01,
+      0xd0,
+      0xfc,
+      0xf0,
+      0x02,
+      0xea,
+      0xea,
+      0x4c,
+      0x0a,
+      0x80,
+    ),
   );
 });
 
@@ -206,7 +224,7 @@ test("ca65 .addr / .dbyt / .lobytes / .hibytes emit the documented endianness", 
       ".hibytes Target",
     ].join("\n"),
   );
-  t.deepEqual([...output.slice(16, 22)], [0x34, 0x12, 0x12, 0x34, 0x34, 0x12]);
+  t.deepEqual(output.slice(16, 22), Uint8Array.of(0x34, 0x12, 0x12, 0x34, 0x34, 0x12));
 });
 
 test("ca65 unnamed labels do not leak across included object files", (t) => {
@@ -217,7 +235,10 @@ test("ca65 unnamed labels do not leak across included object files", (t) => {
     },
   });
   // a: bne :+ over nop (d0 01 ea) rts. B: bne :+ over two nops (d0 02 ea ea) rts
-  t.deepEqual([...output.slice(16, 25)], [0xd0, 0x01, 0xea, 0x60, 0xd0, 0x02, 0xea, 0xea, 0x60]);
+  t.deepEqual(
+    output.slice(16, 25),
+    Uint8Array.of(0xd0, 0x01, 0xea, 0x60, 0xd0, 0x02, 0xea, 0xea, 0x60),
+  );
 });
 
 test("file-local labels do not collide across included object files", (t) => {
@@ -228,7 +249,7 @@ test("file-local labels do not collide across included object files", (t) => {
     },
   });
   // a.asm: nop at $8000, rts at $8001. B.asm: jmp Shared ($8001)
-  t.deepEqual([...output.slice(16, 21)], [0xea, 0x60, 0x4c, 0x01, 0x80]);
+  t.deepEqual(output.slice(16, 21), Uint8Array.of(0xea, 0x60, 0x4c, 0x01, 0x80));
 });
 
 test("overlay segment define symbols expose load/run/size", (t) => {
@@ -247,8 +268,8 @@ test("overlay segment define symbols expose load/run/size", (t) => {
   );
   // CODE nop at $8000. OVERLAY lda at load $8001 / run $0300. Then CODE resumes at $8003
   t.is(output[16], 0xea);
-  t.deepEqual([...output.slice(17, 19)], [0xa9, 0x01]);
-  t.deepEqual([...output.slice(19, 27)], [0xa9, 0x01, 0xa9, 0x80, 0xa9, 0x00, 0xa9, 0x03]);
+  t.deepEqual(output.slice(17, 19), Uint8Array.of(0xa9, 0x01));
+  t.deepEqual(output.slice(19, 27), Uint8Array.of(0xa9, 0x01, 0xa9, 0x80, 0xa9, 0x00, 0xa9, 0x03));
 });
 
 test("ca65 CPU selection, shorthand predicates, and CPU stack compose", (t) => {

@@ -27,7 +27,7 @@ export class DebugTraceBuffer {
   readonly addressSpace: string;
   readonly capacity: number;
 
-  readonly #addresses: number[];
+  readonly #addresses: Array<number | undefined>;
   #head = 0;
   #length = 0;
   #nextSequence = 1;
@@ -39,7 +39,7 @@ export class DebugTraceBuffer {
     this.architecture = identity(options.architecture, "Trace architecture");
     this.addressSpace = identity(options.addressSpace, "Trace address space");
     this.capacity = positiveInteger(options.capacity, "Trace capacity");
-    this.#addresses = Array.from<number>({ length: this.capacity });
+    this.#addresses = Array.from<number | undefined>({ length: this.capacity });
   }
 
   /** @returns {boolean} Whether new instruction addresses are currently accepted. */

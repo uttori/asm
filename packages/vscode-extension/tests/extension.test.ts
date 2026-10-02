@@ -5,6 +5,26 @@ import path from "node:path";
 
 import type { ExtensionContext } from "vscode";
 
+function isExtensionContext(value: object): value is ExtensionContext {
+  return (
+    "subscriptions" in value &&
+    Array.isArray(value.subscriptions) &&
+    "extensionPath" in value &&
+    typeof value.extensionPath === "string" &&
+    "extensionUri" in value &&
+    typeof value.extensionUri === "object" &&
+    value.extensionUri !== null &&
+    "extensionMode" in value &&
+    typeof value.extensionMode === "number" &&
+    "asAbsolutePath" in value &&
+    typeof value.asAbsolutePath === "function" &&
+    "workspaceState" in value &&
+    typeof value.workspaceState === "object" &&
+    "globalState" in value &&
+    typeof value.globalState === "object"
+  );
+}
+
 import { test } from "../../../tests/ava-helper.js";
 
 const host = {
@@ -21,7 +41,7 @@ const host = {
   clients: [] as { start: () => Promise<void>; stop: () => Promise<void> }[],
 };
 
-(globalThis as { __uttoriExtensionTest?: typeof host }).__uttoriExtensionTest = host;
+Object.assign(globalThis, { __uttoriExtensionTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -278,6 +298,12 @@ registerHooks({
 
 const { activate, deactivate } = await import("../src/extension.js");
 
+const uri = (file: string) => ({
+  scheme: "file",
+  fsPath: file,
+  toString: () => `file://${file}`,
+});
+
 test.serial(
   "activate registers commands, toggleWatch without a file errors, deactivate stops the client",
   async (t) => {
@@ -292,11 +318,6 @@ test.serial(
     host.infos = [];
     host.stopped = 0;
     host.clients = [];
-    const uri = (file: string) => ({
-      scheme: "file",
-      fsPath: file,
-      toString: () => `file://${file}`,
-    });
     const context = {
       subscriptions: [] as { dispose(): void }[],
       extensionPath: directory,
@@ -311,7 +332,10 @@ test.serial(
         get: (_key: string, fallback?: unknown) => fallback,
         update: async () => {},
       },
-    } as unknown as ExtensionContext;
+    };
+    if (!isExtensionContext(context)) {
+      throw new Error("extension context stub");
+    }
     activate(context);
     t.true(host.commands.has("asm.build"));
     t.true(host.commands.has("asm.toggleWatch"));

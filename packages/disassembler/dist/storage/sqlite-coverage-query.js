@@ -1,13 +1,66 @@
-import { decodeSqlitePayload } from "./sqlite-payload.js";
+import { isFiniteNumber, isRecord, isStringArray, requireAnalysisRecord, requireIntervalAnnotation, } from "../model/record-shape.js";
+import { parseSqlitePayload } from "./sqlite-payload.js";
 import { readQueryCache } from "./sqlite-query-cache.js";
-const decode = (value) => JSON.parse(decodeSqlitePayload(value));
+const COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"];
+const COVERAGE_RUNTIME = ["executed", "operand", "read", "written"];
+function isCoverageCounts(value, keys) {
+    return (isRecord(value) &&
+        keys.every((key) => isFiniteNumber(value[key])) &&
+        Object.keys(value).every((key) => keys.includes(key)));
+}
+export function isSqliteCoverageSummary(value) {
+    if (!isRecord(value) ||
+        !isFiniteNumber(value.contentSize) ||
+        !isStringArray(value.fileAddressSpaces) ||
+        !Array.isArray(value.segments) ||
+        value.segments.length !== 0 ||
+        !Array.isArray(value.unprojected) ||
+        value.unprojected.length !== 0 ||
+        !Array.isArray(value.diagnostics) ||
+        value.diagnostics.length !== 0 ||
+        !isFiniteNumber(value.detailCount) ||
+        !isRecord(value.summary)) {
+        return false;
+    }
+    const summary = value.summary;
+    return (isFiniteNumber(summary.totalBytes) &&
+        isFiniteNumber(summary.classifiedBytes) &&
+        isFiniteNumber(summary.unknownBytes) &&
+        isFiniteNumber(summary.conflictBytes) &&
+        isFiniteNumber(summary.segmentCount) &&
+        isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) &&
+        isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME));
+}
+function requireConflict(value) {
+    const record = requireAnalysisRecord(parseSqlitePayload(value));
+    if (record.kind !== "conflict") {
+        throw new Error("Invalid stored analysis record.");
+    }
+    return record;
+}
+function requireAccessWidth(value) {
+    const parsed = parseSqlitePayload(value);
+    if (!isRecord(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
+        throw new Error("Invalid runtime memory coverage payload.");
+    }
+    return { access: parsed.access, width: parsed.width };
+}
 export const coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 /** Read a current header without acquiring a writer lock.
  * @param {DatabaseSync} db Project connection.
  * @param {AnalysisProjectManifest} manifest Snapshot identity.
  * @returns {SqliteCoverageSummary | undefined} Header if all dependencies still match.
  */
-export const cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
+export const cachedCoverage = (db, manifest) => {
+    const value = readQueryCache(db, "coverage", coverageSignature(manifest));
+    if (value === undefined) {
+        return undefined;
+    }
+    if (!isSqliteCoverageSummary(value)) {
+        throw new Error("Invalid coverage summary cache.");
+    }
+    return value;
+};
 /** Build disk-backed events and sweep them with only the active interval identities in memory.
  * Explicit offsets are used. CPU bus addresses are never guessed to be ROM offsets.
  * @param {DatabaseSync} db Read transaction with prepared instruction/offset indexes. Writes stay in temporary tables.
@@ -23,7 +76,7 @@ export const prepareCoverage = (db, manifest) => {
     const fileAddressSpaces = manifest.addressSpaces
         .filter((s) => s.kind === "file")
         .map((s) => s.id)
-        .sort((a, b) => a.localeCompare(b));
+        .toSorted((a, b) => a.localeCompare(b));
     const files = new Set(fileAddressSpaces);
     const size = manifest.rom.contentSize;
     if (!Number.isSafeInteger(size) || size < 0) {
@@ -68,7 +121,7 @@ export const prepareCoverage = (db, manifest) => {
         for (const row of db
             .prepare("SELECT * FROM annotations WHERE classification != 'unreached'")
             .iterate()) {
-            const record = decode(row.payload);
+            const record = requireIntervalAnnotation(parseSqlitePayload(row.payload));
             if (!files.has(record.addressSpace)) {
                 unprojected("annotation", record.id, "non-file-address-space");
                 continue;
@@ -116,7 +169,7 @@ export const prepareCoverage = (db, manifest) => {
         }
         const node = db.prepare("SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'");
         for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-            const record = decode(row.payload);
+            const record = requireConflict(row.payload);
             if (files.has(record.addressSpace)) {
                 add("analysis", record.id, record.address, record.end ?? record.address + 1, [
                     ["conflictIds", record.id],
@@ -179,7 +232,7 @@ export const prepareCoverage = (db, manifest) => {
       WHERE r.kind='runtime-memory-access' AND r.accessed_address_space IN (SELECT value FROM json_each(?))`)
             .iterate(JSON.stringify(fileAddressSpaces))) {
             const id = String(row.id);
-            const payload = decode(row.payload);
+            const payload = requireAccessWidth(row.payload);
             for (const [access, classification] of [
                 ["read", "read"],
                 ["write", "written"],
@@ -196,7 +249,7 @@ export const prepareCoverage = (db, manifest) => {
         event.run(0, "boundary", "", 0);
         event.run(size, "boundary", "", 0);
         const active = new Map();
-        const ids = (category) => [...(active.get(category)?.keys() ?? [])].sort((a, b) => a.localeCompare(b));
+        const ids = (category) => [...(active.get(category)?.keys() ?? [])].toSorted((a, b) => a.localeCompare(b));
         const put = db.prepare("INSERT INTO query_coverage_segments VALUES(?,?)");
         const summary = {
             totalBytes: size,
@@ -246,8 +299,8 @@ export const prepareCoverage = (db, manifest) => {
                 conflictIds,
                 regionIds: ids("regionIds"),
             };
-            const { start: _start, end: _end, ...identity } = segment;
-            const key = JSON.stringify(identity);
+            const { start: _start, end: _end, ...segmentIdentity } = segment;
+            const key = JSON.stringify(segmentIdentity);
             // Overlapping copies can change an identity's multiplicity without changing its visible set.
             if (pending && key === pendingKey) {
                 pending = { ...pending, end };

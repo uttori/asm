@@ -44,21 +44,21 @@ const parseArguments = (arguments_: readonly string[]): Options => {
     ["--runtime", "runtime"],
   ]);
   for (let index = 0; index < arguments_.length; index++) {
-    const argument = arguments_[index];
+    const argument: string | undefined = arguments_[index];
     if (argument === "--help") {
       process.stdout.write(usage);
       process.exit(0);
     }
-    const name = names.get(argument ?? "");
+    const name = names.get(argument);
     if (!name) {
-      throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
+      throw new Error(`Unknown argument '${argument}'.\n${usage}`);
     }
     if (seen.has(name)) {
-      throw new Error(`Duplicate argument '${String(argument)}'.`);
+      throw new Error(`Duplicate argument '${argument}'.`);
     }
     const value = arguments_[++index];
     if (!value || value.startsWith("--")) {
-      throw new Error(`Argument '${String(argument)}' requires a path.`);
+      throw new Error(`Argument '${argument}' requires a path.`);
     }
     parsed[name] = path.resolve(value);
     seen.add(name);
@@ -144,13 +144,13 @@ const noticeResources = notices
     path: destination,
     sha256: sha256(path.join(runtime, destination)),
   }))
-  .sort((left, right) => left.path.localeCompare(right.path));
+  .toSorted((left, right) => left.path.localeCompare(right.path));
 const runtimeResources = manifest.resources.filter(
   ({ path: resourcePath }) => !resourcePath.startsWith("LICENSES/"),
 );
 const updatedManifest = {
   ...manifest,
-  resources: [...runtimeResources, ...noticeResources].sort((left, right) =>
+  resources: [...runtimeResources, ...noticeResources].toSorted((left, right) =>
     left.path.localeCompare(right.path),
   ),
 };

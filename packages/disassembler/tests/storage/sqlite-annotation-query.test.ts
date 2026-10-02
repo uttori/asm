@@ -501,14 +501,14 @@ test("partial index construction rolls back", (t) => {
 test("SQL coverage pages and totals match the standalone sweep and survive unrelated edits", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-coverage-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const fixture = project();
+  const base = project();
   const shards = {
-    ...fixture.shards,
+    ...base.shards,
     regions: [
       { id: "region", name: "Test region", addressSpace: "file", start: 0, end: 4, evidence: [] },
     ],
     analysis: [
-      ...fixture.shards.analysis,
+      ...base.shards.analysis,
       {
         id: "conflict",
         kind: "conflict" as const,
@@ -521,7 +521,7 @@ test("SQL coverage pages and totals match the standalone sweep and survive unrel
       },
     ],
     runtime: [
-      ...fixture.shards.runtime,
+      ...base.shards.runtime,
       {
         id: "file-coverage",
         kind: "runtime-coverage" as const,
@@ -546,10 +546,10 @@ test("SQL coverage pages and totals match the standalone sweep and survive unrel
       },
     ],
   };
-  publishAnalysisProject(directory, { ...fixture, shards });
+  publishAnalysisProject(directory, { ...base, shards });
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => store.close());
-  const expected = buildRomCoverageMap(fixture.manifest, shards);
+  const expected = buildRomCoverageMap(base.manifest, shards);
   const actual = store.coverageSummary();
   t.deepEqual(actual.summary, expected.summary);
   t.deepEqual(store.coveragePage("segments"), expected.segments);
@@ -563,18 +563,18 @@ test("SQL coverage pages and totals match the standalone sweep and survive unrel
   store.transaction(() => store.replaceTables({ annotations: [] }));
   t.deepEqual(
     store.coverageSummary().summary,
-    buildRomCoverageMap(fixture.manifest, { ...shards, annotations: [] }).summary,
+    buildRomCoverageMap(base.manifest, { ...shards, annotations: [] }).summary,
   );
 });
 
 test("SQL call ownership preserves aliases, missing edges, and last-entry evidence paths", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-graph-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const fixture = project();
+  const base = project();
   const shards = {
-    ...fixture.shards,
+    ...base.shards,
     analysis: [
-      ...fixture.shards.analysis,
+      ...base.shards.analysis,
       { ...node("body", 0x101, 1), evidencePath: ["node", "alias", "missing", "body"] },
       {
         id: "f1",
@@ -628,7 +628,7 @@ test("SQL call ownership preserves aliases, missing edges, and last-entry eviden
       },
     ],
   };
-  publishAnalysisProject(directory, { ...fixture, shards });
+  publishAnalysisProject(directory, { ...base, shards });
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => store.close());
   const graph = store.callGraph();
@@ -658,6 +658,16 @@ test("SQL call ownership preserves aliases, missing edges, and last-entry eviden
   ]);
 });
 
+const restoreCalls = (value: unknown): { calls: number } => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Invalid query cache.");
+  }
+  if (typeof value.calls !== "number") {
+    throw new Error("Invalid query cache.");
+  }
+  return { calls: value.calls };
+};
+
 test("SQL result caching publishes after unrelated writes and invalidates only declared inputs", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-cache-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -681,10 +691,25 @@ test("SQL result caching publishes after unrelated writes and invalidates only d
     );
     return { calls };
   };
-  t.deepEqual(store.cachedProjection("fixture", "1", ["analysis"], compute), { calls: 1 });
-  t.deepEqual(store.cachedProjection("fixture", "1", ["analysis"], compute), { calls: 1 });
+  t.deepEqual(
+    store.cachedProjection("fixture", "1", ["analysis"], compute, undefined, restoreCalls),
+    {
+      calls: 1,
+    },
+  );
+  t.deepEqual(
+    store.cachedProjection("fixture", "1", ["analysis"], compute, undefined, restoreCalls),
+    {
+      calls: 1,
+    },
+  );
   writer.transaction(() => writer.replaceTables({ analysis: [] }));
-  t.deepEqual(store.cachedProjection("fixture", "1", ["analysis"], compute), { calls: 2 });
+  t.deepEqual(
+    store.cachedProjection("fixture", "1", ["analysis"], compute, undefined, restoreCalls),
+    {
+      calls: 2,
+    },
+  );
 });
 
 test("compact execution summaries do not read detail payloads and preserve mirrored counts", (t) => {

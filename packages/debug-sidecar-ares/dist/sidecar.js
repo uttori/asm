@@ -27,7 +27,9 @@ export const parseAresSidecarArguments = (arguments_) => {
     const values = new Map();
     let fastBoot = true;
     for (let index = 0; index < arguments_.length; index++) {
-        const argument = arguments_[index];
+        const argument = index >= 0 && index < arguments_.length && Object.hasOwn(arguments_, index)
+            ? arguments_[index]
+            : undefined;
         if (argument === undefined) {
             throw new Error("Ares sidecar arguments cannot contain holes.");
         }

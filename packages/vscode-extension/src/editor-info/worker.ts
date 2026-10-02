@@ -1,6 +1,11 @@
 import { parentPort } from "node:worker_threads";
 
-import { EditorInformationProvider } from "./provider.js";
+import type { InformationRequirements } from "./format.js";
+import {
+  EditorInformationProvider,
+  type EditorProjectManifest,
+  type InformationLineRange,
+} from "./provider.js";
 
 if (!parentPort) {
   throw new Error("Source information worker needs its host message port.");
@@ -8,17 +13,101 @@ if (!parentPort) {
 const port = parentPort;
 let sequence = 0;
 const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringSet(value: unknown): value is ReadonlySet<string> {
+  if (!(value instanceof Set)) {
+    return false;
+  }
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isLineRange(value: unknown): value is InformationLineRange {
+  return isRecord(value) && typeof value.start === "number" && typeof value.end === "number";
+}
+
+function isRequirements(value: unknown): value is InformationRequirements {
+  return (
+    isRecord(value) &&
+    typeof value.counts === "boolean" &&
+    typeof value.bytes === "boolean" &&
+    typeof value.state === "boolean"
+  );
+}
+
+function isDiscoverMaps(
+  value: unknown,
+): value is readonly { file: string; sourceRoots: readonly string[] }[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.file === "string" &&
+        Array.isArray(entry.sourceRoots) &&
+        entry.sourceRoots.every((root) => typeof root === "string"),
+    )
+  );
+}
+
+function isEditorProjectManifest(value: unknown): value is EditorProjectManifest {
+  return (
+    isRecord(value) &&
+    typeof value.target === "string" &&
+    isRecord(value.rom) &&
+    typeof value.rom.contentSha256 === "string" &&
+    typeof value.rom.contentSize === "number" &&
+    Array.isArray(value.addressSpaces) &&
+    value.addressSpaces.every(
+      (space) => isRecord(space) && typeof space.id === "string" && typeof space.kind === "string",
+    )
+  );
+}
+
+function isProjects(
+  value: unknown,
+): value is readonly { directory: string; manifest: EditorProjectManifest }[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.directory === "string" &&
+        isEditorProjectManifest(entry.manifest),
+    )
+  );
+}
+
 /** Small callbacks preserve existing discovery and evidence services without importing VS Code here. */
-function host<T>(method: string, args: unknown[] = []): Promise<T> {
+function host(method: string, args: unknown[] = []): Promise<unknown> {
   const id = ++sequence;
-  return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: (value) => resolve(value as T), reject });
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
     port.postMessage({ type: "host", id, method, args });
   });
 }
 const provider = new EditorInformationProvider({
-  discoverMaps: () => host("discoverMaps"),
-  projects: () => host("projects"),
+  discoverMaps: async () => {
+    const value = await host("discoverMaps");
+    if (!isDiscoverMaps(value)) {
+      throw new Error("Invalid source information map discovery.");
+    }
+    return value;
+  },
+  projects: async () => {
+    const value = await host("projects");
+    if (!isProjects(value)) {
+      throw new Error("Invalid source information projects.");
+    }
+    return value;
+  },
   request: (...args) => host("request", args),
 });
 let publishedRevision = -1;
@@ -52,18 +141,41 @@ const handleMessage = async (message: {
         provider.configurationChanged();
         break;
       case "buildCompleted":
-        provider.buildCompleted(
-          ...(message.args as Parameters<EditorInformationProvider["buildCompleted"]>),
-        );
+        if (
+          message.args.length !== 2 ||
+          typeof message.args[0] !== "string" ||
+          typeof message.args[1] !== "string"
+        ) {
+          throw new Error("Invalid buildCompleted arguments.");
+        }
+        provider.buildCompleted(message.args[0], message.args[1]);
         break;
       case "diagnostics":
-        value = await provider.diagnostics(
-          ...(message.args as Parameters<EditorInformationProvider["diagnostics"]>),
-        );
+        if (
+          message.args.length !== 2 ||
+          typeof message.args[0] !== "string" ||
+          !isStringSet(message.args[1])
+        ) {
+          throw new Error("Invalid diagnostics arguments.");
+        }
+        value = await provider.diagnostics(message.args[0], message.args[1]);
         break;
       case "lines":
+        if (
+          message.args.length !== 4 ||
+          typeof message.args[0] !== "string" ||
+          !Array.isArray(message.args[1]) ||
+          !message.args[1].every(isLineRange) ||
+          !isRequirements(message.args[2]) ||
+          !isStringSet(message.args[3])
+        ) {
+          throw new Error("Invalid lines arguments.");
+        }
         value = await provider.lines(
-          ...(message.args as Parameters<EditorInformationProvider["lines"]>),
+          message.args[0],
+          message.args[1],
+          message.args[2],
+          message.args[3],
         );
         break;
       default:

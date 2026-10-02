@@ -6,50 +6,66 @@ import { readResearchInputs } from "../research-inputs/inputs.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath, sourceRepository } from "./git.js";
 /** Check runtime shape without widening typed readonly arrays to any[]. */
-const isArray = (value) => Array.isArray(value);
-/** Validate portable paths and identity before running any project-specific tool. */
-export function parseSourceProject(value) {
-    const config = value;
-    if (!config ||
-        config.format !== "uttori-source-project" ||
-        config.version !== 1 ||
-        typeof config.id !== "string" ||
-        !/^[\w.-]+$/.test(config.id) ||
-        typeof config.target !== "string" ||
-        !config.target ||
-        typeof config.romSha256 !== "string" ||
-        !/^[\da-f]{64}$/.test(config.romSha256) ||
-        !isArray(config.sourceRoots) ||
-        !config.sourceRoots.length ||
-        !isArray(config.researchRoots) ||
-        !config.researchRoots.length) {
+function isUnknownArray(value) {
+    return Array.isArray(value);
+}
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSafeInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value);
+}
+function assertSourceProjectConfiguration(value) {
+    if (!isRecord(value)) {
+        throw new Error("Invalid Git source project configuration.");
+    }
+    const id = value.id;
+    const target = value.target;
+    const romSha256 = value.romSha256;
+    const sourceRoots = value.sourceRoots;
+    const researchRoots = value.researchRoots;
+    if (value.format !== "uttori-source-project" ||
+        value.version !== 1 ||
+        typeof id !== "string" ||
+        !/^[\w.-]+$/.test(id) ||
+        typeof target !== "string" ||
+        target === "" ||
+        typeof romSha256 !== "string" ||
+        !/^[\da-f]{64}$/.test(romSha256) ||
+        !isUnknownArray(sourceRoots) ||
+        sourceRoots.length === 0 ||
+        !isUnknownArray(researchRoots) ||
+        researchRoots.length === 0) {
         throw new Error("Invalid Git source project configuration.");
     }
     for (const name of [
-        ...config.sourceRoots,
-        ...config.researchRoots,
-        config.buildConfig,
-        config.layout,
-        config.captures,
+        ...sourceRoots,
+        ...researchRoots,
+        value.buildConfig,
+        value.layout,
+        value.captures,
     ]) {
         if (typeof name !== "string") {
             throw new Error("Source project paths must be strings.");
         }
         assertSourcePath(name);
     }
-    if (config.limits !== undefined) {
-        if (!config.limits || typeof config.limits !== "object" || Array.isArray(config.limits)) {
+    if (value.limits !== undefined) {
+        if (!isRecord(value.limits)) {
             throw new Error("Source work limits must be an object.");
         }
-        for (const [name, limit] of Object.entries(config.limits)) {
-            if (!["captureBytes", "analysisWorkItems", "analysisCallDepth"].includes(name) ||
-                !Number.isSafeInteger(limit) ||
-                limit < (name === "analysisCallDepth" ? 0 : 1)) {
+        for (const [name, limit] of Object.entries(value.limits)) {
+            if ((name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth") ||
+                !(isSafeInteger(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))) {
                 throw new Error(`Invalid source work limit: ${name}. Use an integer within the supported range.`);
             }
         }
     }
-    return config;
+}
+/** Validate portable paths and identity before running any project-specific tool. */
+export function parseSourceProject(value) {
+    assertSourceProjectConfiguration(value);
+    return value;
 }
 /** Discover only the selected repository's project; nested repositories cannot inherit a parent's identity. */
 export async function openSourceProject(directory) {
@@ -70,18 +86,21 @@ export async function openSourceProject(directory) {
 export function sourceProjectLocalInputs(project) {
     return readSourceProjectLocalInputs(project.repository.root);
 }
+function assertSourceProjectLocalInputs(value) {
+    if (!isRecord(value) ||
+        value.format !== "uttori-source-local" ||
+        value.version !== 1 ||
+        typeof value.rom !== "string" ||
+        value.rom === "" ||
+        typeof value.evidence !== "string" ||
+        value.evidence === "") {
+        throw new Error("Configure the local ROM and evidence paths before running this source project.");
+    }
+}
 /** Read only the local bindings; research queries do not need to spawn Git or load the ROM. */
 export function readSourceProjectLocalInputs(root) {
     const local = JSON.parse(fs.readFileSync(path.join(root, ".uttori-local/project.json"), "utf8"));
-    if (!local ||
-        local.format !== "uttori-source-local" ||
-        local.version !== 1 ||
-        typeof local.rom !== "string" ||
-        !local.rom ||
-        typeof local.evidence !== "string" ||
-        !local.evidence) {
-        throw new Error("Configure the local ROM and evidence paths before running this source project.");
-    }
+    assertSourceProjectLocalInputs(local);
     return {
         ...local,
         rom: path.resolve(root, local.rom),

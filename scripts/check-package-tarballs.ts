@@ -24,8 +24,214 @@ interface PackageManifest {
   readonly engines?: { readonly node?: string };
   readonly publishConfig?: { readonly access?: string };
   readonly dependencies?: Readonly<Record<string, string>>;
-  readonly exports: Readonly<Record<string, string | Readonly<Record<string, string>>>>;
+  readonly exports: Readonly<Record<string, string | Readonly<Partial<Record<string, string>>>>>;
   readonly bin?: Readonly<Record<string, string>>;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function readStringMap(value: unknown, label: string): Record<string, string> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  const entries: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry !== "string") {
+      throw new Error(`${label}.${key} must be a string.`);
+    }
+    entries[key] = entry;
+  }
+  return entries;
+}
+
+function readExportTarget(value: unknown): string | Readonly<Partial<Record<string, string>>> {
+  if (typeof value === "string") {
+    return value;
+  }
+  const target = readStringMap(value, "export target");
+  if (!target) {
+    throw new Error("Package export target must be a string or condition map.");
+  }
+  return target;
+}
+
+function isPackageIdentity(
+  value: unknown,
+): value is Pick<PackageManifest, "name" | "version" | "dependencies"> {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.version === "string" &&
+    (value.dependencies === undefined || isRecord(value.dependencies))
+  );
+}
+
+function readPackageIdentity(
+  value: unknown,
+): Pick<PackageManifest, "name" | "version" | "dependencies"> {
+  if (!isPackageIdentity(value)) {
+    throw new Error("Installed package manifest is missing its name or version.");
+  }
+  const dependencies = readStringMap(value.dependencies, "dependencies");
+  return {
+    name: value.name,
+    version: value.version,
+    ...(dependencies === undefined ? {} : { dependencies }),
+  };
+}
+
+function readPackageManifest(value: unknown): PackageManifest {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== "string" ||
+    typeof value.version !== "string" ||
+    !isRecord(value.exports)
+  ) {
+    throw new Error("Package manifest is missing its name, version, or exports.");
+  }
+  const exportsMap: Record<string, string | Readonly<Partial<Record<string, string>>>> = {};
+  for (const [key, entry] of Object.entries(value.exports)) {
+    exportsMap[key] = readExportTarget(entry);
+  }
+  const manifest: PackageManifest = {
+    name: value.name,
+    version: value.version,
+    exports: exportsMap,
+  };
+  if (value.private !== undefined) {
+    if (typeof value.private !== "boolean") {
+      throw new Error("Package private flag must be a boolean.");
+    }
+    return {
+      ...manifest,
+      private: value.private,
+      ...optionalManifestFields(value),
+    };
+  }
+  return { ...manifest, ...optionalManifestFields(value) };
+}
+
+function optionalManifestFields(value: Record<string, unknown>): {
+  homepage?: string;
+  license?: string;
+  keywords?: string[];
+  repository?: { type: string; url: string; directory: string };
+  bugs?: { url: string };
+  engines?: { node?: string };
+  publishConfig?: { access?: string };
+  dependencies?: Record<string, string>;
+  bin?: Record<string, string>;
+} {
+  const fields: {
+    homepage?: string;
+    license?: string;
+    keywords?: string[];
+    repository?: { type: string; url: string; directory: string };
+    bugs?: { url: string };
+    engines?: { node?: string };
+    publishConfig?: { access?: string };
+    dependencies?: Record<string, string>;
+    bin?: Record<string, string>;
+  } = {};
+  if (value.homepage !== undefined) {
+    if (typeof value.homepage !== "string") {
+      throw new Error("Package homepage must be a string.");
+    }
+    fields.homepage = value.homepage;
+  }
+  if (value.license !== undefined) {
+    if (typeof value.license !== "string") {
+      throw new Error("Package license must be a string.");
+    }
+    fields.license = value.license;
+  }
+  if (value.keywords !== undefined) {
+    if (
+      !Array.isArray(value.keywords) ||
+      !value.keywords.every((entry) => typeof entry === "string")
+    ) {
+      throw new Error("Package keywords must be strings.");
+    }
+    fields.keywords = value.keywords.filter((entry): entry is string => typeof entry === "string");
+  }
+  if (value.repository !== undefined) {
+    if (
+      !isRecord(value.repository) ||
+      typeof value.repository.type !== "string" ||
+      typeof value.repository.url !== "string" ||
+      typeof value.repository.directory !== "string"
+    ) {
+      throw new Error("Package repository must identify a git directory.");
+    }
+    fields.repository = {
+      type: value.repository.type,
+      url: value.repository.url,
+      directory: value.repository.directory,
+    };
+  }
+  if (value.bugs !== undefined) {
+    if (!isRecord(value.bugs) || typeof value.bugs.url !== "string") {
+      throw new Error("Package bugs.url must be a string.");
+    }
+    fields.bugs = { url: value.bugs.url };
+  }
+  if (value.engines !== undefined) {
+    if (
+      !isRecord(value.engines) ||
+      (value.engines.node !== undefined && typeof value.engines.node !== "string")
+    ) {
+      throw new Error("Package engines.node must be a string.");
+    }
+    fields.engines = typeof value.engines.node === "string" ? { node: value.engines.node } : {};
+  }
+  if (value.publishConfig !== undefined) {
+    if (
+      !isRecord(value.publishConfig) ||
+      (value.publishConfig.access !== undefined && typeof value.publishConfig.access !== "string")
+    ) {
+      throw new Error("Package publishConfig.access must be a string.");
+    }
+    fields.publishConfig =
+      typeof value.publishConfig.access === "string" ? { access: value.publishConfig.access } : {};
+  }
+  const dependencies = readStringMap(value.dependencies, "dependencies");
+  if (dependencies) {
+    fields.dependencies = dependencies;
+  }
+  const bin = readStringMap(value.bin, "bin");
+  if (bin) {
+    fields.bin = bin;
+  }
+  return fields;
+}
+
+function readPackedArchive(value: unknown): PackedArchive {
+  assert.ok(isRecord(value), "Expected one npm archive.");
+  assert.equal(typeof value.name, "string");
+  assert.equal(typeof value.filename, "string");
+  assert.ok(Array.isArray(value.files));
+  if (
+    typeof value.name !== "string" ||
+    typeof value.filename !== "string" ||
+    !Array.isArray(value.files)
+  ) {
+    throw new Error("Expected one npm archive.");
+  }
+  return {
+    name: value.name,
+    filename: value.filename,
+    files: value.files.map((file: unknown) => {
+      assert.ok(isRecord(file) && typeof file.path === "string");
+      if (!isRecord(file) || typeof file.path !== "string") {
+        throw new Error("Expected archive file path.");
+      }
+      return { path: file.path };
+    }),
+  };
 }
 
 const root = process.cwd();
@@ -61,6 +267,13 @@ const run = (executable: string, args: string[], cwd: string): string => {
   return result.stdout;
 };
 
+function assertDistExport(
+  destination: string | undefined,
+  message: string,
+): asserts destination is string {
+  assert.ok(destination?.startsWith("./dist/"), message);
+}
+
 /**
  * Uses npm's JS entry point so Windows does not need a shell to execute npm.cmd.
  * @param {string[]} args npm arguments.
@@ -83,7 +296,8 @@ const dependencyManifest = (dependency: string, from: string): string => {
   for (;;) {
     const manifestPath = path.join(directory, "node_modules", dependency, "package.json");
     if (fs.existsSync(manifestPath)) {
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
+      const parsedManifest: unknown = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      const manifest = readPackageIdentity(parsedManifest);
       if (manifest.name === dependency) {
         return manifestPath;
       }
@@ -115,15 +329,8 @@ const pack = (directory: string, lifecycle: boolean): PackedArchive => {
     inventoryStart < 0 ? output : output.slice(inventoryStart + 1),
   );
   assert.ok(Array.isArray(parsed) && parsed.length === 1, "Expected one npm archive.");
-  const archive = parsed[0] as PackedArchive;
-  assert.equal(typeof archive.name, "string");
-  assert.equal(typeof archive.filename, "string");
+  const archive = readPackedArchive(parsed[0]);
   assert.equal(path.basename(archive.filename), archive.filename);
-  assert.ok(Array.isArray(archive.files));
-  for (const file of archive.files as readonly unknown[]) {
-    assert.ok(file !== null && typeof file === "object" && "path" in file);
-    assert.equal(typeof file.path, "string");
-  }
   return archive;
 };
 
@@ -134,7 +341,8 @@ try {
     if (!fs.existsSync(manifestPath)) {
       return [];
     }
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
+    const parsedManifest: unknown = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    const manifest = readPackageManifest(parsedManifest);
     return manifest.private ? [] : [{ directory, manifest }];
   });
   const names = new Set(workspaces.map(({ manifest }) => manifest.name));
@@ -158,7 +366,7 @@ try {
         if (condition === "require" && !destination) {
           continue;
         }
-        assert.ok(destination?.startsWith("./dist/"), `${specifier}: invalid ${condition} export`);
+        assertDistExport(destination, `${specifier}: invalid ${condition} export`);
         const extension = condition === "types" ? ".d.ts" : ".js";
         assert.ok(
           destination.endsWith(extension),
@@ -220,7 +428,8 @@ try {
   const stagedDependencies = new Set<string>();
   for (const { dependency, from } of externalDependencies) {
     const manifestPath = dependencyManifest(dependency, from);
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
+    const parsedDependency: unknown = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    const manifest = readPackageIdentity(parsedDependency);
     const identity = `${manifest.name}@${manifest.version}`;
     if (stagedDependencies.has(identity)) {
       continue;

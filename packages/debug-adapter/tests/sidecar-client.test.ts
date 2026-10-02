@@ -8,9 +8,15 @@ import {
   encodeDebugSidecarMessage,
   type DebugSidecarEvent,
   type DebugSidecarMessage,
+  type DebugSidecarRequest,
+  type DebugSidecarResponse,
   type DebugSidecarTransport,
   type DebugSubscription,
 } from "../src/index.js";
+
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
 
 class MemoryTransport implements DebugSidecarTransport {
   readonly dataListeners = new Set<(data: Uint8Array) => void>();
@@ -54,25 +60,37 @@ class MemoryTransport implements DebugSidecarTransport {
 
 const session = "a".repeat(43);
 
+type ServerMessageBody =
+  | Omit<DebugSidecarRequest, "protocol" | "version" | "session" | "sequence">
+  | Omit<DebugSidecarResponse, "protocol" | "version" | "session" | "sequence">
+  | Omit<DebugSidecarEvent, "protocol" | "version" | "session" | "sequence">;
+
 const serverMessage = (
   sequence: number,
-  message: Omit<DebugSidecarMessage, "protocol" | "version" | "session" | "sequence">,
+  message: ServerMessageBody,
   token = session,
-): DebugSidecarMessage =>
-  ({
+): DebugSidecarMessage => {
+  const envelope = {
     protocol: DEBUG_SIDECAR_PROTOCOL,
     version: DEBUG_SIDECAR_PROTOCOL_VERSION,
     session: token,
     sequence,
-    ...message,
-  }) as DebugSidecarMessage;
+  };
+  if (message.type === "request") {
+    return { ...envelope, ...message };
+  }
+  if (message.type === "response") {
+    return { ...envelope, ...message };
+  }
+  return { ...envelope, ...message };
+};
 
 test("sidecar client pairs ordered responses and publishes authenticated events", async (t) => {
   const transport = new MemoryTransport();
   const requests = new DebugSidecarMessageParser();
   let serverSequence = 1;
   transport.onWrite = (data) => {
-    const [request] = requests.push(data);
+    const request = elementAt(requests.push(data), 0);
     if (request?.type !== "request") {
       throw new Error("Expected request.");
     }
@@ -113,7 +131,7 @@ test("sidecar client fails closed on a mismatched session", async (t) => {
   const transport = new MemoryTransport();
   const requests = new DebugSidecarMessageParser();
   transport.onWrite = (data) => {
-    const [request] = requests.push(data);
+    const request = elementAt(requests.push(data), 0);
     if (request?.type !== "request") {
       throw new Error("Expected request.");
     }
@@ -133,7 +151,7 @@ test("sidecar client fails closed on a mismatched session", async (t) => {
   };
   const client = new DebugSidecarClient({ transport, session });
   const error = await t.throwsAsync(client.request("ping"));
-  t.regex(error?.message ?? "", /session does not match/);
+  t.regex(error.message, /session does not match/);
   t.true(client.closed);
   t.is(transport.closes, 1);
 });
@@ -142,7 +160,7 @@ test("sidecar client times out, closes, and rejects every pending request", asyn
   const transport = new MemoryTransport();
   const client = new DebugSidecarClient({ transport, session, requestTimeoutMs: 10 });
   const error = await t.throwsAsync(client.request("threads"));
-  t.regex(error?.message ?? "", /timed out/);
+  t.regex(error.message, /timed out/);
   t.true(client.closed);
   t.is(transport.closes, 1);
 });
@@ -157,12 +175,12 @@ test("sidecar client bounds pending requests and propagates transport failure", 
   });
   const first = client.request("threads");
   const overflow = await t.throwsAsync(client.request("registers"));
-  t.regex(overflow?.message ?? "", /Too many pending/);
+  t.regex(overflow.message, /Too many pending/);
   const closeErrors: string[] = [];
   client.onClose((error) => closeErrors.push(error.message));
   transport.emitClose(new Error("native sidecar crashed"));
   const crash = await t.throwsAsync(first);
-  t.is(crash?.message, "native sidecar crashed");
+  t.is(crash.message, "native sidecar crashed");
   t.deepEqual(closeErrors, ["native sidecar crashed"]);
   t.true(client.closed);
 
@@ -173,7 +191,7 @@ test("sidecar client bounds pending requests and propagates transport failure", 
     limits: { ...DEFAULT_DEBUG_SIDECAR_LIMITS, maxQueuedBytes: 1 },
   });
   const byteOverflow = await t.throwsAsync(byteBounded.request("ping"));
-  t.regex(byteOverflow?.message ?? "", /request bytes exceed/);
+  t.regex(byteOverflow.message, /request bytes exceed/);
   t.is(byteTransport.writes, 0);
   await byteBounded.close();
 });

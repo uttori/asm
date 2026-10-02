@@ -19,7 +19,7 @@ const MAX_SHIFT = 255n;
 const MAX_EXPONENT = 255n;
 const MAX_MAGNITUDE = (1n << 256n) - 1n;
 
-const binaryPrecedence: Readonly<Record<string, number>> = Object.freeze({
+const binaryPrecedence: Readonly<Partial<Record<string, number>>> = Object.freeze({
   "||": 0,
   "&&": 1,
   "=": 2,

@@ -9,7 +9,7 @@ import { DirectiveRegistry } from "../../src/directives/registry.js";
 import type { IncludeDirectiveContext } from "../../src/directives/types.js";
 import { parseExpressionNode, type ExpressionNode } from "../../src/ir/expression-node.js";
 import { createNormalizedCommand } from "../../src/ir/normalized-command.js";
-import { createOperandResolver, runtimeStub } from "./test-stubs.js";
+import { createOperandResolver, runtimeStub, testDouble } from "./test-stubs.js";
 
 const evalRange = (expr: string | ExpressionNode, labels: Record<string, number> = {}): number => {
   if (typeof expr === "string") {
@@ -76,6 +76,8 @@ type IncludeSessionOverrides = {
   labels?: Record<string, number>;
 };
 
+const identityDefine = (content: string): string => content;
+
 const createContext = (overrides: IncludeSessionOverrides = {}) => {
   const written: number[] = [];
   const events: string[] = [];
@@ -98,8 +100,7 @@ const createContext = (overrides: IncludeSessionOverrides = {}) => {
     write1: (value: number) => written.push(value),
   };
   const includeCalls: string[] = [];
-  const identityDefine = (content: string) => content;
-  const ctx = {
+  const ctx = testDouble<IncludeDirectiveContext>({
     session,
     defineEngine: {
       resolveDefinesInStringLiteral: identityDefine,
@@ -117,7 +118,7 @@ const createContext = (overrides: IncludeSessionOverrides = {}) => {
       handlePushPC: () => events.push("push"),
       handlePullPC: () => events.push("pull"),
     },
-  } as IncludeDirectiveContext;
+  });
   return { ctx, session, written, events, includeCalls };
 };
 

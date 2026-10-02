@@ -40,8 +40,8 @@ export declare function decompressSomLz(source: Uint8Array, offset?: number, max
  * The unused header byte is explicit because original ROM headers may differ.
  * This does not preserve an original stream's token choices.
  * @param {Uint8Array} source Plain bytes to encode.
- * @param {Readonly<Record<string, unknown>>} [options] `mode` and `unusedHeaderByte`.
+ * @param {unknown} [options] `mode` and `unusedHeaderByte`.
  * @returns {Uint8Array} Shortest accepted stream for the selected mode.
  */
-export declare function compressSomLz(source: Uint8Array, options?: Readonly<Record<string, unknown>>): Uint8Array<ArrayBufferLike>;
+export declare function compressSomLz(source: Uint8Array, options?: unknown): Uint8Array<ArrayBufferLike>;
 //# sourceMappingURL=som-lz.d.ts.map

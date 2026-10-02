@@ -3,8 +3,6 @@ import * as path from "node:path";
 
 import type {
   AnalysisEvidenceSource,
-  AnalysisProjectManifest,
-  AnalysisSourceSummary,
   AnalysisSourceEntry,
   AnalysisSourceGroup,
 } from "@uttori/asm-disassembler";
@@ -19,8 +17,117 @@ import {
 
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import type { AnalysisNavigationTarget } from "./navigation-target.js";
-import type { AnalysisSourceCatalogProjection } from "./sources-data.js";
 import { analysisWorker } from "./worker-client.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isNumberRecord(value: unknown): value is Readonly<Record<string, number>> {
+  return isRecord(value) && Object.values(value).every((entry) => typeof entry === "number");
+}
+
+function isEvidenceKind(value: unknown): value is AnalysisEvidenceSource["kinds"][number] {
+  return (
+    value === "manual" ||
+    value === "import" ||
+    value === "detector" ||
+    value === "static" ||
+    value === "runtime"
+  );
+}
+
+function isImportReport(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.format === "string" &&
+    typeof value.sourceName === "string" &&
+    typeof value.sourceSha256 === "string" &&
+    isNumberRecord(value.imported) &&
+    isStringArray(value.warnings) &&
+    Array.isArray(value.unsupported) &&
+    value.unsupported.every(
+      (loss) =>
+        isRecord(loss) &&
+        typeof loss.field === "string" &&
+        typeof loss.reason === "string" &&
+        typeof loss.count === "number",
+    )
+  );
+}
+
+function isEvidenceSource(value: unknown): value is AnalysisEvidenceSource {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    isStringArray(value.names) &&
+    Array.isArray(value.kinds) &&
+    value.kinds.every(isEvidenceKind) &&
+    isStringArray(value.evidenceIds) &&
+    Array.isArray(value.reports) &&
+    value.reports.every(isImportReport) &&
+    (value.format === undefined || typeof value.format === "string") &&
+    (value.sha256 === undefined || typeof value.sha256 === "string") &&
+    (value.lastImportedAt === undefined || typeof value.lastImportedAt === "number")
+  );
+}
+
+function isSourceCatalog(
+  value: unknown,
+): value is { readonly sources: readonly AnalysisEvidenceSource[] } {
+  return isRecord(value) && Array.isArray(value.sources) && value.sources.every(isEvidenceSource);
+}
+
+interface SourceSummaryView {
+  readonly manifest: {
+    readonly target: string;
+    readonly rom: { readonly contentSha256: string; readonly contentSize: number };
+  };
+  readonly summary: {
+    readonly instructionCount: number;
+    readonly memoryCount: number;
+    readonly contributionCount: number;
+    readonly source: AnalysisEvidenceSource;
+  };
+}
+
+function isSourceSummary(value: unknown): value is SourceSummaryView {
+  return (
+    isRecord(value) &&
+    isRecord(value.manifest) &&
+    typeof value.manifest.target === "string" &&
+    isRecord(value.manifest.rom) &&
+    typeof value.manifest.rom.contentSha256 === "string" &&
+    typeof value.manifest.rom.contentSize === "number" &&
+    isRecord(value.summary) &&
+    typeof value.summary.instructionCount === "number" &&
+    typeof value.summary.memoryCount === "number" &&
+    typeof value.summary.contributionCount === "number" &&
+    isEvidenceSource(value.summary.source)
+  );
+}
+
+function isSourceEntry(value: unknown): value is AnalysisSourceEntry {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.label === "string" &&
+    typeof value.description === "string" &&
+    typeof value.detail === "string" &&
+    Array.isArray(value.outputOffsets) &&
+    value.outputOffsets.every((offset) => typeof offset === "number") &&
+    isStringArray(value.recordIds) &&
+    (value.addressSpace === undefined || typeof value.addressSpace === "string") &&
+    (value.address === undefined || typeof value.address === "number") &&
+    (value.architecture === undefined || typeof value.architecture === "string")
+  );
+}
 
 /**
  * Format source/evidence totals with English digit grouping so tree labels remain consistent
@@ -35,6 +142,11 @@ const PAGE_SIZE = 200;
 interface SourceTarget {
   readonly directory: string;
   readonly source: AnalysisEvidenceSource;
+}
+
+interface SourceManifestView {
+  readonly target: string;
+  readonly rom: { readonly contentSha256: string; readonly contentSize: number };
 }
 /**
  * Source/evidence row with optional lazy children, a VS Code command, and source identity for
@@ -123,10 +235,10 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
     const groups = await Promise.all(
       directories.map(async (directory): Promise<AnalysisSourcesTreeNode> => {
         try {
-          const catalog = await analysisWorker().request<AnalysisSourceCatalogProjection>(
-            directory,
-            "sources",
-          );
+          const catalog = await analysisWorker().request(directory, "sources");
+          if (!isSourceCatalog(catalog)) {
+            throw new Error("Analysis sources are unavailable.");
+          }
           return {
             id: directory,
             label: path.basename(directory),
@@ -151,7 +263,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
 
   #sourceNodes(
     directory: string,
-    catalog: AnalysisSourceCatalogProjection,
+    catalog: { readonly sources: readonly AnalysisEvidenceSource[] },
   ): AnalysisSourcesTreeNode[] {
     const artifacts = catalog.sources.filter((source) => source.sha256);
     const producers = catalog.sources.filter((source) => !source.sha256);
@@ -235,10 +347,13 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
 
   async #sourceChildren(target: SourceTarget): Promise<AnalysisSourcesTreeNode[]> {
     const id = this.#sourceKey(target);
-    const { manifest, summary } = await analysisWorker().request<{
-      manifest: AnalysisProjectManifest;
-      summary: AnalysisSourceSummary;
-    }>(target.directory, "sourceSummary", { sourceId: target.source.id });
+    const loaded = await analysisWorker().request(target.directory, "sourceSummary", {
+      sourceId: target.source.id,
+    });
+    if (!isSourceSummary(loaded)) {
+      throw new Error("Analysis source summary is unavailable.");
+    }
+    const { manifest, summary } = loaded;
     const children: AnalysisSourcesTreeNode[] = [];
     const group = (
       name: AnalysisSourceGroup,
@@ -287,10 +402,11 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
           ([field, value]) => `${report.sourceName}: ${count(value)} ${field} imported`,
         ),
       ),
-      ...summary.source.reports.flatMap((report) => [
-        ...report.warnings,
-        ...report.unsupported.map((loss) => `${loss.field}: ${loss.reason} (${loss.count})`),
-      ]),
+      ...summary.source.reports.flatMap((report) =>
+        report.warnings.concat(
+          report.unsupported.map((loss) => `${loss.field}: ${loss.reason} (${loss.count})`),
+        ),
+      ),
     ];
     children.push({
       id: `${id}:notes`,
@@ -313,18 +429,21 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
 
   async #pages(
     target: SourceTarget,
-    manifest: AnalysisProjectManifest,
+    manifest: SourceManifestView,
     group: AnalysisSourceGroup,
     start: number,
     total: number,
   ): Promise<AnalysisSourcesTreeNode[]> {
     const id = `${this.#sourceKey(target)}:${group}`;
     if (total <= PAGE_SIZE) {
-      const entries = await analysisWorker().request<AnalysisSourceEntry[]>(
-        target.directory,
-        "sourceEntries",
-        { sourceId: target.source.id, sourceGroup: group, offset: start },
-      );
+      const entries = await analysisWorker().request(target.directory, "sourceEntries", {
+        sourceId: target.source.id,
+        sourceGroup: group,
+        offset: start,
+      });
+      if (!Array.isArray(entries) || !entries.every(isSourceEntry)) {
+        throw new Error("Analysis source entries are unavailable.");
+      }
       return entries.map((entry) => {
         const navigation: AnalysisNavigationTarget | undefined =
           entry.address !== undefined && entry.addressSpace
@@ -340,13 +459,15 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
                 recordIds: entry.recordIds,
               }
             : undefined;
-        return {
-          id: `${id}:${entry.id}`,
-          label: entry.label,
-          description: entry.description,
-          tooltip: entry.detail,
-          icon: "location",
-          ...(navigation
+        return Object.assign(
+          {
+            id: `${id}:${entry.id}`,
+            label: entry.label,
+            description: entry.description,
+            tooltip: entry.detail,
+            icon: "location",
+          },
+          navigation
             ? {
                 command: {
                   command: "asm.analysis.navigate",
@@ -354,8 +475,8 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
                   arguments: [navigation],
                 },
               }
-            : {}),
-        };
+            : {},
+        );
       });
     }
     let stride = PAGE_SIZE;

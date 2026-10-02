@@ -218,23 +218,41 @@ const readExpressions: ExpressionSetContribution = {
  * @param {unknown} configured The configured options.
  * @returns {SnesTargetOptions} The target options.
  */
+/**
+ * Accepts a JSON object. Arrays and null are not option maps.
+ * @param {unknown} value Candidate target options.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Accepts the checksum mode enum.
+ * @param {unknown} value Candidate mode.
+ * @returns {boolean} True for `asar` or `simple`.
+ */
+const isChecksumMode = (value: unknown): value is "asar" | "simple" =>
+  value === "asar" || value === "simple";
+
+/**
+ * Accepts the optional bank-crossing diagnostic. Any function is kept; the caller supplies the signature.
+ * @param {unknown} value Candidate callback.
+ * @returns {boolean} True when `value` is a function.
+ */
+const isBankCrossingHandler = (value: unknown): value is (address: number, width: number) => void =>
+  typeof value === "function";
+
 const targetOptions = (configured: unknown): SnesTargetOptions => {
-  const value =
-    typeof configured === "object" && configured !== null && !Array.isArray(configured)
-      ? (configured as Record<string, unknown>)
-      : {};
+  const value = isRecord(configured) ? configured : {};
   const checksumMode = value.checksumMode ?? "asar";
-  if (checksumMode !== "asar" && checksumMode !== "simple") {
+  if (!isChecksumMode(checksumMode)) {
     throw new Error("checksumMode must be 'asar' or 'simple'.");
   }
   return {
     checksumMode,
     checksumEnabled: value.checksumEnabled === undefined ? true : value.checksumEnabled === true,
     asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true,
-    onBankCrossing:
-      typeof value.onBankCrossing === "function"
-        ? (value.onBankCrossing as SnesTargetOptions["onBankCrossing"])
-        : undefined,
+    onBankCrossing: isBankCrossingHandler(value.onBankCrossing) ? value.onBankCrossing : undefined,
   };
 };
 

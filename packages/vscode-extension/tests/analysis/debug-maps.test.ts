@@ -20,8 +20,7 @@ const host = {
     | undefined,
 };
 
-(globalThis as { __uttoriAnalysisDebugMapsTest?: typeof host }).__uttoriAnalysisDebugMapsTest =
-  host;
+Object.assign(globalThis, { __uttoriAnalysisDebugMapsTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -289,7 +288,7 @@ test.serial(
       workspaceFolder: { uri: { fsPath: root } },
     };
     const discovered = await discoverAnalysisDebugMapFiles();
-    t.deepEqual(discovered.map((entry) => entry.file).sort(), [nested, extra].sort());
+    t.deepEqual(discovered.map((entry) => entry.file).toSorted(), [nested, extra].toSorted());
     const configured = discovered.find((entry) => entry.file === nested);
     t.true(configured?.sourceRoots.includes(path.join(root, "src")));
     t.true(configured?.sourceRoots.includes(root));

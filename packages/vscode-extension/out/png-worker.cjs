@@ -1,9 +1,9 @@
 "use strict";
 
-// src/assets/png-worker.ts
+// packages/vscode-extension/src/assets/png-worker.ts
 var import_node_worker_threads = require("node:worker_threads");
 
-// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -3441,7 +3441,7 @@ var Inflate = class {
   }
 };
 
-// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
+// node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -3533,7 +3533,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
+// node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -3551,7 +3551,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
+// node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -4796,7 +4796,7 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL = 3988292384;
 var CRC32C_POLYNOMIAL = 2197175160;
 var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -4835,7 +4835,7 @@ var computeBytes = (bytes) => {
   return ~crc >>> 0;
 };
 
-// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -4985,7 +4985,7 @@ function drawBitmapText(surface, text, x, y, color, options) {
   return metrics;
 }
 
-// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -5441,7 +5441,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug2 = () => {
 };
 if (typeof process !== "undefined" && false) {
@@ -7081,7 +7081,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// ../assets/src/png.ts
+// packages/assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: 16 * 1024 * 1024,
   maxPixels: 1024 * 1024,
@@ -7116,7 +7116,7 @@ var pngImporter = Object.freeze({
   }
 });
 
-// ../assets/src/validation.ts
+// packages/assets/src/validation.ts
 function integer(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -7124,7 +7124,7 @@ function integer(value, label, minimum, maximum) {
   return value;
 }
 
-// ../assets/src/indexed-edit.ts
+// packages/assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
   integer(image.width, "Indexed width", 1, 1 << 20);
   integer(image.height, "Indexed height", 1, 1 << 20);
@@ -7133,7 +7133,7 @@ function validateIndexedPixels(image) {
   }
 }
 
-// ../assets/src/png-edit.ts
+// packages/assets/src/png-edit.ts
 function rewriteIndexedPng(source, edit) {
   return data_image_png_default.rewriteIndexed(source, edit, {
     ...ASSET_PNG_OPTIONS,
@@ -7143,9 +7143,21 @@ function rewriteIndexedPng(source, edit) {
   });
 }
 
-// src/assets/png-worker.ts
+// packages/vscode-extension/src/assets/png-worker.ts
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isWorkerBytes(value) {
+  return isRecord(value) && value.bytes instanceof Uint8Array && (value.indexes === void 0 || value.indexes instanceof Uint8Array);
+}
 try {
-  const { bytes, indexes } = import_node_worker_threads.workerData;
+  const data = import_node_worker_threads.workerData;
+  if (!isWorkerBytes(data)) {
+    throw new Error(
+      isRecord(data) && data.indexes !== void 0 ? "PNG worker indexes must be bytes." : "PNG worker requires image bytes."
+    );
+  }
+  const { bytes, indexes } = data;
   if (indexes) {
     import_node_worker_threads.parentPort.postMessage({ value: rewriteIndexedPng(bytes, { indexes }) });
   } else {

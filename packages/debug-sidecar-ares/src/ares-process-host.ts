@@ -111,17 +111,23 @@ const sha256Pattern = /^[\dA-Fa-f]{64}$/;
 const revisionPattern = /^[\dA-Fa-f]{40}$/;
 
 const checkedSha256 = (value: string, name: string): string => {
-  if (!sha256Pattern.test(value)) {throw new Error(`${name} must be a 64-digit SHA-256 value.`);}
+  if (!sha256Pattern.test(value)) {
+    throw new Error(`${name} must be a 64-digit SHA-256 value.`);
+  }
   return value.toLowerCase();
 };
 
 const checkedRevision = (value: string, name: string): string => {
-  if (!revisionPattern.test(value)) {throw new Error(`${name} must be a 40-digit git revision.`);}
+  if (!revisionPattern.test(value)) {
+    throw new Error(`${name} must be a 40-digit git revision.`);
+  }
   return value.toLowerCase();
 };
 
 const checkedAbsolutePath = (value: string, name: string): string => {
-  if (!path.isAbsolute(value)) {throw new Error(`${name} must be an absolute path.`);}
+  if (!path.isAbsolute(value)) {
+    throw new Error(`${name} must be an absolute path.`);
+  }
   return path.normalize(value);
 };
 
@@ -132,8 +138,9 @@ const checkedResourcePath = (value: string): string => {
     path.posix.isAbsolute(value) ||
     path.posix.normalize(value) !== value ||
     value.split("/").includes("..")
-  )
-    {throw new Error(`Ares resource path '${value}' must be normalized and relative.`);}
+  ) {
+    throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
+  }
   return value;
 };
 
@@ -150,6 +157,7 @@ const waitWithTimeout = async <Value>(
     void promise.then((value) => {
       clearTimeout(timer);
       resolve(value);
+      return;
     });
   });
 
@@ -193,13 +201,20 @@ class NodeAresProcessHandle implements AresProcessHandle {
   }
 
   kill(signal: "SIGTERM" | "SIGKILL"): void {
-    if (!this.#exited) {this.#child.kill(signal);}
+    if (!this.#exited) {
+      this.#child.kill(signal);
+    }
   }
 }
 
 const nodeSha256 = async (file: string): Promise<string> => {
   const digest = createHash("sha256");
-  for await (const chunk of createReadStream(file)) {digest.update(chunk as Buffer);}
+  for await (const chunk of createReadStream(file)) {
+    if (!Buffer.isBuffer(chunk)) {
+      throw new Error(`Expected binary bytes while hashing ${file}.`);
+    }
+    digest.update(chunk);
+  }
   return digest.digest("hex");
 };
 
@@ -216,8 +231,11 @@ const reserveLoopbackPort = async (): Promise<number> => {
   }
   await new Promise<void>((resolve, reject) =>
     server.close((error) => {
-      if (error) {reject(error);}
-      else {resolve();}
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
     }),
   );
   return address.port;
@@ -243,15 +261,42 @@ export const nodeAresProcessRuntime = Object.freeze<AresProcessRuntime>({
     }),
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 const manifestRecord = (value: unknown): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    {throw new Error("Ares runtime manifest must be an object.");}
-  return value as Record<string, unknown>;
+  if (!isRecord(value)) {
+    throw new Error("Ares runtime manifest must be an object.");
+  }
+  return value;
+};
+
+const NODE_PLATFORMS = [
+  "aix",
+  "android",
+  "darwin",
+  "freebsd",
+  "haiku",
+  "linux",
+  "openbsd",
+  "sunos",
+  "win32",
+  "cygwin",
+  "netbsd",
+] as const satisfies readonly NodeJS.Platform[];
+
+const manifestPlatform = (value: string): NodeJS.Platform => {
+  const platform = NODE_PLATFORMS.find((candidate) => candidate === value);
+  if (!platform) {
+    throw new Error(`Ares manifest platform '${value}' is not a Node platform.`);
+  }
+  return platform;
 };
 
 const manifestString = (value: unknown, name: string): string => {
-  if (typeof value !== "string" || value.length === 0)
-    {throw new Error(`${name} must be a non-empty string.`);}
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${name} must be a non-empty string.`);
+  }
   return value;
 };
 
@@ -262,24 +307,29 @@ const manifestString = (value: unknown, name: string): string => {
  */
 export const parseAresRuntimeManifest = (value: unknown): AresRuntimeManifest => {
   const manifest = manifestRecord(value);
-  if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION)
-    {throw new Error(`Unsupported ares runtime manifest version ${String(manifest.schemaVersion)}.`);}
-  if (manifest.emulator !== "ares") {throw new Error("Runtime manifest is not for ares.");}
+  if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION) {
+    throw new Error(`Unsupported ares runtime manifest version ${String(manifest.schemaVersion)}.`);
+  }
+  if (manifest.emulator !== "ares") {
+    throw new Error("Runtime manifest is not for ares.");
+  }
   if (
     manifest.frontend !== undefined &&
     manifest.frontend !== "headless" &&
     manifest.frontend !== "desktop"
-  )
-    {throw new Error("Ares runtime frontend must be 'headless' or 'desktop'.");}
+  ) {
+    throw new Error("Ares runtime frontend must be 'headless' or 'desktop'.");
+  }
   const buildConfiguration = manifestString(
     manifest.buildConfiguration,
     "Ares build configuration",
   );
-  if (!Array.isArray(manifest.resources))
-    {throw new Error("Ares runtime manifest resources must be an array.");}
+  if (!Array.isArray(manifest.resources)) {
+    throw new Error("Ares runtime manifest resources must be an array.");
+  }
   const resources = Object.freeze(
-    manifest.resources.map((value, index) => {
-      const resource = manifestRecord(value);
+    manifest.resources.map((entry, index) => {
+      const resource = manifestRecord(entry);
       const resourcePath = checkedResourcePath(
         manifestString(resource.path, `Ares resource ${index} path`),
       );
@@ -292,8 +342,9 @@ export const parseAresRuntimeManifest = (value: unknown): AresRuntimeManifest =>
       });
     }),
   );
-  if (new Set(resources.map((resource) => resource.path)).size !== resources.length)
-    {throw new Error("Ares runtime manifest contains duplicate resource paths.");}
+  if (new Set(resources.map((resource) => resource.path)).size !== resources.length) {
+    throw new Error("Ares runtime manifest contains duplicate resource paths.");
+  }
   return Object.freeze({
     schemaVersion: ARES_RUNTIME_MANIFEST_VERSION,
     emulator: "ares",
@@ -323,7 +374,7 @@ export const parseAresRuntimeManifest = (value: unknown): AresRuntimeManifest =>
       "Ares executable SHA-256",
     ),
     romSha256: checkedSha256(manifestString(manifest.romSha256, "ROM SHA-256"), "ROM SHA-256"),
-    platform: manifestString(manifest.platform, "Ares manifest platform") as NodeJS.Platform,
+    platform: manifestPlatform(manifestString(manifest.platform, "Ares manifest platform")),
     architecture: manifestString(manifest.architecture, "Ares manifest architecture"),
     buildConfiguration,
     resources,
@@ -366,10 +417,13 @@ export class AresProcessHost {
       executableRelative === ".." ||
       executableRelative.startsWith(`..${path.sep}`) ||
       path.isAbsolute(executableRelative)
-    )
-      {throw new Error("Ares executable must be contained within its portable runtime directory.");}
+    ) {
+      throw new Error("Ares executable must be contained within its portable runtime directory.");
+    }
     this.#system = options.system ?? "Super Famicom";
-    if (this.#system.length === 0) {throw new Error("Ares system name must be non-empty.");}
+    if (this.#system.length === 0) {
+      throw new Error("Ares system name must be non-empty.");
+    }
     this.#fastBoot = options.fastBoot ?? true;
     this.#env = options.env ?? {};
     this.#startupTimeoutMs = options.startupTimeoutMs ?? 10_000;
@@ -386,8 +440,9 @@ export class AresProcessHost {
       ["Ares connect retry delay", this.#connectRetryMs],
       ["Ares output limit", this.#maxOutputBytes],
     ] as const) {
-      if (!Number.isSafeInteger(value) || value <= 0)
-        {throw new Error(`${name} must be a positive safe integer.`);}
+      if (!Number.isSafeInteger(value) || value <= 0) {
+        throw new Error(`${name} must be a positive safe integer.`);
+      }
     }
   }
 
@@ -424,7 +479,9 @@ export class AresProcessHost {
       try {
         return await this.#connect();
       } catch (error) {
-        if (launched) {await this.#terminateCurrent();}
+        if (launched) {
+          await this.#terminateCurrent();
+        }
         throw error;
       }
     });
@@ -490,11 +547,15 @@ export class AresProcessHost {
   async #connect(): Promise<GdbRspClient> {
     const processHandle = this.#process;
     const port = this.#port;
-    if (!processHandle || port === undefined) {throw new Error("Ares process is not running.");}
+    if (!processHandle || port === undefined) {
+      throw new Error("Ares process is not running.");
+    }
     const deadline = Date.now() + this.#startupTimeoutMs;
     let lastError = new Error("Ares RSP listener was not ready.");
     while (Date.now() < deadline) {
-      if (processHandle.exited) {throw await this.#exitError(processHandle, "before RSP connected");}
+      if (processHandle.exited) {
+        throw await this.#exitError(processHandle, "before RSP connected");
+      }
       try {
         const remaining = Math.max(1, deadline - Date.now());
         const transport = await this.#runtime.connect(port, Math.min(remaining, 250));
@@ -504,24 +565,29 @@ export class AresProcessHost {
       }
       await this.#runtime.delay(Math.min(this.#connectRetryMs, Math.max(1, deadline - Date.now())));
     }
-    if (processHandle.exited) {throw await this.#exitError(processHandle, "before RSP connected");}
+    if (processHandle.exited) {
+      throw await this.#exitError(processHandle, "before RSP connected");
+    }
     throw new Error(
       `Ares RSP listener on 127.0.0.1:${port} was not ready within ${this.#startupTimeoutMs} ms: ${lastError.message}`,
     );
   }
 
   async #verifyIdentity(): Promise<void> {
-    if (this.#runtime.platform !== this.#manifest.platform)
-      {throw new Error(
+    if (this.#runtime.platform !== this.#manifest.platform) {
+      throw new Error(
         `Ares manifest platform '${this.#manifest.platform}' does not match '${this.#runtime.platform}'.`,
-      );}
-    if (this.#runtime.architecture !== this.#manifest.architecture)
-      {throw new Error(
+      );
+    }
+    if (this.#runtime.architecture !== this.#manifest.architecture) {
+      throw new Error(
         `Ares manifest architecture '${this.#manifest.architecture}' does not match '${this.#runtime.architecture}'.`,
-      );}
+      );
+    }
     const runtimeInfo = await stat(this.#runtimeDirectory).catch(() => undefined);
-    if (runtimeInfo && !runtimeInfo.isDirectory())
-      {throw new Error("Ares runtime path exists but is not a directory.");}
+    if (runtimeInfo && !runtimeInfo.isDirectory()) {
+      throw new Error("Ares runtime path exists but is not a directory.");
+    }
     await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
     await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
     for (const resource of this.#manifest.resources) {
@@ -541,21 +607,27 @@ export class AresProcessHost {
     } catch (error) {
       throw new Error(
         `Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`,
+        { cause: error },
       );
     }
-    if (actual !== expected)
-      {throw new Error(
+    if (actual !== expected) {
+      throw new Error(
         `Ares ${context} SHA-256 mismatch: expected ${expected}, received ${actual}.`,
-      );}
+      );
+    }
   }
 
   async #terminateCurrent(): Promise<void> {
     const processHandle = this.#process;
     this.#process = undefined;
     this.#port = undefined;
-    if (!processHandle || processHandle.exited) {return;}
+    if (!processHandle || processHandle.exited) {
+      return;
+    }
     processHandle.kill("SIGTERM");
-    if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs)) {return;}
+    if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs)) {
+      return;
+    }
     processHandle.kill("SIGKILL");
     await processHandle.waitForExit();
   }
@@ -565,8 +637,11 @@ export class AresProcessHost {
     const status = exit.signal ? `signal ${exit.signal}` : `code ${String(exit.code)}`;
     const detail = this.output.trim();
     let suffix = ".";
-    if (exit.error) {suffix = `: ${exit.error.message}`;}
-    else if (detail) {suffix = `: ${detail}`;}
+    if (exit.error) {
+      suffix = `: ${exit.error.message}`;
+    } else if (detail) {
+      suffix = `: ${detail}`;
+    }
     return new Error(`Ares exited with ${status} ${context}${suffix}`);
   }
 

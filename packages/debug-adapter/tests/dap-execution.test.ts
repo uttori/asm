@@ -15,11 +15,37 @@ import {
   SidecarDebugBackend,
   createDebugSidecarSessionToken,
   type DapProtocolMessage,
-  type DapResponse,
   type DebugBackend,
   type DebugSidecarTransport,
 } from "../src/index.js";
 import { ControlledExecutionBackend } from "./fixtures/controlled-execution-backend.js";
+
+const ignoreSidecarFrame = (): void => undefined;
+
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const eventReason = (body: unknown): string | undefined => {
+  if (!isRecord(body) || typeof body.reason !== "string") {
+    return undefined;
+  }
+  return body.reason;
+};
+
+const breakpointVerified = (body: unknown): boolean => {
+  if (
+    !isRecord(body) ||
+    !isRecord(body.breakpoint) ||
+    typeof body.breakpoint.verified !== "boolean"
+  ) {
+    throw new Error("Expected a breakpoint event body.");
+  }
+  return body.breakpoint.verified;
+};
 
 /** Two mapped files let execution tests also detect lost per-source breakpoint updates. */
 const setup = (
@@ -44,10 +70,15 @@ const setup = (
     onMessage: (message) => messages.push(message),
   });
   let sequence = 0;
-  const request = async (command: string, args: Record<string, unknown> = {}) =>
-    (
+  const request = async (command: string, args: Record<string, unknown> = {}) => {
+    const message = (
       await session.dispatch({ seq: ++sequence, type: "request", command, arguments: args })
-    )[0] as DapResponse;
+    )[0];
+    if (message.type !== "response") {
+      throw new Error("Expected a DAP response.");
+    }
+    return message;
+  };
   const set = (index = 0, lines = [2]) =>
     request("setBreakpoints", {
       source: { path: sources[index] },
@@ -214,7 +245,7 @@ test("user Pause during a hidden table update prevents automatic resume", async 
       (message) =>
         message.type === "event" &&
         message.event === "stopped" &&
-        (message.body as { reason: string }).reason === "pause",
+        eventReason(message.body) === "pause",
     ),
   );
 });
@@ -253,7 +284,7 @@ test("failed table recovery exposes the stop and blocks execution until reconcil
     (message) => message.type === "event" && message.event === "breakpoint",
   );
   t.truthy(invalidated);
-  t.is((invalidated!.body as { breakpoint: { verified: boolean } }).breakpoint.verified, false);
+  t.is(breakpointVerified(invalidated?.body), false);
   backend.onSet = undefined;
   t.true((await set()).success);
   t.deepEqual(backend.tables.at(-1), [0x808000]);
@@ -335,7 +366,7 @@ test("real sidecar framing tolerates Continue response and continued event in se
     const token = createDebugSidecarSessionToken();
     const outputParser = new DebugSidecarMessageParser();
     const inputParser = new DebugSidecarMessageParser();
-    let receive: (data: Uint8Array) => void = () => undefined;
+    let receive: (data: Uint8Array) => void = ignoreSidecarFrame;
     const held: Uint8Array[] = [];
     const transport: DebugSidecarTransport = {
       write: async (data) => {
@@ -369,7 +400,7 @@ test("real sidecar framing tolerates Continue response and continued event in se
       implementation: native,
       session: token,
       write: async (frame) => {
-        const [message] = outputParser.push(frame);
+        const message = elementAt(outputParser.push(frame), 0);
         if (held.length || (message?.type === "event" && message.event === "continued")) {
           held.push(frame);
         } else {

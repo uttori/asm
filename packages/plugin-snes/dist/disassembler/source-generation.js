@@ -11,10 +11,39 @@ export function snesGenerationOptionsHash(options) {
         sourceRoot: options.sourceRoot,
         recipes: options.recipes
             .map((file) => ({ path: file.path, sha256: sourceContentHash(file.bytes) }))
-            .sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))),
-        pristineAssets: [...options.pristineAssets].sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))),
+            .toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))),
+        pristineAssets: [...options.pristineAssets].toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))),
         codeWithdrawals: options.codeWithdrawals ?? [],
     }));
+}
+/**
+ * Accepts a JSON object. Arrays and null are not coverage contracts.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+ * Accepts one half-open ROM interval from a coverage contract.
+ * @param {unknown} value Candidate range.
+ * @returns {boolean} True when start and end are numbers.
+ */
+function isCodeRange(value) {
+    return isRecord(value) && typeof value.start === "number" && typeof value.end === "number";
+}
+/**
+ * Accepts the accepted generation's code coverage contract.
+ * @param {unknown} value Parsed `source-code.json`.
+ * @returns {boolean} True for format `uttori-source-code` version 1 with numeric ranges.
+ */
+function isSourceCodeContract(value) {
+    return (isRecord(value) &&
+        value.format === "uttori-source-code" &&
+        value.version === 1 &&
+        typeof value.romSha256 === "string" &&
+        Array.isArray(value.ranges) &&
+        value.ranges.every(isCodeRange));
 }
 /**
  * Render one pinned analysis snapshot in an owned temporary directory, verify the original ROM,
@@ -78,12 +107,14 @@ export async function prepareSnesGeneration(options) {
                 store.researchInputsIdentity() !== options.inputs.researchSha256) {
                 throw new Error("Evidence or indexed research changed before pure rendering. Prepare a fresh input snapshot.");
             }
-            const rom = RomImage.load(options.romFile, { headerSize: project.manifest.rom.headerSize });
-            validateProjectRom(project.manifest, rom);
-            if (rom.identity.contentSha256 !== options.inputs.romSha256) {
+            const loadedRom = RomImage.load(options.romFile, {
+                headerSize: project.manifest.rom.headerSize,
+            });
+            validateProjectRom(project.manifest, loadedRom);
+            if (loadedRom.identity.contentSha256 !== options.inputs.romSha256) {
                 throw new Error("Generation ROM content identity changed.");
             }
-            const manifest = exportSnes65816Source(project, rom, source, {
+            const exportedManifest = exportSnes65816Source(project, loadedRom, source, {
                 sourceProjectSha256: sourceContentHash(canonicalJson(project.manifest)),
                 instructionGroups: store.instructionExportGroups(),
                 emitFile: (file) => {
@@ -95,7 +126,7 @@ export async function prepareSnesGeneration(options) {
                     write({ path: `${options.sourceRoot}/${file.path}`, bytes: file.bytes });
                 },
             });
-            return { manifest, rom };
+            return { manifest: exportedManifest, rom: loadedRom };
         }, false);
         const priorFiles = new Map(prior.files.map((file) => [file.path, file]));
         const priorCode = priorFiles.get(`${options.sourceRoot}/source-code.json`);
@@ -105,10 +136,7 @@ export async function prepareSnesGeneration(options) {
         let withdrawnCode;
         {
             const code = JSON.parse((await sourceGit(options.repository.root, ["cat-file", "blob", priorCode.blob])).stdout.toString("utf8"));
-            if (code.format !== "uttori-source-code" ||
-                code.version !== 1 ||
-                code.romSha256 !== rom.identity.contentSha256 ||
-                !Array.isArray(code.ranges)) {
+            if (!isSourceCodeContract(code) || code.romSha256 !== rom.identity.contentSha256) {
                 throw new Error("Accepted generation has an invalid code coverage contract.");
             }
             withdrawnCode = lostCodeRanges(code.ranges, manifest.spans.filter((span) => span.role === "code"));

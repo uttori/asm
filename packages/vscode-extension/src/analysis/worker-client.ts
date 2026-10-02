@@ -1,7 +1,7 @@
 import { fork, type ChildProcess } from "node:child_process";
 import * as path from "node:path";
 
-import type { AnalysisWorkerRequest } from "./worker.js";
+import type { AnalysisWorkerOperation, AnalysisWorkerRequest } from "./worker.js";
 
 /**
  * Queued worker request and its promise callbacks; the execution timer starts only after
@@ -59,9 +59,9 @@ export class AnalysisWorkerClient {
     readonly options: AnalysisWorkerOptions = {},
   ) {}
 
-  request<T>(
+  request(
     directory: string,
-    operation: AnalysisWorkerRequest["operation"],
+    operation: AnalysisWorkerOperation,
     options: Pick<
       AnalysisWorkerRequest,
       | "offset"
@@ -72,7 +72,7 @@ export class AnalysisWorkerClient {
       | "evidenceSelection"
       | "evidenceRecord"
     > = {},
-  ): Promise<T> {
+  ): Promise<unknown> {
     if (this.options.isolateAnnotations && interactiveOperations.has(operation)) {
       this.#manifests ??= new AnalysisWorkerClient(this.workerFile, {
         ...this.options,
@@ -91,13 +91,13 @@ export class AnalysisWorkerClient {
     const key = JSON.stringify({ directory, operation, sourceRoot, ...options });
     const previous = this.#inflight.get(key);
     if (previous) {
-      return previous as Promise<T>;
+      return previous;
     }
     const id = ++this.#nextId;
-    const promise = new Promise<T>((resolve, reject) => {
+    const promise = new Promise<unknown>((resolve, reject) => {
       this.#queue.push({
         message: { id, directory, operation, sourceRoot, ...options },
-        resolve: (value) => resolve(value as T),
+        resolve,
         reject,
       });
     });

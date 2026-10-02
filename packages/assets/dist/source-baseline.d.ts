@@ -13,10 +13,10 @@ export interface AssetSourceBaseline {
     readonly files: readonly AssetSourceFingerprint[];
 }
 /** Reject platform-dependent aliases and paths that escape a selected source root.
- * @param {string} name Portable project-relative path.
+ * @param {unknown} name Portable project-relative path.
  * @returns {string} Validated path, unchanged.
  */
-export declare function assetRelativePath(name: string): string;
+export declare function assetRelativePath(name: unknown): string;
 /** Reject symlinks in every path component, including the selected root.
  * @param {string} root Existing source directory.
  * @param {string} name Project-relative path to an existing regular file.

@@ -421,7 +421,7 @@ function processedIndexToFileLines(filePath: string): number[] {
     const command = buffer + line;
     buffer = "";
     const parts = splitInlineCommands([command]);
-    for (let count = 0; count < parts.length; count += 1) {
+    for (const _part of parts) {
       lines.push(index + 1);
     }
   }
@@ -490,7 +490,7 @@ function assembleSource(input: {
         commandIndex,
         words: words.join(" "),
         size: assembler.currentTargetAddress - start,
-        arch: String(assembler.arch),
+        arch: assembler.arch,
       });
       return result;
     };
@@ -676,9 +676,7 @@ function diffRoms(input: {
       actual: input.actual[offset],
       official: input.official[offset],
     };
-    if (!first) {
-      first = mismatch;
-    }
+    first ??= mismatch;
     const bank = snes >>> 16;
     const bankInfo = banks.get(bank);
     if (!bankInfo) {
@@ -734,7 +732,7 @@ function diffRoms(input: {
     mismatches,
     first,
     banks: [...banks.entries()]
-      .sort((a, b) => a[0] - b[0])
+      .toSorted((a, b) => a[0] - b[0])
       .map(([bank, info]) => ({
         bank,
         count: info.count,

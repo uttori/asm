@@ -5,6 +5,10 @@ import path from "node:path";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceGit, type SourceRepository } from "./git.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 const ownerId = (gitDirectory: string): string =>
   createHash("sha256").update(gitDirectory).digest("hex").slice(0, 24);
 
@@ -48,11 +52,9 @@ function retiredOwnerFile(common: string, directory: string, id: string): string
   if (!stat.isFile() || stat.size > 4096) {
     throw new Error("Unknown owner");
   }
-  const owner = JSON.parse(fs.readFileSync(file, "utf8")) as {
-    format?: string;
-    gitDirectory?: string;
-  };
+  const owner: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
   if (
+    !isRecord(owner) ||
     owner.format !== "uttori-source-pin-owner-v1" ||
     typeof owner.gitDirectory !== "string" ||
     ownerId(owner.gitDirectory) !== id ||

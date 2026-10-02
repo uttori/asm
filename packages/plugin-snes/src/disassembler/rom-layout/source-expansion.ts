@@ -19,6 +19,8 @@ export interface SnesSourceExpansion {
   readonly outputSha256: string;
 }
 
+const hex = (value: number) => `$${value.toString(16).toUpperCase()}`;
+
 /**
  * Add reviewed storage as ordinary assembly and update an explicit one-byte size header.
  * No source file is written. Existing source must build before capacity changes are proposed.
@@ -96,7 +98,6 @@ export function prepareSnesSourceExpansion(options: {
   const entry = read(build.entrySource);
   const freeSpace = [...options.freeSpace];
   const bankSize = expansion.mapper === "lorom" ? 0x8000 : 0x10000;
-  const hex = (value: number) => `$${value.toString(16).toUpperCase()}`;
   entry.lines.push("", "; Explicit cartridge expansion storage.", expansion.mapper);
   for (let start = build.expectedSize; start < size; start += bankSize) {
     const end = Math.min(start + bankSize, size) - 1;

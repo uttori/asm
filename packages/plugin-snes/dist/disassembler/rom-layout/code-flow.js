@@ -45,7 +45,7 @@ export function checkSnesCodeFlow(output, mapping, contract, declared = []) {
             .filter((instruction) => instruction.outputOffset !== undefined &&
             instruction.outputOffset >= object.start &&
             instruction.outputOffset < object.start + object.length)
-            .sort((a, b) => a.outputOffset - b.outputOffset);
+            .toSorted((a, b) => a.outputOffset - b.outputOffset);
         const byOffset = new Map();
         const byAddress = new Map();
         let through = object.start;
@@ -99,10 +99,9 @@ export function checkSnesCodeFlow(output, mapping, contract, declared = []) {
             reached.set(offset, state);
             const assumption = assumptions.get(offset);
             if (assumption &&
-                ["e", "m", "x"].some((flag) => {
-                    const key = flag;
-                    return assumption[key] !== undefined && assumption[key] !== state[key];
-                })) {
+                ((assumption.e !== undefined && assumption.e !== state.e) ||
+                    (assumption.m !== undefined && assumption.m !== state.m) ||
+                    (assumption.x !== undefined && assumption.x !== state.x))) {
                 fail(`${object.id}: a declared CPU state contradicts the preceding control flow.`, instruction);
             }
             const spec = cpu65816Specifications[output[offset]];

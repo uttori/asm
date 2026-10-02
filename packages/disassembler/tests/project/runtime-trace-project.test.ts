@@ -108,6 +108,11 @@ test("in-memory chunks publish the same facts and roll back on a late producer f
   t.deepEqual(loadAnalysisProject(directory).shards, loadAnalysisProject(expectedDirectory).shards);
 });
 
+const instructionTraceSource = (value: RuntimeInstructionTraceArtifact) => ({
+  metadata: validateRuntimeInstructionTraceMetadata(value),
+  read: async (accept: (chunk: unknown) => void) => value.chunks.forEach(accept),
+});
+
 const trace = (project: AnalysisProject): RuntimeInstructionTraceArtifact => {
   const detail = {
     bytes: [0xea],
@@ -201,7 +206,7 @@ test("disk import preserves canonical full facts and repairs incomplete reimport
     shards: {
       ...complete.shards,
       runtime: complete.shards.runtime.map((record) =>
-        record.id === "existing" ? record : { ...record, count: record.count + 1 },
+        record.id === "existing" ? record : Object.assign({}, record, { count: record.count + 1 }),
       ),
     },
   });
@@ -274,13 +279,9 @@ test("bulk trace publication crosses batches losslessly, shares facts and rolls 
     projectRomContentSha256: artifact.romContentSha256,
     indexMode: "full" as const,
   };
-  const source = (value: RuntimeInstructionTraceArtifact) => ({
-    metadata: validateRuntimeInstructionTraceMetadata(value),
-    read: async (accept: (chunk: unknown) => void) => value.chunks.forEach(accept),
-  });
   // Several complete SQL batches have flushed by this phase; none may survive a late failure.
   await t.throwsAsync(
-    importRuntimeTraceSourceIntoProject(source(artifact), directory, context, {
+    importRuntimeTraceSourceIntoProject(instructionTraceSource(artifact), directory, context, {
       onStage: (stage) => {
         if (stage === "Validating merged runtime provenance…") {
           throw new Error("Stop after flush");
@@ -291,7 +292,11 @@ test("bulk trace publication crosses batches losslessly, shares facts and rolls 
   );
   t.deepEqual(loadAnalysisProject(directory).shards, project.shards);
   const expected = importRuntimeInstructionTrace(artifact, context);
-  const actual = await importRuntimeTraceSourceIntoProject(source(artifact), directory, context);
+  const actual = await importRuntimeTraceSourceIntoProject(
+    instructionTraceSource(artifact),
+    directory,
+    context,
+  );
   const merged = mergeRuntimeEvidence(project.shards, expected.batch);
   publishAnalysisProject(path.join(root, "expected"), { ...project, shards: merged.shards });
   t.deepEqual(
@@ -300,10 +305,17 @@ test("bulk trace publication crosses batches losslessly, shares facts and rolls 
   );
   t.is(actual.added.runtime, 6000);
   const second = { ...artifact, producer: { ...artifact.producer, revision: "2" } };
-  const reused = await importRuntimeTraceSourceIntoProject(source(second), directory, context);
+  const reused = await importRuntimeTraceSourceIntoProject(
+    instructionTraceSource(second),
+    directory,
+    context,
+  );
   t.is(reused.storage.newFacts, 0);
   t.is(reused.added.runtime, actual.added.runtime);
-  t.false((await importRuntimeTraceSourceIntoProject(source(second), directory, context)).changed);
+  t.false(
+    (await importRuntimeTraceSourceIntoProject(instructionTraceSource(second), directory, context))
+      .changed,
+  );
 });
 
 test("trace publication rejects inconsistent pairs, duplicate IDs and escaped source provenance", (t) => {

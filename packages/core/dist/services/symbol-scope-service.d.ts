@@ -1,4 +1,4 @@
-import { type SyntaxProfile } from "../syntax-profile.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
 import type { StructDefinition } from "./struct-engine.js";
 export type LabelEntry = {
     value: number;

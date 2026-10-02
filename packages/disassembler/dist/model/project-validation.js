@@ -3,49 +3,71 @@ import { validateAnalysisOwnership } from "./analysis-ownership.js";
 import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, } from "./project-types.js";
 import { validateRuntimeBusFact } from "./runtime-bus-types.js";
 import { validateRuntimeInstructionDetails } from "./trace-detail.js";
+function isObject(value) {
+    return typeof value === "object" && value !== null;
+}
+function isRowRecord(value) {
+    return !Array.isArray(value);
+}
+function isSafeInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value);
+}
 /**
  * Validate the semantic manifest and reject obsolete storage descriptors.
- * @param {AnalysisProjectManifest} manifest Semantic identity and current storage descriptors.
+ * @param {object} manifest Semantic identity and current storage descriptors.
  */
-export const validateAnalysisProjectManifest = (manifest) => {
+export function validateAnalysisProjectManifest(manifest) {
+    if (typeof manifest !== "object" || manifest === null || !isRowRecord(manifest)) {
+        throw new Error("Unsupported analysis project format 'undefined'.");
+    }
     if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
         throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
     }
     if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
         throw new Error(`Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`);
     }
-    if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) {
+    const rom = manifest.rom;
+    if (!isObject(rom) || typeof rom.sha256 !== "string" || !/^[\da-f]{64}$/.test(rom.sha256)) {
         throw new Error("Invalid ROM SHA-256.");
     }
-    if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
+    if (typeof rom.contentSha256 !== "string" || !/^[\da-f]{64}$/.test(rom.contentSha256)) {
         throw new Error("Invalid ROM content SHA-256.");
     }
+    if (!Array.isArray(manifest.addressSpaces)) {
+        throw new Error("Analysis address spaces require non-empty ids and names.");
+    }
     const addressSpaceIds = new Set();
-    for (const addressSpace of manifest.addressSpaces) {
-        if (addressSpace.id === "" || addressSpace.name === "") {
+    for (const entry of manifest.addressSpaces) {
+        if (!isObject(entry)) {
             throw new Error("Analysis address spaces require non-empty ids and names.");
         }
-        if (addressSpaceIds.has(addressSpace.id)) {
-            throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
+        const id = entry.id;
+        const name = entry.name;
+        if (typeof id !== "string" || id === "" || typeof name !== "string" || name === "") {
+            throw new Error("Analysis address spaces require non-empty ids and names.");
         }
-        if (!Number.isSafeInteger(addressSpace.addressBits) ||
-            addressSpace.addressBits <= 0 ||
-            addressSpace.addressBits > 53) {
-            throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
+        if (addressSpaceIds.has(id)) {
+            throw new Error(`Duplicate analysis address-space id '${id}'.`);
         }
-        addressSpaceIds.add(addressSpace.id);
+        const addressBits = entry.addressBits;
+        if (!(isSafeInteger(addressBits) && addressBits > 0 && addressBits <= 53)) {
+            throw new Error(`Analysis address space '${id}' has invalid address bits.`);
+        }
+        addressSpaceIds.add(id);
     }
-    if (manifest.db !== undefined && manifest.db !== "analysis.sqlite") {
-        throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
+    const db = manifest.db;
+    if (db !== undefined && db !== "analysis.sqlite") {
+        const pathText = typeof db === "string" ? db : JSON.stringify(db);
+        throw new Error(`Unsupported analysis sqlite path '${pathText}'.`);
     }
-    if (manifest.revision !== undefined &&
-        (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0)) {
+    const revision = manifest.revision;
+    if (revision !== undefined && !(isSafeInteger(revision) && revision >= 0)) {
         throw new Error("Invalid analysis sqlite revision.");
     }
-    if (manifest.shards.length !== 0) {
+    if (!Array.isArray(manifest.shards) || manifest.shards.length !== 0) {
         throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
     }
-};
+}
 const FORBIDDEN_ROM_PAYLOAD_KEYS = new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
 /**
  * Reject embedded ROM payload fields at any depth, preserving the offending property's path.
@@ -63,7 +85,7 @@ const assertNoRomPayload = (value, location) => {
         }
         return;
     }
-    if (!value || typeof value !== "object") {
+    if (!value || typeof value !== "object" || !isRowRecord(value)) {
         return;
     }
     // Most record fields are scalars. Avoid allocating entry tuples and diagnostic paths for every
@@ -82,13 +104,13 @@ const assertNoRomPayload = (value, location) => {
         }
     }
 };
+const isAlphaNumeric = (character) => {
+    const code = character.charCodeAt(0);
+    return ((code >= 0x30 && code <= 0x39) ||
+        (code >= 0x41 && code <= 0x5a) ||
+        (code >= 0x61 && code <= 0x7a));
+};
 const isStableId = (id) => {
-    const isAlphaNumeric = (character) => {
-        const code = character.charCodeAt(0);
-        return ((code >= 0x30 && code <= 0x39) ||
-            (code >= 0x41 && code <= 0x5a) ||
-            (code >= 0x61 && code <= 0x7a));
-    };
     if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
         return false;
     }
@@ -98,6 +120,23 @@ const isStableId = (id) => {
         }
     }
     return true;
+};
+const visitJson = (value, current) => {
+    if (value === null ||
+        typeof value === "string" ||
+        typeof value === "boolean" ||
+        (typeof value === "number" && Number.isFinite(value))) {
+        return;
+    }
+    if (Array.isArray(value)) {
+        value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
+        return;
+    }
+    if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+        Object.entries(value).forEach(([key, entry]) => visitJson(entry, `${current}.${key}`));
+        return;
+    }
+    throw new Error(`${current} is not a JSON-safe codec option.`);
 };
 const assertCodecReference = (reference, location) => {
     if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
@@ -116,23 +155,6 @@ const assertCodecReference = (reference, location) => {
             throw new Error(`${location} has no provider plugin version.`);
         }
     }
-    const visitJson = (value, current) => {
-        if (value === null ||
-            typeof value === "string" ||
-            typeof value === "boolean" ||
-            (typeof value === "number" && Number.isFinite(value))) {
-            return;
-        }
-        if (Array.isArray(value)) {
-            value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
-            return;
-        }
-        if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-            Object.entries(value).forEach(([key, entry]) => visitJson(entry, `${current}.${key}`));
-            return;
-        }
-        throw new Error(`${current} is not a JSON-safe codec option.`);
-    };
     if (reference.options !== undefined) {
         visitJson(reference.options, `${location} options`);
     }
@@ -156,7 +178,7 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
         if (ids && !ids.add(record.id)) {
             throw new Error(`Analysis shard 'runtime' contains duplicate id '${record.id}'.`);
         }
-        for (const id of record.evidence ?? []) {
+        for (const id of record.evidence) {
             if (!evidenceIds.has(id)) {
                 throw new Error(`Analysis record '${record.id}' refers to missing evidence '${id}'.`);
             }
@@ -280,6 +302,7 @@ export const validateRuntimeRecords = (records, project, evidence) => {
         validate.close();
     }
 };
+const outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
 /**
  * Validate metadata, runtime values, address bounds and provenance before publication.
  * @param {AnalysisProjectShards} shards Complete record collections, or metadata with empty runtime.
@@ -289,20 +312,29 @@ export const validateRuntimeRecords = (records, project, evidence) => {
 export const validateLoadedShards = (shards, project, analysisScope = "complete") => {
     const { addressSpaces } = project;
     const evidenceIds = new Set(shards.evidence.map((record) => record.id));
-    for (const [kind, records] of Object.entries(shards)) {
-        if (kind === "runtime") {
-            continue;
-        }
+    const shardKinds = [
+        "analysis",
+        "annotations",
+        "labels",
+        "comments",
+        "regions",
+        "evidence",
+        "imports",
+    ];
+    for (const kind of shardKinds) {
         const ids = new Set();
-        for (const record of records) {
-            if (!record || typeof record.id !== "string" || record.id === "") {
+        for (const record of shards[kind]) {
+            if (typeof record.id !== "string" || record.id === "") {
                 throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
             }
             if (ids.has(record.id)) {
                 throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
             }
             ids.add(record.id);
-            for (const evidence of record.evidence ?? []) {
+            if (!("evidence" in record)) {
+                continue;
+            }
+            for (const evidence of record.evidence) {
                 if (!evidenceIds.has(evidence)) {
                     throw new Error(`Analysis record '${record.id}' refers to missing evidence '${evidence}'.`);
                 }
@@ -449,7 +481,6 @@ export const validateLoadedShards = (shards, project, analysisScope = "complete"
     const addressSpaceById = new Map(addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace]));
     // Scan collections in place. Flattening them and collecting each record's addresses creates
     // substantial temporary allocation when validating a complete CFG before every save or load.
-    const outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
     for (const records of [
         shards.annotations,
         shards.labels,

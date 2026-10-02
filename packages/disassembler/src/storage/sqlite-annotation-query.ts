@@ -8,7 +8,16 @@ import type {
   AnalysisControlFlowNodeRecord,
   RuntimeEvidenceRecord,
 } from "../model/project-types.js";
-import { decodeSqlitePayload, encodeSqlitePayload } from "./sqlite-payload.js";
+import {
+  isFiniteNumber,
+  isRecord,
+  isStringArray,
+  requireAnalysisRecord,
+  requireEvidenceRecord,
+  requireIntervalAnnotation,
+  requireProjectComment,
+} from "../model/record-shape.js";
+import { encodeSqlitePayload, parseSqlitePayload } from "./sqlite-payload.js";
 import { runtimeFromRow } from "./sqlite-records.js";
 
 /** Exact logical/output coordinates from a validated debug map. Ranges are half-open. */
@@ -44,7 +53,40 @@ export type InstructionExportRecord = Pick<
 >;
 const QUERY_LAYOUT = "5";
 
-const decode = <T>(payload: unknown): T => JSON.parse(decodeSqlitePayload(payload)) as T;
+function isPartialInstruction(value: unknown): value is Partial<InstructionExportRecord> {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.kind !== undefined && value.kind !== "cfg-node") {
+    return false;
+  }
+  if (value.id !== undefined && typeof value.id !== "string") {
+    return false;
+  }
+  if (value.addressSpace !== undefined && typeof value.addressSpace !== "string") {
+    return false;
+  }
+  if (value.specificationId !== undefined && typeof value.specificationId !== "string") {
+    return false;
+  }
+  for (const key of ["address", "fileOffset", "size", "opcode"] as const) {
+    if (value[key] !== undefined && !isFiniteNumber(value[key])) {
+      return false;
+    }
+  }
+  if (value.incomingState !== undefined && !isRecord(value.incomingState)) {
+    return false;
+  }
+  return value.evidence === undefined || isStringArray(value.evidence);
+}
+
+function requirePartialInstruction(value: unknown): Partial<InstructionExportRecord> {
+  const parsed = parseSqlitePayload(value);
+  if (!isPartialInstruction(parsed)) {
+    throw new Error("Invalid indexed instruction.");
+  }
+  return parsed;
+}
 /** Reconstruct one physical observation or its paired logical state after filtering shared facts.
  * CROSS JOIN keeps the selective fact lookup ahead of capture relationships. The compatibility
  * UNION view cannot push a state-kind constraint into its paired branch and scans the history.
@@ -162,8 +204,7 @@ export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
     // Fetch bounded batches before updating the pending index. Never mutate a live scan cursor.
     for (let rows = pending.all(); rows.length; rows = pending.all()) {
       for (const row of rows) {
-        const record =
-          row.payload === null ? {} : decode<Partial<InstructionExportRecord>>(row.payload);
+        const record = row.payload === null ? {} : requirePartialInstruction(row.payload);
         const offset = record.fileOffset;
         if (offset !== undefined && (!Number.isSafeInteger(offset) || offset < 0)) {
           throw new Error("Invalid persisted instruction output offset.");
@@ -266,7 +307,7 @@ export const readSqliteAnnotationView = (
         limited = true;
         break;
       }
-      const record = decode<AnalysisRecord>(row.payload);
+      const record = requireAnalysisRecord(parseSqlitePayload(row.payload));
       analysis.set(record.id, record);
       if (record.kind === "cfg-node") {
         locate(record.addressSpace, record.address);
@@ -338,7 +379,7 @@ export const readSqliteAnnotationView = (
   for (const row of database
     .prepare("SELECT payload FROM analysis WHERE kind='summary'")
     .iterate()) {
-    const record = decode<AnalysisRecord>(row.payload);
+    const record = requireAnalysisRecord(parseSqlitePayload(row.payload));
     analysis.set(record.id, record);
   }
   const runtime = new Map<string, RuntimeEvidenceRecord>();
@@ -426,7 +467,7 @@ export const readSqliteAnnotationView = (
         limited = true;
         break;
       }
-      const record = decode<AnalysisProjectShards["annotations"][number]>(row.payload);
+      const record = requireIntervalAnnotation(parseSqlitePayload(row.payload));
       annotations.set(record.id, record);
     }
     let commentCount = 0;
@@ -435,7 +476,7 @@ export const readSqliteAnnotationView = (
         limited = true;
         break;
       }
-      const record = decode<AnalysisProjectShards["comments"][number]>(row.payload);
+      const record = requireProjectComment(parseSqlitePayload(row.payload));
       comments.set(record.id, record);
     }
     addRuntime(
@@ -449,7 +490,7 @@ export const readSqliteAnnotationView = (
       annotations: [...annotations.values()],
       comments: [...comments.values()],
       evidence: [...database.prepare("SELECT payload FROM evidence").iterate()].map((row) =>
-        decode(row.payload),
+        requireEvidenceRecord(parseSqlitePayload(row.payload)),
       ),
       labels: [],
       regions: [],

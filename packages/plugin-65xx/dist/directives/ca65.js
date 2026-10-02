@@ -148,7 +148,10 @@ function openSegment(session, state, segment) {
     if (!loadMemory || !runMemory) {
         throw new Error(`.segment "${segment.name}" references unknown MEMORY.`);
     }
-    const loadStart = segment.start ?? state.memoryCursors[segment.load] ?? loadMemory.start;
+    const loadCursor = Object.hasOwn(state.memoryCursors, segment.load)
+        ? state.memoryCursors[segment.load]
+        : undefined;
+    const loadStart = segment.start ?? loadCursor ?? loadMemory.start;
     session.setWritePosition(loadStart);
     const runStart = segment.run === segment.load ? loadStart : runMemory.start;
     if (runStart !== loadStart) {
@@ -215,7 +218,7 @@ export function handleImport(session, words) {
  * @returns {void}
  */
 export function handleByte(session, words) {
-    session.directiveRuntime.handleDataDirective("db", [...words.slice(1)]);
+    session.directiveRuntime.handleDataDirective("db", words.slice(1));
 }
 /**
  * Handles `.addr` / `.word` (16-bit little-endian).
@@ -224,7 +227,7 @@ export function handleByte(session, words) {
  * @returns {void}
  */
 export function handleAddr(session, words) {
-    session.directiveRuntime.handleDataDirective("dw", [...words.slice(1)]);
+    session.directiveRuntime.handleDataDirective("dw", words.slice(1));
 }
 /**
  * Emits one transformed byte per expression, or estimates during collection.
@@ -284,7 +287,7 @@ export function handleDbyt(session, words) {
  * @param {3 | 4} width Emitted value width.
  */
 export function handleDword(session, words, width = 4) {
-    session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", [...words.slice(1)]);
+    session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", words.slice(1));
 }
 /**
  * Selects one of the 65xx-owned ca65 CPUs.

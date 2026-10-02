@@ -9,6 +9,15 @@ import type {
 /** ALT selector carried by the GSU status register. */
 export type SuperFxAltState = 0 | 1 | 2 | 3;
 
+/**
+ * Accepts a GSU ALT value. Hardware ALT is a 2-bit field.
+ * @param {number} value Candidate ALT state.
+ * @returns {boolean} True when `value` is 0, 1, 2, or 3.
+ */
+export function isSuperFxAltState(value: number): value is SuperFxAltState {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
 /** Operand encoding used by one effective SuperFX opcode. */
 export type SuperFxOperandEncoding =
   | "implied"
@@ -550,12 +559,12 @@ const fused = (
 export const superFxFusedSpecifications: readonly SuperFxFusedInstructionSpecification[] =
   Object.freeze([
     ...Array.from({ length: 16 }, (_, source) =>
-      Array.from({ length: 16 }, (_, destination) =>
+      Array.from({ length: 16 }, (_item, destination) =>
         fused("MOVE", [0x20 + source, 0x10 + destination], "registerRegister", destination, source),
       ),
     ).flat(),
     ...Array.from({ length: 16 }, (_, destination) =>
-      Array.from({ length: 16 }, (_, source) =>
+      Array.from({ length: 16 }, (_item, source) =>
         fused(
           "MOVES",
           [0x20 + destination, 0xb0 + source],
@@ -674,5 +683,7 @@ export function buildSuperFxCatalog(): InstructionDescriptor[] {
   for (const entry of conveniences) {
     grouped.set(entry.mnemonic, entry);
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted((left, right) =>
+    left.mnemonic.localeCompare(right.mnemonic),
+  );
 }

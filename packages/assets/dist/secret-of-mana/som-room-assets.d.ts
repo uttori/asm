@@ -59,6 +59,11 @@ export interface RoomPreview {
  * @returns {RoomAsset} Validated room.
  */
 export declare function parseRoomAsset(source: AssetInput): RoomAsset;
+/** Parse a captured preview sidecar. Render still checks tileset and layout contents.
+ * @param {Uint8Array} bytes JSON bytes for a `som.room.preview` document.
+ * @returns {RoomPreview} Preview envelope with tileset and layout records.
+ */
+export declare function parseRoomPreview(bytes: Uint8Array): RoomPreview;
 /**
  * Repack one fixed section. Changing record counts or adding layer markers requires relocation,
  * so length changes fail instead of silently overwriting an adjacent room's records.

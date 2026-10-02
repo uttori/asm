@@ -265,10 +265,15 @@ function parseBitBranchOpcode(opcode) {
     if (!match) {
         return undefined;
     }
-    if (match[2] === undefined) {
-        return { family: match[1] };
+    const familyText = match[1];
+    if (familyText !== "BBS" && familyText !== "BBC") {
+        return undefined;
     }
-    return { family: match[1], mnemonicBit: Number(match[2]) };
+    const mnemonicBitText = match.length > 2 ? match[2] : undefined;
+    if (mnemonicBitText === undefined) {
+        return { family: familyText };
+    }
+    return { family: familyText, mnemonicBit: Number(mnemonicBitText) };
 }
 const wordOpsWithYaLeft = {
     CMPW: 0x5a,
@@ -290,9 +295,17 @@ const NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
  * @param {string} opcode Instruction mnemonic.
  * @returns {NumberedBitOpcode | undefined} Family and mnemonic bit, if any.
  */
+/**
+ * Accepts a TASM/Asar numbered mem.bit family.
+ * @param {string} value Family text from the mnemonic.
+ * @returns {boolean} True for NOT, OR, AND, EOR, or MOV.
+ */
+function isNumberedBitFamily(value) {
+    return value === "NOT" || value === "OR" || value === "AND" || value === "EOR" || value === "MOV";
+}
 function parseNumberedBitOpcode(opcode) {
     const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
-    if (!match) {
+    if (!match || !isNumberedBitFamily(match[1])) {
         return undefined;
     }
     return {
@@ -338,6 +351,19 @@ function parseSpcBitNumber(raw) {
     return Number(trimmed);
 }
 /**
+ * Accepts a memory-move table key.
+ * @param {string} value Operand pair key.
+ * @returns {boolean} True when the key names a byte/word move.
+ */
+const isMovMemoryKey = (value) => value === "A,$" ||
+    value === "A,$+X" ||
+    value === "X,$" ||
+    value === "Y,$" ||
+    value === "$,A" ||
+    value === "$+X,A" ||
+    value === "$,X" ||
+    value === "$,Y";
+/**
  * Sony SPC700 encoder. Operand commas are split at top-level only so
  * `MOV A,($12+X)` stays two operands. Address width follows hex spelling,
  * not the resolved value - see {@link getAddressSize}.
@@ -360,8 +386,7 @@ export class ArchSPC700 {
      * @returns {number} Encoded size in bytes.
      */
     estimateInstruction(instruction) {
-        const loweredOperands = instruction.loweredOperands ?? [];
-        return this.estimateResolvedInstruction(instruction.mnemonic, instruction.operandText, instruction.loweredOperand, loweredOperands);
+        return this.estimateResolvedInstruction(instruction.mnemonic, instruction.operandText, instruction.loweredOperand, instruction.loweredOperands);
     }
     /**
      * Encodes a lowered instruction.
@@ -369,8 +394,7 @@ export class ArchSPC700 {
      * @returns {boolean} True if encoded.
      */
     encodeInstruction(instruction) {
-        const loweredOperands = instruction.loweredOperands ?? [];
-        return this.encodeResolvedInstruction(instruction.mnemonic, instruction.operands, instruction.loweredOperand, loweredOperands);
+        return this.encodeResolvedInstruction(instruction.mnemonic, instruction.operands, instruction.loweredOperand, instruction.loweredOperands);
     }
     /**
      * Estimates size from tokenized words.
@@ -1454,6 +1478,7 @@ export class ArchSPC700 {
         if (upper === "JMP") {
             const trimmed = operand.trim().toUpperCase();
             // if operand is "($1234+X)" => 1F lo hi, else => 5F lo hi
+            let val;
             if (loweredOperand?.mode === "directPageIndexedXIndirect" ||
                 (trimmed.startsWith("(") && trimmed.endsWith("+X)"))) {
                 // => 0x1f
@@ -1464,17 +1489,15 @@ export class ArchSPC700 {
                         .trim()
                         .slice(1, operand.trim().length - 3)
                         .trim();
-                const val = resolveOperand(inner);
-                this.assembler.write2(val);
-                return true;
+                val = resolveOperand(inner);
             }
             else {
                 // => 0x5f
                 this.assembler.write1(0x5f);
-                const val = resolveOperand(operand);
-                this.assembler.write2(val);
-                return true;
+                val = resolveOperand(operand);
             }
+            this.assembler.write2(val);
+            return true;
         }
         return false;
     }
@@ -1517,7 +1540,6 @@ export class ArchSPC700 {
                     this.assembler.write1(0xc8);
                     const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 0xff;
                     this.assembler.write1(imm);
-                    return true;
                 }
                 else {
                     // => check dp vs abs
@@ -1544,8 +1566,8 @@ export class ArchSPC700 {
                             this.assembler.write2(val);
                         }
                     }
-                    return true;
                 }
+                return true;
             }
             if (leftOperandIsY) {
                 if (rightLowered?.immediate ?? tail.startsWith("#")) {
@@ -1553,7 +1575,6 @@ export class ArchSPC700 {
                     this.assembler.write1(0xad);
                     const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 0xff;
                     this.assembler.write1(imm);
-                    return true;
                 }
                 else {
                     // dp vs abs => "5E" or "7E"
@@ -1580,8 +1601,8 @@ export class ArchSPC700 {
                             this.assembler.write2(val);
                         }
                     }
-                    return true;
                 }
+                return true;
             }
         }
         // MOV X,#$12 => CD 12, MOV Y,#$12 => 8D 12,
@@ -1672,6 +1693,23 @@ export class ArchSPC700 {
                 return true;
             }
         }
+        // Handle memory moves with explicit length
+        // mov.b A, $0000 => E4 00
+        // mov.w A, $0000 => E5 00 00
+        // mov.b A, $0000+X => F4 00
+        // mov.w A, $0000+X => F5 00 00
+        // mov.b X, $0000 => F8 00
+        // mov.w X, $0000 => E9 00 00
+        // mov.b Y, $0000 => EB 00
+        // mov.w Y, $0000 => EC 00 00
+        // mov.b $0000, A => C4 00
+        // mov.w $0000, A => C5 00 00
+        // mov.b $0000+X, A => D4 00
+        // mov.w $0000+X, A => D5 00 00
+        // mov.b $0000, X => D8 00
+        // mov.w $0000, X => C9 00 00
+        // mov.b $0000, Y => CB 00
+        // mov.w $0000, Y => CC 00 00
         const memoryMoves = {
             "A,$": { byte: 0xe4, word: 0xe5 },
             "A,$+X": { byte: 0xf4, word: 0xf5 },
@@ -1683,18 +1721,22 @@ export class ArchSPC700 {
             "$,Y": { byte: 0xcb, word: 0xcc },
         };
         // Parse the operands into a key format
-        let key = null;
+        let key;
         if (/^\$[\da-f]+$/i.test(left)) {
-            key = `$,${right.toUpperCase()}`;
+            const candidate = `$,${right.toUpperCase()}`;
+            key = isMovMemoryKey(candidate) ? candidate : undefined;
         }
         else if (/^\$[\da-f]+\+x$/i.test(left)) {
-            key = `$+X,${right.toUpperCase()}`;
+            const candidate = `$+X,${right.toUpperCase()}`;
+            key = isMovMemoryKey(candidate) ? candidate : undefined;
         }
         else if (/^\$[\da-f]+$/i.test(right)) {
-            key = `${left.toUpperCase()},$`;
+            const candidate = `${left.toUpperCase()},$`;
+            key = isMovMemoryKey(candidate) ? candidate : undefined;
         }
         else if (/^\$[\da-f]+\+x$/i.test(right)) {
-            key = `${left.toUpperCase()},$+X`;
+            const candidate = `${left.toUpperCase()},$+X`;
+            key = isMovMemoryKey(candidate) ? candidate : undefined;
         }
         if (key && hasOwn(memoryMoves, key)) {
             // Extract the value from whichever operand contains the $ address
@@ -1888,9 +1930,13 @@ export class ArchSPC700 {
             if (!baseExpression) {
                 return null;
             }
+            const index = match[2].toUpperCase();
+            if (index !== "X" && index !== "Y") {
+                return null;
+            }
             return {
                 value: this.assembler.operandResolver.getnum(baseExpression),
-                index: match[2].toUpperCase(),
+                index,
                 length: getAddressSize(baseExpression),
             };
         };

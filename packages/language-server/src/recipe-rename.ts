@@ -7,6 +7,83 @@ import { validateSnesRamMap, validateSnesStructMap } from "@uttori/asm-plugin-sn
 import { pathToUri } from "./providers.js";
 import type { RenameBuffer } from "./research-rename.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNamed(value: unknown): value is { name: string } {
+  return isRecord(value) && typeof value.name === "string";
+}
+
+function isRamMap(value: unknown): value is { variables: { name: string }[] } {
+  return isRecord(value) && Array.isArray(value.variables) && value.variables.every(isNamed);
+}
+
+function isStructure(value: unknown): value is { id: string; fields: { name: string }[] } {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    Array.isArray(value.fields) &&
+    value.fields.every(isNamed)
+  );
+}
+
+function isBinding(value: unknown): value is { name: string; structure: string } {
+  return isRecord(value) && typeof value.name === "string" && typeof value.structure === "string";
+}
+
+function isObservation(value: unknown): value is { target: string } {
+  return isRecord(value) && typeof value.target === "string";
+}
+
+function isInstructionUse(value: unknown): value is {
+  operand?: string;
+  memoryOperand?: string;
+  observations?: { target: string }[];
+} {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.operand !== undefined && typeof value.operand !== "string") {
+    return false;
+  }
+  if (value.memoryOperand !== undefined && typeof value.memoryOperand !== "string") {
+    return false;
+  }
+  return (
+    value.observations === undefined ||
+    (Array.isArray(value.observations) && value.observations.every(isObservation))
+  );
+}
+
+function isStructMap(value: unknown): value is {
+  structures: { id: string; fields: { name: string }[] }[];
+  bindings: { name: string; structure: string }[];
+  constants?: { name: string }[];
+  instructionUses?: {
+    operand?: string;
+    memoryOperand?: string;
+    observations?: { target: string }[];
+  }[];
+} {
+  if (!isRecord(value) || !Array.isArray(value.structures) || !Array.isArray(value.bindings)) {
+    return false;
+  }
+  if (!value.structures.every(isStructure) || !value.bindings.every(isBinding)) {
+    return false;
+  }
+  if (
+    value.constants !== undefined &&
+    !(Array.isArray(value.constants) && value.constants.every(isNamed))
+  ) {
+    return false;
+  }
+  return (
+    value.instructionUses === undefined ||
+    (Array.isArray(value.instructionUses) && value.instructionUses.every(isInstructionUse))
+  );
+}
+
 /** A field rename applies to its reusable layout and every addressed instance of that layout. */
 export interface RecipeRename {
   readonly path: string;
@@ -63,7 +140,7 @@ export function renameRecipeExpression(
     }
   }
   let output = expression;
-  for (const offset of edits.reverse()) {
+  for (const offset of edits.toReversed()) {
     output = output.slice(0, offset) + newName + output.slice(offset + oldName.length);
   }
   return output;
@@ -110,8 +187,11 @@ export function sourceRecipeRename(
     if (!input) {
       return undefined;
     }
-    const map = JSON.parse(input.before) as { variables: { name: string }[] };
+    const map: unknown = JSON.parse(input.before);
     validateSnesRamMap(map);
+    if (!isRamMap(map)) {
+      throw new Error("RAM map must contain a variables array.");
+    }
     const variable = map.variables.find((item) => item.name === definition.name);
     if (!variable) {
       return undefined;
@@ -132,17 +212,11 @@ export function sourceRecipeRename(
   if (!input) {
     return undefined;
   }
-  const map = JSON.parse(input.before) as {
-    structures: { id: string; fields: { name: string }[] }[];
-    bindings: { name: string; structure: string }[];
-    constants?: { name: string }[];
-    instructionUses?: {
-      operand?: string;
-      memoryOperand?: string;
-      observations?: { target: string }[];
-    }[];
-  };
+  const map: unknown = JSON.parse(input.before);
   const before = validateSnesStructMap(map);
+  if (!isStructMap(map)) {
+    throw new Error("Struct map requires structures and bindings arrays.");
+  }
   let fieldContainers: string[] | undefined;
   if (definition.kind === "structMember") {
     const binding = map.bindings.find((item) => item.name === definition.containerName);

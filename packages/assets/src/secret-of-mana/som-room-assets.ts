@@ -62,6 +62,40 @@ export interface RoomPreview {
   layouts: Record<string, RoomPreviewLayout>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isRoomEntity(value: unknown): value is RoomEntity {
+  return isRecord(value);
+}
+
+function isRoomPiece(value: unknown): value is RoomPiece {
+  return isRecord(value);
+}
+
+function isRoomPreview(value: unknown): value is RoomPreview {
+  return (
+    isRecord(value) &&
+    value.format === "som.room.preview" &&
+    value.version === 1 &&
+    isRecord(value.tilesets) &&
+    isRecord(value.layouts)
+  );
+}
+
+function isRoomAsset(value: unknown): value is RoomAsset {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.entities) &&
+    value.entities.every(isRoomEntity) &&
+    Array.isArray(value.pieces) &&
+    value.pieces.every(isRoomPiece) &&
+    Array.isArray(value.triggers) &&
+    value.triggers.every((item): item is number => typeof item === "number")
+  );
+}
+
 /** Reject truncation rather than silently masking a user's edited field.
  * @param {unknown} value Field to check.
  * @param {number} maximum Inclusive upper bound.
@@ -69,11 +103,10 @@ export interface RoomPreview {
  * @returns {number} The validated integer.
  */
 function integer(value: unknown, maximum: number, name: string): number {
-  assert(
-    Number.isInteger(value) && (value as number) >= 0 && (value as number) <= maximum,
-    `${name} must be 0..${maximum}.`,
-  );
-  return value as number;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+    assert.fail(`${name} must be 0..${maximum}.`);
+  }
+  return value;
 }
 
 /** One room owns three discontiguous sections; shared layouts, graphics and palettes remain references.
@@ -82,21 +115,44 @@ function integer(value: unknown, maximum: number, name: string): number {
  */
 export function parseRoomAsset(source: AssetInput): RoomAsset {
   assert.equal(source.mediaType, "application/json", "Room source must be JSON.");
-  const room = JSON.parse(new TextDecoder().decode(source.bytes)) as RoomAsset;
-  assert.equal(room.format, "som.room");
-  assert.equal(room.version, 1);
-  integer(room.id, 510, "room id");
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(source.bytes));
+  if (!isRecord(parsed)) {
+    assert.fail("Room source must be a JSON object.");
+  }
+  assert.equal(parsed.format, "som.room");
+  assert.equal(parsed.version, 1);
+  integer(parsed.id, 510, "room id");
   assert(
-    Array.isArray(room.header) && room.header.length === 8,
+    Array.isArray(parsed.header) && parsed.header.length === 8,
     "Room header requires eight bytes.",
   );
-  for (const byte of room.header) {
+  for (const byte of parsed.header) {
     integer(byte, 255, "header byte");
   }
   for (const key of ["entities", "pieces", "triggers"] as const) {
-    assert(Array.isArray(room[key]), `Missing room ${key}.`);
+    assert(Array.isArray(parsed[key]), `Missing room ${key}.`);
   }
-  return room;
+  if (!isRoomAsset(parsed)) {
+    assert.fail("Room entities, pieces, and triggers must match the room record.");
+  }
+  return parsed;
+}
+
+/** Parse a captured preview sidecar. Render still checks tileset and layout contents.
+ * @param {Uint8Array} bytes JSON bytes for a `som.room.preview` document.
+ * @returns {RoomPreview} Preview envelope with tileset and layout records.
+ */
+export function parseRoomPreview(bytes: Uint8Array): RoomPreview {
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+  if (!isRecord(parsed)) {
+    assert.fail("Room preview resource must be a JSON object.");
+  }
+  assert.equal(parsed.format, "som.room.preview");
+  assert.equal(parsed.version, 1);
+  if (!isRoomPreview(parsed)) {
+    assert.fail("Room preview resource must include tileset and layout records.");
+  }
+  return parsed;
 }
 
 /** Encode whole-byte story predicates with packed inclusive nibbles, without changing their semantics.
@@ -231,11 +287,12 @@ export function renderRoomAsset(
     integer(piece.x, 127, "piece x");
     integer(piece.y, 127, "piece y");
     assert(piece.layer === 1 || piece.layer === 2, "Piece layer must be 1 or 2.");
-    const layout = preview.layouts[piece.layout];
-    assert(
-      layout && layout.tiles.length === layout.width * layout.height,
-      "Missing or incomplete layout preview.",
-    );
+    const layout = Object.hasOwn(preview.layouts, piece.layout)
+      ? preview.layouts[piece.layout]
+      : undefined;
+    if (!layout || layout.tiles.length !== layout.width * layout.height) {
+      assert(false, "Missing or incomplete layout preview.");
+    }
     integer(layout.width, 128, "layout width");
     integer(layout.height, 128, "layout height");
     assert(layout.width && layout.height, "Layout dimensions must be positive.");

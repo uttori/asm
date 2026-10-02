@@ -85,7 +85,7 @@ const mirrorsForOffset = (
     }
   }
   mirrors.add(canonical);
-  return [...mirrors].sort((left, right) => left - right);
+  return [...mirrors].toSorted((left, right) => left - right);
 };
 
 /**

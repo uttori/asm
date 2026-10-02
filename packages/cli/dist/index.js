@@ -8,6 +8,12 @@ import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSne
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
 export { executeSourceOperation } from "./source.js";
+function isCliCommand(value) {
+    return Object.hasOwn(commandOptions, value);
+}
+function isSnesMapper(value) {
+    return SNES_MAPPERS.some((mapper) => mapper === value);
+}
 /** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
 const commandOptions = {
     assemble: [
@@ -105,8 +111,9 @@ export const parseCliArguments = (argv) => {
     const pluginOptions = {};
     let command = "assemble";
     let startIndex = 0;
-    if (Object.hasOwn(commandOptions, argv[0] ?? "")) {
-        command = argv[0];
+    const requestedCommand = argv[0];
+    if (requestedCommand !== undefined && isCliCommand(requestedCommand)) {
+        command = requestedCommand;
         startIndex = 1;
     }
     let configFile;
@@ -130,7 +137,9 @@ export const parseCliArguments = (argv) => {
     let help = false;
     const suppliedOptions = new Set();
     const requireValue = (flag, inlineValue, index) => {
-        const value = inlineValue ?? argv[index + 1];
+        const nextIndex = index + 1;
+        const nextArgument = nextIndex >= 0 && nextIndex < argv.length ? argv[nextIndex] : undefined;
+        const value = inlineValue ?? nextArgument;
         if (value === undefined ||
             value === "" ||
             (inlineValue === undefined && value.startsWith("--"))) {
@@ -197,16 +206,21 @@ export const parseCliArguments = (argv) => {
                 includePaths.push(value);
                 break;
             case "--mapper":
-                if (!SNES_MAPPERS.includes(value)) {
+                if (!isSnesMapper(value)) {
                     throw new Error(`--mapper must be one of: ${SNES_MAPPERS.join(", ")}.`);
                 }
                 mapper = value;
                 break;
             case "--header-size":
-                if (value !== "0" && value !== "512") {
+                if (value === "0") {
+                    headerSize = 0;
+                }
+                else if (value === "512") {
+                    headerSize = 512;
+                }
+                else {
                     throw new Error("--header-size must be 0 or 512.");
                 }
-                headerSize = Number(value);
                 break;
             case "--dizraw":
                 dizraw = value;
@@ -267,13 +281,13 @@ export const parseCliArguments = (argv) => {
                 break;
             case "--plugin-option": {
                 const colon = value.indexOf(":");
-                const equals = value.indexOf("=", colon + 1);
-                if (colon <= 0 || equals <= colon + 1) {
+                const equalsAt = value.indexOf("=", colon + 1);
+                if (colon <= 0 || equalsAt <= colon + 1) {
                     throw new Error("--plugin-option must use <plugin:key=value> syntax.");
                 }
                 const plugin = value.slice(0, colon);
-                const key = value.slice(colon + 1, equals);
-                const rawValue = value.slice(equals + 1);
+                const key = value.slice(colon + 1, equalsAt);
+                const rawValue = value.slice(equalsAt + 1);
                 let optionValue = rawValue;
                 // Accept JSON values while preserving unquoted strings as written.
                 try {
@@ -283,7 +297,7 @@ export const parseCliArguments = (argv) => {
                     // Non-JSON plugin options remain strings.
                 }
                 pluginOptions[plugin] = {
-                    ...(pluginOptions[plugin] ?? {}),
+                    ...pluginOptions[plugin],
                     [key]: optionValue,
                 };
                 break;
@@ -344,6 +358,9 @@ const defaultOutputPath = (inputFile, extension) => {
  * @param {unknown} error The error.
  * @returns {string} The formatted failure message.
  */
+function stringifyCaught(value) {
+    return JSON.stringify(value);
+}
 const formatFailure = (error) => {
     if (error instanceof PluginError) {
         const context = [
@@ -353,7 +370,7 @@ const formatFailure = (error) => {
         ].filter(Boolean);
         return `${error.code}: ${error.message}${context.length > 0 ? ` (${context.join(", ")})` : ""}`;
     }
-    return error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");
+    return error instanceof Error ? error.message : (stringifyCaught(error) ?? "Unknown error");
 };
 /**
  * Creates an analysis project from a ROM file.
@@ -384,7 +401,7 @@ const createAnalysisProject = (parsed, cwd) => {
         });
         console.log(`Success: Analysis project written to '${outputDirectory}'.`);
         if (result.importReport) {
-            console.log(`Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`);
+            console.log(`Import: ${result.importReport.imported.metadataBytes} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`);
         }
         return 0;
     }
@@ -453,7 +470,7 @@ const importProjectEvidence = async (parsed, cwd) => {
             headerSize: manifest.rom.headerSize,
         });
         validateProjectRom(manifest, rom);
-        if (!SNES_MAPPERS.includes(manifest.mapping.mapper)) {
+        if (!isSnesMapper(manifest.mapping.mapper)) {
             throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
         }
         const filename = path.resolve(cwd, parsed.instructionTrace);

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+import { isRecord } from "../model/record-shape.js";
 import { sqliteRuntimeIdentity, encodeSqlitePayload, parseSqlitePayload, } from "./sqlite-payload.js";
 import { runtimeColumns } from "./sqlite-records.js";
 import { RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA, runtimeIdentityKey, } from "./sqlite-runtime-facts.js";
@@ -146,6 +147,13 @@ CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,arch
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,NEW.evidence_id,NEW.payload);
 END;
 `;
+function pairedState(payload) {
+    const parsed = parseSqlitePayload(payload);
+    if (!isRecord(parsed)) {
+        throw new Error("Invalid paired runtime payload.");
+    }
+    return parsed.state;
+}
 /** Bounded prepared writer. Dictionary IDs are transaction-owned by the calling store. */
 export class SqliteRuntimeWriter {
     #findFact;
@@ -198,7 +206,7 @@ export class SqliteRuntimeWriter {
                 other.architecture === record.architecture &&
                 other.address_space === record.addressSpace &&
                 other.address === record.address &&
-                canonicalEquals(parseSqlitePayload(other.payload).state, record.state)) {
+                canonicalEquals(pairedState(other.payload), record.state)) {
                 if (record.kind === "runtime-cpu-state") {
                     this.#pair.run(prefix, other.oid);
                     return;

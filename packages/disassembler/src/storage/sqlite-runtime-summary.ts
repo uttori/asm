@@ -2,13 +2,16 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 import type { RuntimeEvidenceRecord } from "../model/project-types.js";
+import { isFiniteNumber, isRecord } from "../model/record-shape.js";
 import { parseSqlitePayload } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow } from "./sqlite-records.js";
 import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
 
 /** Masks affect grouping only. The representative keeps its original, unmasked register values. */
-type StateMasks = Readonly<Record<string, { readonly max: number; readonly mask: number }>>;
+type StateMasks = Readonly<
+  Partial<Record<string, { readonly max: number; readonly mask: number }>>
+>;
 /** The store owns file-identity checks, rollback and connection-local transaction state. */
 type Transaction = (action: () => void, write?: boolean) => void;
 
@@ -131,9 +134,10 @@ const registerVariantKey = (
   masks: StateMasks,
 ): void => {
   db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
-    const record = parseSqlitePayload<{ bytes: readonly number[]; state: Record<string, unknown> }>(
-      payload,
-    );
+    const record = parseSqlitePayload(payload);
+    if (!isRecord(record) || !isByteList(record.bytes) || !isRecord(record.state)) {
+      throw new Error("Invalid instruction variant payload.");
+    }
     const state: Record<string, unknown> = {};
     for (const key of fields) {
       const value = record.state[key];
@@ -154,6 +158,10 @@ const registerVariantKey = (
     return JSON.stringify([record.bytes, state]);
   });
 };
+
+function isByteList(value: unknown): value is readonly number[] {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
 
 /** A base token survives append-only changes; the pending set distinguishes it from a current result.
  * @param {DatabaseSync} db Connection holding the consuming snapshot.

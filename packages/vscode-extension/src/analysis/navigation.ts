@@ -2,7 +2,6 @@
 import * as path from "node:path";
 
 import { formatDebugAddress } from "@uttori/asm-debug-adapter";
-import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
 import { Position, Selection, TextEditorRevealType, Uri, debug, window, workspace } from "vscode";
 
 import {
@@ -13,6 +12,32 @@ import {
 import type { AnalysisNavigationProjection } from "./navigation-data.js";
 import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import { analysisWorker } from "./worker-client.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNavigationManifest(value: unknown): value is {
+  readonly target: string;
+  readonly rom: { readonly contentSha256: string; readonly contentSize: number };
+} {
+  return (
+    isRecord(value) &&
+    typeof value.target === "string" &&
+    isRecord(value.rom) &&
+    typeof value.rom.contentSha256 === "string" &&
+    typeof value.rom.contentSize === "number"
+  );
+}
+
+function isNavigationProjection(value: unknown): value is AnalysisNavigationProjection {
+  return (
+    isRecord(value) &&
+    typeof value.capturedRam === "boolean" &&
+    Array.isArray(value.lines) &&
+    value.lines.every((line) => typeof line === "string")
+  );
+}
 
 /**
  * Hash-verified source mapping with a one-based line number and the exact
@@ -43,7 +68,7 @@ interface DebugMapSearchResult {
  * @returns {readonly string[]} Unique strings sorted with localeCompare.
  */
 const sortedUnique = (values: readonly string[]): readonly string[] =>
-  [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 
 /**
  * Find exact ROM-matched source ranges, exclude missing or changed source files, and retain
@@ -86,7 +111,7 @@ const findDebugMapSources = async (
     ]),
   );
   return {
-    locations: [...unique.values()].sort(
+    locations: [...unique.values()].toSorted(
       (left, right) =>
         left.file.localeCompare(right.file) ||
         left.line - right.line ||
@@ -185,7 +210,7 @@ const openLiveDisassembly = async (
     return false;
   }
   try {
-    const response = (await session.customRequest("disassemble", {
+    const response: unknown = await session.customRequest("disassemble", {
       memoryReference: formatDebugAddress({
         architecture,
         addressSpace: target.addressSpace,
@@ -194,9 +219,10 @@ const openLiveDisassembly = async (
       }),
       instructionOffset: 0,
       instructionCount: 32,
-    })) as { readonly instructions?: readonly Record<string, unknown>[] };
-    const instructions = response.instructions ?? [];
-    if (instructions.length === 0) {
+    });
+    const instructions =
+      isRecord(response) && Array.isArray(response.instructions) ? response.instructions : [];
+    if (instructions.length === 0 || !instructions.every(isRecord)) {
       return false;
     }
     const lines = instructions.map((instruction) => {
@@ -259,10 +285,10 @@ export const navigateToAnalysisLocation = async (
   target: AnalysisNavigationTarget,
 ): Promise<void> => {
   try {
-    const manifest = await analysisWorker().request<AnalysisProjectManifest>(
-      target.projectDirectory,
-      "manifest",
-    );
+    const manifest = await analysisWorker().request(target.projectDirectory, "manifest");
+    if (!isNavigationManifest(manifest)) {
+      throw new Error("Analysis manifest is unavailable.");
+    }
     if (
       manifest.target !== target.target ||
       manifest.rom.contentSha256 !== target.romContentSha256 ||
@@ -274,11 +300,12 @@ export const navigateToAnalysisLocation = async (
     if (await openSourceLocation(search.locations)) {
       return;
     }
-    const projection = await analysisWorker().request<AnalysisNavigationProjection>(
-      target.projectDirectory,
-      "navigation",
-      { navigationTarget: target },
-    );
+    const projection = await analysisWorker().request(target.projectDirectory, "navigation", {
+      navigationTarget: target,
+    });
+    if (!isNavigationProjection(projection)) {
+      throw new Error("Analysis navigation is unavailable.");
+    }
     // Captured RAM may have changed since recording. Show its saved variants before live memory.
     if (projection.capturedRam) {
       await openPersistedDisassembly(target, projection);

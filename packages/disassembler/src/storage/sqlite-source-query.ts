@@ -8,6 +8,36 @@ import type {
   AnalysisSourceSummary,
 } from "../analysis/analysis-sources.js";
 import { decodeSqlitePayload } from "./sqlite-payload.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function optionalString(record: Record<string, unknown>, key: string): string | undefined {
+  if (!Object.hasOwn(record, key)) {
+    return undefined;
+  }
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new Error("Invalid source metadata record.");
+  }
+  return value;
+}
+
+function optionalNumber(record: Record<string, unknown>, key: string): number | undefined {
+  if (!Object.hasOwn(record, key)) {
+    return undefined;
+  }
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("Invalid source metadata record.");
+  }
+  return value;
+}
 import { runtimeFromRow } from "./sqlite-records.js";
 
 const collections = ["labels", "comments", "annotations", "regions"] as const;
@@ -67,15 +97,12 @@ export const prepareSourceQueries = (db: DatabaseSync): void => {
     );
     for (let rows = pending.all(table); rows.length; rows = pending.all(table)) {
       for (const row of rows) {
-        const record = JSON.parse(decodeSqlitePayload(row.payload)) as { evidence: unknown };
-        if (
-          !Array.isArray(record.evidence) ||
-          record.evidence.some((id) => typeof id !== "string")
-        ) {
+        const parsed: unknown = JSON.parse(decodeSqlitePayload(row.payload));
+        if (!isRecord(parsed) || !isStringArray(parsed.evidence)) {
           throw new Error("Invalid source metadata evidence membership.");
         }
         remove.run(table, row.id);
-        for (const id of record.evidence as string[]) {
+        for (const id of parsed.evidence) {
           insert.run(id, table, row.id);
         }
         ready.run(table, row.id);
@@ -190,9 +217,6 @@ export const readSourcePage = (
         };
       });
   }
-  if (group !== "contributions") {
-    throw new Error("Unknown source contribution group.");
-  }
   const select = collections
     .map(
       (table) =>
@@ -204,28 +228,30 @@ export const readSourcePage = (
     ${select} ORDER BY collection,id LIMIT 200 OFFSET ?`)
     .all(evidence, offset)
     .map((row) => {
-      const record = JSON.parse(decodeSqlitePayload(row.payload)) as {
-        id: string;
-        addressSpace: string;
-        address?: number;
-        start?: number;
-        architecture?: string;
-        name?: string;
-        text?: string;
-        classification?: string;
-      };
-      const address = record.address ?? record.start;
-      const label = record.name ?? record.text ?? record.classification ?? record.id;
+      const parsed: unknown = JSON.parse(decodeSqlitePayload(row.payload));
+      if (!isRecord(parsed) || typeof parsed.id !== "string") {
+        throw new Error("Invalid source metadata record.");
+      }
+      const addressSpace = optionalString(parsed, "addressSpace");
+      if (addressSpace === undefined) {
+        throw new Error("Invalid source metadata record.");
+      }
+      const address = optionalNumber(parsed, "address") ?? optionalNumber(parsed, "start");
+      const label =
+        optionalString(parsed, "name") ??
+        optionalString(parsed, "text") ??
+        optionalString(parsed, "classification") ??
+        parsed.id;
       return {
-        id: `${String(row.collection)}:${record.id}`,
+        id: `${String(row.collection)}:${parsed.id}`,
         label,
         description: String(row.collection),
-        detail: `Attributed to ${source.name}: ${record.id}`,
-        addressSpace: record.addressSpace,
+        detail: `Attributed to ${source.name}: ${parsed.id}`,
+        addressSpace,
         address,
-        architecture: record.architecture,
+        architecture: optionalString(parsed, "architecture"),
         outputOffsets: [],
-        recordIds: [record.id],
+        recordIds: [parsed.id],
       };
     });
 };

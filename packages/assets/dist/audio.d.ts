@@ -12,6 +12,11 @@ export interface PcmAudio {
         end: number;
     }>;
 }
+/** Rebuild a PCM model from an importer or encoder document value.
+ * @param {unknown} value Untrusted document payload.
+ * @returns {PcmAudio} Owned field snapshot; the sample buffer is the validated array.
+ */
+export declare function readPcmAudio(value: unknown): PcmAudio;
 /** Browser-safe RIFF PCM8/PCM16 importer using published AudioWAV chunk models. */
 export declare const waveImporter: AssetImporter;
 /** Write review PCM16 WAVE without Node Buffer or a guessed BRR playback rate.

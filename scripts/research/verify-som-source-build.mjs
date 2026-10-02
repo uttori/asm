@@ -16,7 +16,7 @@ const inputs = [];
 function collect(directory) {
   for (const item of fs
     .readdirSync(directory, { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name))) {
+    .toSorted((a, b) => a.name.localeCompare(b.name))) {
     const file = path.join(directory, item.name);
     if (item.isDirectory()) collect(file);
     else if (item.isFile())

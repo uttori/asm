@@ -58,9 +58,22 @@ export function getOperandCodec(mode) {
         case "immediateAbsolute":
         case "immediateAbsoluteIndexedX":
             return "immediate-unsigned16";
-        default:
+        case "immediate":
+        case "zeroPage":
+        case "zeroPageIndexedX":
+        case "zeroPageIndexedY":
+        case "zeroPageIndirect":
+        case "zeroPageIndirectLong":
+        case "indexedIndirectX":
+        case "indirectIndexedY":
+        case "zeroPageIndirectIndexedZ":
+        case "stackRelative":
+        case "stackRelativeIndirectIndexedY":
+        case "basePageIndirectIndexedZ":
             return "unsigned8";
     }
+    const leftover = mode;
+    throw new Error(`Unsupported addressing mode: ${String(leftover)}`);
 }
 /**
  * Operand field list for a codec. `zero-page-relative8` is BBR/BBS: zp then rel8.

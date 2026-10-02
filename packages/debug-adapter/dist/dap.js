@@ -3,6 +3,24 @@ import path from "node:path";
 import { debugMapRangesForAddress, debugMapRangesForSource, validateDebugMap, } from "@uttori/asm-core/debug-map";
 import { evaluateDebugExpression, formatDebugExpressionValue } from "./debug-expression.js";
 const numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Reject framed JSON that is not a DAP request before the session dispatcher sees it. */
+const dapRequest = (value) => {
+    if (!isRecord(value) || value.type !== "request" || typeof value.command !== "string") {
+        throw new Error("DAP frame is not a request.");
+    }
+    if (typeof value.seq !== "number" || !Number.isSafeInteger(value.seq)) {
+        throw new Error("DAP frame is not a request.");
+    }
+    const request = { seq: value.seq, type: "request", command: value.command };
+    if (value.arguments === undefined) {
+        return request;
+    }
+    if (!isRecord(value.arguments)) {
+        throw new Error("DAP request arguments must be an object.");
+    }
+    return { ...request, arguments: value.arguments };
+};
 const records = (value) => Array.isArray(value)
     ? value.filter((entry) => entry !== null && typeof entry === "object")
     : [];
@@ -24,8 +42,16 @@ export const formatDebugAddress = (address) => `${address.architecture}|${addres
  * @param {string} reference Qualified address string.
  * @returns {DebugAddress | undefined} Parsed address, or undefined for malformed input.
  */
+function indexedString(values, index) {
+    return index >= 0 && index < values.length ? values[index] : undefined;
+}
 export const parseDebugAddress = (reference) => {
-    const [architecture, addressSpace, rawAddress, rawOutputOffset, extra] = reference.split("|");
+    const parts = reference.split("|");
+    const architecture = indexedString(parts, 0);
+    const addressSpace = indexedString(parts, 1);
+    const rawAddress = indexedString(parts, 2);
+    const rawOutputOffset = indexedString(parts, 3);
+    const extra = indexedString(parts, 4);
     if (!architecture || !addressSpace || !rawAddress || extra !== undefined) {
         return undefined;
     }
@@ -243,7 +269,7 @@ export class DebugAdapterSession {
             }
             const messages = [
                 response,
-                ...pending.map((event) => ({ ...event, seq: this.#nextSequence++ })),
+                ...pending.map((event) => Object.assign({}, event, { seq: this.#nextSequence++ })),
             ];
             for (const message of messages) {
                 this.#onMessage?.(message);
@@ -301,7 +327,8 @@ export class DebugAdapterSession {
                 if (this.#runWithoutDebug) {
                     // A Run client need not send configurationDone or breakpoints. The
                     // backend still connects at a coherent stop before native execution.
-                    const [thread] = await this.#backend.threads();
+                    const threads = await this.#backend.threads();
+                    const thread = threads.length > 0 ? threads[0] : undefined;
                     if (!thread) {
                         throw new Error("The backend has no execution thread to run.");
                     }
@@ -451,12 +478,11 @@ export class DebugAdapterSession {
                 if (capabilities?.step && !supportedSteps.includes("out")) {
                     unavailable.push("step out");
                 }
-                return {
-                    ...thread,
+                return Object.assign({}, thread, {
                     name: unavailable.length === 0
                         ? thread.name
                         : `${thread.name} (unavailable: ${unavailable.join(", ")})`,
-                };
+                });
             }),
         };
     }
@@ -770,7 +796,7 @@ export class DebugAdapterSession {
         if (!this.#map) {
             throw new Error("Source breakpoints require a debug map.");
         }
-        const source = args.source;
+        const source = isRecord(args.source) ? args.source : undefined;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
         if (!sourcePath) {
             throw new Error("Source breakpoint request requires source.path.");
@@ -799,13 +825,12 @@ export class DebugAdapterSession {
                     // One gutter marker represents all ROM aliases. Partial native acceptance
                     // must not turn it into a misleading verified breakpoint.
                     const verified = matches.length > 0 && matches.every((entry) => entry?.verified);
-                    const result = { ...dapBreakpoint(match), verified, line };
+                    const result = Object.assign({}, dapBreakpoint(match), { verified, line });
                     if (!verified) {
-                        return {
-                            ...result,
+                        return Object.assign({}, result, {
                             message: matches.find((entry) => !entry?.verified)?.message ??
                                 "One or more source breakpoint addresses could not be installed.",
-                        };
+                        });
                     }
                     return result;
                 }
@@ -827,7 +852,7 @@ export class DebugAdapterSession {
         if (!this.#map) {
             throw new Error("Breakpoint locations require a debug map.");
         }
-        const source = args.source;
+        const source = isRecord(args.source) ? args.source : undefined;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
         if (!sourcePath) {
             throw new Error("Breakpoint location request requires source.path.");
@@ -841,7 +866,7 @@ export class DebugAdapterSession {
             .map((range) => range.line));
         return {
             breakpoints: [...lines]
-                .sort((left, right) => left - right)
+                .toSorted((left, right) => left - right)
                 .map((line) => ({ line, column: 1 })),
         };
     }
@@ -853,7 +878,7 @@ export class DebugAdapterSession {
             const address = parseDebugAddress(reference);
             if (address) {
                 const offset = numeric(breakpoint.offset);
-                const adjusted = { ...address, address: address.address + offset };
+                const adjusted = Object.assign({}, address, { address: address.address + offset });
                 if (this.#supportsBreakpoint(adjusted)) {
                     instructions.set(formatDebugAddress(adjusted), adjusted);
                 }
@@ -915,7 +940,7 @@ export class DebugAdapterSession {
                 const restored = await this.#backend.setBreakpoints(this.#verifiedBreakpoints.map(({ address }) => address));
                 this.#assertExecutionActive();
                 if (restored.some(({ verified }) => !verified)) {
-                    throw new Error("Breakpoint recovery was not verified.");
+                    throw new Error("Breakpoint recovery was not verified.", { cause: error });
                 }
                 this.#verifiedBreakpoints = restored;
                 this.#breakpointTableReliable = true;
@@ -944,7 +969,7 @@ export class DebugAdapterSession {
                     await this.#resumeAfterBreakpointUpdate(paused.threadId);
                 }
                 catch (error) {
-                    if (this.#executionState === "stopped" && !this.#executionEnded) {
+                    if (this.#executionState === "stopped" && !this.#executionHasEnded()) {
                         this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
                     }
                     throw error;
@@ -984,7 +1009,7 @@ export class DebugAdapterSession {
         return (debugMapRangesForSource(this.#map, sourcePath, requestedLine).find((range) => this.#supportsBreakpoint(this.#addressForRange(range))) ??
             this.#sourceRanges(sourcePath)
                 .filter((range) => range.line > requestedLine && this.#supportsBreakpoint(this.#addressForRange(range)))
-                .sort((left, right) => left.line - right.line || left.start - right.start)[0]);
+                .toSorted((left, right) => left.line - right.line || left.start - right.start)[0]);
     }
     /**
      * Serializes execution and whole-table writes without blocking backend events.
@@ -999,6 +1024,18 @@ export class DebugAdapterSession {
         });
         this.#executionUpdateQueue = result.then(() => undefined, () => undefined);
         return result;
+    }
+    /** A resumed CPU can stop again while this request is awaiting the backend. */
+    #executionIsRunning() {
+        return this.#executionState === "running";
+    }
+    /** Termination can arrive while a breakpoint-table write is awaiting the backend. */
+    #executionHasEnded() {
+        return this.#executionEnded;
+    }
+    /** The maintenance pause can be completed by a stop event before this finally runs. */
+    #maintenancePauseRecord() {
+        return this.#maintenancePause;
     }
     #assertExecutionActive() {
         if (this.#executionEnded) {
@@ -1048,7 +1085,7 @@ export class DebugAdapterSession {
         }
         this.#assertExecutionActive();
         // Thread discovery can yield long enough for a real breakpoint to stop the CPU.
-        if (this.#executionState !== "running") {
+        if (!this.#executionIsRunning()) {
             return undefined;
         }
         const architectures = new Set(addresses.map(({ architecture }) => architecture));
@@ -1076,7 +1113,7 @@ export class DebugAdapterSession {
             return { threadId: thread.id, ...stop };
         }
         finally {
-            if (this.#maintenancePause?.timer === timer) {
+            if (this.#maintenancePauseRecord()?.timer === timer) {
                 this.#maintenancePause = undefined;
             }
             clearTimeout(timer);
@@ -1122,12 +1159,11 @@ export class DebugAdapterSession {
         const instructions = await this.#backend.disassemble({ ...address, address: address.address + numeric(args.instructionOffset) }, numeric(args.instructionCount));
         const texts = await Promise.all(instructions.map((instruction) => this.#annotatedInstructionText(instruction)));
         return {
-            instructions: instructions.map((instruction, index) => ({
+            instructions: instructions.map((instruction, index) => Object.assign({
                 address: formatDebugAddress(instruction.address),
                 instructionBytes: bytesText(instruction),
                 instruction: texts[index],
-                ...(instruction.symbol ? { symbol: instruction.symbol } : {}),
-            })),
+            }, instruction.symbol ? { symbol: instruction.symbol } : {})),
         };
     }
     async #source(sourceReference) {
@@ -1271,7 +1307,7 @@ export class DapMessageParser {
             }
             const body = this.#buffer.subarray(start, start + length).toString("utf8");
             this.#buffer = this.#buffer.subarray(start + length);
-            messages.push(JSON.parse(body));
+            messages.push(dapRequest(JSON.parse(body)));
         }
         return messages;
     }

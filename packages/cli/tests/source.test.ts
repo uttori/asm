@@ -34,6 +34,88 @@ import { test } from "../../../tests/ava-helper.js";
 import { prepareSourceResearch } from "../src/source-research.js";
 import { executeSourceOperation } from "../src/source.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSnesSourceBuild(value: unknown): value is SnesSourceBuild {
+  return isRecord(value) && typeof value.outputFile === "string" && "verification" in value;
+}
+
+function isPreparedGeneration(value: unknown): value is PreparedSnesGeneration {
+  return (
+    isRecord(value) &&
+    isRecord(value.verification) &&
+    typeof value.verification.outputSha256 === "string" &&
+    isRecord(value.generation) &&
+    typeof value.generation.commit === "string"
+  );
+}
+
+function isMergePreview(value: unknown): value is SourceMergePreview {
+  return isRecord(value) && Array.isArray(value.conflicts);
+}
+
+function isMergeStatus(value: unknown): value is SourceMergeStatus {
+  return isRecord(value) && typeof value.phase === "string";
+}
+
+function isImportResult(value: unknown): value is { sourceSha256: string; changed: boolean } {
+  return (
+    isRecord(value) && typeof value.sourceSha256 === "string" && typeof value.changed === "boolean"
+  );
+}
+
+function isChangedResult(value: unknown): value is { changed: boolean } {
+  return isRecord(value) && typeof value.changed === "boolean";
+}
+
+function isCleanResult(value: unknown): value is { scratch: { retained: unknown[] } } {
+  return isRecord(value) && isRecord(value.scratch) && Array.isArray(value.scratch.retained);
+}
+
+function isInitResult(
+  value: unknown,
+): value is { generation: string; verification: { outputSha256: string } } {
+  return (
+    isRecord(value) &&
+    typeof value.generation === "string" &&
+    isRecord(value.verification) &&
+    typeof value.verification.outputSha256 === "string"
+  );
+}
+
+type GenerationRecipeFile = {
+  pristineAssets: { path: string; sha256: string; romRange: { start: number; end: number } }[];
+};
+
+function isGenerationRecipeFile(value: unknown): value is GenerationRecipeFile {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.pristineAssets) &&
+    value.pristineAssets.every(
+      (asset) =>
+        isRecord(asset) &&
+        typeof asset.path === "string" &&
+        typeof asset.sha256 === "string" &&
+        isRecord(asset.romRange) &&
+        typeof asset.romRange.start === "number" &&
+        typeof asset.romRange.end === "number",
+    )
+  );
+}
+
+async function expectOperation<T>(
+  operation: Parameters<typeof executeSourceOperation>[0],
+  accept: (value: unknown) => value is T,
+): Promise<T> {
+  const value = await executeSourceOperation(operation);
+  if (!accept(value)) {
+    throw new Error(`Unexpected ${operation.action} result.`);
+  }
+  return value;
+}
+
 test("headless analysis research composes over unsaved documents and rejects stale selections", async (t) => {
   const { directory } = await fixture(t.teardown);
   const project = await openSourceProject(directory);
@@ -231,8 +313,7 @@ async function fixture(teardown: (cleanup: () => void) => void) {
   await finishSourceGeneration(repository, {
     message: "Adopt source baseline",
     validate: async () =>
-      ((await executeSourceOperation({ directory, action: "build" })) as SnesSourceBuild)
-        .verification,
+      (await expectOperation({ directory, action: "build" }, isSnesSourceBuild)).verification,
   });
   return { directory, rom };
 }
@@ -243,19 +324,25 @@ test("headless source commands preserve an edited raw byte through verified rege
   const bytes = fs.readFileSync(rawFile);
   bytes[7] = 0xeb;
   fs.writeFileSync(rawFile, bytes);
-  const generation = (await executeSourceOperation({
-    directory,
-    action: "prepare",
-  })) as PreparedSnesGeneration;
+  const generation = await expectOperation(
+    {
+      directory,
+      action: "prepare",
+    },
+    isPreparedGeneration,
+  );
   t.is(generation.verification.outputSha256, rom.identity.contentSha256);
   const candidate = generation.generation.commit;
   const capturedRecipe = fs.readFileSync(path.join(directory, "source/ram-map.json"));
   const capturedResearch = fs.readFileSync(path.join(directory, ".uttori/research/names.json"));
-  const preview = (await executeSourceOperation({
-    directory,
-    action: "preview",
-    candidate,
-  })) as SourceMergePreview;
+  const preview = await expectOperation(
+    {
+      directory,
+      action: "preview",
+      candidate,
+    },
+    isMergePreview,
+  );
   t.deepEqual(preview.conflicts, []);
   await t.throwsAsync(executeSourceOperation({ directory, action: "apply", candidate }), {
     message: /Commit or move/,
@@ -263,11 +350,8 @@ test("headless source commands preserve an edited raw byte through verified rege
   await sourceGit(directory, ["add", "--all"]);
   await sourceGit(directory, ["commit", "-m", "Edit raw byte"]);
   await executeSourceOperation({ directory, action: "apply", candidate });
-  t.is(
-    ((await executeSourceOperation({ directory, action: "finish" })) as SourceMergeStatus).phase,
-    "verified",
-  );
-  const built = (await executeSourceOperation({ directory, action: "build" })) as SnesSourceBuild;
+  t.is((await expectOperation({ directory, action: "finish" }, isMergeStatus)).phase, "verified");
+  const built = await expectOperation({ directory, action: "build" }, isSnesSourceBuild);
   const expected = rom.read(0, rom.length)!.slice();
   expected[7] = 0xeb;
   t.deepEqual([...fs.readFileSync(built.outputFile)], [...expected]);
@@ -291,23 +375,27 @@ test("headless source commands preserve an edited raw byte through verified rege
 test("new pristine native resources are extracted from pinned ROM ranges, never edited working files", async (t) => {
   const { directory, rom } = await fixture((cleanup) => t.teardown(cleanup));
   const file = ".uttori/generation-inputs.json";
-  const recipe = JSON.parse(fs.readFileSync(path.join(directory, file), "utf8")) as {
-    pristineAssets: { path: string; sha256: string; romRange: { start: number; end: number } }[];
-  };
+  const recipeText: unknown = JSON.parse(fs.readFileSync(path.join(directory, file), "utf8"));
+  if (!isGenerationRecipeFile(recipeText)) {
+    throw new Error("Expected a generation recipe.");
+  }
   const asset = {
     path: "source/assets/native/compression.bin",
     sha256: sourceContentHash(rom.read(11, 17)!),
     romRange: { start: 11, end: 28 },
   };
-  recipe.pristineAssets = [asset];
-  const write = () => fs.writeFileSync(path.join(directory, file), JSON.stringify(recipe));
+  recipeText.pristineAssets = [asset];
+  const write = () => fs.writeFileSync(path.join(directory, file), JSON.stringify(recipeText));
   write();
   fs.mkdirSync(path.dirname(path.join(directory, asset.path)), { recursive: true });
   fs.writeFileSync(path.join(directory, asset.path), new Uint8Array(17).fill(0x42));
-  const prepared = (await executeSourceOperation({
-    directory,
-    action: "prepare",
-  })) as PreparedSnesGeneration;
+  const prepared = await expectOperation(
+    {
+      directory,
+      action: "prepare",
+    },
+    isPreparedGeneration,
+  );
   t.is(prepared.verification.outputSha256, rom.identity.contentSha256);
   const pristine = (
     await sourceGit(directory, ["show", `${prepared.generation.commit}:${asset.path}`])
@@ -341,11 +429,14 @@ test("capture import records portable archive identity and survives idempotent r
       chunks: [{ sequenceStart: 1, addresses: [0x808000], droppedEvents: 0, active: false }],
     }),
   );
-  const imported = (await executeSourceOperation({
-    directory,
-    action: "import",
-    capture: file,
-  })) as { sourceSha256: string; changed: boolean };
+  const imported = await expectOperation(
+    {
+      directory,
+      action: "import",
+      capture: file,
+    },
+    isImportResult,
+  );
   t.true(imported.changed);
   const saved = readSourceCaptureCatalog(
     directory,
@@ -361,11 +452,14 @@ test("capture import records portable archive identity and survives idempotent r
       bytes: fs.statSync(file).size,
     },
   ]);
-  const retried = (await executeSourceOperation({
-    directory,
-    action: "import",
-    capture: file,
-  })) as { changed: boolean };
+  const retried = await expectOperation(
+    {
+      directory,
+      action: "import",
+      capture: file,
+    },
+    isChangedResult,
+  );
   t.false(retried.changed);
   t.is(
     readSourceCaptureCatalog(directory, ".uttori/captures.json", rom.identity.contentSha256)
@@ -412,15 +506,16 @@ for (const phase of ["export", "verification"] as const) {
       t.deepEqual(await inspect(), before);
       // Killed workers cannot run finally blocks. The ordinary owned-scratch cleaner must reclaim
       // their partial files; cooperative cancellation has already removed them before returning.
-      const clean = (await executeSourceOperation({ directory, action: "clean" })) as {
-        scratch: { retained: unknown[] };
-      };
+      const clean = await expectOperation({ directory, action: "clean" }, isCleanResult);
       t.deepEqual(clean.scratch.retained, []);
       t.deepEqual(fs.readdirSync(path.join(repository.stateDirectory, "scratch")), []);
-      const retry = (await executeSourceOperation({
-        directory,
-        action: "prepare",
-      })) as PreparedSnesGeneration;
+      const retry = await expectOperation(
+        {
+          directory,
+          action: "prepare",
+        },
+        isPreparedGeneration,
+      );
       t.is(retry.verification.outputSha256, rom.identity.contentSha256);
       t.deepEqual((await inspect()).head, before.head);
       t.deepEqual((await inspect()).status, before.status);
@@ -482,9 +577,7 @@ for (const boundary of ["before", "after"] as const) {
       t.true(interrupted.runtime.length > 0);
       t.true(interrupted.revision > before.revision);
     }
-    const retry = (await executeSourceOperation({ directory, action: "import", capture })) as {
-      changed: boolean;
-    };
+    const retry = await expectOperation({ directory, action: "import", capture }, isChangedResult);
     t.is(retry.changed, boundary === "before");
     const recovered = inspect();
     t.is(recovered.imports.length, 1);
@@ -497,9 +590,7 @@ for (const boundary of ["before", "after"] as const) {
         .catalog.captures.length,
       1,
     );
-    const clean = (await executeSourceOperation({ directory, action: "clean" })) as {
-      scratch: { retained: unknown[] };
-    };
+    const clean = await expectOperation({ directory, action: "clean" }, isCleanResult);
     t.deepEqual(clean.scratch.retained, []);
   });
 }
@@ -540,13 +631,16 @@ r 32768 U
         );
       }
       try {
-        const result = (await executeSourceOperation({
-          action: "init",
-          directory,
-          rom: file,
-          mapper: "lorom",
-          dizRawFile,
-        })) as { generation: string; verification: { outputSha256: string } };
+        const result = await expectOperation(
+          {
+            action: "init",
+            directory,
+            rom: file,
+            mapper: "lorom",
+            dizRawFile,
+          },
+          isInitResult,
+        );
         const project = await openSourceProject(directory);
         if (dizRawFile) {
           t.true(
@@ -561,10 +655,13 @@ r 32768 U
           t.true(project.research.decisions.some((decision) => decision.collection === "comments"));
           fs.unlinkSync(dizRawFile);
           // Regeneration reads portable Git decisions after the private XML has disappeared.
-          const prepared = (await executeSourceOperation({
-            directory,
-            action: "prepare",
-          })) as PreparedSnesGeneration;
+          const prepared = await expectOperation(
+            {
+              directory,
+              action: "prepare",
+            },
+            isPreparedGeneration,
+          );
           t.is(prepared.verification.outputSha256, project.configuration.romSha256);
         }
         const head = (await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString().trim();
@@ -574,10 +671,13 @@ r 32768 U
           .split("\0");
         t.false(indexed.some((name) => name.startsWith(".uttori-local/")));
         t.false(indexed.some((name) => /generated-files|source-ownership/.test(name)));
-        const built = (await executeSourceOperation({
-          directory,
-          action: "build",
-        })) as SnesSourceBuild;
+        const built = await expectOperation(
+          {
+            directory,
+            action: "build",
+          },
+          isSnesSourceBuild,
+        );
         t.deepEqual(fs.readFileSync(built.outputFile), rom);
         await t.throwsAsync(
           executeSourceOperation({ action: "init", directory, rom: file, mapper: "lorom" }),

@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 // oxlint-disable-next-line security/detect-unsafe-regex -- Every repetition has a fixed small bound.
 const uuidPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 /** Keep ownership until every payload is gone, so interruption never strands unidentifiable data.
@@ -47,9 +50,12 @@ function pruneScratch(directory) {
                 throw new Error("Unrecognized scratch owner");
             }
             const owner = JSON.parse(fs.readFileSync(marker, "utf8"));
-            if (owner.format !== "uttori-source-scratch-v1" ||
+            if (!isRecord(owner) ||
+                owner.format !== "uttori-source-scratch-v1" ||
                 owner.id !== entry.name ||
-                !["generation", "preview", "prepare"].includes(owner.purpose ?? "")) {
+                (owner.purpose !== "generation" &&
+                    owner.purpose !== "preview" &&
+                    owner.purpose !== "prepare")) {
                 throw new Error("Unrecognized scratch owner");
             }
             // Local dead-owner detection is shared with publication. Live processes,

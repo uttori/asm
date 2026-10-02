@@ -166,8 +166,8 @@ test("placement inspection measures prospective emission without publishing or a
   t.is(fs.readFileSync(path.join(root, "main.asm"), "utf8"), source);
   t.deepEqual(fs.readFileSync(path.join(path.dirname(baseline.outputFile), "build.json")), receipt);
   t.deepEqual(
-    fs.readdirSync(options.outputDirectory).sort(),
-    ["current.json", baseline.inputSha256].sort(),
+    fs.readdirSync(options.outputDirectory).toSorted(),
+    ["current.json", baseline.inputSha256].toSorted(),
   );
   t.deepEqual(
     JSON.parse(fs.readFileSync(path.join(options.outputDirectory, "current.json"), "utf8")),
@@ -239,8 +239,8 @@ test("ordinary builds enforce saved placement and pointer contracts before repla
   );
   t.deepEqual(fs.readFileSync(receiptPath), receipt);
   t.deepEqual(
-    fs.readdirSync(options.outputDirectory).sort(),
-    ["current.json", baseline.inputSha256].sort(),
+    fs.readdirSync(options.outputDirectory).toSorted(),
+    ["current.json", baseline.inputSha256].toSorted(),
   );
   t.deepEqual(
     JSON.parse(fs.readFileSync(path.join(options.outputDirectory, "current.json"), "utf8")),

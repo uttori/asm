@@ -11,10 +11,34 @@ import {
 } from "../src/image.js";
 import type { IndexedImage } from "../src/image.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isIndexedImage(value: unknown): value is IndexedImage {
+  return (
+    isRecord(value) &&
+    value.kind === "indexed-image" &&
+    typeof value.width === "number" &&
+    typeof value.height === "number" &&
+    value.indexes instanceof Uint8Array &&
+    Array.isArray(value.palette) &&
+    (value.sourceBitDepth === 1 ||
+      value.sourceBitDepth === 2 ||
+      value.sourceBitDepth === 4 ||
+      value.sourceBitDepth === 8)
+  );
+}
+
 const fixture = (name: string): Uint8Array =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
-const decode = (bytes: Uint8Array): IndexedImage =>
-  pngImporter.import({ bytes, mediaType: "image/png" }).value as IndexedImage;
+const decode = (bytes: Uint8Array): IndexedImage => {
+  const value = pngImporter.import({ bytes, mediaType: "image/png" }).value;
+  if (!isIndexedImage(value)) {
+    throw new Error("Expected an indexed image.");
+  }
+  return value;
+};
 /** Inspect chunks independently of the rewrite implementation. */
 function chunks(bytes: Uint8Array): Map<string, Uint8Array> {
   const result = new Map<string, Uint8Array>();

@@ -14,35 +14,202 @@ type Grammar = {
   repository?: Record<string, unknown>;
 };
 
+type ExtensionManifest = {
+  contributes: {
+    commands: Array<{ command: string; title: string; category: string; when?: string }>;
+    languages: Array<{ id: string; extensions?: string[]; firstLine?: string }>;
+    grammars: Array<{ language?: string; scopeName: string; path: string }>;
+    menus: {
+      commandPalette: Array<{ command: string; when?: string }>;
+      "editor/title/run": Array<{ command: string; when?: string }>;
+    };
+    configuration: { properties: Record<string, Record<string, unknown>> };
+    semanticTokenScopes: Array<{
+      language: string;
+      scopes: Record<string, string[]>;
+    }>;
+    viewsContainers: { activitybar: Array<{ id: string; title: string; icon: string }> };
+    views: Record<string, Array<{ type: string; id: string; name: string }>>;
+    viewsWelcome: Array<{ view: string; contents: string }>;
+  };
+  capabilities: {
+    untrustedWorkspaces: { supported: string; restrictedConfigurations: string[] };
+  };
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
+const isStringArrayRecord = (value: unknown): value is Record<string, string[]> =>
+  isRecord(value) && Object.values(value).every((entry) => isStringArray(entry));
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isGrammar(value: unknown): value is Grammar {
+  if (!isRecord(value) || typeof value.name !== "string" || typeof value.scopeName !== "string") {
+    return false;
+  }
+  if (!Array.isArray(value.patterns)) {
+    return false;
+  }
+  if (
+    !value.patterns.every(
+      (pattern) =>
+        isRecord(pattern) && (pattern.include === undefined || typeof pattern.include === "string"),
+    )
+  ) {
+    return false;
+  }
+  return value.repository === undefined || isRecord(value.repository);
+}
+
+function isMenuEntries(value: unknown): value is Array<{ command: string; when?: string }> {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        isRecord(entry) && typeof entry.command === "string" && isOptionalString(entry.when),
+    )
+  );
+}
+
+function isExtensionManifest(value: unknown): value is ExtensionManifest {
+  if (!isRecord(value) || !isRecord(value.contributes) || !isRecord(value.capabilities)) {
+    return false;
+  }
+  const contributes = value.contributes;
+  if (
+    !Array.isArray(contributes.commands) ||
+    !contributes.commands.every(
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.command === "string" &&
+        typeof entry.title === "string" &&
+        typeof entry.category === "string" &&
+        isOptionalString(entry.when),
+    )
+  ) {
+    return false;
+  }
+  if (
+    !Array.isArray(contributes.languages) ||
+    !contributes.languages.every(
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.id === "string" &&
+        (entry.extensions === undefined || isStringArray(entry.extensions)) &&
+        isOptionalString(entry.firstLine),
+    )
+  ) {
+    return false;
+  }
+  if (
+    !Array.isArray(contributes.grammars) ||
+    !contributes.grammars.every(
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.scopeName === "string" &&
+        typeof entry.path === "string" &&
+        isOptionalString(entry.language),
+    )
+  ) {
+    return false;
+  }
+  if (!isRecord(contributes.menus) || !isMenuEntries(contributes.menus.commandPalette)) {
+    return false;
+  }
+  if (!isMenuEntries(contributes.menus["editor/title/run"])) {
+    return false;
+  }
+  if (!isRecord(contributes.configuration) || !isRecord(contributes.configuration.properties)) {
+    return false;
+  }
+  if (!Object.values(contributes.configuration.properties).every((entry) => isRecord(entry))) {
+    return false;
+  }
+  if (
+    !Array.isArray(contributes.semanticTokenScopes) ||
+    !contributes.semanticTokenScopes.every(
+      (entry) =>
+        isRecord(entry) && typeof entry.language === "string" && isStringArrayRecord(entry.scopes),
+    )
+  ) {
+    return false;
+  }
+  if (
+    !isRecord(contributes.viewsContainers) ||
+    !Array.isArray(contributes.viewsContainers.activitybar)
+  ) {
+    return false;
+  }
+  if (
+    !contributes.viewsContainers.activitybar.every(
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.id === "string" &&
+        typeof entry.title === "string" &&
+        typeof entry.icon === "string",
+    )
+  ) {
+    return false;
+  }
+  if (!isRecord(contributes.views)) {
+    return false;
+  }
+  if (
+    !Object.values(contributes.views).every(
+      (views) =>
+        Array.isArray(views) &&
+        views.every(
+          (entry) =>
+            isRecord(entry) &&
+            typeof entry.type === "string" &&
+            typeof entry.id === "string" &&
+            typeof entry.name === "string",
+        ),
+    )
+  ) {
+    return false;
+  }
+  if (
+    !Array.isArray(contributes.viewsWelcome) ||
+    !contributes.viewsWelcome.every(
+      (entry) =>
+        isRecord(entry) && typeof entry.view === "string" && typeof entry.contents === "string",
+    )
+  ) {
+    return false;
+  }
+  if (!isRecord(value.capabilities.untrustedWorkspaces)) {
+    return false;
+  }
+  const untrusted = value.capabilities.untrustedWorkspaces;
+  return (
+    typeof untrusted.supported === "string" && isStringArray(untrusted.restrictedConfigurations)
+  );
+}
+
 function readGrammar(fileName: string): { grammar: Grammar; source: string } {
   const grammarPath = path.join(syntaxDirectory, fileName);
   const source = fs.readFileSync(grammarPath, "utf8");
-  return { grammar: JSON.parse(source) as Grammar, source };
+  const parsed: unknown = JSON.parse(source);
+  if (!isGrammar(parsed)) {
+    throw new Error(`${fileName} is not a TextMate grammar.`);
+  }
+  return { grammar: parsed, source };
 }
 
 test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
-    contributes: {
-      commands: Array<{ command: string; title: string; category: string; when?: string }>;
-      languages: Array<{ id: string; extensions?: string[]; firstLine?: string }>;
-      grammars: Array<{ language?: string; scopeName: string; path: string }>;
-      menus: {
-        commandPalette: Array<{ command: string; when?: string }>;
-        "editor/title/run": Array<{ command: string; when?: string }>;
-      };
-      configuration: { properties: Record<string, Record<string, unknown>> };
-      semanticTokenScopes: Array<{
-        language: string;
-        scopes: Record<string, string[]>;
-      }>;
-      viewsContainers: { activitybar: Array<{ id: string; title: string; icon: string }> };
-      views: Record<string, Array<{ type: string; id: string; name: string }>>;
-      viewsWelcome: Array<{ view: string; contents: string }>;
-    };
-    capabilities: {
-      untrustedWorkspaces: { supported: string; restrictedConfigurations: string[] };
-    };
-  };
+  const parsed: unknown = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  if (!isExtensionManifest(parsed)) {
+    throw new Error("VS Code manifest is missing the Uttori language contribution.");
+  }
+  const manifest = parsed;
 
   const commands = new Set(manifest.contributes.commands.map((entry) => entry.command));
   for (const command of [
@@ -135,7 +302,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
 
   const properties = manifest.contributes.configuration.properties;
   t.deepEqual(
-    Object.keys(properties).sort(),
+    Object.keys(properties).toSorted(),
     [
       "asm.architecture",
       "asm.analysisProject",
@@ -171,7 +338,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.plugins",
       "asm.target",
       "uttoriAsmLanguageServer.trace.server",
-    ].sort(),
+    ].toSorted(),
   );
   t.deepEqual(properties["uttoriAsmLanguageServer.trace.server"]?.enum, [
     "off",
@@ -202,7 +369,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     "uttori-asm.sources": "tree",
     "uttori-asm.analysisCoverage": "tree",
   });
-  t.deepEqual(manifest.contributes.viewsWelcome?.map(({ view }) => view).sort(), [
+  t.deepEqual(manifest.contributes.viewsWelcome.map(({ view }) => view).toSorted(), [
     "uttori-asm.analysisCoverage",
     "uttori-asm.projectOutline",
     "uttori-asm.sources",
@@ -304,7 +471,8 @@ test("VS Code client propagates trust and every project environment setting", (t
   }
   t.true(source.includes("workspace.isTrusted"));
   t.true(source.includes("workspace.onDidGrantWorkspaceTrust"));
-  t.true(source.includes('configurationSection: "asm"'));
+  t.true(source.includes("initializationOptions: serverInitializationOptions()"));
+  t.false(source.includes("configurationSection"));
   t.true(source.includes("uttori-snes"));
   t.true(source.includes("uttori-65xx"));
   t.true(source.includes("traceOutputChannel"));
@@ -349,8 +517,8 @@ test("analysis navigation preserves identity and navigates source-first", (t) =>
   t.true(tree.includes("romContentSha256"));
   t.true(tree.includes("addressSpace"));
   t.true(maps.includes("validateDebugMap"));
-  t.true(maps.includes("map.output.sha256 === candidate.romContentSha256"));
-  t.true(maps.includes("map.output.size === candidate.romContentSize"));
+  t.true(maps.includes("parsed.output.sha256 === candidate.romContentSha256"));
+  t.true(maps.includes("parsed.output.size === candidate.romContentSize"));
   t.true(maps.includes("analysisSourceSha256(file) === source.sha256"));
   t.true(navigation.includes('customRequest("disassemble"'));
   t.true(navigation.includes("Persisted analysis disassembly (read-only)"));

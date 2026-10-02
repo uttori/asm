@@ -18,8 +18,21 @@ const annotationClassification = (classification) => {
             return "asset";
         case "unreached":
             return undefined;
-        default:
+        case "data8":
+        case "data16":
+        case "data24":
+        case "data32":
+        case "empty":
+        case "pointer16":
+        case "pointer24":
+        case "pointer32":
+        case "text": {
             return "data";
+        }
+        default: {
+            const leftover = classification;
+            throw new Error(`Unsupported annotation classification: ${String(leftover)}`);
+        }
     }
 };
 const compareStrings = (left, right) => left.localeCompare(right);
@@ -58,7 +71,7 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
     const fileAddressSpaces = manifest.addressSpaces
         .filter(({ kind }) => kind === "file")
         .map(({ id }) => id)
-        .sort(compareStrings);
+        .toSorted(compareStrings);
     const fileAddressSpaceSet = new Set(fileAddressSpaces);
     const events = new Map();
     const unprojected = [];
@@ -172,9 +185,9 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
             addConflict(record);
         }
     }
-    const addRuntimeAddressSpaceOverlay = (record, runtime, start, end) => {
+    const addRuntimeAddressSpaceOverlay = (record, runtimeCoverage, start, end) => {
         const addressSpace = coverageAddressSpace(record);
-        addAddressSpaceOverlay({ runtime, runtimeId: record.id }, start, end, {
+        addAddressSpaceOverlay({ runtime: runtimeCoverage, runtimeId: record.id }, start, end, {
             kind: "runtime",
             id: record.id,
             addressSpace,
@@ -216,7 +229,7 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
     }
     eventAt(0);
     eventAt(contentSize);
-    const boundaries = [...events.keys()].sort((left, right) => left - right);
+    const boundaries = [...events.keys()].toSorted((left, right) => left - right);
     const active = new Map();
     const segments = [];
     for (let index = 0; index + 1 < boundaries.length; index++) {
@@ -243,7 +256,7 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
         sortedClassifications.sort((left, right) => CLASSIFICATION_ORDER.indexOf(left) - CLASSIFICATION_ORDER.indexOf(right));
         const conflictIds = [
             ...new Set(values.flatMap(({ conflictId }) => (conflictId ? [conflictId] : []))),
-        ].sort(compareStrings);
+        ].toSorted(compareStrings);
         let status = "classified";
         if (classifications.size === 0 && conflictIds.length === 0) {
             status = "unknown";
@@ -256,18 +269,22 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
             end,
             status,
             classifications: sortedClassifications,
-            runtime: [...new Set(values.flatMap(({ runtime }) => (runtime ? [runtime] : [])))].sort((left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)),
+            runtime: [
+                ...new Set(values.flatMap(({ runtime: runtimeKind }) => (runtimeKind ? [runtimeKind] : []))),
+            ].toSorted((left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)),
             annotationIds: [
                 ...new Set(values.flatMap(({ annotationId }) => (annotationId ? [annotationId] : []))),
-            ].sort(compareStrings),
+            ].toSorted(compareStrings),
             analysisIds: [
                 ...new Set(values.flatMap(({ analysisId }) => (analysisId ? [analysisId] : []))),
-            ].sort(compareStrings),
+            ].toSorted(compareStrings),
             runtimeIds: [
                 ...new Set(values.flatMap(({ runtimeId }) => (runtimeId ? [runtimeId] : []))),
-            ].sort(compareStrings),
+            ].toSorted(compareStrings),
             conflictIds,
-            regionIds: [...new Set(values.flatMap(({ regionId }) => (regionId ? [regionId] : [])))].sort(compareStrings),
+            regionIds: [
+                ...new Set(values.flatMap(({ regionId }) => (regionId ? [regionId] : []))),
+            ].toSorted(compareStrings),
         };
         const previous = segments.at(-1);
         if (previous && previous.end === segment.start && segmentsEqual(previous, segment)) {
@@ -298,8 +315,8 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
         for (const classification of segment.classifications) {
             bytesByClassification[classification] += size;
         }
-        for (const runtime of segment.runtime) {
-            bytesByRuntimeCoverage[runtime] += size;
+        for (const runtimeKind of segment.runtime) {
+            bytesByRuntimeCoverage[runtimeKind] += size;
         }
         if (segment.status === "classified") {
             classifiedBytes += size;
@@ -324,10 +341,10 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
             bytesByClassification,
             bytesByRuntimeCoverage,
         },
-        unprojected: unprojected.sort((left, right) => left.kind.localeCompare(right.kind) ||
+        unprojected: unprojected.toSorted((left, right) => left.kind.localeCompare(right.kind) ||
             left.id.localeCompare(right.id) ||
             left.reason.localeCompare(right.reason)),
-        diagnostics: diagnostics.sort((left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)),
+        diagnostics: diagnostics.toSorted((left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)),
     };
 };
 //# sourceMappingURL=coverage-map.js.map

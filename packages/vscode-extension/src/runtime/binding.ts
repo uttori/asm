@@ -2,6 +2,10 @@ import * as path from "node:path";
 
 import type { EmulatorRuntimeBinding } from "../debug/session.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * Reuses an unambiguous explicit live launch for the Run/Debug build commands.
  * Saved picker bindings still take precedence. Runtime verification occurs at launch.
@@ -15,10 +19,10 @@ export const runtimeBindingFromLaunch = (
 ): EmulatorRuntimeBinding | undefined => {
   const bindings = new Map<string, EmulatorRuntimeBinding>();
   for (const configuration of configurations) {
-    if (!configuration || typeof configuration !== "object") {
+    if (!isRecord(configuration)) {
       continue;
     }
-    const config = configuration as Record<string, unknown>;
+    const config = configuration;
     if (config.type !== "uttori-asm" || config.request !== "launch" || config.backend !== "ares") {
       continue;
     }

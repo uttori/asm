@@ -13,10 +13,11 @@ export declare const encodeSqlitePayload: (json: string) => string | Buffer;
  */
 export declare const decodeSqlitePayload: (value: unknown) => string;
 /** Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
+ * Callers validate the decoded value before use.
  * @param {unknown} value Stored TEXT or a supported versioned BLOB.
- * @returns {T} Decoded semantic data; callers still validate the requested record type.
+ * @returns {unknown} Decoded semantic data.
  */
-export declare const parseSqlitePayload: <T>(value: unknown) => T;
+export declare const parseSqlitePayload: (value: unknown) => unknown;
 /** Exact external ID split. BLOB suffixes represent only canonical lowercase SHA-256 text. */
 export interface SqliteRuntimeIdentity {
     readonly prefix: string;

@@ -1,3 +1,11 @@
+/**
+ * Accepts a GSU ALT value. Hardware ALT is a 2-bit field.
+ * @param {number} value Candidate ALT state.
+ * @returns {boolean} True when `value` is 0, 1, 2, or 3.
+ */
+export function isSuperFxAltState(value) {
+    return value === 0 || value === 1 || value === 2 || value === 3;
+}
 const syntaxFor = (encoding) => {
     switch (encoding) {
         case "implied":
@@ -452,8 +460,8 @@ const fused = (mnemonic, opcode, mode, destinationRegister, sourceRegister, poin
 });
 /** Every canonical selector fusion emitted by MOVE/MOVES/MOVEB/MOVEW. */
 export const superFxFusedSpecifications = Object.freeze([
-    ...Array.from({ length: 16 }, (_, source) => Array.from({ length: 16 }, (_, destination) => fused("MOVE", [0x20 + source, 0x10 + destination], "registerRegister", destination, source))).flat(),
-    ...Array.from({ length: 16 }, (_, destination) => Array.from({ length: 16 }, (_, source) => fused("MOVES", [0x20 + destination, 0xb0 + source], "registerRegister", destination, source))).flat(),
+    ...Array.from({ length: 16 }, (_, source) => Array.from({ length: 16 }, (_item, destination) => fused("MOVE", [0x20 + source, 0x10 + destination], "registerRegister", destination, source))).flat(),
+    ...Array.from({ length: 16 }, (_, destination) => Array.from({ length: 16 }, (_item, source) => fused("MOVES", [0x20 + destination, 0xb0 + source], "registerRegister", destination, source))).flat(),
     ...Array.from({ length: 15 }, (_, index) => index + 1).flatMap((destination) => Array.from({ length: 12 }, (_, pointer) => [
         fused("MOVEW", [0x10 + destination, 0x40 + pointer], "registerRegisterIndirect", destination, undefined, pointer),
         fused("MOVEB", [0x10 + destination, 0x3d, 0x40 + pointer], "registerRegisterIndirect", destination, undefined, pointer),
@@ -531,6 +539,6 @@ export function buildSuperFxCatalog() {
     for (const entry of conveniences) {
         grouped.set(entry.mnemonic, entry);
     }
-    return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+    return [...grouped.values()].toSorted((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
 //# sourceMappingURL=superfx-spec.js.map

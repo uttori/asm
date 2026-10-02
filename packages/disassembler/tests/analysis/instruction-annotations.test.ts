@@ -298,7 +298,7 @@ test("state alternatives are canonicalized once per observation, retaining count
   t.deepEqual(
     buildInstructionAnalysisAnnotations(manifest, {
       ...emptyShards(),
-      runtime: [...runtime].reverse(),
+      runtime: [...runtime].toReversed(),
     }),
     projection,
     "input order does not change state ordering, evidence, or execution counts",

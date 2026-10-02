@@ -36,7 +36,8 @@ export interface SnesRelocationReference {
     readonly target: string;
     readonly offset: number;
     readonly expected: readonly number[];
-    readonly encoding: "long24" | "bank16" | "low16" | "bank8" | "relative8" | "relative16" | "length8" | "length16" | "count8" | "count16";
+    /** One of `RELOCATION_ENCODINGS`. Unknown values are rejected when the relocation is planned. */
+    readonly encoding: string;
     /** Original/current logical bank for bank16; complete logical instruction end for relative encodings. */
     readonly bank?: number;
     readonly instructionEnd?: number;

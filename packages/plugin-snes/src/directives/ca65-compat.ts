@@ -72,7 +72,8 @@ export function handleA16(session: Assembler): void {
  * @returns {void}
  */
 export function handleAccu(session: Assembler, words: readonly string[]): void {
-  const widthToken = words[1]?.trim();
+  const widthArgument = words.length > 1 ? words[1] : undefined;
+  const widthToken = widthArgument?.trim();
   if (widthToken === "8") {
     handleA8(session);
   } else if (widthToken === "16") {
@@ -113,7 +114,8 @@ export function handleI16(session: Assembler): void {
  * @returns {void}
  */
 export function handleIndex(session: Assembler, words: readonly string[]): void {
-  const widthToken = words[1]?.trim();
+  const widthArgument = words.length > 1 ? words[1] : undefined;
+  const widthToken = widthArgument?.trim();
   if (widthToken === "8") {
     handleI8(session);
   } else if (widthToken === "16") {

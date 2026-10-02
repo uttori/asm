@@ -1,4 +1,4 @@
-import { decodeScalarArray, encodeScalarArray, type ScalarArrayOptions } from "./data.js";
+import { decodeScalarArray, encodeScalarArray, type ScalarArrayOptions } from "./data-scalar.js";
 import { integer, unitCount } from "./validation.js";
 
 /** One non-overlapping scalar or LSB0 bit field in a fixed-size record. */

@@ -21,6 +21,10 @@ import {
 
 const INITIAL_PC = 0x80_8000;
 
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
 test("terminal detach accepts native EOF before OK and still terminates the owned process", async (t) => {
   const client = new FakeAresRspClient(fakeState());
   const original = client.request.bind(client);
@@ -503,7 +507,7 @@ class FakeAresRspClient implements AresGdbRspClient {
   }
 
   async continue(): Promise<void> {
-    const breakpoint = [...this.#state.breakpoints][0];
+    const breakpoint = elementAt([...this.#state.breakpoints], 0);
     if (breakpoint !== undefined) {
       this.#state.pb = breakpoint >>> 16;
       this.#state.pc = breakpoint & 0xffff;
@@ -587,11 +591,6 @@ const fixture: DebugBackendConformanceFixture = {
         { addressSpace: "snes.wram", sideEffectFree: true },
         { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
       ],
-      trace: {
-        addressSpaces: ["snes.cpu"],
-        maxBufferedEvents: 65_536,
-        maxBatchEvents: 240,
-      },
       capabilities: {
         pause: true,
         step: true,
@@ -606,14 +605,12 @@ const fixture: DebugBackendConformanceFixture = {
       architecture: "snes.spc700",
       addressSpaces: ["spc.aram"],
       memorySpaces: [],
-      trace: null,
       capabilities: { pause: false, step: false, registers: false, memory: false },
     },
     {
       architecture: "snes.superfx",
       addressSpaces: ["superfx.ram", "superfx.rom"],
       memorySpaces: [],
-      trace: null,
       capabilities: { pause: false, step: false, registers: false, memory: false },
     },
   ],
@@ -679,7 +676,7 @@ test("ares RSP backend rejects an incomplete target description", async (t) => {
     createClient: () => new FakeAresRspClient(fakeState(), '<target><reg name="pc"/></target>'),
   });
   const error = await t.throwsAsync(backend.connect());
-  t.regex(error?.message ?? "", /missing register 'a'/);
+  t.regex(error.message, /missing register 'a'/);
 });
 
 test("ares RSP backend requires the maintained fork's named-memory extension", async (t) => {
@@ -692,7 +689,7 @@ test("ares RSP backend requires the maintained fork's named-memory extension", a
       ),
   });
   const error = await t.throwsAsync(backend.connect());
-  t.regex(error?.message ?? "", /required debugger extensions/);
+  t.regex(error.message, /required debugger extensions/);
 });
 
 test("ares RSP backend preserves the stopped RSP session across logical reconnect", async (t) => {
@@ -709,10 +706,10 @@ test("ares RSP backend preserves the stopped RSP session across logical reconnec
   });
   await backend.connect({ reset: true });
   await backend.step(1, "instruction");
-  const [before] = await backend.stackFrames(1);
+  const before = elementAt(await backend.stackFrames(1), 0);
   await backend.disconnect({ terminate: false });
   await backend.connect({ reset: false });
-  const [after] = await backend.stackFrames(1);
+  const after = elementAt(await backend.stackFrames(1), 0);
   t.is(clients, 1);
   t.deepEqual(after?.pc, before?.pc);
   await backend.disconnect({ terminate: true });
@@ -821,11 +818,12 @@ test("ares RSP backend reads only advertised named storage and chunks bounded pa
   await backend.disconnect({ terminate: true });
 });
 
+const backendFor = (response: string) =>
+  new AresRspDebugBackend({
+    createClient: () => new FakeAresRspClient(fakeState(), targetXml, undefined, () => response),
+  });
+
 test("ares RSP backend rejects failed or malformed named-memory replies and reports short reads", async (t) => {
-  const backendFor = (response: string) =>
-    new AresRspDebugBackend({
-      createClient: () => new FakeAresRspClient(fakeState(), targetXml, undefined, () => response),
-    });
   const address = {
     architecture: "snes.65816",
     addressSpace: "snes.wram",
@@ -901,11 +899,19 @@ test("capture context binds the runtime identity and holds the setup boundary", 
   const original = client.request.bind(client);
   const commands: string[] = [];
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriContext:")) {return original(command);}
+    if (!command.startsWith("qUttoriContext:")) {
+      return original(command);
+    }
     commands.push(command);
-    if (command.startsWith("qUttoriContext:prepare:")) {return "prepared";}
-    if (command.startsWith("qUttoriContext:start:")) {return "recording";}
-    if (command === "qUttoriContext:abort") {return "aborted";}
+    if (command.startsWith("qUttoriContext:prepare:")) {
+      return "prepared";
+    }
+    if (command.startsWith("qUttoriContext:start:")) {
+      return "recording";
+    }
+    if (command === "qUttoriContext:abort") {
+      return "aborted";
+    }
     return "";
   };
   const nativeFileIdentity = { romSha256: "a".repeat(64), executableSha256: "b".repeat(64) };

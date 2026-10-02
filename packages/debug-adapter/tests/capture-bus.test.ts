@@ -171,7 +171,7 @@ test("scope negotiation binds the reserve and requires explicit bus positions", 
   t.throws(() =>
     validateCaptureCapabilities({ ...busCapabilities, requiredReserveBytes: 71 }, busScope),
   );
-  t.throws(() => validateCaptureRequest({ operation: "capabilities", scope: "bus" } as never));
+  t.throws(() => validateCaptureRequest({ operation: "capabilities", scope: "bus" }));
   t.notThrows(() =>
     validateCaptureRequest({ operation: "start", scope: busScope, bufferBytes: 4718656 }),
   );
@@ -282,7 +282,7 @@ test("bus recording checkpoints and recovers separate bus records without instru
   await t.throwsAsync(exportCaptureJson(file, path.join(root, "bad.json")), {
     message: /Bus capture cannot/,
   });
-  t.deepEqual((await readdir(root)).sort(), ["bus.act2", "empty.act2"]);
+  t.deepEqual((await readdir(root)).toSorted(), ["bus.act2", "empty.act2"]);
   const bytes = await readFile(file);
   const firstAck = bytes.indexOf(Buffer.from("ACK2"));
   const secondData = bytes.indexOf(Buffer.from("ACT2"), firstAck);

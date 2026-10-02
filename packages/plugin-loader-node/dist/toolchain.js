@@ -4,6 +4,29 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
+/**
+ * Accepts a JSON object. Arrays and null are not package manifests.
+ * @param {unknown} value Parsed JSON.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+ * Reads a package.json dependency map. A missing map contributes no dependencies.
+ * @param {unknown} value `dependencies` or `optionalDependencies`.
+ * @param {string} root Package directory, used in the error.
+ * @returns {Record<string, unknown>} Dependency names. Values are ignored except for object shape.
+ */
+function dependencyMap(value, root) {
+    if (value === undefined) {
+        return {};
+    }
+    if (!isRecord(value)) {
+        throw new Error(`Tool package dependency map is invalid: ${root}`);
+    }
+    return value;
+}
 /** Source-mode and packaged entry points both resolve to an owning package, never to repository HEAD. */
 function packageRoot(file) {
     let directory = path.dirname(file);
@@ -16,6 +39,7 @@ function packageRoot(file) {
     }
     return fs.realpathSync(directory);
 }
+const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 /**
  * Hash owning packages and installed runtime dependencies, including dirty source, encoders and native
  * modules. Hosts include their own entry point so bundled code is covered as well. This is conservative:
@@ -25,22 +49,27 @@ export function fingerprintNodeToolchain(moduleFiles, bundles = []) {
     const seen = new Set();
     const packages = [];
     let totalBytes = 0, totalFiles = 0;
-    const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
     const visitPackage = (root) => {
         if (seen.has(root)) {
             return;
         }
         seen.add(root);
         const packageFile = path.join(root, "package.json");
-        const manifest = JSON.parse(fs.readFileSync(packageFile, "utf8"));
-        if (!manifest.name || !manifest.version) {
+        const parsed = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+        if (!isRecord(parsed) ||
+            typeof parsed.name !== "string" ||
+            !parsed.name ||
+            typeof parsed.version !== "string" ||
+            !parsed.version) {
             throw new Error(`Tool package needs a name and version: ${root}`);
         }
+        const dependencies = dependencyMap(parsed.dependencies, root);
+        const optionalDependencies = dependencyMap(parsed.optionalDependencies, root);
         const files = [];
         const visit = (directory) => {
             for (const entry of fs
                 .readdirSync(directory, { withFileTypes: true })
-                .sort((a, b) => Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)))) {
+                .toSorted((a, b) => Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)))) {
                 if ([
                     "node_modules",
                     ".git",
@@ -74,15 +103,15 @@ export function fingerprintNodeToolchain(moduleFiles, bundles = []) {
         };
         visit(root);
         packages.push({
-            name: manifest.name,
-            version: manifest.version,
+            name: parsed.name,
+            version: parsed.version,
             sha256: hash(canonicalJson(files)),
         });
         const resolve = createRequire(packageFile).resolve;
         for (const dependency of Object.keys({
-            ...manifest.dependencies,
-            ...manifest.optionalDependencies,
-        }).sort()) {
+            ...dependencies,
+            ...optionalDependencies,
+        }).toSorted()) {
             // Reading package contents does not select a require/import entry point. Import-only and
             // subpath-only packages can deliberately omit the CommonJS root export.
             const directory = resolve
@@ -98,10 +127,12 @@ export function fingerprintNodeToolchain(moduleFiles, bundles = []) {
                 entry = resolve(dependency);
             }
             catch (error) {
-                if (Object.hasOwn(manifest.optionalDependencies ?? {}, dependency)) {
+                if (Object.hasOwn(optionalDependencies, dependency)) {
                     continue;
                 }
-                throw new Error(`Cannot fingerprint runtime dependency ${dependency} of ${manifest.name}.`, { cause: error });
+                throw new Error(`Cannot fingerprint runtime dependency ${dependency} of ${parsed.name}.`, {
+                    cause: error,
+                });
             }
             visitPackage(packageRoot(entry));
         }

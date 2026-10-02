@@ -91,15 +91,16 @@ export function renderStableFrameAtlas(
     }
     native.forEach((tile, index) => {
       const source = JSON.stringify([name, index]);
-      const rectangle = segment.tiles[index];
-      if (!rectangle) {
+      const tileSlot =
+        index >= 0 && index < segment.tiles.length ? segment.tiles[index] : undefined;
+      if (!tileSlot) {
         throw new Error(`Missing native tiles: ${name}.`);
       }
       sources.set(source, tile);
       placements.push({
         id: `strip:${source}`,
         source,
-        ...rectangle,
+        ...tileSlot,
         transparentIndex: null,
         indexMap: Array.from({ length: 16 }, (_, i) => (i === 0 ? 0 : segment.palette * 16 + i)),
       });
@@ -115,7 +116,10 @@ export function renderStableFrameAtlas(
       if (p.external) {
         continue;
       } // Only validated blank references are read-only outside owned storage.
-      const segment = layout.segments[p.segment];
+      const segment =
+        typeof p.segment === "string" && Object.hasOwn(layout.segments, p.segment)
+          ? layout.segments[p.segment]
+          : undefined;
       if (!segment) {
         throw new Error(`Unknown tile reference in ${frame.id}:${p.id}.`);
       }

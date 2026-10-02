@@ -129,7 +129,7 @@ export class AddressToLineMapping {
     serializableRanges() {
         return this.ranges
             .map(({ fileIdx, ...range }) => ({ ...range, source: this.fileList[fileIdx]?.name ?? "" }))
-            .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace) ||
+            .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace) ||
             left.architecture.localeCompare(right.architecture) ||
             left.start - right.start ||
             left.end - right.end ||

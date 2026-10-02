@@ -83,11 +83,12 @@ function mappedIndex(index: number, map?: readonly (number | null)[]): number {
   if (!map) {
     return index;
   }
-  const value = map[index];
-  if (value === undefined || value === null) {
+  const mappedSlot =
+    Number.isInteger(index) && index >= 0 && index < map.length ? map[index] : undefined;
+  if (mappedSlot === undefined || mappedSlot === null) {
     throw new RangeError(`Unmapped palette index ${index}.`);
   }
-  return integer(value, "Mapped palette index", 0, 255);
+  return integer(mappedSlot, "Mapped palette index", 0, 255);
 }
 
 /** Extract an owned index buffer and undo display flips; never changes the source image.

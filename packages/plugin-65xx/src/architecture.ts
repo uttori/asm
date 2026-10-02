@@ -37,6 +37,72 @@ const absoluteToDirect: Readonly<Partial<Record<AddressingMode, AddressingMode>>
   absoluteIndexedIndirect: "indexedIndirectX",
 };
 
+/** Every addressing mode. A missing key fails typechecking when the mode union grows. */
+const addressingModes = {
+  implied: true,
+  accumulator: true,
+  immediate: true,
+  zeroPage: true,
+  zeroPageIndexedX: true,
+  zeroPageIndexedY: true,
+  absolute: true,
+  absoluteIndexedX: true,
+  absoluteIndexedY: true,
+  absoluteLongIndexedX: true,
+  indirect: true,
+  zeroPageIndirect: true,
+  zeroPageIndirectLong: true,
+  indexedIndirectX: true,
+  indirectIndexedY: true,
+  absoluteIndexedIndirect: true,
+  zeroPageIndirectIndexedZ: true,
+  stackRelative: true,
+  stackRelativeIndirectIndexedY: true,
+  relative: true,
+  relative16: true,
+  zeroPageRelative: true,
+  accumulatorRelative: true,
+  zeroPageImmediate: true,
+  specialPage: true,
+  blockTransfer: true,
+  immediateZeroPage: true,
+  immediateZeroPageIndexedX: true,
+  immediateAbsolute: true,
+  immediateAbsoluteIndexedX: true,
+  basePageIndirectIndexedZ: true,
+  quadAccumulator: true,
+} satisfies Record<AddressingMode, true>;
+
+/**
+ * Accepts a classified 65xx addressing mode.
+ * @param {string} value Operand mode string.
+ * @returns {boolean} True when `value` is a known mode.
+ */
+function isAddressingMode(value: string): value is AddressingMode {
+  for (const mode of Object.keys(addressingModes)) {
+    if (value === mode) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Looks up a zp/absolute twin. Unknown mode strings have no twin.
+ * @param {Readonly<Partial<Record<AddressingMode, AddressingMode>>>} table Width-promotion map.
+ * @param {string | undefined} mode Classified mode, which may be outside the mode union.
+ * @returns {AddressingMode | undefined} The paired mode, when one exists.
+ */
+function mappedAddressingMode(
+  table: Readonly<Partial<Record<AddressingMode, AddressingMode>>>,
+  mode: string | undefined,
+): AddressingMode | undefined {
+  if (mode === undefined || !isAddressingMode(mode)) {
+    return undefined;
+  }
+  return table[mode];
+}
+
 const aliasToMnemonic = new Map<string, string>();
 for (const form of nmos6502DecodeTable) {
   for (const alias of form.aliases ?? []) {
@@ -197,19 +263,41 @@ export class Arch65xx implements ArchitectureEncoder {
     return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
 
+  /**
+   * Estimates the size of a resolved instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {number} The estimated size in bytes.
+   */
   estimateInstruction(instruction: LoweredInstruction): number {
     return this.estimateResolved(instruction.mnemonic, instruction.loweredOperand);
   }
 
+  /**
+   * Encodes a resolved instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {boolean} True if encoded.
+   */
   encodeInstruction(instruction: LoweredInstruction): boolean {
     return this.encodeResolved(instruction.mnemonic, instruction.loweredOperand);
   }
 
+  /**
+   * Estimates the size of a resolved instruction.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {number} The estimated size in bytes.
+   */
   private estimateResolved(rawMnemonic: string, operand: LoweredOperand): number {
     const resolved = this.resolveForm(rawMnemonic, operand);
     return resolved ? modeSize(resolved) : 0;
   }
 
+  /**
+   * Encodes a resolved instruction.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {boolean} True if encoded.
+   */
   private encodeResolved(rawMnemonic: string, operand: LoweredOperand): boolean {
     const resolved = this.resolveForm(rawMnemonic, operand);
     if (!resolved) {
@@ -322,6 +410,12 @@ export class Arch65xx implements ArchitectureEncoder {
     return false;
   }
 
+  /**
+   * Reads compound values from operands.
+   * @param {InstructionForm} form The instruction form.
+   * @param {readonly string[]} operands The operands.
+   * @returns {readonly number[]} The compound values.
+   */
   private readCompoundValues(
     form: InstructionForm,
     operands: readonly string[],
@@ -405,11 +499,24 @@ export class Arch65xx implements ArchitectureEncoder {
           ),
         ];
       }
+      case "none":
+      case "relative16":
+      case "relative8":
+      case "special-page":
+      case "unsigned16-le":
+      case "unsigned24-le":
+      case "unsigned8":
       default:
         return [];
     }
   }
 
+  /**
+   * Resolves a form for a mnemonic and operand.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {InstructionForm | undefined} The resolved form.
+   */
   private resolveForm(rawMnemonic: string, operand: LoweredOperand): InstructionForm | undefined {
     const parsed = parseMnemonic(rawMnemonic);
     let mnemonic = parsed.mnemonic;
@@ -450,7 +557,7 @@ export class Arch65xx implements ArchitectureEncoder {
       throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
     }
 
-    let mode = operand.mode as AddressingMode | undefined;
+    let mode = operand.mode;
     if (operand.raw.trim().toUpperCase() === "A") {
       mode = "accumulator";
     }
@@ -480,8 +587,8 @@ export class Arch65xx implements ArchitectureEncoder {
     }
 
     if (forcedWidth) {
-      const byteMode = mode ? absoluteToDirect[mode] : undefined;
-      const wordMode = mode ? directToAbsolute[mode] : undefined;
+      const byteMode = mappedAddressingMode(absoluteToDirect, mode);
+      const wordMode = mappedAddressingMode(directToAbsolute, mode);
       const alreadyRequestedWidth =
         (forcedWidth === 1 && mode?.startsWith("zeroPage")) ||
         (forcedWidth === 2 &&
@@ -491,13 +598,14 @@ export class Arch65xx implements ArchitectureEncoder {
           `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode}.`,
         );
       }
-      mode =
-        forcedWidth === 1 ? (absoluteToDirect[mode!] ?? mode) : (directToAbsolute[mode!] ?? mode);
+      const promoted = forcedWidth === 1 ? byteMode : wordMode;
+      mode = promoted ?? mode;
     }
 
     let form = forms.find((entry) => entry.mode === mode);
-    if (!form && mode && directToAbsolute[mode]) {
-      form = forms.find((entry) => entry.mode === directToAbsolute[mode]);
+    const widened = mappedAddressingMode(directToAbsolute, mode);
+    if (!form && widened) {
+      form = forms.find((entry) => entry.mode === widened);
     }
     if (!form) {
       const accepted = forms.map((entry) => entry.mode).join(", ");
@@ -508,6 +616,14 @@ export class Arch65xx implements ArchitectureEncoder {
     return form;
   }
 
+  /**
+   * Reads an expression value.
+   * @param {string} expression The expression.
+   * @param {1 | 2 | 3} width The width.
+   * @param {string} description The description.
+   * @param {boolean} immediate Whether the expression is immediate.
+   * @returns {number} The value.
+   */
   private readExpressionValue(
     expression: string,
     width: 1 | 2 | 3,
@@ -531,6 +647,13 @@ export class Arch65xx implements ArchitectureEncoder {
     return value & maximum;
   }
 
+  /**
+   * Reads a branch delta.
+   * @param {LoweredOperand} operand The operand.
+   * @param {number} relativeBaseOffset The relative base offset.
+   * @param {1 | 2} width The width.
+   * @returns {number} The branch delta.
+   */
   private readBranchDelta(
     operand: LoweredOperand,
     relativeBaseOffset: number,
@@ -543,6 +666,13 @@ export class Arch65xx implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Reads a branch expression.
+   * @param {string} expression The expression.
+   * @param {number} relativeBaseOffset The relative base offset.
+   * @param {1 | 2} width The width.
+   * @returns {number} The branch expression.
+   */
   private readBranchExpression(
     expression: string,
     relativeBaseOffset: number,

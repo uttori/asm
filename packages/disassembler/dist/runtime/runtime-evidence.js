@@ -9,7 +9,7 @@ const emptyCounts = () => ({
     evidence: 0,
     imports: 0,
 });
-const sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+const sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 const stateValueKey = (value) => `${typeof value}:${String(value)}`;
 const conflictReport = (runtime) => {
     const observations = [];
@@ -98,10 +98,10 @@ const conflictReport = (runtime) => {
                 records: sortedUnique(entries.map((entry) => entry.record)),
                 evidence: sortedUnique(entries.flatMap((entry) => entry.evidence)),
             }))
-                .sort((left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value))),
+                .toSorted((left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value))),
         });
     }
-    return conflicts.sort((left, right) => left.id.localeCompare(right.id));
+    return conflicts.toSorted((left, right) => left.id.localeCompare(right.id));
 };
 const explanationReport = (shards) => {
     const runtimeEvidence = new Set(shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id));
@@ -111,7 +111,7 @@ const explanationReport = (shards) => {
         if (evidence.length === 0) {
             continue;
         }
-        const stateFields = Object.keys(annotation.state ?? {}).sort();
+        const stateFields = Object.keys(annotation.state ?? {}).toSorted();
         explanations.push({
             recordId: annotation.id,
             detail: stateFields.length > 0
@@ -136,9 +136,9 @@ const explanationReport = (shards) => {
             evidence: sortedUnique(evidence),
         });
     }
-    return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
+    return explanations.toSorted((left, right) => left.recordId.localeCompare(right.recordId));
 };
-const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
+const mergeRecords = (kind, prior, incoming, added, updated, existing, combine) => {
     // A PC-only import usually leaves the much larger CFG and annotation collections untouched.
     // Reuse their readonly arrays instead of indexing and copying every unrelated record.
     if (incoming.length === 0) {
@@ -154,22 +154,11 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
         else if (canonicalEquals(current, record)) {
             existing[kind]++;
         }
-        else if (kind === "analysis" &&
-            "kind" in current &&
-            "kind" in record &&
-            current.kind === "target-override" &&
-            record.kind === "target-override" &&
-            current.id.startsWith("runtime:target-override:")) {
-            const left = current;
-            const right = record;
-            if (left.addressSpace !== right.addressSpace || left.address !== right.address) {
-                throw new Error(`Runtime target override '${record.id}' changed its control-flow site.`);
+        else if (combine) {
+            const merged = combine(current, record);
+            if (!merged) {
+                throw new Error(`Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`);
             }
-            const merged = {
-                ...left,
-                targets: [...new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
-                evidence: sortedUnique([...left.evidence, ...right.evidence]),
-            };
             if (canonicalEquals(current, merged)) {
                 existing[kind]++;
             }
@@ -214,7 +203,21 @@ export const mergeRuntimeEvidence = (shards, batch) => {
     const updated = emptyCounts();
     const existing = emptyCounts();
     const merged = {
-        analysis: mergeRecords("analysis", shards.analysis, batch.analysis ?? [], added, updated, existing),
+        analysis: mergeRecords("analysis", shards.analysis, batch.analysis ?? [], added, updated, existing, (current, record) => {
+            if (current.kind !== "target-override" ||
+                record.kind !== "target-override" ||
+                !current.id.startsWith("runtime:target-override:")) {
+                return undefined;
+            }
+            if (current.addressSpace !== record.addressSpace || current.address !== record.address) {
+                throw new Error(`Runtime target override '${record.id}' changed its control-flow site.`);
+            }
+            return {
+                ...current,
+                targets: [...new Set([...current.targets, ...record.targets])].toSorted((a, b) => a - b),
+                evidence: sortedUnique([...current.evidence, ...record.evidence]),
+            };
+        }),
         annotations: mergeRecords("annotations", shards.annotations, batch.annotations ?? [], added, updated, existing),
         labels: mergeRecords("labels", shards.labels, batch.labels ?? [], added, updated, existing),
         comments: mergeRecords("comments", shards.comments, batch.comments ?? [], added, updated, existing),

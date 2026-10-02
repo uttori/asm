@@ -93,7 +93,7 @@ test("trace memory loss and access counts have explicit bounds", (t) => {
       message: /memory loss/,
     });
   }
-  for (const memoryAccesses of [null, {}, Array(257).fill(access)]) {
+  for (const memoryAccesses of [null, {}, Array.from({ length: 257 }, () => access)]) {
     t.throws(() => validateDebugTraceDetails([{ ...instruction, memoryAccesses }], 1), {
       message: /access bound/,
     });
@@ -122,7 +122,7 @@ test("trace bus operations reject invalid addresses, widths, actors, and DMA cha
       { actor: "dma", channel: -1 },
       { actor: "dma", channel: 8 },
       { actor: "hdma", channel: 0.5 },
-    ].map((overrides) => ({ ...access, ...overrides })),
+    ].map((overrides) => Object.assign({}, access, overrides)),
   ];
   for (const busOperation of invalid) {
     t.throws(

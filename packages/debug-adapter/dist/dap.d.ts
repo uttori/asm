@@ -48,11 +48,6 @@ export interface DebugAdapterSessionOptions {
  * @returns {string} Stable transport string.
  */
 export declare const formatDebugAddress: (address: DebugAddress) => string;
-/**
- * Parses an address produced by `formatDebugAddress`.
- * @param {string} reference Qualified address string.
- * @returns {DebugAddress | undefined} Parsed address, or undefined for malformed input.
- */
 export declare const parseDebugAddress: (reference: string) => DebugAddress | undefined;
 /**
  * Emulator-neutral DAP session. It translates protocol requests into the

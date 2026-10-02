@@ -16,6 +16,58 @@ import {
   type ResearchAnalysisRecord,
 } from "@uttori/asm-disassembler";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((item): item is string => typeof item === "string");
+}
+
+function isProjectLabel(value: unknown): value is ProjectLabel {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.addressSpace !== "string" ||
+    typeof value.address !== "number" ||
+    typeof value.name !== "string" ||
+    !isStringArray(value.evidence)
+  ) {
+    return false;
+  }
+  return (
+    (value.sourceName === undefined || typeof value.sourceName === "string") &&
+    (value.aliases === undefined || isStringArray(value.aliases)) &&
+    (value.suppressed === undefined || typeof value.suppressed === "boolean") &&
+    (value.analysisEntryPoint === undefined || typeof value.analysisEntryPoint === "boolean")
+  );
+}
+
+function isResearchAnalysisRecord(value: unknown): value is ResearchAnalysisRecord {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.addressSpace !== "string" ||
+    !isStringArray(value.evidence)
+  ) {
+    return false;
+  }
+  if (value.kind === "target-override" || value.kind === "target-set") {
+    return (
+      Array.isArray(value.targets) &&
+      value.targets.every((target): target is number => typeof target === "number") &&
+      (value.kind === "target-override" || typeof value.name === "string") &&
+      (value.kind === "target-set" || typeof value.address === "number")
+    );
+  }
+  return (
+    typeof value.start === "number" &&
+    typeof value.end === "number" &&
+    typeof value.classification === "string" &&
+    typeof value.architecture === "string"
+  );
+}
+
 /** Omit the selection to list declarations; a selected change returns a proposal without saving it. */
 export type SourceResearchRequest =
   | {
@@ -101,11 +153,14 @@ export function prepareSourceResearch(
           ) {
             return [];
           }
+          if (!isResearchAnalysisRecord(decision.value)) {
+            throw new Error("Research analysis decision does not match its collection.");
+          }
           return [
             {
               path: file.path,
               collection: decision.collection,
-              value: decision.value as ResearchAnalysisRecord,
+              value: decision.value,
             },
           ];
         }),
@@ -145,7 +200,10 @@ export function prepareSourceResearch(
         if (decision.collection !== "labels" || !decision.value) {
           return [];
         }
-        const label = decision.value as ProjectLabel;
+        if (!isProjectLabel(decision.value)) {
+          throw new Error("Research label decision is not a project label.");
+        }
+        const label = decision.value;
         return [
           {
             id: label.id,

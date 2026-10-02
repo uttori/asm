@@ -44,7 +44,7 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
         let insert;
         options.onStage?.("Indexing CPU/DMA/HDMA bus facts in SQLite…");
         const importer = await store.indexTrace(async (index) => {
-            const importer = createRuntimeBusTraceImporter(source.metadata, context, {
+            const traceImporter = createRuntimeBusTraceImporter(source.metadata, context, {
                 index,
                 // finish() calls onSource before onRecord inside the publication transaction,
                 // after the entire source validates. This keeps the one-time namespace
@@ -70,12 +70,12 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
             });
             await source.read((chunk) => {
                 options.signal?.throwIfAborted();
-                importer.push(chunk);
+                traceImporter.push(chunk);
             });
             if (source.completedFile) {
                 completedFileIdentity = captureFileIdentity(source.completedFile);
             }
-            return importer;
+            return traceImporter;
         }, context.cacheMetrics?.index);
         options.onStage?.("Publishing validated bus activity…");
         options.signal?.throwIfAborted();

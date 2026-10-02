@@ -59,8 +59,26 @@ test("imported pixel ownership is independent of compressed Buffer input", (t) =
     const bytes = fixture(name);
     const input = Buffer.from(bytes);
     const document = pngImporter.import({ bytes: input, mediaType: "image/png" });
-    const value = document.value as { indexes?: Uint8Array; rgba?: Uint8Array };
-    const pixels = value.indexes ?? value.rgba!;
+    const value = document.value;
+    let pixels: Uint8Array | undefined;
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "indexes" in value &&
+      value.indexes instanceof Uint8Array
+    ) {
+      pixels = value.indexes;
+    } else if (
+      typeof value === "object" &&
+      value !== null &&
+      "rgba" in value &&
+      value.rgba instanceof Uint8Array
+    ) {
+      pixels = value.rgba;
+    }
+    if (!pixels) {
+      throw new Error("Expected indexed or RGBA pixels.");
+    }
     const before = pixels.slice();
     input.fill(0);
     t.deepEqual(pixels, before);

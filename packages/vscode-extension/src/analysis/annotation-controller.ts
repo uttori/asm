@@ -1,7 +1,6 @@
 /** Configurable, snapshot-backed source information using native editor decorations and hovers. */
 import * as path from "node:path";
 
-import type { AnalysisProjectManifest } from "@uttori/asm-disassembler";
 import {
   commands,
   ConfigurationTarget,
@@ -29,6 +28,34 @@ import {
   type EditorInformationConfiguration,
 } from "../editor-info/configuration.js";
 import {
+  type EditorProjectManifest,
+  EditorInformationProvider,
+  type EditorInformationService,
+  type EditorInformationHost,
+} from "../editor-info/provider.js";
+
+function isInformationPreset(value: string): value is keyof typeof INFORMATION_PRESETS {
+  return value === "compact" || value === "authoring" || value === "disassembly";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isEditorProjectManifest(value: unknown): value is EditorProjectManifest {
+  return (
+    isRecord(value) &&
+    typeof value.target === "string" &&
+    isRecord(value.rom) &&
+    typeof value.rom.contentSha256 === "string" &&
+    typeof value.rom.contentSize === "number" &&
+    Array.isArray(value.addressSpaces) &&
+    value.addressSpaces.every(
+      (space) => isRecord(space) && typeof space.id === "string" && typeof space.kind === "string",
+    )
+  );
+}
+import {
   INFORMATION_FIELDS,
   renderInformation,
   INFORMATION_SECTIONS,
@@ -36,15 +63,19 @@ import {
   templateRequirements,
 } from "../editor-info/format.js";
 import { informationOverlayGap } from "../editor-info/layout.js";
-import {
-  EditorInformationProvider,
-  type EditorInformationService,
-  type EditorInformationHost,
-} from "../editor-info/provider.js";
 import { EditorInformationWorker } from "../editor-info/worker-client.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import { discoverAnalysisDebugMapFiles } from "./debug-maps.js";
 import { analysisWorker } from "./worker-client.js";
+
+/** Host cancellation and dirty state can change during an awaited information query. */
+function cancellationRequested(token: CancellationToken): boolean {
+  return token.isCancellationRequested;
+}
+
+function documentDirty(document: TextDocument): boolean {
+  return document.isDirty;
+}
 
 /** Existing toolbar command ID remains stable for saved keybindings. */
 export const TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
@@ -72,19 +103,25 @@ export class AnalysisAnnotationController implements Disposable {
   readonly #explanations = new WeakMap<TextEditor, string>();
   #disposed = false;
 
+  /** Disposal can win the race against an in-flight diagnostics query. */
+  #isDisposed(): boolean {
+    return this.#disposed;
+  }
+
   constructor(provider?: EditorInformationService, workerFile?: string) {
     const host: EditorInformationHost = {
       discoverMaps: discoverAnalysisDebugMapFiles,
       projects: async () => {
-        const projects: { directory: string; manifest: AnalysisProjectManifest }[] = [];
+        const projects: { directory: string; manifest: EditorProjectManifest }[] = [];
         for (const directory of await findAnalysisProjectDirectories()) {
           try {
+            const manifest = await analysisWorker().request(directory, "manifest");
+            if (!isEditorProjectManifest(manifest)) {
+              throw new Error("Analysis manifest is unavailable.");
+            }
             projects.push({
               directory,
-              manifest: await analysisWorker().request<AnalysisProjectManifest>(
-                directory,
-                "manifest",
-              ),
+              manifest,
             });
           } catch {
             /* One unavailable analysis project must not hide valid build information. */
@@ -388,7 +425,7 @@ export class AnalysisAnnotationController implements Disposable {
         this.#dirtyFiles(),
       );
       // Diagnostics can involve asynchronous discovery too; disabled or newer editors win.
-      if (this.#generations.get(editor) !== generation || this.#disposed) {
+      if (this.#generations.get(editor) !== generation || this.#isDisposed()) {
         return;
       }
       let reason =
@@ -438,9 +475,9 @@ export class AnalysisAnnotationController implements Disposable {
       const currentConfiguration = this.#configuration(document.uri);
       if (
         this.#disposed ||
-        token.isCancellationRequested ||
+        cancellationRequested(token) ||
         version !== document.version ||
-        document.isDirty ||
+        documentDirty(document) ||
         !currentConfiguration.hoverEnabled ||
         JSON.stringify(currentConfiguration.rows) !== JSON.stringify(config.rows)
       ) {
@@ -476,7 +513,10 @@ export class AnalysisAnnotationController implements Disposable {
     const config = workspace.getConfiguration("asm", uri);
     const target = configurationTarget(uri);
     await config.update("editorInfo.preset", selected.label, target);
-    const preset = INFORMATION_PRESETS[selected.label as keyof typeof INFORMATION_PRESETS];
+    if (!isInformationPreset(selected.label)) {
+      return;
+    }
+    const preset = INFORMATION_PRESETS[selected.label];
     // Explicit lists override inherited custom templates as well as local ones.
     await config.update("editorInfo.inline.parts", [...preset.parts], target);
     await config.update("editorInfo.hover.rows", [...preset.rows], target);

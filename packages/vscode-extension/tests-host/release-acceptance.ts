@@ -6,6 +6,21 @@ import { sourceGit } from "@uttori/asm-disassembler";
 import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import * as vscode from "vscode";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** Read hover text from MarkdownString, a plain string, or a legacy code-block hover. */
+const hoverContentText = (content: string | object): string => {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (content instanceof vscode.MarkdownString) {
+    return content.value;
+  }
+  const code = Reflect.get(content, "value");
+  return typeof code === "string" ? code : "";
+};
+
 import { AnalysisWorkerClient } from "../src/analysis/worker-client.js";
 import { SourceProcessClient } from "../src/source/process-client.js";
 
@@ -27,9 +42,7 @@ async function eventually(
 /** Flatten the API's Markdown variants for assertions on visible hover documentation. */
 function hoverText(hovers: readonly vscode.Hover[]): string {
   return hovers
-    .flatMap((hover) =>
-      hover.contents.map((content) => (typeof content === "string" ? content : content.value)),
-    )
+    .flatMap((hover) => hover.contents.map((content) => hoverContentText(content)))
     .join("\n");
 }
 
@@ -45,39 +58,39 @@ async function languageFeatures(folder: vscode.WorkspaceFolder): Promise<void> {
       "vscode.executeDocumentSymbolProvider",
       uri,
     );
-    return symbols?.some((symbol) => symbol.name === "Entry") ?? false;
+    return symbols.some((symbol) => symbol.name === "Entry");
   }, "assembly symbols");
   const completions = await vscode.commands.executeCommand<vscode.CompletionList>(
     "vscode.executeCompletionItemProvider",
     uri,
     new vscode.Position(3, 4),
   );
-  assert.ok(completions?.items.length, "Instruction completion is empty.");
+  assert.ok(completions.items.length, "Instruction completion is empty.");
   const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
     "vscode.executeHoverProvider",
     uri,
     new vscode.Position(3, 3),
   );
-  assert.match(hoverText(hovers ?? []), /lda|accumulator/i);
+  assert.match(hoverText(hovers), /lda|accumulator/i);
   const definitions = await vscode.commands.executeCommand<readonly unknown[]>(
     "vscode.executeDefinitionProvider",
     uri,
     new vscode.Position(4, 7),
   );
-  assert.ok(definitions?.length, "Label definition is missing.");
+  assert.ok(definitions.length, "Label definition is missing.");
   const references = await vscode.commands.executeCommand<readonly unknown[]>(
     "vscode.executeReferenceProvider",
     uri,
     new vscode.Position(2, 2),
   );
-  assert.ok(references?.length, "Label references are missing.");
+  assert.ok(references.length, "Label references are missing.");
   const rename = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
     "vscode.executeDocumentRenameProvider",
     uri,
     new vscode.Position(2, 2),
     "RenamedEntry",
   );
-  assert.ok(rename?.size, "Rename returned no edits.");
+  assert.ok(rename.size, "Rename returned no edits.");
   assert.equal(await vscode.workspace.applyEdit(rename), true);
   assert.match(document.getText(), /bra renamedentry/i);
   const formatted = await vscode.commands.executeCommand<vscode.TextEdit[]>(
@@ -141,7 +154,7 @@ async function languageFeatures(folder: vscode.WorkspaceFolder): Promise<void> {
       consumer,
       new vscode.Position(2, 17),
     );
-    return /Retains the array without copying/.test(hoverText(result ?? []));
+    return /Retains the array without copying/.test(hoverText(result));
   }, "installed declaration JSDoc hover");
   assert.equal(
     fs.lstatSync(path.join(folder.uri.fsPath, "node_modules/@uttori/asm-core")).isSymbolicLink(),
@@ -271,9 +284,12 @@ export async function runReleaseAcceptance(
   }
   assert.equal(vscode.workspace.isTrusted, true);
   if (phase === "reopen") {
-    const saved = JSON.parse(
+    const saved: unknown = JSON.parse(
       fs.readFileSync(path.join(folder.uri.fsPath, "release-reopen.json"), "utf8"),
-    ) as { edited: string; content: string };
+    );
+    if (!isRecord(saved) || typeof saved.edited !== "string" || typeof saved.content !== "string") {
+      assert.fail("Reopen report must name the edited file and its content.");
+    }
     assert.equal(fs.readFileSync(saved.edited, "utf8"), saved.content);
     const doc = await vscode.workspace.openTextDocument(
       vscode.Uri.joinPath(folder.uri, "main.asm"),
@@ -305,7 +321,7 @@ export async function runReleaseAcceptance(
       "vscode.executeDocumentSymbolProvider",
       secondUri,
     );
-    return symbols?.some((symbol) => symbol.name === "SecondEntry") ?? false;
+    return symbols.some((symbol) => symbol.name === "SecondEntry");
   }, "second-folder symbols");
   console.log("Installed extension handles documents in multiple workspace folders.");
 }

@@ -10,7 +10,9 @@ export function checkRawBlockConsumption(mapping, blocks) {
         if (asset.format !== "raw" || asset.inputStart === undefined || asset.inputEnd === undefined) {
             continue;
         }
-        const file = mapping.fileList[asset.assetFileIdx];
+        const file = asset.assetFileIdx >= 0 && asset.assetFileIdx < mapping.fileList.length
+            ? mapping.fileList[asset.assetFileIdx]
+            : undefined;
         if (!file) {
             throw new Error("Raw consumption refers to a missing source dependency.");
         }

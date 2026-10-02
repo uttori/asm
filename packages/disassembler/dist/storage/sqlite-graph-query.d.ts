@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { AnalysisCallGraph } from "../analysis/analysis-graph.js";
+export declare function isCallGraph(value: unknown): value is AnalysisCallGraph;
 /** Index only graph ownership and relevant edges, with bounded payload decoding on rebuild.
  * Context/state payloads never remain in memory. Ownership uses the last function entry in each
  * evidence path. Missing owners remain explicit.

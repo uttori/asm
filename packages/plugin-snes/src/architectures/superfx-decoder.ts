@@ -11,6 +11,7 @@ import type {
 import {
   superFxFusedSpecifications,
   superFxOpcodeMatrix,
+  isSuperFxAltState,
   type SuperFxAltState,
   type SuperFxFusedInstructionSpecification,
   type SuperFxInstructionSpecification,
@@ -279,8 +280,10 @@ const truncated = (
   availableBytes: availableAt(context),
 });
 
-const prefixAlt = (opcode: number): SuperFxAltState | undefined =>
-  opcode >= 0x3d && opcode <= 0x3f ? ((opcode - 0x3c) as SuperFxAltState) : undefined;
+const prefixAlt = (opcode: number): SuperFxAltState | undefined => {
+  const alt = opcode - 0x3c;
+  return opcode >= 0x3d && opcode <= 0x3f && isSuperFxAltState(alt) ? alt : undefined;
+};
 
 /** Bounds-safe SuperFX decoder with canonical ALT-prefix fusion. */
 export class SuperFxDecoder implements ArchitectureDecoder<SuperFxDecodeState> {

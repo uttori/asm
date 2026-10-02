@@ -3,6 +3,10 @@ import { executeSourceOperation, type SourceOperation } from "@uttori/asm-cli/so
 const cancellation = new AbortController();
 let started = false;
 
+const finish = (value: unknown): void => {
+  process.send?.(value, () => process.disconnect?.());
+};
+
 /** One isolated operation per process; SQLite and native Git own recovery after an interrupted writer. */
 process.on(
   "message",
@@ -15,15 +19,10 @@ process.on(
       return;
     }
     started = true;
-    const finish = (value: unknown): void => {
-      process.send?.(value as Parameters<NonNullable<typeof process.send>>[0], () =>
-        process.disconnect?.(),
-      );
-    };
     void executeSourceOperation({
       ...message.operation,
       signal: cancellation.signal,
-      onProgress: (message) => process.send?.({ type: "progress", message }),
+      onProgress: (progress) => process.send?.({ type: "progress", message: progress }),
     }).then(
       (value) => finish({ type: "result", value }),
       (error) =>

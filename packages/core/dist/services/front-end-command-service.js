@@ -90,10 +90,11 @@ export class FrontEndCommandService {
     handleGlobalLabel(command) {
         const { words } = command;
         const directiveArgs = command.parsed.directiveArgs;
-        if ((directiveArgs?.name ?? words[0] ?? "").toLowerCase() !== "global") {
+        const leadingWord = words.length > 0 ? words[0] : undefined;
+        if ((directiveArgs?.name ?? leadingWord ?? "").toLowerCase() !== "global") {
             return false;
         }
-        const payload = directiveArgs?.args?.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
+        const payload = directiveArgs?.args.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
         if (payload.length < 1) {
             throw new Error("global requires a label name");
         }
@@ -143,10 +144,12 @@ export class FrontEndCommandService {
                 ? this.host.symbolScope.getScopedParentLabel(dotCount) || undefined
                 : namespace || undefined;
             this.host.symbolScope.handleLabelDefinition(labelName);
+            const consumedSpan = consumedCount >= 0 && consumedCount < command.source.tokenSpans.length
+                ? command.source.tokenSpans[consumedCount]
+                : undefined;
+            const firstSpan = command.source.tokenSpans.length > 0 ? command.source.tokenSpans[0] : undefined;
             this.host.recordSymbolDefinition("label", labelName, {
-                span: command.source.tokenSpans[consumedCount] ??
-                    command.source.tokenSpans[0] ??
-                    command.source.normalizedSpan,
+                span: consumedSpan ?? firstSpan ?? command.source.normalizedSpan,
                 containerName,
             });
             remainingWords.shift();

@@ -22,25 +22,29 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// src/editor-info/worker.ts
+// packages/vscode-extension/src/editor-info/worker.ts
 var import_node_worker_threads = require("node:worker_threads");
 
-// src/editor-info/provider.ts
+// packages/vscode-extension/src/editor-info/provider.ts
 var import_node_crypto2 = require("node:crypto");
 var import_promises = require("node:fs/promises");
 var path = __toESM(require("node:path"), 1);
 
-// ../core/src/debug-map.ts
+// packages/core/src/debug-map.ts
 var import_node_crypto = require("node:crypto");
 
-// ../core/src/canonical-json.ts
+// packages/core/src/canonical-json.ts
 var compareKeys = (a, b) => a.localeCompare(b);
+var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var canonicalValue = (value) => {
   if (typeof value !== "object" || value === null) {
     return value;
   }
   if (Array.isArray(value)) {
     return value.map(canonicalValue);
+  }
+  if (!isRecord(value)) {
+    return value;
   }
   const input = value;
   const result = {};
@@ -70,7 +74,7 @@ var canonicalValue = (value) => {
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// ../core/src/debug-map.ts
+// packages/core/src/debug-map.ts
 var DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 var DEBUG_MAP_SCHEMA_VERSION = 1;
 var sha256 = (value) => (0, import_node_crypto.createHash)("sha256").update(value).digest("hex");
@@ -78,7 +82,7 @@ var validateDebugMap = (map, output) => {
   const { fingerprint, ...payload } = map;
   const issues = [];
   if (map.format !== DEBUG_MAP_FORMAT) {
-    issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
+    issues.push(`Unsupported debug-map format '${map.format}'.`);
   }
   if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
     issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
@@ -98,7 +102,24 @@ var validateDebugMap = (map, output) => {
   return issues;
 };
 
-// src/editor-info/provider.ts
+// packages/vscode-extension/src/editor-info/provider.ts
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStoredDebugMap(value) {
+  return isRecord2(value) && isRecord2(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord2(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
+}
+function isAcceptedDebugMap(map) {
+  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
+}
+function isExecutionSummaryRow(value) {
+  return isRecord2(value) && typeof value.rangeIndex === "number" && typeof value.limited === "boolean" && Array.isArray(value.locations) && value.locations.every(
+    (location) => isRecord2(location) && typeof location.addressSpace === "string" && typeof location.address === "number" && typeof location.executionCount === "number" && Array.isArray(location.outputOffsets) && location.outputOffsets.every((offset) => typeof offset === "number")
+  );
+}
+function isAnnotationRow(value) {
+  return isRecord2(value) && typeof value.line === "number" && isRecord2(value.annotation) && typeof value.annotation.id === "string" && (value.annotation.detailsLimited === void 0 || typeof value.annotation.detailsLimited === "boolean");
+}
 var hash = (bytes) => (0, import_node_crypto2.createHash)("sha256").update(bytes).digest("hex");
 var rangeKey = (range) => JSON.stringify(range);
 var EditorInformationProvider = class {
@@ -226,13 +247,19 @@ var EditorInformationProvider = class {
           reject("Debug map exceeds the 64 MiB inspection budget.");
           continue;
         }
-        const map = JSON.parse(await (0, import_promises.readFile)(file, "utf8"));
-        const errors = validateDebugMap(map);
-        if (errors.length) {
+        const parsed = JSON.parse(await (0, import_promises.readFile)(file, "utf8"));
+        if (!isStoredDebugMap(parsed)) {
+          throw new Error(
+            "Debug map is not an object with fingerprint, output, sources, and ranges."
+          );
+        }
+        const errors = validateDebugMap(parsed);
+        if (errors.length || !isAcceptedDebugMap(parsed)) {
           reject(`Invalid debug map: ${errors.join("; ")}`);
           continue;
         }
-        const resolutionRoots = [.../* @__PURE__ */ new Set([path.dirname(file), ...roots])].sort(
+        const map = parsed;
+        const resolutionRoots = [.../* @__PURE__ */ new Set([path.dirname(file), ...roots])].toSorted(
           (a, b) => Number(file.startsWith(path.resolve(b) + path.sep)) - Number(file.startsWith(path.resolve(a) + path.sep)) || b.length - a.length
         );
         const sources = /* @__PURE__ */ new Map();
@@ -455,12 +482,11 @@ var EditorInformationProvider = class {
           if (missing.length) {
             const rows = await this.#request(
               `${identity}:counts:${JSON.stringify(missing)}`,
-              () => this.host.request(
-                project.directory,
-                "annotationSummary",
-                { ranges: missing }
-              )
+              () => this.host.request(project.directory, "annotationSummary", { ranges: missing })
             );
+            if (!Array.isArray(rows) || !rows.every(isExecutionSummaryRow)) {
+              throw new Error("Analysis execution summary is unavailable.");
+            }
             if (epoch !== this.#epoch) {
               return /* @__PURE__ */ new Map();
             }
@@ -478,6 +504,9 @@ var EditorInformationProvider = class {
               `${identity}:details:${JSON.stringify(missing)}`,
               () => this.host.request(project.directory, "annotations", { ranges: missing })
             );
+            if (!Array.isArray(rows) || !rows.every(isAnnotationRow)) {
+              throw new Error("Analysis annotations are unavailable.");
+            }
             if (epoch !== this.#epoch) {
               return /* @__PURE__ */ new Map();
             }
@@ -579,23 +608,70 @@ var EditorInformationProvider = class {
   }
 };
 
-// src/editor-info/worker.ts
+// packages/vscode-extension/src/editor-info/worker.ts
 if (!import_node_worker_threads.parentPort) {
   throw new Error("Source information worker needs its host message port.");
 }
 var port = import_node_worker_threads.parentPort;
 var sequence = 0;
 var pending = /* @__PURE__ */ new Map();
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringSet(value) {
+  if (!(value instanceof Set)) {
+    return false;
+  }
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+function isLineRange(value) {
+  return isRecord3(value) && typeof value.start === "number" && typeof value.end === "number";
+}
+function isRequirements(value) {
+  return isRecord3(value) && typeof value.counts === "boolean" && typeof value.bytes === "boolean" && typeof value.state === "boolean";
+}
+function isDiscoverMaps(value) {
+  return Array.isArray(value) && value.every(
+    (entry) => isRecord3(entry) && typeof entry.file === "string" && Array.isArray(entry.sourceRoots) && entry.sourceRoots.every((root) => typeof root === "string")
+  );
+}
+function isEditorProjectManifest(value) {
+  return isRecord3(value) && typeof value.target === "string" && isRecord3(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number" && Array.isArray(value.addressSpaces) && value.addressSpaces.every(
+    (space) => isRecord3(space) && typeof space.id === "string" && typeof space.kind === "string"
+  );
+}
+function isProjects(value) {
+  return Array.isArray(value) && value.every(
+    (entry) => isRecord3(entry) && typeof entry.directory === "string" && isEditorProjectManifest(entry.manifest)
+  );
+}
 function host(method, args = []) {
   const id = ++sequence;
   return new Promise((resolve2, reject) => {
-    pending.set(id, { resolve: (value) => resolve2(value), reject });
+    pending.set(id, { resolve: resolve2, reject });
     port.postMessage({ type: "host", id, method, args });
   });
 }
 var provider = new EditorInformationProvider({
-  discoverMaps: () => host("discoverMaps"),
-  projects: () => host("projects"),
+  discoverMaps: async () => {
+    const value = await host("discoverMaps");
+    if (!isDiscoverMaps(value)) {
+      throw new Error("Invalid source information map discovery.");
+    }
+    return value;
+  },
+  projects: async () => {
+    const value = await host("projects");
+    if (!isProjects(value)) {
+      throw new Error("Invalid source information projects.");
+    }
+    return value;
+  },
   request: (...args) => host("request", args)
 });
 var publishedRevision = -1;
@@ -620,18 +696,26 @@ var handleMessage = async (message) => {
         provider.configurationChanged();
         break;
       case "buildCompleted":
-        provider.buildCompleted(
-          ...message.args
-        );
+        if (message.args.length !== 2 || typeof message.args[0] !== "string" || typeof message.args[1] !== "string") {
+          throw new Error("Invalid buildCompleted arguments.");
+        }
+        provider.buildCompleted(message.args[0], message.args[1]);
         break;
       case "diagnostics":
-        value = await provider.diagnostics(
-          ...message.args
-        );
+        if (message.args.length !== 2 || typeof message.args[0] !== "string" || !isStringSet(message.args[1])) {
+          throw new Error("Invalid diagnostics arguments.");
+        }
+        value = await provider.diagnostics(message.args[0], message.args[1]);
         break;
       case "lines":
+        if (message.args.length !== 4 || typeof message.args[0] !== "string" || !Array.isArray(message.args[1]) || !message.args[1].every(isLineRange) || !isRequirements(message.args[2]) || !isStringSet(message.args[3])) {
+          throw new Error("Invalid lines arguments.");
+        }
         value = await provider.lines(
-          ...message.args
+          message.args[0],
+          message.args[1],
+          message.args[2],
+          message.args[3]
         );
         break;
       default:

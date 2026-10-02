@@ -37,8 +37,11 @@ const createDiagnosticContext = (
 test("assert passes a nonzero condition and ignores the message", (t) => {
   const seen: string[] = [];
   const ctx = createDiagnosticContext((expression) => {
-    t.is(typeof expression, "string");
-    seen.push(expression as string);
+    if (typeof expression !== "string") {
+      t.fail();
+      return false;
+    }
+    seen.push(expression);
     return true;
   });
 
@@ -50,8 +53,11 @@ test("assert passes a nonzero condition and ignores the message", (t) => {
 test("assert splits the message at the first top-level comma", (t) => {
   const seen: string[] = [];
   const ctx = createDiagnosticContext((expression) => {
-    t.is(typeof expression, "string");
-    seen.push(expression as string);
+    if (typeof expression !== "string") {
+      t.fail();
+      return false;
+    }
+    seen.push(expression);
     return true;
   });
 
@@ -320,8 +326,11 @@ test("misc registry dispatches assert, error, warn, and warnpc", (t) => {
     diagnostic: {
       session: {
         evaluateExpression: (expression) => {
-          t.is(typeof expression, "string");
-          evaluated = expression as string;
+          if (typeof expression !== "string") {
+            t.fail();
+            return false;
+          }
+          evaluated = expression;
           return true;
         },
         resolvedefines: (input) => input,

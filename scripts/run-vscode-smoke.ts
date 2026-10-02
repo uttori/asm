@@ -18,6 +18,13 @@ import {
 /** VS Code release matching the extension's declared minimum API and embedded Node 24 runtime. */
 const VSCODE_TEST_VERSION = "1.128.0";
 
+/** Parsed JSON must be a plain object before its fields are read. */
+function assertRecord(value: unknown, label: string): asserts value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} is not a JSON object.`);
+  }
+}
+
 /**
  * Install the actual archive into a disposable profile and test it in production extension mode.
  * A separate empty development extension supplies the test runner without replacing the installed
@@ -95,8 +102,16 @@ const testInstalledArchive = async (
         [npmCli, "pack", "--ignore-scripts", "--json", "--pack-destination", isolation],
         { cwd: path.resolve(directory), encoding: "utf8", env: npmEnvironment },
       );
-      const [{ filename }] = JSON.parse(packed) as { filename: string }[];
-      archives.push(path.join(isolation, filename));
+      const packedArchives: unknown = JSON.parse(packed);
+      if (!Array.isArray(packedArchives) || packedArchives.length !== 1) {
+        throw new Error(`npm pack in ${directory} did not report one archive.`);
+      }
+      const packedArchive: unknown = packedArchives[0];
+      assertRecord(packedArchive, `npm pack in ${directory}`);
+      if (typeof packedArchive.filename !== "string") {
+        throw new Error(`npm pack in ${directory} did not report an archive filename.`);
+      }
+      archives.push(path.join(isolation, packedArchive.filename));
     }
     fs.writeFileSync(path.join(workspace, "package.json"), '{"private":true,"type":"module"}\n');
     execFileSync(
@@ -263,11 +278,16 @@ const main = async (): Promise<void> => {
     if (process.platform === "darwin") {
       resources = path.resolve(path.dirname(vscodeExecutablePath), "../Resources");
     }
-    const actual = (
-      JSON.parse(fs.readFileSync(path.join(resources, "app/package.json"), "utf8")) as {
-        version: string;
-      }
-    ).version;
+    const editorPackage: unknown = JSON.parse(
+      fs.readFileSync(path.join(resources, "app/package.json"), "utf8"),
+    );
+    assertRecord(editorPackage, "VS Code package.json");
+    if (typeof editorPackage.version !== "string") {
+      throw new Error(
+        `Expected VS Code ${version}, found no version. Replace the stale test cache.`,
+      );
+    }
+    const actual = editorPackage.version;
     if (actual !== version) {
       throw new Error(
         `Expected VS Code ${version}, found ${actual}. Replace the stale test cache.`,
@@ -300,9 +320,10 @@ const main = async (): Promise<void> => {
             );
           }
         }
-        const manifest = JSON.parse(
+        const manifest: unknown = JSON.parse(
           fs.readFileSync(path.join(extensionDevelopmentPath, "package.json"), "utf8"),
-        ) as Record<string, unknown>;
+        );
+        assertRecord(manifest, "extension package.json");
         // VS Code assigns API ownership from the real module path; a symlinked
         // entry would not own the debugger contribution in this disposable root.
         fs.copyFileSync(
@@ -436,13 +457,14 @@ const main = async (): Promise<void> => {
               return;
             }
             try {
-              const result = JSON.parse(fs.readFileSync(resultFile, "utf8")) as {
-                success: boolean;
-                phase: string;
-                error?: string;
-              };
-              if (!result.success || result.phase !== phase) {
-                throw new Error(result.error ?? "Asset recovery did not complete its phase.");
+              const result: unknown = JSON.parse(fs.readFileSync(resultFile, "utf8"));
+              assertRecord(result, "asset recovery result");
+              if (result.success !== true || result.phase !== phase) {
+                throw new Error(
+                  typeof result.error === "string"
+                    ? result.error
+                    : "Asset recovery did not complete its phase.",
+                );
               }
               resolve();
             } catch (error) {
@@ -528,17 +550,17 @@ const main = async (): Promise<void> => {
         comments: [],
         regions: [],
         runtime: ["a", "b"].flatMap((source) =>
-            Array.from({ length: source === "a" ? 500 : 100 }, (_, index) => ({
-              id: `pc:${source}:${index}`,
-              kind: "runtime-execution" as const,
-              architecture: "snes.65816",
-              addressSpace: "snes.cpu",
-              address: 0x808000 + index,
-              size: 1,
-              count: 1,
-              evidence: [source],
-            })),
-          ),
+          Array.from({ length: source === "a" ? 500 : 100 }, (_, index) => ({
+            id: `pc:${source}:${index}`,
+            kind: "runtime-execution" as const,
+            architecture: "snes.65816",
+            addressSpace: "snes.cpu",
+            address: 0x808000 + index,
+            size: 1,
+            count: 1,
+            evidence: [source],
+          })),
+        ),
         imports: ["a", "b"].map((id) => ({
           id: `import:${id}`,
           format: "trace",

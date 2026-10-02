@@ -91,7 +91,6 @@ graphify-out/
 # IDE & Agent Files
 CLAUDE.md
 .cursor/
-.rtk/
 .vscode/
 !packages/vscode-extension/.vscode/
 !packages/vscode-extension/.vscode/launch.json

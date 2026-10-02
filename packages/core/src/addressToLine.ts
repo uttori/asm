@@ -244,7 +244,7 @@ export class AddressToLineMapping {
   serializableRanges(): readonly SerializableAddressRange[] {
     return this.ranges
       .map(({ fileIdx, ...range }) => ({ ...range, source: this.fileList[fileIdx]?.name ?? "" }))
-      .sort(
+      .toSorted(
         (left, right) =>
           left.addressSpace.localeCompare(right.addressSpace) ||
           left.architecture.localeCompare(right.architecture) ||

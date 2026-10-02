@@ -28,7 +28,8 @@ export class StructEngine {
             const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
             if (typed) {
                 const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
-                const count = typed[2] === undefined ? 1 : this.host.operandResolver.getnum(typed[2]);
+                const countText = typed.length > 2 ? typed[2] : undefined;
+                const count = countText === undefined ? 1 : this.host.operandResolver.getnum(countText);
                 if (!Number.isSafeInteger(count) || count < 1 || count * width > 0x10000) {
                     throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
                 }
@@ -40,7 +41,7 @@ export class StructEngine {
                     offset: currentStruct.offset,
                     width,
                     count,
-                    array: typed[2] !== undefined,
+                    array: countText !== undefined,
                 });
             }
             else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
@@ -144,16 +145,18 @@ export class StructEngine {
         const seen = new Set();
         for (let index = 1; index < words.length; index += 2) {
             const option = words[index].toLowerCase();
+            const parameterIndex = index + 1;
+            const parameter = parameterIndex < words.length ? words[parameterIndex] : undefined;
             if (!["align", "count", "firstindex"].includes(option) ||
                 seen.has(option) ||
-                words[index + 1] === undefined) {
+                parameter === undefined) {
                 if (words[1]?.toLowerCase() === "align") {
                     throw new Error("endstruct align requires a single alignment parameter.");
                 }
                 throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
             }
             seen.add(option);
-            const value = this.host.operandResolver.getnum(words[index + 1]);
+            const value = this.host.operandResolver.getnum(parameter);
             if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
                 throw new Error(option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`);
             }
@@ -193,11 +196,8 @@ export class StructEngine {
                 parentStruct.extensionSize = extSize;
             }
             this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
-            this.host.structs.set(currentStruct.name, currentStruct);
         }
-        else {
-            this.host.structs.set(currentStruct.name, currentStruct);
-        }
+        this.host.structs.set(currentStruct.name, currentStruct);
         this.host.restoreStructDefinition();
         this.host.currentStruct = null;
     }

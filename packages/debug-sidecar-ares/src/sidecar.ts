@@ -47,7 +47,10 @@ export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSi
   const values = new Map<string, string>();
   let fastBoot = true;
   for (let index = 0; index < arguments_.length; index++) {
-    const argument = arguments_[index];
+    const argument =
+      index >= 0 && index < arguments_.length && Object.hasOwn(arguments_, index)
+        ? arguments_[index]
+        : undefined;
     if (argument === undefined) {throw new Error("Ares sidecar arguments cannot contain holes.");}
     if (argument === "--no-fast-boot") {
       fastBoot = false;

@@ -1,4 +1,4 @@
-import { superFxFusedSpecifications, superFxOpcodeMatrix, } from "./superfx-spec.js";
+import { superFxFusedSpecifications, superFxOpcodeMatrix, isSuperFxAltState, } from "./superfx-spec.js";
 const word = (bytes, offset) => (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8);
 const register = (value) => ({ kind: "register", register: `R${value}` });
 const immediate = (value, width, signed = false) => ({
@@ -203,7 +203,10 @@ const truncated = (context, requiredBytes) => ({
     requiredBytes,
     availableBytes: availableAt(context),
 });
-const prefixAlt = (opcode) => opcode >= 0x3d && opcode <= 0x3f ? (opcode - 0x3c) : undefined;
+const prefixAlt = (opcode) => {
+    const alt = opcode - 0x3c;
+    return opcode >= 0x3d && opcode <= 0x3f && isSuperFxAltState(alt) ? alt : undefined;
+};
 /** Bounds-safe SuperFX decoder with canonical ALT-prefix fusion. */
 export class SuperFxDecoder {
     decode(context) {

@@ -17,6 +17,10 @@ import {
 const makeCommand = (command: string) =>
   createNormalizedCommand(command, command, command.trim().split(/\s+/), "test.asm", 1);
 
+/** Returns the indexed element, or undefined when the index is past the end. */
+const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
+  index >= 0 && index < items.length ? items[index] : undefined;
+
 test("binary-build mode skips source metadata collection", (t) => {
   const assembler = new Assembler(undefined, { collectSourceMetadata: false });
 
@@ -287,7 +291,7 @@ test("trace listener captures command and write events", (t) => {
   );
 
   const writeEvent = collector.events.find((event) => event.type === "write");
-  if (!writeEvent || writeEvent.type !== "write") {
+  if (!writeEvent) {
     t.fail("Expected a write trace event");
     return;
   }
@@ -691,7 +695,9 @@ test("expandOperand - handles resolvedefines errors", (t) => {
   const assembler = new Assembler();
 
   // Set up a stub for resolvedefines to throw an error
-  sinon.stub(assembler, "resolvedefines").throws(new Error("Define not found"));
+  const resolvedefinesStub = sinon
+    .stub(assembler, "resolvedefines")
+    .throws(new Error("Define not found"));
 
   // Call expandOperand with an operand that would trigger resolvedefines
   const { expanded, length } = assembler.operandResolver.expandOperand("SOME_DEFINE");
@@ -700,7 +706,6 @@ test("expandOperand - handles resolvedefines errors", (t) => {
   t.is(expanded, "SOME_DEFINE");
   t.is(length, 2); // Default length should be used
 
-  const resolvedefinesStub = assembler.resolvedefines as unknown as sinon.SinonStub;
   t.true(resolvedefinesStub.calledOnce);
   t.true(resolvedefinesStub.calledWith("SOME_DEFINE"));
 
@@ -880,7 +885,9 @@ test("expandOperand - handles math expressions that throw errors", (t) => {
 
   // Set up a math expression that will throw an error
   sinon.stub(assembler, "resolvedefines").returns("(1 + 2) * 3");
-  sinon.stub(assembler.mathCore, "math").throws(new Error("Math evaluation error"));
+  const mathStub = sinon
+    .stub(assembler.mathCore, "math")
+    .throws(new Error("Math evaluation error"));
 
   // Call expandOperand with the expression
   const { expanded, length } = assembler.operandResolver.expandOperand("(1 + 2) * 3");
@@ -889,7 +896,6 @@ test("expandOperand - handles math expressions that throw errors", (t) => {
   t.is(expanded, "(1 + 2) * 3");
   t.is(length, 2); // Default length should be used
 
-  const mathStub = assembler.mathCore.math as unknown as sinon.SinonStub;
   t.true(mathStub.calledOnce);
   t.true(mathStub.calledWith("(1 + 2) * 3"));
 });
@@ -1104,7 +1110,7 @@ test("getExpressionObjectSize - baseOnly parameter returns only base size", (t) 
 test("finalizeOutput - lorom mapper updates header at 0x7FC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
-  assembler.outputBytes = new Array(0x8000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x8000 }, () => 0);
 
   assembler.finalizeOutput();
 
@@ -1120,7 +1126,7 @@ test("finalizeOutput - lorom mapper updates header at 0x7FC0", (t) => {
 test("finalizeOutput - hirom mapper updates header at 0xFFC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "hirom";
-  assembler.outputBytes = new Array(0x10000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x10000 }, () => 0);
 
   assembler.finalizeOutput();
 
@@ -1136,7 +1142,7 @@ test("finalizeOutput - hirom mapper updates header at 0xFFC0", (t) => {
 test("finalizeOutput - exhirom mapper updates header at 0xFFC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exhirom";
-  assembler.outputBytes = new Array(0x10000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x10000 }, () => 0);
 
   assembler.finalizeOutput();
 
@@ -1152,7 +1158,7 @@ test("finalizeOutput - exhirom mapper updates header at 0xFFC0", (t) => {
 test("finalizeOutput - other mappers default to 0xFFC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "other";
-  assembler.outputBytes = new Array(0x10000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x10000 }, () => 0);
 
   assembler.finalizeOutput();
 
@@ -1168,7 +1174,7 @@ test("finalizeOutput - other mappers default to 0xFFC0", (t) => {
 test("finalizeOutput - ROM too small for header update", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
-  assembler.outputBytes = new Array(0x7fc0).fill(0); // Too small for lorom header
+  assembler.outputBytes = Array.from({ length: 0x7fc0 }, () => 0); // Too small for lorom header
 
   // Just verify the function doesn't throw an error
   t.notThrows(() => {
@@ -1180,7 +1186,7 @@ test("finalizeOutput - checksum calculation is correct", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
   // Create a small ROM with known values to verify checksum calculation
-  assembler.outputBytes = new Array(0x8000).fill(1); // All bytes are 1
+  assembler.outputBytes = Array.from({ length: 0x8000 }, () => 1); // All bytes are 1
 
   assembler.finalizeOutput();
 
@@ -1243,8 +1249,9 @@ test("getBinaryOutput - handles empty ROM data", (t) => {
 test("getBinaryOutput - slices to the correct length", (t) => {
   const assembler = new Assembler();
 
-  // Create an array with allocated but unused space
-  assembler.outputBytes = new Array(10);
+  // Create an array with allocated but unused space. Empty slots stay holes.
+  assembler.outputBytes = [];
+  assembler.outputBytes.length = 10;
   assembler.outputBytes.fill(0xff, 0, 5); // Only first 5 elements have meaningful data
 
   const result = assembler.getBinaryOutput();
@@ -1547,8 +1554,10 @@ test("handleInclude - adds file to included files set", (t) => {
 
 test("handleInclude - handles undefined filename", (t) => {
   const assembler = new Assembler();
+  const includeSource: { includeFile(filename: string | undefined): void } =
+    assembler.includeSource;
   const error = t.throws(() => {
-    assembler.includeSource.includeFile(undefined as unknown as string);
+    includeSource.includeFile(undefined);
   });
   t.is(error.message, "Invalid or missing filename");
 });
@@ -1573,8 +1582,8 @@ test("assemblefile - basic file assembly", (t) => {
   t.is(dispatchLoweredNodeStub.callCount, 2);
   const mnemonics = dispatchLoweredNodeStub
     .getCalls()
-    .map((call) => call.args[0]?.mnemonic?.toLowerCase());
-  t.deepEqual(mnemonics.sort(), ["lda", "sta"]);
+    .map((call) => call.args[0].mnemonic?.toLowerCase());
+  t.deepEqual(mnemonics.toSorted(), ["lda", "sta"]);
 
   // Cleanup
   readTextFileStub.restore();
@@ -1805,7 +1814,7 @@ test("asar apostrophe table mapping ''' = $2A is 0 bytes", (t) => {
 
 test("character mappings inside a macro apply on invoke, not on define", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x100).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x100 }, () => 0);
   assembler.processCommand("macro LoadFont()");
   assembler.processCommand("cleartable");
   assembler.processCommand("'A' = $10");
@@ -1834,7 +1843,7 @@ test("character mappings inside a macro apply on invoke, not on define", (t) => 
 
 test("last defined font macro does not leave its table active", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x100).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x100 }, () => 0);
   assembler.processCommand("macro FontA()");
   assembler.processCommand("cleartable");
   assembler.processCommand("'T' = $14");
@@ -4523,7 +4532,9 @@ test("directive runtime writeDataByLength - handles string length parameter", (t
   const write1Spy = sinon.spy(assembler, "write1");
 
   // Test with string length parameter (which the code comments indicate happens sometimes)
-  assembler.directiveRuntime.writeDataByLength("1" as unknown as number, 0xab);
+  const runtime: { writeDataByLength(len: number | string, value: number): void } =
+    assembler.directiveRuntime;
+  runtime.writeDataByLength("1", 0xab);
   t.true(write1Spy.calledOnceWith(0xab), "Should handle string length parameter");
 });
 
@@ -4547,7 +4558,9 @@ test("directive runtime writeDataByLength - throws on NaN length", (t) => {
   // Test with NaN length
   const error = t.throws(
     () => {
-      assembler.directiveRuntime.writeDataByLength("invalid" as unknown as number, 0xab);
+      const runtime: { writeDataByLength(len: number | string, value: number): void } =
+        assembler.directiveRuntime;
+      runtime.writeDataByLength("invalid", 0xab);
     },
     { instanceOf: Error },
   );
@@ -4878,7 +4891,10 @@ test("handleDataDirective - throws on empty or invalid params", (t) => {
   // Test with undefined params
   const error2 = t.throws(
     () => {
-      assembler.directiveRuntime.handleDataDirective("dw", undefined as unknown as string[]);
+      const runtime: {
+        handleDataDirective(type: string, params: string[] | null | undefined): void;
+      } = assembler.directiveRuntime;
+      runtime.handleDataDirective("dw", undefined);
     },
     { instanceOf: Error },
   );
@@ -4892,7 +4908,10 @@ test("handleDataDirective - throws on empty or invalid params", (t) => {
   // Test with null params
   const error3 = t.throws(
     () => {
-      assembler.directiveRuntime.handleDataDirective("dl", null as unknown as string[]);
+      const runtime: {
+        handleDataDirective(type: string, params: string[] | null | undefined): void;
+      } = assembler.directiveRuntime;
+      runtime.handleDataDirective("dl", null);
     },
     { instanceOf: Error },
   );
@@ -4906,7 +4925,10 @@ test("handleDataDirective - throws on empty or invalid params", (t) => {
   // Test with non-array params
   const error4 = t.throws(
     () => {
-      assembler.directiveRuntime.handleDataDirective("dd", "not an array" as unknown as string[]);
+      const runtime: {
+        handleDataDirective(type: string, params: string[] | string | null | undefined): void;
+      } = assembler.directiveRuntime;
+      runtime.handleDataDirective("dd", "not an array");
     },
     { instanceOf: Error },
   );
@@ -5132,9 +5154,12 @@ test("typed conditional nodes execute the first matching branch", (t) => {
     executed.push(command.command);
   });
 
-  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    ["if !state == 0", "db $00", "elseif !state == 1", "db $01", "else", "db $02", "endif"],
-    "conditional.asm",
+  const node = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      ["if !state == 0", "db $00", "elseif !state == 1", "db $01", "else", "db $02", "endif"],
+      "conditional.asm",
+      0,
+    ),
     0,
   );
 
@@ -5199,19 +5224,22 @@ test("typed conditional nodes support nested branch execution", (t) => {
     executed.push(command.command);
   });
 
-  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    [
-      "if !outer == 1",
-      "  if !inner == 1",
-      "    db $11",
-      "  else",
-      "    db $22",
-      "  endif",
-      "else",
-      "  db $33",
-      "endif",
-    ],
-    "nested-conditional.asm",
+  const node = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      [
+        "if !outer == 1",
+        "  if !inner == 1",
+        "    db $11",
+        "  else",
+        "    db $22",
+        "  endif",
+        "else",
+        "  db $33",
+        "endif",
+      ],
+      "nested-conditional.asm",
+      0,
+    ),
     0,
   );
 
@@ -5266,9 +5294,12 @@ test("getDefineVariable - integration", (t) => {
 test("typed parser builds while nodes with preserved conditions", (t) => {
   const assembler = new Assembler();
 
-  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    ["while !defined(DEBUG) && VERSION > 1.0", "db $01", "endwhile"],
-    "while.asm",
+  const node = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      ["while !defined(DEBUG) && VERSION > 1.0", "db $01", "endwhile"],
+      "while.asm",
+      0,
+    ),
     0,
   );
 
@@ -5284,9 +5315,12 @@ test("typed parser builds while nodes with preserved conditions", (t) => {
 test("typed parser builds for nodes with preserved range expressions", (t) => {
   const assembler = new Assembler();
 
-  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
-    ["for j = !start .. !end + 5", "db !j", "endfor"],
-    "for.asm",
+  const node = elementAt(
+    assembler.programModelBuilder.parseCommandStreamToNodes(
+      ["for j = !start .. !end + 5", "db !j", "endfor"],
+      "for.asm",
+      0,
+    ),
     0,
   );
 
@@ -5310,7 +5344,7 @@ test("typed parser closes top-level loop nodes at end markers", (t) => {
   );
 
   t.is(nodes.length, 1);
-  const [loop] = nodes;
+  const loop = elementAt(nodes, 0);
   if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
     t.fail();
     return;
@@ -6297,7 +6331,7 @@ test("handleArch - error cases", (t) => {
     { instanceOf: Error },
   );
   t.is(
-    missingParamError?.message,
+    missingParamError.message,
     "ARCH command requires an architecture parameter.",
     "Should throw when architecture parameter is missing",
   );
@@ -6316,7 +6350,7 @@ test("handleArch - error cases", (t) => {
     { instanceOf: Error },
   );
   t.is(
-    unsupportedArchError?.message,
+    unsupportedArchError.message,
     "Unsupported architecture: z80",
     "Should throw on unsupported architecture",
   );
@@ -6777,7 +6811,7 @@ test("step - negative step", (t) => {
     { instanceOf: Error },
   );
 
-  t.is(error?.message, "step num is negative", "Should throw error for negative step");
+  t.is(error.message, "step num is negative", "Should throw error for negative step");
 
   // Also test with a different negative value
   const error2 = t.throws(
@@ -6787,7 +6821,7 @@ test("step - negative step", (t) => {
     { instanceOf: Error },
   );
 
-  t.is(error2?.message, "step num is negative", "Should throw error for negative step");
+  t.is(error2.message, "step num is negative", "Should throw error for negative step");
 });
 
 test("expressionHost - resolveLabel", (t) => {
@@ -7051,7 +7085,7 @@ test("expressionHost - getfilestatus", (t) => {
 
 test("write1_65816 - basic functionality", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x1000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x1000 }, () => 0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -7067,7 +7101,7 @@ test("write1_65816 - basic functionality", (t) => {
 
 test("write1_65816 - NaN handling", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x1000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x1000 }, () => 0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -7076,12 +7110,12 @@ test("write1_65816 - NaN handling", (t) => {
   const error = t.throws(() => {
     assembler.write1_65816(NaN);
   });
-  t.is(error?.message, "write1 value is NaN", "Should throw error for NaN input");
+  t.is(error.message, "write1 value is NaN", "Should throw error for NaN input");
 });
 
 test("write1_65816 - bank wrapping", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x10000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x10000 }, () => 0);
   assembler.activateStage("emitProgram");
 
   // Position at the end of a bank
@@ -7102,7 +7136,7 @@ test("write1_65816 - bank wrapping", (t) => {
 
 test("write1_65816 - bank wrapping with bankcross off", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x10000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x10000 }, () => 0);
   assembler.activateStage("emitProgram");
   assembler.targetState.bankCrossMode = "off";
   assembler.currentTargetAddress = 0x00ffff;
@@ -7118,7 +7152,7 @@ test("write1_65816 - bank wrapping with bankcross off", (t) => {
 
 test("write1_65816 - ROM expansion", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x10).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x10 }, () => 0);
   assembler.activateStage("emitProgram");
   assembler.outputFillByte = 0xff;
 
@@ -7150,7 +7184,7 @@ test("write1_65816 - ROM expansion", (t) => {
 
 test("write1_65816 - pass 1 behavior", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x1000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x1000 }, () => 0);
   assembler.activateStage("resolveLayout");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -7178,7 +7212,7 @@ test("write1_65816 - pass 1 behavior", (t) => {
 
 test("write1_65816 - byte masking", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x1000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x1000 }, () => 0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -7192,7 +7226,7 @@ test("write1_65816 - byte masking", (t) => {
 
 test("write1_65816 - step behavior", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(0x1000).fill(0);
+  assembler.outputBytes = Array.from({ length: 0x1000 }, () => 0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -7207,7 +7241,7 @@ test("write1_65816 - step behavior", (t) => {
 
 test("fillOutputBytes - basic fill", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(10).fill(0);
+  assembler.outputBytes = Array.from({ length: 10 }, () => 0);
 
   // Fill positions 2-4 with value 0x42
   assembler.fillOutputBytes(2, 0x42, 3);
@@ -7223,7 +7257,7 @@ test("fillOutputBytes - basic fill", (t) => {
 
 test("fillOutputBytes - zero length", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(10).fill(0);
+  assembler.outputBytes = Array.from({ length: 10 }, () => 0);
 
   // Fill with length 0
   assembler.fillOutputBytes(2, 0x42, 0);
@@ -7231,14 +7265,14 @@ test("fillOutputBytes - zero length", (t) => {
   // Check that no data was modified
   t.deepEqual(
     assembler.outputBytes,
-    new Array(10).fill(0),
+    Array.from({ length: 10 }, () => 0),
     "Should not modify any data with length 0",
   );
 });
 
 test("fillOutputBytes - fill at start of ROM", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(10).fill(0);
+  assembler.outputBytes = Array.from({ length: 10 }, () => 0);
 
   // Fill from the beginning
   assembler.fillOutputBytes(0, 0x42, 3);
@@ -7252,7 +7286,7 @@ test("fillOutputBytes - fill at start of ROM", (t) => {
 
 test("fillOutputBytes - fill at end of ROM", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(10).fill(0);
+  assembler.outputBytes = Array.from({ length: 10 }, () => 0);
 
   // Fill at the end
   assembler.fillOutputBytes(7, 0x42, 3);
@@ -7266,18 +7300,22 @@ test("fillOutputBytes - fill at end of ROM", (t) => {
 
 test("fillOutputBytes - fill entire ROM", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(5).fill(0);
+  assembler.outputBytes = Array.from({ length: 5 }, () => 0);
 
   // Fill the entire ROM
   assembler.fillOutputBytes(0, 0x42, 5);
 
   // Check that all bytes were filled
-  t.deepEqual(assembler.outputBytes, new Array(5).fill(0x42), "Should fill entire ROM");
+  t.deepEqual(
+    assembler.outputBytes,
+    Array.from({ length: 5 }, () => 0x42),
+    "Should fill entire ROM",
+  );
 });
 
 test("fillOutputBytes - with different values", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(10).fill(0);
+  assembler.outputBytes = Array.from({ length: 10 }, () => 0);
 
   // Fill with different values
   assembler.fillOutputBytes(2, 0xff, 2);
@@ -7292,7 +7330,7 @@ test("fillOutputBytes - with different values", (t) => {
 
 test("fillOutputBytes - value byte masking", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(5).fill(0);
+  assembler.outputBytes = Array.from({ length: 5 }, () => 0);
 
   // Fill with a value larger than a byte
   assembler.fillOutputBytes(1, 0x1234, 3);
@@ -7305,7 +7343,7 @@ test("fillOutputBytes - value byte masking", (t) => {
 
 test("fillOutputBytes - overlapping fills", (t) => {
   const assembler = new Assembler();
-  assembler.outputBytes = new Array(10).fill(0);
+  assembler.outputBytes = Array.from({ length: 10 }, () => 0);
 
   // Create overlapping fills
   assembler.fillOutputBytes(2, 0x42, 4);

@@ -1,4 +1,7 @@
 import { normalizeRuntimePPUEffect } from "./runtime-ppu-effect.js";
+function isInteger(value) {
+    return typeof value === "number" && Number.isInteger(value);
+}
 /** Validate semantic facts independently of their transport or storage representation.
  * Return the normalization result so importers need not normalize twice. This
  * still checks untrusted PPU fields. The bus importer uses the returned canonical
@@ -8,43 +11,46 @@ import { normalizeRuntimePPUEffect } from "./runtime-ppu-effect.js";
  * Throws on inconsistent actor, channel, phase, effect or out-of-range values. Never mutates the input.
  */
 export const validateRuntimeBusFact = (fact) => {
+    const address = fact.address;
+    const pc = fact.pc;
+    const value = fact.value;
+    const direction = fact.direction;
+    const context = fact.context;
     if (fact.addressSpace !== "snes.cpu" ||
-        !Number.isInteger(fact.address) ||
-        fact.address < 0 ||
-        fact.address > 0xffffff ||
-        !Number.isInteger(fact.pc) ||
-        fact.pc < 0 ||
-        fact.pc > 0xffffff ||
-        !Number.isInteger(fact.value) ||
-        fact.value < 0 ||
-        fact.value > 0xff ||
-        !["read", "write"].includes(fact.direction) ||
-        !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
+        !(isInteger(address) && address >= 0 && address <= 0xffffff) ||
+        !(isInteger(pc) && pc >= 0 && pc <= 0xffffff) ||
+        !(isInteger(value) && value >= 0 && value <= 0xff) ||
+        (direction !== "read" && direction !== "write") ||
+        (context !== "unattributed" &&
+            context !== "instruction" &&
+            context !== "interrupt" &&
+            context !== "wait" &&
+            context !== "stop")) {
         throw new Error("Invalid bus access coordinates, value, direction or context.");
     }
-    if (fact.actor === "cpu") {
-        if (fact.channel !== null || fact.phase !== "cpu") {
+    const actor = fact.actor;
+    const channel = fact.channel;
+    const phase = fact.phase;
+    if (actor === "cpu") {
+        if (channel !== null || phase !== "cpu") {
             throw new Error("CPU bus accesses require a null channel and CPU phase.");
         }
     }
     else {
-        if (!Number.isInteger(fact.channel) ||
-            fact.channel === null ||
-            fact.channel < 0 ||
-            fact.channel > 7) {
+        if (!(isInteger(channel) && channel >= 0 && channel <= 7)) {
             throw new Error("DMA/HDMA bus accesses require a channel in [0, 7].");
         }
-        if (fact.actor === "dma") {
-            if (fact.phase !== "dma") {
+        if (actor === "dma") {
+            if (phase !== "dma") {
                 throw new Error("DMA bus access has an invalid phase.");
             }
         }
-        else if (fact.actor === "hdma") {
-            if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase)) {
+        else if (actor === "hdma") {
+            if (phase !== "hdma-table" && phase !== "hdma-indirect" && phase !== "hdma-transfer") {
                 throw new Error("HDMA bus access has an invalid phase.");
             }
             // Table and indirect-pointer fetches are metadata reads, never transfer writes.
-            if (fact.phase !== "hdma-transfer" && fact.direction !== "read") {
+            if (phase !== "hdma-transfer" && direction !== "read") {
                 throw new Error("HDMA table and indirect phases must be reads.");
             }
         }
@@ -53,7 +59,7 @@ export const validateRuntimeBusFact = (fact) => {
         }
     }
     if (fact.ppu !== undefined) {
-        return normalizeRuntimePPUEffect(fact.ppu, fact);
+        return normalizeRuntimePPUEffect(fact.ppu, { address, direction, value });
     }
     return undefined;
 };

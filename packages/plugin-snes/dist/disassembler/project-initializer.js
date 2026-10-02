@@ -6,7 +6,7 @@ import { analyzeSnes65816 } from "./65816-analysis.js";
 import { createSnesAddressContext, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, } from "./address-identities.js";
 import { lostCodeRanges } from "./code-preservation.js";
 import { importDizRaw } from "./dizraw-import.js";
-import { detectSnesRom, SNES_MAPPERS, } from "./rom-header.js";
+import { detectSnesRom, isSnesMapper, } from "./rom-header.js";
 import { analyzeSnesRuntimeCode } from "./runtime-code.js";
 import { SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR } from "./spc700-address-space.js";
 import { SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR } from "./superfx-address-space.js";
@@ -106,9 +106,7 @@ const commitStagedDirectory = (staging, destination) => {
 export const probeSnesProject = (options) => {
     throwIfCancelled(options.signal);
     report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
-    const rom = RomImage.load(path.resolve(options.romFile), {
-        ...(options.headerSize === undefined ? {} : { headerSize: options.headerSize }),
-    });
+    const rom = RomImage.load(path.resolve(options.romFile), options.headerSize === undefined ? {} : { headerSize: options.headerSize });
     const detection = detectSnesRom(rom, {
         ...(options.mapper === undefined ? {} : { mapper: options.mapper }),
         ...(options.headerSize === undefined ? {} : { headerSize: options.headerSize }),
@@ -235,6 +233,9 @@ export const createSnesAnalysisProject = (options) => {
         throw error;
     }
 };
+const codeRanges = (records) => records.flatMap((record) => record.kind === "cfg-node" && record.fileOffset !== undefined
+    ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
+    : []);
 /**
  * Runs bounded conservative 65816 analysis and atomically updates the native project.
  * Completion describes explored work, not proof that all code was found. An incomplete pass that
@@ -305,10 +306,11 @@ export const analyzeSnesProject = (options) => {
         headerSize: loaded.manifest.rom.headerSize,
     });
     validateProjectRom(loaded.manifest, rom);
-    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
-        throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+    const mapper = loaded.manifest.mapping.mapper;
+    if (!isSnesMapper(mapper)) {
+        throw new Error(`Unsupported SNES mapper '${mapper}'.`);
     }
-    const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
+    const addressContext = createSnesAddressContext(mapper);
     const editableRecords = loaded.view.analysis.filter((record) => record.kind === "target-override" || record.kind === "target-set");
     const targetOverrides = editableRecords.filter((record) => record.kind === "target-override");
     const targetSets = editableRecords.filter((record) => record.kind === "target-set");
@@ -323,7 +325,7 @@ export const analyzeSnesProject = (options) => {
                 ...previous,
                 evidence: [
                     ...new Set([...(previous.evidence ?? []), ...(entry.evidence ?? [])]),
-                ].sort(),
+                ].toSorted(),
             }
             : entry);
     }
@@ -345,7 +347,7 @@ export const analyzeSnesProject = (options) => {
         }
         runtimeCandidates.set(record.address, candidate);
     }
-    const rankedRuntime = [...runtimeCandidates.values()].sort((left, right) => right.count - left.count || left.address - right.address);
+    const rankedRuntime = [...runtimeCandidates.values()].toSorted((left, right) => right.count - left.count || left.address - right.address);
     let addedRuntimeSeeds = 0;
     for (const candidate of rankedRuntime) {
         // RAM PCs are decoded from captured bytes below, not queued as ROM seeds.
@@ -356,7 +358,7 @@ export const analyzeSnesProject = (options) => {
         if (previous) {
             configured.set(candidate.address, {
                 ...previous,
-                evidence: [...new Set([...(previous.evidence ?? []), ...candidate.evidence])].sort(),
+                evidence: [...new Set([...(previous.evidence ?? []), ...candidate.evidence])].toSorted(),
             });
             continue;
         }
@@ -367,12 +369,12 @@ export const analyzeSnesProject = (options) => {
             id: `runtime-${candidate.address.toString(16).padStart(6, "0")}`,
             address: candidate.address,
             kind: "observation",
-            evidence: [...candidate.evidence].sort(),
+            evidence: [...candidate.evidence].toSorted(),
         });
         addedRuntimeSeeds++;
     }
     const runtimeSeeds = rankedRuntime.filter(({ address }) => configured.has(address)).length;
-    const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper, {
+    const result = analyzeSnes65816(rom, mapper, {
         annotations: loaded.view.annotations,
         labels: loaded.view.labels,
         evidence: loaded.view.evidence,
@@ -390,7 +392,7 @@ export const analyzeSnesProject = (options) => {
             const variants = capturedStore.runtimeInstructionVariants(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, ["p", "P", "e", "E", "db", "DB", "d", "D"], { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } });
             return capturedStore.transaction(() => {
                 assertAnalysisProjectRevision(capturedStore, loaded.revision);
-                return analyzeSnesRuntimeCode(loaded.view, rom, loaded.manifest.mapping.mapper, variants, (message) => {
+                return analyzeSnesRuntimeCode(loaded.view, rom, mapper, variants, (message) => {
                     throwIfCancelled(options.signal);
                     report(options, "analyze", message);
                 });
@@ -412,9 +414,6 @@ export const analyzeSnesProject = (options) => {
         ...capturedRecords,
     ];
     if (result.status === "incomplete") {
-        const codeRanges = (records) => records.flatMap((record) => record.kind === "cfg-node" && record.fileOffset !== undefined
-            ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
-            : []);
         const lost = lostCodeRanges(previousCode, codeRanges(analysisRecords));
         if (lost.length > 0) {
             const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);

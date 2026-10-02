@@ -3,6 +3,46 @@ import path from "node:path";
 import type { RomIdentity } from "@uttori/asm-disassembler";
 import type { ExtensionContext } from "vscode";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isExtensionContext(value: object): value is ExtensionContext {
+  return (
+    "globalState" in value && typeof value.globalState === "object" && value.globalState !== null
+  );
+}
+
+function isRomBinding(value: unknown): value is {
+  path: string;
+  updatedAt: string;
+  fileSha256: string;
+  contentSha256: string;
+  headerSize: 0 | 512;
+} {
+  return (
+    isRecord(value) &&
+    typeof value.path === "string" &&
+    typeof value.updatedAt === "string" &&
+    typeof value.fileSha256 === "string" &&
+    typeof value.contentSha256 === "string" &&
+    (value.headerSize === 0 || value.headerSize === 512)
+  );
+}
+
+function isRomStore(value: unknown): value is Record<
+  string,
+  {
+    path: string;
+    updatedAt: string;
+    fileSha256: string;
+    contentSha256: string;
+    headerSize: 0 | 512;
+  }
+> {
+  return isRecord(value) && Object.values(value).every(isRomBinding);
+}
+
 import { test } from "../../../../tests/ava-helper.js";
 import { rememberedSnesRom, rememberSnesRom } from "../../src/project/snes-rom-bindings.js";
 
@@ -19,27 +59,27 @@ const identity = (n: number, headerSize: 0 | 512 = 0): RomIdentity => ({
 
 const createContext = (initial: Record<string, unknown> = {}) => {
   const store = new Map<string, unknown>(Object.entries(initial));
-  return {
-    context: {
-      globalState: {
-        get: (key: string, defaultValue?: unknown) =>
-          store.has(key) ? store.get(key) : defaultValue,
-        update: async (key: string, value: unknown) => {
-          store.set(key, value);
-        },
+  const context = {
+    globalState: {
+      get: (key: string, defaultValue?: unknown) =>
+        store.has(key) ? store.get(key) : defaultValue,
+      update: async (key: string, value: unknown) => {
+        store.set(key, value);
       },
-    } as unknown as ExtensionContext,
-    snapshot: () =>
-      (store.get(ROM_BINDINGS_KEY) ?? {}) as Record<
-        string,
-        {
-          path: string;
-          updatedAt: string;
-          fileSha256: string;
-          contentSha256: string;
-          headerSize: 0 | 512;
-        }
-      >,
+    },
+  };
+  if (!isExtensionContext(context)) {
+    throw new Error("extension context stub");
+  }
+  return {
+    context,
+    snapshot: () => {
+      const stored = store.get(ROM_BINDINGS_KEY) ?? {};
+      if (!isRomStore(stored)) {
+        throw new Error("expected remembered ROM bindings");
+      }
+      return stored;
+    },
   };
 };
 

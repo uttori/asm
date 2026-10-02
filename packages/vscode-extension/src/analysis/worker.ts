@@ -27,33 +27,63 @@ import { readAnalysisSourceCatalog } from "./sources-data.js";
  * IPC request with a correlation ID, project directory, and operation-specific selectors; loaded
  * project shards never enter the message.
  */
+/** Operations the extension host may request. The worker still rejects any other string. */
+export type AnalysisWorkerOperation =
+  | "clear"
+  | "manifest"
+  | "coverage"
+  | "segments"
+  | "details"
+  | "annotationSummary"
+  | "annotations"
+  | "debugAnnotations"
+  | "navigation"
+  | "evidenceChoices"
+  | "explainEvidence"
+  | "sources"
+  | "sourceSummary"
+  | "sourceEntries";
+
 export interface AnalysisWorkerRequest {
   readonly id: number;
   readonly directory: string;
   /** Selected worktree, needed when a private evidence store lives outside that repository. */
   readonly sourceRoot?: string;
-  readonly operation:
-    | "clear"
-    | "manifest"
-    | "coverage"
-    | "segments"
-    | "details"
-    | "annotationSummary"
-    | "annotations"
-    | "debugAnnotations"
-    | "navigation"
-    | "evidenceChoices"
-    | "explainEvidence"
-    | "sources"
-    | "sourceSummary"
-    | "sourceEntries";
+  /** Untrusted IPC may name an operation this process does not implement. */
+  readonly operation: string;
   readonly navigationTarget?: AnalysisNavigationTarget;
   readonly sourceId?: string;
   readonly evidenceSelection?: Partial<Record<ShardKind, readonly string[]>>;
   readonly evidenceRecord?: { kind: ShardKind; id: string };
   readonly sourceGroup?: AnalysisSourceGroup;
   readonly offset?: number;
-  readonly ranges?: readonly DebugMapRange[];
+  readonly ranges?: readonly unknown[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Visible editor ranges keep their debug-map identity; length limits run before this check. */
+function isDebugMapRange(value: unknown): value is DebugMapRange {
+  return (
+    isRecord(value) &&
+    typeof value.architecture === "string" &&
+    typeof value.addressSpace === "string" &&
+    typeof value.start === "number" &&
+    typeof value.end === "number" &&
+    typeof value.sourceId === "number" &&
+    typeof value.line === "number" &&
+    (value.outputStart === undefined || typeof value.outputStart === "number") &&
+    (value.outputEnd === undefined || typeof value.outputEnd === "number")
+  );
+}
+
+function debugMapRanges(values: readonly unknown[]): readonly DebugMapRange[] {
+  if (!values.every(isDebugMapRange)) {
+    throw new Error("Invalid debug-map range.");
+  }
+  return values;
 }
 
 /** The worker owns one connection until it switches projects or the database inode is replaced. */
@@ -106,25 +136,27 @@ const projectRequest = (message: AnalysisWorkerRequest): unknown => {
     return store.explainEvidence(message.evidenceRecord.kind, message.evidenceRecord.id);
   }
   if (message.operation === "annotationSummary") {
-    const ranges = message.ranges ?? [];
-    if (!ranges.length) {
+    const supplied = message.ranges ?? [];
+    if (!supplied.length) {
       return [];
     }
-    if (ranges.length > 2000) {
+    if (supplied.length > 2000) {
       throw new Error("At most 2000 visible source ranges may be projected per request.");
     }
+    const ranges = debugMapRanges(supplied);
     store.prepareAnnotationQueries();
     return store.transaction(() => store.instructionExecutionSummary(ranges), false);
   }
   if (message.operation === "annotations" || message.operation === "debugAnnotations") {
-    const ranges = message.ranges ?? [];
+    const supplied = message.ranges ?? [];
     // Reject unbounded requests before loading metadata or initializing any query index.
-    if (!ranges.length) {
+    if (!supplied.length) {
       return [];
     }
-    if (ranges.length > 2000) {
+    if (supplied.length > 2000) {
       throw new Error("At most 2000 visible source ranges may be projected per request.");
     }
+    const ranges = debugMapRanges(supplied);
     store.prepareAnnotationQueries();
     return store.transaction(() => {
       const manifest = store.manifest();
@@ -132,13 +164,18 @@ const projectRequest = (message: AnalysisWorkerRequest): unknown => {
       const instructions = buildInstructionAnalysisAnnotations(
         manifest,
         view.shards,
-      ).instructions.map((entry) => ({
-        ...entry,
-        executionCount:
-          view.executionCounts.get(`${entry.addressSpace}:${entry.address}`) ??
-          entry.executionCount,
-        ...(view.limited ? { detailsLimited: true } : {}),
-      }));
+      ).instructions.map((entry) =>
+        Object.assign(
+          {},
+          entry,
+          {
+            executionCount:
+              view.executionCounts.get(`${entry.addressSpace}:${entry.address}`) ??
+              entry.executionCount,
+          },
+          view.limited ? { detailsLimited: true } : {},
+        ),
+      );
       const index = createInstructionAnnotationIndex(instructions);
       const output: { line: number; annotation: InstructionAnalysisAnnotation }[] = [];
       for (const range of ranges) {
@@ -288,19 +325,20 @@ const request = (message: AnalysisWorkerRequest): unknown => {
   return value;
 };
 
+const send = (response: unknown): void => {
+  if (parentPort) {
+    parentPort.postMessage(response);
+  } else {
+    process.send?.(response);
+  }
+};
+
 /**
  * Execute one projection and send its correlation ID with either the value or serialized error
  * over worker-thread or child-process IPC.
  * @param {AnalysisWorkerRequest} message Projection operation and correlation ID received from the parent.
  */
 const handleMessage = (message: AnalysisWorkerRequest): void => {
-  const send = (response: unknown): void => {
-    if (parentPort) {
-      parentPort.postMessage(response);
-    } else {
-      process.send?.(response as Parameters<NonNullable<typeof process.send>>[0]);
-    }
-  };
   try {
     const value = request(message);
     if (value instanceof Promise) {

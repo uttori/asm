@@ -169,7 +169,7 @@ export class NodeStdioSidecarTransport {
             timer.unref();
             void this.#exit.then(() => {
                 clearTimeout(timer);
-                resolve(true);
+                return resolve(true);
             });
         });
     }

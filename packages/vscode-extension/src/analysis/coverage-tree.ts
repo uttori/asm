@@ -7,8 +7,6 @@ import * as path from "node:path";
 import {
   ANALYSIS_PROJECT_MANIFEST,
   readSourceProjectLocalInputs,
-  type AnalysisProjectManifest,
-  type RomCoverageMap,
   type RomCoverageSegment,
 } from "@uttori/asm-disassembler";
 import {
@@ -92,6 +90,130 @@ export interface AnalysisCoverageEditTarget {
   readonly runtimeIds: readonly string[];
   readonly conflictIds: readonly string[];
   readonly regionIds: readonly string[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isCoverageManifest(value: unknown): value is {
+  readonly target: string;
+  readonly mapping: { readonly mapper: string };
+  readonly rom: { readonly contentSha256: string; readonly contentSize: number };
+} {
+  return (
+    isRecord(value) &&
+    typeof value.target === "string" &&
+    isRecord(value.mapping) &&
+    typeof value.mapping.mapper === "string" &&
+    isRecord(value.rom) &&
+    typeof value.rom.contentSha256 === "string" &&
+    typeof value.rom.contentSize === "number"
+  );
+}
+
+const COVERAGE_CLASSIFICATIONS = ["opcode", "operand", "data", "asset", "unknown"] as const;
+const COVERAGE_RUNTIME = ["executed", "operand", "read", "written"] as const;
+
+function isCountRecord<T extends string>(
+  value: unknown,
+  keys: readonly T[],
+): value is Readonly<Record<T, number>> {
+  return isRecord(value) && keys.every((key) => typeof value[key] === "number");
+}
+
+interface CoverageSummaryView {
+  readonly contentSize: number;
+  readonly detailCount: number;
+  readonly summary: {
+    readonly totalBytes: number;
+    readonly classifiedBytes: number;
+    readonly unknownBytes: number;
+    readonly conflictBytes: number;
+    readonly segmentCount: number;
+    readonly bytesByClassification: Readonly<
+      Record<(typeof COVERAGE_CLASSIFICATIONS)[number], number>
+    >;
+    readonly bytesByRuntimeCoverage: Readonly<Record<(typeof COVERAGE_RUNTIME)[number], number>>;
+  };
+}
+
+function isCoverageSummary(value: unknown): value is CoverageSummaryView {
+  if (
+    !isRecord(value) ||
+    typeof value.contentSize !== "number" ||
+    typeof value.detailCount !== "number" ||
+    !isRecord(value.summary)
+  ) {
+    return false;
+  }
+  const summary = value.summary;
+  return (
+    typeof summary.totalBytes === "number" &&
+    typeof summary.classifiedBytes === "number" &&
+    typeof summary.unknownBytes === "number" &&
+    typeof summary.conflictBytes === "number" &&
+    typeof summary.segmentCount === "number" &&
+    isCountRecord(summary.bytesByClassification, COVERAGE_CLASSIFICATIONS) &&
+    isCountRecord(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME)
+  );
+}
+
+function isCoverageSegment(value: unknown): value is RomCoverageSegment {
+  return (
+    isRecord(value) &&
+    typeof value.start === "number" &&
+    typeof value.end === "number" &&
+    (value.status === "unknown" || value.status === "classified" || value.status === "conflict") &&
+    Array.isArray(value.classifications) &&
+    value.classifications.every(
+      (entry) =>
+        entry === "opcode" ||
+        entry === "operand" ||
+        entry === "data" ||
+        entry === "asset" ||
+        entry === "unknown",
+    ) &&
+    Array.isArray(value.runtime) &&
+    value.runtime.every(
+      (entry) =>
+        entry === "executed" || entry === "operand" || entry === "read" || entry === "written",
+    ) &&
+    isStringArray(value.annotationIds) &&
+    isStringArray(value.analysisIds) &&
+    isStringArray(value.runtimeIds) &&
+    isStringArray(value.conflictIds) &&
+    isStringArray(value.regionIds)
+  );
+}
+
+function isCoverageDetail(value: unknown): value is CoverageDetail {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.label === "string" &&
+    typeof value.icon === "string" &&
+    (value.description === undefined || typeof value.description === "string") &&
+    (value.tooltip === undefined || typeof value.tooltip === "string")
+  );
+}
+
+function isEditTarget(value: unknown): value is AnalysisCoverageEditTarget {
+  return (
+    isRecord(value) &&
+    typeof value.projectDirectory === "string" &&
+    typeof value.start === "number" &&
+    typeof value.end === "number" &&
+    isStringArray(value.annotationIds) &&
+    isStringArray(value.analysisIds) &&
+    isStringArray(value.runtimeIds) &&
+    isStringArray(value.conflictIds) &&
+    isStringArray(value.regionIds)
+  );
 }
 
 /**
@@ -188,13 +310,13 @@ const summaryNode = (
  * requests.
  * @param {string} projectId Project-specific row ID prefix.
  * @param {string} projectDirectory Absolute native project directory for paged requests.
- * @param {RomCoverageMap & { readonly detailCount: number }} map Coverage totals and diagnostic count from the worker.
+ * @param {CoverageSummaryView} map Coverage totals and diagnostic count from the worker.
  * @returns {readonly CoverageTreeNode[]} Summary categories and lazy segment/diagnostic pages.
  */
 const mapChildren = (
   projectId: string,
   projectDirectory: string,
-  map: RomCoverageMap & { readonly detailCount: number },
+  map: CoverageSummaryView,
 ): readonly CoverageTreeNode[] => {
   const { summary } = map;
   const summaryChildren = [
@@ -376,7 +498,7 @@ export const findAnalysisProjectDirectories = async (): Promise<string[]> => {
             : candidate,
         ),
       ),
-    ].sort();
+    ].toSorted();
   }
   const manifests = await workspace.findFiles(
     `**/${ANALYSIS_PROJECT_MANIFEST}`,
@@ -387,7 +509,7 @@ export const findAnalysisProjectDirectories = async (): Promise<string[]> => {
     ...new Set(
       manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path.dirname(fsPath)),
     ),
-  ].sort();
+  ].toSorted();
 };
 
 /**
@@ -430,10 +552,10 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
     }
     if (element.loadProject) {
       try {
-        const map = await analysisWorker().request<RomCoverageMap & { detailCount: number }>(
-          element.projectDirectory!,
-          "coverage",
-        );
+        const map = await analysisWorker().request(element.projectDirectory!, "coverage");
+        if (!isCoverageSummary(map)) {
+          throw new Error("Analysis coverage is unavailable.");
+        }
         return [...mapChildren(element.id, element.projectDirectory!, map)];
       } catch (error) {
         return [leaf(`${element.id}:error`, "Could not load coverage", String(error), "error")];
@@ -444,28 +566,30 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
       if (count <= PAGE_SIZE) {
         try {
           if (operation === "segments") {
-            const segments = await analysisWorker().request<RomCoverageSegment[]>(
-              element.projectDirectory!,
-              operation,
-              { offset },
-            );
+            const segments = await analysisWorker().request(element.projectDirectory!, operation, {
+              offset,
+            });
+            if (!Array.isArray(segments) || !segments.every(isCoverageSegment)) {
+              throw new Error("Analysis coverage segments are unavailable.");
+            }
             return segments
               .slice(0, count)
               .map((segment) =>
                 segmentNode(element.id, segment, element.contentSize!, element.projectDirectory!),
               );
           }
-          return (
-            await analysisWorker().request<CoverageDetail[]>(element.projectDirectory!, operation, {
-              offset,
-            })
-          )
-            .slice(0, count)
-            .map((detail) => ({
-              ...detail,
+          const details = await analysisWorker().request(element.projectDirectory!, operation, {
+            offset,
+          });
+          if (!Array.isArray(details) || !details.every(isCoverageDetail)) {
+            throw new Error("Analysis coverage details are unavailable.");
+          }
+          return details.slice(0, count).map((detail) =>
+            Object.assign({}, detail, {
               id: `${element.id}:${detail.id}`,
               state: TreeItemCollapsibleState.None,
-            }));
+            }),
+          );
         } catch (error) {
           return [leaf(`${element.id}:error`, "Could not load page", String(error), "error")];
         }
@@ -492,10 +616,10 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
   }
 
   editTarget(element: unknown): AnalysisCoverageEditTarget | undefined {
-    if (!element || typeof element !== "object" || !("editTarget" in element)) {
+    if (!isRecord(element) || !isEditTarget(element.editTarget)) {
       return undefined;
     }
-    return (element as CoverageTreeNode).editTarget;
+    return element.editTarget;
   }
 
   private async loadProjects(): Promise<CoverageTreeNode[]> {
@@ -505,10 +629,10 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
       const manifestUri = Uri.file(path.join(directory, ANALYSIS_PROJECT_MANIFEST));
       const projectId = `analysis:${directory}`;
       try {
-        const manifest = await analysisWorker().request<AnalysisProjectManifest>(
-          directory,
-          "manifest",
-        );
+        const manifest = await analysisWorker().request(directory, "manifest");
+        if (!isCoverageManifest(manifest)) {
+          throw new Error("Analysis manifest is unavailable.");
+        }
         result.push({
           id: projectId,
           label: path.basename(directory),

@@ -182,7 +182,7 @@ function readBlockStatements(source: string, block: "MEMORY" | "SEGMENTS" | "SYM
 
 type NamedStatement = {
   name: string;
-  attrs: Record<string, string>;
+  attrs: Partial<Record<string, string>>;
 };
 
 /**
@@ -196,7 +196,7 @@ function parseNamedStatement(statement: string): NamedStatement {
     throw new Error(`Invalid ld65 statement: ${statement}`);
   }
   const name = statement.slice(0, colon).trim();
-  const attrs: Record<string, string> = {};
+  const attrs: Partial<Record<string, string>> = {};
   for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
     const equals = part.indexOf("=");
     if (equals <= 0) {
@@ -269,12 +269,12 @@ function parseNumberToken(token: string | undefined): number | undefined {
 
 /**
  * Requires a numeric attribute.
- * @param {Record<string, string>} attrs Attribute map.
+ * @param {Partial<Record<string, string>>} attrs Attribute map.
  * @param {string} key Attribute name.
  * @param {string} owner Statement name for errors.
  * @returns {number} The parsed number.
  */
-function requireNumber(attrs: Record<string, string>, key: string, owner: string): number {
+function requireNumber(attrs: Partial<Record<string, string>>, key: string, owner: string): number {
   const value = parseNumberToken(attrs[key]);
   if (value === undefined) {
     throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);

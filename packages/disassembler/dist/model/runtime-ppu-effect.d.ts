@@ -1,4 +1,3 @@
-import type { RuntimeBusFact } from "./runtime-bus-types.js";
 /** Native PPU decision at one completing port write. Physical byte writes retain
  * order, including repeated destinations. No source instruction or A-bus read is inferred.
  * Raster positions stay in the ordered archive instead of multiplying SQL variants.
@@ -17,9 +16,13 @@ export interface RuntimePPUEffect {
     }[];
 }
 /** Validate a native effect independently of transport framing or stored JSON.
- * @param {RuntimePPUEffect} effect Claimed physical writes and decision flags.
- * @param {Pick<RuntimeBusFact, "address" | "direction" | "value">} access Completing bus operation.
+ * @param {unknown} effect Claimed physical writes and decision flags.
+ * @param {object} access Completing bus operation.
  * @returns {RuntimePPUEffect} Fresh semantic value with canonical property order, excluding raster.
  */
-export declare const normalizeRuntimePPUEffect: (effect: RuntimePPUEffect, access: Pick<RuntimeBusFact, "address" | "direction" | "value">) => RuntimePPUEffect;
+export declare const normalizeRuntimePPUEffect: (effect: unknown, access: {
+    readonly address: unknown;
+    readonly direction: unknown;
+    readonly value: unknown;
+}) => RuntimePPUEffect;
 //# sourceMappingURL=runtime-ppu-effect.d.ts.map

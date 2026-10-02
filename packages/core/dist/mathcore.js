@@ -15,12 +15,39 @@ function throwMathError(message) {
  * @param {string} token The candidate operator token.
  * @returns {BinaryOperatorSpec | undefined} The matching spec, if any.
  */
+function isBinaryOperatorToken(value) {
+    switch (value) {
+        case "**":
+        case "*":
+        case "/":
+        case "%":
+        case "+":
+        case "-":
+        case "<<":
+        case ">>":
+        case "&":
+        case "|":
+        case "^":
+        case "<":
+        case ">":
+        case "<=":
+        case ">=":
+        case "==":
+        case "=":
+        case "!=":
+        case "&&":
+        case "||":
+            return true;
+        default:
+            return false;
+    }
+}
 function getOperator(operators, token) {
     // `Object.hasOwn` avoids treating a two-char prefix as present when it isn't a key.
-    if (!Object.hasOwn(operators, token)) {
+    if (!isBinaryOperatorToken(token) || !Object.hasOwn(operators, token)) {
         return undefined;
     }
-    return operators[token];
+    return { operator: token, spec: operators[token] };
 }
 const OPERATORS = {
     // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
@@ -320,9 +347,17 @@ export class MathCore {
                 return this.isPureExpressionNode(expression.argument);
             case "binary":
                 return (this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right));
-            default:
-                return false;
+            case "call":
+            case "defineReference":
+            case "identifier":
+            case "index":
+            case "member":
+            case "range":
+            case "raw":
+            case "string":
+                break;
         }
+        return false;
     }
     /**
      * Evaluates a string expression using the legacy parser.
@@ -383,9 +418,17 @@ export class MathCore {
                     return argument.value;
                 case "raw":
                     return argument.value.replace(/^["']|["']$/g, "");
-                default:
-                    return renderExpressionNode(argument);
+                case "binary":
+                case "call":
+                case "defineReference":
+                case "index":
+                case "literal":
+                case "member":
+                case "range":
+                case "unary":
+                    break;
             }
+            return renderExpressionNode(argument);
         }
         switch (argument.type) {
             case "string":
@@ -394,16 +437,24 @@ export class MathCore {
                 return renderExpressionNode(argument);
             case "raw":
                 return this.evaluateStringExpression(argument.value);
-            default:
-                if (isReferenceExpressionNode(argument)) {
-                    return argument.type === "defineReference"
-                        ? renderReferenceExpressionNode(argument)
-                        : this.resolveNumericIdentifierArgument(renderReferenceExpressionNode(argument, {
-                            renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
-                        }));
-                }
-                return this.evaluateExpressionNode(argument);
+            case "binary":
+            case "call":
+            case "defineReference":
+            case "identifier":
+            case "index":
+            case "literal":
+            case "member":
+            case "unary":
+                break;
         }
+        if (isReferenceExpressionNode(argument)) {
+            return argument.type === "defineReference"
+                ? renderReferenceExpressionNode(argument)
+                : this.resolveNumericIdentifierArgument(renderReferenceExpressionNode(argument, {
+                    renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
+                }));
+        }
+        return this.evaluateExpressionNode(argument);
     }
     evaluateUnaryExpressionNode(operator, argument) {
         const value = this.evaluateExpressionNode(argument);
@@ -570,17 +621,18 @@ export class MathCore {
             const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
             const twoOp = getOperator(operators, twoChars);
             if (twoOp) {
-                if (twoOp.priority >= depth) {
-                    return twoChars;
+                if (twoOp.spec.priority >= depth) {
+                    return twoOp.operator;
                 }
                 return null;
             }
         }
         // Otherwise, check a single-character operator against the current depth.
+        // The cursor is already inside the source, so this index is a character.
         const oneChar = this.scanSource[this.scanIndex];
         const oneOp = getOperator(operators, oneChar);
-        if (oneOp && oneOp.priority >= depth) {
-            return oneChar;
+        if (oneOp && oneOp.spec.priority >= depth) {
+            return oneOp.operator;
         }
         // No operator matched
         return null;
@@ -648,7 +700,10 @@ export class MathCore {
                 // prefixes so FileType-style identifiers are not `~label`. `!=` is
                 // inequality. Break after a define-like `!` so this prefix loop does
                 // not spin forever on the same character.
-                const after = this.scanSource[this.scanIndex + 1];
+                const afterIndex = this.scanIndex + 1;
+                const after = afterIndex >= 0 && afterIndex < this.scanSource.length
+                    ? this.scanSource[afterIndex]
+                    : undefined;
                 let isDefineLike = after === "{";
                 if (after !== undefined) {
                     const code = after.charCodeAt(0);

@@ -107,6 +107,10 @@ export const spc700Modes = Object.freeze({
 
 type Spc700ModeKey = keyof typeof spc700Modes;
 
+function isSpc700ModeKey(value: string): value is Spc700ModeKey {
+  return Object.hasOwn(spc700Modes, value);
+}
+
 /*
  * Independently transcribed from Nintendo's SNES Development Manual, Book I,
  * Appendix C. The GPL Framework disassembler is an optional oracle only and
@@ -131,7 +135,7 @@ const opcodeRows = [
   "BEQ:rel TCALL:tc CLR7:dpBit BBC7:dpBitRel MOV:aDpx MOV:aAbx MOV:aAby MOV:aDpiy MOV:xDp MOV:xDpy MOV:dpDp MOV:yDpx INC:regY MOV:regYA2 DBNZ:yRel STOP:imp",
 ] as const;
 
-const summaries: Readonly<Record<string, string>> = {
+const summaries: Partial<Record<string, string>> = {
   ADC: "Add with carry.",
   ADDW: "Add a direct-page word to YA.",
   AND: "Bitwise AND.",
@@ -273,10 +277,10 @@ if (entries.length !== 256) {
 export const spc700Specifications: readonly Spc700InstructionSpecification[] = Object.freeze(
   entries.map((entry, opcode): Spc700InstructionSpecification => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const definition = spc700Modes[modeKeyText as Spc700ModeKey];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isSpc700ModeKey(modeKeyText)) {
       throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
     }
+    const definition = spc700Modes[modeKeyText];
     const summaryKey = mnemonic.replace(/[0-7]$/, "0");
     return Object.freeze({
       id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -318,5 +322,7 @@ export function buildSpc700Catalog(): InstructionDescriptor[] {
       });
     }
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted((left, right) =>
+    left.mnemonic.localeCompare(right.mnemonic),
+  );
 }

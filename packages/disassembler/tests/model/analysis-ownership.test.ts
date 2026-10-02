@@ -3,14 +3,30 @@ import { validateAnalysisOwnership } from "../../src/model/analysis-ownership.js
 import type { AnalysisControlFlowNodeRecord } from "../../src/model/project-types.js";
 
 /** Only ownership fields participate here; ordinary record bounds are checked by project validation. */
-const node = (id: string, functionEntry?: string, evidencePredecessor?: string) =>
-  ({
-    id,
-    kind: "cfg-node",
-    addressSpace: "snes.cpu",
-    functionEntry,
-    evidencePredecessor,
-  }) as AnalysisControlFlowNodeRecord;
+const node = (
+  id: string,
+  functionEntry?: string,
+  evidencePredecessor?: string,
+): AnalysisControlFlowNodeRecord => ({
+  id,
+  kind: "cfg-node",
+  addressSpace: "snes.cpu",
+  address: 0,
+  size: 1,
+  opcode: 0,
+  specificationId: "test",
+  mnemonic: "nop",
+  mode: "implied",
+  context: [],
+  incomingState: {},
+  outgoingState: {},
+  effectiveAddresses: [],
+  entryPoint: id,
+  functionEntry,
+  evidencePredecessor,
+  evidencePath: [],
+  evidence: [],
+});
 
 test("compact ownership validates long paths once and rejects dangling, cyclic or mixed owners", (t) => {
   const records = [node("entry", "entry")];

@@ -23,7 +23,7 @@ test.serial("coordinated writes reject stale and duplicate files before publicat
     fs.writeFileSync(changes[1].path, "other edit");
     t.throws(() => applyAssetFileChanges(changes), { message: /changed/ });
     t.is(fs.readFileSync(changes[0].path, "utf8"), "old");
-    t.deepEqual(fs.readdirSync(directory).sort(), ["a", "b"]);
+    t.deepEqual(fs.readdirSync(directory).toSorted(), ["a", "b"]);
   } finally {
     fs.rmSync(directory, { recursive: true });
   }
@@ -44,7 +44,7 @@ test.serial("a failed second rename restores the first file and removes staging"
     for (const change of changes) {
       t.is(fs.readFileSync(change.path, "utf8"), "old");
     }
-    t.deepEqual(fs.readdirSync(directory).sort(), ["a", "b"]);
+    t.deepEqual(fs.readdirSync(directory).toSorted(), ["a", "b"]);
   } finally {
     fs.renameSync = rename;
     fs.rmSync(directory, { recursive: true });
@@ -58,7 +58,7 @@ test.serial("successful coordinated writes publish every replacement", (t) => {
     for (const change of changes) {
       t.is(fs.readFileSync(change.path, "utf8"), "new");
     }
-    t.deepEqual(fs.readdirSync(directory).sort(), ["a", "b"]);
+    t.deepEqual(fs.readdirSync(directory).toSorted(), ["a", "b"]);
   } finally {
     fs.rmSync(directory, { recursive: true });
   }

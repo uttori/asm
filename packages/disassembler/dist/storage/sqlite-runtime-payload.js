@@ -64,7 +64,11 @@ export const encodePackedRuntimePayload = (record) => {
     }
     for (const [index, [key, width]] of FIELDS.entries()) {
         if (mask & (1 << index)) {
-            encoded.writeUIntLE(record.state[key], offset, width);
+            const field = record.state[key];
+            if (typeof field !== "number") {
+                return undefined;
+            }
+            encoded.writeUIntLE(field, offset, width);
             offset += width;
         }
     }

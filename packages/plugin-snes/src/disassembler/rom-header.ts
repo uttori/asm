@@ -18,6 +18,15 @@ export const SNES_MAPPERS = [
 /** Cartridge mapper id matching `SNES_MAPPERS`. */
 export type SnesMapper = (typeof SNES_MAPPERS)[number];
 
+/**
+ * Accepts a supported cartridge mapper id.
+ * @param {string} value Candidate mapper name.
+ * @returns {boolean} True when `value` is one of `SNES_MAPPERS`.
+ */
+export function isSnesMapper(value: string): value is SnesMapper {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
+
 /** One 16-bit vector slot in the bank-$00 SNES CPU vector table. */
 export interface SnesCpuVectorDefinition {
   /** Stable analysis/evidence id. */
@@ -328,12 +337,12 @@ export const parseSnesInternalRomHeader = (
   const vectors = SNES_CPU_VECTOR_DEFINITIONS.map((definition): SnesCpuVector => {
     const fileOffset = offset + definition.pointer - 0x00ffc0;
     const value = rom.readByte(fileOffset)! | (rom.readByte(fileOffset + 1)! << 8);
-    return {
-      ...definition,
-      fileOffset,
-      value,
-      ...(definition.state && value !== 0 && value !== 0xffff ? { targetAddress: value } : {}),
-    };
+    return Object.assign(
+      {},
+      definition,
+      { fileOffset, value },
+      definition.state && value !== 0 && value !== 0xffff ? { targetAddress: value } : {},
+    );
   });
   return {
     offset,
@@ -533,7 +542,7 @@ export const detectSnesRom = (
   }
   const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec))
     .filter((candidate): candidate is MappingCandidate => candidate !== undefined)
-    .sort((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
+    .toSorted((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
 
   if (options.mapper) {
     const selected = candidates.find((candidate) => candidate.mapper === options.mapper);
@@ -556,10 +565,13 @@ export const detectSnesRom = (
     };
   }
 
-  const first = candidates[0];
-  const second = candidates[1];
+  const first = candidates.length > 0 ? candidates[0] : undefined;
+  const second = candidates.length > 1 ? candidates[1] : undefined;
   if (first && first.score >= 8 && (!second || first.score - second.score >= 3)) {
-    const mapper = first.mapper as SnesMapper;
+    if (!isSnesMapper(first.mapper)) {
+      throw new Error(`Unsupported SNES mapper '${first.mapper}'.`);
+    }
+    const mapper = first.mapper;
     return {
       status: "detected",
       mapper,

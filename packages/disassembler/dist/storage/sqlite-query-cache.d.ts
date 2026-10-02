@@ -13,7 +13,7 @@ export declare const installQueryCache: (db: DatabaseSync, key: string, dependen
  * @param {string} signature Configuration/layout fingerprint.
  * @returns {T | undefined} Cached value, or undefined when its inputs changed.
  */
-export declare const readQueryCache: <T>(db: DatabaseSync, key: string, signature: string) => T | undefined;
+export declare const readQueryCache: (db: DatabaseSync, key: string, signature: string) => unknown;
 /** Publish a complete projection atomically with the read snapshot used to compute it.
  * @param {DatabaseSync} db Connection in the owning write transaction.
  * @param {string} key Internal projection identifier.

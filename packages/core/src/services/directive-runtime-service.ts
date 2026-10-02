@@ -146,7 +146,7 @@ export class DirectiveRuntimeService {
 
     // Reverse storage keeps source order when popping and avoids shifting a large data list.
     // Expanded defines are pushed in reverse too, so they finish before the following operand.
-    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+    const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
     while (pendingValues.length > 0) {
       let value = (pendingValues.pop() ?? "").trim();
       if (value.startsWith('"') || value.startsWith("'")) {
@@ -250,7 +250,7 @@ export class DirectiveRuntimeService {
    */
   estimateDataDirectiveSize(len: number, params: string[]): void {
     // Match emission's reverse stack: expanded lists retain source order with constant-time pops.
-    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+    const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
     let estimatedItems = 0;
     while (pendingValues.length > 0) {
       let value = (pendingValues.pop() ?? "").trim();

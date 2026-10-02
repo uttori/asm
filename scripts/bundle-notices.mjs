@@ -9,9 +9,6 @@ import path from "node:path";
  */
 export const withBundleNotices = (build) => async (options) => {
   const result = await build({ ...options, metafile: true });
-  if (!result.metafile) {
-    throw new Error("Bundle notices require esbuild output metadata.");
-  }
   const base = options.absWorkingDir ?? process.cwd();
   /** @type {Map<string, string>} License text grouped by package and installed version. */
   const packages = new Map();
@@ -60,7 +57,7 @@ export const withBundleNotices = (build) => async (options) => {
             /^(licen[cs]e|copying|notice)(?:\.|$)/i.test(name) &&
             fs.statSync(path.join(directory, name)).isFile(),
         )
-        .sort();
+        .toSorted();
       if (files.length === 0) {
         // These published Data Tools releases declare MIT and Matthew Callis as author,
         // but omit the license file. Keep their existing archives buildable; later
@@ -83,7 +80,7 @@ export const withBundleNotices = (build) => async (options) => {
     }
   }
   const sections = [...packages]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .toSorted(([left], [right]) => left.localeCompare(right))
     // Normalize line endings only; preserve every word and all upstream attribution. Mixed CRLF/LF
     // notices otherwise introduce whitespace errors into reproducibly generated bundle artifacts.
     .map(

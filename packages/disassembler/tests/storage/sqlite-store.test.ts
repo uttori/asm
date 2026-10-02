@@ -43,7 +43,7 @@ test("synchronous transactions reject promises and roll back their writes and re
       await Promise.resolve();
       return true;
     };
-    t.throws(() => store.transaction(action as unknown as () => boolean), {
+    t.throws(() => store.transaction(action), {
       instanceOf: TypeError,
       message: /synchronous/,
     });
@@ -472,7 +472,9 @@ test("sqlite preserves the original failure when SQLite already rolled back the 
         () =>
           store.transaction(() =>
             store.replaceTables({
-              labels: project.shards.labels.map((label) => ({ ...label, name: "Changed" })),
+              labels: project.shards.labels.map((label) =>
+                Object.assign({}, label, { name: "Changed" }),
+              ),
             }),
           ),
         { message: "simulated storage failure" },
@@ -509,7 +511,9 @@ test("sqlite creation preserves records and serves interval queries", (t) => {
       t.is(store.loadTable("annotations")[0]?.classification, "data8");
       store.transaction(() => {
         store.replaceTables({
-          labels: projectFor(rom).shards.labels.map((label) => ({ ...label, name: "Reset" })),
+          labels: projectFor(rom).shards.labels.map((label) =>
+            Object.assign({}, label, { name: "Reset" }),
+          ),
         });
         store.publishManifest(store.manifest());
       });
@@ -777,7 +781,9 @@ test("runtime lookup distinguishes colliding hash keys, shared suffixes, and tex
     "capture:one:text-identity",
     "capture:one:text-identity-longer",
   ];
-  const records = ids.map((id, index) => ({ ...project.shards.runtime[0]!, id, count: index + 1 }));
+  const records = ids.map((id, index) =>
+    Object.assign({}, project.shards.runtime[0]!, { id, count: index + 1 }),
+  );
   try {
     store.transaction(() => {
       for (const record of records) {

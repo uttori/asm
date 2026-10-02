@@ -4,6 +4,12 @@ import { RomImage } from "@uttori/asm-disassembler";
 export declare const SNES_MAPPERS: readonly ["lorom", "hirom", "exlorom", "exhirom", "sfxrom", "sa1rom", "bigsa1rom", "norom"];
 /** Cartridge mapper id matching `SNES_MAPPERS`. */
 export type SnesMapper = (typeof SNES_MAPPERS)[number];
+/**
+ * Accepts a supported cartridge mapper id.
+ * @param {string} value Candidate mapper name.
+ * @returns {boolean} True when `value` is one of `SNES_MAPPERS`.
+ */
+export declare function isSnesMapper(value: string): value is SnesMapper;
 /** One 16-bit vector slot in the bank-$00 SNES CPU vector table. */
 export interface SnesCpuVectorDefinition {
     /** Stable analysis/evidence id. */

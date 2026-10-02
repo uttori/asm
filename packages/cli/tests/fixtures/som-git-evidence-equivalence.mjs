@@ -19,6 +19,8 @@ db.exec("PRAGMA query_only=ON");
 db.prepare("ATTACH DATABASE ? AS original").run(
   path.join(root, "disassembly/analysis/analysis.sqlite"),
 );
+const quote = (name) => `"${name}"`;
+
 const report = {
   started: new Date().toISOString(),
   method:
@@ -44,7 +46,6 @@ try {
     for (const name of names) {
       assert.match(name, /^[_a-z]+$/);
     }
-    const quote = (name) => `"${name}"`;
     const primary = quote(key[0]);
     const rows = db.prepare(`SELECT count(*) n FROM main.${table}`).get().n;
     assert.equal(rows, db.prepare(`SELECT count(*) n FROM original.${table}`).get().n, table);

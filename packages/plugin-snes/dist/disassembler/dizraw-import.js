@@ -72,7 +72,7 @@ const decodeMetadata = (line) => {
     const flags = fake64(padded[1]);
     const pointValue = (flags >> 4) & 0x0f;
     const architectureValue = Number.parseInt(padded[8], 16) & 0x03;
-    const architecture = ARCHITECTURES[architectureValue];
+    const architecture = architectureValue < ARCHITECTURES.length ? ARCHITECTURES[architectureValue] : undefined;
     if (!architecture) {
         throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
     }
@@ -121,7 +121,7 @@ const decodeRomByteLines = (body, maximumBytes) => {
     if (options.includes("compress_table_1")) {
         lines = lines.map((line) => {
             let decoded = line;
-            for (const [longText, shortText] of [...SUBSTITUTIONS].reverse()) {
+            for (const [longText, shortText] of SUBSTITUTIONS.toReversed()) {
                 decoded = decoded.replaceAll(shortText, longText);
             }
             return decoded;
@@ -230,7 +230,8 @@ export const importDizRaw = (xml, options = {}) => {
     const rootAttributes = attributes(rootMatch[1]);
     const projectAttributes = attributes(projectMatch[1]);
     const dataAttributes = attributes(data.opening);
-    const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
+    const romMapMode = dataAttributes.RomMapMode;
+    const mapper = romMapMode === undefined ? undefined : DIZ_MAPPERS[romMapMode];
     if (!mapper) {
         throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
     }

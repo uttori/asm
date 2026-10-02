@@ -2,7 +2,7 @@ import type { HalfOpenInterval } from "@uttori/asm-disassembler";
 
 const union = (ranges: readonly HalfOpenInterval[]): HalfOpenInterval[] => {
   const merged: HalfOpenInterval[] = [];
-  for (const range of [...ranges].sort((left, right) => left.start - right.start)) {
+  for (const range of ranges.toSorted((left, right) => left.start - right.start)) {
     const previous = merged.at(-1);
     if (previous && range.start <= previous.end) {
       merged[merged.length - 1] = {

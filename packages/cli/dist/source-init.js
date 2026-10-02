@@ -4,11 +4,24 @@ import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore, openSourceProject, sourceGit, sourceRepository, sourceContentHash, retainSourceGeneration, createSourceInputSnapshot, SOURCE_GENERATION_FILE, synchronizeSourceResearch, RESEARCH_COLLECTIONS, RomImage, sourceStatus, } from "@uttori/asm-disassembler";
 import { createSnesAnalysisProject, analyzeSnesProject, exportSnes65816Source, buildSnesSource, snesGenerationOptionsHash, } from "@uttori/asm-plugin-snes";
-/**
- * Create, analyze and verify a new Git source repository in owned staging, then publish it once.
- * The original ROM stays private. A pure root commit and an ordinary source commit establish
- * cloneable regeneration ancestry without introducing managed-export manifests or folder backups.
- */
+function importedResearchRecords(store, collection) {
+    switch (collection) {
+        case "labels":
+            return store.loadTable("labels");
+        case "comments":
+            return store.loadTable("comments");
+        case "regions":
+            return store.loadTable("regions");
+        case "annotations":
+            return store.loadTable("annotations");
+        case "analysis":
+            return store.analysisByKinds(["target-override", "target-set"]);
+        default: {
+            const leftover = collection;
+            throw new Error(`Unsupported research collection: ${String(leftover)}`);
+        }
+    }
+}
 export async function initializeSnesSourceProject(options) {
     const destination = path.resolve(options.directory);
     if (fs.existsSync(destination)) {
@@ -93,9 +106,7 @@ export async function initializeSnesSourceProject(options) {
                     if (collection === "evidence") {
                         continue;
                     }
-                    const records = collection === "analysis"
-                        ? imported.analysisByKinds(["target-override", "target-set"])
-                        : imported.loadTable(collection);
+                    const records = importedResearchRecords(imported, collection);
                     for (const record of records) {
                         decisions.push({
                             collection,

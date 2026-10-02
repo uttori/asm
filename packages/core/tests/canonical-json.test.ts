@@ -18,7 +18,10 @@ test("canonical JSON preserves locale ordering, undefined omission and own __pro
     canonicalJson(input),
     '{\n  "2": "two",\n  "10": "ten",\n  "__proto__": {\n    "polluted": true\n  },\n  "a": 4,\n  "ä": 3,\n  "array": [\n    {\n      "a": null,\n      "z": false\n    },\n    null,\n    "escaped\\n🎮"\n  ],\n  "z": 1\n}\n',
   );
-  const normalized = canonicalValue(input) as Record<string, unknown>;
+  const normalized = canonicalValue(input);
+  if (typeof normalized !== "object" || normalized === null || Array.isArray(normalized)) {
+    throw new Error("Expected a canonical object.");
+  }
   t.true(Object.hasOwn(normalized, "__proto__"));
   t.is(Object.getPrototypeOf(normalized), Object.prototype);
   t.false(Object.hasOwn(normalized, "omitted"));

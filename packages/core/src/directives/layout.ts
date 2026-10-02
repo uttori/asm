@@ -82,8 +82,8 @@ export const registerGenericLayoutDirectives = (
 
     const param = words[1].trim();
     if (param.toLowerCase() === "off") {
-      const baseAddress = Number(session.currentTargetBaseAddress);
-      const baseStartAddress = Number(session.currentTargetBaseStartAddress);
+      const baseAddress = session.currentTargetBaseAddress;
+      const baseStartAddress = session.currentTargetBaseStartAddress;
       session.currentTargetAddress = baseAddress;
       session.currentTargetStartAddress = baseStartAddress;
       return;

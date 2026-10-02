@@ -119,9 +119,7 @@ export type RawExpressionNode = ExpressionNodeBase & {
  * @returns {ExpressionNode} The same node with a root span.
  */
 function attachRootSpan(node: ExpressionNode, text: string): ExpressionNode {
-  if (!node.span) {
-    node.span = createSourceSpan(0, text.length);
-  }
+  node.span ??= createSourceSpan(0, text.length);
   return node;
 }
 
@@ -219,9 +217,17 @@ export function isReferenceExpressionNode(node: ExpressionNode): node is Referen
     case "member":
     case "index":
       return isReferenceExpressionNode(node.object);
+    case "binary":
+    case "call":
+    case "literal":
+    case "range":
+    case "raw":
+    case "string":
+    case "unary":
     default:
-      return false;
+      break;
   }
+  return false;
 }
 
 type RenderReferenceExpressionOptions = {
@@ -496,7 +502,21 @@ const binaryPrecedence: Record<BinaryOperator, number> = {
   "**": 6,
 };
 
-const unaryOperators = new Set<UnaryOperator>(["<:", "<", ">", "^", "~", "-", "+"]);
+function isUnaryOperator(value: string): value is UnaryOperator {
+  return (
+    value === "<:" ||
+    value === "<" ||
+    value === ">" ||
+    value === "^" ||
+    value === "~" ||
+    value === "-" ||
+    value === "+"
+  );
+}
+
+function isQuote(value: string | undefined): value is '"' | "'" {
+  return value === '"' || value === "'";
+}
 const binaryOperators = [
   "**",
   "<<",
@@ -652,7 +672,10 @@ function readQuotedString(
   input: string,
   start: number,
 ): { value: string; nextIndex: number; quote: '"' | "'" } {
-  const quote = input[start] as '"' | "'";
+  const quote = input[start];
+  if (!isQuote(quote)) {
+    throw new Error("Expected string literal");
+  }
   let value = "";
   let index = start + 1;
   while (index < input.length) {
@@ -768,11 +791,11 @@ class ExpressionParser {
     if (!token) {
       throw new Error("Unexpected end of expression");
     }
-    if (token.type === "operator" && unaryOperators.has(token.value as UnaryOperator)) {
+    if (token.type === "operator" && isUnaryOperator(token.value)) {
       this.consume();
       return {
         type: "unary",
-        operator: token.value as UnaryOperator,
+        operator: token.value,
         argument: this.parsePrefix(),
       };
     }
@@ -837,9 +860,15 @@ class ExpressionParser {
         this.expect("rparen");
         return expression;
       }
-      default:
-        throw new Error(`Unexpected token ${token.type}`);
+      case "comma":
+      case "dot":
+      case "lbracket":
+      case "operator":
+      case "rbracket":
+      case "rparen":
+        break;
     }
+    throw new Error(`Unexpected token ${token.type}`);
   }
 
   parsePostfix(expression: ExpressionNode): ExpressionNode {

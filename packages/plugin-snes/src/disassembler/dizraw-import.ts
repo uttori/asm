@@ -28,7 +28,7 @@ const SUBSTITUTIONS: ReadonlyArray<readonly [string, string]> = [
   ["0001", "Zs"],
 ];
 
-const CLASSIFICATIONS: Readonly<Record<string, IntervalAnnotation["classification"]>> = {
+const CLASSIFICATIONS: Partial<Record<string, IntervalAnnotation["classification"]>> = {
   U: "unreached",
   "+": "opcode",
   ".": "operand",
@@ -62,7 +62,7 @@ const xmlDecode = (value: string): string =>
     );
   });
 
-const attributes = (source: string): Record<string, string> =>
+const attributes = (source: string): Partial<Record<string, string>> =>
   Object.fromEntries(
     [...source.matchAll(/([\w:-]+)="([^"]*)"/g)].map((match) => [match[1], xmlDecode(match[2])]),
   );
@@ -117,7 +117,8 @@ const decodeMetadata = (line: string): DecodedMetadata => {
   const flags = fake64(padded[1]);
   const pointValue = (flags >> 4) & 0x0f;
   const architectureValue = Number.parseInt(padded[8], 16) & 0x03;
-  const architecture = ARCHITECTURES[architectureValue];
+  const architecture =
+    architectureValue < ARCHITECTURES.length ? ARCHITECTURES[architectureValue] : undefined;
   if (!architecture) {
     throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
   }
@@ -169,7 +170,7 @@ const decodeRomByteLines = (body: string, maximumBytes: number): string[] => {
   if (options.includes("compress_table_1")) {
     lines = lines.map((line) => {
       let decoded = line;
-      for (const [longText, shortText] of [...SUBSTITUTIONS].reverse()) {
+      for (const [longText, shortText] of SUBSTITUTIONS.toReversed()) {
         decoded = decoded.replaceAll(shortText, longText);
       }
       return decoded;
@@ -244,7 +245,7 @@ const metadataIntervals = (lines: readonly string[], evidenceId: string): Interv
   return output;
 };
 
-const DIZ_MAPPERS: Readonly<Record<string, SnesMapper>> = {
+const DIZ_MAPPERS: Partial<Record<string, SnesMapper>> = {
   LoRom: "lorom",
   HiRom: "hirom",
   ExLoRom: "exlorom",
@@ -314,7 +315,8 @@ export const importDizRaw = (
   const rootAttributes = attributes(rootMatch[1]);
   const projectAttributes = attributes(projectMatch[1]);
   const dataAttributes = attributes(data.opening);
-  const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
+  const romMapMode = dataAttributes.RomMapMode;
+  const mapper = romMapMode === undefined ? undefined : DIZ_MAPPERS[romMapMode];
   if (!mapper) {
     throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
   }

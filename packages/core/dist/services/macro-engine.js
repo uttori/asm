@@ -46,7 +46,8 @@ export class MacroEngine {
         }
         const [keyword, ...rest] = trimmed.split(/\s+/);
         const normalizedKeyword = keyword.toLowerCase();
-        const current = this.macroExpansionControlStack[this.macroExpansionControlStack.length - 1];
+        const currentIndex = this.macroExpansionControlStack.length - 1;
+        const current = currentIndex >= 0 ? this.macroExpansionControlStack[currentIndex] : undefined;
         const parentActive = this.isMacroExpansionActive();
         const enclosingActive = this.macroExpansionControlStack
             .slice(0, -1)
@@ -232,9 +233,7 @@ export class MacroEngine {
                             }
                         }
                     }
-                    if (nextAddr === null) {
-                        nextAddr = this.host.symbolScope.findNextLabel("?+");
-                    }
+                    nextAddr ??= this.host.symbolScope.findNextLabel("?+");
                     modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
                 }
             }
@@ -254,9 +253,7 @@ export class MacroEngine {
                             }
                         }
                     }
-                    if (prevAddr === null) {
-                        prevAddr = this.host.symbolScope.findPreviousLabel("?-");
-                    }
+                    prevAddr ??= this.host.symbolScope.findPreviousLabel("?-");
                     modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
                 }
             }
@@ -460,7 +457,7 @@ export class MacroEngine {
                 }
             }
             const defineValue = this.host.defines.get(name);
-            return defineValue !== undefined ? defineValue : match;
+            return defineValue ?? match;
         };
         if (line.trim().startsWith("!") && line.includes("=")) {
             const defineMatch = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
@@ -562,7 +559,7 @@ export class MacroEngine {
         resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
             const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
                 const defineValue = this.host.defines.get(defName);
-                return defineValue !== undefined ? defineValue : defMatch;
+                return defineValue ?? defMatch;
             });
             const resolvedExpr = this.host.resolvedefines(processedExpr);
             let index = this.host.mathCore.math(resolvedExpr);

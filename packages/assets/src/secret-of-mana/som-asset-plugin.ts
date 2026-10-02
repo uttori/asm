@@ -10,7 +10,7 @@ import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { decodePlanarTiles, encodePlanarTiles, snesNativeEncoders } from "@uttori/asm-assets/snes";
 import { definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
 
-import type { PcmAudio } from "../audio.js";
+import { readPcmAudio, type PcmAudio } from "../audio.js";
 import { readAssetPng } from "../png.js";
 import type { AssetInput, AssetOutput } from "../registry.js";
 import { encodeBossGraphics, expandBossGraphics } from "./som-boss-graphics.js";
@@ -129,12 +129,18 @@ export function convertBossImage(
   const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
   let original: Uint8Array | undefined;
   if (options.native !== undefined) {
-    if (typeof options.native !== "string" || !options.native || !resources[options.native]) {
+    if (typeof options.native !== "string" || !options.native) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    const nativeResource = Object.hasOwn(resources, options.native)
+      ? resources[options.native]
+      : undefined;
+    if (!nativeResource) {
       throw new Error("Boss native data requires an explicit original compressed resource.");
     }
     // A Git-tracked original stream survives ordinary PNG tools dropping private
     // chunks. It remains a compression reference, never a replacement for edited pixels.
-    original = resources[options.native].bytes;
+    original = nativeResource.bytes;
   } else {
     original = nativeBossChunk(source.bytes, chunkName);
   }
@@ -200,7 +206,7 @@ export function verifiedBrrFromWave(source: AssetInput) {
 /** Read optional native bytes after the strict WAVE importer has checked every RIFF extent. */
 function readBrrWave(source: AssetInput): { audio: PcmAudio; native?: Uint8Array } {
   const document = waveImporter.import(source);
-  const audio = document.value as PcmAudio;
+  const audio = readPcmAudio(document.value);
   const bytes = source.bytes;
   if (
     bytes.length < 12 ||
@@ -353,8 +359,8 @@ export function decodeActor3bppNative(bytes: Uint8Array) {
     throw new Error("Actor stream requires complete 24-byte tiles.");
   }
   return Array.from({ length: bytes.length / 24 }, (_, tileIndex) =>
-    Array.from({ length: 8 }, (_, y) =>
-      Array.from({ length: 8 }, (_, x) => {
+    Array.from({ length: 8 }, (_row, y) =>
+      Array.from({ length: 8 }, (_column, x) => {
         const offset = tileIndex * 24 + y * 3;
         const bit = 7 - x;
         return (

@@ -106,6 +106,9 @@ export type DebugSidecarMessage = DebugSidecarRequest | DebugSidecarResponse | D
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const listed = <Value extends string>(values: readonly Value[], value: unknown): value is Value =>
+  typeof value === "string" && values.some((item) => item === value);
+
 const positiveInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 
@@ -126,37 +129,45 @@ export const createDebugSidecarSessionToken = (): string => randomBytes(32).toSt
  * @returns {asserts value is string} Assertion for a valid token.
  */
 export function assertDebugSidecarSessionToken(value: unknown): asserts value is string {
-  if (typeof value !== "string" || !sessionPattern.test(value))
-    {throw new Error("Sidecar session token must be 32-128 base64url characters.");}
+  if (typeof value !== "string" || !sessionPattern.test(value)) {
+    throw new Error("Sidecar session token must be 32-128 base64url characters.");
+  }
 }
 
 const assertRequestBounds = (
-  message: DebugSidecarRequest,
+  command: DebugSidecarRequest["command"],
+  args: unknown,
   limits: DebugSidecarProtocolLimits,
 ): void => {
-  const args = message.arguments ?? {};
-  if (!isRecord(args)) {throw new Error("Sidecar request arguments must be an object.");}
-  if (message.command === "readMemory") {
-    const count = args.count;
-    if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes)
-      {throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);}
+  const record = args ?? {};
+  if (!isRecord(record)) {
+    throw new Error("Sidecar request arguments must be an object.");
   }
-  if (message.command === "disassemble") {
-    const count = args.count;
-    if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions)
-      {throw new Error(
+  if (command === "readMemory") {
+    const count = record.count;
+    if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
+      throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
+    }
+  }
+  if (command === "disassemble") {
+    const count = record.count;
+    if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
+      throw new Error(
         `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`,
-      );}
+      );
+    }
   }
-  if (message.command === "setBreakpoints") {
-    const breakpoints = args.breakpoints;
-    if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints)
-      {throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);}
+  if (command === "setBreakpoints") {
+    const breakpoints = record.breakpoints;
+    if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
+      throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
+    }
   }
-  if (message.command === "readTrace") {
-    const maxEvents = args.maxEvents;
-    if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents)
-      {throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);}
+  if (command === "readTrace") {
+    const maxEvents = record.maxEvents;
+    if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
+      throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
+    }
   }
 };
 
@@ -170,44 +181,70 @@ export function assertDebugSidecarMessage(
   value: unknown,
   limits: DebugSidecarProtocolLimits = DEFAULT_DEBUG_SIDECAR_LIMITS,
 ): asserts value is DebugSidecarMessage {
-  if (!isRecord(value)) {throw new Error("Sidecar message must be an object.");}
-  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL)
-    {throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);}
-  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION)
-    {throw new Error(`Unsupported sidecar protocol version '${String(value.version)}'.`);}
+  if (!isRecord(value)) {
+    throw new Error("Sidecar message must be an object.");
+  }
+  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
+    throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);
+  }
+  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION) {
+    throw new Error(`Unsupported sidecar protocol version '${String(value.version)}'.`);
+  }
   assertDebugSidecarSessionToken(value.session);
-  if (!positiveInteger(value.sequence))
-    {throw new Error("Sidecar message sequence must be a positive safe integer.");}
+  if (!positiveInteger(value.sequence)) {
+    throw new Error("Sidecar message sequence must be a positive safe integer.");
+  }
   if (value.type === "request") {
-    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command as never))
-      {throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);}
-    assertRequestBounds(value as unknown as DebugSidecarRequest, limits);
+    if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
+      throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
+    }
+    assertRequestBounds(value.command, value.arguments, limits);
     return;
   }
   if (value.type === "response") {
-    if (!positiveInteger(value.requestSequence))
-      {throw new Error("Sidecar response requestSequence must be a positive safe integer.");}
-    if (typeof value.success !== "boolean")
-      {throw new Error("Sidecar response success must be boolean.");}
-    if (!value.success && typeof value.error !== "string")
-      {throw new Error("Failed sidecar response must include an error string.");}
+    if (!positiveInteger(value.requestSequence)) {
+      throw new Error("Sidecar response requestSequence must be a positive safe integer.");
+    }
+    if (typeof value.success !== "boolean") {
+      throw new Error("Sidecar response success must be boolean.");
+    }
+    if (!value.success && typeof value.error !== "string") {
+      throw new Error("Failed sidecar response must include an error string.");
+    }
     return;
   }
   if (value.type === "event") {
-    if (!DEBUG_SIDECAR_EVENTS.includes(value.event as never))
-      {throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);}
-    if (!isRecord(value.body)) {throw new Error("Sidecar event body must be an object.");}
+    if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
+      throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
+    }
+    if (!isRecord(value.body)) {
+      throw new Error("Sidecar event body must be an object.");
+    }
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
 
+const LIMIT_NAMES = [
+  "maxFrameBytes",
+  "maxBufferedBytes",
+  "maxMemoryReadBytes",
+  "maxDisassemblyInstructions",
+  "maxBreakpoints",
+  "maxTraceBatchEvents",
+  "maxQueuedMessages",
+  "maxQueuedBytes",
+] as const satisfies readonly (keyof DebugSidecarProtocolLimits)[];
+
 const validateLimits = (limits: DebugSidecarProtocolLimits): void => {
-  for (const [name, value] of Object.entries(limits) as Array<[string, number]>) {
-    if (!positiveInteger(value)) {throw new Error(`${name} must be a positive safe integer.`);}
+  for (const name of LIMIT_NAMES) {
+    if (!positiveInteger(limits[name])) {
+      throw new Error(`${name} must be a positive safe integer.`);
+    }
   }
-  if (limits.maxBufferedBytes < limits.maxFrameBytes + 4)
-    {throw new Error("maxBufferedBytes must hold at least one complete framed message.");}
+  if (limits.maxBufferedBytes < limits.maxFrameBytes + 4) {
+    throw new Error("maxBufferedBytes must hold at least one complete framed message.");
+  }
 };
 
 /**
@@ -223,8 +260,9 @@ export const encodeDebugSidecarMessage = (
   validateLimits(limits);
   assertDebugSidecarMessage(message, limits);
   const body = Buffer.from(JSON.stringify(message), "utf8");
-  if (body.length > limits.maxFrameBytes)
-    {throw new Error(`Sidecar frame exceeds ${limits.maxFrameBytes} bytes.`);}
+  if (body.length > limits.maxFrameBytes) {
+    throw new Error(`Sidecar frame exceeds ${limits.maxFrameBytes} bytes.`);
+  }
   const frame = Buffer.allocUnsafe(body.length + 4);
   frame.writeUInt32BE(body.length, 0);
   body.copy(frame, 4);
@@ -252,16 +290,22 @@ export class DebugSidecarMessageParser {
    * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
    */
   push(chunk: Uint8Array): DebugSidecarMessage[] {
-    if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes)
-      {throw new Error(`Sidecar receive buffer exceeds ${this.#limits.maxBufferedBytes} bytes.`);}
+    if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
+      throw new Error(`Sidecar receive buffer exceeds ${this.#limits.maxBufferedBytes} bytes.`);
+    }
     this.#buffer = Buffer.concat([this.#buffer, chunk]);
     const messages: DebugSidecarMessage[] = [];
     while (this.#buffer.length >= 4) {
       const length = this.#buffer.readUInt32BE(0);
-      if (length === 0) {throw new Error("Sidecar frame body cannot be empty.");}
-      if (length > this.#limits.maxFrameBytes)
-        {throw new Error(`Sidecar frame declares ${length} bytes, above the configured limit.`);}
-      if (this.#buffer.length < length + 4) {break;}
+      if (length === 0) {
+        throw new Error("Sidecar frame body cannot be empty.");
+      }
+      if (length > this.#limits.maxFrameBytes) {
+        throw new Error(`Sidecar frame declares ${length} bytes, above the configured limit.`);
+      }
+      if (this.#buffer.length < length + 4) {
+        break;
+      }
       const body = this.#buffer.subarray(4, length + 4);
       this.#buffer = this.#buffer.subarray(length + 4);
       let decoded: unknown;
@@ -271,10 +315,11 @@ export class DebugSidecarMessageParser {
         throw new Error("Sidecar frame contains invalid JSON.");
       }
       assertDebugSidecarMessage(decoded, this.#limits);
-      if (decoded.sequence <= this.#lastSequence)
-        {throw new Error(
+      if (decoded.sequence <= this.#lastSequence) {
+        throw new Error(
           `Sidecar sequence ${decoded.sequence} is not greater than ${this.#lastSequence}.`,
-        );}
+        );
+      }
       this.#lastSequence = decoded.sequence;
       messages.push(decoded);
     }
@@ -317,8 +362,9 @@ export class DebugSidecarMessageQueue {
     if (
       this.#frames.length >= this.#limits.maxQueuedMessages ||
       this.#bytes + frame.length > this.#limits.maxQueuedBytes
-    )
-      {throw new Error("Sidecar outgoing queue exceeded its backpressure limit.");}
+    ) {
+      throw new Error("Sidecar outgoing queue exceeded its backpressure limit.");
+    }
     this.#frames.push(frame);
     this.#bytes += frame.length;
   }
@@ -329,7 +375,9 @@ export class DebugSidecarMessageQueue {
    */
   dequeue(): Uint8Array | undefined {
     const frame = this.#frames.shift();
-    if (frame) {this.#bytes -= frame.length;}
+    if (frame) {
+      this.#bytes -= frame.length;
+    }
     return frame;
   }
 }

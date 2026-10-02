@@ -1,5 +1,17 @@
 import { getStructMetadata, parseExpressionNode } from "@uttori/asm-core";
 /**
+ * Reject imprecise intermediates even if later masking would make them fit an operand.
+ * @param {number} value Computed intermediate before any truncation.
+ * @param {string} expression Parenthesized native source for this subtree.
+ * @returns {object} Exact value and source, or throws on lost precision.
+ */
+const checked = (value, expression) => {
+    if (!Number.isSafeInteger(value)) {
+        throw new Error("Struct expression must evaluate to exact safe integers.");
+    }
+    return { value, expression };
+};
+/**
  * Resolve a bounded subset of native assembly expressions, caching repeated expressions per map.
  * Only this map's constants/layouts/bindings participate; external defines, arbitrary calls,
  * file reads and record contents cannot affect instruction identity.
@@ -39,18 +51,6 @@ export class SnesStructExpressionResolver {
         const owners = new Set();
         let references = 0;
         let nodes = 0;
-        /**
-         * Reject imprecise intermediates even if later masking would make them fit an operand.
-         * @param {number} value Computed intermediate before any truncation.
-         * @param {string} expression Parenthesized native source for this subtree.
-         * @returns {object} Exact value and source, or throws on lost precision.
-         */
-        const checked = (value, expression) => {
-            if (!Number.isSafeInteger(value)) {
-                throw new Error("Struct expression must evaluate to exact safe integers.");
-            }
-            return { value, expression };
-        };
         /**
          * Resolve only named layouts/bindings. Inherited and arbitrary symbol paths are outside this map.
          * @param {ExpressionNode} node Optional record index and field under one declared root.
@@ -129,15 +129,15 @@ export class SnesStructExpressionResolver {
                     return reference(node);
                 case "call": {
                     const name = node.callee.name;
-                    const arg = node.arguments[0];
-                    if (node.arguments.length !== 1 || !arg) {
+                    const callArgument = node.arguments.length === 1 ? node.arguments[0] : undefined;
+                    if (!callArgument) {
                         throw new Error(`Struct expression ${name}() requires one argument.`);
                     }
                     if (name === "bank") {
-                        const resolved = visit(arg);
+                        const resolved = visit(callArgument);
                         return checked((resolved.value >> 16) & 0xff, `bank(${resolved.expression})`);
                     }
-                    if (arg.type !== "identifier") {
+                    if (callArgument.type !== "identifier") {
                         throw new Error("Struct reflection requires a layout or binding name.");
                     }
                     if (name !== "sizeof" &&
@@ -147,9 +147,9 @@ export class SnesStructExpressionResolver {
                         name !== "endof") {
                         throw new Error(`Unsupported struct expression function '${name}'.`);
                     }
-                    reference(arg);
-                    const binding = this.bindings.get(arg.name);
-                    const layout = binding?.structure ?? this.layouts.get(arg.name);
+                    reference(callArgument);
+                    const binding = this.bindings.get(callArgument.name);
+                    const layout = binding?.structure ?? this.layouts.get(callArgument.name);
                     if (!layout) {
                         throw new Error("Struct reflection requires a layout or binding, not a scalar constant.");
                     }
@@ -159,7 +159,7 @@ export class SnesStructExpressionResolver {
                         indexRange: { first: binding?.firstIndex ?? 0, count: binding?.count ?? 1 },
                     };
                     const value = name === "sizeof" ? layout.size : getStructMetadata(definition, name);
-                    return checked(value, `${name}(${arg.name})`);
+                    return checked(value, `${name}(${callArgument.name})`);
                 }
                 case "unary": {
                     const arg = visit(node.argument);
@@ -224,14 +224,27 @@ export class SnesStructExpressionResolver {
                         case ">>":
                             value = left.value >> right.value;
                             break;
-                        default:
+                        case "**":
+                        case "<":
+                        case ">":
+                        case "<=":
+                        case ">=":
+                        case "==":
+                        case "=":
+                        case "!=":
+                        case "&&":
+                        case "||":
                             throw new Error(`Unsupported struct expression operator '${node.operator}'.`);
                     }
                     return checked(value, `(${left.expression} ${node.operator} ${right.expression})`);
                 }
-                default:
+                case "defineReference":
+                case "range":
+                case "raw":
+                case "string":
                     throw new Error("Unsupported struct expression syntax.");
             }
+            throw new Error("Unsupported struct expression syntax.");
         };
         const resolved = visit(parseExpressionNode(input));
         if (!references) {
@@ -272,7 +285,7 @@ export function describeSnesStructAccess(binding, address, width) {
                 high = middle;
             }
         }
-        const candidate = structure.fields[low - 1];
+        const candidate = low > 0 ? structure.fields[low - 1] : undefined;
         const field = candidate && offset < candidate.offset + candidate.size ? candidate : undefined;
         // Match generated operands: only scalar bindings use an unindexed physical record.
         const suffix = binding.count === 1 && index === 0 ? "" : `[${index}]`;

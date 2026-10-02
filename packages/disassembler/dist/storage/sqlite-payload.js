@@ -85,14 +85,16 @@ export const decodeSqlitePayload = (value) => {
     }
 };
 /** Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
+ * Callers validate the decoded value before use.
  * @param {unknown} value Stored TEXT or a supported versioned BLOB.
- * @returns {T} Decoded semantic data; callers still validate the requested record type.
+ * @returns {unknown} Decoded semantic data.
  */
 export const parseSqlitePayload = (value) => {
     if (types.isUint8Array(value) && isPackedRuntimePayload(value)) {
         return decodePackedRuntimePayload(value);
     }
-    return JSON.parse(decodeSqlitePayload(value));
+    const parsed = JSON.parse(decodeSqlitePayload(value));
+    return parsed;
 };
 /**
  * Factor repeated capture prefixes without changing arbitrary caller-supplied IDs.

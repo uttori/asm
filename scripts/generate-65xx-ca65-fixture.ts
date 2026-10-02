@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import type { InstructionForm } from "../packages/plugin-65xx/src/instructions/schema.js";
 import {
   cmos65c02Forms,
   cmos65sc02Forms,
@@ -15,7 +16,6 @@ import {
   mos6502DtvForms,
   wdc65c02Forms,
 } from "../packages/plugin-65xx/src/instructions/variants.js";
-import type { InstructionForm } from "../packages/plugin-65xx/src/instructions/schema.js";
 
 const ca65 = process.argv[2];
 const ld65 = process.argv[3];
@@ -55,11 +55,13 @@ function sourceFor(form: InstructionForm, endLabel: string): string {
       case "quadAccumulator":
         return "Q";
       case "immediate":
-        return form.codec === "unsigned16-le"
-          ? "#$1234"
-          : form.operandConstraint === "power-of-two"
-            ? "#$10"
-            : "#$12";
+        if (form.codec === "unsigned16-le") {
+          return "#$1234";
+        }
+        if (form.operandConstraint === "power-of-two") {
+          return "#$10";
+        }
+        return "#$12";
       case "zeroPage":
         return "$12";
       case "zeroPageIndexedX":
@@ -142,7 +144,9 @@ try {
       const size =
         form.encoding.length + form.operands.reduce((sum, operand) => sum + operand.width, 0);
       const bytes = [...binary.subarray(offset, offset + size)];
-      if (bytes.length !== size) throw new Error(`${cpu} fixture ended during case ${index}.`);
+      if (bytes.length !== size) {
+        throw new Error(`${cpu} fixture ended during case ${index}.`);
+      }
       cases.push({
         mnemonic: form.mnemonic,
         mode: form.mode,

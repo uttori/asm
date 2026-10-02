@@ -209,7 +209,7 @@ function parseNumberToken(token) {
 }
 /**
  * Requires a numeric attribute.
- * @param {Record<string, string>} attrs Attribute map.
+ * @param {Partial<Record<string, string>>} attrs Attribute map.
  * @param {string} key Attribute name.
  * @param {string} owner Statement name for errors.
  * @returns {number} The parsed number.

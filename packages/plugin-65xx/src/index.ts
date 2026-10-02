@@ -215,18 +215,24 @@ const directive = (
 };
 
 /**
+ * Rejects addresses outside the unsigned 16-bit flat space.
+ * @param {number} address Candidate CPU address.
+ * @returns {number} The same address when it is in range.
+ */
+function validate(address: number): number {
+  if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
+    throw new Error(`Address $${address.toString(16).toUpperCase()} is outside flat16.`);
+  }
+  return address;
+}
+
+/**
  * 16-bit address space with no bank wrap. Writes below `origin` are rejected.
  * @param {TargetFactoryContext} options The target factory context.
  * @returns {TargetAddressSpace} The address space.
  */
 function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAddressSpace {
   const { origin } = createRaw65xxTargetOptions(options);
-  const validate = (address: number): number => {
-    if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
-      throw new Error(`Address $${address.toString(16).toUpperCase()} is outside flat16.`);
-    }
-    return address;
-  };
   return {
     addressWidth: 16,
     defaultOrigin: origin,
@@ -256,6 +262,21 @@ function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAd
 }
 
 /**
+ * Sets ca65 CPU predicate symbols for the selected architecture.
+ * @param {import("@uttori/asm-core").Assembler} session Active assembler session.
+ * @param {string} architecture Architecture id being selected.
+ */
+function updatePredicates(
+  session: import("@uttori/asm-core").Assembler,
+  architecture: string,
+): void {
+  for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
+    session.globalSymbols.add(symbol);
+    session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
+  }
+}
+
+/**
  * Registers NMOS/CMOS/Commodore/MEGA65/Hudson/Mitsubishi architectures plus the flat raw target.
  * Used by the plugin `activate` hook and by tests that want contributions
  * without constructing a full plugin object.
@@ -266,7 +287,9 @@ export function register65xxContributions(context: PluginActivationContext): voi
   for (const [cpu, forms] of [
     [nmos6502Cpu, nmos6502Forms],
     [nmos6502xCpu, nmos6502xForms],
-    ...variantCpus.map((cpu) => [cpu, variantFormsByCpuId[cpu.id] ?? []] as const),
+    ...variantCpus.map(
+      (variantCpu) => [variantCpu, variantFormsByCpuId[variantCpu.id] ?? []] as const,
+    ),
   ] as const) {
     const catalog = buildInstructionCatalog(forms);
     context.registerArchitecture({
@@ -347,15 +370,6 @@ export function register65xxContributions(context: PluginActivationContext): voi
   context.registerLifecycle({
     id: CA65_65XX_LIFECYCLE_ID,
     create: () => {
-      const updatePredicates = (
-        session: import("@uttori/asm-core").Assembler,
-        architecture: string,
-      ) => {
-        for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
-          session.globalSymbols.add(symbol);
-          session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
-        }
-      };
       return {
         onSessionCreated: ({ session, state }) => {
           const profile = state.get(ca65SessionStateKey);

@@ -1,4 +1,4 @@
-const sorted = (values) => [...new Set(values)].sort();
+const sorted = (values) => [...new Set(values)].toSorted();
 const key = (...values) => JSON.stringify(values);
 /**
  * Join sources by immutable artifact identity, never by a display filename or import order.
@@ -49,19 +49,17 @@ export const buildAnalysisSourceCatalog = (shards, importTimes = new Map()) => {
         source.evidenceIds.push(evidence.id);
     }
     return ([...sources.values()]
-        .map((source) => ({
-        ...source,
-        ...(source.sha256 && importTimes.has(source.sha256)
-            ? { lastImportedAt: importTimes.get(source.sha256) }
-            : {}),
+        .map((source) => Object.assign({}, source, source.sha256 && importTimes.has(source.sha256)
+        ? { lastImportedAt: importTimes.get(source.sha256) }
+        : {}, {
         names: sorted(source.names),
         name: sorted(source.names).join(" / "),
-        kinds: [...source.kinds].sort(),
+        kinds: [...source.kinds].toSorted(),
         evidenceIds: sorted(source.evidenceIds),
-        reports: source.reports.sort((a, b) => a.id.localeCompare(b.id)),
+        reports: source.reports.toSorted((a, b) => a.id.localeCompare(b.id)),
     }))
         // Missing dates cannot establish recency. Keep legacy sources deterministic after dated imports.
-        .sort((a, b) => (b.lastImportedAt ?? -1) - (a.lastImportedAt ?? -1) ||
+        .toSorted((a, b) => (b.lastImportedAt ?? -1) - (a.lastImportedAt ?? -1) ||
         a.name.localeCompare(b.name) ||
         a.id.localeCompare(b.id)));
 };

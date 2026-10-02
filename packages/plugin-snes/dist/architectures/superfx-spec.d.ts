@@ -1,6 +1,12 @@
 import type { ArchitectureInstructionSpecification, InstructionDescriptor, InstructionFlow, InstructionStateEffect } from "@uttori/asm-core";
 /** ALT selector carried by the GSU status register. */
 export type SuperFxAltState = 0 | 1 | 2 | 3;
+/**
+ * Accepts a GSU ALT value. Hardware ALT is a 2-bit field.
+ * @param {number} value Candidate ALT state.
+ * @returns {boolean} True when `value` is 0, 1, 2, or 3.
+ */
+export declare function isSuperFxAltState(value: number): value is SuperFxAltState;
 /** Operand encoding used by one effective SuperFX opcode. */
 export type SuperFxOperandEncoding = "implied" | "relative" | "register" | "registerIndirect" | "immediateNibble" | "registerImmediate8" | "registerImmediate16" | "registerRamShort" | "ramShortRegister" | "registerRamAbsolute" | "ramAbsoluteRegister";
 /** One effective opcode under one of the four ALT states. */

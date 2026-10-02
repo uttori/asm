@@ -47,13 +47,13 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 function isDataBuffer(data) {
   return typeof data === "object" && data !== null && Symbol.for(DATA_BUFFER_BRAND) in data;
 }
 var DATA_BUFFER_BRAND, CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, textEncoder, hashBytes, computeBytes, isoChecksum, compute, crc32cBytes;
 var init_data_hash_crc32 = __esm({
-  "../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
     DATA_BUFFER_BRAND = "uttori.DataBuffer";
     CRC32_POLYNOMIAL = 3988292384;
     CRC32C_POLYNOMIAL = 2197175160;
@@ -142,9 +142,9 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
-// ../../node_modules/semver/internal/constants.js
+// node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "../../node_modules/semver/internal/constants.js"(exports, module) {
+  "node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -174,9 +174,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/debug.js
+// node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "../../node_modules/semver/internal/debug.js"(exports, module) {
+  "node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug4 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -184,9 +184,9 @@ var require_debug = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/re.js
+// node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "../../node_modules/semver/internal/re.js"(exports, module) {
+  "node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -272,9 +272,9 @@ var require_re = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/parse-options.js
+// node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "../../node_modules/semver/internal/parse-options.js"(exports, module) {
+  "node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -291,9 +291,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/identifiers.js
+// node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "../../node_modules/semver/internal/identifiers.js"(exports, module) {
+  "node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -316,9 +316,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/semver.js
+// node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "../../node_modules/semver/classes/semver.js"(exports, module) {
+  "node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug4 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -608,9 +608,9 @@ var require_semver = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/parse.js
+// node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "../../node_modules/semver/functions/parse.js"(exports, module) {
+  "node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -630,9 +630,9 @@ var require_parse = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/valid.js
+// node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "../../node_modules/semver/functions/valid.js"(exports, module) {
+  "node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -643,9 +643,9 @@ var require_valid = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/clean.js
+// node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "../../node_modules/semver/functions/clean.js"(exports, module) {
+  "node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -656,9 +656,9 @@ var require_clean = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/inc.js
+// node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "../../node_modules/semver/functions/inc.js"(exports, module) {
+  "node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier2, identifierBase) => {
@@ -680,9 +680,9 @@ var require_inc = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/diff.js
+// node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "../../node_modules/semver/functions/diff.js"(exports, module) {
+  "node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -724,9 +724,9 @@ var require_diff = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/major.js
+// node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "../../node_modules/semver/functions/major.js"(exports, module) {
+  "node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -734,9 +734,9 @@ var require_major = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/minor.js
+// node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "../../node_modules/semver/functions/minor.js"(exports, module) {
+  "node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -744,9 +744,9 @@ var require_minor = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/patch.js
+// node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "../../node_modules/semver/functions/patch.js"(exports, module) {
+  "node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -754,9 +754,9 @@ var require_patch = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/prerelease.js
+// node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "../../node_modules/semver/functions/prerelease.js"(exports, module) {
+  "node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -767,9 +767,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare.js
+// node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "../../node_modules/semver/functions/compare.js"(exports, module) {
+  "node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -777,9 +777,9 @@ var require_compare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/rcompare.js
+// node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "../../node_modules/semver/functions/rcompare.js"(exports, module) {
+  "node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -787,9 +787,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare-loose.js
+// node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "../../node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -797,9 +797,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare-build.js
+// node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "../../node_modules/semver/functions/compare-build.js"(exports, module) {
+  "node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -811,9 +811,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/sort.js
+// node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "../../node_modules/semver/functions/sort.js"(exports, module) {
+  "node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -821,9 +821,9 @@ var require_sort = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/rsort.js
+// node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "../../node_modules/semver/functions/rsort.js"(exports, module) {
+  "node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -831,9 +831,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gt.js
+// node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "../../node_modules/semver/functions/gt.js"(exports, module) {
+  "node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -841,9 +841,9 @@ var require_gt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lt.js
+// node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "../../node_modules/semver/functions/lt.js"(exports, module) {
+  "node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -851,9 +851,9 @@ var require_lt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/eq.js
+// node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "../../node_modules/semver/functions/eq.js"(exports, module) {
+  "node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -861,9 +861,9 @@ var require_eq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/neq.js
+// node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "../../node_modules/semver/functions/neq.js"(exports, module) {
+  "node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -871,9 +871,9 @@ var require_neq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gte.js
+// node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "../../node_modules/semver/functions/gte.js"(exports, module) {
+  "node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -881,9 +881,9 @@ var require_gte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lte.js
+// node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "../../node_modules/semver/functions/lte.js"(exports, module) {
+  "node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -891,9 +891,9 @@ var require_lte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/cmp.js
+// node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "../../node_modules/semver/functions/cmp.js"(exports, module) {
+  "node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -941,9 +941,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/coerce.js
+// node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "../../node_modules/semver/functions/coerce.js"(exports, module) {
+  "node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -987,9 +987,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/truncate.js
+// node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "../../node_modules/semver/functions/truncate.js"(exports, module) {
+  "node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -1028,9 +1028,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/lrucache.js
+// node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "../../node_modules/semver/internal/lrucache.js"(exports, module) {
+  "node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1066,9 +1066,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/range.js
+// node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "../../node_modules/semver/classes/range.js"(exports, module) {
+  "node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1451,9 +1451,9 @@ var require_range = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/comparator.js
+// node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "../../node_modules/semver/classes/comparator.js"(exports, module) {
+  "node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1564,9 +1564,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/satisfies.js
+// node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "../../node_modules/semver/functions/satisfies.js"(exports, module) {
+  "node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range2, options) => {
@@ -1581,9 +1581,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/to-comparators.js
+// node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var toComparators = (range2, options) => new Range(range2, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -1591,9 +1591,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/max-satisfying.js
+// node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1620,9 +1620,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/min-satisfying.js
+// node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1649,9 +1649,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/min-version.js
+// node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "../../node_modules/semver/ranges/min-version.js"(exports, module) {
+  "node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1708,9 +1708,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/valid.js
+// node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "../../node_modules/semver/ranges/valid.js"(exports, module) {
+  "node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var validRange = (range2, options) => {
@@ -1724,9 +1724,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/outside.js
+// node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "../../node_modules/semver/ranges/outside.js"(exports, module) {
+  "node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -1793,9 +1793,9 @@ var require_outside = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/gtr.js
+// node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "../../node_modules/semver/ranges/gtr.js"(exports, module) {
+  "node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range2, options) => outside(version, range2, ">", options);
@@ -1803,9 +1803,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/ltr.js
+// node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "../../node_modules/semver/ranges/ltr.js"(exports, module) {
+  "node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range2, options) => outside(version, range2, "<", options);
@@ -1813,9 +1813,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/intersects.js
+// node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "../../node_modules/semver/ranges/intersects.js"(exports, module) {
+  "node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -1827,9 +1827,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/simplify.js
+// node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "../../node_modules/semver/ranges/simplify.js"(exports, module) {
+  "node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -1877,9 +1877,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/subset.js
+// node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "../../node_modules/semver/ranges/subset.js"(exports, module) {
+  "node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -2039,9 +2039,9 @@ var require_subset = __commonJS({
   }
 });
 
-// ../../node_modules/semver/index.js
+// node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "../../node_modules/semver/index.js"(exports, module) {
+  "node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -2136,18 +2136,25 @@ var require_semver2 = __commonJS({
   }
 });
 
-// ../core/src/canonical-json.ts
-var compareKeys, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
+// packages/core/src/canonical-json.ts
+function stringifyCanonical(value) {
+  return JSON.stringify(value);
+}
+var compareKeys, isRecord3, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
 var init_canonical_json = __esm({
-  "../core/src/canonical-json.ts"() {
+  "packages/core/src/canonical-json.ts"() {
     "use strict";
     compareKeys = (a, b) => a.localeCompare(b);
+    isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     canonicalValue = (value) => {
       if (typeof value !== "object" || value === null) {
         return value;
       }
       if (Array.isArray(value)) {
         return value.map(canonicalValue);
+      }
+      if (!isRecord3(value)) {
+        return value;
       }
       const input = value;
       const result = {};
@@ -2174,19 +2181,19 @@ var init_canonical_json = __esm({
       }
       return result;
     };
-    canonicalJsonCompact = (value) => JSON.stringify(canonicalValue(value)) ?? "";
+    canonicalJsonCompact = (value) => stringifyCanonical(canonicalValue(value)) ?? "";
     canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
     canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
   }
 });
 
-// ../core/src/debug-map.ts
+// packages/core/src/debug-map.ts
 import { createHash } from "node:crypto";
 import path2 from "node:path";
 var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, sha256, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
-  "../core/src/debug-map.ts"() {
+  "packages/core/src/debug-map.ts"() {
     "use strict";
     init_canonical_json();
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
@@ -2199,21 +2206,24 @@ var init_debug_map = __esm({
         const relative2 = path2.relative(sourceRoot, absolute);
         const portable = relative2 && !relative2.startsWith("..") && !path2.isAbsolute(relative2) ? relative2 : absolute;
         return { entry, originalId, portable: portable.split(path2.sep).join("/") };
-      }).sort((left, right) => left.portable.localeCompare(right.portable));
+      }).toSorted((left, right) => left.portable.localeCompare(right.portable));
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
         const kind = options.dependencyKinds?.get(entry.name);
-        return {
-          id,
-          path: portable,
-          size: entry.size,
-          crc32: entry.crc,
-          sha256: entry.sha256,
-          ...kind ? { kind } : {}
-        };
+        return Object.assign(
+          {},
+          {
+            id,
+            path: portable,
+            size: entry.size,
+            crc32: entry.crc,
+            sha256: entry.sha256
+          },
+          kind ? { kind } : {}
+        );
       });
-      const ranges = options.mapping.ranges.map(({ fileIdx, ...range2 }) => ({ ...range2, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 })).filter((range2) => range2.sourceId >= 0).sort(
+      const ranges = options.mapping.ranges.map(({ fileIdx, ...range2 }) => ({ ...range2, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 })).filter((range2) => range2.sourceId >= 0).toSorted(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.sourceId - right.sourceId || left.line - right.line
       );
       const payload = {
@@ -2246,7 +2256,7 @@ var init_debug_map = __esm({
       const { fingerprint, ...payload } = map;
       const issues = [];
       if (map.format !== DEBUG_MAP_FORMAT) {
-        issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
+        issues.push(`Unsupported debug-map format '${map.format}'.`);
       }
       if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
         issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
@@ -2286,19 +2296,22 @@ var init_debug_map = __esm({
   }
 });
 
-// ../debug-adapter/src/contracts.ts
+// packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION;
 var init_contracts = __esm({
-  "../debug-adapter/src/contracts.ts"() {
+  "packages/debug-adapter/src/contracts.ts"() {
     "use strict";
     DEBUG_BACKEND_PROTOCOL_VERSION = 1;
   }
 });
 
-// ../debug-adapter/src/conformance.ts
-var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
+// packages/debug-adapter/src/conformance.ts
+function reportedProtocol(version) {
+  return version;
+}
+var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, CAPABILITY_KEYS, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
 var init_conformance = __esm({
-  "../debug-adapter/src/conformance.ts"() {
+  "packages/debug-adapter/src/conformance.ts"() {
     "use strict";
     init_contracts();
     DEBUG_BACKEND_CONFORMANCE_VERSION = 1;
@@ -2322,18 +2335,28 @@ var init_conformance = __esm({
         );
       }
     };
+    CAPABILITY_KEYS = [
+      "pause",
+      "step",
+      "stepKinds",
+      "registers",
+      "memory",
+      "stackFrames",
+      "breakpoints",
+      "disassemble"
+    ];
     assertCapability = (actual, expected) => {
-      const spaces = [...actual.addressSpaces].sort();
-      const expectedSpaces = [...expected.addressSpaces].sort();
+      const spaces = [...actual.addressSpaces].toSorted();
+      const expectedSpaces = [...expected.addressSpaces].toSorted();
       if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces)) {
         fail(
           `${expected.architecture}: expected address spaces ${expectedSpaces.join(", ")}, received ${spaces.join(", ")}.`
         );
       }
-      const memorySpaces = [...actual.memorySpaces].sort(
+      const memorySpaces = [...actual.memorySpaces].toSorted(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace)
       );
-      const expectedMemorySpaces = [...expected.memorySpaces].sort(
+      const expectedMemorySpaces = [...expected.memorySpaces].toSorted(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace)
       );
       if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces)) {
@@ -2341,9 +2364,14 @@ var init_conformance = __esm({
           `${expected.architecture}: expected memory spaces ${JSON.stringify(expectedMemorySpaces)}, received ${JSON.stringify(memorySpaces)}.`
         );
       }
-      for (const [key3, value] of Object.entries(expected.capabilities)) {
-        if (actual[key3] !== value) {
-          fail(`${expected.architecture}: expected capability '${key3}' to be ${value}.`);
+      for (const key3 of CAPABILITY_KEYS) {
+        if (!Object.hasOwn(expected.capabilities, key3)) {
+          continue;
+        }
+        if (actual[key3] !== expected.capabilities[key3]) {
+          fail(
+            `${expected.architecture}: expected capability '${key3}' to be ${JSON.stringify(expected.capabilities[key3])}.`
+          );
         }
       }
     };
@@ -2361,7 +2389,7 @@ var init_conformance = __esm({
         if (existing) {
           return existing;
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject2) => {
           const started = Date.now();
           const timer = setInterval(() => {
             const match = this.events.slice(start).find(predicate);
@@ -2370,25 +2398,27 @@ var init_conformance = __esm({
               resolve(match);
             } else if (Date.now() - started >= timeoutMs) {
               clearInterval(timer);
-              reject(new Error(`Timed out after ${timeoutMs} ms waiting for a backend event.`));
+              reject2(new Error(`Timed out after ${timeoutMs} ms waiting for a backend event.`));
             }
           }, 5);
         });
       }
     };
-    withTimeout = async (operation, timeoutMs, context) => new Promise((resolve, reject) => {
+    withTimeout = async (operation, timeoutMs, context) => new Promise((resolve, reject2) => {
       const timer = setTimeout(
-        () => reject(new Error(`${context} timed out after ${timeoutMs} ms.`)),
+        () => reject2(new Error(`${context} timed out after ${timeoutMs} ms.`)),
         timeoutMs
       );
       operation.then(
         (value) => {
           clearTimeout(timer);
           resolve(value);
+          return;
         },
         (error) => {
           clearTimeout(timer);
-          reject(error instanceof Error ? error : new Error(String(error)));
+          reject2(error instanceof Error ? error : new Error(String(error)));
+          return;
         }
       );
     });
@@ -2417,7 +2447,7 @@ var init_conformance = __esm({
     eventTypes = (events) => events.map((event) => event.type);
     scenarios = {
       "protocol-and-capabilities": async (options) => withBackend(options, (backend) => {
-        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
+        if (reportedProtocol(backend.protocolVersion) !== DEBUG_BACKEND_PROTOCOL_VERSION) {
           fail(`Expected backend protocol ${String(DEBUG_BACKEND_PROTOCOL_VERSION)}.`);
         }
         if (options.fixture.initialAddress.architecture !== options.fixture.primaryArchitecture || options.fixture.initialAddress.addressSpace !== options.fixture.primaryAddressSpace) {
@@ -2516,7 +2546,8 @@ var init_conformance = __esm({
           ),
           "Missing primary thread."
         );
-        const [breakpoint2] = await backend.setBreakpoints([options.fixture.breakpointAddress]);
+        const appliedBreakpoints = await backend.setBreakpoints([options.fixture.breakpointAddress]);
+        const breakpoint2 = appliedBreakpoints.length > 0 ? appliedBreakpoints[0] : void 0;
         if (!breakpoint2?.verified) {
           fail("Conformance breakpoint was not verified.");
         }
@@ -2600,10 +2631,10 @@ var init_conformance = __esm({
   }
 });
 
-// ../debug-adapter/src/debug-expression.ts
+// packages/debug-adapter/src/debug-expression.ts
 var MAX_EXPRESSION_CHARACTERS, MAX_EXPRESSION_DEPTH, MAX_SHIFT, MAX_EXPONENT, MAX_MAGNITUDE, binaryPrecedence2, checked, parseDigits, digitPattern, tokenize, DebugExpressionParser, evaluateDebugExpression, formatDebugExpressionValue;
 var init_debug_expression = __esm({
-  "../debug-adapter/src/debug-expression.ts"() {
+  "packages/debug-adapter/src/debug-expression.ts"() {
     "use strict";
     MAX_EXPRESSION_CHARACTERS = 256;
     MAX_EXPRESSION_DEPTH = 32;
@@ -2903,7 +2934,193 @@ var init_debug_expression = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-v2.ts
+// packages/debug-adapter/src/capture-v2.ts
+function isFieldRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function validateCaptureRequest(value) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture request.");
+  }
+  if (value.operation === "context") {
+    let fields2 = ["operation", "action"];
+    const action = value.action;
+    if (action === "prepare" || action === "replay" || action === "restore") {
+      fields2.push("directory", "romContentSha256", "producer");
+      validateCaptureRequest({
+        operation: "file-start",
+        file: value.directory,
+        romContentSha256: value.romContentSha256,
+        producer: value.producer,
+        bufferBytes: 8388608
+      });
+    } else if (action === "start" || action === "stop" || action === "mark") {
+      fields2.push("session");
+      captureSession(value.session);
+      if (action === "mark") {
+        fields2.push("label");
+        if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
+          throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
+        }
+      }
+    } else if (action !== "abort" && action !== "status") {
+      throw new Error("Unsupported capture context action.");
+    }
+    if (Object.keys(value).some((key3) => !fields2.includes(key3))) {
+      throw new Error("Unsupported capture context field.");
+    }
+    return;
+  }
+  if (value.operation === "file-capabilities") {
+    if (Object.keys(value).some((key3) => !["operation", "scope"].includes(key3))) {
+      throw new Error("Unsupported native file capability field.");
+    }
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+    return;
+  }
+  if (value.operation === "file-start") {
+    if (Object.keys(value).some(
+      (key3) => ![
+        "operation",
+        "scope",
+        "bufferBytes",
+        "file",
+        "romContentSha256",
+        "producer",
+        "measureStages"
+      ].includes(key3)
+    )) {
+      throw new Error("Unsupported native file start field.");
+    }
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
+      throw new Error("Native file profiling must be boolean.");
+    }
+    validateCaptureRequest({
+      operation: "start",
+      bufferBytes: value.bufferBytes,
+      scope: value.scope
+    });
+    const producer = value.producer;
+    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key3) => !["id", "revision"].includes(key3))) {
+      throw new Error(
+        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
+      );
+    }
+    return;
+  }
+  let fields = ["operation", "session"];
+  if (value.operation === "capabilities") {
+    fields = ["operation", "scope"];
+  }
+  if (value.operation === "start") {
+    fields = ["operation", "bufferBytes", "scope"];
+  }
+  if (value.operation === "read") {
+    fields = ["operation", "session", "chunk"];
+  }
+  if (value.operation === "ack") {
+    fields = ["operation", "session", "chunk", "event"];
+  }
+  if (Object.keys(value).some((key3) => !fields.includes(key3))) {
+    throw new Error(
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
+    );
+  }
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+  }
+  if (value.operation === "capabilities") {
+    return;
+  }
+  if (value.operation === "start") {
+    const bufferBytes = value.bufferBytes;
+    if (typeof bufferBytes !== "number" || !Number.isSafeInteger(bufferBytes) || bufferBytes < 4718656 || bufferBytes > 64 * 1024 * 1024) {
+      throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+    }
+    return;
+  }
+  captureSession(value.session);
+  if (value.operation === "status" || value.operation === "stop" || value.operation === "abort" || value.operation === "release" || value.operation === "file-status" || value.operation === "file-stop" || value.operation === "file-abort" || value.operation === "file-release") {
+    return;
+  }
+  if (value.operation === "read" || value.operation === "ack") {
+    if (!captureU64(value.chunk)) {
+      throw new Error("Capture chunk sequence starts at one.");
+    }
+    if (value.operation === "ack" && !captureU64(value.event)) {
+      throw new Error("Capture event sequence starts at one.");
+    }
+    return;
+  }
+  throw new Error("Unsupported capture operation.");
+}
+function assertCapturePosition(value, session, scope) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture position.");
+  }
+  captureSession(value.session);
+  if (session !== void 0 && value.session !== session) {
+    throw new Error("Capture session changed.");
+  }
+  if (value.scope !== void 0) {
+    captureScope(value.scope);
+  }
+  const positionScope = value.scope === void 0 ? "snes.65816.instructions" : value.scope;
+  if (scope !== void 0 && positionScope !== captureScope(scope)) {
+    throw new Error("Capture scope changed or was not confirmed by the producer.");
+  }
+  const state = value.state;
+  if (state !== "armed" && state !== "recording" && state !== "throttled" && state !== "stopping" && state !== "draining" && state !== "complete" && state !== "incomplete") {
+    throw new Error("Invalid capture state.");
+  }
+  const bounds = [
+    value.releasedThrough,
+    value.durableThrough,
+    value.acceptedThrough,
+    value.deliveredThrough,
+    value.producedThrough
+  ].map(captureU64);
+  if (bounds.some((bound, index) => index > 0 && bound < bounds[index - 1])) {
+    throw new Error("Capture ownership boundaries are inconsistent.");
+  }
+  if (captureU64(value.chunkThrough) > captureU64(value.producedChunks)) {
+    throw new Error("Capture chunk boundary is inconsistent.");
+  }
+  captureU64(value.throttleCount);
+  if (!captureU64(value.clockNumerator) || !captureU64(value.clockDenominator)) {
+    throw new Error("Invalid capture clock domain.");
+  }
+  if (value.droppedInScope !== "0" || typeof value.error !== "string" || value.error.length > 256) {
+    throw new Error("Capture integrity failed.");
+  }
+  const bufferedBytes = value.bufferedBytes;
+  const allocatedBytes = value.allocatedBytes;
+  if (typeof bufferedBytes !== "number" || typeof allocatedBytes !== "number" || !Number.isSafeInteger(bufferedBytes) || !Number.isSafeInteger(allocatedBytes) || bufferedBytes < 0 || allocatedBytes < 0 || bufferedBytes > 64 * 1024 * 1024 || allocatedBytes > 64 * 1024 * 1024 || bufferedBytes > allocatedBytes) {
+    throw new Error("Capture allocation exceeds its bounds.");
+  }
+  if (state === "complete" && (value.error || bufferedBytes || new Set(bounds.map(String)).size !== 1 || value.chunkThrough !== value.producedChunks)) {
+    throw new Error("Capture terminal totals do not reconcile.");
+  }
+}
+function validateCaptureResult(value) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Capture result must be an object.");
+  }
+  if (typeof value.hex === "string" && value.version === void 0 && value.session === void 0 && value.contextState === void 0) {
+    return { hex: value.hex };
+  }
+  if (typeof value.contextState === "string" && value.version === void 0 && value.session === void 0) {
+    return { contextState: value.contextState };
+  }
+  if (value.version === 2) {
+    return validateCaptureCapabilities(value, captureScope(value.scope));
+  }
+  return validateCapturePosition(value);
+}
 function decodeCaptureChunk(bytes2, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
@@ -2936,10 +3153,17 @@ function decodeCaptureChunk(bytes2, session, scope = "snes.65816.instructions") 
     through: String(through)
   };
   if (scope === "snes.cpu-bus") {
+    const accesses = [];
+    for (const access of decodeBusAccesses(b, first, count)) {
+      if ("kind" in access) {
+        throw new Error("Bus capture chunk contains a transfer marker.");
+      }
+      accesses.push(access);
+    }
     return {
       ...identity2,
       scope,
-      accesses: decodeBusAccesses(b, first, count)
+      accesses
     };
   }
   if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu") {
@@ -3004,9 +3228,9 @@ function decodeCaptureChunk(bytes2, session, scope = "snes.65816.instructions") 
     instructions
   };
 }
-var maxU64, captureScope, captureU64, captureSession, validateCaptureRequest, validateCaptureCapabilities, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
+var maxU64, captureScope, captureU64, captureSession, bounded, validateCaptureCapabilities, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "../debug-adapter/src/capture-v2.ts"() {
+  "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
     maxU64 = (1n << 64n) - 1n;
@@ -3028,134 +3252,7 @@ var init_capture_v2 = __esm({
       }
       return value;
     };
-    validateCaptureRequest = (value) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Invalid capture request.");
-      }
-      if (value.operation === "context") {
-        let fields2 = ["operation", "action"];
-        if (["prepare", "replay", "restore"].includes(value.action)) {
-          fields2.push("directory", "romContentSha256", "producer");
-          const request = value;
-          validateCaptureRequest({
-            operation: "file-start",
-            file: request.directory,
-            romContentSha256: request.romContentSha256,
-            producer: request.producer,
-            bufferBytes: 8388608
-          });
-        } else if (value.action === "start" || value.action === "stop" || value.action === "mark") {
-          fields2.push("session");
-          captureSession(value.session);
-          if (value.action === "mark") {
-            fields2.push("label");
-            if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
-              throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
-            }
-          }
-        } else if (value.action !== "abort" && value.action !== "status") {
-          throw new Error("Unsupported capture context action.");
-        }
-        if (Object.keys(value).some((key3) => !fields2.includes(key3))) {
-          throw new Error("Unsupported capture context field.");
-        }
-        return;
-      }
-      if (value.operation === "file-capabilities") {
-        if (Object.keys(value).some((key3) => !["operation", "scope"].includes(key3))) {
-          throw new Error("Unsupported native file capability field.");
-        }
-        if (value.scope !== void 0) {
-          captureScope(value.scope);
-        }
-        return;
-      }
-      if (value.operation === "file-start") {
-        if (Object.keys(value).some(
-          (key3) => ![
-            "operation",
-            "scope",
-            "bufferBytes",
-            "file",
-            "romContentSha256",
-            "producer",
-            "measureStages"
-          ].includes(key3)
-        )) {
-          throw new Error("Unsupported native file start field.");
-        }
-        if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
-          throw new Error("Native file profiling must be boolean.");
-        }
-        validateCaptureRequest({
-          operation: "start",
-          bufferBytes: value.bufferBytes,
-          scope: value.scope
-        });
-        const bounded = (text2, max) => typeof text2 === "string" && text2.length > 0 && !text2.includes("\0") && new TextEncoder().encode(text2).length <= max;
-        if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key3) => !["id", "revision"].includes(key3))) {
-          throw new Error(
-            "Native file capture requires an absolute bounded path and exact ROM/producer identity."
-          );
-        }
-        return;
-      }
-      let fields = ["operation", "session"];
-      if (value.operation === "capabilities") {
-        fields = ["operation", "scope"];
-      }
-      if (value.operation === "start") {
-        fields = ["operation", "bufferBytes", "scope"];
-      }
-      if (value.operation === "read") {
-        fields = ["operation", "session", "chunk"];
-      }
-      if (value.operation === "ack") {
-        fields = ["operation", "session", "chunk", "event"];
-      }
-      if (Object.keys(value).some((key3) => !fields.includes(key3))) {
-        throw new Error(
-          "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
-        );
-      }
-      if (value.operation === "capabilities" || value.operation === "start") {
-        if (value.scope !== void 0) {
-          captureScope(value.scope);
-        }
-      }
-      if (value.operation === "capabilities") {
-        return;
-      }
-      if (value.operation === "start") {
-        if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024) {
-          throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
-        }
-        return;
-      }
-      captureSession(value.session);
-      if ([
-        "status",
-        "stop",
-        "abort",
-        "release",
-        "file-status",
-        "file-stop",
-        "file-abort",
-        "file-release"
-      ].includes(value.operation)) {
-        return;
-      }
-      if (value.operation === "read" || value.operation === "ack") {
-        if (!captureU64(value.chunk)) {
-          throw new Error("Capture chunk sequence starts at one.");
-        }
-        if (value.operation === "ack" && !captureU64(value.event)) {
-          throw new Error("Capture event sequence starts at one.");
-        }
-        return;
-      }
-      throw new Error("Unsupported capture operation.");
-    };
+    bounded = (text2, max) => typeof text2 === "string" && text2.length > 0 && !text2.includes("\0") && new TextEncoder().encode(text2).length <= max;
     validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
       captureScope(scope);
       let reserve = 71;
@@ -3178,7 +3275,7 @@ var init_capture_v2 = __esm({
         overheadBytes: 4194304,
         resumeSession: false
       };
-      if (!value || typeof value !== "object" || Object.entries(expected).some(([key3, item]) => value[key3] !== item)) {
+      if (!isFieldRecord(value) || Object.entries(expected).some(([key3, item]) => value[key3] !== item)) {
         throw new Error("Unsupported capture scope, reserve, or ownership contract.");
       }
       if (value.nativeFile === true) {
@@ -3187,54 +3284,8 @@ var init_capture_v2 = __esm({
       return expected;
     };
     validateCapturePosition = (value, session, scope) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Invalid capture position.");
-      }
-      const p = value;
-      captureSession(p.session);
-      if (session !== void 0 && p.session !== session) {
-        throw new Error("Capture session changed.");
-      }
-      if (p.scope !== void 0) {
-        captureScope(p.scope);
-      }
-      if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
-        throw new Error("Capture scope changed or was not confirmed by the producer.");
-      }
-      if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
-        p.state
-      )) {
-        throw new Error("Invalid capture state.");
-      }
-      const bounds = [
-        p.releasedThrough,
-        p.durableThrough,
-        p.acceptedThrough,
-        p.deliveredThrough,
-        p.producedThrough
-      ].map(captureU64);
-      if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
-        throw new Error("Capture ownership boundaries are inconsistent.");
-      }
-      if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
-        throw new Error("Capture chunk boundary is inconsistent.");
-      }
-      captureU64(p.throttleCount);
-      if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
-        throw new Error("Invalid capture clock domain.");
-      }
-      if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
-        throw new Error("Capture integrity failed.");
-      }
-      if (![p.bufferedBytes, p.allocatedBytes].every(
-        (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-      ) || p.bufferedBytes > p.allocatedBytes) {
-        throw new Error("Capture allocation exceeds its bounds.");
-      }
-      if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
-        throw new Error("Capture terminal totals do not reconcile.");
-      }
-      return p;
+      assertCapturePosition(value, session, scope);
+      return value;
     };
     captureCrc32c = (bytes2, zeroChecksum = false) => crc32cBytes(bytes2, zeroChecksum);
     captureChunkRecords = (chunk) => {
@@ -3414,17 +3465,37 @@ var init_capture_v2 = __esm({
   }
 });
 
-// ../debug-adapter/src/dap.ts
+// packages/debug-adapter/src/dap.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import path10 from "node:path";
-var numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
+function indexedString(values, index) {
+  return index >= 0 && index < values.length ? values[index] : void 0;
+}
+var numeric, isRecord12, dapRequest, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
-  "../debug-adapter/src/dap.ts"() {
+  "packages/debug-adapter/src/dap.ts"() {
     "use strict";
     init_debug_map();
     init_debug_expression();
     init_capture_v2();
     numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
+    isRecord12 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    dapRequest = (value) => {
+      if (!isRecord12(value) || value.type !== "request" || typeof value.command !== "string") {
+        throw new Error("DAP frame is not a request.");
+      }
+      if (typeof value.seq !== "number" || !Number.isSafeInteger(value.seq)) {
+        throw new Error("DAP frame is not a request.");
+      }
+      const request = { seq: value.seq, type: "request", command: value.command };
+      if (value.arguments === void 0) {
+        return request;
+      }
+      if (!isRecord12(value.arguments)) {
+        throw new Error("DAP request arguments must be an object.");
+      }
+      return { ...request, arguments: value.arguments };
+    };
     records = (value) => Array.isArray(value) ? value.filter(
       (entry) => entry !== null && typeof entry === "object"
     ) : [];
@@ -3437,7 +3508,12 @@ var init_dap = __esm({
     ];
     formatDebugAddress = (address5) => `${address5.architecture}|${address5.addressSpace}|0x${address5.address.toString(16)}${address5.outputOffset === void 0 ? "" : `|0x${address5.outputOffset.toString(16)}`}`;
     parseDebugAddress = (reference) => {
-      const [architecture, addressSpace, rawAddress, rawOutputOffset, extra] = reference.split("|");
+      const parts = reference.split("|");
+      const architecture = indexedString(parts, 0);
+      const addressSpace = indexedString(parts, 1);
+      const rawAddress = indexedString(parts, 2);
+      const rawOutputOffset = indexedString(parts, 3);
+      const extra = indexedString(parts, 4);
       if (!architecture || !addressSpace || !rawAddress || extra !== void 0) {
         return void 0;
       }
@@ -3633,7 +3709,7 @@ var init_dap = __esm({
           }
           const messages = [
             response,
-            ...pending.map((event) => ({ ...event, seq: this.#nextSequence++ }))
+            ...pending.map((event) => Object.assign({}, event, { seq: this.#nextSequence++ }))
           ];
           for (const message of messages) {
             this.#onMessage?.(message);
@@ -3655,11 +3731,11 @@ var init_dap = __esm({
         if (!this.#configurationHandshake) {
           return;
         }
-        const configured = new Promise((resolve, reject) => {
+        const configured = new Promise((resolve, reject2) => {
           const timer = setTimeout(() => {
             this.#configurationDone = void 0;
             this.#cancelConfiguration = void 0;
-            reject(new Error("Debugger configuration timed out after 30 seconds."));
+            reject2(new Error("Debugger configuration timed out after 30 seconds."));
           }, 3e4);
           this.#configurationDone = () => {
             clearTimeout(timer);
@@ -3671,7 +3747,7 @@ var init_dap = __esm({
             clearTimeout(timer);
             this.#configurationDone = void 0;
             this.#cancelConfiguration = void 0;
-            reject(new Error("Debugger launch cancelled."));
+            reject2(new Error("Debugger launch cancelled."));
           };
         });
         this.#onMessage?.({ type: "event", event: "initialized", seq: this.#nextSequence++ });
@@ -3689,7 +3765,8 @@ var init_dap = __esm({
             this.#runWithoutDebug = args.noDebug === true;
             await this.#backend.connect({ reset: command === "launch" });
             if (this.#runWithoutDebug) {
-              const [thread2] = await this.#backend.threads();
+              const threads = await this.#backend.threads();
+              const thread2 = threads.length > 0 ? threads[0] : void 0;
               if (!thread2) {
                 throw new Error("The backend has no execution thread to run.");
               }
@@ -3835,10 +3912,9 @@ var init_dap = __esm({
             if (capabilities?.step && !supportedSteps.includes("out")) {
               unavailable.push("step out");
             }
-            return {
-              ...thread2,
+            return Object.assign({}, thread2, {
               name: unavailable.length === 0 ? thread2.name : `${thread2.name} (unavailable: ${unavailable.join(", ")})`
-            };
+            });
           })
         };
       }
@@ -4150,7 +4226,7 @@ var init_dap = __esm({
         if (!this.#map) {
           throw new Error("Source breakpoints require a debug map.");
         }
-        const source = args.source;
+        const source = isRecord12(args.source) ? args.source : void 0;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
         if (!sourcePath) {
           throw new Error("Source breakpoint request requires source.path.");
@@ -4177,12 +4253,11 @@ var init_dap = __esm({
             const match = address5 ? applied.get(breakpointKey(address5)) : void 0;
             if (match) {
               const verified = matches.length > 0 && matches.every((entry) => entry?.verified);
-              const result = { ...dapBreakpoint(match), verified, line };
+              const result = Object.assign({}, dapBreakpoint(match), { verified, line });
               if (!verified) {
-                return {
-                  ...result,
+                return Object.assign({}, result, {
                   message: matches.find((entry) => !entry?.verified)?.message ?? "One or more source breakpoint addresses could not be installed."
-                };
+                });
               }
               return result;
             }
@@ -4204,7 +4279,7 @@ var init_dap = __esm({
         if (!this.#map) {
           throw new Error("Breakpoint locations require a debug map.");
         }
-        const source = args.source;
+        const source = isRecord12(args.source) ? args.source : void 0;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
         if (!sourcePath) {
           throw new Error("Breakpoint location request requires source.path.");
@@ -4217,7 +4292,7 @@ var init_dap = __esm({
           ).map((range2) => range2.line)
         );
         return {
-          breakpoints: [...lines].sort((left, right) => left - right).map((line) => ({ line, column: 1 }))
+          breakpoints: [...lines].toSorted((left, right) => left - right).map((line) => ({ line, column: 1 }))
         };
       }
       async #setInstructionBreakpoints(args) {
@@ -4228,7 +4303,7 @@ var init_dap = __esm({
           const address5 = parseDebugAddress(reference);
           if (address5) {
             const offset = numeric(breakpoint2.offset);
-            const adjusted = { ...address5, address: address5.address + offset };
+            const adjusted = Object.assign({}, address5, { address: address5.address + offset });
             if (this.#supportsBreakpoint(adjusted)) {
               instructions.set(formatDebugAddress(adjusted), adjusted);
             }
@@ -4290,7 +4365,7 @@ var init_dap = __esm({
             );
             this.#assertExecutionActive();
             if (restored.some(({ verified }) => !verified)) {
-              throw new Error("Breakpoint recovery was not verified.");
+              throw new Error("Breakpoint recovery was not verified.", { cause: error });
             }
             this.#verifiedBreakpoints = restored;
             this.#breakpointTableReliable = true;
@@ -4318,7 +4393,7 @@ var init_dap = __esm({
             try {
               await this.#resumeAfterBreakpointUpdate(paused.threadId);
             } catch (error) {
-              if (this.#executionState === "stopped" && !this.#executionEnded) {
+              if (this.#executionState === "stopped" && !this.#executionHasEnded()) {
                 this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
               }
               throw error;
@@ -4358,7 +4433,7 @@ var init_dap = __esm({
           (range2) => this.#supportsBreakpoint(this.#addressForRange(range2))
         ) ?? this.#sourceRanges(sourcePath).filter(
           (range2) => range2.line > requestedLine && this.#supportsBreakpoint(this.#addressForRange(range2))
-        ).sort((left, right) => left.line - right.line || left.start - right.start)[0];
+        ).toSorted((left, right) => left.line - right.line || left.start - right.start)[0];
       }
       /**
        * Serializes execution and whole-table writes without blocking backend events.
@@ -4376,6 +4451,18 @@ var init_dap = __esm({
           () => void 0
         );
         return result;
+      }
+      /** A resumed CPU can stop again while this request is awaiting the backend. */
+      #executionIsRunning() {
+        return this.#executionState === "running";
+      }
+      /** Termination can arrive while a breakpoint-table write is awaiting the backend. */
+      #executionHasEnded() {
+        return this.#executionEnded;
+      }
+      /** The maintenance pause can be completed by a stop event before this finally runs. */
+      #maintenancePauseRecord() {
+        return this.#maintenancePause;
       }
       #assertExecutionActive() {
         if (this.#executionEnded) {
@@ -4423,7 +4510,7 @@ var init_dap = __esm({
           await this.#threadList();
         }
         this.#assertExecutionActive();
-        if (this.#executionState !== "running") {
+        if (!this.#executionIsRunning()) {
           return void 0;
         }
         const architectures = new Set(addresses2.map(({ architecture }) => architecture));
@@ -4436,9 +4523,9 @@ var init_dap = __esm({
         let resolvePause;
         let rejectPause;
         const stopped = new Promise(
-          (resolve, reject) => {
+          (resolve, reject2) => {
             resolvePause = resolve;
-            rejectPause = reject;
+            rejectPause = reject2;
           }
         );
         const timer = setTimeout(
@@ -4452,7 +4539,7 @@ var init_dap = __esm({
           const [, stop] = await Promise.all([pause2, stopped]);
           return { threadId: thread2.id, ...stop };
         } finally {
-          if (this.#maintenancePause?.timer === timer) {
+          if (this.#maintenancePauseRecord()?.timer === timer) {
             this.#maintenancePause = void 0;
           }
           clearTimeout(timer);
@@ -4502,12 +4589,16 @@ var init_dap = __esm({
           instructions.map((instruction2) => this.#annotatedInstructionText(instruction2))
         );
         return {
-          instructions: instructions.map((instruction2, index) => ({
-            address: formatDebugAddress(instruction2.address),
-            instructionBytes: bytesText(instruction2),
-            instruction: texts[index],
-            ...instruction2.symbol ? { symbol: instruction2.symbol } : {}
-          }))
+          instructions: instructions.map(
+            (instruction2, index) => Object.assign(
+              {
+                address: formatDebugAddress(instruction2.address),
+                instructionBytes: bytesText(instruction2),
+                instruction: texts[index]
+              },
+              instruction2.symbol ? { symbol: instruction2.symbol } : {}
+            )
+          )
         };
       }
       async #source(sourceReference) {
@@ -4640,7 +4731,7 @@ var init_dap = __esm({
           }
           const body = this.#buffer.subarray(start, start + length).toString("utf8");
           this.#buffer = this.#buffer.subarray(start + length);
-          messages.push(JSON.parse(body));
+          messages.push(dapRequest(JSON.parse(body)));
         }
         return messages;
       }
@@ -4648,10 +4739,10 @@ var init_dap = __esm({
   }
 });
 
-// ../debug-adapter/src/mock-script.ts
+// packages/debug-adapter/src/mock-script.ts
 var addressFor, instructionFor, createDebugMapReplayScript;
 var init_mock_script = __esm({
-  "../debug-adapter/src/mock-script.ts"() {
+  "packages/debug-adapter/src/mock-script.ts"() {
     "use strict";
     init_debug_map();
     addressFor = (range2) => ({
@@ -4676,7 +4767,7 @@ var init_mock_script = __esm({
       if (map.ranges.length === 0) {
         throw new Error("Debug map contains no executable source ranges.");
       }
-      const architectures = [...new Set(map.ranges.map((range2) => range2.architecture))].sort();
+      const architectures = [...new Set(map.ranges.map((range2) => range2.architecture))].toSorted();
       const threads = architectures.map((architecture, index) => ({
         id: index + 1,
         name: architecture,
@@ -4689,7 +4780,7 @@ var init_mock_script = __esm({
         ])
       );
       const currentRange = new Map(firstRange);
-      const ordered = [...map.ranges].sort(
+      const ordered = [...map.ranges].toSorted(
         (left, right) => (left.outputStart ?? Number.MAX_SAFE_INTEGER) - (right.outputStart ?? Number.MAX_SAFE_INTEGER) || left.architecture.localeCompare(right.architecture) || left.start - right.start
       );
       const instructions = ordered.map((range2) => instructionFor(range2, output));
@@ -4733,7 +4824,7 @@ var init_mock_script = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-protocol.ts
+// packages/debug-adapter/src/sidecar-protocol.ts
 import { randomBytes } from "node:crypto";
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value)) {
@@ -4741,7 +4832,7 @@ function assertDebugSidecarSessionToken(value) {
   }
 }
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord2(value)) {
+  if (!isRecord13(value)) {
     throw new Error("Sidecar message must be an object.");
   }
   if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
@@ -4755,10 +4846,10 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     throw new Error("Sidecar message sequence must be a positive safe integer.");
   }
   if (value.type === "request") {
-    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command)) {
+    if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
       throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
     }
-    assertRequestBounds(value, limits);
+    assertRequestBounds(value.command, value.arguments, limits);
     return;
   }
   if (value.type === "response") {
@@ -4774,19 +4865,19 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     return;
   }
   if (value.type === "event") {
-    if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
+    if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
     }
-    if (!isRecord2(value.body)) {
+    if (!isRecord13(value.body)) {
       throw new Error("Sidecar event body must be an object.");
     }
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
-var DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord2, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
+var DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord13, listed, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, LIMIT_NAMES, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
-  "../debug-adapter/src/sidecar-protocol.ts"() {
+  "packages/debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
     DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
     DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
@@ -4827,46 +4918,57 @@ var init_sidecar_protocol = __esm({
       maxQueuedMessages: 1024,
       maxQueuedBytes: 8388608
     });
-    isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    isRecord13 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
     positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
     nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
     sessionPattern = /^[\w-]{32,128}$/;
     createDebugSidecarSessionToken = () => randomBytes(32).toString("base64url");
-    assertRequestBounds = (message, limits) => {
-      const args = message.arguments ?? {};
-      if (!isRecord2(args)) {
+    assertRequestBounds = (command, args, limits) => {
+      const record5 = args ?? {};
+      if (!isRecord13(record5)) {
         throw new Error("Sidecar request arguments must be an object.");
       }
-      if (message.command === "readMemory") {
-        const count = args.count;
+      if (command === "readMemory") {
+        const count = record5.count;
         if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
           throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
         }
       }
-      if (message.command === "disassemble") {
-        const count = args.count;
+      if (command === "disassemble") {
+        const count = record5.count;
         if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
           throw new Error(
             `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
           );
         }
       }
-      if (message.command === "setBreakpoints") {
-        const breakpoints = args.breakpoints;
+      if (command === "setBreakpoints") {
+        const breakpoints = record5.breakpoints;
         if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
           throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
         }
       }
-      if (message.command === "readTrace") {
-        const maxEvents = args.maxEvents;
+      if (command === "readTrace") {
+        const maxEvents = record5.maxEvents;
         if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
           throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
         }
       }
     };
+    LIMIT_NAMES = [
+      "maxFrameBytes",
+      "maxBufferedBytes",
+      "maxMemoryReadBytes",
+      "maxDisassemblyInstructions",
+      "maxBreakpoints",
+      "maxTraceBatchEvents",
+      "maxQueuedMessages",
+      "maxQueuedBytes"
+    ];
     validateLimits = (limits) => {
-      for (const [name, value] of Object.entries(limits)) {
-        if (!positiveInteger(value)) {
+      for (const name of LIMIT_NAMES) {
+        if (!positiveInteger(limits[name])) {
           throw new Error(`${name} must be a positive safe integer.`);
         }
       }
@@ -4988,11 +5090,11 @@ var init_sidecar_protocol = __esm({
   }
 });
 
-// ../debug-adapter/src/node-stdio-transport.ts
+// packages/debug-adapter/src/node-stdio-transport.ts
 import { spawn } from "node:child_process";
 var DEBUG_SIDECAR_SESSION_ENV, positiveInteger2, NodeStdioSidecarTransport;
 var init_node_stdio_transport = __esm({
-  "../debug-adapter/src/node-stdio-transport.ts"() {
+  "packages/debug-adapter/src/node-stdio-transport.ts"() {
     "use strict";
     init_sidecar_protocol();
     DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
@@ -5074,17 +5176,17 @@ var init_node_stdio_transport = __esm({
         if (this.#notified || this.#exited) {
           return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject2) => {
           try {
             this.#child.stdin.write(Buffer.from(data), (error) => {
               if (error) {
-                reject(error);
+                reject2(error);
               } else {
                 resolve();
               }
             });
           } catch (error) {
-            reject(error instanceof Error ? error : new Error(String(error)));
+            reject2(error instanceof Error ? error : new Error(String(error)));
           }
         });
       }
@@ -5165,7 +5267,7 @@ var init_node_stdio_transport = __esm({
           timer.unref();
           void this.#exit.then(() => {
             clearTimeout(timer);
-            resolve(true);
+            return resolve(true);
           });
         });
       }
@@ -5173,10 +5275,10 @@ var init_node_stdio_transport = __esm({
   }
 });
 
-// ../debug-adapter/src/trace-buffer.ts
+// packages/debug-adapter/src/trace-buffer.ts
 var positiveInteger3, identity, DebugTraceBuffer;
 var init_trace_buffer = __esm({
-  "../debug-adapter/src/trace-buffer.ts"() {
+  "packages/debug-adapter/src/trace-buffer.ts"() {
     "use strict";
     positiveInteger3 = (value, context) => {
       if (!Number.isSafeInteger(value) || value <= 0) {
@@ -5278,10 +5380,10 @@ var init_trace_buffer = __esm({
   }
 });
 
-// ../debug-adapter/src/replay-backend.ts
+// packages/debug-adapter/src/replay-backend.ts
 var REPLAY_TRACE_BUFFER_EVENTS, REPLAY_TRACE_BATCH_EVENTS, REPLAY_STEP_KINDS, replayArchitectureCapabilities, addressKey, addressesEqual, assertCount, ReplayDebugBackend;
 var init_replay_backend = __esm({
-  "../debug-adapter/src/replay-backend.ts"() {
+  "packages/debug-adapter/src/replay-backend.ts"() {
     "use strict";
     init_contracts();
     init_trace_buffer();
@@ -5301,7 +5403,7 @@ var init_replay_backend = __esm({
           architectureNames.add(instruction2.address.architecture);
         }
       }
-      return [...architectureNames].sort().map((architecture) => {
+      return [...architectureNames].toSorted().map((architecture) => {
         const addressSpaces = /* @__PURE__ */ new Set();
         let registers = false;
         let disassemble = false;
@@ -5325,13 +5427,13 @@ var init_replay_backend = __esm({
           (addressSpace) => script.snapshots.some(
             (snapshot) => snapshot.memory.some((region) => region.addressSpace === addressSpace)
           )
-        ).sort().map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
+        ).toSorted().map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
         return {
           architecture,
-          addressSpaces: [...addressSpaces].sort(),
+          addressSpaces: [...addressSpaces].toSorted(),
           memorySpaces,
           trace: addressSpaces.size === 0 ? null : {
-            addressSpaces: [...addressSpaces].sort(),
+            addressSpaces: [...addressSpaces].toSorted(),
             maxBufferedEvents: REPLAY_TRACE_BUFFER_EVENTS,
             maxBatchEvents: REPLAY_TRACE_BATCH_EVENTS
           },
@@ -5375,11 +5477,11 @@ var init_replay_backend = __esm({
         const architectures = script.architectures ? script.architectures.map((capability) => ({
           ...capability,
           ...capability.stepKinds ? { stepKinds: [...capability.stepKinds] } : {},
-          addressSpaces: [...capability.addressSpaces].sort(),
-          memorySpaces: [...capability.memorySpaces].sort((left, right) => left.addressSpace.localeCompare(right.addressSpace)).map((memorySpace) => Object.freeze({ ...memorySpace })),
+          addressSpaces: [...capability.addressSpaces].toSorted(),
+          memorySpaces: [...capability.memorySpaces].toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace)).map((memorySpace) => Object.freeze({ ...memorySpace })),
           trace: capability.trace ? {
             ...capability.trace,
-            addressSpaces: [...capability.trace.addressSpaces].sort()
+            addressSpaces: [...capability.trace.addressSpaces].toSorted()
           } : null
         })) : replayArchitectureCapabilities(script);
         const supports = (key3) => architectures.some((capability) => capability[key3]);
@@ -5496,7 +5598,7 @@ var init_replay_backend = __esm({
       stackFrames(threadId) {
         this.#requireConnected();
         return Promise.resolve(
-          this.#snapshot.frames.filter((frame) => frame.threadId === threadId).map((frame) => ({ ...frame, pc: { ...frame.pc } }))
+          this.#snapshot.frames.filter((frame) => frame.threadId === threadId).map((frame) => Object.assign({}, frame, { pc: Object.assign({}, frame.pc) }))
         );
       }
       /**
@@ -5507,7 +5609,7 @@ var init_replay_backend = __esm({
       registers(frameId) {
         this.#requireConnected();
         return Promise.resolve(
-          (this.#snapshot.registers[frameId] ?? []).map((register5) => ({ ...register5 }))
+          (this.#snapshot.registers[frameId] ?? []).map((register5) => Object.assign({}, register5))
         );
       }
       /**
@@ -5548,7 +5650,7 @@ var init_replay_backend = __esm({
       setBreakpoints(addresses2) {
         this.#requireConnected();
         this.#breakpoints.clear();
-        const sorted2 = [...addresses2].sort(
+        const sorted2 = [...addresses2].toSorted(
           (left, right) => left.architecture.localeCompare(right.architecture) || left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address
         );
         for (const address5 of sorted2) {
@@ -5577,11 +5679,12 @@ var init_replay_backend = __esm({
         return Promise.resolve(
           (this.#snapshot.instructions ?? []).filter(
             (instruction2) => instruction2.address.architecture === address5.architecture && instruction2.address.addressSpace === address5.addressSpace && instruction2.address.address >= address5.address
-          ).sort((left, right) => left.address.address - right.address.address).slice(0, count).map((instruction2) => ({
-            ...instruction2,
-            address: { ...instruction2.address },
-            bytes: [...instruction2.bytes]
-          }))
+          ).toSorted((left, right) => left.address.address - right.address.address).slice(0, count).map(
+            (instruction2) => Object.assign({}, instruction2, {
+              address: Object.assign({}, instruction2.address),
+              bytes: Array.from(instruction2.bytes)
+            })
+          )
         );
       }
       /** @inheritdoc */
@@ -5678,54 +5781,95 @@ var init_replay_backend = __esm({
   }
 });
 
-// ../debug-adapter/src/trace-detail-validation.ts
-var isArray4, validateDebugTraceDetails;
+// packages/debug-adapter/src/trace-detail-validation.ts
+function isUnknownArray4(value) {
+  return Array.isArray(value);
+}
+function isRecord14(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function assertInstructionBytes(bytes2) {
+  if (!isUnknownArray4(bytes2) || bytes2.length < 1 || bytes2.length > 16) {
+    throw new Error("Invalid trace instruction bytes.");
+  }
+  for (const byte2 of bytes2) {
+    if (typeof byte2 !== "number" || !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255) {
+      throw new Error("Invalid trace instruction bytes.");
+    }
+  }
+}
+function assertInstructionState(state) {
+  if (!isRecord14(state)) {
+    throw new Error("Invalid trace instruction state.");
+  }
+  for (const [key3, entry] of Object.entries(state)) {
+    if (!key3 || typeof entry !== "number" && typeof entry !== "boolean" && typeof entry !== "string" || typeof entry === "number" && !Number.isFinite(entry)) {
+      throw new Error("Invalid trace instruction state.");
+    }
+  }
+}
+function assertBusAccess(access) {
+  if (!isRecord14(access)) {
+    throw new Error("Invalid trace bus operation.");
+  }
+  const actor = access.actor === void 0 ? "cpu" : access.actor;
+  if (typeof access.addressSpace !== "string" || !access.addressSpace || typeof access.address !== "number" || !Number.isSafeInteger(access.address) || access.address < 0 || access.access !== "read" && access.access !== "write" && access.access !== "fetch" || typeof access.width !== "number" || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (typeof access.value !== "number" || !Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && actor !== "cpu" && actor !== "dma" && actor !== "hdma" || access.channel !== void 0 && (typeof access.channel !== "number" || !Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || actor !== "dma" && actor !== "hdma")) {
+    throw new Error("Invalid trace bus operation.");
+  }
+}
+function assertTraceDetails(value) {
+  for (const detail of value) {
+    assertTraceDetail(detail);
+  }
+}
+function assertTraceDetail(detail) {
+  if (!isRecord14(detail)) {
+    throw new Error("Invalid trace instruction bytes.");
+  }
+  assertInstructionBytes(detail.bytes);
+  assertInstructionState(detail.state);
+  const dropped = detail.droppedMemoryAccesses;
+  if (dropped !== void 0 && (typeof dropped !== "number" || !Number.isSafeInteger(dropped) || dropped < 0)) {
+    throw new Error("Invalid trace memory loss.");
+  }
+  const memoryAccesses = detail.memoryAccesses;
+  if (memoryAccesses !== void 0 && (!isUnknownArray4(memoryAccesses) || memoryAccesses.length > 256)) {
+    throw new Error("Invalid trace memory access bound.");
+  }
+  if (isUnknownArray4(memoryAccesses)) {
+    for (const access of memoryAccesses) {
+      assertBusAccess(access);
+    }
+  }
+}
+function validateDebugTraceDetails(value, count) {
+  if (!isUnknownArray4(value) || value.length !== count) {
+    throw new Error("Trace details must align with instruction addresses.");
+  }
+  assertTraceDetails(value);
+  return value;
+}
 var init_trace_detail_validation = __esm({
-  "../debug-adapter/src/trace-detail-validation.ts"() {
+  "packages/debug-adapter/src/trace-detail-validation.ts"() {
     "use strict";
-    isArray4 = (value) => Array.isArray(value);
-    validateDebugTraceDetails = (value, count) => {
-      if (!Array.isArray(value) || value.length !== count) {
-        throw new Error("Trace details must align with instruction addresses.");
-      }
-      for (const detail of value) {
-        if (!detail || !isArray4(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255)) {
-          throw new Error("Invalid trace instruction bytes.");
-        }
-        if (!detail.state || typeof detail.state !== "object" || isArray4(detail.state) || Object.entries(detail.state).some(
-          ([key3, entry]) => !key3 || !["number", "boolean", "string"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-        )) {
-          throw new Error("Invalid trace instruction state.");
-        }
-        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
-          throw new Error("Invalid trace memory loss.");
-        }
-        if (detail.memoryAccesses !== void 0 && (!isArray4(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
-          throw new Error("Invalid trace memory access bound.");
-        }
-        for (const access of detail.memoryAccesses ?? []) {
-          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
-            throw new Error("Invalid trace bus operation.");
-          }
-        }
-      }
-      return value;
-    };
   }
 });
 
-// ../debug-adapter/src/sidecar-backend.ts
-var stopReasons, stepKinds, record2, array, string2, boolean, integer2, positiveInteger4, address, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
+// packages/debug-adapter/src/sidecar-backend.ts
+var isStopReason, stepKindNames, isStepKind, isOutputCategory, isRecord15, record2, array, string2, readStepKinds, boolean, integer2, positiveInteger4, address, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
 var init_sidecar_backend = __esm({
-  "../debug-adapter/src/sidecar-backend.ts"() {
+  "packages/debug-adapter/src/sidecar-backend.ts"() {
     "use strict";
     init_contracts();
     init_trace_detail_validation();
     init_capture_v2();
-    stopReasons = /* @__PURE__ */ new Set(["entry", "pause", "step", "breakpoint", "exception"]);
-    stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStopReason = (value) => value === "entry" || value === "pause" || value === "step" || value === "breakpoint" || value === "exception";
+    stepKindNames = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStepKind = (value) => stepKindNames.has(value);
+    isOutputCategory = (value) => value === "console" || value === "stdout" || value === "stderr";
+    isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     record2 = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (!isRecord15(value)) {
         throw new Error(`${context} must be an object.`);
       }
       return value;
@@ -5742,6 +5886,23 @@ var init_sidecar_backend = __esm({
       }
       return value;
     };
+    readStepKinds = (value, context) => {
+      if (value === void 0) {
+        return void 0;
+      }
+      const values = array(value, context).map((entry, index) => string2(entry, `${context}[${index}]`));
+      const kinds = [];
+      for (const entry of values) {
+        if (!isStepKind(entry)) {
+          throw new Error(`${context} contains an unsupported step kind.`);
+        }
+        kinds.push(entry);
+      }
+      if (new Set(kinds).size !== kinds.length) {
+        throw new Error(`${context} must be unique.`);
+      }
+      return kinds;
+    };
     boolean = (value, context) => {
       if (typeof value !== "boolean") {
         throw new Error(`${context} must be boolean.`);
@@ -5749,7 +5910,7 @@ var init_sidecar_backend = __esm({
       return value;
     };
     integer2 = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum) {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       }
       return value;
@@ -5786,7 +5947,7 @@ var init_sidecar_backend = __esm({
             `${context}.memorySpaces[${index}].sideEffectFree`
           )
         };
-      }).sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
+      }).toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace));
       if (new Set(memorySpaces.map(({ addressSpace }) => addressSpace)).size !== memorySpaces.length) {
         throw new Error(`${context}.memorySpaces must use unique address spaces.`);
       }
@@ -5802,8 +5963,8 @@ var init_sidecar_backend = __esm({
         if (candidate.trace === null) {
           return null;
         }
-        const value2 = record2(candidate.trace, `${context}.trace`);
-        const traceAddressSpaces = array(value2.addressSpaces, `${context}.trace.addressSpaces`).map((entry, index) => string2(entry, `${context}.trace.addressSpaces[${index}]`)).sort();
+        const traceRecord = record2(candidate.trace, `${context}.trace`);
+        const traceAddressSpaces = array(traceRecord.addressSpaces, `${context}.trace.addressSpaces`).map((entry, index) => string2(entry, `${context}.trace.addressSpaces[${index}]`)).toSorted();
         if (traceAddressSpaces.length === 0) {
           throw new Error(`${context}.trace.addressSpaces must not be empty.`);
         }
@@ -5814,10 +5975,13 @@ var init_sidecar_backend = __esm({
           throw new Error(`${context}.trace.addressSpaces must be declared in addressSpaces.`);
         }
         const maxBufferedEvents = positiveInteger4(
-          value2.maxBufferedEvents,
+          traceRecord.maxBufferedEvents,
           `${context}.trace.maxBufferedEvents`
         );
-        const maxBatchEvents = positiveInteger4(value2.maxBatchEvents, `${context}.trace.maxBatchEvents`);
+        const maxBatchEvents = positiveInteger4(
+          traceRecord.maxBatchEvents,
+          `${context}.trace.maxBatchEvents`
+        );
         if (maxBatchEvents > maxBufferedEvents) {
           throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);
         }
@@ -5825,33 +5989,20 @@ var init_sidecar_backend = __esm({
           addressSpaces: traceAddressSpaces,
           maxBufferedEvents,
           maxBatchEvents,
-          ...value2.instructionDetails === void 0 ? {} : { instructionDetails: boolean(value2.instructionDetails, "Trace instructionDetails") }
+          ...traceRecord.instructionDetails === void 0 ? {} : {
+            instructionDetails: boolean(traceRecord.instructionDetails, "Trace instructionDetails")
+          }
         };
       })();
-      const stepKinds3 = (() => {
-        if (candidate.stepKinds === void 0) {
-          return void 0;
-        }
-        const values = array(candidate.stepKinds, `${context}.stepKinds`).map(
-          (entry, index) => string2(entry, `${context}.stepKinds[${index}]`)
-        );
-        const allowed = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry))) {
-          throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        }
-        if (new Set(values).size !== values.length) {
-          throw new Error(`${context}.stepKinds must be unique.`);
-        }
-        return values;
-      })();
+      const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
       return {
         architecture: string2(candidate.architecture, `${context}.architecture`),
-        addressSpaces: [...addressSpaces].sort(),
+        addressSpaces: [...addressSpaces].toSorted(),
         memorySpaces,
         trace,
         pause: boolean(candidate.pause, `${context}.pause`),
         step: boolean(candidate.step, `${context}.step`),
-        ...stepKinds3 === void 0 ? {} : { stepKinds: stepKinds3 },
+        ...stepKinds === void 0 ? {} : { stepKinds },
         registers: boolean(candidate.registers, `${context}.registers`),
         memory,
         stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -5861,30 +6012,15 @@ var init_sidecar_backend = __esm({
     };
     backendCapabilities = (value, context) => {
       const candidate = record2(value, context);
-      const architectures = array(candidate.architectures, `${context}.architectures`).map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`)).sort((left, right) => left.architecture.localeCompare(right.architecture));
+      const architectures = array(candidate.architectures, `${context}.architectures`).map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`)).toSorted((left, right) => left.architecture.localeCompare(right.architecture));
       if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length) {
         throw new Error(`${context}.architectures must use unique architecture identifiers.`);
       }
-      const stepKinds3 = (() => {
-        if (candidate.stepKinds === void 0) {
-          return void 0;
-        }
-        const values = array(candidate.stepKinds, `${context}.stepKinds`).map(
-          (entry, index) => string2(entry, `${context}.stepKinds[${index}]`)
-        );
-        const allowed = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry))) {
-          throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        }
-        if (new Set(values).size !== values.length) {
-          throw new Error(`${context}.stepKinds must be unique.`);
-        }
-        return values;
-      })();
+      const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
       return Object.freeze({
         pause: boolean(candidate.pause, `${context}.pause`),
         step: boolean(candidate.step, `${context}.step`),
-        ...stepKinds3 === void 0 ? {} : { stepKinds: Object.freeze(stepKinds3) },
+        ...stepKinds === void 0 ? {} : { stepKinds: Object.freeze(stepKinds) },
         registers: boolean(candidate.registers, `${context}.registers`),
         memory: boolean(candidate.memory, `${context}.memory`),
         stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -6009,7 +6145,7 @@ var init_sidecar_backend = __esm({
       const body = record2(message.body, `Sidecar '${message.event}' event body`);
       if (message.event === "stopped") {
         const reason = string2(body.reason, "Stopped event reason");
-        if (!stopReasons.has(reason)) {
+        if (!isStopReason(reason)) {
           throw new Error(`Unsupported stop reason '${reason}'.`);
         }
         return {
@@ -6035,7 +6171,7 @@ var init_sidecar_backend = __esm({
         type: "output",
         category: (() => {
           const category = string2(body.category, "Output event category");
-          if (!(/* @__PURE__ */ new Set(["console", "stdout", "stderr"])).has(category)) {
+          if (!isOutputCategory(category)) {
             throw new Error(`Unsupported output category '${category}'.`);
           }
           return category;
@@ -6110,20 +6246,22 @@ var init_sidecar_backend = __esm({
       }
       /** @inheritdoc */
       async pause(threadId) {
-        await this.#requireConnected().request("pause", {
-          ...threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
-        });
+        await this.#requireConnected().request(
+          "pause",
+          threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
+        );
       }
       /** @inheritdoc */
       async continue(threadId) {
-        await this.#requireConnected().request("continue", {
-          ...threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
-        });
+        await this.#requireConnected().request(
+          "continue",
+          threadId === void 0 ? {} : { threadId: positiveInteger4(threadId, "Thread id") }
+        );
       }
       /** @inheritdoc */
       async step(threadId, kind) {
-        if (!stepKinds.has(kind)) {
-          throw new Error(`Unsupported step kind '${String(kind)}'.`);
+        if (!stepKindNames.has(kind)) {
+          throw new Error(`Unsupported step kind '${kind}'.`);
         }
         await this.#requireConnected().request("step", {
           threadId: positiveInteger4(threadId, "Thread id"),
@@ -6201,16 +6339,16 @@ var init_sidecar_backend = __esm({
       }
       /** @inheritdoc */
       async setBreakpoints(addresses2) {
-        const checked2 = addresses2.map((entry, index) => address(entry, `Breakpoints[${index}]`));
+        const checked3 = addresses2.map((entry, index) => address(entry, `Breakpoints[${index}]`));
         const result = array(
-          await this.#requireConnected().request("setBreakpoints", { breakpoints: checked2 }),
+          await this.#requireConnected().request("setBreakpoints", { breakpoints: checked3 }),
           "Breakpoints response"
         );
         const breakpoints = uniqueIds(
           result.map((entry, index) => breakpoint(entry, `Breakpoints response[${index}]`)),
           "Breakpoints response"
         );
-        if (breakpoints.length !== checked2.length) {
+        if (breakpoints.length !== checked3.length) {
           throw new Error("Breakpoints response count does not match the request.");
         }
         return breakpoints;
@@ -6234,7 +6372,7 @@ var init_sidecar_backend = __esm({
       /** @inheritdoc */
       async capture(request) {
         validateCaptureRequest(request);
-        return await this.#requireConnected().request("capture", { ...request });
+        return validateCaptureResult(await this.#requireConnected().request("capture", { ...request }));
       }
       async startTrace(options) {
         const architecture = string2(options.architecture, "Trace architecture");
@@ -6374,10 +6512,10 @@ var init_sidecar_backend = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-client.ts
+// packages/debug-adapter/src/sidecar-client.ts
 var asError, DebugSidecarClient;
 var init_sidecar_client = __esm({
-  "../debug-adapter/src/sidecar-client.ts"() {
+  "packages/debug-adapter/src/sidecar-client.ts"() {
     "use strict";
     init_sidecar_protocol();
     asError = (error) => error instanceof Error ? error : new Error(String(error));
@@ -6482,12 +6620,12 @@ var init_sidecar_client = __esm({
           );
         }
         this.#queuedWriteBytes += frame.length;
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject2) => {
           const timer = setTimeout(
             () => this.#fail(new Error(`Sidecar request '${command}' timed out.`)),
             this.#requestTimeoutMs
           );
-          this.#pending.set(sequence, { resolve, reject, timer });
+          this.#pending.set(sequence, { resolve, reject: reject2, timer });
           const write = this.#writeTail.then(() => {
             if (this.#closed) {
               throw new Error("Sidecar client is closed.");
@@ -6573,23 +6711,29 @@ var init_sidecar_client = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-server.ts
-var stepKinds2, record3, integer3, positiveInteger5, string3, optionalPositiveInteger, boolean2, address2, addresses, asError2, DebugSidecarServer;
+// packages/debug-adapter/src/sidecar-server.ts
+function assertShutdownCommand(command) {
+  if (command !== "shutdown") {
+    throw new Error(`Unsupported command '${command}'.`);
+  }
+}
+var isStepKind2, isRecord16, record3, integer3, positiveInteger5, string3, optionalPositiveInteger, boolean2, address2, addresses, asError2, DebugSidecarServer;
 var init_sidecar_server = __esm({
-  "../debug-adapter/src/sidecar-server.ts"() {
+  "packages/debug-adapter/src/sidecar-server.ts"() {
     "use strict";
     init_contracts();
     init_sidecar_protocol();
     init_capture_v2();
-    stepKinds2 = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStepKind2 = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
+    isRecord16 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     record3 = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (!isRecord16(value)) {
         throw new Error(`${context} must be an object.`);
       }
       return value;
     };
     integer3 = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum) {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       }
       return value;
@@ -6777,13 +6921,11 @@ var init_sidecar_server = __esm({
           return {};
         }
         if (request.command === "step") {
-          if (!stepKinds2.has(args.kind)) {
-            throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+          const kind = args.kind;
+          if (typeof kind !== "string" || !isStepKind2(kind)) {
+            throw new Error(`Unsupported step kind '${String(kind)}'.`);
           }
-          await this.#implementation.step(
-            positiveInteger5(args.threadId, "Step threadId"),
-            args.kind
-          );
+          await this.#implementation.step(positiveInteger5(args.threadId, "Step threadId"), kind);
           return {};
         }
         if (request.command === "threads") {
@@ -6848,10 +6990,8 @@ var init_sidecar_server = __esm({
         if (request.command === "ping") {
           return { pong: true };
         }
-        if (request.command === "shutdown") {
-          return {};
-        }
-        throw new Error(`Unsupported command '${String(request.command)}'.`);
+        assertShutdownCommand(request.command);
+        return {};
       }
       #backendEvent(event) {
         if (this.#closed) {
@@ -6923,6 +7063,7 @@ var init_sidecar_server = __esm({
             await this.#write(frame);
             frame = this.#outgoing.dequeue();
           }
+          return;
         });
         this.#writeTail = write.catch(() => void 0);
         return write;
@@ -6931,15 +7072,26 @@ var init_sidecar_server = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-context.ts
+// packages/debug-adapter/src/capture-context.ts
 import { createHash as createHash8 } from "node:crypto";
 import { createReadStream as createReadStream2 } from "node:fs";
 import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
 import path11 from "node:path";
-var CaptureContextRecorder, verifyCaptureContext;
+var isRecord17, digestFile, CaptureContextRecorder, verifyCaptureContext;
 var init_capture_context = __esm({
-  "../debug-adapter/src/capture-context.ts"() {
+  "packages/debug-adapter/src/capture-context.ts"() {
     "use strict";
+    isRecord17 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    digestFile = async (file, signal) => {
+      const hash2 = createHash8("sha256");
+      for await (const bytes2 of createReadStream2(file, { signal })) {
+        if (!Buffer.isBuffer(bytes2)) {
+          throw new Error(`Expected binary capture context data in ${path11.basename(file)}.`);
+        }
+        hash2.update(bytes2);
+      }
+      return hash2.digest("hex");
+    };
     CaptureContextRecorder = class {
       directory;
       transport;
@@ -7019,11 +7171,15 @@ var init_capture_context = __esm({
         const boundaries = JSON.parse(
           await readFile(path11.join(this.directory, "boundaries.json"), "utf8")
         );
-        if (boundaries.session !== summary.position.session || boundaries.end?.eventThrough !== summary.position.producedThrough) {
+        if (!isRecord17(boundaries)) {
+          throw new Error("Capture context boundaries must be an object.");
+        }
+        const boundaryEnd = isRecord17(boundaries.end) ? boundaries.end.eventThrough : void 0;
+        if (boundaries.session !== summary.position.session || boundaryEnd !== summary.position.producedThrough) {
           throw new Error("Capture context boundary does not match the completed ACT2 archive.");
         }
         const files = {};
-        for (const name of (await readdir(this.directory)).sort()) {
+        for (const name of (await readdir(this.directory)).toSorted()) {
           if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
             name
           )) {
@@ -7040,17 +7196,14 @@ var init_capture_context = __esm({
           if (name === "inputs.bin" && stat2.size % 18) {
             throw new Error("Controller evidence has an incomplete row.");
           }
-          const hash = createHash8("sha256");
-          for await (const bytes2 of createReadStream2(file)) {
-            hash.update(bytes2);
-          }
+          const sha2564 = await digestFile(file);
           const handle2 = await open(file, "r+");
           try {
             await handle2.sync();
           } finally {
             await handle2.close();
           }
-          files[name] = { bytes: stat2.size, sha256: hash.digest("hex") };
+          files[name] = { bytes: stat2.size, sha256: sha2564 };
         }
         for (const name of [
           "start.bst",
@@ -7131,8 +7284,11 @@ var init_capture_context = __esm({
         throw new Error("Invalid capture context manifest.");
       }
       const manifest = JSON.parse(await readFile(metadataFile, "utf8"));
-      const producer = manifest.producer;
-      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || producer?.id !== identity2.producer.id || producer?.revision !== identity2.producer.revision || !manifest.files || typeof manifest.files !== "object") {
+      if (!isRecord17(manifest)) {
+        throw new Error("Invalid capture context manifest.");
+      }
+      const producer = isRecord17(manifest.producer) ? manifest.producer : void 0;
+      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || !isRecord17(producer) || producer.id !== identity2.producer.id || producer.revision !== identity2.producer.revision || !isRecord17(manifest.files)) {
         throw new Error("Capture context requires the matching ROM and emulator build.");
       }
       const files = manifest.files;
@@ -7155,18 +7311,14 @@ var init_capture_context = __esm({
         signal?.throwIfAborted();
         if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
           name
-        ) || !artifact || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+        ) || !isRecord17(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
           throw new Error("Invalid capture context artifact descriptor.");
         }
         const file = path11.join(directory, name), stat2 = await lstat(file);
         if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && stat2.size !== 131072 || name === "inputs.bin" && stat2.size % 18) {
           throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
-        const hash = createHash8("sha256");
-        for await (const bytes2 of createReadStream2(file, { signal })) {
-          hash.update(bytes2);
-        }
-        if (hash.digest("hex") !== artifact.sha256) {
+        if (await digestFile(file, signal) !== artifact.sha256) {
           throw new Error(`Capture context checksum mismatch: ${name}.`);
         }
       }
@@ -7174,10 +7326,10 @@ var init_capture_context = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file-reader.ts
+// packages/debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "../debug-adapter/src/capture-file-reader.ts"() {
+  "packages/debug-adapter/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -7237,22 +7389,57 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file.ts
+// packages/debug-adapter/src/capture-file.ts
 import { open as open2, link as link2, unlink as unlink2, lstat as lstat2 } from "node:fs/promises";
 import { setImmediate as yieldToMessages } from "node:timers/promises";
-var pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
+function isRecord18(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function consumerRejected(failed) {
+  return failed;
+}
+function metadataValid(m) {
+  if (!isRecord18(m)) {
+    throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
+  const producer = m.producer;
+  if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || typeof m.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !isRecord18(producer) || typeof producer.id !== "string" || !producer.id || typeof producer.revision !== "string" || !producer.revision) {
+    throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
+}
+function captureOutputFormat(value) {
+  const format = value ?? "json";
+  if (format !== "json" && format !== "act2") {
+    throw new Error("Unsupported capture output format.");
+  }
+  return format;
+}
+function headerAllocationAccepted(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 4718656 && value <= 64 * 1024 * 1024;
+}
+function assertCaptureFileHeader(value) {
+  if (!isRecord18(value)) {
+    throw new Error("Missing capture session header.");
+  }
+  metadataValid(value);
+  captureSession(value.session);
+  captureScope(value.scope);
+  const clock = value.clock;
+  if (!isRecord18(clock) || clock.id !== "snes.master" || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
+    throw new Error("Invalid session clock domain.");
+  }
+  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
+    throw new Error("Unsupported capture session contract.");
+  }
+}
+var pause, jsonFrame, emptyStageTiming, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
 var init_capture_file = __esm({
-  "../debug-adapter/src/capture-file.ts"() {
+  "packages/debug-adapter/src/capture-file.ts"() {
     "use strict";
     init_capture_context();
     init_capture_file_reader();
     init_capture_v2();
     pause = () => new Promise((resolve) => setTimeout(resolve, 10));
-    metadataValid = (m) => {
-      if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
-        throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
-      }
-    };
     jsonFrame = (magic, value) => {
       const body = Buffer.from(JSON.stringify(value));
       if (body.length > 65536) {
@@ -7264,6 +7451,11 @@ var init_capture_file = __esm({
       header.writeUInt32LE(captureCrc32c(body), 8);
       return Buffer.concat([header, body]);
     };
+    emptyStageTiming = () => ({
+      calls: 0,
+      totalMs: 0,
+      maxMs: 0
+    });
     LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       completion;
       #file;
@@ -7300,21 +7492,20 @@ var init_capture_file = __esm({
         };
         this.#position = position;
         if (measureStages) {
-          const stage = () => ({ calls: 0, totalMs: 0, maxMs: 0 });
           this.#timings = {
             started: performance.now(),
             bytes: 0,
             stages: {
-              read: stage(),
-              decode: stage(),
-              dataWrite: stage(),
-              dataSync: stage(),
-              checkpointWrite: stage(),
-              checkpointSync: stage(),
-              ack: stage(),
-              status: stage(),
-              idle: stage(),
-              finalize: stage()
+              read: emptyStageTiming(),
+              decode: emptyStageTiming(),
+              dataWrite: emptyStageTiming(),
+              dataSync: emptyStageTiming(),
+              checkpointWrite: emptyStageTiming(),
+              checkpointSync: emptyStageTiming(),
+              ack: emptyStageTiming(),
+              status: emptyStageTiming(),
+              idle: emptyStageTiming(),
+              finalize: emptyStageTiming()
             }
           };
         }
@@ -7329,10 +7520,7 @@ var init_capture_file = __esm({
       static async create(options) {
         metadataValid(options);
         const scope = captureScope(options.scope ?? "snes.65816.instructions");
-        const format = options.format ?? "json";
-        if (format !== "json" && format !== "act2") {
-          throw new Error("Unsupported capture output format.");
-        }
+        const format = captureOutputFormat(options.format);
         if (scope !== "snes.65816.instructions" && format !== "act2") {
           throw new Error("Bus capture requires ACT2 output. Instruction JSON cannot represent it.");
         }
@@ -7590,20 +7778,8 @@ var init_capture_file = __esm({
       }
     };
     validateCaptureFileHeader = (value) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Missing capture session header.");
-      }
-      const header = value;
-      metadataValid(header);
-      captureSession(header.session);
-      captureScope(header.scope);
-      if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator)) {
-        throw new Error("Invalid session clock domain.");
-      }
-      if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024) {
-        throw new Error("Unsupported capture session contract.");
-      }
-      return header;
+      assertCaptureFileHeader(value);
+      return value;
     };
     readCaptureBytes = async (handle, length, offset) => {
       const bytes2 = Buffer.allocUnsafe(length);
@@ -7713,7 +7889,7 @@ var init_capture_file = __esm({
             }
           } else if (magic === "ACK2") {
             const checkpoint = await json(prefix);
-            if (!pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
+            if (!isRecord18(checkpoint) || !pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
               throw new Error("Checkpoint does not match the pending chunk.");
             }
             if (accept) {
@@ -7758,7 +7934,7 @@ var init_capture_file = __esm({
         }
       } catch (error) {
         options.signal?.throwIfAborted();
-        if (consumerFailed) {
+        if (consumerRejected(consumerFailed)) {
           throw error;
         }
         return {
@@ -7997,7 +8173,7 @@ var init_capture_file = __esm({
               throw new Error("Native capture chunk has no checkpoint.");
             }
             const ack = await json(ackPrefix);
-            if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
+            if (!isRecord18(ack) || ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
               throw new Error("Native checkpoint disagrees with its chunk.");
             }
             accept(chunk);
@@ -8022,20 +8198,48 @@ var init_capture_file = __esm({
     };
     nativePosition = (value, session, scope) => {
       const position = validateCapturePosition(value, session, scope);
-      if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
+      if (!isRecord18(value)) {
         throw new Error("Invalid native file state.");
       }
-      captureU64(position.fileBytes);
-      captureU64(position.fileBatches);
-      if (position.fileProfile) {
-        for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"]) {
-          captureU64(position.fileProfile[field]);
-        }
+      const fileState = value.fileState;
+      if (fileState !== "preparing" && fileState !== "writing" && fileState !== "complete" && fileState !== "incomplete") {
+        throw new Error("Invalid native file state.");
       }
-      if (position.state === "complete" !== (position.fileState === "complete")) {
+      const fileBytes = value.fileBytes;
+      const fileBatches = value.fileBatches;
+      captureU64(fileBytes);
+      captureU64(fileBatches);
+      if (typeof fileBytes !== "string" || typeof fileBatches !== "string") {
+        throw new Error("Invalid native file counters.");
+      }
+      let fileProfile;
+      if (value.fileProfile) {
+        if (!isRecord18(value.fileProfile)) {
+          throw new Error("Invalid native file profile.");
+        }
+        const sealNs = value.fileProfile.sealNs;
+        const copyNs = value.fileProfile.copyNs;
+        const writeNs = value.fileProfile.writeNs;
+        const syncNs = value.fileProfile.syncNs;
+        captureU64(sealNs);
+        captureU64(copyNs);
+        captureU64(writeNs);
+        captureU64(syncNs);
+        if (typeof sealNs !== "string" || typeof copyNs !== "string" || typeof writeNs !== "string" || typeof syncNs !== "string") {
+          throw new Error("Invalid native file profile.");
+        }
+        fileProfile = { sealNs, copyNs, writeNs, syncNs };
+      }
+      if (position.state === "complete" !== (fileState === "complete")) {
         throw new Error("Native file publication and producer completion disagree.");
       }
-      return position;
+      return {
+        ...position,
+        fileState,
+        fileBytes,
+        fileBatches,
+        ...fileProfile ? { fileProfile } : {}
+      };
     };
     NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
       completion;
@@ -8192,7 +8396,7 @@ var init_capture_file = __esm({
   }
 });
 
-// ../debug-adapter/src/index.ts
+// packages/debug-adapter/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   CaptureContextRecorder: () => CaptureContextRecorder,
@@ -8241,10 +8445,11 @@ __export(src_exports, {
   validateCaptureCapabilities: () => validateCaptureCapabilities,
   validateCapturePosition: () => validateCapturePosition,
   validateCaptureRequest: () => validateCaptureRequest,
+  validateCaptureResult: () => validateCaptureResult,
   verifyCaptureContext: () => verifyCaptureContext
 });
 var init_src = __esm({
-  "../debug-adapter/src/index.ts"() {
+  "packages/debug-adapter/src/index.ts"() {
     "use strict";
     init_conformance();
     init_contracts();
@@ -8264,9 +8469,9 @@ var init_src = __esm({
   }
 });
 
-// ../../node_modules/ms/index.js
+// node_modules/ms/index.js
 var require_ms = __commonJS({
-  "../../node_modules/ms/index.js"(exports, module) {
+  "node_modules/ms/index.js"(exports, module) {
     var s = 1e3;
     var m = s * 60;
     var h = m * 60;
@@ -8380,9 +8585,9 @@ var require_ms = __commonJS({
   }
 });
 
-// ../../node_modules/debug/src/common.js
+// node_modules/debug/src/common.js
 var require_common = __commonJS({
-  "../../node_modules/debug/src/common.js"(exports, module) {
+  "node_modules/debug/src/common.js"(exports, module) {
     function setup(env) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -8399,12 +8604,12 @@ var require_common = __commonJS({
       createDebug.skips = [];
       createDebug.formatters = {};
       function selectColor(namespace) {
-        let hash = 0;
+        let hash2 = 0;
         for (let i = 0; i < namespace.length; i++) {
-          hash = (hash << 5) - hash + namespace.charCodeAt(i);
-          hash |= 0;
+          hash2 = (hash2 << 5) - hash2 + namespace.charCodeAt(i);
+          hash2 |= 0;
         }
-        return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
+        return createDebug.colors[Math.abs(hash2) % createDebug.colors.length];
       }
       createDebug.selectColor = selectColor;
       function createDebug(namespace) {
@@ -8557,9 +8762,9 @@ var require_common = __commonJS({
   }
 });
 
-// ../../node_modules/debug/src/browser.js
+// node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "../../node_modules/debug/src/browser.js"(exports, module) {
+  "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -8727,9 +8932,9 @@ var require_browser = __commonJS({
   }
 });
 
-// ../../node_modules/has-flag/index.js
+// node_modules/has-flag/index.js
 var require_has_flag = __commonJS({
-  "../../node_modules/has-flag/index.js"(exports, module) {
+  "node_modules/has-flag/index.js"(exports, module) {
     "use strict";
     module.exports = (flag, argv = process.argv) => {
       const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
@@ -8740,9 +8945,9 @@ var require_has_flag = __commonJS({
   }
 });
 
-// ../../node_modules/supports-color/index.js
+// node_modules/supports-color/index.js
 var require_supports_color = __commonJS({
-  "../../node_modules/supports-color/index.js"(exports, module) {
+  "node_modules/supports-color/index.js"(exports, module) {
     "use strict";
     var os3 = __require("os");
     var tty = __require("tty");
@@ -8842,9 +9047,9 @@ var require_supports_color = __commonJS({
   }
 });
 
-// ../../node_modules/debug/src/node.js
+// node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "../../node_modules/debug/src/node.js"(exports, module) {
+  "node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util = __require("util");
     exports.init = init;
@@ -9016,9 +9221,9 @@ var require_node = __commonJS({
   }
 });
 
-// ../../node_modules/debug/src/index.js
+// node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "../../node_modules/debug/src/index.js"(exports, module) {
+  "node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -9027,11 +9232,11 @@ var require_src = __commonJS({
   }
 });
 
-// src/index.ts
+// packages/cli/src/index.ts
 import * as fs31 from "node:fs";
 import path37 from "node:path";
 
-// ../core/src/address-width.ts
+// packages/core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
     throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
@@ -9046,7 +9251,7 @@ function normalizeAddressForWidth(address5, addressWidth) {
   return (address5 % modulus + modulus) % modulus;
 }
 
-// ../core/src/crc32.ts
+// packages/core/src/crc32.ts
 init_data_hash_crc32();
 var CRC32 = class _CRC32 {
   /** Legacy lookup-table snapshot for inspection; mutations do not customize compute().
@@ -9070,7 +9275,7 @@ var CRC32 = class _CRC32 {
   }
 };
 
-// ../core/src/addressToLine.ts
+// packages/core/src/addressToLine.ts
 var sourceIdentity = (filename, supplied) => {
   try {
     const fs32 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
@@ -9185,7 +9390,7 @@ var AddressToLineMapping = class {
   }
   /** @returns {readonly SerializableAddressRange[]} Deterministic path-based ranges. */
   serializableRanges() {
-    return this.ranges.map(({ fileIdx, ...range2 }) => ({ ...range2, source: this.fileList[fileIdx]?.name ?? "" })).sort(
+    return this.ranges.map(({ fileIdx, ...range2 }) => ({ ...range2, source: this.fileList[fileIdx]?.name ?? "" })).toSorted(
       (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.source.localeCompare(right.source) || left.line - right.line
     );
   }
@@ -9207,7 +9412,7 @@ var AddressToLineMapping = class {
   }
 };
 
-// ../core/src/architecture-registry.ts
+// packages/core/src/architecture-registry.ts
 var ArchitectureRegistry = class {
   definitions = /* @__PURE__ */ new Map();
   aliases = /* @__PURE__ */ new Map();
@@ -9245,7 +9450,7 @@ var ArchitectureRegistry = class {
   }
 };
 
-// ../core/src/source-location.ts
+// packages/core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -9318,7 +9523,7 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 
-// ../core/src/diagnostics.ts
+// packages/core/src/diagnostics.ts
 var AssemblyError = class extends Error {
   code;
   severity;
@@ -9378,7 +9583,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
   };
 }
 
-// ../core/src/directive-groups.ts
+// packages/core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS = Object.freeze([
   "data",
   "memory",
@@ -9392,7 +9597,7 @@ var CORE_DIRECTIVE_GROUPS = Object.freeze([
   "diagnostic"
 ]);
 
-// ../core/src/directives/data.ts
+// packages/core/src/directives/data.ts
 var handleDataDirective = ({ runtime }, words) => {
   runtime.handleDataDirective(words[0], words.slice(1));
 };
@@ -9400,7 +9605,7 @@ var registerDataDirectives = (registry3, context) => {
   registry3.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
 };
 
-// ../core/src/directives/fill-pad.ts
+// packages/core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE = 12;
 var PATTERN_WIDTH = {
   fillbyte: 1,
@@ -9496,7 +9701,7 @@ var registerFillPadDirectives = (registry3, context) => {
   registry3.registerLowered("pad", context, handlePad);
 };
 
-// ../core/src/directives/flow-control.ts
+// packages/core/src/directives/flow-control.ts
 var handleRelativeLabel = ({ session }, _words, raw) => {
   session.symbolScope.handleRelativeLabel(raw);
 };
@@ -9504,11 +9709,9 @@ var registerFlowControlDirectives = (registry3, context) => {
   registry3.register(["+", "-"], context, handleRelativeLabel);
 };
 
-// ../core/src/ir/expression-node.ts
+// packages/core/src/ir/expression-node.ts
 function attachRootSpan(node, text2) {
-  if (!node.span) {
-    node.span = createSourceSpan(0, text2.length);
-  }
+  node.span ??= createSourceSpan(0, text2.length);
   return node;
 }
 function parseExpressionNode(input, source) {
@@ -9582,9 +9785,17 @@ function isReferenceExpressionNode(node) {
     case "member":
     case "index":
       return isReferenceExpressionNode(node.object);
+    case "binary":
+    case "call":
+    case "literal":
+    case "range":
+    case "raw":
+    case "string":
+    case "unary":
     default:
-      return false;
+      break;
   }
+  return false;
 }
 function renderReferenceExpressionNode(node, options = {}) {
   switch (node.type) {
@@ -9766,7 +9977,12 @@ var binaryPrecedence = {
   "%": 5,
   "**": 6
 };
-var unaryOperators = /* @__PURE__ */ new Set(["<:", "<", ">", "^", "~", "-", "+"]);
+function isUnaryOperator(value) {
+  return value === "<:" || value === "<" || value === ">" || value === "^" || value === "~" || value === "-" || value === "+";
+}
+function isQuote(value) {
+  return value === '"' || value === "'";
+}
 var binaryOperators = [
   "**",
   "<<",
@@ -9894,6 +10110,9 @@ function tokenizeExpression(input, source) {
 }
 function readQuotedString(input, start) {
   const quote = input[start];
+  if (!isQuote(quote)) {
+    throw new Error("Expected string literal");
+  }
   let value = "";
   let index = start + 1;
   while (index < input.length) {
@@ -9985,7 +10204,7 @@ var ExpressionParser = class {
     if (!token) {
       throw new Error("Unexpected end of expression");
     }
-    if (token.type === "operator" && unaryOperators.has(token.value)) {
+    if (token.type === "operator" && isUnaryOperator(token.value)) {
       this.consume();
       return {
         type: "unary",
@@ -10051,9 +10270,15 @@ var ExpressionParser = class {
         this.expect("rparen");
         return expression;
       }
-      default:
-        throw new Error(`Unexpected token ${token.type}`);
+      case "comma":
+      case "dot":
+      case "lbracket":
+      case "operator":
+      case "rbracket":
+      case "rparen":
+        break;
     }
+    throw new Error(`Unexpected token ${token.type}`);
   }
   parsePostfix(expression) {
     let current = expression;
@@ -10146,7 +10371,7 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
-// ../core/src/directives/include-source.ts
+// packages/core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES = {
   resolveDefinesInStringLiteral: (content) => content,
   resolveRegularDefines: (content) => content
@@ -10416,7 +10641,7 @@ var registerIncludeSourceDirectives = (registry3, context) => {
   registry3.registerLowered("incbin", context, handleIncbin);
 };
 
-// ../core/src/directives/layout.ts
+// packages/core/src/directives/layout.ts
 var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
 };
@@ -10458,8 +10683,8 @@ var registerGenericLayoutDirectives = (registry3, context) => {
     }
     const param = words[1].trim();
     if (param.toLowerCase() === "off") {
-      const baseAddress = Number(session.currentTargetBaseAddress);
-      const baseStartAddress = Number(session.currentTargetBaseStartAddress);
+      const baseAddress = session.currentTargetBaseAddress;
+      const baseStartAddress = session.currentTargetBaseStartAddress;
       session.currentTargetAddress = baseAddress;
       session.currentTargetStartAddress = baseStartAddress;
       return;
@@ -10490,7 +10715,7 @@ var registerLayoutDirectives = (registry3, context) => {
   registerGenericLayoutDirectives(registry3, context);
 };
 
-// ../core/src/services/struct-initializer.ts
+// packages/core/src/services/struct-initializer.ts
 function splitInitializerList(text2) {
   const entries3 = [];
   const stack = [];
@@ -10623,7 +10848,7 @@ function isOpenStructInitializer(text2) {
   return depth > 0;
 }
 
-// ../core/src/syntax-profile.ts
+// packages/core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE = Object.freeze({
   id: "asar",
   preserveLeadingWhitespace: false,
@@ -10655,7 +10880,7 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   fileLocalSymbols: true
 });
 
-// ../core/src/services/command-text-service.ts
+// packages/core/src/services/command-text-service.ts
 var isEscapedAt = (text2, index) => {
   let slashes = 0;
   for (let at = index - 1; at >= 0 && text2[at] === "\\"; at--) {
@@ -10771,7 +10996,8 @@ var splitOnInlineStatementSeparator = (command) => {
       }
     }
     const next = command[i + 1];
-    const after = command[i + 2];
+    const afterIndex = i + 2;
+    const after = afterIndex < command.length ? command[afterIndex] : void 0;
     if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
       const trimmed2 = current.trim();
       if (trimmed2 !== "") {
@@ -10835,13 +11061,10 @@ var splitCommandIntoWords = (command) => {
       if (!inQuotes) {
         inQuotes = true;
         quoteChar = char;
-        currentWord += char;
       } else if (char === quoteChar) {
         inQuotes = false;
-        currentWord += char;
-      } else {
-        currentWord += char;
       }
+      currentWord += char;
     } else if (/\s/.test(char) && !inQuotes) {
       if (currentWord) {
         words.push(currentWord);
@@ -10965,7 +11188,7 @@ function isBareLabelReference(input) {
   return index === input.length;
 }
 
-// ../core/src/directives/misc.ts
+// packages/core/src/directives/misc.ts
 var handlePullTable = ({ session }) => {
   if (session.tableStack.length === 0) {
     throw new Error("pulltable without pushtable");
@@ -11047,20 +11270,20 @@ var parseAsarTableLine = (line, rtl, lineNumber) => {
     if (eq < 1 || eq !== line.length - 2) {
       throw invalidTableLine(lineNumber);
     }
-    const hex12 = line.slice(0, eq);
-    if (!/^[\dA-Fa-f]+$/.test(hex12)) {
+    const hex13 = line.slice(0, eq);
+    if (!/^[\dA-Fa-f]+$/.test(hex13)) {
       throw invalidTableLine(lineNumber);
     }
-    return { char: line[eq + 1], value: Number.parseInt(hex12, 16) };
+    return { char: line[eq + 1], value: Number.parseInt(hex13, 16) };
   }
   if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
     throw invalidTableLine(lineNumber);
   }
-  const hex11 = line.slice(2);
-  if (!/^[\dA-Fa-f]+$/.test(hex11)) {
+  const hex12 = line.slice(2);
+  if (!/^[\dA-Fa-f]+$/.test(hex12)) {
     throw invalidTableLine(lineNumber);
   }
-  return { char: line[0], value: Number.parseInt(hex11, 16) };
+  return { char: line[0], value: Number.parseInt(hex12, 16) };
 };
 var handleClearTable = ({ session }) => {
   session.characterMappings.clear();
@@ -11124,7 +11347,7 @@ var registerMiscDirectives = (registry3, context, enabledGroups = /* @__PURE__ *
   }
 };
 
-// ../core/src/directives/namespace.ts
+// packages/core/src/directives/namespace.ts
 var handlePushNamespace = ({ session }) => {
   session.namespaceStack.push(session.currentNamespace);
   if (session.namespaceNestingEnabled) {
@@ -11205,7 +11428,7 @@ var registerNamespaceDirectives = (registry3, context) => {
   registry3.registerLowered("pullns", context, handlePullNamespace);
 };
 
-// ../core/src/directives/struct-binary.ts
+// packages/core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives = (registry3, context) => {
   registry3.register("struct", context, ({ session }, words) => {
     session.structEngine.handleStruct(words);
@@ -11224,7 +11447,7 @@ var registerStructBinaryDirectives = (registry3, context) => {
   });
 };
 
-// ../core/src/directives/registry.ts
+// packages/core/src/directives/registry.ts
 var DirectiveRegistry = class {
   constructor(directivePrefixes = []) {
     this.directivePrefixes = directivePrefixes;
@@ -11338,7 +11561,7 @@ var createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, 
   return registry3;
 };
 
-// ../core/src/file-provider.ts
+// packages/core/src/file-provider.ts
 var nodePath = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:path");
 var nodeFs = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
 var virtualPath = {
@@ -11432,7 +11655,7 @@ function stripWrappingQuotes(filename) {
   return filename;
 }
 
-// ../core/src/internal-instrumentation.ts
+// packages/core/src/internal-instrumentation.ts
 var activeInstrumentation;
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
@@ -11468,7 +11691,7 @@ function measureInternalPhase(name, callback) {
   }
 }
 
-// ../core/src/ir/asset-call.ts
+// packages/core/src/ir/asset-call.ts
 function parseAssetCall(command, line) {
   const leading = command.length - command.trimStart().length;
   const trimmed = command.slice(leading);
@@ -11504,7 +11727,8 @@ function parseAssetCall(command, line) {
         return { kind: "string", value: value2, span: span(start, at) };
       }
       if (character === "\\") {
-        const escaped = command[at++];
+        const escaped = at < command.length ? command[at] : void 0;
+        at++;
         if (escaped === void 0) {
           fail2("unterminated string escape");
         }
@@ -11652,18 +11876,26 @@ function parseAssetCall(command, line) {
   if (at !== command.length) {
     fail2("unexpected text after call");
   }
-  if (positional.length !== 2 || positional[0].kind !== "string" || positional[1].kind !== "string") {
+  const stringArgument = (argument) => {
+    if (!argument || argument.kind !== "string") {
+      throw new Error(
+        `includeAsset at column ${at + 1}: expected exactly two leading string arguments`
+      );
+    }
+    return argument;
+  };
+  if (positional.length !== 2) {
     fail2("expected exactly two leading string arguments");
   }
   return {
-    path: positional[0],
-    format: positional[1],
+    path: stringArgument(positional[0]),
+    format: stringArgument(positional[1]),
     options,
     span: span(callStart, at)
   };
 }
 
-// ../core/src/ir/normalized-command.ts
+// packages/core/src/ir/normalized-command.ts
 var EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
 var EMPTY_TOKEN_SPANS = Object.freeze([]);
 function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
@@ -11962,15 +12194,42 @@ function splitCommaArguments(input) {
   return values;
 }
 
-// ../core/src/mathcore.ts
+// packages/core/src/mathcore.ts
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
+function isBinaryOperatorToken(value) {
+  switch (value) {
+    case "**":
+    case "*":
+    case "/":
+    case "%":
+    case "+":
+    case "-":
+    case "<<":
+    case ">>":
+    case "&":
+    case "|":
+    case "^":
+    case "<":
+    case ">":
+    case "<=":
+    case ">=":
+    case "==":
+    case "=":
+    case "!=":
+    case "&&":
+    case "||":
+      return true;
+    default:
+      return false;
+  }
+}
 function getOperator(operators, token) {
-  if (!Object.hasOwn(operators, token)) {
+  if (!isBinaryOperatorToken(token) || !Object.hasOwn(operators, token)) {
     return void 0;
   }
-  return operators[token];
+  return { operator: token, spec: operators[token] };
 }
 var OPERATORS = {
   // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
@@ -12254,9 +12513,17 @@ var MathCore = class {
         return this.isPureExpressionNode(expression.argument);
       case "binary":
         return this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right);
-      default:
-        return false;
+      case "call":
+      case "defineReference":
+      case "identifier":
+      case "index":
+      case "member":
+      case "range":
+      case "raw":
+      case "string":
+        break;
     }
+    return false;
   }
   /**
    * Evaluates a string expression using the legacy parser.
@@ -12329,9 +12596,17 @@ var MathCore = class {
           return argument.value;
         case "raw":
           return argument.value.replace(/^["']|["']$/g, "");
-        default:
-          return renderExpressionNode(argument);
+        case "binary":
+        case "call":
+        case "defineReference":
+        case "index":
+        case "literal":
+        case "member":
+        case "range":
+        case "unary":
+          break;
       }
+      return renderExpressionNode(argument);
     }
     switch (argument.type) {
       case "string":
@@ -12340,16 +12615,24 @@ var MathCore = class {
         return renderExpressionNode(argument);
       case "raw":
         return this.evaluateStringExpression(argument.value);
-      default:
-        if (isReferenceExpressionNode(argument)) {
-          return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
-            renderReferenceExpressionNode(argument, {
-              renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-            })
-          );
-        }
-        return this.evaluateExpressionNode(argument);
+      case "binary":
+      case "call":
+      case "defineReference":
+      case "identifier":
+      case "index":
+      case "literal":
+      case "member":
+      case "unary":
+        break;
     }
+    if (isReferenceExpressionNode(argument)) {
+      return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
+        renderReferenceExpressionNode(argument, {
+          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+        })
+      );
+    }
+    return this.evaluateExpressionNode(argument);
   }
   evaluateUnaryExpressionNode(operator, argument) {
     const value = this.evaluateExpressionNode(argument);
@@ -12498,16 +12781,16 @@ var MathCore = class {
       const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
       const twoOp = getOperator(operators, twoChars);
       if (twoOp) {
-        if (twoOp.priority >= depth) {
-          return twoChars;
+        if (twoOp.spec.priority >= depth) {
+          return twoOp.operator;
         }
         return null;
       }
     }
     const oneChar = this.scanSource[this.scanIndex];
     const oneOp = getOperator(operators, oneChar);
-    if (oneOp && oneOp.priority >= depth) {
-      return oneChar;
+    if (oneOp && oneOp.spec.priority >= depth) {
+      return oneOp.operator;
     }
     return null;
   }
@@ -12558,7 +12841,8 @@ var MathCore = class {
         this.skipWhitespace();
         return ~this.getnum();
       } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
-        const after = this.scanSource[this.scanIndex + 1];
+        const afterIndex = this.scanIndex + 1;
+        const after = afterIndex >= 0 && afterIndex < this.scanSource.length ? this.scanSource[afterIndex] : void 0;
         let isDefineLike = after === "{";
         if (after !== void 0) {
           const code = after.charCodeAt(0);
@@ -13174,7 +13458,7 @@ var MathCore = class {
   }
 };
 
-// ../core/src/operand-syntax.ts
+// packages/core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -13196,7 +13480,8 @@ function parseOperandSyntax(operand) {
   };
 }
 
-// ../core/src/operand-resolver.ts
+// packages/core/src/operand-resolver.ts
+var syntaxOf = (operand, raw) => operand.syntax ?? parseOperandSyntax(raw);
 var OperandResolver = class {
   constructor(deps) {
     this.deps = deps;
@@ -13415,15 +13700,21 @@ var OperandResolver = class {
         throw new Error(
           `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
         );
-      default:
-        try {
-          return this.deps.evaluateMath(operand);
-        } catch (error) {
-          if (this.deps.shouldDeferExpressionEvaluation()) {
-            return 0;
-          }
-          throw error;
-        }
+      case "binary":
+      case "call":
+      case "literal":
+      case "raw":
+      case "string":
+      case "unary":
+        break;
+    }
+    try {
+      return this.deps.evaluateMath(operand);
+    } catch (error) {
+      if (this.deps.shouldDeferExpressionEvaluation()) {
+        return 0;
+      }
+      throw error;
     }
   }
   resolveReferenceValue(reference) {
@@ -13510,7 +13801,7 @@ var OperandResolver = class {
     const raw = operand.trim();
     const expandedOperand = this.expandOperand(raw);
     const { expanded, length } = expandedOperand;
-    const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+    const syntax = syntaxOf(expandedOperand, raw);
     return {
       mode: "unknown",
       baseExpression: expanded,
@@ -13531,13 +13822,13 @@ var OperandResolver = class {
   }
 };
 
-// ../core/src/plugin/contracts.ts
+// packages/core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 1;
 function definePlugin(plugin2) {
   return plugin2;
 }
 
-// ../core/src/plugin/diagnostics.ts
+// packages/core/src/plugin/diagnostics.ts
 var PluginError = class extends Error {
   code;
   pluginId;
@@ -13557,7 +13848,7 @@ var PluginError = class extends Error {
   }
 };
 
-// ../core/src/lsp/directive-catalog.ts
+// packages/core/src/lsp/directive-catalog.ts
 var descriptor = (keyword, summary, syntax, group, operands) => ({
   keyword,
   summary,
@@ -13734,7 +14025,7 @@ var directiveCatalogMap = new Map(
   directiveCatalog.map((entry) => [entry.keyword.toLowerCase(), entry])
 );
 
-// ../core/src/plugin/environment.ts
+// packages/core/src/plugin/environment.ts
 var canonical = (value) => value.toLowerCase();
 var toMap = (records2) => new Map(records2.map((record5) => [canonical(record5.contributionId), record5]));
 var targetInvalid = (target, message) => {
@@ -14205,7 +14496,7 @@ var AssemblerEnvironment = class {
       target.lifecycle.flatMap((id) => {
         const lifecycle = this.#lifecycles.get(canonical(id));
         return lifecycle ? [lifecycle] : [];
-      }).sort((left, right) => left.registrationOrder - right.registrationOrder)
+      }).toSorted((left, right) => left.registrationOrder - right.registrationOrder)
     );
   }
   /**
@@ -14236,7 +14527,7 @@ var AssemblerEnvironment = class {
   }
 };
 
-// ../core/src/plugin/manager.ts
+// packages/core/src/plugin/manager.ts
 var import_semver = __toESM(require_semver2(), 1);
 var noopLogger = {
   debug: () => void 0,
@@ -14275,7 +14566,11 @@ var deepFreeze = (value, seen = /* @__PURE__ */ new Set()) => {
     for (const item of value) {
       deepFreeze(item, seen);
     }
-  } else {
+  } else if (isRecord(value)) {
+    for (const item of Object.values(value)) {
+      deepFreeze(item, seen);
+    }
+  } else if (typeof value === "function") {
     for (const item of Object.values(value)) {
       deepFreeze(item, seen);
     }
@@ -14363,8 +14658,10 @@ var validateManifest = (manifest, pluginModule) => {
     ...requires.length === 0 ? {} : { requires }
   });
 };
+var isPluginActivate = (value) => typeof value === "function";
+var isPluginValidateOptions = (value) => typeof value === "function";
 var validatePlugin = (value, pluginModule) => {
-  if (!isRecord(value) || typeof value.activate !== "function") {
+  if (!isRecord(value) || !isPluginActivate(value.activate)) {
     throw new PluginError(
       `Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`,
       {
@@ -14374,18 +14671,18 @@ var validatePlugin = (value, pluginModule) => {
     );
   }
   const manifest = validateManifest(value.manifest, pluginModule);
-  if (value.validateOptions !== void 0 && typeof value.validateOptions !== "function") {
+  const validateOptions = value.validateOptions;
+  if (validateOptions !== void 0 && !isPluginValidateOptions(validateOptions)) {
     throw new PluginError(`Plugin '${manifest.id}' validateOptions must be a function.`, {
       code: "PLUGIN_INVALID_EXPORT",
       pluginId: manifest.id,
       pluginModule
     });
   }
-  const plugin2 = value;
   return {
     manifest,
-    ...plugin2.validateOptions ? { validateOptions: plugin2.validateOptions.bind(plugin2) } : {},
-    activate: plugin2.activate.bind(plugin2)
+    ...isPluginValidateOptions(validateOptions) ? { validateOptions: validateOptions.bind(value) } : {},
+    activate: value.activate.bind(value)
   };
 };
 var validateContributionId = (id, pluginId) => {
@@ -14633,10 +14930,7 @@ var PluginManager = class {
       logger,
       options,
       registerSessionState: (contribution) => {
-        add(
-          transaction.sessionStates,
-          contribution
-        );
+        add(transaction.sessionStates, contribution);
         return Object.freeze({ id: contribution.id });
       },
       registerArchitecture: (contribution) => add(transaction.architectures, contribution),
@@ -14764,7 +15058,7 @@ var PluginManager = class {
       validateAliases(record5.value.aliases, transaction.manifest.id, record5.contributionId);
       const schema = record5.value.optionSchema;
       const invalidSchema = schema !== void 0 && (!isRecord(schema) || Object.values(schema).some(
-        (field) => !isRecord(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (field.resource !== true || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
+        (field) => !isRecord(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (!field.resource || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
       ));
       if (!import_semver.default.valid(record5.value.version) || typeof record5.value.encode !== "function" || typeof record5.value.decode !== "function" || invalidSchema || record5.value.validateOptions !== void 0 && typeof record5.value.validateOptions !== "function" || record5.value.resourcePaths !== void 0 && typeof record5.value.resourcePaths !== "function" || record5.value.targets !== void 0 && (!isArray(record5.value.targets) || record5.value.targets.some((target) => typeof target !== "string"))) {
         this.#malformed(transaction, record5);
@@ -14889,7 +15183,7 @@ var PluginManager = class {
     }
     this.#disposed = true;
     const errors = [];
-    for (const plugin2 of [...this.#activated].reverse()) {
+    for (const plugin2 of [...this.#activated].toReversed()) {
       try {
         await plugin2.disposable?.dispose();
       } catch (error) {
@@ -14902,7 +15196,10 @@ var PluginManager = class {
   }
 };
 
-// ../core/src/plugin/session-state.ts
+// packages/core/src/plugin/session-state.ts
+function isSlotValue(value) {
+  return value !== void 0 || Object.is(value, void 0);
+}
 var PluginSessionStateStore = class {
   #contributions;
   #values;
@@ -14946,7 +15243,14 @@ var PluginSessionStateStore = class {
         contributionId: slot.id
       });
     }
-    return this.#values.get(slot.id);
+    const value = this.#values.get(slot.id);
+    if (!isSlotValue(value)) {
+      throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
+        code: "PLUGIN_CONFIGURATION_INVALID",
+        contributionId: slot.id
+      });
+    }
+    return value;
   }
   /**
    * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
@@ -15022,7 +15326,7 @@ var PluginSessionStateStore = class {
     }
     this.#disposed = true;
     const errors = [];
-    for (const record5 of [...this.#contributions].reverse()) {
+    for (const record5 of [...this.#contributions].toReversed()) {
       try {
         record5.value.dispose?.(this.#values.get(record5.contributionId));
       } catch (error) {
@@ -15036,7 +15340,11 @@ var PluginSessionStateStore = class {
   }
 };
 
-// ../core/src/services/program-model-builder.ts
+// packages/core/src/services/program-model-builder.ts
+function stackTop(stack) {
+  const topIndex = stack.length - 1;
+  return topIndex >= 0 ? stack[topIndex] : void 0;
+}
 var ProgramModelBuilder = class {
   constructor(host) {
     this.host = host;
@@ -15159,8 +15467,8 @@ var ProgramModelBuilder = class {
    * @param {ExecutableNode} node The node.
    */
   pushToCurrent(state, node) {
-    const currentBranch = state.branchStack[state.branchStack.length - 1];
-    const currentLoop = state.loopStack[state.loopStack.length - 1];
+    const currentBranch = stackTop(state.branchStack);
+    const currentLoop = stackTop(state.loopStack);
     if (currentBranch && currentLoop) {
       if (currentLoop.startLine >= currentBranch.startLine) {
         currentLoop.commands.push(node);
@@ -15264,7 +15572,7 @@ var ProgramModelBuilder = class {
       return;
     }
     if (keyword === "elseif" || keyword === "else") {
-      const currentIf = state.ifStack[state.ifStack.length - 1];
+      const currentIf = stackTop(state.ifStack);
       if (!currentIf) {
         this.pushToCurrent(state, command);
         return;
@@ -15287,8 +15595,8 @@ var ProgramModelBuilder = class {
       return;
     }
     if (keyword === "endif") {
-      const currentIf = state.ifStack[state.ifStack.length - 1];
-      const currentLoop = state.loopStack[state.loopStack.length - 1];
+      const currentIf = stackTop(state.ifStack);
+      const currentLoop = stackTop(state.loopStack);
       const whileIsInnermost = this.host.shouldEndifCloseInnermostWhile(
         currentLoop?.type,
         currentLoop?.startLine,
@@ -15332,7 +15640,7 @@ var ProgramModelBuilder = class {
   }
 };
 
-// ../core/src/services/assembly-front-end-service.ts
+// packages/core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService = class {
   constructor(host) {
     this.host = host;
@@ -15455,7 +15763,19 @@ var AssemblyFrontEndService = class {
   }
 };
 
-// ../core/src/services/asset-assembly-service.ts
+// packages/core/src/services/asset-assembly-service.ts
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray(value) {
+  return Array.isArray(value);
+}
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.length > 0;
+}
+function isNonEmptyStringArray(value) {
+  return isUnknownArray(value) && value.every(isNonEmptyString);
+}
 var AssetAssemblyService = class _AssetAssemblyService {
   constructor(session) {
     this.session = session;
@@ -15483,6 +15803,13 @@ var AssetAssemblyService = class _AssetAssemblyService {
    */
   snapshot(path38) {
     return this.#files.get(path38)?.slice();
+  }
+  /** Resolve a string operand after define expansion.
+   * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
+   * @returns {string} Expanded text.
+   */
+  #text(node) {
+    return this.session.defineEngine.resolveDefinesInStringLiteral(node.value);
   }
   /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
    * @param {AssetValueNode} node Typed source value.
@@ -15581,7 +15908,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
       return `[${value.map((item) => this.#stable(item)).join(",")}]`;
     }
     if (value && typeof value === "object") {
-      return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key3, item]) => `${JSON.stringify(key3)}:${this.#stable(item)}`).join(",")}}`;
+      return `{${Object.entries(value).toSorted(([a], [b]) => a.localeCompare(b)).map(([key3, item]) => `${JSON.stringify(key3)}:${this.#stable(item)}`).join(",")}}`;
     }
     return JSON.stringify(value);
   }
@@ -15638,8 +15965,8 @@ var AssetAssemblyService = class _AssetAssemblyService {
     const options = Object.fromEntries(
       Object.entries(call.options).map(([key3, node]) => [key3, this.#value(node)])
     );
-    const sourcePath = this.#resolve(this.#value(call.path));
-    const formatName = this.#value(call.format);
+    const sourcePath = this.#resolve(this.#text(call.path));
+    const formatName = this.#text(call.format);
     const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
     if (!format) {
       throw new Error(
@@ -15657,7 +15984,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     let transforms = [];
     if (typeof transformSpec === "string") {
-      const compressOptions = call.options.compressOptions;
+      const compressOptions = Object.hasOwn(call.options, "compressOptions") ? call.options.compressOptions : void 0;
       transforms = [
         { id: transformSpec, options: compressOptions ? this.#value(compressOptions) : {} }
       ];
@@ -15673,7 +16000,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
         continue;
       }
       const suppliedOptions = "options" in item ? item.options : void 0;
-      const transformOptions = suppliedOptions && typeof suppliedOptions === "object" ? suppliedOptions : {};
+      const transformOptions = isRecord2(suppliedOptions) ? suppliedOptions : {};
       const names = [
         ...this.#validateTransformOptions(transform, transformOptions),
         ...transform.resourcePaths?.(transformOptions) ?? []
@@ -15691,8 +16018,8 @@ var AssetAssemblyService = class _AssetAssemblyService {
     const options = Object.fromEntries(
       Object.entries(call.options).map(([key3, node]) => [key3, this.#value(node)])
     );
-    const sourcePath = this.#resolve(this.#value(call.path));
-    const formatName = this.#value(call.format);
+    const sourcePath = this.#resolve(this.#text(call.path));
+    const formatName = this.#text(call.format);
     const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
     if (!format) {
       throw new Error(
@@ -15710,13 +16037,17 @@ var AssetAssemblyService = class _AssetAssemblyService {
     if (output !== void 0 && typeof output !== "string") {
       throw new Error("includeAsset output must be a string.");
     }
-    if (maxSize !== void 0 && (!Number.isSafeInteger(maxSize) || maxSize < 0)) {
-      throw new Error("includeAsset maxSize must be a non-negative integer.");
+    let boundedSize;
+    if (maxSize !== void 0) {
+      if (typeof maxSize !== "number" || !Number.isSafeInteger(maxSize) || maxSize < 0) {
+        throw new Error("includeAsset maxSize must be a non-negative integer.");
+      }
+      boundedSize = maxSize;
     }
     const resources = {};
     const resourceIdentities = [];
     const declaredResources = format.resourcePaths?.(options) ?? [];
-    if (!Array.isArray(declaredResources) || declaredResources.some((path38) => typeof path38 !== "string" || !path38)) {
+    if (!isNonEmptyStringArray(declaredResources)) {
       throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
     }
     for (const resourceName of declaredResources) {
@@ -15776,7 +16107,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
     } else if (compress !== void 0) {
       transformSpecs = compress;
     }
-    if (!Array.isArray(transformSpecs)) {
+    if (!isUnknownArray(transformSpecs)) {
       throw new Error("includeAsset compress must be an ID or array of { id, options }.");
     }
     if (typeof compress !== "string" && compressOptions !== void 0) {
@@ -15784,31 +16115,29 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     const transforms = [];
     for (const unknownItem of transformSpecs) {
-      if (!unknownItem || typeof unknownItem !== "object" || !("id" in unknownItem) || typeof unknownItem.id !== "string") {
+      if (!isRecord2(unknownItem) || typeof unknownItem.id !== "string") {
         throw new Error("includeAsset transform entries require an id.");
       }
-      const item = unknownItem;
-      const transform = this.session.environment.getAssetTransform(item.id, this.session.targetId);
+      const id = unknownItem.id;
+      const transform = this.session.environment.getAssetTransform(id, this.session.targetId);
       if (!transform) {
         throw new Error(
-          `includeAsset transform '${item.id}' is unavailable on '${this.session.targetId}'.`
+          `includeAsset transform '${id}' is unavailable on '${this.session.targetId}'.`
         );
       }
-      const transformOptions = item.options ?? {};
-      if (!transformOptions || typeof transformOptions !== "object" || Array.isArray(transformOptions)) {
-        throw new Error(`includeAsset transform '${item.id}' options must be an object.`);
+      const transformOptions = unknownItem.options ?? {};
+      if (!isRecord2(transformOptions)) {
+        throw new Error(`includeAsset transform '${id}' options must be an object.`);
       }
-      const validatedOptions = transformOptions;
-      const schemaResources = this.#validateTransformOptions(transform, validatedOptions);
-      transform.validateOptions?.(validatedOptions);
+      const schemaResources = this.#validateTransformOptions(transform, transformOptions);
+      transform.validateOptions?.(transformOptions);
       const transformResources = {};
       const transformResourceIdentities = [];
-      const declared = transform.resourcePaths?.(validatedOptions) ?? [];
-      const resourcePaths = declared;
-      if (!Array.isArray(declared) || declared.some((name) => typeof name !== "string" || !name)) {
+      const declared = transform.resourcePaths?.(transformOptions) ?? [];
+      if (!isNonEmptyStringArray(declared)) {
         throw new Error(`Asset transform '${transform.id}' returned invalid resource paths.`);
       }
-      const names = [.../* @__PURE__ */ new Set([...schemaResources, ...resourcePaths])];
+      const names = [.../* @__PURE__ */ new Set([...schemaResources, ...declared])];
       for (const name of names) {
         const path38 = this.#resolve(name);
         transformResources[name] = {
@@ -15819,7 +16148,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
       }
       transforms.push({
         provider: transform,
-        options: validatedOptions,
+        options: transformOptions,
         resources: transformResources,
         resourceIdentities: transformResourceIdentities
       });
@@ -15874,15 +16203,16 @@ var AssetAssemblyService = class _AssetAssemblyService {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           throw new Error(
-            `Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`
+            `Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`,
+            { cause: error }
           );
         }
       }
       this.#emissions.set(emissionKey, bytes2);
     }
-    if (maxSize !== void 0 && bytes2.length > maxSize) {
+    if (boundedSize !== void 0 && bytes2.length > boundedSize) {
       throw new Error(
-        `includeAsset output is ${bytes2.length} bytes, above maxSize ${maxSize}.`
+        `includeAsset output is ${bytes2.length} bytes, above maxSize ${boundedSize}.`
       );
     }
     this.lastEmission = {
@@ -15896,7 +16226,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
   }
 };
 
-// ../core/src/services/command-lowering-service.ts
+// packages/core/src/services/command-lowering-service.ts
 var CommandLoweringService = class {
   host;
   constructor(host) {
@@ -15986,14 +16316,11 @@ var CommandLoweringService = class {
         endLine: node.endLine
       };
     }
-    if (node.type !== "if") {
-      throw new Error(`Unknown executable node type: ${String(node.type)}`);
-    }
-    const conditionalNode = node;
+    assertConditionalNode(node);
     return {
       kind: "conditional",
-      header: conditionalNode.header,
-      branches: conditionalNode.branches.map((branch) => ({
+      header: node.header,
+      branches: node.branches.map((branch) => ({
         kind: branch.kind,
         header: branch.header,
         conditionNode: branch.conditionNode,
@@ -16001,8 +16328,8 @@ var CommandLoweringService = class {
         startLine: branch.startLine,
         endLine: branch.endLine
       })),
-      startLine: conditionalNode.startLine,
-      endLine: conditionalNode.endLine
+      startLine: node.startLine,
+      endLine: node.endLine
     };
   }
   /**
@@ -16065,8 +16392,13 @@ var CommandLoweringService = class {
     return command.kind === "opcodeCandidate" ? void 0 : "unknown";
   }
 };
+function assertConditionalNode(node) {
+  if (node.type !== "if") {
+    throw new Error(`Unknown executable node type: ${node.type}`);
+  }
+}
 
-// ../core/src/services/define-engine.ts
+// packages/core/src/services/define-engine.ts
 var DefineEngine = class {
   constructor(host) {
     this.host = host;
@@ -16261,7 +16593,8 @@ var DefineEngine = class {
     while (index < content.length) {
       const char = content[index];
       if (char === "\\") {
-        const next = content[index + 1];
+        const nextIndex = index + 1;
+        const next = nextIndex < content.length ? content[nextIndex] : void 0;
         if (next === void 0) {
           result += "\\";
           index++;
@@ -16373,7 +16706,7 @@ var DefineEngine = class {
       return;
     }
     if (operator === "+=") {
-      value = (this.host.defines.get(identifier2) || "") + value;
+      value = (this.host.defines.get(identifier2) ?? "") + value;
     }
     if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") || value.includes("&") || value.includes("|") || value.includes("^") || value.includes("<<") || value.includes(">>") || value.includes("("))) {
       try {
@@ -16412,7 +16745,7 @@ var DefineEngine = class {
   }
 };
 
-// ../core/src/services/directive-runtime-service.ts
+// packages/core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService = class {
   constructor(host) {
     this.host = host;
@@ -16504,7 +16837,7 @@ var DirectiveRuntimeService = class {
       this.estimateDataDirectiveSize(len, params);
       return;
     }
-    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+    const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
     while (pendingValues.length > 0) {
       let value = (pendingValues.pop() ?? "").trim();
       if (value.startsWith('"') || value.startsWith("'")) {
@@ -16592,7 +16925,7 @@ var DirectiveRuntimeService = class {
    * @param {string[]} params Source operands, including defines that may expand to data lists.
    */
   estimateDataDirectiveSize(len, params) {
-    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+    const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
     let estimatedItems = 0;
     while (pendingValues.length > 0) {
       let value = (pendingValues.pop() ?? "").trim();
@@ -16669,7 +17002,7 @@ var DirectiveRuntimeService = class {
   }
 };
 
-// ../core/src/services/front-end-command-service.ts
+// packages/core/src/services/front-end-command-service.ts
 var FrontEndCommandService = class {
   constructor(host) {
     this.host = host;
@@ -16756,10 +17089,11 @@ var FrontEndCommandService = class {
   handleGlobalLabel(command) {
     const { words } = command;
     const directiveArgs = command.parsed.directiveArgs;
-    if ((directiveArgs?.name ?? words[0] ?? "").toLowerCase() !== "global") {
+    const leadingWord = words.length > 0 ? words[0] : void 0;
+    if ((directiveArgs?.name ?? leadingWord ?? "").toLowerCase() !== "global") {
       return false;
     }
-    const payload = directiveArgs?.args?.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
+    const payload = directiveArgs?.args.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
     if (payload.length < 1) {
       throw new Error("global requires a label name");
     }
@@ -16800,8 +17134,10 @@ var FrontEndCommandService = class {
       const dotCount = labelName.startsWith(".") ? labelName.match(/^\.*/)?.[0]?.length ?? 1 : 0;
       const containerName = dotCount > 0 ? this.host.symbolScope.getScopedParentLabel(dotCount) || void 0 : namespace || void 0;
       this.host.symbolScope.handleLabelDefinition(labelName);
+      const consumedSpan = consumedCount >= 0 && consumedCount < command.source.tokenSpans.length ? command.source.tokenSpans[consumedCount] : void 0;
+      const firstSpan = command.source.tokenSpans.length > 0 ? command.source.tokenSpans[0] : void 0;
       this.host.recordSymbolDefinition("label", labelName, {
-        span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+        span: consumedSpan ?? firstSpan ?? command.source.normalizedSpan,
         containerName
       });
       remainingWords.shift();
@@ -16847,7 +17183,7 @@ var FrontEndCommandService = class {
   }
 };
 
-// ../core/src/services/include-source-service.ts
+// packages/core/src/services/include-source-service.ts
 var IncludeSourceService = class {
   constructor(host) {
     this.host = host;
@@ -16957,7 +17293,7 @@ var IncludeSourceService = class {
     const previousFile = this.host.currentFile;
     this.host.includeStack.push(previousFile);
     this.host.recordIncludeEdge(previousFile, resolvedPath);
-    if (this.host.followIncludes === false) {
+    if (!this.host.followIncludes) {
       this.host.includeStack.pop();
       return;
     }
@@ -16976,8 +17312,8 @@ var IncludeSourceService = class {
         this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
-      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
+      const message = error instanceof Error ? error.message : stringifyCaught(error) ?? "Unknown error";
+      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`, { cause: error });
     } finally {
       this.host.currentFile = this.host.includeStack.pop() ?? "";
     }
@@ -17036,8 +17372,11 @@ var IncludeSourceService = class {
     return content;
   }
 };
+function stringifyCaught(value) {
+  return JSON.stringify(value);
+}
 
-// ../core/src/services/macro-engine.ts
+// packages/core/src/services/macro-engine.ts
 var MacroEngine = class {
   host;
   macroExpansionControlStack = [];
@@ -17085,7 +17424,8 @@ var MacroEngine = class {
     }
     const [keyword, ...rest] = trimmed.split(/\s+/);
     const normalizedKeyword = keyword.toLowerCase();
-    const current = this.macroExpansionControlStack[this.macroExpansionControlStack.length - 1];
+    const currentIndex = this.macroExpansionControlStack.length - 1;
+    const current = currentIndex >= 0 ? this.macroExpansionControlStack[currentIndex] : void 0;
     const parentActive = this.isMacroExpansionActive();
     const enclosingActive = this.macroExpansionControlStack.slice(0, -1).every((entry) => entry.active);
     const expression = rest.join(" ").trim();
@@ -17259,9 +17599,7 @@ var MacroEngine = class {
               }
             }
           }
-          if (nextAddr === null) {
-            nextAddr = this.host.symbolScope.findNextLabel("?+");
-          }
+          nextAddr ??= this.host.symbolScope.findNextLabel("?+");
           modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
         }
       }
@@ -17277,9 +17615,7 @@ var MacroEngine = class {
               }
             }
           }
-          if (prevAddr === null) {
-            prevAddr = this.host.symbolScope.findPreviousLabel("?-");
-          }
+          prevAddr ??= this.host.symbolScope.findPreviousLabel("?-");
           modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
         }
       }
@@ -17488,7 +17824,7 @@ var MacroEngine = class {
         }
       }
       const defineValue = this.host.defines.get(name);
-      return defineValue !== void 0 ? defineValue : match;
+      return defineValue ?? match;
     };
     if (line.trim().startsWith("!") && line.includes("=")) {
       const defineMatch = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
@@ -17595,7 +17931,7 @@ var MacroEngine = class {
     resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
       const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
         const defineValue = this.host.defines.get(defName);
-        return defineValue !== void 0 ? defineValue : defMatch;
+        return defineValue ?? defMatch;
       });
       const resolvedExpr = this.host.resolvedefines(processedExpr);
       let index = this.host.mathCore.math(resolvedExpr);
@@ -17671,7 +18007,7 @@ var MacroEngine = class {
   }
 };
 
-// ../core/src/services/output-writer-service.ts
+// packages/core/src/services/output-writer-service.ts
 var OutputWriterService = class {
   constructor(host) {
     this.host = host;
@@ -17859,7 +18195,7 @@ var OutputWriterService = class {
   }
 };
 
-// ../core/src/services/data-struct-engine.ts
+// packages/core/src/services/data-struct-engine.ts
 var DataStructEngine = class {
   constructor(host, structs) {
     this.host = host;
@@ -17927,7 +18263,8 @@ var DataStructEngine = class {
     if (!match || !definition) {
       throw new Error(`Unknown dataStruct record '${reference}'.`);
     }
-    const index = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
+    const indexText = match.length > 2 ? match[2] : void 0;
+    const index = indexText === void 0 ? 0 : this.host.operandResolver.getnum(indexText);
     if (!Number.isSafeInteger(index) || index < 0) {
       throw new Error(`Invalid record index '${reference}'.`);
     }
@@ -17945,7 +18282,7 @@ var DataStructEngine = class {
         `dataStruct does not initialize extended layouts ('${definition.name}'). Use raw data directives.`
       );
     }
-    const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
+    const fields = [...definition.fields?.values() ?? []].toSorted((a, b) => a.offset - b.offset);
     let end = 0;
     for (const field of fields) {
       if (field.offset !== end) {
@@ -18015,7 +18352,7 @@ var DataStructEngine = class {
       if (!this.host.canEmitBytes) {
         continue;
       }
-      for (const [index2, expression] of items.entries()) {
+      for (const [itemIndex, expression] of items.entries()) {
         const number = this.host.operandResolver.getnum(expression);
         if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
           throw new Error(
@@ -18024,7 +18361,7 @@ var DataStructEngine = class {
         }
         if (this.host.recordStructField) {
           fields.push({
-            reference: field.array ? `${name}[${index2}]` : name,
+            reference: field.array ? `${name}[${itemIndex}]` : name,
             expression,
             offset: bytes2.length,
             width: field.width
@@ -18056,7 +18393,7 @@ var DataStructEngine = class {
   }
 };
 
-// ../core/src/services/struct-engine.ts
+// packages/core/src/services/struct-engine.ts
 var StructEngine = class {
   constructor(host) {
     this.host = host;
@@ -18083,7 +18420,8 @@ var StructEngine = class {
       const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
       if (typed) {
         const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
-        const count = typed[2] === void 0 ? 1 : this.host.operandResolver.getnum(typed[2]);
+        const countText = typed.length > 2 ? typed[2] : void 0;
+        const count = countText === void 0 ? 1 : this.host.operandResolver.getnum(countText);
         if (!Number.isSafeInteger(count) || count < 1 || count * width > 65536) {
           throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
         }
@@ -18095,7 +18433,7 @@ var StructEngine = class {
           offset: currentStruct.offset,
           width,
           count,
-          array: typed[2] !== void 0
+          array: countText !== void 0
         });
       } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
         throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
@@ -18195,14 +18533,16 @@ var StructEngine = class {
     const seen = /* @__PURE__ */ new Set();
     for (let index = 1; index < words.length; index += 2) {
       const option = words[index].toLowerCase();
-      if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index + 1] === void 0) {
+      const parameterIndex = index + 1;
+      const parameter = parameterIndex < words.length ? words[parameterIndex] : void 0;
+      if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || parameter === void 0) {
         if (words[1]?.toLowerCase() === "align") {
           throw new Error("endstruct align requires a single alignment parameter.");
         }
         throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
       }
       seen.add(option);
-      const value = this.host.operandResolver.getnum(words[index + 1]);
+      const value = this.host.operandResolver.getnum(parameter);
       if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
         throw new Error(
           option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
@@ -18242,10 +18582,8 @@ var StructEngine = class {
         parentStruct.extensionSize = extSize;
       }
       this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
-      this.host.structs.set(currentStruct.name, currentStruct);
-    } else {
-      this.host.structs.set(currentStruct.name, currentStruct);
     }
+    this.host.structs.set(currentStruct.name, currentStruct);
     this.host.restoreStructDefinition();
     this.host.currentStruct = null;
   }
@@ -18374,7 +18712,7 @@ var StructEngine = class {
   }
 };
 
-// ../core/src/services/struct-metadata.ts
+// packages/core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count = definition.indexRange?.count ?? 1;
   const bytes2 = definition.size * count;
@@ -18393,7 +18731,10 @@ function getStructMetadata(definition, property) {
   }
 }
 
-// ../core/src/services/symbol-scope-service.ts
+// packages/core/src/services/symbol-scope-service.ts
+function relativeLabelBucket(table, depth) {
+  return Object.hasOwn(table, depth) ? table[depth] : void 0;
+}
 var SymbolScopeService = class {
   constructor(host) {
     this.host = host;
@@ -18420,8 +18761,7 @@ var SymbolScopeService = class {
    * @returns {string} The storage key.
    */
   qualifySymbolName(name) {
-    const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
-    if (!profile.fileLocalSymbols) {
+    if (!this.host.syntaxProfile.fileLocalSymbols) {
       return name;
     }
     if (this.host.globalSymbols.has(name)) {
@@ -18454,7 +18794,7 @@ var SymbolScopeService = class {
    * @returns {string} The rewritten name.
    */
   toCheapDotLabel(name) {
-    const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+    const prefix = this.host.syntaxProfile.cheapLocalPrefix;
     if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
       return `.${name.slice(prefix.length)}`;
     }
@@ -18543,21 +18883,25 @@ var SymbolScopeService = class {
    */
   handleRelativeLabel(label) {
     const isPositive = label.includes("+");
-    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+    const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
     const targetAddress = this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (this.host.enforceResolvedLabels) {
       if (isPositive) {
-        if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+        const forwardLabels = relativeLabelBucket(this.host.forwardLabels, depth);
+        if (!forwardLabels || forwardLabels.length === 0) {
           throw new Error(`Error: Undefined forward label '${label}'.`);
         }
-      } else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
-        throw new Error(`Error: Undefined backward label '${label}'.`);
+      } else {
+        const backwardLabels = relativeLabelBucket(this.host.backwardLabels, depth);
+        if (!backwardLabels || backwardLabels.length === 0) {
+          throw new Error(`Error: Undefined backward label '${label}'.`);
+        }
       }
       return targetAddress;
     }
     if (isPositive) {
-      if (!this.host.forwardLabels[depth]) {
+      if (!relativeLabelBucket(this.host.forwardLabels, depth)) {
         this.host.forwardLabels[depth] = [];
       }
       if (isMacroLocal && this.host.inMacroExpansion) {
@@ -18569,7 +18913,7 @@ var SymbolScopeService = class {
         this.host.forwardLabels[depth].push({ addr: targetAddress });
       }
     } else {
-      if (!this.host.backwardLabels[depth]) {
+      if (!relativeLabelBucket(this.host.backwardLabels, depth)) {
         this.host.backwardLabels[depth] = [];
       }
       if (isMacroLocal && this.host.inMacroExpansion) {
@@ -18591,15 +18935,16 @@ var SymbolScopeService = class {
   handleUnnamedLabel() {
     const targetAddress = this.host.currentTargetAddress;
     if (this.host.enforceResolvedLabels) {
-      if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+      const forwardLabels = relativeLabelBucket(this.host.forwardLabels, 0);
+      if (!forwardLabels || forwardLabels.length === 0) {
         throw new Error("Error: Undefined unnamed label ':'.");
       }
       return targetAddress;
     }
-    if (!this.host.forwardLabels[0]) {
+    if (!relativeLabelBucket(this.host.forwardLabels, 0)) {
       this.host.forwardLabels[0] = [];
     }
-    if (!this.host.backwardLabels[0]) {
+    if (!relativeLabelBucket(this.host.backwardLabels, 0)) {
       this.host.backwardLabels[0] = [];
     }
     const entry = { addr: targetAddress, unit: this.objectFileKey() };
@@ -18622,7 +18967,10 @@ var SymbolScopeService = class {
     if (!this.host.enforceResolvedLabels) {
       return 0;
     }
-    const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+    const table = relativeLabelBucket(
+      parsed.direction === 1 ? this.host.forwardLabels : this.host.backwardLabels,
+      0
+    );
     if (!table || table.length === 0) {
       throw new Error(
         `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
@@ -18631,7 +18979,7 @@ var SymbolScopeService = class {
     const unit = this.objectFileKey();
     const ordered = table.filter((entry) => !entry.unit || entry.unit === unit).filter(
       (entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress
-    ).map((entry) => entry.addr).sort((left, right) => parsed.direction === 1 ? left - right : right - left);
+    ).map((entry) => entry.addr).toSorted((left, right) => parsed.direction === 1 ? left - right : right - left);
     if (ordered.length < parsed.count) {
       throw new Error(
         `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
@@ -18647,16 +18995,17 @@ var SymbolScopeService = class {
    */
   findNextLabel(label, currentAddressOverride) {
     const isPositive = label.includes("+");
-    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+    const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
     const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (!this.host.enforceResolvedLabels) {
       return 0;
     }
-    if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+    const forwardLabels = relativeLabelBucket(this.host.forwardLabels, depth);
+    if (!forwardLabels || forwardLabels.length === 0) {
       throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
     }
-    const possibleTargets = this.host.forwardLabels[depth].filter((entry) => {
+    const possibleTargets = forwardLabels.filter((entry) => {
       if (isMacroLocal && this.host.inMacroExpansion) {
         return entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance;
       }
@@ -18675,16 +19024,17 @@ var SymbolScopeService = class {
    */
   findPreviousLabel(label, currentAddressOverride) {
     const isPositive = label.includes("+");
-    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+    const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
     const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (this.host.isDefinitionCollectionStage) {
       return 0;
     }
-    if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+    const backwardLabels = relativeLabelBucket(this.host.backwardLabels, depth);
+    if (!backwardLabels || backwardLabels.length === 0) {
       throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
     }
-    const possibleTargets = this.host.backwardLabels[depth].filter((entry) => {
+    const possibleTargets = backwardLabels.filter((entry) => {
       if (isMacroLocal && this.host.inMacroExpansion) {
         return entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance;
       }
@@ -18726,7 +19076,7 @@ var SymbolScopeService = class {
           if (recentMainLabel) {
             const subLabelWithoutDot = labelName.substring(1);
             const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
-            const subAddr = value !== void 0 ? value : this.host.currentTargetAddress;
+            const subAddr = value ?? this.host.currentTargetAddress;
             this.host.labelTable.set(parentChildLabel, {
               value: subAddr,
               isStatic,
@@ -18749,7 +19099,7 @@ var SymbolScopeService = class {
           if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0 && modifiesHierarchy) {
             const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
             const leafLabel = `${leafNamespace}_${label}`;
-            const addr2 = value !== void 0 ? value : this.host.currentTargetAddress;
+            const addr2 = value ?? this.host.currentTargetAddress;
             this.host.labelTable.set(leafLabel, {
               value: addr2,
               isStatic,
@@ -18777,7 +19127,7 @@ var SymbolScopeService = class {
         fullLabel = label;
       }
     }
-    const addr = value !== void 0 ? value : this.host.currentTargetAddress;
+    const addr = value ?? this.host.currentTargetAddress;
     if (this.host.isDefinitionCollectionStage) {
       if (modifiesHierarchy && !label.startsWith(".")) {
         this.host.currentParentLabel = fullLabel;
@@ -19263,7 +19613,7 @@ function parseUnnamedLabelReference(token) {
   };
 }
 
-// ../core/src/assembler.ts
+// packages/core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
 var Assembler = class _Assembler {
   /** The current logical target address. */
@@ -19534,14 +19884,15 @@ var Assembler = class _Assembler {
    * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
    */
   traceWrite(event) {
-    const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+    const sourceIndex = this.traceCommandStack.length - 1;
+    const traceSource = sourceIndex >= 0 ? this.traceCommandStack[sourceIndex] : void 0;
     this.traceListener?.({
       type: "write",
       ...event,
-      file: source?.file ?? this.currentFile,
-      line: source?.line ?? this.currentLine,
-      raw: source?.raw ?? "",
-      normalized: source?.normalized ?? ""
+      file: traceSource?.file ?? this.currentFile,
+      line: traceSource?.line ?? this.currentLine,
+      raw: traceSource?.raw ?? "",
+      normalized: traceSource?.normalized ?? ""
     });
   }
   /**
@@ -19719,7 +20070,9 @@ var Assembler = class _Assembler {
         this.collectExpressionReferences(expression.start, fallbackSpan);
         this.collectExpressionReferences(expression.end, fallbackSpan);
         return;
-      default:
+      case "literal":
+      case "raw":
+      case "string":
         return;
     }
   }
@@ -19817,9 +20170,14 @@ var Assembler = class _Assembler {
         return this.structNameFromExpression(node.right, seen) ?? this.structNameFromExpression(node.left, seen);
       case "unary":
         return this.structNameFromExpression(node.argument, seen);
-      default:
-        return void 0;
+      case "call":
+      case "literal":
+      case "range":
+      case "raw":
+      case "string":
+        break;
     }
+    return void 0;
   }
   /**
    * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
@@ -20201,7 +20559,7 @@ var Assembler = class _Assembler {
    */
   seedOutputFromBaseImage() {
     const seedSize = 512 * 1024;
-    if (!this.baseImage || this.baseImage.length === 0) {
+    if (this.baseImage.length === 0) {
       return;
     }
     for (let i = 0; i < Math.min(seedSize, this.baseImage.length); i++) {
@@ -20235,7 +20593,7 @@ var Assembler = class _Assembler {
    * in plugin activation disposables and session state cloneable.
    */
   constructor(options) {
-    if (!options?.environment) {
+    if (!options.environment) {
       throw new PluginError("Assembler construction requires a frozen plugin environment.", {
         code: "PLUGIN_CONFIGURATION_INVALID"
       });
@@ -20334,18 +20692,35 @@ var Assembler = class _Assembler {
     this.mathCore.host = this.expressionHost;
     this.installExpressionFunctions(target.expressionSets);
     this.services = this.createServices();
+    const readCurrentFile = () => this.currentFile;
+    const readCurrentLine = () => this.currentLine;
+    const readInMacroExpansion = () => this.inMacroExpansion;
+    const readIsDefinitionCollectionStage = () => this.isDefinitionCollectionStage;
+    const readSyntaxProfile = () => this.syntaxProfile;
+    const readCollectSourceMetadata = () => this.collectSourceMetadata;
     const frontEndHost = {
       passProgramCache: this.passProgramCache,
       resolveVariadicPlaceholders: (command) => this.macroEngine.resolveVariadicPlaceholders(command),
-      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+      get currentFile() {
+        return readCurrentFile();
+      },
+      get currentLine() {
+        return readCurrentLine();
+      },
+      get inMacroExpansion() {
+        return readInMacroExpansion();
+      },
+      get isDefinitionCollectionStage() {
+        return readIsDefinitionCollectionStage();
+      },
+      get syntaxProfile() {
+        return readSyntaxProfile();
+      },
+      get collectSourceMetadata() {
+        return readCollectSourceMetadata();
+      }
     };
-    Object.defineProperties(frontEndHost, {
-      currentFile: { get: () => this.currentFile },
-      currentLine: { get: () => this.currentLine },
-      inMacroExpansion: { get: () => this.inMacroExpansion },
-      isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage },
-      syntaxProfile: { get: () => this.syntaxProfile }
-    });
     this.frontEndService = new AssemblyFrontEndService(frontEndHost);
     this.programModelBuilder = this.frontEndService.programModelBuilder;
     this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
@@ -20634,7 +21009,7 @@ var Assembler = class _Assembler {
     }
     this.sessionDisposed = true;
     const errors = [];
-    for (const { record: record5, instance } of [...this.activeLifecycles].reverse()) {
+    for (const { record: record5, instance } of [...this.activeLifecycles].toReversed()) {
       try {
         instance.onSessionDispose?.({ state: this.pluginState, session: this });
       } catch (cause) {
@@ -20758,13 +21133,13 @@ var Assembler = class _Assembler {
     return this.macros.get(this.currentMacroName)?.sourceFile;
   }
   canReadBaseImage(position, size) {
-    const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
+    const sourceLength = this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
   readBaseImage(position, size, defaultValue) {
     const pos = Math.trunc(position);
     const pcPos = this.outputWriter.toOutputOffset(pos);
-    const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
+    const source = this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
     if (pcPos < 0) {
       if (defaultValue !== void 0) {
         return defaultValue;
@@ -20976,9 +21351,7 @@ var Assembler = class _Assembler {
     this.activeStageExecutionState.capabilities = descriptor2.capabilities;
   }
   getActiveStageCapabilities() {
-    if (!this.activeStageExecutionState) {
-      this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
-    }
+    this.activeStageExecutionState ??= this.createEphemeralStageExecutionState("collectDefinitions");
     return this.activeStageExecutionState.capabilities;
   }
   get traceStage() {
@@ -21416,12 +21789,10 @@ var Assembler = class _Assembler {
     }
   }
   getOrCreateLoweredProgram(stageState, program) {
-    if (!stageState.loweredProgram) {
-      stageState.loweredProgram = measureInternalPhase(
-        "lowerProgram",
-        () => this.commandLoweringService.lowerProgram(program)
-      );
-    }
+    stageState.loweredProgram ??= measureInternalPhase(
+      "lowerProgram",
+      () => this.commandLoweringService.lowerProgram(program)
+    );
     return stageState.loweredProgram;
   }
   /**
@@ -21514,7 +21885,8 @@ var Assembler = class _Assembler {
       const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
       throw new Error(
-        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`
+        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`,
+        { cause: e }
       );
     }
     return result !== 0;
@@ -21565,9 +21937,11 @@ var Assembler = class _Assembler {
           return this.resolveExpressionInput(this.resolvedefines(expression.value));
         }
         return expression;
-      default:
-        return expression;
+      case "literal":
+      case "string":
+        break;
     }
+    return expression;
   }
   /**
    * Resolves reference-style expressions such as identifiers, define references,
@@ -21979,7 +22353,7 @@ var Assembler = class _Assembler {
   cloneRelativeLabels(source) {
     const clone = {};
     for (const [depth, entries3] of Object.entries(source)) {
-      clone[Number(depth)] = entries3.map((entry) => ({ ...entry }));
+      clone[Number(depth)] = entries3.map((entry) => Object.assign({}, entry));
     }
     return clone;
   }
@@ -22284,7 +22658,7 @@ var Assembler = class _Assembler {
   executeLoweredLoop(loopBlock) {
     if (loopBlock.loopType === "for") {
       this.executeLoweredForLoop(loopBlock);
-    } else if (loopBlock.loopType === "while") {
+    } else {
       this.executeLoweredWhileLoop(loopBlock);
     }
   }
@@ -22464,7 +22838,7 @@ var Assembler = class _Assembler {
   }
 };
 
-// ../core/src/architecture-types.ts
+// packages/core/src/architecture-types.ts
 var createEncoderRuntime = (context) => ({
   operandResolver: context.operands,
   write1: (value) => context.emission.write1(value),
@@ -22486,7 +22860,7 @@ var createEncoderRuntime = (context) => ({
   diagnostics: context.diagnostics
 });
 
-// ../core/src/decoder-types.ts
+// packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
   constructor(bytes2) {
@@ -22528,19 +22902,19 @@ var Uint8ArrayDecoderSource = class {
   }
 };
 
-// ../core/src/index.ts
+// packages/core/src/index.ts
 init_debug_map();
 init_canonical_json();
 
-// src/index.ts
+// packages/cli/src/index.ts
 init_canonical_json();
 
-// ../disassembler/src/model/project-types.ts
+// packages/disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// ../disassembler/src/model/project-labels.ts
+// packages/disassembler/src/model/project-labels.ts
 var validateSourceLabelName = (name) => {
   if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
     throw new Error(
@@ -22552,8 +22926,8 @@ var legacySourceLabelName = (name) => `L_${name.replaceAll(/\W/g, "_").replaceAl
 var projectSourceLabelNames = (labels, reserved = []) => {
   const names = /* @__PURE__ */ new Map();
   const used = new Set([...reserved].map((name) => name.toLowerCase()));
-  const sorted2 = labels.filter((label) => !label.suppressed).sort((a, b) => a.id.localeCompare(b.id));
-  for (const label of sorted2.filter((label2) => label2.sourceName === void 0)) {
+  const sorted2 = labels.filter((label) => !label.suppressed).toSorted((a, b) => a.id.localeCompare(b.id));
+  for (const label of sorted2.filter((candidate) => candidate.sourceName === void 0)) {
     const base = legacySourceLabelName(label.name);
     let name = base;
     let suffix = 2;
@@ -22563,7 +22937,7 @@ var projectSourceLabelNames = (labels, reserved = []) => {
     used.add(name.toLowerCase());
     names.set(label.id, name);
   }
-  for (const label of sorted2.filter((label2) => label2.sourceName !== void 0)) {
+  for (const label of sorted2.filter((candidate) => candidate.sourceName !== void 0)) {
     const name = label.sourceName;
     validateSourceLabelName(name);
     if (used.has(name.toLowerCase())) {
@@ -22575,7 +22949,7 @@ var projectSourceLabelNames = (labels, reserved = []) => {
   return names;
 };
 
-// ../disassembler/src/model/rom-image.ts
+// packages/disassembler/src/model/rom-image.ts
 import { createHash as createHash2 } from "node:crypto";
 import * as fs from "node:fs";
 var sha2562 = (bytes2) => createHash2("sha256").update(bytes2).digest("hex");
@@ -22678,45 +23052,110 @@ var RomImage = class _RomImage {
   }
 };
 
-// ../disassembler/src/model/trace-detail.ts
-var isArray2 = (value) => Array.isArray(value);
+// packages/disassembler/src/model/trace-detail.ts
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray2(value) {
+  return Array.isArray(value);
+}
+function isInteger(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+function isSafeInteger(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isStateValue(value) {
+  return typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value);
+}
+function isMemoryAccess(entry) {
+  if (!isRecord4(entry)) {
+    return false;
+  }
+  const addressSpace = entry.addressSpace;
+  const address5 = entry.address;
+  const access = entry.access;
+  const width = entry.width;
+  const value = entry.value;
+  const actor = entry.actor;
+  const channel = entry.channel;
+  return typeof addressSpace === "string" && addressSpace !== "" && isSafeInteger(address5) && address5 >= 0 && (access === "read" || access === "write" || access === "fetch") && isSafeInteger(width) && width >= 1 && width <= 8 && (value === void 0 || isSafeInteger(value) && value >= 0) && (actor === void 0 || actor === "cpu" || actor === "dma" || actor === "hdma") && (channel === void 0 || isInteger(channel) && channel >= 0 && channel <= 7 && (actor === "dma" || actor === "hdma"));
+}
 var validateRuntimeInstructionDetails = (value, count) => {
-  if (!Array.isArray(value) || value.length !== count) {
+  if (!isUnknownArray2(value) || value.length !== count) {
     throw new Error("Trace details must align one-to-one with instruction addresses.");
   }
-  return value.map((detail) => {
-    if (!detail || !isArray2(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255)) {
+  return value.map((entry) => {
+    if (!isRecord4(entry)) {
       throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
     }
-    if (!detail.state || typeof detail.state !== "object" || isArray2(detail.state) || Object.entries(detail.state).some(
-      ([key3, entry]) => !key3 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-    )) {
+    const rawBytes = entry.bytes;
+    if (!isUnknownArray2(rawBytes) || rawBytes.length < 1 || rawBytes.length > 16) {
+      throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
+    }
+    const bytes2 = [];
+    for (const byte2 of rawBytes) {
+      if (!(isInteger(byte2) && byte2 >= 0 && byte2 <= 255)) {
+        throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
+      }
+      bytes2.push(byte2);
+    }
+    const rawState = entry.state;
+    if (!isRecord4(rawState)) {
       throw new Error("Trace instruction state contains an invalid register value.");
     }
-    if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
-      throw new Error("Trace memory loss must be a non-negative safe integer.");
+    const state = {};
+    for (const [key3, stateValue] of Object.entries(rawState)) {
+      if (!key3 || !isStateValue(stateValue)) {
+        throw new Error("Trace instruction state contains an invalid register value.");
+      }
+      state[key3] = stateValue;
     }
-    if (detail.memoryAccesses !== void 0 && (!isArray2(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
+    const droppedMemoryAccesses = entry.droppedMemoryAccesses;
+    let droppedCount;
+    if (droppedMemoryAccesses !== void 0) {
+      if (!(isSafeInteger(droppedMemoryAccesses) && droppedMemoryAccesses >= 0)) {
+        throw new Error("Trace memory loss must be a non-negative safe integer.");
+      }
+      droppedCount = droppedMemoryAccesses;
+    }
+    const rawAccesses = entry.memoryAccesses;
+    if (rawAccesses !== void 0 && (!isUnknownArray2(rawAccesses) || rawAccesses.length > 256)) {
       throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
     }
-    const memoryAccesses = detail.memoryAccesses?.map((access) => {
-      if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isSafeInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
+    const memoryAccesses = rawAccesses === void 0 ? void 0 : rawAccesses.map((access) => {
+      if (!isMemoryAccess(access)) {
         throw new Error("Trace contains an invalid bus operation.");
       }
-      return { ...access };
+      return access;
     });
     return {
-      bytes: [...detail.bytes],
-      state: { ...detail.state },
+      bytes: bytes2,
+      state,
       ...memoryAccesses === void 0 ? {} : { memoryAccesses },
-      ...detail.droppedMemoryAccesses === void 0 ? {} : { droppedMemoryAccesses: detail.droppedMemoryAccesses }
+      ...droppedCount === void 0 ? {} : { droppedMemoryAccesses: droppedCount }
     };
   });
 };
 
-// ../disassembler/src/model/runtime-ppu-effect.ts
+// packages/disassembler/src/model/runtime-ppu-effect.ts
+function isEffectRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isVramBytes(value) {
+  return value === 65536 || value === 131072;
+}
+function isInteger2(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
 var normalizeRuntimePPUEffect = (effect, access) => {
-  const port = access.address & 65535;
+  const accessAddress = access.address;
+  const accessValue = access.value;
+  const accessDirection = access.direction;
+  if (typeof accessAddress !== "number" || typeof accessValue !== "number" || typeof accessDirection !== "string") {
+    throw new Error("Invalid native PPU effect identity or flags.");
+  }
+  const port = accessAddress & 65535;
   let target = "vram";
   if (port === 8452) {
     target = "oam";
@@ -22724,59 +23163,92 @@ var normalizeRuntimePPUEffect = (effect, access) => {
   if (port === 8482) {
     target = "cgram";
   }
-  if (!effect || access.direction !== "write" || access.address & 4194304 || ![8452, 8472, 8473, 8482].includes(port) || effect.target !== target || !["written", "blocked", "latched"].includes(effect.outcome) || typeof effect.forcedBlank !== "boolean" || typeof effect.renderingRestricted !== "boolean" || effect.forcedBlank && effect.renderingRestricted || !["accurate", "performance"].includes(effect.implementation) || (target === "vram" ? ![65536, 131072].includes(effect.vramBytes ?? 0) : effect.vramBytes !== null) || !Array.isArray(effect.bytes) || effect.bytes.length > 2) {
+  const effectRecord = isEffectRecord(effect) ? effect : void 0;
+  const outcome = effectRecord?.outcome;
+  const forcedBlank = effectRecord?.forcedBlank;
+  const renderingRestricted = effectRecord?.renderingRestricted;
+  const implementation = effectRecord?.implementation;
+  const vramBytes = effectRecord?.vramBytes;
+  const rawBytes = effectRecord?.bytes;
+  if (!effectRecord || accessDirection !== "write" || accessAddress & 4194304 || ![8452, 8472, 8473, 8482].includes(port) || effectRecord.target !== target || outcome !== "written" && outcome !== "blocked" && outcome !== "latched" || typeof forcedBlank !== "boolean" || typeof renderingRestricted !== "boolean" || forcedBlank && renderingRestricted || implementation !== "accurate" && implementation !== "performance" || (target === "vram" ? !isVramBytes(vramBytes) : vramBytes !== null) || !Array.isArray(rawBytes) || rawBytes.length > 2) {
     throw new Error("Invalid native PPU effect identity or flags.");
   }
-  const count = effect.bytes.length;
-  if (effect.outcome === "written" && (count === 0 || target === "vram" && count !== 1 || target === "cgram" && count !== 2) || effect.outcome !== "written" && count !== 0 || effect.outcome === "blocked" && (target !== "vram" || !effect.renderingRestricted) || effect.outcome === "latched" && (target === "vram" || effect.renderingRestricted)) {
+  const count = rawBytes.length;
+  const capacity2 = target === "vram" && isVramBytes(vramBytes) ? vramBytes : null;
+  if (outcome === "written" && (count === 0 || target === "vram" && count !== 1 || target === "cgram" && count !== 2) || outcome !== "written" && count !== 0 || outcome === "blocked" && (target !== "vram" || !renderingRestricted) || outcome === "latched" && (target === "vram" || renderingRestricted)) {
     throw new Error("Invalid native PPU outcome or write count.");
   }
-  let bound = effect.vramBytes ?? 0;
+  let bound = capacity2 ?? 0;
   if (target === "cgram") {
     bound = 512;
   }
   if (target === "oam") {
     bound = 544;
   }
-  const bytes2 = effect.bytes.map((byte2, i) => {
-    if (!byte2 || !Number.isInteger(byte2.address) || byte2.address < 0 || byte2.address >= bound || !Number.isInteger(byte2.value) || byte2.value < 0 || byte2.value > 255 || target === "vram" && ((byte2.address & 1) !== (port & 1) || byte2.value !== access.value) || target === "cgram" && (i === 0 ? (byte2.address & 1) !== 0 : byte2.address !== effect.bytes[0].address + 1 || byte2.value !== (access.value & 127)) || target === "oam" && i === count - 1 && byte2.value !== access.value) {
+  const byteEntries = rawBytes;
+  let firstAddress = 0;
+  const bytes2 = byteEntries.map((entry, i) => {
+    const byte2 = isEffectRecord(entry) ? entry : void 0;
+    if (!byte2) {
       throw new Error("Invalid native PPU byte destination or value.");
     }
-    return { address: byte2.address, value: byte2.value };
+    const address5 = byte2.address;
+    const byteValue = byte2.value;
+    if (!isInteger2(address5) || !isInteger2(byteValue)) {
+      throw new Error("Invalid native PPU byte destination or value.");
+    }
+    if (address5 < 0 || address5 >= bound || byteValue < 0 || byteValue > 255 || target === "vram" && ((address5 & 1) !== (port & 1) || byteValue !== accessValue) || target === "cgram" && (i === 0 ? (address5 & 1) !== 0 : address5 !== firstAddress + 1 || byteValue !== (accessValue & 127)) || target === "oam" && i === count - 1 && byteValue !== accessValue) {
+      throw new Error("Invalid native PPU byte destination or value.");
+    }
+    if (i === 0) {
+      firstAddress = address5;
+    }
+    return { address: address5, value: byteValue };
   });
   return {
-    target: effect.target,
-    outcome: effect.outcome,
-    forcedBlank: effect.forcedBlank,
-    renderingRestricted: effect.renderingRestricted,
-    implementation: effect.implementation,
-    vramBytes: effect.vramBytes,
+    target,
+    outcome,
+    forcedBlank,
+    renderingRestricted,
+    implementation,
+    vramBytes: capacity2,
     bytes: bytes2
   };
 };
 
-// ../disassembler/src/model/runtime-bus-types.ts
+// packages/disassembler/src/model/runtime-bus-types.ts
+function isInteger3(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
 var validateRuntimeBusFact = (fact) => {
-  if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
+  const address5 = fact.address;
+  const pc = fact.pc;
+  const value = fact.value;
+  const direction = fact.direction;
+  const context = fact.context;
+  if (fact.addressSpace !== "snes.cpu" || !(isInteger3(address5) && address5 >= 0 && address5 <= 16777215) || !(isInteger3(pc) && pc >= 0 && pc <= 16777215) || !(isInteger3(value) && value >= 0 && value <= 255) || direction !== "read" && direction !== "write" || context !== "unattributed" && context !== "instruction" && context !== "interrupt" && context !== "wait" && context !== "stop") {
     throw new Error("Invalid bus access coordinates, value, direction or context.");
   }
-  if (fact.actor === "cpu") {
-    if (fact.channel !== null || fact.phase !== "cpu") {
+  const actor = fact.actor;
+  const channel = fact.channel;
+  const phase = fact.phase;
+  if (actor === "cpu") {
+    if (channel !== null || phase !== "cpu") {
       throw new Error("CPU bus accesses require a null channel and CPU phase.");
     }
   } else {
-    if (!Number.isInteger(fact.channel) || fact.channel === null || fact.channel < 0 || fact.channel > 7) {
+    if (!(isInteger3(channel) && channel >= 0 && channel <= 7)) {
       throw new Error("DMA/HDMA bus accesses require a channel in [0, 7].");
     }
-    if (fact.actor === "dma") {
-      if (fact.phase !== "dma") {
+    if (actor === "dma") {
+      if (phase !== "dma") {
         throw new Error("DMA bus access has an invalid phase.");
       }
-    } else if (fact.actor === "hdma") {
-      if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase)) {
+    } else if (actor === "hdma") {
+      if (phase !== "hdma-table" && phase !== "hdma-indirect" && phase !== "hdma-transfer") {
         throw new Error("HDMA bus access has an invalid phase.");
       }
-      if (fact.phase !== "hdma-transfer" && fact.direction !== "read") {
+      if (phase !== "hdma-transfer" && direction !== "read") {
         throw new Error("HDMA table and indirect phases must be reads.");
       }
     } else {
@@ -22784,13 +23256,13 @@ var validateRuntimeBusFact = (fact) => {
     }
   }
   if (fact.ppu !== void 0) {
-    return normalizeRuntimePPUEffect(fact.ppu, fact);
+    return normalizeRuntimePPUEffect(fact.ppu, { address: address5, direction, value });
   }
   return void 0;
 };
 
-// ../disassembler/src/analysis/analysis-sources.ts
-var sorted = (values) => [...new Set(values)].sort();
+// packages/disassembler/src/analysis/analysis-sources.ts
+var sorted = (values) => [...new Set(values)].toSorted();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
   const sources = /* @__PURE__ */ new Map();
@@ -22832,26 +23304,31 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
     source.kinds.add(evidence.source);
     source.evidenceIds.push(evidence.id);
   }
-  return [...sources.values()].map((source) => ({
-    ...source,
-    ...source.sha256 && importTimes.has(source.sha256) ? { lastImportedAt: importTimes.get(source.sha256) } : {},
-    names: sorted(source.names),
-    name: sorted(source.names).join(" / "),
-    kinds: [...source.kinds].sort(),
-    evidenceIds: sorted(source.evidenceIds),
-    reports: source.reports.sort((a, b) => a.id.localeCompare(b.id))
-  })).sort(
+  return [...sources.values()].map(
+    (source) => Object.assign(
+      {},
+      source,
+      source.sha256 && importTimes.has(source.sha256) ? { lastImportedAt: importTimes.get(source.sha256) } : {},
+      {
+        names: sorted(source.names),
+        name: sorted(source.names).join(" / "),
+        kinds: [...source.kinds].toSorted(),
+        evidenceIds: sorted(source.evidenceIds),
+        reports: source.reports.toSorted((a, b) => a.id.localeCompare(b.id))
+      }
+    )
+  ).toSorted(
     (a, b) => (b.lastImportedAt ?? -1) - (a.lastImportedAt ?? -1) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
   );
 };
 
-// ../disassembler/src/analysis/static-analysis.ts
+// packages/disassembler/src/analysis/static-analysis.ts
 var DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1e6;
 var DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
 var hexAddress = (address5) => address5.toString(16).padStart(6, "0");
 var contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`).join("/");
 var nodeIdFor = (address5, context) => `cfg:${hexAddress(address5)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
-var sortedUnique = (values) => [...new Set(values)].sort();
+var sortedUnique = (values) => [...new Set(values)].toSorted();
 var sortWork = (left, right) => left.address - right.address || contextKey(left.context).localeCompare(contextKey(right.context)) || left.entryPoint.localeCompare(right.entryPoint) || (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
 var StaticWorkQueue = class {
   #values = [];
@@ -22882,9 +23359,9 @@ var StaticWorkQueue = class {
     this.#values[index] = queued;
   }
   shift() {
-    const first = this.#values[0];
+    const firstSlot = this.#values.length > 0 ? this.#values[0] : void 0;
     const last = this.#values.pop();
-    if (!first || !last) {
+    if (!firstSlot || !last) {
       return void 0;
     }
     if (this.#values.length > 0) {
@@ -22904,7 +23381,7 @@ var StaticWorkQueue = class {
       }
       this.#values[index] = last;
     }
-    return first.item;
+    return firstSlot.item;
   }
   #compare(left, right) {
     return sortWork(left.item, right.item) || left.sequence - right.sequence;
@@ -22942,7 +23419,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     throw new Error("maxCallDepth must be a non-negative safe integer.");
   }
   const overrides = /* @__PURE__ */ new Map();
-  for (const override of [...options.targetOverrides ?? []].sort(
+  for (const override of [...options.targetOverrides ?? []].toSorted(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id)
   )) {
     if (overrides.has(override.address)) {
@@ -22951,7 +23428,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     overrides.set(override.address, override);
   }
   const queue = new StaticWorkQueue(
-    [...seeds].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
+    [...seeds].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
       address: seed.address,
       state: seed.state,
       context: [],
@@ -23085,7 +23562,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
       }
     }
     if (overlapping.size > 0) {
-      const related = [...overlapping, nodeId].sort();
+      const related = [...overlapping, nodeId].toSorted();
       addConflict({
         id: `conflict:instruction-boundary:${hexAddress(item.address)}:${related.join("+")}`,
         kind: "instruction-boundary",
@@ -23249,23 +23726,23 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
       reachedOffsets.add(offset);
     }
   }
-  const sortedNodes = [...nodes.values()].sort(
+  const sortedNodes = [...nodes.values()].toSorted(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id)
   );
-  const sortedFunctions = [...functions.values()].sort(
+  const sortedFunctions = [...functions.values()].toSorted(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id)
   );
   return {
     status: incompleteReasons.size === 0 ? "complete" : "incomplete",
     nodes: sortedNodes,
-    edges: [...edges.values()].sort(
+    edges: [...edges.values()].toSorted(
       (left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id)
     ),
     functions: sortedFunctions,
-    conflicts: [...conflicts.values()].sort(
+    conflicts: [...conflicts.values()].toSorted(
       (left, right) => left.address - right.address || left.id.localeCompare(right.id)
     ),
-    unresolved: [...unresolved.values()].sort(
+    unresolved: [...unresolved.values()].toSorted(
       (left, right) => left.address - right.address || left.id.localeCompare(right.id)
     ),
     coverage: {
@@ -23275,14 +23752,14 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
       totalBytes: adapter.backingSize,
       reachedPercent: adapter.backingSize === 0 ? 0 : Number((reachedOffsets.size / adapter.backingSize * 100).toFixed(6))
     },
-    incompleteReasons: [...incompleteReasons.values()].sort(
+    incompleteReasons: [...incompleteReasons.values()].toSorted(
       (left, right) => left.address - right.address || left.kind.localeCompare(right.kind)
     ),
     processedWorkItems
   };
 };
 
-// ../disassembler/src/analysis/project-evidence.ts
+// packages/disassembler/src/analysis/project-evidence.ts
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record5) => record5.evidence.includes(evidenceId)).map((record5) => `analysis:${record5.id}`),
   ...shards.annotations.filter((record5) => record5.evidence.includes(evidenceId)).map((record5) => `annotations:${record5.id}`),
@@ -23291,7 +23768,7 @@ var evidenceReferences = (shards, evidenceId) => [
   ...shards.regions.filter((record5) => record5.evidence.includes(evidenceId)).map((record5) => `regions:${record5.id}`),
   ...shards.runtime.filter((record5) => record5.evidence.includes(evidenceId)).map((record5) => `runtime:${record5.id}`)
 ];
-var sortedUnique2 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+var sortedUnique2 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 var explainProjectEvidence = (shards, shard, recordId) => {
   const records2 = shards[shard];
   const record5 = records2.find(({ id }) => id === recordId);
@@ -23315,11 +23792,11 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   const evidenceSet = new Set(evidenceIds);
   const conflicts = shards.analysis.filter(
     (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
-  ).sort((left, right) => left.id.localeCompare(right.id));
+  ).toSorted((left, right) => left.id.localeCompare(right.id));
   return { shard, record: record5, evidence, referencedBy, conflicts };
 };
 
-// ../disassembler/src/runtime/runtime-evidence.ts
+// packages/disassembler/src/runtime/runtime-evidence.ts
 init_canonical_json();
 var emptyCounts = () => ({
   analysis: 0,
@@ -23331,7 +23808,7 @@ var emptyCounts = () => ({
   evidence: 0,
   imports: 0
 });
-var sortedUnique3 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+var sortedUnique3 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 var stateValueKey = (value) => `${typeof value}:${String(value)}`;
 var conflictReport = (runtime) => {
   const observations = [];
@@ -23415,10 +23892,12 @@ var conflictReport = (runtime) => {
         value: entries3[0].value,
         records: sortedUnique3(entries3.map((entry) => entry.record)),
         evidence: sortedUnique3(entries3.flatMap((entry) => entry.evidence))
-      })).sort((left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value)))
+      })).toSorted(
+        (left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value))
+      )
     });
   }
-  return conflicts.sort((left, right) => left.id.localeCompare(right.id));
+  return conflicts.toSorted((left, right) => left.id.localeCompare(right.id));
 };
 var explanationReport = (shards) => {
   const runtimeEvidence = new Set(
@@ -23430,7 +23909,7 @@ var explanationReport = (shards) => {
     if (evidence.length === 0) {
       continue;
     }
-    const stateFields = Object.keys(annotation.state ?? {}).sort();
+    const stateFields = Object.keys(annotation.state ?? {}).toSorted();
     explanations.push({
       recordId: annotation.id,
       detail: stateFields.length > 0 ? `Runtime observation supplies ${stateFields.join(", ")} state.` : `Runtime observation classifies bytes as ${annotation.classification}.`,
@@ -23451,9 +23930,9 @@ var explanationReport = (shards) => {
       evidence: sortedUnique3(evidence)
     });
   }
-  return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
+  return explanations.toSorted((left, right) => left.recordId.localeCompare(right.recordId));
 };
-var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
+var mergeRecords = (kind, prior, incoming, added, updated, existing, combine) => {
   if (incoming.length === 0) {
     return prior;
   }
@@ -23465,17 +23944,13 @@ var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
       added[kind]++;
     } else if (canonicalEquals(current, record5)) {
       existing[kind]++;
-    } else if (kind === "analysis" && "kind" in current && "kind" in record5 && current.kind === "target-override" && record5.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
-      const left = current;
-      const right = record5;
-      if (left.addressSpace !== right.addressSpace || left.address !== right.address) {
-        throw new Error(`Runtime target override '${record5.id}' changed its control-flow site.`);
+    } else if (combine) {
+      const merged = combine(current, record5);
+      if (!merged) {
+        throw new Error(
+          `Runtime evidence id '${record5.id}' in '${kind}' changed content. Use a content-derived id.`
+        );
       }
-      const merged = {
-        ...left,
-        targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
-        evidence: sortedUnique3([...left.evidence, ...right.evidence])
-      };
       if (canonicalEquals(current, merged)) {
         existing[kind]++;
       } else {
@@ -23513,7 +23988,20 @@ var mergeRuntimeEvidence = (shards, batch) => {
       batch.analysis ?? [],
       added,
       updated,
-      existing
+      existing,
+      (current, record5) => {
+        if (current.kind !== "target-override" || record5.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
+          return void 0;
+        }
+        if (current.addressSpace !== record5.addressSpace || current.address !== record5.address) {
+          throw new Error(`Runtime target override '${record5.id}' changed its control-flow site.`);
+        }
+        return {
+          ...current,
+          targets: [.../* @__PURE__ */ new Set([...current.targets, ...record5.targets])].toSorted((a, b) => a - b),
+          evidence: sortedUnique3([...current.evidence, ...record5.evidence])
+        };
+      }
     ),
     annotations: mergeRecords(
       "annotations",
@@ -23565,15 +24053,18 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// ../disassembler/src/runtime/runtime-trace.ts
+// packages/disassembler/src/runtime/runtime-trace.ts
 init_canonical_json();
 import { createHash as createHash3 } from "node:crypto";
 var RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
 var RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
 var DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8e6;
 var MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
+function isRowRecord(value) {
+  return !Array.isArray(value);
+}
 var record = (value, context) => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (typeof value !== "object" || value === null || !isRowRecord(value)) {
     throw new Error(`${context} must be an object.`);
   }
   return value;
@@ -23585,7 +24076,7 @@ var string = (value, context) => {
   return value;
 };
 var integer = (value, context, minimum = 0) => {
-  if (!Number.isSafeInteger(value) || value < minimum) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
     throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
   }
   return value;
@@ -23729,7 +24220,7 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
   const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
   const envelope = canonicalJson({ ...artifact, chunks: [] });
   const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
-  const hash = createHash3("sha256").update(envelope.slice(0, split));
+  const hash2 = createHash3("sha256").update(envelope.slice(0, split));
   const suffix = envelope.slice(split + 2);
   const validateChunk = createRuntimeTraceChunkValidator();
   const index = storage?.index ?? createMemoryFactIndex();
@@ -23753,13 +24244,13 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
   let failure;
   let detailedEvents = 0;
   let memoryLoss = 0;
-  const pushChunk = (value2) => {
+  const pushChunk = (input) => {
     if (finished) {
       throw new Error("Instruction trace import already finished.");
     }
-    const chunk = validateChunk(value2);
-    hash.update(chunks++ === 0 ? "[\n" : ",\n");
-    hash.update(`    ${canonicalJson(chunk).slice(0, -1).replaceAll("\n", "\n    ")}`);
+    const chunk = validateChunk(input);
+    hash2.update(chunks++ === 0 ? "[\n" : ",\n");
+    hash2.update(`    ${canonicalJson(chunk).slice(0, -1).replaceAll("\n", "\n    ")}`);
     droppedEvents = chunk.droppedEvents;
     complete = !chunk.active;
     unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
@@ -23816,12 +24307,12 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
       }
     }
   };
-  const push2 = (value2) => {
+  const push2 = (input) => {
     if (failure) {
       throw failure;
     }
     try {
-      pushChunk(value2);
+      pushChunk(input);
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
       index.clear();
@@ -23836,7 +24327,7 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
       throw new Error("Instruction trace import already finished.");
     }
     finished = true;
-    const sourceSha256 = hash.update(chunks ? "\n  ]" : "[]").update(suffix).digest("hex");
+    const sourceSha256 = hash2.update(chunks ? "\n  ]" : "[]").update(suffix).digest("hex");
     storage?.onSource?.(sourceSha256, "full");
     const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
     const evidenceIds = [evidenceId];
@@ -23845,13 +24336,13 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
     let processedRecords = 0;
     let lastProgress = performance.now();
     storage?.onMergeProgress?.(0, indexRecords);
-    const emit = (record5) => {
+    const emit = (emitted) => {
       if (storage?.onRecord) {
-        storage.onRecord(record5);
-      } else if (record5.kind === "runtime-execution") {
-        executions.push(record5);
+        storage.onRecord(emitted);
+      } else if (emitted.kind === "runtime-execution") {
+        executions.push(emitted);
       } else {
-        facts.push(record5);
+        facts.push(emitted);
       }
       processedRecords++;
       if (storage?.onMergeProgress && (processedRecords === indexRecords || processedRecords % 128 === 0 && performance.now() - lastProgress >= 1e3)) {
@@ -23899,13 +24390,13 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
     } finally {
       index.clear();
     }
-    const runtime = executions.sort((a, b) => {
+    const runtime = executions.toSorted((a, b) => {
       if (a.kind !== "runtime-execution" || b.kind !== "runtime-execution") {
         return 0;
       }
       return a.address - b.address;
     });
-    for (const fact of facts.sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const fact of facts.toSorted((a, b) => a.id.localeCompare(b.id))) {
       runtime.push(fact);
     }
     const evidence = {
@@ -23962,7 +24453,7 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
   return { push: push2, finish };
 };
 
-// ../disassembler/src/runtime/runtime-trace-file.ts
+// packages/disassembler/src/runtime/runtime-trace-file.ts
 init_canonical_json();
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -23998,7 +24489,7 @@ async function* traceEntries(file, options) {
   const fail2 = () => {
     throw new Error(`Instruction trace '${file}' is not a valid JSON object with a chunks array.`);
   };
-  const append = (text2) => {
+  const append2 = (text2) => {
     length += text2.length;
     if (length > MAX_VALUE_CHARACTERS) {
       throw new Error("Instruction trace chunk or metadata value exceeds the 32 MiB text limit.");
@@ -24011,6 +24502,11 @@ async function* traceEntries(file, options) {
   try {
     for await (const bytes2 of stream) {
       options.signal?.throwIfAborted();
+      if (!Buffer.isBuffer(bytes2)) {
+        throw new Error(
+          `Instruction trace '${file}' is not a valid JSON object with a chunks array.`
+        );
+      }
       bytesRead += bytes2.length;
       checkSize(bytesRead);
       const text2 = decoder.write(bytes2);
@@ -24045,16 +24541,16 @@ async function* traceEntries(file, options) {
           if (!done) {
             continue;
           }
-          append(text2.slice(tokenStart, delimiter ? index : index + 1));
+          append2(text2.slice(tokenStart, delimiter ? index : index + 1));
           const value = JSON.parse(parts.join(""));
           parts = [];
           length = 0;
           tokenStart = -1;
           if (tokenKind === "key") {
-            if (typeof value !== "string" || keys.has(value)) {
+            key3 = typeof value === "string" ? value : fail2();
+            if (keys.has(key3)) {
               fail2();
             }
-            key3 = value;
             keys.add(key3);
             mode3 = "colon";
           } else if (tokenKind === "chunk") {
@@ -24136,12 +24632,12 @@ async function* traceEntries(file, options) {
         primitive = !inString && depth === 0;
       }
       if (tokenStart >= 0) {
-        append(text2.slice(tokenStart));
+        append2(text2.slice(tokenStart));
       }
       options.onProgress?.(bytesRead, before.size);
     }
     options.signal?.throwIfAborted();
-    if (decoder.end() || String(mode3) !== "end" || !keys.has("chunks")) {
+    if (decoder.end() || mode3 !== "end" || !keys.has("chunks")) {
       fail2();
     }
     const after = await stat(file);
@@ -24207,10 +24703,10 @@ var createRuntimeTraceFileSource = async (file, options = {}) => {
   };
 };
 
-// ../disassembler/src/runtime/runtime-bus-trace.ts
+// packages/disassembler/src/runtime/runtime-bus-trace.ts
 import { createHash as createHash4 } from "node:crypto";
 
-// ../disassembler/src/internal/trace-cache.ts
+// packages/disassembler/src/internal/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
@@ -24280,7 +24776,7 @@ var TraceCache = class {
   }
 };
 
-// ../disassembler/src/runtime/runtime-graphics.ts
+// packages/disassembler/src/runtime/runtime-graphics.ts
 var mapVram = (address5, mapping) => {
   if (mapping === 0) {
     return address5;
@@ -24500,14 +24996,14 @@ var createRuntimeGraphicsAccumulator = () => {
     push: push2,
     finish: () => ({
       model: "snes-ppu-ports-v1",
-      activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, group]) => group),
+      activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, group]) => group),
       writes,
       omittedWrites
     })
   };
 };
 
-// ../disassembler/src/runtime/runtime-ppu.ts
+// packages/disassembler/src/runtime/runtime-ppu.ts
 var createRuntimePPUAccumulator = () => {
   let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;
   const writes = [];
@@ -24561,60 +25057,74 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// ../disassembler/src/runtime/runtime-transfer.ts
+// packages/disassembler/src/runtime/runtime-transfer.ts
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isInteger4(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+var readRegister = (configuration, field, maximum, message) => {
+  const count = configuration[field];
+  if (!(isInteger4(count) && count >= 0 && count <= maximum)) {
+    throw new Error(message);
+  }
+  return count;
+};
 var validateRuntimeTransferBoundary = (marker) => {
-  const { configuration: c } = marker;
-  if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
+  if (!isRecord5(marker) || !isRecord5(marker.configuration)) {
     throw new Error("Invalid transfer boundary attribution or count.");
   }
-  for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"]) {
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255) {
-      throw new Error("Invalid transfer byte register.");
-    }
+  const configuration = marker.configuration;
+  const actor = marker.actor;
+  const channel = marker.channel;
+  const boundary2 = marker.boundary;
+  const transferId = marker.transferId;
+  const pc = marker.pc;
+  const context = marker.context;
+  const transferred = marker.transferred;
+  const sequence = marker.sequence;
+  const ordinal = marker.ordinal;
+  const cycle = marker.cycle;
+  const hcounter = marker.hcounter;
+  const vcounter = marker.vcounter;
+  if (actor !== "dma" && actor !== "hdma" || !(isInteger4(channel) && channel >= 0 && channel <= 7) || boundary2 !== "begin" && boundary2 !== "complete" && boundary2 !== "interrupted" || typeof transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(transferId) || BigInt(transferId) > 0xffffffffffffffffn || !(isInteger4(pc) && pc >= 0 && pc <= 16777215) || context !== "unattributed" && context !== "instruction" && context !== "interrupt" && context !== "wait" && context !== "stop" || !(isInteger4(transferred) && transferred >= 0 && transferred <= 65536) || typeof sequence !== "string" || typeof ordinal !== "string" || typeof cycle !== "string" || !isInteger4(hcounter) || !isInteger4(vcounter)) {
+    throw new Error("Invalid transfer boundary attribution or count.");
   }
-  for (const field of ["a1t", "das", "a2a"]) {
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535) {
-      throw new Error("Invalid transfer word register.");
-    }
-  }
-  if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15) {
-    throw new Error("Invalid transfer channel flags.");
-  }
-  if (marker.boundary === "begin") {
-    if (marker.transferId !== marker.sequence || marker.transferred !== 0) {
+  const dmap = readRegister(configuration, "dmap", 255, "Invalid transfer byte register.");
+  const bbad = readRegister(configuration, "bbad", 255, "Invalid transfer byte register.");
+  const a1b = readRegister(configuration, "a1b", 255, "Invalid transfer byte register.");
+  const dasb = readRegister(configuration, "dasb", 255, "Invalid transfer byte register.");
+  const ntlr = readRegister(configuration, "ntlr", 255, "Invalid transfer byte register.");
+  const a1t = readRegister(configuration, "a1t", 65535, "Invalid transfer word register.");
+  const das = readRegister(configuration, "das", 65535, "Invalid transfer word register.");
+  const a2a = readRegister(configuration, "a2a", 65535, "Invalid transfer word register.");
+  const flags = readRegister(configuration, "flags", 15, "Invalid transfer channel flags.");
+  if (boundary2 === "begin") {
+    if (transferId !== sequence || transferred !== 0) {
       throw new Error("Invalid transfer begin identity.");
     }
-  } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1) {
+  } else if (BigInt(transferId) >= BigInt(sequence) || transferred < 1) {
     throw new Error("Invalid transfer end identity.");
   }
-  if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4)) {
+  if (actor === "hdma" && (boundary2 === "interrupted" || transferred > 4)) {
     throw new Error("Invalid HDMA payload-burst boundary.");
   }
   return {
     kind: "transfer",
-    sequence: marker.sequence,
-    ordinal: marker.ordinal,
-    cycle: marker.cycle,
-    transferId: marker.transferId,
-    pc: marker.pc,
-    boundary: marker.boundary,
-    actor: marker.actor,
-    channel: marker.channel,
-    context: marker.context,
-    hcounter: marker.hcounter,
-    vcounter: marker.vcounter,
-    transferred: marker.transferred,
-    configuration: {
-      dmap: c.dmap,
-      bbad: c.bbad,
-      a1t: c.a1t,
-      a1b: c.a1b,
-      das: c.das,
-      dasb: c.dasb,
-      a2a: c.a2a,
-      ntlr: c.ntlr,
-      flags: c.flags
-    }
+    sequence,
+    ordinal,
+    cycle,
+    transferId,
+    pc,
+    boundary: boundary2,
+    actor,
+    channel,
+    context,
+    hcounter,
+    vcounter,
+    transferred,
+    configuration: { dmap, bbad, a1t, a1b, das, dasb, a2a, ntlr, flags }
   };
 };
 var createRuntimeTransferAccumulator = () => {
@@ -24741,7 +25251,7 @@ var createRuntimeTransferAccumulator = () => {
       }
       open5.clear();
       return {
-        activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
+        activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
         windows,
         omittedWindows
       };
@@ -24749,7 +25259,10 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// ../disassembler/src/runtime/runtime-bus-trace.ts
+// packages/disassembler/src/runtime/runtime-bus-trace.ts
+function isRowRecord2(value) {
+  return !Array.isArray(value);
+}
 var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
 var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 var unsigned = (value) => {
@@ -24768,30 +25281,54 @@ var unsigned = (value) => {
   }
   return number;
 };
+function isMetadataRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isBusScope(value) {
+  return value === "snes.cpu-bus" || value === "snes.cpu-bus-transfers" || value === "snes.cpu-bus-ppu";
+}
+function positiveDecimal(value) {
+  if (typeof value !== "string" || unsigned(value) === 0) {
+    if (typeof value !== "string") {
+      throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
+    }
+    throw new Error("Bus trace clock frequency must be positive.");
+  }
+  return value;
+}
 var validateRuntimeBusTraceMetadata = (value) => {
-  const meta = value;
-  if (!meta || meta.format !== RUNTIME_BUS_TRACE_FORMAT || meta.schemaVersion !== 1 || meta.scope !== "snes.cpu-bus" && meta.scope !== "snes.cpu-bus-transfers" && meta.scope !== "snes.cpu-bus-ppu" || meta.architecture !== "snes.65816" || meta.addressSpace !== "snes.cpu" || typeof meta.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(meta.romContentSha256) || typeof meta.session !== "string" || !/^[\da-f]{32}$/.test(meta.session) || typeof meta.producer?.id !== "string" || !meta.producer.id || typeof meta.producer?.revision !== "string" || !meta.producer.revision || meta.clock?.id !== "snes.master") {
+  if (!isMetadataRecord(value)) {
     throw new Error("Invalid SNES bus trace metadata.");
   }
-  if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0) {
-    throw new Error("Bus trace clock frequency must be positive.");
+  const producer = isMetadataRecord(value.producer) ? value.producer : void 0;
+  const clock = isMetadataRecord(value.clock) ? value.clock : void 0;
+  const producerId = producer?.id;
+  const producerRevision = producer?.revision;
+  const scope = value.scope;
+  const romContentSha256 = value.romContentSha256;
+  const session = value.session;
+  if (value.format !== RUNTIME_BUS_TRACE_FORMAT || value.schemaVersion !== 1 || !isBusScope(scope) || value.architecture !== "snes.65816" || value.addressSpace !== "snes.cpu" || typeof romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(romContentSha256) || typeof session !== "string" || !/^[\da-f]{32}$/.test(session) || typeof producerId !== "string" || producerId === "" || typeof producerRevision !== "string" || producerRevision === "" || !clock || clock.id !== "snes.master") {
+    throw new Error("Invalid SNES bus trace metadata.");
   }
   return {
     format: RUNTIME_BUS_TRACE_FORMAT,
     schemaVersion: 1,
-    scope: meta.scope,
+    scope,
     architecture: "snes.65816",
     addressSpace: "snes.cpu",
-    romContentSha256: meta.romContentSha256,
-    producer: { id: meta.producer.id, revision: meta.producer.revision },
-    session: meta.session,
+    romContentSha256,
+    producer: { id: producerId, revision: producerRevision },
+    session,
     clock: {
       id: "snes.master",
-      numerator: meta.clock.numerator,
-      denominator: meta.clock.denominator
+      numerator: positiveDecimal(clock.numerator),
+      denominator: positiveDecimal(clock.denominator)
     }
   };
 };
+function isBusTraceEvent(value) {
+  return typeof value === "object" && value !== null;
+}
 var createRuntimeBusTraceImporter = (metadata, context, storage) => {
   const meta = validateRuntimeBusTraceMetadata(metadata);
   if (meta.romContentSha256 !== context.projectRomContentSha256) {
@@ -24818,7 +25355,7 @@ var createRuntimeBusTraceImporter = (metadata, context, storage) => {
     values: () => memory.values(),
     clear: () => memory.clear()
   };
-  const hash = createHash4("sha256").update(`uttori-bus-index-v1
+  const hash2 = createHash4("sha256").update(`uttori-bus-index-v1
 ${JSON.stringify(meta)}
 `);
   const factKeys = new TraceCache(context.cacheMetrics?.facts);
@@ -24848,13 +25385,13 @@ ${JSON.stringify(meta)}
       throw new Error("Bus trace importer is no longer writable.");
     }
     try {
-      const accesses = chunk?.accesses;
+      const accesses = typeof chunk === "object" && chunk !== null && isRowRecord2(chunk) ? chunk.accesses : void 0;
       if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095) {
         throw new Error("Bus trace chunks require 1\u20134095 accesses.");
       }
       const hashLines = [];
       for (const item of accesses) {
-        if (!item || typeof item !== "object") {
+        if (!isBusTraceEvent(item)) {
           throw new Error("Invalid bus trace event.");
         }
         const access = item;
@@ -24986,7 +25523,7 @@ ${JSON.stringify(meta)}
         group.lastSequence = access.sequence;
         group.lastCycle = access.cycle;
       }
-      hash.update(hashLines.join(""));
+      hash2.update(hashLines.join(""));
       if (context.onProgress) {
         const summary = ppu?.finish();
         const counts = summary ? {
@@ -25006,7 +25543,7 @@ ${JSON.stringify(meta)}
           firstCycle,
           lastCycle: firstCycle === null ? null : String(previousCycle),
           ...counts ? { ppu: counts } : {},
-          activity: [...activity.values()].map((group) => ({ ...group }))
+          activity: [...activity.values()].map((group) => Object.assign({}, group))
         });
       }
     } catch (error) {
@@ -25021,7 +25558,7 @@ ${JSON.stringify(meta)}
     }
     finished = true;
     try {
-      const sourceSha256 = hash.digest("hex");
+      const sourceSha256 = hash2.digest("hex");
       storage?.onSource?.(sourceSha256, RUNTIME_BUS_INDEX_PROFILE);
       const evidenceId = `evidence:bus-trace:${sourceSha256}`;
       const runtime = [];
@@ -25107,10 +25644,10 @@ ${JSON.stringify(meta)}
           firstCycle,
           lastCycle: firstCycle === null ? null : String(previousCycle),
           contexts,
-          activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
+          activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
         },
         batch: {
-          ...storage?.onRecord ? {} : { runtime: runtime.sort((a, b) => a.id.localeCompare(b.id)) },
+          ...storage?.onRecord ? {} : { runtime: runtime.toSorted((a, b) => a.id.localeCompare(b.id)) },
           evidence: [
             {
               id: evidenceId,
@@ -25136,14 +25673,14 @@ ${JSON.stringify(meta)}
   return { push: push2, finish };
 };
 
-// ../disassembler/src/storage/sqlite-store.ts
+// packages/disassembler/src/storage/sqlite-store.ts
 init_canonical_json();
 import { randomUUID as randomUUID3 } from "node:crypto";
 import fs6 from "node:fs";
 import path7 from "node:path";
 import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
 
-// ../disassembler/src/internal/record-id-set.ts
+// packages/disassembler/src/internal/record-id-set.ts
 import fs2 from "node:fs";
 import os from "node:os";
 import path3 from "node:path";
@@ -25206,7 +25743,7 @@ var RecordIdSet = class {
   }
 };
 
-// ../disassembler/src/model/analysis-ownership.ts
+// packages/disassembler/src/model/analysis-ownership.ts
 function validateAnalysisOwnership(records2, scope = "complete") {
   if (!records2.some(
     (record5) => record5.kind === "cfg-node" && (record5.functionEntry !== void 0 || record5.evidencePredecessor !== void 0)
@@ -25260,8 +25797,20 @@ function validateAnalysisOwnership(records2, scope = "complete") {
   }
 }
 
-// ../disassembler/src/model/project-validation.ts
-var validateAnalysisProjectManifest = (manifest) => {
+// packages/disassembler/src/model/project-validation.ts
+function isObject(value) {
+  return typeof value === "object" && value !== null;
+}
+function isRowRecord3(value) {
+  return !Array.isArray(value);
+}
+function isSafeInteger2(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function validateAnalysisProjectManifest(manifest) {
+  if (typeof manifest !== "object" || manifest === null || !isRowRecord3(manifest)) {
+    throw new Error("Unsupported analysis project format 'undefined'.");
+  }
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
   }
@@ -25270,35 +25819,48 @@ var validateAnalysisProjectManifest = (manifest) => {
       `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
     );
   }
-  if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) {
+  const rom = manifest.rom;
+  if (!isObject(rom) || typeof rom.sha256 !== "string" || !/^[\da-f]{64}$/.test(rom.sha256)) {
     throw new Error("Invalid ROM SHA-256.");
   }
-  if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
+  if (typeof rom.contentSha256 !== "string" || !/^[\da-f]{64}$/.test(rom.contentSha256)) {
     throw new Error("Invalid ROM content SHA-256.");
   }
+  if (!Array.isArray(manifest.addressSpaces)) {
+    throw new Error("Analysis address spaces require non-empty ids and names.");
+  }
   const addressSpaceIds = /* @__PURE__ */ new Set();
-  for (const addressSpace of manifest.addressSpaces) {
-    if (addressSpace.id === "" || addressSpace.name === "") {
+  for (const entry of manifest.addressSpaces) {
+    if (!isObject(entry)) {
       throw new Error("Analysis address spaces require non-empty ids and names.");
     }
-    if (addressSpaceIds.has(addressSpace.id)) {
-      throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
+    const id = entry.id;
+    const name = entry.name;
+    if (typeof id !== "string" || id === "" || typeof name !== "string" || name === "") {
+      throw new Error("Analysis address spaces require non-empty ids and names.");
     }
-    if (!Number.isSafeInteger(addressSpace.addressBits) || addressSpace.addressBits <= 0 || addressSpace.addressBits > 53) {
-      throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
+    if (addressSpaceIds.has(id)) {
+      throw new Error(`Duplicate analysis address-space id '${id}'.`);
     }
-    addressSpaceIds.add(addressSpace.id);
+    const addressBits = entry.addressBits;
+    if (!(isSafeInteger2(addressBits) && addressBits > 0 && addressBits <= 53)) {
+      throw new Error(`Analysis address space '${id}' has invalid address bits.`);
+    }
+    addressSpaceIds.add(id);
   }
-  if (manifest.db !== void 0 && manifest.db !== "analysis.sqlite") {
-    throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
+  const db = manifest.db;
+  if (db !== void 0 && db !== "analysis.sqlite") {
+    const pathText = typeof db === "string" ? db : JSON.stringify(db);
+    throw new Error(`Unsupported analysis sqlite path '${pathText}'.`);
   }
-  if (manifest.revision !== void 0 && (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0)) {
+  const revision = manifest.revision;
+  if (revision !== void 0 && !(isSafeInteger2(revision) && revision >= 0)) {
     throw new Error("Invalid analysis sqlite revision.");
   }
-  if (manifest.shards.length !== 0) {
+  if (!Array.isArray(manifest.shards) || manifest.shards.length !== 0) {
     throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
   }
-};
+}
 var FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
 var assertNoRomPayload = (value, location2) => {
   if (Array.isArray(value)) {
@@ -25310,7 +25872,7 @@ var assertNoRomPayload = (value, location2) => {
     }
     return;
   }
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== "object" || !isRowRecord3(value)) {
     return;
   }
   const record5 = value;
@@ -25327,11 +25889,11 @@ var assertNoRomPayload = (value, location2) => {
     }
   }
 };
+var isAlphaNumeric = (character) => {
+  const code = character.charCodeAt(0);
+  return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+};
 var isStableId = (id) => {
-  const isAlphaNumeric = (character) => {
-    const code = character.charCodeAt(0);
-    return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-  };
   if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
     return false;
   }
@@ -25341,6 +25903,20 @@ var isStableId = (id) => {
     }
   }
   return true;
+};
+var visitJson = (value, current) => {
+  if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
+    return;
+  }
+  throw new Error(`${current} is not a JSON-safe codec option.`);
 };
 var assertCodecReference = (reference, location2) => {
   if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
@@ -25357,20 +25933,6 @@ var assertCodecReference = (reference, location2) => {
       throw new Error(`${location2} has no provider plugin version.`);
     }
   }
-  const visitJson = (value, current) => {
-    if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
-      return;
-    }
-    if (Array.isArray(value)) {
-      value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
-      return;
-    }
-    if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-      Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
-      return;
-    }
-    throw new Error(`${current} is not a JSON-safe codec option.`);
-  };
   if (reference.options !== void 0) {
     visitJson(reference.options, `${location2} options`);
   }
@@ -25386,7 +25948,7 @@ var createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true)
     if (ids && !ids.add(record5.id)) {
       throw new Error(`Analysis shard 'runtime' contains duplicate id '${record5.id}'.`);
     }
-    for (const id of record5.evidence ?? []) {
+    for (const id of record5.evidence) {
       if (!evidenceIds.has(id)) {
         throw new Error(`Analysis record '${record5.id}' refers to missing evidence '${id}'.`);
       }
@@ -25492,23 +26054,33 @@ var validateRuntimeRecords = (records2, project, evidence) => {
     validate.close();
   }
 };
+var outsideSpace = (address5, exclusiveMaximum) => !Number.isSafeInteger(address5) || address5 < 0 || address5 >= exclusiveMaximum;
 var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   const { addressSpaces } = project;
   const evidenceIds = new Set(shards.evidence.map((record5) => record5.id));
-  for (const [kind, records2] of Object.entries(shards)) {
-    if (kind === "runtime") {
-      continue;
-    }
+  const shardKinds = [
+    "analysis",
+    "annotations",
+    "labels",
+    "comments",
+    "regions",
+    "evidence",
+    "imports"
+  ];
+  for (const kind of shardKinds) {
     const ids = /* @__PURE__ */ new Set();
-    for (const record5 of records2) {
-      if (!record5 || typeof record5.id !== "string" || record5.id === "") {
+    for (const record5 of shards[kind]) {
+      if (typeof record5.id !== "string" || record5.id === "") {
         throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
       }
       if (ids.has(record5.id)) {
         throw new Error(`Analysis shard '${kind}' contains duplicate id '${record5.id}'.`);
       }
       ids.add(record5.id);
-      for (const evidence of record5.evidence ?? []) {
+      if (!("evidence" in record5)) {
+        continue;
+      }
+      for (const evidence of record5.evidence) {
         if (!evidenceIds.has(evidence)) {
           throw new Error(
             `Analysis record '${record5.id}' refers to missing evidence '${evidence}'.`
@@ -25650,7 +26222,6 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   const addressSpaceById = new Map(
     addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
   );
-  const outsideSpace = (address5, exclusiveMaximum) => !Number.isSafeInteger(address5) || address5 < 0 || address5 >= exclusiveMaximum;
   for (const records2 of [
     shards.annotations,
     shards.labels,
@@ -25701,16 +26272,286 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// ../disassembler/src/research-inputs/inputs.ts
+// packages/disassembler/src/model/record-shape.ts
+function isRecord6(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+function isFiniteNumberArray(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isJsonValue(value) {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (isFiniteNumber(value)) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  return isRecord6(value) && Object.values(value).every(isJsonValue);
+}
+function allowsString(value) {
+  return value === void 0 || typeof value === "string";
+}
+function allowsFinite(value) {
+  return value === void 0 || isFiniteNumber(value);
+}
+function allowsBoolean(value) {
+  return value === void 0 || typeof value === "boolean";
+}
+function isNumberRecord(value) {
+  return isRecord6(value) && Object.values(value).every(isFiniteNumber);
+}
+function isAttributeRecord(value) {
+  return isRecord6(value) && Object.values(value).every(
+    (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
+  );
+}
+function isRecordArray(value) {
+  return Array.isArray(value) && value.every(isRecord6);
+}
+var CLASSIFICATIONS = [
+  "unreached",
+  "opcode",
+  "operand",
+  "data8",
+  "data16",
+  "data24",
+  "data32",
+  "pointer16",
+  "pointer24",
+  "pointer32",
+  "graphics",
+  "music",
+  "compressed",
+  "asset",
+  "empty",
+  "text"
+];
+function isClassification(value) {
+  return CLASSIFICATIONS.some((candidate) => candidate === value);
+}
+function isAnnotationState(value) {
+  if (value === void 0) {
+    return true;
+  }
+  if (!isRecord6(value)) {
+    return false;
+  }
+  for (const key3 of Object.keys(value)) {
+    const entry = value[key3];
+    if (key3 === "e" || key3 === "m" || key3 === "x" || key3 === "carry") {
+      if (typeof entry !== "boolean") {
+        return false;
+      }
+    } else if (key3 === "programBank" || key3 === "dataBank" || key3 === "directPage" || key3 === "stackPointer") {
+      if (!isFiniteNumber(entry)) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+function isPoints(value) {
+  return value === void 0 || Array.isArray(value) && value.every(
+    (point) => point === "in" || point === "out" || point === "end" || point === "read"
+  );
+}
+function isCodecFields(value) {
+  if (typeof value.codecId !== "string" || typeof value.codecVersion !== "string") {
+    return false;
+  }
+  const provider = value.provider;
+  if (provider !== void 0) {
+    if (!isRecord6(provider) || typeof provider.pluginId !== "string" || typeof provider.pluginVersion !== "string") {
+      return false;
+    }
+  }
+  return value.options === void 0 || isJsonValue(value.options);
+}
+function isAsset(value) {
+  if (!isRecord6(value) || !isCodecFields(value)) {
+    return false;
+  }
+  const compression = value.compression;
+  if (compression === void 0) {
+    return true;
+  }
+  return isRecord6(compression) && isCodecFields(compression) && allowsFinite(compression.maximumSize) && allowsFinite(compression.bankStart) && allowsFinite(compression.bankEnd) && allowsFinite(compression.fillByte);
+}
+function hasIdentity(value) {
+  return typeof value.id === "string" && isStringArray(value.evidence);
+}
+function isProjectLabel(value) {
+  return isRecord6(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.name === "string" && allowsString(value.comment) && allowsString(value.sourceName) && (value.aliases === void 0 || isStringArray(value.aliases)) && allowsString(value.inlineComment) && allowsBoolean(value.analysisEntryPoint) && allowsBoolean(value.suppressed) && allowsString(value.author) && allowsString(value.confidence);
+}
+function isProjectComment(value) {
+  return isRecord6(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.text === "string" && (value.placement === void 0 || value.placement === "before" || value.placement === "inline-instruction");
+}
+function isProjectRegion(value) {
+  return isRecord6(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && typeof value.name === "string" && allowsString(value.parentRegion) && allowsString(value.context) && allowsFinite(value.priority) && (value.attributes === void 0 || isAttributeRecord(value.attributes));
+}
+function isIntervalAnnotation(value) {
+  return isRecord6(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && isClassification(value.classification) && typeof value.architecture === "string" && isAnnotationState(value.state) && isPoints(value.points) && (value.asset === void 0 || isAsset(value.asset));
+}
+function isArtifact(value) {
+  if (value === void 0) {
+    return true;
+  }
+  return isRecord6(value) && typeof value.format === "string" && typeof value.sha256 === "string" && typeof value.romContentSha256 === "string" && allowsString(value.formatVersion) && allowsString(value.mapper);
+}
+function isEvidenceRecord(value) {
+  return isRecord6(value) && typeof value.id === "string" && (value.source === "manual" || value.source === "import" || value.source === "detector" || value.source === "static" || value.source === "runtime") && typeof value.sourceId === "string" && (value.confidence === "certain" || value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" || value.confidence === "unknown") && allowsString(value.detail) && isArtifact(value.artifact);
+}
+function isLossItem(value) {
+  return isRecord6(value) && typeof value.field === "string" && isFiniteNumber(value.count) && typeof value.reason === "string";
+}
+function isImportReport(value) {
+  return isRecord6(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && allowsString(value.sourceVersion) && allowsString(value.indexProfile) && isNumberRecord(value.imported) && Array.isArray(value.unsupported) && value.unsupported.every(isLossItem) && isStringArray(value.warnings);
+}
+function isControlFlowNode(value) {
+  return isRecord6(value) && value.kind === "cfg-node" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.fileOffset) && (value.bytes === void 0 || isFiniteNumberArray(value.bytes)) && isFiniteNumber(value.size) && isFiniteNumber(value.opcode) && typeof value.specificationId === "string" && typeof value.mnemonic === "string" && typeof value.mode === "string" && isFiniteNumberArray(value.context) && isRecord6(value.incomingState) && isRecord6(value.outgoingState) && isRecordArray(value.effectiveAddresses) && typeof value.entryPoint === "string" && allowsString(value.functionEntry) && allowsString(value.evidencePredecessor) && isStringArray(value.evidencePath);
+}
+function isControlFlowEdge(value) {
+  return isRecord6(value) && value.kind === "cfg-edge" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.from === "string" && isFiniteNumber(value.fromAddress) && allowsString(value.to) && allowsFinite(value.toAddress) && typeof value.edgeKind === "string" && typeof value.indirect === "boolean" && allowsString(value.override) && allowsString(value.explanation);
+}
+function isFunctionRecord(value) {
+  return isRecord6(value) && value.kind === "function" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isStringArray(value.evidencePath);
+}
+function isConflictRecord(value) {
+  return isRecord6(value) && value.kind === "conflict" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.end) && typeof value.conflictKind === "string" && typeof value.message === "string" && isStringArray(value.nodes);
+}
+function isUnresolvedRecord(value) {
+  return isRecord6(value) && value.kind === "unresolved" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string";
+}
+function isSummaryRecord(value) {
+  return isRecord6(value) && value.kind === "summary" && hasIdentity(value) && typeof value.architecture === "string" && (value.status === "complete" || value.status === "incomplete") && isNumberRecord(value.coverage) && isFiniteNumber(value.processedWorkItems) && isRecordArray(value.incompleteReasons);
+}
+function isTargetOverride(value) {
+  return isRecord6(value) && value.kind === "target-override" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isFiniteNumberArray(value.targets);
+}
+function isTargetSet(value) {
+  return isRecord6(value) && value.kind === "target-set" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.name === "string" && isFiniteNumberArray(value.targets);
+}
+function isAnalysisRecord(value) {
+  if (!isRecord6(value)) {
+    return false;
+  }
+  switch (value.kind) {
+    case "cfg-node":
+      return isControlFlowNode(value);
+    case "cfg-edge":
+      return isControlFlowEdge(value);
+    case "function":
+      return isFunctionRecord(value);
+    case "conflict":
+      return isConflictRecord(value);
+    case "unresolved":
+      return isUnresolvedRecord(value);
+    case "summary":
+      return isSummaryRecord(value);
+    case "target-override":
+      return isTargetOverride(value);
+    case "target-set":
+      return isTargetSet(value);
+    default:
+      return false;
+  }
+}
+function reject(kind) {
+  throw new Error(`Invalid stored ${kind} record.`);
+}
+function requireProjectLabel(value) {
+  if (!isProjectLabel(value)) {
+    reject("label");
+  }
+  return value;
+}
+function requireProjectComment(value) {
+  if (!isProjectComment(value)) {
+    reject("comment");
+  }
+  return value;
+}
+function requireProjectRegion(value) {
+  if (!isProjectRegion(value)) {
+    reject("region");
+  }
+  return value;
+}
+function requireIntervalAnnotation(value) {
+  if (!isIntervalAnnotation(value)) {
+    reject("annotation");
+  }
+  return value;
+}
+function requireEvidenceRecord(value) {
+  if (!isEvidenceRecord(value)) {
+    reject("evidence");
+  }
+  return value;
+}
+function requireImportReport(value) {
+  if (!isImportReport(value)) {
+    reject("import");
+  }
+  return value;
+}
+function requireAnalysisRecord(value) {
+  if (!isAnalysisRecord(value)) {
+    reject("analysis");
+  }
+  return value;
+}
+function requireMetadataRecord(kind, value) {
+  switch (kind) {
+    case "labels":
+      return requireProjectLabel(value);
+    case "comments":
+      return requireProjectComment(value);
+    case "regions":
+      return requireProjectRegion(value);
+    case "annotations":
+      return requireIntervalAnnotation(value);
+    case "analysis":
+      return requireAnalysisRecord(value);
+    case "evidence":
+      return requireEvidenceRecord(value);
+    case "imports":
+      return requireImportReport(value);
+    default:
+      return reject(kind);
+  }
+}
+
+// packages/disassembler/src/research-inputs/inputs.ts
 init_canonical_json();
 import fs4 from "node:fs";
 import path6 from "node:path";
 
-// ../disassembler/src/internal/durable-files.ts
+// packages/disassembler/src/internal/durable-files.ts
 import { randomUUID } from "node:crypto";
 import fs3 from "node:fs";
 import os2 from "node:os";
 import path4 from "node:path";
+function errorCode(error) {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return void 0;
+}
+function isRecord7(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 function durableReplace(file, bytes2) {
   ensureDurableDirectory(path4.dirname(path4.resolve(file)));
   const temporary = `${file}.${randomUUID()}.tmp`;
@@ -25737,7 +26578,7 @@ function ensureDurableDirectory(directory) {
   try {
     fs3.mkdirSync(directory);
   } catch (error) {
-    if (error.code !== "EEXIST") {
+    if (errorCode(error) !== "EEXIST") {
       throw error;
     }
   }
@@ -25763,21 +26604,21 @@ function acquireFileLease(file) {
     try {
       fs3.linkSync(candidate, file);
     } catch (error) {
-      if (error.code !== "EEXIST") {
+      if (errorCode(error) !== "EEXIST") {
         throw error;
       }
       const previous = fs3.readFileSync(file, "utf8");
       const parsed = JSON.parse(previous);
       let dead = false;
-      if (parsed.host === os2.hostname() && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
+      if (isRecord7(parsed) && parsed.host === os2.hostname() && typeof parsed.pid === "number" && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
         try {
           process.kill(parsed.pid, 0);
         } catch (cause) {
-          dead = cause.code === "ESRCH";
+          dead = errorCode(cause) === "ESRCH";
         }
       }
       if (!dead) {
-        throw new Error(`An operation owns ${file}. Retry after it finishes.`);
+        throw new Error(`An operation owns ${file}. Retry after it finishes.`, { cause: error });
       }
       const recovery = acquireFileLease(`${file}.recovery`);
       try {
@@ -25803,7 +26644,7 @@ function acquireFileLease(file) {
   };
 }
 
-// ../disassembler/src/internal/source-inputs.ts
+// packages/disassembler/src/internal/source-inputs.ts
 import { createHash as createHash5 } from "node:crypto";
 import path5 from "node:path";
 var sourceContentHash = (value) => createHash5("sha256").update(value).digest("hex");
@@ -25813,93 +26654,157 @@ function assertSourcePath(relative2) {
   }
 }
 
-// ../disassembler/src/model/metadata-validation.ts
+// packages/disassembler/src/model/metadata-validation.ts
+function isRecord8(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringList(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isInteger5(value) {
+  return typeof value === "number" && Number.isInteger(value);
+}
+function isSafeInteger3(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isStateRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function stateEntries(state) {
+  if (typeof state === "string") {
+    const entries4 = [];
+    for (let index = 0; index < state.length; index += 1) {
+      entries4.push([String(index), state[index]]);
+    }
+    return entries4;
+  }
+  if (!isStateRecord(state)) {
+    return [];
+  }
+  const entries3 = [];
+  for (const field of Object.keys(state)) {
+    entries3.push([field, state[field]]);
+  }
+  return entries3;
+}
+var CLASSIFICATIONS2 = [
+  "unreached",
+  "opcode",
+  "operand",
+  "data8",
+  "data16",
+  "data24",
+  "data32",
+  "pointer16",
+  "pointer24",
+  "pointer32",
+  "graphics",
+  "music",
+  "compressed",
+  "asset",
+  "empty",
+  "text"
+];
 var validateEditableMetadataRecord = (shard, record5) => {
-  if (!record5 || typeof record5.id !== "string" || !/^\w[\w./:-]*$/.test(record5.id) || !Array.isArray(record5.evidence) || record5.evidence.some((id) => typeof id !== "string")) {
+  if (!isRecord8(record5) || typeof record5.id !== "string" || !/^\w[\w./:-]*$/.test(record5.id) || !isStringList(record5.evidence)) {
     throw new Error("Metadata needs a stable record ID and evidence list.");
   }
-  if ("address" in record5 && (!Number.isSafeInteger(record5.address) || record5.address < 0)) {
+  const address5 = record5.address;
+  if ("address" in record5 && !(isSafeInteger3(address5) && address5 >= 0)) {
     throw new Error("Metadata needs a nonnegative integer address.");
   }
   if (typeof record5.addressSpace !== "string") {
     throw new Error("Metadata needs a named address space.");
   }
   if (shard === "labels") {
-    if (!("name" in record5) || typeof record5.name !== "string" || !record5.name || !("address" in record5) || "kind" in record5) {
+    const name = record5.name;
+    if (typeof name !== "string" || name === "" || !("address" in record5) || "kind" in record5) {
       throw new Error("Invalid label metadata.");
     }
-    const label = record5;
-    if (label.sourceName !== void 0) {
-      validateSourceLabelName(label.sourceName);
+    const sourceName = record5.sourceName;
+    if (sourceName !== void 0) {
+      if (typeof sourceName !== "string") {
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+        );
+      }
+      validateSourceLabelName(sourceName);
     }
-    if (label.suppressed !== void 0 && typeof label.suppressed !== "boolean") {
+    if (record5.suppressed !== void 0 && typeof record5.suppressed !== "boolean") {
       throw new Error("Invalid label suppression flag.");
     }
-    for (const value of [label.comment, label.inlineComment]) {
+    for (const value of [record5.comment, record5.inlineComment]) {
       if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
         throw new Error("Invalid label comment.");
       }
     }
   } else if (shard === "comments") {
-    if (!("text" in record5) || typeof record5.text !== "string" || !record5.text.trim() || record5.text.includes("\0") || !("address" in record5) || "kind" in record5) {
+    const text2 = record5.text;
+    if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record5) || "kind" in record5) {
       throw new Error("A standalone comment needs nonempty text.");
     }
   } else if (shard === "annotations") {
-    if (!("classification" in record5) || ![
-      "unreached",
-      "opcode",
-      "operand",
-      "data8",
-      "data16",
-      "data24",
-      "data32",
-      "pointer16",
-      "pointer24",
-      "pointer32",
-      "graphics",
-      "music",
-      "compressed",
-      "asset",
-      "empty",
-      "text"
-    ].includes(record5.classification) || typeof record5.architecture !== "string" || !record5.architecture) {
+    const classification = record5.classification;
+    const architecture = record5.architecture;
+    if (typeof classification !== "string" || !CLASSIFICATIONS2.some((candidate) => candidate === classification) || typeof architecture !== "string" || architecture === "") {
       throw new Error("Invalid classification metadata.");
     }
-    if (!Number.isSafeInteger(record5.start) || !Number.isSafeInteger(record5.end) || record5.start < 0 || record5.end <= record5.start) {
+    const start = record5.start;
+    const end = record5.end;
+    if (!(isSafeInteger3(start) && isSafeInteger3(end) && start >= 0 && end > start)) {
       throw new Error("Classification bounds must describe a nonempty half-open interval.");
     }
-    for (const [field, value] of Object.entries(record5.state ?? {})) {
-      if (["e", "m", "x", "carry"].includes(field)) {
+    const state = record5.state ?? {};
+    for (const [field, value] of stateEntries(state)) {
+      if (field === "e" || field === "m" || field === "x" || field === "carry") {
         if (typeof value !== "boolean") {
           throw new Error(`State ${field} must be true or false; omit it to clear the hint.`);
         }
       } else {
-        const maximum = ["programBank", "dataBank"].includes(field) ? 255 : 65535;
-        if (!["programBank", "dataBank", "directPage", "stackPointer"].includes(field) || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+        const maximum = field === "programBank" || field === "dataBank" ? 255 : 65535;
+        if (field !== "programBank" && field !== "dataBank" && field !== "directPage" && field !== "stackPointer" || !(isInteger5(value) && value >= 0 && value <= maximum)) {
           throw new Error(`Invalid state field '${field}'.`);
         }
       }
     }
-    if (record5.points?.some((point) => !["in", "out", "end", "read"].includes(point))) {
+    const points = record5.points;
+    if (Array.isArray(points) && points.some(
+      (point) => point !== "in" && point !== "out" && point !== "end" && point !== "read" || typeof point !== "string"
+    )) {
       throw new Error("Invalid entry-point metadata.");
     }
-  } else if (shard === "analysis") {
-    if (!("kind" in record5) || !["target-override", "target-set"].includes(record5.kind) || !Array.isArray(record5.targets) || record5.targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+  } else {
+    const kind = record5.kind;
+    const targets = record5.targets;
+    if (kind !== "target-override" && kind !== "target-set" || !Array.isArray(targets) || targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
       throw new Error("Only target overrides and target sets are editable analysis records.");
     }
-    if (record5.kind === "target-set" && (typeof record5.name !== "string" || !record5.name.trim())) {
+    if (kind === "target-set" && (typeof record5.name !== "string" || !record5.name.trim())) {
       throw new Error("A target set needs a name.");
     }
-    if (record5.kind === "target-override" && !Number.isSafeInteger(record5.address)) {
+    if (kind === "target-override" && !Number.isSafeInteger(record5.address)) {
       throw new Error("A target override needs an instruction anchor.");
     }
-  } else {
-    throw new Error("This collection is not editable metadata.");
   }
 };
 
-// ../disassembler/src/research-inputs/inputs.ts
-var isArray3 = (value) => Array.isArray(value);
+// packages/disassembler/src/research-inputs/inputs.ts
+var isArray2 = (value) => Array.isArray(value);
+function isRecord9(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray3(value) {
+  return Array.isArray(value);
+}
+function isResearchCollection(value) {
+  return RESEARCH_COLLECTIONS.some((collection) => collection === value);
+}
+function isSafeInteger4(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isConfidence(value) {
+  return value === "certain" || value === "high" || value === "medium" || value === "low" || value === "unknown";
+}
 var RESEARCH_COLLECTIONS = [
   "labels",
   "comments",
@@ -25909,7 +26814,7 @@ var RESEARCH_COLLECTIONS = [
   "evidence"
 ];
 function validateResearchSnapshot(snapshot) {
-  if (!snapshot || typeof snapshot.project !== "string" || !/^[\w.-]+$/.test(snapshot.project) || typeof snapshot.romSha256 !== "string" || !/^[\da-f]{64}$/.test(snapshot.romSha256) || !isArray3(snapshot.decisions)) {
+  if (!snapshot || typeof snapshot.project !== "string" || !/^[\w.-]+$/.test(snapshot.project) || typeof snapshot.romSha256 !== "string" || !/^[\da-f]{64}$/.test(snapshot.romSha256) || !isArray2(snapshot.decisions)) {
     throw new Error("Invalid research snapshot identity.");
   }
   const keys = /* @__PURE__ */ new Set();
@@ -25921,7 +26826,7 @@ function validateResearchSnapshot(snapshot) {
     }
     keys.add(key3);
   }
-  const decisions = [...snapshot.decisions].sort(compareDecisions);
+  const decisions = [...snapshot.decisions].toSorted(compareDecisions);
   if (snapshot.hash !== sourceContentHash(
     canonicalJson({ project: snapshot.project, romSha256: snapshot.romSha256, decisions })
   )) {
@@ -25930,68 +26835,85 @@ function validateResearchSnapshot(snapshot) {
 }
 var compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 function validateResearchDecision(decision) {
-  if (!decision || !RESEARCH_COLLECTIONS.includes(decision.collection) || typeof decision.id !== "string" || !/^\w[\w./:-]*$/.test(decision.id)) {
+  if (!isRecord9(decision)) {
+    throw new Error("Research decisions require a known collection and stable ID.");
+  }
+  const collection = decision.collection;
+  const id = decision.id;
+  if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
   const record5 = decision.value;
   if (record5 === null) {
     return;
   }
-  if (!record5 || record5.id !== decision.id) {
-    throw new Error(`Research record identity mismatch: ${decision.id}`);
+  if (!isRecord9(record5) || record5.id !== id) {
+    throw new Error(`Research record identity mismatch: ${id}`);
   }
-  if (decision.collection === "evidence") {
-    const evidence = record5;
-    if (evidence.source !== "manual" || typeof evidence.sourceId !== "string" || !evidence.sourceId || !["certain", "high", "medium", "low", "unknown"].includes(evidence.confidence) || evidence.detail !== void 0 && typeof evidence.detail !== "string") {
+  if (collection === "evidence") {
+    const sourceId = record5.sourceId;
+    const detail = record5.detail;
+    if (record5.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record5.confidence) || detail !== void 0 && typeof detail !== "string") {
       throw new Error("Research files may author only valid manual evidence.");
     }
     return;
   }
-  if (!("evidence" in record5) || !isArray3(record5.evidence) || record5.evidence.some((id) => typeof id !== "string")) {
-    throw new Error(`Research record ${decision.id} needs an evidence list.`);
+  const evidence = record5.evidence;
+  if (!isUnknownArray3(evidence) || evidence.some((entry) => typeof entry !== "string")) {
+    throw new Error(`Research record ${id} needs an evidence list.`);
   }
-  if (decision.collection === "regions") {
-    if (!("start" in record5) || !("end" in record5) || !("name" in record5) || typeof record5.name !== "string" || !record5.name || !Number.isSafeInteger(record5.start) || !Number.isSafeInteger(record5.end) || record5.start < 0 || record5.end <= record5.start) {
-      throw new Error(`Invalid research region: ${decision.id}`);
+  if (collection === "regions") {
+    const name = record5.name;
+    const start = record5.start;
+    const end = record5.end;
+    if (typeof name !== "string" || name === "" || !(isSafeInteger4(start) && isSafeInteger4(end) && start >= 0 && end > start)) {
+      throw new Error(`Invalid research region: ${id}`);
     }
   } else {
-    validateEditableMetadataRecord(
-      decision.collection,
-      record5
-    );
+    validateEditableMetadataRecord(collection, record5);
   }
-  if (decision.collection === "labels") {
-    const label = record5;
-    if (label.aliases !== void 0) {
-      if (!isArray3(label.aliases)) {
-        throw new Error("Symbol aliases must be an array.");
+  if (collection === "labels" && record5.aliases !== void 0) {
+    const aliases2 = record5.aliases;
+    if (!isUnknownArray3(aliases2)) {
+      throw new Error("Symbol aliases must be an array.");
+    }
+    for (const alias of aliases2) {
+      if (typeof alias !== "string") {
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+        );
       }
-      for (const alias of label.aliases) {
-        validateSourceLabelName(alias);
-      }
-      if (new Set(label.aliases).size !== label.aliases.length) {
-        throw new Error("Symbol aliases must be unique.");
-      }
+      validateSourceLabelName(alias);
+    }
+    if (new Set(aliases2).size !== aliases2.length) {
+      throw new Error("Symbol aliases must be unique.");
     }
   }
 }
 function parseResearchDocument(value) {
-  const document2 = value;
-  if (!document2 || document2.format !== "uttori-research" || document2.version !== 1 || typeof document2.project !== "string" || !/^[\w.-]+$/.test(document2.project) || typeof document2.romSha256 !== "string" || !/^[\da-f]{64}$/.test(document2.romSha256) || !isArray3(document2.decisions) || Object.keys(document2).some(
+  if (!isRecord9(value)) {
+    throw new Error("Invalid research document header.");
+  }
+  const project = value.project;
+  const romSha256 = value.romSha256;
+  const decisions = value.decisions;
+  if (value.format !== "uttori-research" || value.version !== 1 || typeof project !== "string" || !/^[\w.-]+$/.test(project) || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray3(decisions) || Object.keys(value).some(
     (key3) => !["format", "version", "project", "romSha256", "decisions"].includes(key3)
   )) {
     throw new Error("Invalid research document header.");
   }
+  const parsed = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const decision of document2.decisions) {
+  for (const decision of decisions) {
     validateResearchDecision(decision);
     const key3 = `${decision.collection}:${decision.id}`;
     if (seen.has(key3)) {
       throw new Error(`Duplicate research decision: ${key3}`);
     }
     seen.add(key3);
+    parsed.push(decision);
   }
-  return document2;
+  return { format: "uttori-research", version: 1, project, romSha256, decisions: parsed };
 }
 function researchPath(root, relative2) {
   assertSourcePath(relative2);
@@ -26017,7 +26939,7 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
     const overlay = overlays.get(relative2);
     const stat2 = fs4.existsSync(file) ? fs4.lstatSync(file) : void 0;
     if (stat2?.isDirectory()) {
-      for (const entry of fs4.readdirSync(file).sort()) {
+      for (const entry of fs4.readdirSync(file).toSorted()) {
         visit(`${relative2}/${entry}`);
       }
       return;
@@ -26064,15 +26986,15 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
   }
   decisions.sort(compareDecisions);
   const selected = { project: identity2.project, romSha256: identity2.romSha256 };
-  const hash = sourceContentHash(canonicalJson({ ...selected, decisions }));
-  return { ...selected, files, decisions, hash };
+  const hash2 = sourceContentHash(canonicalJson({ ...selected, decisions }));
+  return { ...selected, files, decisions, hash: hash2 };
 }
 
-// ../disassembler/src/storage/sqlite-payload.ts
+// packages/disassembler/src/storage/sqlite-payload.ts
 import { TextDecoder as TextDecoder2, types } from "node:util";
 import { deflateSync, inflateSync } from "node:zlib";
 
-// ../disassembler/src/storage/sqlite-runtime-payload.ts
+// packages/disassembler/src/storage/sqlite-runtime-payload.ts
 import { crc32 } from "node:zlib";
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
@@ -26129,7 +27051,11 @@ var encodePackedRuntimePayload = (record5) => {
   }
   for (const [index, [key3, width]] of FIELDS.entries()) {
     if (mask & 1 << index) {
-      encoded.writeUIntLE(record5.state[key3], offset, width);
+      const field = record5.state[key3];
+      if (typeof field !== "number") {
+        return void 0;
+      }
+      encoded.writeUIntLE(field, offset, width);
       offset += width;
     }
   }
@@ -26175,7 +27101,7 @@ var decodePackedRuntimePayload = (bytes2) => {
   return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
 };
 
-// ../disassembler/src/storage/sqlite-payload.ts
+// packages/disassembler/src/storage/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
 var HEADER_BYTES2 = 8;
@@ -26242,7 +27168,8 @@ var parseSqlitePayload = (value) => {
   if (types.isUint8Array(value) && isPackedRuntimePayload(value)) {
     return decodePackedRuntimePayload(value);
   }
-  return JSON.parse(decodeSqlitePayload(value));
+  const parsed = JSON.parse(decodeSqlitePayload(value));
+  return parsed;
 };
 var sqliteRuntimeIdentity = (id) => {
   const split = id.lastIndexOf(":") + 1;
@@ -26265,7 +27192,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// ../disassembler/src/storage/sqlite-records.ts
+// packages/disassembler/src/storage/sqlite-records.ts
 init_canonical_json();
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
@@ -26420,121 +27347,304 @@ var runtimeColumns = (record5) => {
   }
   throw new Error("Unsupported runtime evidence kind.");
 };
+function isRowRecord4(value) {
+  return !Array.isArray(value);
+}
+function requireString(value, label) {
+  if (typeof value !== "string") {
+    throw new Error(`Invalid runtime ${label}.`);
+  }
+  return value;
+}
+function requireFinite(value, label) {
+  if (!isFiniteNumber(value)) {
+    throw new Error(`Invalid runtime ${label}.`);
+  }
+  return value;
+}
+function optionalFinite(record5, key3) {
+  if (!Object.hasOwn(record5, key3)) {
+    return void 0;
+  }
+  return requireFinite(record5[key3], key3);
+}
+function requirePayload(value) {
+  if (!value) {
+    throw new Error("Invalid runtime payload.");
+  }
+  return value;
+}
+function requireBytes(value) {
+  if (!Array.isArray(value)) {
+    throw new Error("Invalid runtime bytes.");
+  }
+  const bytes2 = [];
+  for (const entry of value) {
+    if (!isFiniteNumber(entry)) {
+      throw new Error("Invalid runtime bytes.");
+    }
+    bytes2.push(entry);
+  }
+  return bytes2;
+}
+function isRuntimeState(value) {
+  return isRecord6(value) && Object.values(value).every(
+    (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
+  );
+}
+function requireState(value) {
+  if (!isRuntimeState(value)) {
+    throw new Error("Invalid runtime state.");
+  }
+  return value;
+}
+function requireCpuSpace(value) {
+  if (value === "snes.cpu") {
+    return value;
+  }
+  throw new Error("Invalid runtime address space.");
+}
+function requireDirection(value) {
+  if (value === "read" || value === "write") {
+    return value;
+  }
+  throw new Error("Invalid runtime direction.");
+}
+function requireBusActor(value) {
+  if (value === "cpu" || value === "dma" || value === "hdma") {
+    return value;
+  }
+  throw new Error("Invalid runtime actor.");
+}
+function requirePhase(value) {
+  if (value === "cpu" || value === "dma" || value === "hdma-indirect" || value === "hdma-table" || value === "hdma-transfer") {
+    return value;
+  }
+  throw new Error("Invalid runtime phase.");
+}
+function requireContext(value) {
+  if (value === "unattributed" || value === "instruction" || value === "interrupt" || value === "wait" || value === "stop") {
+    return value;
+  }
+  throw new Error("Invalid runtime context.");
+}
+function requireNullableFinite(value, label) {
+  if (value === null) {
+    return null;
+  }
+  return requireFinite(value, label);
+}
+function requireMemoryAccess(value) {
+  if (value === "read" || value === "write" || value === "read-write" || value === "unknown") {
+    return value;
+  }
+  throw new Error("Invalid runtime access.");
+}
+function requireCoverage(value) {
+  if (value === "executed" || value === "operand" || value === "read" || value === "written") {
+    return value;
+  }
+  throw new Error("Invalid runtime coverage.");
+}
+function isPpuByte(value) {
+  return isRecord6(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
+}
+function requirePpu(value) {
+  if (!isRecord6(value) || value.target !== "vram" && value.target !== "cgram" && value.target !== "oam" || value.outcome !== "written" && value.outcome !== "blocked" && value.outcome !== "latched" || typeof value.forcedBlank !== "boolean" || typeof value.renderingRestricted !== "boolean" || value.implementation !== "accurate" && value.implementation !== "performance" || value.vramBytes !== null && value.vramBytes !== 65536 && value.vramBytes !== 131072 || !Array.isArray(value.bytes)) {
+    throw new Error("Invalid runtime ppu effect.");
+  }
+  const bytes2 = [];
+  for (const entry of value.bytes) {
+    if (!isPpuByte(entry)) {
+      throw new Error("Invalid runtime ppu effect.");
+    }
+    bytes2.push({ address: entry.address, value: entry.value });
+  }
+  return {
+    target: value.target,
+    outcome: value.outcome,
+    forcedBlank: value.forcedBlank,
+    renderingRestricted: value.renderingRestricted,
+    implementation: value.implementation,
+    vramBytes: value.vramBytes,
+    bytes: bytes2
+  };
+}
+function readPayload(value) {
+  if (value === null || value === void 0) {
+    return {};
+  }
+  const parsed = parseSqlitePayload(value);
+  return isRecord6(parsed) ? parsed : void 0;
+}
 var runtimeFromRow = (row) => {
-  const fields = row;
-  const extra = fields.payload === null || fields.payload === void 0 ? {} : parseSqlitePayload(fields.payload);
-  if (typeof fields.evidence !== "string") {
+  if (!isRowRecord4(row)) {
+    throw new Error("Invalid runtime row.");
+  }
+  const extra = readPayload(row.payload);
+  if (typeof row.evidence !== "string") {
     throw new Error("Missing SQLite runtime evidence dictionary entry.");
   }
-  const evidence = JSON.parse(fields.evidence);
-  const kind = fields.kind;
-  const architecture = fields.architecture;
-  const count = Number(fields.count);
-  const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+  const parsedEvidence = JSON.parse(row.evidence);
+  if (!isStringArray(parsedEvidence)) {
+    throw new Error("Invalid runtime evidence list.");
+  }
+  const kind = row.kind;
+  const count = Number(row.count);
+  const id = decodeSqliteRuntimeIdentity(row.id_prefix, row.id);
   if (kind === "runtime-execution") {
+    const body = requirePayload(extra);
+    const fileOffset = optionalFinite(body, "fileOffset");
+    const size = optionalFinite(body, "size");
+    const opcode = optionalFinite(body, "opcode");
     return {
       id,
       kind,
-      architecture,
+      architecture: requireString(row.architecture, "architecture"),
       count,
-      evidence,
-      addressSpace: fields.address_space,
-      address: Number(fields.address),
-      ...extra
+      evidence: parsedEvidence,
+      addressSpace: requireString(row.address_space, "address space"),
+      address: Number(row.address),
+      ...fileOffset === void 0 ? {} : { fileOffset },
+      ...size === void 0 ? {} : { size },
+      ...opcode === void 0 ? {} : { opcode }
     };
   }
   if (kind === "runtime-instruction") {
+    const body = requirePayload(extra);
     return {
       id,
       kind,
-      architecture,
+      architecture: requireString(row.architecture, "architecture"),
       count,
-      evidence,
-      addressSpace: fields.address_space,
-      address: Number(fields.address),
-      bytes: extra.bytes,
-      state: extra.state
+      evidence: parsedEvidence,
+      addressSpace: requireString(row.address_space, "address space"),
+      address: Number(row.address),
+      bytes: requireBytes(body.bytes),
+      state: requireState(body.state)
     };
   }
   if (kind === "runtime-bus-access") {
+    const body = requirePayload(extra);
     return {
       id,
       kind,
-      architecture,
+      architecture: requireString(row.architecture, "architecture"),
       count,
-      evidence,
-      addressSpace: fields.accessed_address_space,
-      address: Number(fields.accessed_address),
-      ...extra.ppu === void 0 ? {} : { ppu: extra.ppu },
-      pc: extra.pc,
-      value: extra.value,
-      direction: extra.direction,
-      actor: extra.actor,
-      channel: extra.channel,
-      phase: extra.phase,
-      context: extra.context
+      evidence: parsedEvidence,
+      ...body.ppu === void 0 ? {} : { ppu: requirePpu(body.ppu) },
+      addressSpace: requireCpuSpace(row.accessed_address_space),
+      address: Number(row.accessed_address),
+      pc: requireFinite(body.pc, "pc"),
+      value: requireFinite(body.value, "value"),
+      direction: requireDirection(body.direction),
+      actor: requireBusActor(body.actor),
+      channel: requireNullableFinite(body.channel, "channel"),
+      phase: requirePhase(body.phase),
+      context: requireContext(body.context)
     };
   }
   if (kind === "runtime-memory-access") {
+    const body = requirePayload(extra);
+    const actor = optionalBusActor(body);
+    const channel = optionalFinite(body, "channel");
+    const value = optionalFinite(body, "value");
     return {
       id,
       kind,
-      architecture,
+      architecture: requireString(row.architecture, "architecture"),
       count,
-      evidence,
-      instructionAddressSpace: fields.instruction_address_space,
-      instructionAddress: Number(fields.instruction_address),
-      accessedAddressSpace: fields.accessed_address_space,
-      accessedAddress: Number(fields.accessed_address),
-      access: extra.access,
-      width: extra.width,
-      ...extra.actor === void 0 ? {} : { actor: extra.actor },
-      ...extra.channel === void 0 ? {} : { channel: extra.channel },
-      ...extra.value === void 0 ? {} : { value: extra.value }
+      evidence: parsedEvidence,
+      instructionAddressSpace: requireString(row.instruction_address_space, "address space"),
+      instructionAddress: Number(row.instruction_address),
+      accessedAddressSpace: requireString(row.accessed_address_space, "address space"),
+      accessedAddress: Number(row.accessed_address),
+      access: requireMemoryAccess(body.access),
+      width: requireFinite(body.width, "width"),
+      ...actor,
+      ...channel === void 0 ? {} : { channel },
+      ...value === void 0 ? {} : { value }
     };
   }
   if (kind === "runtime-cpu-state") {
+    const body = requirePayload(extra);
     return {
       id,
       kind,
-      architecture,
+      architecture: requireString(row.architecture, "architecture"),
       count,
-      evidence,
-      addressSpace: fields.address_space,
-      address: Number(fields.address),
-      state: extra.state
+      evidence: parsedEvidence,
+      addressSpace: requireString(row.address_space, "address space"),
+      address: Number(row.address),
+      state: requireState(body.state)
     };
   }
   if (kind === "runtime-coverage") {
     return {
       id,
       kind,
-      architecture,
+      architecture: requireString(row.architecture, "architecture"),
       count,
-      evidence,
-      addressSpace: fields.address_space,
-      start: Number(fields.start),
-      end: Number(fields.end),
-      coverage: fields.coverage
+      evidence: parsedEvidence,
+      addressSpace: requireString(row.address_space, "address space"),
+      start: Number(row.start),
+      end: Number(row.end),
+      coverage: requireCoverage(row.coverage)
     };
   }
-  if (kind !== "runtime-control-target") {
-    throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
+  if (kind === "runtime-control-target") {
+    const body = requirePayload(extra);
+    return {
+      id,
+      kind: "runtime-control-target",
+      architecture: requireString(row.architecture, "architecture"),
+      count,
+      evidence: parsedEvidence,
+      fromAddressSpace: requireString(row.from_address_space, "address space"),
+      fromAddress: Number(row.from_address),
+      toAddressSpace: requireString(row.to_address_space, "address space"),
+      toAddress: Number(row.to_address),
+      flowKind: requireString(body.flowKind, "flow kind"),
+      indirect: Boolean(body.indirect)
+    };
   }
-  return {
-    id,
-    kind: "runtime-control-target",
-    architecture,
-    count,
-    evidence,
-    fromAddressSpace: fields.from_address_space,
-    fromAddress: Number(fields.from_address),
-    toAddressSpace: fields.to_address_space,
-    toAddress: Number(fields.to_address),
-    flowKind: extra.flowKind,
-    indirect: Boolean(extra.indirect)
-  };
+  throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
 };
+function optionalBusActor(record5) {
+  if (!Object.hasOwn(record5, "actor")) {
+    return {};
+  }
+  return { actor: requireBusActor(record5.actor) };
+}
+function allowsFinite2(value) {
+  return value === void 0 || isFiniteNumber(value);
+}
+function isRuntimeEvidenceRecord(value) {
+  if (!isRecord6(value) || typeof value.id !== "string" || typeof value.architecture !== "string" || !isFiniteNumber(value.count) || !isStringArray(value.evidence)) {
+    return false;
+  }
+  switch (value.kind) {
+    case "runtime-execution":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite2(value.fileOffset) && allowsFinite2(value.size) && allowsFinite2(value.opcode);
+    case "runtime-instruction":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && Array.isArray(value.bytes) && value.bytes.every(isFiniteNumber) && isRuntimeState(value.state);
+    case "runtime-cpu-state":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isRuntimeState(value.state);
+    case "runtime-coverage":
+      return typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && (value.coverage === "executed" || value.coverage === "operand" || value.coverage === "read" || value.coverage === "written");
+    case "runtime-control-target":
+      return typeof value.fromAddressSpace === "string" && isFiniteNumber(value.fromAddress) && typeof value.toAddressSpace === "string" && isFiniteNumber(value.toAddress) && typeof value.flowKind === "string" && typeof value.indirect === "boolean";
+    case "runtime-memory-access":
+      return typeof value.instructionAddressSpace === "string" && isFiniteNumber(value.instructionAddress) && typeof value.accessedAddressSpace === "string" && isFiniteNumber(value.accessedAddress) && (value.access === "read" || value.access === "write" || value.access === "read-write" || value.access === "unknown") && isFiniteNumber(value.width) && (value.actor === void 0 || value.actor === "cpu" || value.actor === "dma" || value.actor === "hdma") && allowsFinite2(value.channel) && allowsFinite2(value.value);
+    case "runtime-bus-access":
+      return (value.ppu === void 0 || isBusPpu(value.ppu)) && value.addressSpace === "snes.cpu" && isFiniteNumber(value.address) && isFiniteNumber(value.pc) && isFiniteNumber(value.value) && (value.direction === "read" || value.direction === "write") && (value.actor === "cpu" || value.actor === "dma" || value.actor === "hdma") && (value.channel === null || isFiniteNumber(value.channel)) && (value.phase === "cpu" || value.phase === "dma" || value.phase === "hdma-indirect" || value.phase === "hdma-table" || value.phase === "hdma-transfer") && (value.context === "unattributed" || value.context === "instruction" || value.context === "interrupt" || value.context === "wait" || value.context === "stop");
+    default:
+      return false;
+  }
+}
+function isBusPpu(value) {
+  return isRecord6(value) && (value.target === "vram" || value.target === "cgram" || value.target === "oam") && (value.outcome === "written" || value.outcome === "blocked" || value.outcome === "latched") && typeof value.forcedBlank === "boolean" && typeof value.renderingRestricted === "boolean" && (value.implementation === "accurate" || value.implementation === "performance") && (value.vramBytes === null || value.vramBytes === 65536 || value.vramBytes === 131072) && Array.isArray(value.bytes) && value.bytes.every(isPpuByte);
+}
 var analysisAddress = (record5) => {
   if ("addressSpace" in record5 && "address" in record5) {
     return { addressSpace: record5.addressSpace, address: record5.address };
@@ -26545,13 +27655,45 @@ var analysisAddress = (record5) => {
   return { addressSpace: null, address: null };
 };
 
-// ../disassembler/src/storage/sqlite-annotation-query.ts
+// packages/disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
-var decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
-var runtimeSelect = (pairedState = false) => {
-  const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
-  const prefix = pairedState ? "o.state_prefix_id" : "o.prefix_id";
-  const row = pairedState ? "-o.oid" : "o.oid";
+function isPartialInstruction(value) {
+  if (!isRecord6(value)) {
+    return false;
+  }
+  if (value.kind !== void 0 && value.kind !== "cfg-node") {
+    return false;
+  }
+  if (value.id !== void 0 && typeof value.id !== "string") {
+    return false;
+  }
+  if (value.addressSpace !== void 0 && typeof value.addressSpace !== "string") {
+    return false;
+  }
+  if (value.specificationId !== void 0 && typeof value.specificationId !== "string") {
+    return false;
+  }
+  for (const key3 of ["address", "fileOffset", "size", "opcode"]) {
+    if (value[key3] !== void 0 && !isFiniteNumber(value[key3])) {
+      return false;
+    }
+  }
+  if (value.incomingState !== void 0 && !isRecord6(value.incomingState)) {
+    return false;
+  }
+  return value.evidence === void 0 || isStringArray(value.evidence);
+}
+function requirePartialInstruction(value) {
+  const parsed = parseSqlitePayload(value);
+  if (!isPartialInstruction(parsed)) {
+    throw new Error("Invalid indexed instruction.");
+  }
+  return parsed;
+}
+var runtimeSelect = (pairedState2 = false) => {
+  const kind = pairedState2 ? "'runtime-cpu-state'" : "f.kind";
+  const prefix = pairedState2 ? "o.state_prefix_id" : "o.prefix_id";
+  const row = pairedState2 ? "-o.oid" : "o.oid";
   return `SELECT ${row} AS storage_rowid,${kind} AS kind,i.value AS id,
     p.value AS id_prefix,e.value AS evidence,o.count,f.architecture,
     f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
@@ -26622,7 +27764,7 @@ var ensureAnnotationQueryIndexes = (database) => {
     const exportData = table === "analysis" ? database.prepare("UPDATE analysis SET query_data=? WHERE rowid=?") : void 0;
     for (let rows = pending.all(); rows.length; rows = pending.all()) {
       for (const row of rows) {
-        const record5 = row.payload === null ? {} : decode(row.payload);
+        const record5 = row.payload === null ? {} : requirePartialInstruction(row.payload);
         const offset = record5.fileOffset;
         if (offset !== void 0 && (!Number.isSafeInteger(offset) || offset < 0)) {
           throw new Error("Invalid persisted instruction output offset.");
@@ -26699,7 +27841,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record5 = decode(row.payload);
+      const record5 = requireAnalysisRecord(parseSqlitePayload(row.payload));
       analysis.set(record5.id, record5);
       if (record5.kind === "cfg-node") {
         locate(record5.addressSpace, record5.address);
@@ -26768,7 +27910,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
     }
   }
   for (const row of database.prepare("SELECT payload FROM analysis WHERE kind='summary'").iterate()) {
-    const record5 = decode(row.payload);
+    const record5 = requireAnalysisRecord(parseSqlitePayload(row.payload));
     analysis.set(record5.id, record5);
   }
   const runtime = /* @__PURE__ */ new Map();
@@ -26776,7 +27918,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   const point = database.prepare(
     `${runtimeSelect()} WHERE f.kind=? AND f.address_space=? AND f.address=? ORDER BY o.oid LIMIT ?`
   );
-  const pairedState = database.prepare(
+  const pairedState2 = database.prepare(
     `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_prefix_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`
   );
   const memory = database.prepare(
@@ -26788,7 +27930,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   );
   function* stateRows(space, address5, limit) {
     let remaining = limit;
-    for (const row of pairedState.iterate(space, address5, remaining)) {
+    for (const row of pairedState2.iterate(space, address5, remaining)) {
       yield row;
       remaining--;
     }
@@ -26845,7 +27987,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record5 = decode(row.payload);
+      const record5 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
       annotations.set(record5.id, record5);
     }
     let commentCount = 0;
@@ -26854,7 +27996,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record5 = decode(row.payload);
+      const record5 = requireProjectComment(parseSqlitePayload(row.payload));
       comments.set(record5.id, record5);
     }
     addRuntime(
@@ -26868,7 +28010,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
       annotations: [...annotations.values()],
       comments: [...comments.values()],
       evidence: [...database.prepare("SELECT payload FROM evidence").iterate()].map(
-        (row) => decode(row.payload)
+        (row) => requireEvidenceRecord(parseSqlitePayload(row.payload))
       ),
       labels: [],
       regions: [],
@@ -26965,7 +28107,7 @@ var readInstructionExecutionSummary = (database, manifest, ranges) => {
   });
 };
 
-// ../disassembler/src/storage/sqlite-query-cache.ts
+// packages/disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var installQueryCache = (db, key3, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key3)) {
@@ -27002,7 +28144,11 @@ var readQueryCache = (db, key3, signature) => {
     return void 0;
   }
   const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
-  return row ? JSON.parse(String(row.payload)) : void 0;
+  if (!row) {
+    return void 0;
+  }
+  const parsed = JSON.parse(String(row.payload));
+  return parsed;
 };
 var writeQueryCache = (db, key3, signature, value) => {
   db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
@@ -27012,17 +28158,51 @@ var writeQueryCache = (db, key3, signature, value) => {
   );
 };
 
-// ../disassembler/src/storage/sqlite-coverage-query.ts
-var decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
+// packages/disassembler/src/storage/sqlite-coverage-query.ts
+var COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"];
+var COVERAGE_RUNTIME = ["executed", "operand", "read", "written"];
+function isCoverageCounts(value, keys) {
+  return isRecord6(value) && keys.every((key3) => isFiniteNumber(value[key3])) && Object.keys(value).every((key3) => keys.includes(key3));
+}
+function isSqliteCoverageSummary(value) {
+  if (!isRecord6(value) || !isFiniteNumber(value.contentSize) || !isStringArray(value.fileAddressSpaces) || !Array.isArray(value.segments) || value.segments.length !== 0 || !Array.isArray(value.unprojected) || value.unprojected.length !== 0 || !Array.isArray(value.diagnostics) || value.diagnostics.length !== 0 || !isFiniteNumber(value.detailCount) || !isRecord6(value.summary)) {
+    return false;
+  }
+  const summary = value.summary;
+  return isFiniteNumber(summary.totalBytes) && isFiniteNumber(summary.classifiedBytes) && isFiniteNumber(summary.unknownBytes) && isFiniteNumber(summary.conflictBytes) && isFiniteNumber(summary.segmentCount) && isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) && isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME);
+}
+function requireConflict(value) {
+  const record5 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record5.kind !== "conflict") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record5;
+}
+function requireAccessWidth(value) {
+  const parsed = parseSqlitePayload(value);
+  if (!isRecord6(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
+    throw new Error("Invalid runtime memory coverage payload.");
+  }
+  return { access: parsed.access, width: parsed.width };
+}
 var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
-var cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
+var cachedCoverage = (db, manifest) => {
+  const value = readQueryCache(db, "coverage", coverageSignature(manifest));
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!isSqliteCoverageSummary(value)) {
+    throw new Error("Invalid coverage summary cache.");
+  }
+  return value;
+};
 var prepareCoverage = (db, manifest) => {
   db.exec(`CREATE TEMP TABLE query_coverage_segments (start INTEGER PRIMARY KEY, payload TEXT NOT NULL);
     CREATE TEMP TABLE query_coverage_details (kind TEXT, id TEXT, reason TEXT, payload TEXT NOT NULL);
     CREATE INDEX temp.query_coverage_detail_order ON query_coverage_details(kind,id,reason);
     DELETE FROM query_coverage_segments; DELETE FROM query_coverage_details;
     CREATE TEMP TABLE coverage_events (pos INTEGER NOT NULL, category TEXT NOT NULL, id TEXT NOT NULL, delta INTEGER NOT NULL);`);
-  const fileAddressSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id).sort((a, b) => a.localeCompare(b));
+  const fileAddressSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id).toSorted((a, b) => a.localeCompare(b));
   const files = new Set(fileAddressSpaces);
   const size = manifest.rom.contentSize;
   if (!Number.isSafeInteger(size) || size < 0) {
@@ -27075,7 +28255,7 @@ var prepareCoverage = (db, manifest) => {
   };
   try {
     for (const row of db.prepare("SELECT * FROM annotations WHERE classification != 'unreached'").iterate()) {
-      const record5 = decode2(row.payload);
+      const record5 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
       if (!files.has(record5.addressSpace)) {
         unprojected("annotation", record5.id, "non-file-address-space");
         continue;
@@ -27124,7 +28304,7 @@ var prepareCoverage = (db, manifest) => {
       "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'"
     );
     for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-      const record5 = decode2(row.payload);
+      const record5 = requireConflict(row.payload);
       if (files.has(record5.addressSpace)) {
         add("analysis", record5.id, record5.address, record5.end ?? record5.address + 1, [
           ["conflictIds", record5.id]
@@ -27189,7 +28369,7 @@ var prepareCoverage = (db, manifest) => {
     for (const row of db.prepare(`SELECT ${identity2} AS id,r.accessed_address,r.payload FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id
       WHERE r.kind='runtime-memory-access' AND r.accessed_address_space IN (SELECT value FROM json_each(?))`).iterate(JSON.stringify(fileAddressSpaces))) {
       const id = String(row.id);
-      const payload = decode2(row.payload);
+      const payload = requireAccessWidth(row.payload);
       for (const [access, classification] of [
         ["read", "read"],
         ["write", "written"]
@@ -27211,7 +28391,7 @@ var prepareCoverage = (db, manifest) => {
     event.run(0, "boundary", "", 0);
     event.run(size, "boundary", "", 0);
     const active = /* @__PURE__ */ new Map();
-    const ids = (category) => [...active.get(category)?.keys() ?? []].sort((a, b) => a.localeCompare(b));
+    const ids = (category) => [...active.get(category)?.keys() ?? []].toSorted((a, b) => a.localeCompare(b));
     const put = db.prepare("INSERT INTO query_coverage_segments VALUES(?,?)");
     const summary = {
       totalBytes: size,
@@ -27264,8 +28444,8 @@ var prepareCoverage = (db, manifest) => {
         conflictIds,
         regionIds: ids("regionIds")
       };
-      const { start: _start, end: _end, ...identity3 } = segment;
-      const key3 = JSON.stringify(identity3);
+      const { start: _start, end: _end, ...segmentIdentity } = segment;
+      const key3 = JSON.stringify(segmentIdentity);
       if (pending && key3 === pendingKey) {
         pending = { ...pending, end };
       } else {
@@ -27348,10 +28528,71 @@ var coveragePage = (db, kind, offset) => {
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
 
-// ../disassembler/src/storage/sqlite-graph-query.ts
-var decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
-var unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
-var numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
+// packages/disassembler/src/storage/sqlite-graph-query.ts
+function requireNode(value) {
+  const record5 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record5.kind !== "cfg-node") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record5;
+}
+function requireEdge(value) {
+  const record5 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record5.kind !== "cfg-edge") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record5;
+}
+function requireUnresolved(value) {
+  const record5 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record5.kind !== "unresolved") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record5;
+}
+function requireFunctionRecord(value) {
+  const record5 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record5.kind !== "function") {
+    throw new Error("Invalid stored analysis record.");
+  }
+  return record5;
+}
+function isLabelRefList(value) {
+  return Array.isArray(value) && value.every(
+    (entry) => isRecord6(entry) && typeof entry.id === "string" && typeof entry.name === "string"
+  );
+}
+function isNumberList(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isCallGraphFunction(value) {
+  return isRecord6(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isLabelRefList(value.labels) && isStringArray(value.nodeIds) && isNumberList(value.outputOffsets) && isStringArray(value.incomingCallIds) && isStringArray(value.outgoingCallIds) && isStringArray(value.unresolvedIds) && isStringArray(value.evidence);
+}
+function isCallGraphEdge(value) {
+  return isRecord6(value) && typeof value.id === "string" && (value.edgeKind === "call" || value.edgeKind === "interrupt") && typeof value.addressSpace === "string" && isFiniteNumber(value.fromAddress) && isFiniteNumber(value.toAddress) && typeof value.fromNodeId === "string" && (value.toNodeId === void 0 || typeof value.toNodeId === "string") && isStringArray(value.callerFunctionIds) && isStringArray(value.calleeFunctionIds) && isNumberList(value.fromOutputOffsets) && isNumberList(value.toOutputOffsets) && typeof value.indirect === "boolean" && (value.override === void 0 || typeof value.override === "string") && (value.explanation === void 0 || typeof value.explanation === "string") && isStringArray(value.evidence);
+}
+function isCallGraphUnresolved(value) {
+  return isRecord6(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string" && isStringArray(value.nodeIds) && isStringArray(value.ownerFunctionIds) && isNumberList(value.outputOffsets) && isStringArray(value.evidence);
+}
+function isCallGraph(value) {
+  return isRecord6(value) && Array.isArray(value.functions) && value.functions.every(isCallGraphFunction) && Array.isArray(value.calls) && value.calls.every(isCallGraphEdge) && Array.isArray(value.unresolved) && value.unresolved.every(isCallGraphUnresolved) && isStringArray(value.orphanCallIds) && isStringArray(value.orphanUnresolvedIds);
+}
+function requireCallKind(value) {
+  if (value === "call" || value === "interrupt") {
+    return value;
+  }
+  throw new Error("Invalid call graph edge.");
+}
+var unique = (ids) => [...new Set(ids)].toSorted((a, b) => a.localeCompare(b));
+var numbers = (ids) => [...new Set(ids)].toSorted((a, b) => a - b);
+var append = (map, owner, id) => {
+  let ids = map.get(owner);
+  if (!ids) {
+    ids = [];
+    map.set(owner, ids);
+  }
+  ids.push(id);
+};
 var prepareGraph = (db) => {
   db.exec(`CREATE TEMP TABLE query_graph_nodes(id TEXT PRIMARY KEY,address_space TEXT,address INTEGER,file_offset INTEGER,owner TEXT) WITHOUT ROWID;
     CREATE INDEX temp.query_graph_owner ON query_graph_nodes(owner);
@@ -27368,7 +28609,7 @@ var prepareGraph = (db) => {
   const putEdge = db.prepare("INSERT INTO query_graph_edges VALUES(?,?,?,?,?,?)");
   for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
     if (row.kind === "cfg-node") {
-      const node = decode3(row.payload);
+      const node = requireNode(row.payload);
       const path38 = node.evidencePath.length ? node.evidencePath : [node.id];
       let owner = node.functionEntry;
       for (let i = path38.length - 1; i >= 0; i--) {
@@ -27382,7 +28623,7 @@ var prepareGraph = (db) => {
       }
       putNode.run(node.id, node.addressSpace, node.address, node.fileOffset ?? null, owner ?? null);
     } else {
-      const edge = decode3(row.payload);
+      const edge = requireEdge(row.payload);
       if (edge.edgeKind === "unresolved" || ["call", "interrupt"].includes(edge.edgeKind) && edge.toAddress !== void 0) {
         putEdge.run(
           edge.id,
@@ -27407,10 +28648,10 @@ var prepareGraph = (db) => {
   );
   const calls = [];
   for (const row of db.prepare("SELECT payload FROM query_graph_edges WHERE kind IN ('call','interrupt')").iterate()) {
-    const edge = decode3(row.payload);
+    const edge = requireEdge(row.payload);
     calls.push({
       id: edge.id,
-      edgeKind: edge.edgeKind,
+      edgeKind: requireCallKind(edge.edgeKind),
       addressSpace: edge.addressSpace,
       fromAddress: edge.fromAddress,
       toAddress: edge.toAddress,
@@ -27418,7 +28659,7 @@ var prepareGraph = (db) => {
       ...edge.to ? { toNodeId: edge.to } : {},
       callerFunctionIds: owners(edge.from),
       calleeFunctionIds: unique(
-        functionsAt.all(edge.addressSpace, edge.toAddress).map((row2) => String(row2.id))
+        functionsAt.all(edge.addressSpace, edge.toAddress).map((functionRow) => String(functionRow.id))
       ),
       fromOutputOffsets: offsets([edge.from]),
       toOutputOffsets: offsets(edge.to ? [edge.to] : []),
@@ -27433,9 +28674,9 @@ var prepareGraph = (db) => {
     "SELECT from_id FROM query_graph_edges WHERE kind='unresolved' AND address_space=? AND from_address=?"
   );
   for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='unresolved'").iterate()) {
-    const record5 = decode3(row.payload);
+    const record5 = requireUnresolved(row.payload);
     const nodeIds = unique(
-      unresolvedNodes.all(record5.addressSpace, record5.address).map((row2) => String(row2.from_id))
+      unresolvedNodes.all(record5.addressSpace, record5.address).map((nodeRow) => String(nodeRow.from_id))
     );
     unresolved.push({
       id: record5.id,
@@ -27451,14 +28692,6 @@ var prepareGraph = (db) => {
     });
   }
   const incoming = /* @__PURE__ */ new Map(), outgoing = /* @__PURE__ */ new Map(), unresolvedByOwner = /* @__PURE__ */ new Map();
-  const append = (map, owner, id) => {
-    let ids = map.get(owner);
-    if (!ids) {
-      ids = [];
-      map.set(owner, ids);
-    }
-    ids.push(id);
-  };
   for (const call of calls) {
     for (const id of call.callerFunctionIds) {
       append(outgoing, id, call.id);
@@ -27478,20 +28711,20 @@ var prepareGraph = (db) => {
   const labels = db.prepare("SELECT payload FROM labels WHERE address_space=? AND address=?");
   const functions = [];
   for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='function'").iterate()) {
-    const fn = decode3(row.payload);
+    const fn = requireFunctionRecord(row.payload);
     const nodes = owned.all(fn.addressSpace, fn.address);
     functions.push({
       id: fn.id,
       addressSpace: fn.addressSpace,
       address: fn.address,
       source: fn.source,
-      labels: labels.all(fn.addressSpace, fn.address).map((row2) => {
-        const { id, name } = decode3(row2.payload);
+      labels: labels.all(fn.addressSpace, fn.address).map((labelRow) => {
+        const { id, name } = requireProjectLabel(parseSqlitePayload(labelRow.payload));
         return { id, name };
-      }).sort((a, b) => a.id.localeCompare(b.id)),
-      nodeIds: unique(nodes.map((row2) => String(row2.id))),
+      }).toSorted((a, b) => a.id.localeCompare(b.id)),
+      nodeIds: unique(nodes.map((nodeRow) => String(nodeRow.id))),
       outputOffsets: numbers(
-        nodes.filter((row2) => row2.address === fn.address && row2.file_offset !== null).map((row2) => Number(row2.file_offset))
+        nodes.filter((nodeRow) => nodeRow.address === fn.address && nodeRow.file_offset !== null).map((nodeRow) => Number(nodeRow.file_offset))
       ),
       incomingCallIds: unique(incoming.get(fn.id) ?? []),
       outgoingCallIds: unique(outgoing.get(fn.id) ?? []),
@@ -27531,14 +28764,20 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// ../disassembler/src/storage/sqlite-research-inputs.ts
+// packages/disassembler/src/storage/sqlite-research-inputs.ts
 init_canonical_json();
 var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
+function isRecord10(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isResearchCollection2(value) {
+  return value === "labels" || value === "comments" || value === "annotations" || value === "regions" || value === "analysis" || value === "evidence";
+}
 var collectionName = (value) => {
-  if (typeof value !== "string" || !["labels", "comments", "annotations", "regions", "analysis", "evidence"].includes(value)) {
+  if (typeof value !== "string" || !isResearchCollection2(value)) {
     throw new Error("Invalid research projection collection.");
   }
   return value;
@@ -27547,6 +28786,9 @@ var recordValue = (payload) => payload == null ? null : JSON.parse(decodeSqliteP
 function analysisInput(collection, value) {
   if (value === null || collection === "comments") {
     return null;
+  }
+  if (!isRecord10(value)) {
+    throw new Error("Invalid research record.");
   }
   const record5 = value;
   if (collection === "labels") {
@@ -27622,7 +28864,7 @@ function projectResearchInputs(database, snapshot, insert) {
     const before = database.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(decision.id);
     if (collection === "evidence" && before) {
       const observation = recordValue(before.payload);
-      if (observation.source !== "manual") {
+      if (!isRecord10(observation) || observation.source !== "manual") {
         throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
       }
     }
@@ -27641,10 +28883,10 @@ function projectResearchInputs(database, snapshot, insert) {
   }
 }
 
-// ../disassembler/src/storage/sqlite-runtime-batch.ts
+// packages/disassembler/src/storage/sqlite-runtime-batch.ts
 init_canonical_json();
 
-// ../disassembler/src/storage/sqlite-runtime-facts.ts
+// packages/disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS = [
   "kind",
   "architecture",
@@ -27733,13 +28975,19 @@ WHEN EXISTS(SELECT 1 FROM runtime_identities
 BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
 `;
 
-// ../disassembler/src/storage/sqlite-runtime-storage.ts
+// packages/disassembler/src/storage/sqlite-runtime-storage.ts
 init_canonical_json();
 import { createHash as createHash6 } from "node:crypto";
 
-// ../disassembler/src/storage/sqlite-runtime-history.ts
+// packages/disassembler/src/storage/sqlite-runtime-history.ts
 import { TextDecoder as TextDecoder3, types as types2 } from "node:util";
 import { crc32 as crc322, deflateSync as deflateSync2, inflateSync as inflateSync2 } from "node:zlib";
+function historyPayload(value) {
+  if (value === null || typeof value === "string" || types2.isUint8Array(value)) {
+    return value;
+  }
+  throw new Error("Invalid runtime history payload.");
+}
 var MAGIC2 = Buffer.from([85, 72, 66, 1]);
 var MAX_ROWS = 1024;
 var MAX_BYTES = 32 * 1024 * 1024;
@@ -27883,7 +29131,7 @@ var packRuntimeHistory = (db, onProgress) => {
     const rows = [];
     let size = 0;
     for (const row of pending.iterate(MAX_ROWS)) {
-      const value = row.payload;
+      const value = historyPayload(row.payload);
       const bytes2 = typeof value === "string" ? Buffer.byteLength(value) : value?.byteLength ?? 0;
       if (rows.length && size + bytes2 > TARGET_BYTES) {
         break;
@@ -27894,7 +29142,7 @@ var packRuntimeHistory = (db, onProgress) => {
     if (!rows.length) {
       return packed;
     }
-    const encoded = encodeRuntimeHistory(rows.map((row) => row.payload));
+    const encoded = encodeRuntimeHistory(rows.map((row) => historyPayload(row.payload)));
     const id = insert.run(rows[0].fid, rows[rows.length - 1].fid, encoded).lastInsertRowid;
     for (const [slot, row] of rows.entries()) {
       update.run(id, slot, row.fid);
@@ -27911,7 +29159,7 @@ var collectRuntimeHistory = (db) => {
       SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
 };
 
-// ../disassembler/src/storage/sqlite-runtime-storage.ts
+// packages/disassembler/src/storage/sqlite-runtime-storage.ts
 var runtimeFactFingerprint = (record5, columns2) => createHash6("sha256").update(
   JSON.stringify(
     {
@@ -28040,6 +29288,13 @@ CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,arch
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,NEW.evidence_id,NEW.payload);
 END;
 `;
+function pairedState(payload) {
+  const parsed = parseSqlitePayload(payload);
+  if (!isRecord6(parsed)) {
+    throw new Error("Invalid paired runtime payload.");
+  }
+  return parsed.state;
+}
 var SqliteRuntimeWriter = class {
   #findFact;
   #insertFact;
@@ -28090,7 +29345,7 @@ var SqliteRuntimeWriter = class {
       );
       const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
       const expectedKind = record5.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record5.count && other.evidence_id === evidence && other.architecture === record5.architecture && other.address_space === record5.addressSpace && other.address === record5.address && canonicalEquals(parseSqlitePayload(other.payload).state, record5.state)) {
+      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record5.count && other.evidence_id === evidence && other.architecture === record5.architecture && other.address_space === record5.addressSpace && other.address === record5.address && canonicalEquals(pairedState(other.payload), record5.state)) {
         if (record5.kind === "runtime-cpu-state") {
           this.#pair.run(prefix, other.oid);
           return;
@@ -28142,7 +29397,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// ../disassembler/src/storage/sqlite-runtime-batch.ts
+// packages/disassembler/src/storage/sqlite-runtime-batch.ts
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
   INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
     SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
@@ -28291,7 +29546,7 @@ var SqliteRuntimeTraceBatch = class {
   }
 };
 
-// ../disassembler/src/storage/sqlite-runtime-summary.ts
+// packages/disassembler/src/storage/sqlite-runtime-summary.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
@@ -28376,9 +29631,10 @@ var runtimeSummaryInputSql = (incremental) => {
 };
 var registerVariantKey = (db, fields, masks) => {
   db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
-    const record5 = parseSqlitePayload(
-      payload
-    );
+    const record5 = parseSqlitePayload(payload);
+    if (!isRecord6(record5) || !isByteList(record5.bytes) || !isRecord6(record5.state)) {
+      throw new Error("Invalid instruction variant payload.");
+    }
     const state = {};
     for (const key3 of fields) {
       const value = record5.state[key3];
@@ -28392,6 +29648,9 @@ var registerVariantKey = (db, fields, masks) => {
     return JSON.stringify([record5.bytes, state]);
   });
 };
+function isByteList(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
 var isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
 var runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress) => {
   if (fields.some((field) => !/^\w+$/.test(field))) {
@@ -28495,7 +29754,33 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
   })();
 };
 
-// ../disassembler/src/storage/sqlite-source-query.ts
+// packages/disassembler/src/storage/sqlite-source-query.ts
+function isRecord11(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray2(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function optionalString(record5, key3) {
+  if (!Object.hasOwn(record5, key3)) {
+    return void 0;
+  }
+  const value = record5[key3];
+  if (typeof value !== "string") {
+    throw new Error("Invalid source metadata record.");
+  }
+  return value;
+}
+function optionalNumber(record5, key3) {
+  if (!Object.hasOwn(record5, key3)) {
+    return void 0;
+  }
+  const value = record5[key3];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("Invalid source metadata record.");
+  }
+  return value;
+}
 var collections = ["labels", "comments", "annotations", "regions"];
 var sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
@@ -28537,12 +29822,12 @@ var prepareSourceQueries = (db) => {
     );
     for (let rows = pending.all(table); rows.length; rows = pending.all(table)) {
       for (const row of rows) {
-        const record5 = JSON.parse(decodeSqlitePayload(row.payload));
-        if (!Array.isArray(record5.evidence) || record5.evidence.some((id) => typeof id !== "string")) {
+        const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+        if (!isRecord11(parsed) || !isStringArray2(parsed.evidence)) {
           throw new Error("Invalid source metadata evidence membership.");
         }
         remove.run(table, row.id);
-        for (const id of record5.evidence) {
+        for (const id of parsed.evidence) {
           insert.run(id, table, row.id);
         }
         ready.run(table, row.id);
@@ -28617,33 +29902,43 @@ var readSourcePage = (db, source, group, offset = 0) => {
       };
     });
   }
-  if (group !== "contributions") {
-    throw new Error("Unknown source contribution group.");
-  }
   const select = collections.map(
     (table) => `SELECT '${table}' AS collection,t.id AS id,t.payload AS payload FROM ${table} t JOIN matched m ON m.collection='${table}' AND m.id=t.id`
   ).join(" UNION ALL ");
   return db.prepare(`WITH matched AS (SELECT DISTINCT collection,id FROM query_source_links WHERE evidence_id IN (SELECT value FROM json_each(?)))
     ${select} ORDER BY collection,id LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
-    const record5 = JSON.parse(decodeSqlitePayload(row.payload));
-    const address5 = record5.address ?? record5.start;
-    const label = record5.name ?? record5.text ?? record5.classification ?? record5.id;
+    const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+    if (!isRecord11(parsed) || typeof parsed.id !== "string") {
+      throw new Error("Invalid source metadata record.");
+    }
+    const addressSpace = optionalString(parsed, "addressSpace");
+    if (addressSpace === void 0) {
+      throw new Error("Invalid source metadata record.");
+    }
+    const address5 = optionalNumber(parsed, "address") ?? optionalNumber(parsed, "start");
+    const label = optionalString(parsed, "name") ?? optionalString(parsed, "text") ?? optionalString(parsed, "classification") ?? parsed.id;
     return {
-      id: `${String(row.collection)}:${record5.id}`,
+      id: `${String(row.collection)}:${parsed.id}`,
       label,
       description: String(row.collection),
-      detail: `Attributed to ${source.name}: ${record5.id}`,
-      addressSpace: record5.addressSpace,
+      detail: `Attributed to ${source.name}: ${parsed.id}`,
+      addressSpace,
       address: address5,
-      architecture: record5.architecture,
+      architecture: optionalString(parsed, "architecture"),
       outputOffsets: [],
-      recordIds: [record5.id]
+      recordIds: [parsed.id]
     };
   });
 };
 
-// ../disassembler/src/storage/sqlite-storage-policy.ts
+// packages/disassembler/src/storage/sqlite-storage-policy.ts
 import fs5 from "node:fs";
+function errorCode2(error) {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return void 0;
+}
 var DEFAULT_ANALYSIS_STORAGE_POLICY = {
   cacheMaxBytes: 256 * 1024 ** 2,
   databaseMaxBytes: 0
@@ -28653,23 +29948,33 @@ var CAPTURE_CATALOG_SCHEMA = `CREATE TABLE capture_catalog (
   imported_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL,
   observed_events INTEGER NOT NULL, dropped_events INTEGER NOT NULL DEFAULT 0
 ) WITHOUT ROWID;`;
+function isSafeInteger5(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isPolicyRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var readStoragePolicy = (db) => {
   const value = db.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
-  return validateStoragePolicy(
-    value ? JSON.parse(String(value)) : {}
-  );
+  return validateStoragePolicy(value ? JSON.parse(String(value)) : {});
 };
 var validateStoragePolicy = (value) => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (!isPolicyRecord(value)) {
     throw new Error("Storage policy must be an object containing explicit limits.");
   }
-  const policy = { ...DEFAULT_ANALYSIS_STORAGE_POLICY, ...value };
-  for (const [key3, count] of Object.entries(policy)) {
-    if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key3) || !Number.isSafeInteger(count) || count < 0) {
+  let cacheMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.cacheMaxBytes;
+  let databaseMaxBytes = DEFAULT_ANALYSIS_STORAGE_POLICY.databaseMaxBytes;
+  for (const [key3, count] of Object.entries(value)) {
+    if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key3) || !(isSafeInteger5(count) && count >= 0)) {
       throw new Error(`Invalid storage limit '${key3}'. Use nonnegative integer byte limits.`);
     }
+    if (key3 === "cacheMaxBytes") {
+      cacheMaxBytes = count;
+    } else if (key3 === "databaseMaxBytes") {
+      databaseMaxBytes = count;
+    }
   }
-  return policy;
+  return { cacheMaxBytes, databaseMaxBytes };
 };
 var storageSnapshot = (db, file) => {
   const size = Number(db.prepare("PRAGMA page_size").get().page_size);
@@ -28681,7 +29986,7 @@ var storageSnapshot = (db, file) => {
   try {
     walBytes = fs5.statSync(`${file}-wal`).size;
   } catch (error) {
-    if (error.code !== "ENOENT") {
+    if (errorCode2(error) !== "ENOENT") {
       throw error;
     }
   }
@@ -28779,10 +30084,11 @@ var maintainStorageCaches = (db) => {
   }
   const budget = readStoragePolicy(db).cacheMaxBytes;
   const evicted = retireStorageCaches(db);
-  const entries3 = CACHES.map((cache) => ({
-    ...cache,
-    bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0)
-  }));
+  const entries3 = CACHES.map(
+    (cache) => Object.assign({}, cache, {
+      bytes: cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0)
+    })
+  );
   let cacheBytes = entries3.reduce((n, cache) => n + cache.bytes, 0) + cacheTableBytes(db, "query_cache");
   for (const cache of entries3) {
     const token = db.prepare("SELECT signature FROM query_cache WHERE name=?").get(cache.key);
@@ -28810,7 +30116,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// ../disassembler/src/storage/sqlite-store.ts
+// packages/disassembler/src/storage/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 var SCHEMA2 = `
@@ -28907,6 +30213,62 @@ var analysisProjectSqlitePath = (directory, manifest) => {
   return path7.join(directory, relative2);
 };
 var parseRecord = (payload) => parseSqlitePayload(payload);
+function isByteList2(value) {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isRuntimeState2(value) {
+  return isRecord6(value) && Object.values(value).every(
+    (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
+  );
+}
+function requireTraceFact(value) {
+  if (!isRecord6(value)) {
+    throw new Error("Invalid indexed trace fact.");
+  }
+  if (value.kind === "execution" && isFiniteNumber(value.address)) {
+    return { kind: "execution", address: value.address };
+  }
+  if (value.kind === "instruction" && typeof value.identity === "string" && isFiniteNumber(value.address) && isByteList2(value.bytes) && isRuntimeState2(value.state)) {
+    return {
+      kind: "instruction",
+      identity: value.identity,
+      address: value.address,
+      bytes: value.bytes,
+      state: value.state
+    };
+  }
+  if (value.kind === "memory" && isRuntimeEvidenceRecord(value.record)) {
+    return { kind: "memory", record: value.record };
+  }
+  throw new Error("Invalid indexed trace fact.");
+}
+function isShardKind(value) {
+  return value === "analysis" || value === "annotations" || value === "labels" || value === "comments" || value === "regions" || value === "runtime" || value === "evidence" || value === "imports";
+}
+function isResearchUpdate(value) {
+  return value === "analysis" || value === "annotations" || value === "comments" || value === "evidence";
+}
+function observedImportCount(counts, key3) {
+  return Object.hasOwn(counts, key3) ? counts[key3] : void 0;
+}
+function isSafeInteger6(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isObjectRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function isIndexedExportInstruction(value, spaces, knownEvidence) {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+  const address5 = value.address;
+  const addressSpace = value.addressSpace;
+  const size = value.size;
+  const opcode = value.opcode;
+  const incomingState = value.incomingState;
+  const evidenceList = value.evidence;
+  return typeof value.id === "string" && value.id !== "" && typeof addressSpace === "string" && isSafeInteger6(address5) && address5 >= 0 && address5 < (spaces.get(addressSpace) ?? 0) && isSafeInteger6(size) && size >= 1 && isSafeInteger6(opcode) && typeof value.specificationId === "string" && typeof incomingState === "object" && incomingState !== null && Array.isArray(evidenceList) && evidenceList.every((id) => typeof id === "string" && knownEvidence.has(id));
+}
 var sqliteFileIdentity = (file) => {
   const stat2 = fs6.statSync(file, { bigint: true });
   return `${stat2.dev}:${stat2.ino}`;
@@ -29054,74 +30416,76 @@ var SqliteAnalysisStore = class {
   }
   #insertRecord(kind, value) {
     if (kind === "evidence") {
-      const record6 = value;
-      this.#insertEvidence.run(record6.id, encodeSqlitePayload(JSON.stringify(record6)));
+      const record5 = requireMetadataRecord(kind, value);
+      this.#insertEvidence.run(record5.id, encodeSqlitePayload(JSON.stringify(record5)));
       return;
     }
     if (kind === "labels") {
-      const record6 = value;
+      const record5 = requireMetadataRecord(kind, value);
       this.#insertLabel.run(
-        record6.id,
-        record6.addressSpace,
-        record6.address,
-        record6.name,
-        encodeSqlitePayload(JSON.stringify(record6))
+        record5.id,
+        record5.addressSpace,
+        record5.address,
+        record5.name,
+        encodeSqlitePayload(JSON.stringify(record5))
       );
       return;
     }
     if (kind === "comments") {
-      const record6 = value;
+      const record5 = requireMetadataRecord(kind, value);
       this.#insertComment.run(
-        record6.id,
-        record6.addressSpace,
-        record6.address,
-        encodeSqlitePayload(JSON.stringify(record6))
+        record5.id,
+        record5.addressSpace,
+        record5.address,
+        encodeSqlitePayload(JSON.stringify(record5))
       );
       return;
     }
     if (kind === "regions") {
-      const record6 = value;
+      const record5 = requireMetadataRecord(kind, value);
       this.#insertRegion.run(
-        record6.id,
-        record6.addressSpace,
-        record6.start,
-        record6.end,
-        encodeSqlitePayload(JSON.stringify(record6))
+        record5.id,
+        record5.addressSpace,
+        record5.start,
+        record5.end,
+        encodeSqlitePayload(JSON.stringify(record5))
       );
       return;
     }
     if (kind === "annotations") {
-      const record6 = value;
+      const record5 = requireMetadataRecord(kind, value);
       this.#insertAnnotation.run(
-        record6.id,
-        record6.addressSpace,
-        record6.start,
-        record6.end,
-        record6.classification,
-        encodeSqlitePayload(JSON.stringify(record6))
+        record5.id,
+        record5.addressSpace,
+        record5.start,
+        record5.end,
+        record5.classification,
+        encodeSqlitePayload(JSON.stringify(record5))
       );
       return;
     }
     if (kind === "analysis") {
-      const record6 = value;
-      const located = analysisAddress(record6);
+      const record5 = requireMetadataRecord(kind, value);
+      const located = analysisAddress(record5);
       this.#insertAnalysis.run(
-        record6.id,
-        record6.kind,
+        record5.id,
+        record5.kind,
         located.addressSpace,
         located.address,
-        encodeSqlitePayload(JSON.stringify(record6))
+        encodeSqlitePayload(JSON.stringify(record5))
       );
       return;
     }
     if (kind === "imports") {
-      const record6 = value;
-      this.#insertImport.run(record6.id, encodeSqlitePayload(JSON.stringify(record6)));
-      this.recordCaptureReceipt(record6);
+      const record5 = requireMetadataRecord(kind, value);
+      this.#insertImport.run(record5.id, encodeSqlitePayload(JSON.stringify(record5)));
+      this.recordCaptureReceipt(record5);
       return;
     }
-    const record5 = value;
-    this.#runtimeWriter.insert(record5, (table, value2) => this.#intern(table, value2));
+    if (!isRuntimeEvidenceRecord(value)) {
+      throw new Error("Invalid stored runtime record.");
+    }
+    this.#runtimeWriter.insert(value, (table, entry) => this.#intern(table, entry));
   }
   /**
    * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
@@ -29234,7 +30598,7 @@ var SqliteAnalysisStore = class {
         flush();
         for (const row of values.iterate()) {
           yield {
-            fact: parseRecord(row.payload),
+            fact: requireTraceFact(parseRecord(row.payload)),
             count: Number(row.count)
           };
         }
@@ -29391,10 +30755,11 @@ var SqliteAnalysisStore = class {
     }
     this.suspendResearchInputs();
     const projected = {};
-    for (const collection of Object.keys(updates)) {
-      if (!["analysis", "annotations", "comments", "evidence"].includes(collection)) {
+    for (const key3 of Object.keys(updates)) {
+      if (!isResearchUpdate(key3)) {
         throw new Error("Analysis may only replace derived metadata collections.");
       }
+      const collection = key3;
       const protectedIds = new Set(
         snapshot.decisions.filter((decision) => decision.collection === collection).map((decision) => decision.id)
       );
@@ -29410,11 +30775,21 @@ var SqliteAnalysisStore = class {
       for (const id of protectedIds) {
         const row = find.get(id);
         if (row) {
-          records2.push(
-            JSON.parse(
-              decodeSqlitePayload(row.payload)
-            )
-          );
+          const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+          switch (collection) {
+            case "analysis":
+              records2.push(requireMetadataRecord(collection, parsed));
+              break;
+            case "annotations":
+              records2.push(requireMetadataRecord(collection, parsed));
+              break;
+            case "comments":
+              records2.push(requireMetadataRecord(collection, parsed));
+              break;
+            case "evidence":
+              records2.push(requireMetadataRecord(collection, parsed));
+              break;
+          }
         }
       }
       this.replaceTables({ [collection]: records2 });
@@ -29447,10 +30822,11 @@ var SqliteAnalysisStore = class {
       "evidence",
       "imports"
     ]);
-    for (const kind of Object.keys(shards)) {
-      if (!tables.has(kind)) {
-        throw new Error(`Unknown analysis table '${kind}'.`);
+    for (const key3 of Object.keys(shards)) {
+      if (!isShardKind(key3) || !tables.has(key3)) {
+        throw new Error(`Unknown analysis table '${key3}'.`);
       }
+      const kind = key3;
       if (kind === "runtime") {
         this.#replaceRuntime(shards.runtime ?? []);
         continue;
@@ -29670,7 +31046,12 @@ var SqliteAnalysisStore = class {
     if (!row) {
       throw new Error("Sqlite analysis project is missing its stored manifest.");
     }
-    return { ...parseRecord(row.v), revision: this.revision() };
+    const parsed = parseRecord(row.v);
+    if (!isRecord6(parsed)) {
+      throw new Error("Sqlite analysis project is missing its stored manifest.");
+    }
+    validateAnalysisProjectManifest(parsed);
+    return { ...parsed, revision: this.revision() };
   }
   /**
    * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
@@ -29702,11 +31083,6 @@ var SqliteAnalysisStore = class {
       }
     }
   }
-  /**
-   * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
-   * @param {string} kind Metadata table name from the semantic collection contract.
-   * @returns {Array} Decoded metadata in deterministic display order.
-   */
   loadTable(kind) {
     const order = {
       labels: "address_space, address, id",
@@ -29722,7 +31098,7 @@ var SqliteAnalysisStore = class {
     }
     const records2 = [];
     for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`).iterate()) {
-      records2.push(parseRecord(row.payload));
+      records2.push(requireMetadataRecord(kind, parseRecord(row.payload)));
     }
     return records2;
   }
@@ -29750,7 +31126,7 @@ var SqliteAnalysisStore = class {
       runtime: []
     };
     const ids = JSON.stringify((batch.analysis ?? []).map((record5) => record5.id));
-    const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => parseRecord(row.payload));
+    const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
     const before = { ...base, analysis };
     const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
     this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
@@ -29852,7 +31228,7 @@ var SqliteAnalysisStore = class {
         const sql = ids ? `SELECT payload FROM ${kind} WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 200` : `SELECT payload FROM ${kind} ORDER BY id LIMIT 200`;
         const parameters = ids ? [JSON.stringify(ids)] : [];
         for (const row of this.#database.prepare(sql).iterate(...parameters)) {
-          records2.push(parseRecord(row.payload));
+          records2.push(requireMetadataRecord(kind, parseRecord(row.payload)));
         }
       }
       Object.assign(shards, { [kind]: records2 });
@@ -29919,7 +31295,7 @@ var SqliteAnalysisStore = class {
       const runtime = "SELECT 'runtime:'||p.value||CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END AS reference FROM runtime_evidence e JOIN runtime r ON r.evidence_id=e.id JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?)))";
       const metadataRows = this.#database.prepare(`${metadata} ORDER BY reference LIMIT 200`).all(evidenceIds);
       const runtimeRows = this.#database.prepare(`${runtime} ORDER BY r.prefix_id,r.id LIMIT 200`).all(evidenceIds);
-      const referencedBy = [...metadataRows, ...runtimeRows].map((row) => String(row.reference)).sort((a, b) => a.localeCompare(b)).slice(0, 200);
+      const referencedBy = [...metadataRows, ...runtimeRows].map((row) => String(row.reference)).toSorted((a, b) => a.localeCompare(b)).slice(0, 200);
       const metadataCount = Number(
         this.#database.prepare(`SELECT count(*) AS n FROM (${metadata})`).get(evidenceIds).n
       );
@@ -29946,7 +31322,13 @@ var SqliteAnalysisStore = class {
         coverageSignature(this.manifest()),
         ["analysis", "annotations", "regions", "runtime"],
         () => prepareCoverage(this.#database, this.manifest()),
-        () => publishCoverage(this.#database)
+        () => publishCoverage(this.#database),
+        (value) => {
+          if (!isSqliteCoverageSummary(value)) {
+            throw new Error("Project changed while building coverage. Refresh the view.");
+          }
+          return value;
+        }
       );
       const published = cachedCoverage(this.#database, this.manifest());
       if (!published) {
@@ -29980,10 +31362,16 @@ var SqliteAnalysisStore = class {
         "3",
         ["analysis"],
         () => prepareGraph(this.#database),
-        () => publishGraph(this.#database)
+        () => publishGraph(this.#database),
+        (value) => {
+          if (!isCallGraph(value)) {
+            throw new Error("Analysis changed while building the graph. Refresh the view.");
+          }
+          return value;
+        }
       );
       const published = readQueryCache(this.#database, "graph", "3");
-      if (!published) {
+      if (!isCallGraph(published)) {
         throw new Error("Analysis changed while building the graph. Refresh the view.");
       }
       graph = published;
@@ -29995,10 +31383,13 @@ var SqliteAnalysisStore = class {
     const labels = this.loadTable("labels");
     return {
       ...graph,
-      functions: graph.functions.map((fn) => ({
-        ...fn,
-        labels: labels.filter((label) => label.addressSpace === fn.addressSpace && label.address === fn.address).map(({ id, name }) => ({ id, name })).sort((a, b) => a.id.localeCompare(b.id))
-      }))
+      functions: graph.functions.map(
+        (fn) => Object.assign({}, fn, {
+          labels: labels.filter(
+            (label) => label.addressSpace === fn.addressSpace && label.address === fn.address
+          ).map(({ id, name }) => ({ id, name })).toSorted((a, b) => a.id.localeCompare(b.id))
+        })
+      )
     };
   }
   /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
@@ -30011,10 +31402,13 @@ var SqliteAnalysisStore = class {
    * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
    * @returns {T} Current projected value.
    */
-  cachedProjection(key3, signature, dependencies, compute2, publish2) {
+  cachedProjection(key3, signature, dependencies, compute2, publish2, restore) {
     const cached = readQueryCache(this.#database, key3, signature);
     if (cached !== void 0) {
-      return cached;
+      if (!restore) {
+        throw new Error(`Query cache '${key3}' requires a restore function.`);
+      }
+      return restore(cached);
     }
     const pending = `pending:${randomUUID3()}`;
     this.transaction(() => {
@@ -30044,11 +31438,13 @@ var SqliteAnalysisStore = class {
     }
     const before = this.#database.prepare(
       `SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address<? ${matches} ORDER BY address DESC,id DESC LIMIT 4`
-    ).all(...parameters).reverse();
+    ).all(...parameters).toReversed();
     const after = this.#database.prepare(
       `SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address>=? ${matches} ORDER BY address,id LIMIT ?`
     ).all(...parameters, 32 - before.length);
-    return [...before, ...after].map((row) => parseRecord(row.payload));
+    return [...before, ...after].map(
+      (row) => requireMetadataRecord("analysis", parseRecord(row.payload))
+    );
   }
   /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
    * @returns {Array} Half-open ROM-content intervals.
@@ -30112,19 +31508,23 @@ var SqliteAnalysisStore = class {
       const address5 = Number(row.address);
       const seed = seeds.get(address5) ?? { count: 0, evidence: /* @__PURE__ */ new Set() };
       seed.count += Number(row.count);
-      for (const id of JSON.parse(String(row.evidence))) {
+      const parsedEvidence = JSON.parse(String(row.evidence));
+      if (!isStringArray(parsedEvidence)) {
+        throw new Error("Invalid runtime evidence list.");
+      }
+      for (const id of parsedEvidence) {
         seed.evidence.add(id);
       }
       seeds.set(address5, seed);
     }
-    return [...seeds].sort(([a], [b]) => a - b).map(([address5, seed]) => ({
+    return [...seeds].toSorted(([a], [b]) => a - b).map(([address5, seed]) => ({
       id: `query:execution:${address5}`,
       kind: "runtime-execution",
       architecture,
       addressSpace: space,
       address: address5,
       count: seed.count,
-      evidence: [...seed.evidence].sort()
+      evidence: [...seed.evidence].toSorted()
     }));
   }
   /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
@@ -30245,8 +31645,8 @@ var SqliteAnalysisStore = class {
         yield group;
         group = [];
       }
-      const record5 = parseRecord(row.data);
-      if (typeof record5.id !== "string" || !record5.id || !Number.isSafeInteger(record5.address) || record5.address < 0 || record5.address >= (spaces.get(record5.addressSpace) ?? 0) || !Number.isSafeInteger(record5.size) || record5.size < 1 || !Number.isSafeInteger(record5.opcode) || typeof record5.specificationId !== "string" || !record5.incomingState || typeof record5.incomingState !== "object" || !Array.isArray(record5.evidence) || record5.evidence.some((id) => typeof id !== "string" || !evidence.has(id))) {
+      const record5 = parseSqlitePayload(row.data);
+      if (!isIndexedExportInstruction(record5, spaces, evidence)) {
         throw new Error("Invalid indexed export instruction or missing provenance.");
       }
       group.push(record5);
@@ -30288,7 +31688,7 @@ var SqliteAnalysisStore = class {
     for (const row of this.#database.prepare(
       `SELECT payload FROM analysis WHERE kind IN (${kinds.map(() => "?").join(",")}) ORDER BY id`
     ).iterate(...kinds)) {
-      records2.push(parseRecord(row.payload));
+      records2.push(requireMetadataRecord("analysis", parseRecord(row.payload)));
     }
     return records2;
   }
@@ -30305,7 +31705,7 @@ var SqliteAnalysisStore = class {
       SELECT MIN(rowid) FROM analysis WHERE kind='cfg-node' AND address_space=? AND address=? GROUP BY address_space,address
       UNION SELECT MIN(rowid) FROM analysis INDEXED BY query_instruction_output
       WHERE kind='cfg-node' AND query_file_offset=? GROUP BY address_space,address)`).all(addressSpace, address5, outputOffset ?? null);
-    return rows.map((row) => parseRecord(row.payload));
+    return rows.map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
   }
   /**
    * Materialize complete record arrays without semantic validation. Run inside a read transaction.
@@ -30321,7 +31721,7 @@ var SqliteAnalysisStore = class {
       annotations: this.loadTable("annotations"),
       analysis: this.loadTable("analysis"),
       imports: this.loadTable("imports"),
-      runtime: runtime ? [...this.runtimeRecords()].sort(compareRuntimeRecordIds) : []
+      runtime: runtime ? [...this.runtimeRecords()].toSorted(compareRuntimeRecordIds) : []
     };
   }
   /**
@@ -30466,7 +31866,7 @@ var SqliteAnalysisStore = class {
       report2.sourceName,
       now,
       now,
-      report2.imported.busEvents ?? report2.imported.executionEvents ?? 0,
+      observedImportCount(report2.imported, "busEvents") ?? observedImportCount(report2.imported, "executionEvents") ?? 0,
       report2.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0
     );
   }
@@ -30490,24 +31890,27 @@ var SqliteAnalysisStore = class {
   }
 };
 
-// ../disassembler/src/project/project-store.ts
+// packages/disassembler/src/project/project-store.ts
 import * as fs7 from "node:fs";
 import path8 from "node:path";
+function isUntrustedManifest(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var parseAnalysisProjectManifest = (input) => {
-  if (!input || typeof input !== "object") {
+  if (!isUntrustedManifest(input)) {
     throw new Error("Invalid analysis project manifest.");
   }
-  const manifest = input;
-  if (manifest.schemaVersion > 3) {
+  const schemaVersion = input.schemaVersion;
+  if (typeof schemaVersion === "number" && schemaVersion > 3) {
     throw new Error(
-      `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
+      `Analysis project schema ${schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
     );
   }
-  validateAnalysisProjectManifest(manifest);
-  if (manifest.db !== "analysis.sqlite") {
+  validateAnalysisProjectManifest(input);
+  if (input.db !== "analysis.sqlite") {
     throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
   }
-  return manifest;
+  return input;
 };
 var openAnalysisProjectStore = (directory) => {
   const manifest = parseAnalysisProjectManifest(
@@ -30572,7 +31975,7 @@ var validateAnalysisProject = (directory, rom) => {
   return project;
 };
 
-// ../disassembler/src/project/project-transaction.ts
+// packages/disassembler/src/project/project-transaction.ts
 init_canonical_json();
 import { createHash as createHash7 } from "node:crypto";
 import * as fs8 from "node:fs";
@@ -30677,15 +32080,18 @@ var compactAnalysisProject = (directory) => {
   }
 };
 
-// ../disassembler/src/runtime/capture-instruction-source.ts
+// packages/disassembler/src/runtime/capture-instruction-source.ts
 init_canonical_json();
 import { open as open3 } from "node:fs/promises";
 
-// ../disassembler/src/runtime/capture-companion.ts
+// packages/disassembler/src/runtime/capture-companion.ts
 init_canonical_json();
 init_src();
 import { lstat as lstat3, readFile as readFile2 } from "node:fs/promises";
 import path12 from "node:path";
+function isRecord19(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   const directory = `${file}.context`;
   const stat2 = await lstat3(directory).catch((error) => {
@@ -30706,21 +32112,28 @@ async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   }
   const before = await readFile2(manifestFile, "utf8");
   const manifest = JSON.parse(before);
-  if (!recovery.complete || manifest.archive !== path12.basename(file) || manifest.scope !== recovery.header.scope || manifest.boundaries?.session !== recovery.header.session || manifest.boundaries.end?.eventThrough !== recovery.eventThrough) {
+  if (!isRecord19(manifest)) {
+    throw new Error(
+      "Capture companion does not match this archive's scope, session, or final event boundary."
+    );
+  }
+  const boundaries = isRecord19(manifest.boundaries) ? manifest.boundaries : void 0;
+  const end = boundaries && isRecord19(boundaries.end) ? boundaries.end : void 0;
+  if (!recovery.complete || manifest.archive !== path12.basename(file) || manifest.scope !== recovery.header.scope || boundaries?.session !== recovery.header.session || end?.eventThrough !== recovery.eventThrough) {
     throw new Error(
       "Capture companion does not match this archive's scope, session, or final event boundary."
     );
   }
   await verifyCaptureContext(directory, recovery.header, signal);
-  const boundaries = JSON.parse(
+  const boundaryArtifact = JSON.parse(
     await readFile2(path12.join(directory, "boundaries.json"), "utf8")
   );
-  if (!canonicalEquals(boundaries, manifest.boundaries) || await readFile2(manifestFile, "utf8") !== before) {
+  if (!canonicalEquals(boundaryArtifact, manifest.boundaries) || await readFile2(manifestFile, "utf8") !== before) {
     throw new Error("Capture companion changed or its manifest and boundary artifact disagree.");
   }
 }
 
-// ../disassembler/src/runtime/capture-instruction-source.ts
+// packages/disassembler/src/runtime/capture-instruction-source.ts
 var createRuntimeCaptureSource = async (file, options = {}) => {
   options.signal?.throwIfAborted();
   const handle = await open3(file, "r");
@@ -30788,7 +32201,7 @@ var createRuntimeCaptureSource = async (file, options = {}) => {
   };
 };
 
-// ../disassembler/src/project/runtime-trace-project.ts
+// packages/disassembler/src/project/runtime-trace-project.ts
 var importRuntimeTraceIntoProject = async (file, directory, context, options = {}) => {
   const source = await createRuntimeCaptureSource(file, options);
   return importRuntimeTraceSourceIntoProject(source, directory, context, options);
@@ -30819,7 +32232,7 @@ var importRuntimeTraceSourceIntoProject = async (source, directory, context, opt
     options.onStage?.("Indexing trace facts in SQLite\u2026");
     options.signal?.throwIfAborted();
     const importer = await store.indexTrace(async (index) => {
-      const importer2 = createRuntimeInstructionTraceImporter(source.metadata, context, {
+      const traceImporter = createRuntimeInstructionTraceImporter(source.metadata, context, {
         index,
         onMergeProgress: options.onMergeProgress,
         onSource: (sha2564, profile) => {
@@ -30857,9 +32270,9 @@ var importRuntimeTraceSourceIntoProject = async (source, directory, context, opt
       });
       await source.read((chunk) => {
         options.signal?.throwIfAborted();
-        importer2.push(chunk);
+        traceImporter.push(chunk);
       });
-      return importer2;
+      return traceImporter;
     });
     options.onStage?.("Validating destination revision before publication\u2026");
     options.signal?.throwIfAborted();
@@ -30914,7 +32327,7 @@ var importRuntimeTraceSourceIntoProject = async (source, directory, context, opt
         sourceSha256: imported.sourceSha256,
         observedEvents: imported.observedEvents,
         droppedEvents: imported.droppedEvents,
-        execution: execution.sort((a, b) => a.address - b.address),
+        execution: execution.toSorted((a, b) => a.address - b.address),
         changed,
         added: { runtime: addedRuntime, evidence: merged.added.evidence }
       };
@@ -30956,7 +32369,7 @@ var importRuntimeTraceSourceIntoProject = async (source, directory, context, opt
   }
 };
 
-// ../disassembler/src/project/runtime-bus-project.ts
+// packages/disassembler/src/project/runtime-bus-project.ts
 import fs9 from "node:fs";
 var captureFileIdentity = (file) => {
   const stat2 = fs9.statSync(file, { bigint: true });
@@ -30984,7 +32397,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
     let insert;
     options.onStage?.("Indexing CPU/DMA/HDMA bus facts in SQLite\u2026");
     const importer = await store.indexTrace(async (index) => {
-      const importer2 = createRuntimeBusTraceImporter(source.metadata, context, {
+      const traceImporter = createRuntimeBusTraceImporter(source.metadata, context, {
         index,
         // finish() calls onSource before onRecord inside the publication transaction,
         // after the entire source validates. This keeps the one-time namespace
@@ -31012,12 +32425,12 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
       });
       await source.read((chunk) => {
         options.signal?.throwIfAborted();
-        importer2.push(chunk);
+        traceImporter.push(chunk);
       });
       if (source.completedFile) {
         completedFileIdentity = captureFileIdentity(source.completedFile);
       }
-      return importer2;
+      return traceImporter;
     }, context.cacheMetrics?.index);
     options.onStage?.("Publishing validated bus activity\u2026");
     options.signal?.throwIfAborted();
@@ -31113,13 +32526,13 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   }
 };
 
-// ../disassembler/src/source/source-export.ts
+// packages/disassembler/src/source/source-export.ts
 import { createHash as createHash9 } from "node:crypto";
 var SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
 var SOURCE_EXPORT_SCHEMA_VERSION = 1;
 var sourceExportSha256 = (value) => createHash9("sha256").update(value).digest("hex");
 
-// ../disassembler/src/source-project/git.ts
+// packages/disassembler/src/source-project/git.ts
 import { spawn as spawn2 } from "node:child_process";
 import fs10 from "node:fs";
 import path13 from "node:path";
@@ -31148,7 +32561,7 @@ function sourceGit(root, args, options = {}) {
   if (options.indexFile) {
     env.GIT_INDEX_FILE = options.indexFile;
   }
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject2) => {
     const child = spawn2("git", [...args], {
       cwd: root,
       env,
@@ -31180,7 +32593,7 @@ function sourceGit(root, args, options = {}) {
     });
     child.on("close", (code) => {
       if (failure) {
-        reject(failure);
+        reject2(failure);
         return;
       }
       const result = {
@@ -31189,7 +32602,7 @@ function sourceGit(root, args, options = {}) {
         stderr: Buffer.concat(stderr)
       };
       if (!(options.acceptedCodes ?? [0]).includes(result.code)) {
-        reject(new SourceGitError(args, result));
+        reject2(new SourceGitError(args, result));
       } else {
         resolve(result);
       }
@@ -31242,15 +32655,18 @@ function assertSourceObjectId(value) {
   }
 }
 
-// ../disassembler/src/source-project/generation.ts
+// packages/disassembler/src/source-project/generation.ts
 init_canonical_json();
 import fs13 from "node:fs";
 import path16 from "node:path";
 
-// ../disassembler/src/source-project/pins.ts
+// packages/disassembler/src/source-project/pins.ts
 import { createHash as createHash10 } from "node:crypto";
 import fs11 from "node:fs";
 import path14 from "node:path";
+function isRecord20(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var ownerId = (gitDirectory) => createHash10("sha256").update(gitDirectory).digest("hex").slice(0, 24);
 async function registry(repository) {
   const common = (await sourceGit(repository.root, ["rev-parse", "--path-format=absolute", "--git-common-dir"])).stdout.toString().replace(/\n$/, "");
@@ -31284,7 +32700,7 @@ function retiredOwnerFile(common, directory, id) {
     throw new Error("Unknown owner");
   }
   const owner = JSON.parse(fs11.readFileSync(file, "utf8"));
-  if (owner.format !== "uttori-source-pin-owner-v1" || typeof owner.gitDirectory !== "string" || ownerId(owner.gitDirectory) !== id || path14.dirname(owner.gitDirectory) !== path14.join(common, "worktrees") || fs11.existsSync(owner.gitDirectory)) {
+  if (!isRecord20(owner) || owner.format !== "uttori-source-pin-owner-v1" || typeof owner.gitDirectory !== "string" || ownerId(owner.gitDirectory) !== id || path14.dirname(owner.gitDirectory) !== path14.join(common, "worktrees") || fs11.existsSync(owner.gitDirectory)) {
     throw new Error("Owner still exists or cannot be proven removed");
   }
   return file;
@@ -31333,10 +32749,13 @@ async function pruneSourcePins(repository) {
   }
 }
 
-// ../disassembler/src/source-project/scratch.ts
+// packages/disassembler/src/source-project/scratch.ts
 import { randomUUID as randomUUID4 } from "node:crypto";
 import fs12 from "node:fs";
 import path15 from "node:path";
+function isRecord21(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 var uuidPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 function removeScratch(directory, lease) {
   for (const entry of fs12.readdirSync(directory)) {
@@ -31373,7 +32792,7 @@ function pruneScratch(directory) {
         throw new Error("Unrecognized scratch owner");
       }
       const owner = JSON.parse(fs12.readFileSync(marker, "utf8"));
-      if (owner.format !== "uttori-source-scratch-v1" || owner.id !== entry.name || !["generation", "preview", "prepare"].includes(owner.purpose ?? "")) {
+      if (!isRecord21(owner) || owner.format !== "uttori-source-scratch-v1" || owner.id !== entry.name || owner.purpose !== "generation" && owner.purpose !== "preview" && owner.purpose !== "prepare") {
         throw new Error("Unrecognized scratch owner");
       }
       const lease = acquireFileLease(path15.join(root, "active.lock"));
@@ -31439,8 +32858,11 @@ function createSourceScratch(repository, purpose) {
   }
 }
 
-// ../disassembler/src/source-project/generation.ts
+// packages/disassembler/src/source-project/generation.ts
 var SOURCE_GENERATION_FILE = ".uttori/generation.json";
+function isGenerationFileMode(value) {
+  return value === "100644" || value === "100755";
+}
 async function verifySourceGeneration(repository, commit) {
   const descriptor2 = await generationAt(repository, commit);
   const listing = await sourceGit(repository.root, ["ls-tree", "-r", "-z", commit]);
@@ -31449,11 +32871,11 @@ async function verifySourceGeneration(repository, commit) {
     const [mode3, type, blob] = line.slice(0, tab).split(" ");
     const name = line.slice(tab + 1);
     assertSourcePath(name);
-    if (type !== "blob" || mode3 !== "100644" && mode3 !== "100755") {
+    if (type !== "blob" || !isGenerationFileMode(mode3)) {
       throw new Error("Pure generations contain regular files only.");
     }
     return { path: name, mode: mode3, blob };
-  }).filter((entry) => entry.path !== SOURCE_GENERATION_FILE).sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
+  }).filter((entry) => entry.path !== SOURCE_GENERATION_FILE).toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
   const files = [];
   for (let start = 0; start < entries3.length; start += 32) {
     const batch = entries3.slice(start, start + 32);
@@ -31470,13 +32892,12 @@ async function verifySourceGeneration(repository, commit) {
       }
       files.push({
         ...entry,
-        mode: entry.mode,
         sha256: sourceContentHash(result.stdout.subarray(end + 1, end + 1 + size))
       });
       cursor = end + size + 2;
     }
   }
-  const hash = sourceContentHash(
+  const hash2 = sourceContentHash(
     canonicalJson(
       files.map((entry) => ({
         path: entry.path,
@@ -31485,7 +32906,7 @@ async function verifySourceGeneration(repository, commit) {
       }))
     )
   );
-  if (hash !== descriptor2.payloadSha256) {
+  if (hash2 !== descriptor2.payloadSha256) {
     throw new Error(
       "Pure generation payload differs from its descriptor. Do not use edited source as a generation parent."
     );
@@ -31532,30 +32953,36 @@ async function pinSourceCandidate(repository, commit, signal) {
     lease.release();
   }
 }
+function isRecord22(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSha256(value) {
+  return typeof value === "string" && /^[\da-f]{64}$/.test(value);
+}
+function isGenerationInputs(value) {
+  if (!isRecord22(value)) {
+    return false;
+  }
+  return typeof value.project === "string" && /^[\w.-]+$/.test(value.project) && isSha256(value.romSha256) && isSha256(value.evidenceSha256) && isSha256(value.researchSha256) && isSha256(value.toolchainSha256) && isSha256(value.optionsSha256) && (value.captureCatalogSha256 === void 0 || isSha256(value.captureCatalogSha256));
+}
 function parseSourceGeneration(value) {
-  const descriptor2 = value;
-  const inputs = descriptor2?.inputs;
-  if (descriptor2?.format !== "uttori-source-generation" || !inputs || typeof inputs.project !== "string" || !/^[\w.-]+$/.test(inputs.project)) {
+  if (!isRecord22(value)) {
     throw new Error("Invalid source generation descriptor.");
   }
-  for (const hash of [
-    inputs.romSha256,
-    inputs.evidenceSha256,
-    inputs.researchSha256,
-    inputs.toolchainSha256,
-    inputs.optionsSha256,
-    descriptor2.payloadSha256,
-    descriptor2.id,
-    ...inputs.captureCatalogSha256 === void 0 ? [] : [inputs.captureCatalogSha256]
-  ]) {
-    if (typeof hash !== "string" || !/^[\da-f]{64}$/.test(hash)) {
-      throw new Error("Invalid source generation content identity.");
-    }
+  const inputs = value.inputs;
+  const project = isRecord22(inputs) ? inputs.project : void 0;
+  if (value.format !== "uttori-source-generation" || !isRecord22(inputs) || typeof project !== "string" || !/^[\w.-]+$/.test(project)) {
+    throw new Error("Invalid source generation descriptor.");
   }
-  if (sourceContentHash(canonicalJson({ inputs, payloadSha256: descriptor2.payloadSha256 })) !== descriptor2.id) {
+  const payloadSha256 = value.payloadSha256;
+  const id = value.id;
+  if (!isGenerationInputs(inputs) || !isSha256(payloadSha256) || !isSha256(id)) {
+    throw new Error("Invalid source generation content identity.");
+  }
+  if (sourceContentHash(canonicalJson({ inputs, payloadSha256 })) !== id) {
     throw new Error("Source generation descriptor identity mismatch.");
   }
-  return descriptor2;
+  return { format: "uttori-source-generation", inputs, payloadSha256, id };
 }
 async function generationAt(repository, commit) {
   assertSourceObjectId(commit);
@@ -31571,7 +32998,7 @@ async function retainSourceGeneration(repository, options) {
     }
   }
   const names = /* @__PURE__ */ new Set();
-  const files = [...options.files].sort(
+  const files = [...options.files].toSorted(
     (a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))
   );
   for (const file of files) {
@@ -31704,14 +33131,14 @@ async function acceptedSourceGeneration(repository, sourceCommit) {
   );
 }
 
-// ../disassembler/src/source-project/input-snapshot.ts
+// packages/disassembler/src/source-project/input-snapshot.ts
 init_canonical_json();
 var SOURCE_INPUT_SNAPSHOT_FILE = ".uttori/generation-snapshot.json";
 var MAX_INPUT_BYTES = 40 * 1024 * 1024;
 function createSourceInputSnapshot(files) {
   const paths = /* @__PURE__ */ new Set();
   let size = 0;
-  const entries3 = [...files].sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))).map((file) => {
+  const entries3 = [...files].toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))).map((file) => {
     assertSourcePath(file.path);
     const identity2 = file.path.normalize("NFC").toLowerCase();
     size += file.bytes.length;
@@ -31739,7 +33166,7 @@ function createSourceInputSnapshot(files) {
   };
 }
 
-// ../disassembler/src/source-project/merge.ts
+// packages/disassembler/src/source-project/merge.ts
 init_canonical_json();
 import { randomUUID as randomUUID5 } from "node:crypto";
 import fs14 from "node:fs";
@@ -31751,13 +33178,39 @@ function readJournal(repository) {
     return void 0;
   }
   const value = JSON.parse(fs14.readFileSync(file, "utf8"));
-  if (value.format !== "uttori-source-merge" || !["adopt", "regenerate"].includes(value.kind) || !/^refs\/heads\//.test(value.branch) || !/^refs\/uttori\/candidates\/[\w-]+$/.test(value.candidateRef)) {
+  if (!isJournalRecord(value)) {
     throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
   }
-  assertSourceObjectId(value.before);
-  assertSourceObjectId(value.candidate);
-  if (value.validatedTree) {
-    assertSourceObjectId(value.validatedTree);
+  const before = value.before;
+  const candidate = value.candidate;
+  const validatedTree = value.validatedTree;
+  if (!isMergeJournal(value)) {
+    throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
+  }
+  assertSourceObjectId(gitObjectId(before));
+  assertSourceObjectId(gitObjectId(candidate));
+  if (validatedTree) {
+    assertSourceObjectId(gitObjectId(validatedTree));
+  }
+  return value;
+}
+function isJournalRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isMergeKind(value) {
+  return value === "adopt" || value === "regenerate";
+}
+function isMergeJournal(value) {
+  if (!isJournalRecord(value)) {
+    return false;
+  }
+  const branch = value.branch;
+  const candidateRef = value.candidateRef;
+  return value.format === "uttori-source-merge" && isMergeKind(value.kind) && typeof branch === "string" && branch.startsWith("refs/heads/") && typeof candidateRef === "string" && /^refs\/uttori\/candidates\/[\w-]+$/.test(candidateRef);
+}
+function gitObjectId(value) {
+  if (typeof value !== "string") {
+    throw new Error("Expected a complete Git object ID.");
   }
   return value;
 }
@@ -31931,14 +33384,14 @@ async function applySourceGeneration(repository, generation, preview) {
       throw new Error("Regeneration preview is stale. Preview the current checkpoint again.");
     }
     if (generation.commit === preview.base) {
-      return sourceMergeStatus(repository);
+      return await sourceMergeStatus(repository);
     }
     await previewSourceGeneration(repository, generation.commit);
     await beginJournal(repository, generation, "regenerate");
     await sourceGit(repository.root, ["merge", "--no-ff", "--no-commit", generation.commit], {
       acceptedCodes: [0, 1]
     });
-    return sourceMergeStatus(repository);
+    return await sourceMergeStatus(repository);
   } finally {
     lease.release();
   }
@@ -32063,47 +33516,65 @@ async function abortSourceGeneration(repository) {
       throw new Error("There is no matching regeneration merge to abort.");
     }
     await sourceGit(repository.root, ["merge", "--abort"]);
-    return sourceMergeStatus(repository);
+    return await sourceMergeStatus(repository);
   } finally {
     lease.release();
   }
 }
 
-// ../disassembler/src/source-project/project.ts
+// packages/disassembler/src/source-project/project.ts
 init_canonical_json();
 import fs15 from "node:fs";
 import path18 from "node:path";
-var isArray5 = (value) => Array.isArray(value);
-function parseSourceProject(value) {
-  const config = value;
-  if (!config || config.format !== "uttori-source-project" || config.version !== 1 || typeof config.id !== "string" || !/^[\w.-]+$/.test(config.id) || typeof config.target !== "string" || !config.target || typeof config.romSha256 !== "string" || !/^[\da-f]{64}$/.test(config.romSha256) || !isArray5(config.sourceRoots) || !config.sourceRoots.length || !isArray5(config.researchRoots) || !config.researchRoots.length) {
+function isUnknownArray5(value) {
+  return Array.isArray(value);
+}
+function isRecord23(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSafeInteger7(value) {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+function assertSourceProjectConfiguration(value) {
+  if (!isRecord23(value)) {
+    throw new Error("Invalid Git source project configuration.");
+  }
+  const id = value.id;
+  const target = value.target;
+  const romSha256 = value.romSha256;
+  const sourceRoots = value.sourceRoots;
+  const researchRoots = value.researchRoots;
+  if (value.format !== "uttori-source-project" || value.version !== 1 || typeof id !== "string" || !/^[\w.-]+$/.test(id) || typeof target !== "string" || target === "" || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray5(sourceRoots) || sourceRoots.length === 0 || !isUnknownArray5(researchRoots) || researchRoots.length === 0) {
     throw new Error("Invalid Git source project configuration.");
   }
   for (const name of [
-    ...config.sourceRoots,
-    ...config.researchRoots,
-    config.buildConfig,
-    config.layout,
-    config.captures
+    ...sourceRoots,
+    ...researchRoots,
+    value.buildConfig,
+    value.layout,
+    value.captures
   ]) {
     if (typeof name !== "string") {
       throw new Error("Source project paths must be strings.");
     }
     assertSourcePath(name);
   }
-  if (config.limits !== void 0) {
-    if (!config.limits || typeof config.limits !== "object" || Array.isArray(config.limits)) {
+  if (value.limits !== void 0) {
+    if (!isRecord23(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
-    for (const [name, limit] of Object.entries(config.limits)) {
-      if (!["captureBytes", "analysisWorkItems", "analysisCallDepth"].includes(name) || !Number.isSafeInteger(limit) || limit < (name === "analysisCallDepth" ? 0 : 1)) {
+    for (const [name, limit] of Object.entries(value.limits)) {
+      if (name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth" || !(isSafeInteger7(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))) {
         throw new Error(
           `Invalid source work limit: ${name}. Use an integer within the supported range.`
         );
       }
     }
   }
-  return config;
+}
+function parseSourceProject(value) {
+  assertSourceProjectConfiguration(value);
+  return value;
 }
 async function openSourceProject(directory) {
   const repository = await sourceRepository(directory);
@@ -32124,15 +33595,18 @@ async function openSourceProject(directory) {
 function sourceProjectLocalInputs(project) {
   return readSourceProjectLocalInputs(project.repository.root);
 }
-function readSourceProjectLocalInputs(root) {
-  const local = JSON.parse(
-    fs15.readFileSync(path18.join(root, ".uttori-local/project.json"), "utf8")
-  );
-  if (!local || local.format !== "uttori-source-local" || local.version !== 1 || typeof local.rom !== "string" || !local.rom || typeof local.evidence !== "string" || !local.evidence) {
+function assertSourceProjectLocalInputs(value) {
+  if (!isRecord23(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
     throw new Error(
       "Configure the local ROM and evidence paths before running this source project."
     );
   }
+}
+function readSourceProjectLocalInputs(root) {
+  const local = JSON.parse(
+    fs15.readFileSync(path18.join(root, ".uttori-local/project.json"), "utf8")
+  );
+  assertSourceProjectLocalInputs(local);
   return {
     ...local,
     rom: path18.resolve(root, local.rom),
@@ -32153,13 +33627,27 @@ function synchronizeSourceResearch(project) {
   }
 }
 
-// ../disassembler/src/source-project/captures.ts
+// packages/disassembler/src/source-project/captures.ts
 init_canonical_json();
 import { createHash as createHash11 } from "node:crypto";
 import fs16 from "node:fs";
 import path19 from "node:path";
+function errorCode3(error) {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return void 0;
+}
 var hashPattern = /^[\da-f]{64}$/;
-var isArray6 = (value) => Array.isArray(value);
+function isUnknownArray6(value) {
+  return Array.isArray(value);
+}
+function isRecord24(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function observedCount(counts, key3) {
+  return Object.hasOwn(counts, key3) ? counts[key3] : void 0;
+}
 var validHash = (value) => typeof value === "string" && hashPattern.test(value);
 var validCount = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
 function validName(value) {
@@ -32175,39 +33663,62 @@ function catalogPath(root, name) {
         throw new Error("Capture catalogs cannot follow symlinks.");
       }
     } catch (error) {
-      if (error.code !== "ENOENT") {
+      if (errorCode3(error) !== "ENOENT") {
         throw error;
       }
     }
   }
   return current;
 }
-function parseSourceCaptureCatalog(value, romSha256) {
-  const catalog = value;
-  if (!catalog || catalog.format !== "uttori-capture-catalog" || catalog.version !== 1 || !validHash(catalog.romSha256) || catalog.romSha256 !== romSha256 || !isArray6(catalog.captures) || catalog.captures.length > 1e4) {
+function assertSourceCaptureCatalog(value, romSha256) {
+  if (!isRecord24(value)) {
+    throw new Error("Invalid source capture catalog or original-ROM identity.");
+  }
+  const catalogRom = value.romSha256;
+  const captureEntries = value.captures;
+  if (value.format !== "uttori-capture-catalog" || value.version !== 1 || !validHash(catalogRom) || catalogRom !== romSha256 || !isUnknownArray6(captureEntries) || captureEntries.length > 1e4) {
     throw new Error("Invalid source capture catalog or original-ROM identity.");
   }
   const identities = /* @__PURE__ */ new Set();
   const archiveOwners = /* @__PURE__ */ new Map();
-  for (const capture of catalog.captures) {
-    if (!capture || !validHash(capture.sha256) || identities.has(capture.sha256) || !validName(capture.sourceName) || typeof capture.profile !== "string" || !capture.profile || capture.profile.length > 128 || !validCount(capture.observedEvents) || !validCount(capture.droppedEvents) || !isArray6(capture.archives) || capture.archives.length > 32) {
+  for (const entry of captureEntries) {
+    if (!isRecord24(entry)) {
       throw new Error("Invalid or duplicate canonical capture identity.");
     }
-    identities.add(capture.sha256);
+    const sha2564 = entry.sha256;
+    const sourceName = entry.sourceName;
+    const profile = entry.profile;
+    const observedEvents = entry.observedEvents;
+    const droppedEvents = entry.droppedEvents;
+    const archiveEntries = entry.archives;
+    if (!validHash(sha2564) || identities.has(sha2564) || !validName(sourceName) || typeof profile !== "string" || profile === "" || profile.length > 128 || !validCount(observedEvents) || !validCount(droppedEvents) || !isUnknownArray6(archiveEntries) || archiveEntries.length > 32) {
+      throw new Error("Invalid or duplicate canonical capture identity.");
+    }
+    identities.add(sha2564);
     const archiveIds = /* @__PURE__ */ new Set();
-    for (const archive of capture.archives) {
-      if (!archive || !validName(archive.name) || !validHash(archive.sha256) || !validCount(archive.bytes) || archive.bytes === 0 || archive.companionSha256 !== void 0 && !validHash(archive.companionSha256) || archiveIds.has(archive.sha256)) {
+    for (const archiveEntry of archiveEntries) {
+      if (!isRecord24(archiveEntry)) {
         throw new Error("Invalid or duplicate capture archive binding.");
       }
-      const owner = archiveOwners.get(archive.sha256);
-      if (owner && owner !== capture.sha256) {
+      const name = archiveEntry.name;
+      const archiveSha = archiveEntry.sha256;
+      const bytes2 = archiveEntry.bytes;
+      const companion = archiveEntry.companionSha256;
+      if (!validName(name) || !validHash(archiveSha) || !validCount(bytes2) || bytes2 === 0 || companion !== void 0 && !validHash(companion) || archiveIds.has(archiveSha)) {
+        throw new Error("Invalid or duplicate capture archive binding.");
+      }
+      const owner = archiveOwners.get(archiveSha);
+      if (owner && owner !== sha2564) {
         throw new Error("One archive is bound to conflicting canonical capture identities.");
       }
-      archiveOwners.set(archive.sha256, capture.sha256);
-      archiveIds.add(archive.sha256);
+      archiveOwners.set(archiveSha, sha2564);
+      archiveIds.add(archiveSha);
     }
   }
-  return catalog;
+}
+function parseSourceCaptureCatalog(value, romSha256) {
+  assertSourceCaptureCatalog(value, romSha256);
+  return value;
 }
 function readSourceCaptureCatalog(root, name, romSha256) {
   const file = catalogPath(root, name);
@@ -32219,7 +33730,7 @@ function readSourceCaptureCatalog(root, name, romSha256) {
     }
     bytes2 = fs16.readFileSync(file);
   } catch (error) {
-    if (error.code !== "ENOENT") {
+    if (errorCode3(error) !== "ENOENT") {
       throw error;
     }
     return { catalog: { format: "uttori-capture-catalog", version: 1, romSha256, captures: [] } };
@@ -32240,7 +33751,7 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
       sha256: report2.sourceSha256,
       sourceName,
       profile: report2.indexProfile ?? "full",
-      observedEvents: report2.imported.busEvents ?? report2.imported.executionEvents ?? 0,
+      observedEvents: observedCount(report2.imported, "busEvents") ?? observedCount(report2.imported, "executionEvents") ?? 0,
       droppedEvents: report2.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0,
       archives: captures.get(report2.sourceSha256)?.archives ?? []
     };
@@ -32266,7 +33777,7 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
     if (!prior) {
       captures.set(capture.sha256, {
         ...capture,
-        archives: [...capture.archives, binding.archive].sort(
+        archives: [...capture.archives, binding.archive].toSorted(
           (a, b) => a.sha256.localeCompare(b.sha256)
         )
       });
@@ -32275,7 +33786,7 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
   return parseSourceCaptureCatalog(
     {
       ...catalog,
-      captures: [...captures.values()].sort((a, b) => a.sha256.localeCompare(b.sha256))
+      captures: [...captures.values()].toSorted((a, b) => a.sha256.localeCompare(b.sha256))
     },
     catalog.romSha256
   );
@@ -32316,12 +33827,14 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
   if (before.size > BigInt(maxBytes)) {
     throw new Error("Capture archive exceeds the project's byte budget.");
   }
-  const hash = createHash11("sha256");
+  const hash2 = createHash11("sha256");
   let bytes2 = 0;
   for await (const chunk of fs16.createReadStream(file, { signal })) {
-    const buffer = chunk;
-    hash.update(buffer);
-    bytes2 += buffer.length;
+    if (!Buffer.isBuffer(chunk)) {
+      throw new Error("Capture archive read failed.");
+    }
+    hash2.update(chunk);
+    bytes2 += chunk.length;
     if (bytes2 > maxBytes) {
       throw new Error("Capture archive grew beyond the project's byte budget.");
     }
@@ -32339,20 +33852,23 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
     }
     companionSha256 = sourceContentHash(fs16.readFileSync(manifestFile));
   } catch (error) {
-    if (error.code !== "ENOENT") {
+    if (errorCode3(error) !== "ENOENT") {
       throw error;
     }
   }
   return {
     name: path19.basename(file),
-    sha256: hash.digest("hex"),
+    sha256: hash2.digest("hex"),
     bytes: bytes2,
     ...companionSha256 ? { companionSha256 } : {}
   };
 }
 
-// ../disassembler/src/research-inputs/symbols.ts
-var isArray7 = (value) => Array.isArray(value);
+// packages/disassembler/src/research-inputs/symbols.ts
+var isArray3 = (value) => Array.isArray(value);
+function isProjectLabel2(value) {
+  return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
+}
 function changeResearchSymbol(snapshot, id, change) {
   validateResearchSnapshot(snapshot);
   const file = snapshot.files.find(
@@ -32368,10 +33884,15 @@ function changeResearchSymbol(snapshot, id, change) {
       "Choose an existing label declaration. A record tombstone must be restored explicitly in its research file."
     );
   }
+  if (!isProjectLabel2(decision.value)) {
+    throw new Error(
+      "Choose an existing label declaration. A record tombstone must be restored explicitly in its research file."
+    );
+  }
   const previous = decision.value;
   let symbol;
   if (change.kind === "aliases") {
-    if (!isArray7(change.aliases) || change.aliases.length > 64) {
+    if (!isArray3(change.aliases) || change.aliases.length > 64) {
       throw new Error("A symbol may have at most 64 research aliases.");
     }
     const names = /* @__PURE__ */ new Set();
@@ -32386,6 +33907,9 @@ function changeResearchSymbol(snapshot, id, change) {
     for (const other of snapshot.decisions) {
       if (other.collection !== "labels" || !other.value || other.id === id) {
         continue;
+      }
+      if (!isProjectLabel2(other.value)) {
+        throw new Error("Invalid research label.");
       }
       const label = other.value;
       for (const name of [label.sourceName ?? label.name, ...label.aliases ?? []]) {
@@ -32407,6 +33931,9 @@ function changeResearchSymbol(snapshot, id, change) {
       if (item.collection !== "labels" || !item.value) {
         return [];
       }
+      if (!isProjectLabel2(item.value)) {
+        throw new Error("Invalid research label.");
+      }
       return [item.id === id ? symbol : item.value];
     })
   );
@@ -32419,7 +33946,7 @@ function changeResearchSymbol(snapshot, id, change) {
   return { path: file.path, expectedSha256: file.sha256, document: document2, symbol };
 }
 
-// ../disassembler/src/research-inputs/analysis.ts
+// packages/disassembler/src/research-inputs/analysis.ts
 function validateLocations(record5, spaces) {
   const space = spaces.find((item) => item.id === record5.addressSpace);
   if (!space || !Number.isInteger(space.addressBits) || space.addressBits < 1 || space.addressBits > 53) {
@@ -32452,7 +33979,7 @@ function changeResearchAnalysis(snapshot, change, spaces) {
   if (!change || !["annotations", "analysis"].includes(change.collection) || !["put", "remove"].includes(change.kind)) {
     throw new Error("Choose an annotation or indirect-target research action.");
   }
-  const id = change.kind === "put" ? change.value?.id : change.id;
+  const id = change.kind === "put" ? change.value.id : change.id;
   validateResearchDecision({ collection: change.collection, id, value: null });
   const previousFile = snapshot.files.find(
     (file2) => file2.document.decisions.some((item) => item.collection === change.collection && item.id === id)
@@ -32537,7 +34064,7 @@ function changeResearchAnalysis(snapshot, change, spaces) {
   };
 }
 
-// ../disassembler/src/internal/interval-index.ts
+// packages/disassembler/src/internal/interval-index.ts
 var HalfOpenIntervalIndex = class {
   #entries;
   #prefixMaximumEnd;
@@ -32552,7 +34079,7 @@ var HalfOpenIntervalIndex = class {
         throw new Error("Interval index entries must be non-negative safe half-open ranges.");
       }
     }
-    this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).sort(
+    this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).toSorted(
       (left, right) => left.value.start - right.value.start || left.value.end - right.value.end || left.inputIndex - right.inputIndex
     );
     const prefixMaximumEnd = [];
@@ -32604,11 +34131,11 @@ var HalfOpenIntervalIndex = class {
         matches.push(entry);
       }
     }
-    return matches.sort((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
+    return matches.toSorted((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
   }
 };
 
-// ../disassembler/src/runtime/capture-bus-source.ts
+// packages/disassembler/src/runtime/capture-bus-source.ts
 init_canonical_json();
 var createRuntimeBusCaptureSource = async (file, options = {}) => {
   const { readCaptureFileHeader: readCaptureFileHeader2, recoverCaptureFile: recoverCaptureFile2 } = await Promise.resolve().then(() => (init_src(), src_exports));
@@ -32650,7 +34177,7 @@ var createRuntimeBusCaptureSource = async (file, options = {}) => {
   };
 };
 
-// ../disassembler/src/runtime/capture-source.ts
+// packages/disassembler/src/runtime/capture-source.ts
 import { open as open4 } from "node:fs/promises";
 async function openRuntimeCaptureSource(file, options = {}) {
   options.signal?.throwIfAborted();
@@ -32678,7 +34205,7 @@ async function openRuntimeCaptureSource(file, options = {}) {
   return { kind: "instructions", source: await createRuntimeCaptureSource(file, options) };
 }
 
-// ../plugin-loader-node/src/configuration.ts
+// packages/plugin-loader-node/src/configuration.ts
 import { existsSync as existsSync2, promises as fs17 } from "node:fs";
 import path20 from "node:path";
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
@@ -32693,7 +34220,7 @@ var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
   "baseImage"
 ]);
 var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
-var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord25 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var configurationError = (message, cause) => new PluginError(message, {
   code: "PLUGIN_CONFIGURATION_INVALID",
   cause
@@ -32707,18 +34234,19 @@ var optionalText = (value, field) => {
   }
   return value;
 };
+var isNonEmptyStringArray2 = (value) => Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim() !== "");
 var optionalStringArray = (value, field) => {
   if (value === void 0) {
     return void 0;
   }
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
+  if (!isNonEmptyStringArray2(value)) {
     throw configurationError(`Configuration field '${field}' must be an array of strings.`);
   }
   return value;
 };
 var validatePluginEntry = (value, index) => {
   const entry = `plugins[${index}]`;
-  if (!isRecord3(value)) {
+  if (!isRecord25(value)) {
     throw configurationError(`Configuration entry '${entry}' must be an object.`);
   }
   const unknown2 = Object.keys(value).filter((key3) => !PLUGIN_KEYS.has(key3));
@@ -32730,7 +34258,7 @@ var validatePluginEntry = (value, index) => {
   if (typeof value.module !== "string" || value.module.trim() === "") {
     throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
   }
-  if (value.options !== void 0 && !isRecord3(value.options)) {
+  if (value.options !== void 0 && !isRecord25(value.options)) {
     throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
   }
   return {
@@ -32739,7 +34267,7 @@ var validatePluginEntry = (value, index) => {
   };
 };
 var validateProjectConfiguration = (value) => {
-  if (!isRecord3(value)) {
+  if (!isRecord25(value)) {
     throw configurationError("Project configuration must be a JSON object.");
   }
   const unknown2 = Object.keys(value).filter((key3) => !TOP_LEVEL_KEYS.has(key3));
@@ -32801,17 +34329,17 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
   throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
 };
 
-// ../plugin-loader-node/src/loader.ts
+// packages/plugin-loader-node/src/loader.ts
 import { realpath } from "node:fs/promises";
 import { createRequire, registerHooks } from "node:module";
 import path21 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-var isRecord4 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord26 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var toOptionsRecord = (value, entry) => {
   if (value === void 0) {
     return {};
   }
-  if (!isRecord4(value)) {
+  if (!isRecord26(value)) {
     throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
       code: "PLUGIN_CONFIGURATION_INVALID"
     });
@@ -32819,7 +34347,7 @@ var toOptionsRecord = (value, entry) => {
   return { ...value };
 };
 var pluginIdFromNamespace = (namespace) => {
-  if (!isRecord4(namespace) || !isRecord4(namespace.default) || !isRecord4(namespace.default.manifest)) {
+  if (!isRecord26(namespace) || !isRecord26(namespace.default) || !isRecord26(namespace.default.manifest)) {
     return void 0;
   }
   return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
@@ -32828,9 +34356,9 @@ var stableValue = (value) => {
   if (Array.isArray(value)) {
     return value.map(stableValue);
   }
-  if (isRecord4(value)) {
+  if (isRecord26(value)) {
     return Object.fromEntries(
-      Object.keys(value).sort().map((key3) => [key3, stableValue(value[key3])])
+      Object.keys(value).toSorted().map((key3) => [key3, stableValue(value[key3])])
     );
   }
   return value;
@@ -32853,10 +34381,12 @@ var moduleLoadError = (request, message, resolvedModule, cause) => new PluginErr
 var resolveExternalModule = async (request) => {
   try {
     if (request.module.startsWith("file:")) {
-      return normalizeFileUrl(new URL(request.module));
+      return await normalizeFileUrl(new URL(request.module));
     }
     if (path21.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
-      return normalizeFileUrl(pathToFileURL(path21.resolve(request.baseDirectory, request.module)));
+      return await normalizeFileUrl(
+        pathToFileURL(path21.resolve(request.baseDirectory, request.module))
+      );
     }
     const parent = pathToFileURL(path21.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
     const marker = "uttori:resolve-project-plugin";
@@ -32927,24 +34457,27 @@ var NodePluginLoader = class {
     const configPlugins = loadedConfig.configuration.plugins ?? [];
     const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
     const requests = [
-      ...configPlugins.map((request, index) => ({
-        ...request,
-        baseDirectory: loadedConfig.directory,
-        source: "configuration",
-        configEntry: `plugins[${index}]`
-      })),
-      ...defaultPlugins.map((request, index) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "host-default",
-        configEntry: `hostDefaults.plugins[${index}]`
-      })),
-      ...(options.pluginModules ?? []).map((request, index) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "override",
-        configEntry: `pluginModules[${index}]`
-      }))
+      ...configPlugins.map(
+        (request, index) => Object.assign({}, request, {
+          baseDirectory: loadedConfig.directory,
+          source: "configuration",
+          configEntry: `plugins[${index}]`
+        })
+      ),
+      ...defaultPlugins.map(
+        (request, index) => Object.assign({}, request, {
+          baseDirectory: cwd,
+          source: "host-default",
+          configEntry: `hostDefaults.plugins[${index}]`
+        })
+      ),
+      ...(options.pluginModules ?? []).map(
+        (request, index) => Object.assign({}, request, {
+          baseDirectory: cwd,
+          source: "override",
+          configEntry: `pluginModules[${index}]`
+        })
+      )
     ];
     if (options.activateBundledPlugins && options.bundledPlugins) {
       const requested = new Set(requests.map((request) => request.module));
@@ -33074,7 +34607,7 @@ var NodePluginLoader = class {
         targetOptions: targetOptions2,
         includePaths: Object.freeze(includePaths)
       });
-      const current = {};
+      let current;
       const loaded = Object.freeze({
         environment,
         target,
@@ -33084,18 +34617,21 @@ var NodePluginLoader = class {
         configuration,
         diagnostics: Object.freeze([]),
         dispose: async () => {
+          if (current === void 0) {
+            return;
+          }
           if (this.#current === current) {
             this.#current = void 0;
           }
           await this.#disposeEntry(current);
         }
       });
-      Object.assign(current, {
+      current = {
         snapshot: preliminarySnapshot,
         manager,
         loaded,
         disposed: false
-      });
+      };
       this.#current = current;
       return loaded;
     } catch (error) {
@@ -33187,13 +34723,25 @@ var loadProjectEnvironment = async (options) => {
   });
 };
 
-// ../plugin-loader-node/src/toolchain.ts
+// packages/plugin-loader-node/src/toolchain.ts
 init_canonical_json();
 import { createHash as createHash12 } from "node:crypto";
 import fs18 from "node:fs";
 import { createRequire as createRequire2 } from "node:module";
 import path22 from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
+function isRecord27(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function dependencyMap(value, root) {
+  if (value === void 0) {
+    return {};
+  }
+  if (!isRecord27(value)) {
+    throw new Error(`Tool package dependency map is invalid: ${root}`);
+  }
+  return value;
+}
 function packageRoot(file) {
   let directory = path22.dirname(file);
   while (!fs18.existsSync(path22.join(directory, "package.json"))) {
@@ -33205,24 +34753,26 @@ function packageRoot(file) {
   }
   return fs18.realpathSync(directory);
 }
+var hash = (bytes2) => createHash12("sha256").update(bytes2).digest("hex");
 function fingerprintNodeToolchain(moduleFiles, bundles = []) {
   const seen = /* @__PURE__ */ new Set();
   const packages = [];
   let totalBytes = 0, totalFiles = 0;
-  const hash = (bytes2) => createHash12("sha256").update(bytes2).digest("hex");
   const visitPackage = (root) => {
     if (seen.has(root)) {
       return;
     }
     seen.add(root);
     const packageFile = path22.join(root, "package.json");
-    const manifest = JSON.parse(fs18.readFileSync(packageFile, "utf8"));
-    if (!manifest.name || !manifest.version) {
+    const parsed = JSON.parse(fs18.readFileSync(packageFile, "utf8"));
+    if (!isRecord27(parsed) || typeof parsed.name !== "string" || !parsed.name || typeof parsed.version !== "string" || !parsed.version) {
       throw new Error(`Tool package needs a name and version: ${root}`);
     }
+    const dependencies = dependencyMap(parsed.dependencies, root);
+    const optionalDependencies = dependencyMap(parsed.optionalDependencies, root);
     const files = [];
     const visit = (directory) => {
-      for (const entry of fs18.readdirSync(directory, { withFileTypes: true }).sort((a, b) => Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)))) {
+      for (const entry of fs18.readdirSync(directory, { withFileTypes: true }).toSorted((a, b) => Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)))) {
         if ([
           "node_modules",
           ".git",
@@ -33254,15 +34804,15 @@ function fingerprintNodeToolchain(moduleFiles, bundles = []) {
     };
     visit(root);
     packages.push({
-      name: manifest.name,
-      version: manifest.version,
+      name: parsed.name,
+      version: parsed.version,
       sha256: hash(canonicalJson(files))
     });
     const resolve = createRequire2(packageFile).resolve;
     for (const dependency of Object.keys({
-      ...manifest.dependencies,
-      ...manifest.optionalDependencies
-    }).sort()) {
+      ...dependencies,
+      ...optionalDependencies
+    }).toSorted()) {
       const directory = resolve.paths(dependency)?.map((base) => path22.join(base, dependency)).find((candidate) => fs18.existsSync(path22.join(candidate, "package.json")));
       if (directory) {
         visitPackage(fs18.realpathSync(directory));
@@ -33272,13 +34822,12 @@ function fingerprintNodeToolchain(moduleFiles, bundles = []) {
       try {
         entry = resolve(dependency);
       } catch (error) {
-        if (Object.hasOwn(manifest.optionalDependencies ?? {}, dependency)) {
+        if (Object.hasOwn(optionalDependencies, dependency)) {
           continue;
         }
-        throw new Error(
-          `Cannot fingerprint runtime dependency ${dependency} of ${manifest.name}.`,
-          { cause: error }
-        );
+        throw new Error(`Cannot fingerprint runtime dependency ${dependency} of ${parsed.name}.`, {
+          cause: error
+        });
       }
       visitPackage(packageRoot(entry));
     }
@@ -33308,7 +34857,7 @@ function fingerprintNodeToolchain(moduleFiles, bundles = []) {
   return { ...identity2, sha256: hash(canonicalJson(identity2)) };
 }
 
-// ../plugin-snes/src/architectures/65816-spec.ts
+// packages/plugin-snes/src/architectures/65816-spec.ts
 var mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
   id,
   syntax,
@@ -33345,6 +34894,9 @@ var cpu65816Modes = Object.freeze({
   indlong: mode("absoluteIndirectLong", "[addr]", 3),
   block: mode("blockMove", "srcBank,destBank", 3)
 });
+function isCpu65816ModeKey(value) {
+  return Object.hasOwn(cpu65816Modes, value);
+}
 var opcodeRows = [
   "BRK:sig ORA:dix COP:sig ORA:sr TSB:dp ORA:dp ASL:dp ORA:dil PHP:imp ORA:immM ASL:acc PHD:imp TSB:abs ORA:abs ASL:abs ORA:long",
   "BPL:rel8 ORA:diy ORA:dpi ORA:sriy TRB:dp ORA:dpx ASL:dpx ORA:dily CLC:imp ORA:aby INC:acc TCS:imp TRB:abs ORA:abx ASL:abx ORA:longx",
@@ -33558,11 +35110,10 @@ if (entries.length !== 256) {
 var cpu65816Specifications = Object.freeze(
   entries.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const modeKey = modeKeyText;
-    const definition = cpu65816Modes[modeKey];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isCpu65816ModeKey(modeKeyText)) {
       throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
     }
+    const definition = cpu65816Modes[modeKeyText];
     let operandStatusEffect;
     if (mnemonic === "REP") {
       operandStatusEffect = "clearBits";
@@ -33606,10 +35157,12 @@ function buildCpu65816Catalog() {
       });
     }
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted(
+    (left, right) => left.mnemonic.localeCompare(right.mnemonic)
+  );
 }
 
-// ../plugin-snes/src/architectures/65816-decoder.ts
+// packages/plugin-snes/src/architectures/65816-decoder.ts
 var flagValue = (value) => {
   if (value === true || value === 1) {
     return 1;
@@ -33640,6 +35193,9 @@ var readLittleEndian = (bytes2, offset, width) => {
   }
   return value >>> 0;
 };
+function byteAt(bytes2, index) {
+  return index >= 0 && index < bytes2.length ? bytes2[index] : void 0;
+}
 var signed = (value, width) => {
   const signBit = 1 << width * 8 - 1;
   const modulus = 2 ** (width * 8);
@@ -33652,7 +35208,8 @@ var addressOperand = (value, width) => ({
   width
 });
 var operandsFor = (specification2, bytes2, logicalAddress) => {
-  const value8 = bytes2[1] ?? 0;
+  const firstOperandByte = byteAt(bytes2, 1);
+  const value8 = firstOperandByte ?? 0;
   const value16 = readLittleEndian(bytes2, 1, 2);
   const value24 = readLittleEndian(bytes2, 1, 3);
   switch (specification2.mode) {
@@ -33720,14 +35277,14 @@ var operandsFor = (specification2, bytes2, logicalAddress) => {
     case "blockMove":
       return [
         { kind: "bank", value: value8, width: 1 },
-        { kind: "bank", value: bytes2[2] ?? 0, width: 1 }
+        { kind: "bank", value: byteAt(bytes2, 2) ?? 0, width: 1 }
       ];
     default:
       return [];
   }
 };
 var targetFor = (specification2, operands, state, logicalAddress) => {
-  const operand = operands[0];
+  const operand = operands.length > 0 ? operands[0] : void 0;
   if (!operand) {
     return void 0;
   }
@@ -33847,7 +35404,7 @@ var Cpu65816Decoder = class {
         availableBytes
       };
     }
-    const specification2 = cpu65816Specifications[opcode];
+    const specification2 = opcode >= 0 && opcode < cpu65816Specifications.length ? cpu65816Specifications[opcode] : void 0;
     if (!specification2) {
       return {
         kind: "error",
@@ -33913,7 +35470,7 @@ function formatCpu65816Instruction(instruction2) {
   if (instruction2.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as 65816.`);
   }
-  const operand = instruction2.operands[0];
+  const operand = instruction2.operands.length > 0 ? instruction2.operands[0] : void 0;
   const value = operand?.value ?? 0;
   let text2 = "";
   switch (instruction2.mode) {
@@ -34000,7 +35557,7 @@ function formatCpu65816Instruction(instruction2) {
   return text2 ? `${instruction2.mnemonic} ${text2}` : instruction2.mnemonic;
 }
 
-// ../plugin-snes/src/architectures/spc700-spec.ts
+// packages/plugin-snes/src/architectures/spc700-spec.ts
 var mode2 = (id, syntax, size) => ({
   id,
   syntax,
@@ -34079,6 +35636,9 @@ var spc700Modes = Object.freeze({
   dpxY: mode2("directIndexedXRegisterY", "dp+X,Y", 2),
   absY: mode2("absoluteRegisterY", "addr,Y", 3)
 });
+function isSpc700ModeKey(value) {
+  return Object.hasOwn(spc700Modes, value);
+}
 var opcodeRows2 = [
   "NOP:imp TCALL:tc SET0:dpBit BBS0:dpBitRel OR:aDp OR:aAbs OR:aIndX OR:aDpxi OR:aImm OR:dpDp OR1:cBit ASL:dp ASL:abs PUSH:regP TSET:absA BRK:imp",
   "BPL:rel TCALL:tc CLR0:dpBit BBC0:dpBitRel OR:aDpx OR:aAbx OR:aAby OR:aDpiy OR:dpImm OR:xy DECW:dpWord ASL:dpx ASL:regA DEC:regX CMP:xAbs JMP:jmpAbx",
@@ -34228,10 +35788,10 @@ if (entries2.length !== 256) {
 var spc700Specifications = Object.freeze(
   entries2.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const definition = spc700Modes[modeKeyText];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isSpc700ModeKey(modeKeyText)) {
       throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
     }
+    const definition = spc700Modes[modeKeyText];
     const summaryKey = mnemonic.replace(/[0-7]$/, "0");
     return Object.freeze({
       id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -34268,10 +35828,15 @@ function buildSpc700Catalog() {
       });
     }
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted(
+    (left, right) => left.mnemonic.localeCompare(right.mnemonic)
+  );
 }
 
-// ../plugin-snes/src/architectures/superfx-spec.ts
+// packages/plugin-snes/src/architectures/superfx-spec.ts
+function isSuperFxAltState(value) {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
 var syntaxFor = (encoding) => {
   switch (encoding) {
     case "implied":
@@ -34726,14 +36291,14 @@ var superFxFusedSpecifications = Object.freeze([
     { length: 16 },
     (_, source) => Array.from(
       { length: 16 },
-      (_2, destination) => fused("MOVE", [32 + source, 16 + destination], "registerRegister", destination, source)
+      (_item, destination) => fused("MOVE", [32 + source, 16 + destination], "registerRegister", destination, source)
     )
   ).flat(),
   ...Array.from(
     { length: 16 },
     (_, destination) => Array.from(
       { length: 16 },
-      (_2, source) => fused(
+      (_item, source) => fused(
         "MOVES",
         [32 + destination, 176 + source],
         "registerRegister",
@@ -34846,15 +36411,17 @@ function buildSuperFxCatalog() {
   for (const entry of conveniences) {
     grouped.set(entry.mnemonic, entry);
   }
-  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+  return [...grouped.values()].toSorted(
+    (left, right) => left.mnemonic.localeCompare(right.mnemonic)
+  );
 }
 
-// ../plugin-snes/src/tooling/instruction-catalog.ts
+// packages/plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog = buildCpu65816Catalog();
 var spc700Catalog = buildSpc700Catalog();
 var superFxCatalog = buildSuperFxCatalog();
 
-// ../plugin-snes/src/architectures/operand-classifiers.ts
+// packages/plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -35054,7 +36621,12 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 
-// ../plugin-snes/src/architectures/65816.ts
+// packages/plugin-snes/src/architectures/65816.ts
+var isOperandWidth = (value) => value === 1 || value === 2;
+var isLogicOpcode = (value) => value === "ORA" || value === "AND" || value === "EOR" || value === "CMP" || value === "CPX" || value === "CPY";
+var isStoreOpcode = (value) => value === "STX" || value === "STY" || value === "STZ";
+var isBitOpcode = (value) => value === "BIT" || value === "TSB" || value === "TRB";
+var isGenericOpcode = (value) => value === "BRK" || value === "COP" || value === "PEA" || value === "PEI" || value === "REP" || value === "SEP" || value === "WDM";
 var lower65816Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyExpanded65816Operand(resolver, lowered);
@@ -35550,7 +37122,6 @@ var Arch65816 = class {
         } else if (len === 3) {
           this.assembler.write3(this.assembler.operandResolver.getnum(baseOperand));
         }
-        return true;
       } else if (isIndexedMemory(loweredOperand, "y")) {
         const forcedIndexedY = {
           ADC: { 2: 121 },
@@ -35563,7 +37134,6 @@ var Arch65816 = class {
         }
         this.assembler.write1(forcedIndexedY[opcode][len]);
         this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
-        return true;
       } else {
         const forcedNonIndexed = {
           ADC: { 1: 101, 2: 109, 3: 111 },
@@ -35582,8 +37152,8 @@ var Arch65816 = class {
         } else if (len === 3) {
           this.assembler.write3(this.assembler.operandResolver.getnum(operand));
         }
-        return true;
       }
+      return true;
     }
     if (loweredOperand.mode === "absoluteIndexedX") {
       const absoluteIndexedXOpcodes = {
@@ -35940,10 +37510,9 @@ var Arch65816 = class {
       EOR: 89,
       CMP: 217
     };
-    if (!(opcode in opcodes)) {
+    if (!isLogicOpcode(opcode)) {
       return false;
     }
-    const logicOpcode = opcode;
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
@@ -35952,7 +37521,7 @@ var Arch65816 = class {
     if (loweredOperand.immediate) {
       mode3 = "immediate";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
-      this.assembler.write1(opcodes[logicOpcode].immediate);
+      this.assembler.write1(opcodes[opcode].immediate);
       const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
       if (width === 1) {
         this.assembler.write1(address5);
@@ -35971,79 +37540,77 @@ var Arch65816 = class {
       const explicitOperand = forcedIndexedMode ? baseOperand : resolvedOperand;
       if (forcedIndexedMode === "x") {
         if (len === 1) {
-          const forcedOpcode = dpXMap[logicOpcode];
+          const forcedOpcode = dpXMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
           }
           this.assembler.write1(forcedOpcode);
           this.assembler.write1(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 2) {
-          const forcedOpcode = absXMap[logicOpcode];
+          const forcedOpcode = absXMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
           }
           this.assembler.write1(forcedOpcode);
           this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
-          const forcedOpcode = absXMap[logicOpcode];
+          const forcedOpcode = absXMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
           }
           this.assembler.write1(forcedOpcode + 2);
           this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
-        return true;
       } else if (forcedIndexedMode === "y") {
         if (len !== 2) {
-          throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+          throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
-        const forcedOpcode = absYMap[logicOpcode];
+        const forcedOpcode = absYMap[opcode];
         if (forcedOpcode === void 0) {
-          throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+          throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
         this.assembler.write1(forcedOpcode);
         this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
-        return true;
       } else {
         if (len === 1) {
-          this.assembler.write1(dpMap[logicOpcode]);
+          this.assembler.write1(dpMap[opcode]);
           this.assembler.write1(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 2) {
-          this.assembler.write1(absMap[logicOpcode]);
+          this.assembler.write1(absMap[opcode]);
           this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
-          const forcedOpcode = absLongMap[logicOpcode];
+          const forcedOpcode = absLongMap[opcode];
           if (forcedOpcode === void 0) {
-            throw new Error(`Opcode ${logicOpcode} not supported in forced non-indexed mode.`);
+            throw new Error(`Opcode ${opcode} not supported in forced non-indexed mode.`);
           }
           this.assembler.write1(forcedOpcode);
           this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
-        return true;
       }
+      return true;
     }
-    if (loweredOperand.mode === "absoluteIndexedX" && opcodes[logicOpcode].absoluteX) {
+    if (loweredOperand.mode === "absoluteIndexedX" && opcodes[opcode].absoluteX) {
       mode3 = "absoluteX";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "absoluteIndexedY" && opcodes[logicOpcode].absoluteY) {
+    } else if (loweredOperand.mode === "absoluteIndexedY" && opcodes[opcode].absoluteY) {
       mode3 = "absoluteY";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "absoluteLong") {
       mode3 = "absoluteLong";
       address5 = this.assembler.operandResolver.getnum(resolvedOperand);
-    } else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[logicOpcode].absoluteLongX) {
+    } else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[opcode].absoluteLongX) {
       mode3 = "absoluteLongX";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "stackRelative" && opcodes[logicOpcode].stackRelative) {
+    } else if (loweredOperand.mode === "stackRelative" && opcodes[opcode].stackRelative) {
       mode3 = "stackRelative";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "stackRelativeIndexedIndirectY" && opcodes[logicOpcode].stackRelativeIndirectY) {
+    } else if (loweredOperand.mode === "stackRelativeIndexedIndirectY" && opcodes[opcode].stackRelativeIndirectY) {
       mode3 = "stackRelativeIndirectY";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (/^\$[\dA-Fa-f]{2}$/.test(resolvedOperand)) {
       mode3 = "direct";
       address5 = this.assembler.operandResolver.getnum(resolvedOperand);
-    } else if (loweredOperand.mode === "directPageIndexedX" && opcodes[logicOpcode].directX) {
+    } else if (loweredOperand.mode === "directPageIndexedX" && opcodes[opcode].directX) {
       mode3 = "directX";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indexedIndirectX") {
@@ -36055,10 +37622,10 @@ var Arch65816 = class {
     } else if (loweredOperand.mode === "directPageIndirect") {
       mode3 = "indirect";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "indirectLong" && opcodes[logicOpcode].directIndirectLong) {
+    } else if (loweredOperand.mode === "indirectLong" && opcodes[opcode].directIndirectLong) {
       mode3 = "directIndirectLong";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
-    } else if (loweredOperand.mode === "indirectLongIndexedY" && opcodes[logicOpcode].directIndirectLongY) {
+    } else if (loweredOperand.mode === "indirectLongIndexedY" && opcodes[opcode].directIndirectLongY) {
       mode3 = "directIndirectLongY";
       address5 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectLong") {
@@ -36073,12 +37640,12 @@ var Arch65816 = class {
     } else {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
-    const opcodeByte = opcodes[logicOpcode][mode3];
+    const opcodeByte = opcodes[opcode][mode3];
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
     }
     this.assembler.write1(opcodeByte);
-    if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode3 === "directIndirectLong") {
+    if (mode3 === "directIndirectLong") {
       this.assembler.write1(address5);
     } else if (["absolute", "absoluteX", "absoluteY", "directIndirectLong"].includes(mode3)) {
       this.assembler.write2(address5);
@@ -36177,7 +37744,7 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleArithmeticOperations(opcode, operand, len, explicitlen) {
-    const operandText = operand?.trim() || "A";
+    const operandText = operand.trim() || "A";
     const accumulatorOpcodes = {
       ASL: 10,
       LSR: 74,
@@ -36225,14 +37792,6 @@ var Arch65816 = class {
           throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
         this.assembler.write1(forcedIndexed[opcode][len]);
-        if (len === 1) {
-          this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else if (len === 2) {
-          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else {
-          throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
-        }
-        return true;
       } else {
         const forcedNonIndexed = {
           ASL: { 1: 6, 2: 14 },
@@ -36246,15 +37805,15 @@ var Arch65816 = class {
           throw new Error(`Opcode ${opcode} not supported in forced non-indexed mode.`);
         }
         this.assembler.write1(forcedNonIndexed[opcode][len]);
-        if (len === 1) {
-          this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else if (len === 2) {
-          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
-        } else {
-          throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
-        }
-        return true;
       }
+      if (len === 1) {
+        this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
+      } else if (len === 2) {
+        this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
+      } else {
+        throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
+      }
+      return true;
     }
     if (/^\$[\da-f]{2}$/i.test(normalizedOperand) && loweredOperand.mode === "directPageIndexedX") {
       const dpIndexedXOpcodes = {
@@ -36389,8 +37948,8 @@ var Arch65816 = class {
       return true;
     }
     if (isLDX) {
+      address5 = this.assembler.operandResolver.getnum(operand);
       if (!isIndexed) {
-        address5 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address5 > 255) {
           opcodeByte = 174;
           this.assembler.write1(opcodeByte);
@@ -36401,7 +37960,6 @@ var Arch65816 = class {
           this.assembler.write1(address5);
         }
       } else {
-        address5 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address5 > 255) {
           opcodeByte = 190;
           this.assembler.write1(opcodeByte);
@@ -36413,8 +37971,8 @@ var Arch65816 = class {
         }
       }
     } else if (isLDY) {
+      address5 = this.assembler.operandResolver.getnum(operand);
       if (!isIndexed) {
-        address5 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address5 > 255) {
           opcodeByte = 172;
           this.assembler.write1(opcodeByte);
@@ -36425,7 +37983,6 @@ var Arch65816 = class {
           this.assembler.write1(address5);
         }
       } else {
-        address5 = this.assembler.operandResolver.getnum(operand);
         if (loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address5 > 255) {
           opcodeByte = 188;
           this.assembler.write1(opcodeByte);
@@ -36494,13 +38051,13 @@ var Arch65816 = class {
         if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
           return { mode: currentOpcode, address: resolvedAddress & 65535 };
         }
-        let mode4 = currentOpcode;
+        let jumpMode = currentOpcode;
         if (currentOpcode === "JMP") {
-          mode4 = "JML";
+          jumpMode = "JML";
         } else if (currentOpcode === "JSR") {
-          mode4 = "JSL";
+          jumpMode = "JSL";
         }
-        return { mode: mode4, address: resolvedAddress };
+        return { mode: jumpMode, address: resolvedAddress };
       }
       return { mode: currentOpcode, address: resolvedAddress };
     };
@@ -36587,40 +38144,39 @@ var Arch65816 = class {
       STZ: { direct: 100, directX: 116, absolute: 156, absoluteX: 158 }
       // STZ DP, DP Indexed X, Absolute, Absolute Indexed X
     };
-    if (!(opcode in storeOpcodes)) {
+    if (!isStoreOpcode(opcode)) {
       return false;
     }
-    const storeOpcode = opcode;
-    const storeModeMap = storeOpcodes[storeOpcode];
+    const storeModeMap = storeOpcodes[opcode];
     const getForcedOpcode = (map, fallback) => {
-      const forced = map[len];
+      const forced = isOperandWidth(len) ? map[len] : void 0;
       return forced ?? fallback;
     };
     let address5 = 0;
-    const isIndexed = storeOpcode === "STX" && isIndexedMemory(loweredOperand, "y") || storeOpcode === "STY" && isIndexedMemory(loweredOperand, "x") || storeOpcode === "STZ" && isIndexedMemory(loweredOperand, "x");
+    const isIndexed = opcode === "STX" && isIndexedMemory(loweredOperand, "y") || opcode === "STY" && isIndexedMemory(loweredOperand, "x") || opcode === "STZ" && isIndexedMemory(loweredOperand, "x");
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
     }
     if (explicitlen) {
       if (isIndexed) {
-        if (storeOpcode === "STZ") {
+        if (opcode === "STZ") {
           const forcedSTZIndexed = { 1: 116, 2: 158 };
           this.assembler.write1(getForcedOpcode(forcedSTZIndexed, 158));
-        } else if (storeOpcode === "STX") {
+        } else if (opcode === "STX") {
           const forcedSTXIndexed = { 1: 150 };
           this.assembler.write1(getForcedOpcode(forcedSTXIndexed, 150));
-        } else if (storeOpcode === "STY") {
+        } else {
           const forcedSTYIndexed = { 1: 148 };
           this.assembler.write1(getForcedOpcode(forcedSTYIndexed, 148));
         }
       } else {
-        if (storeOpcode === "STX") {
+        if (opcode === "STX") {
           const forcedSTX = { 1: 134, 2: 142 };
           this.assembler.write1(getForcedOpcode(forcedSTX, 142));
-        } else if (storeOpcode === "STY") {
+        } else if (opcode === "STY") {
           const forcedSTY = { 1: 132, 2: 140 };
           this.assembler.write1(getForcedOpcode(forcedSTY, 140));
-        } else if (storeOpcode === "STZ") {
+        } else {
           const forcedSTZ = { 1: 100, 2: 156 };
           this.assembler.write1(getForcedOpcode(forcedSTZ, 156));
         }
@@ -36644,46 +38200,42 @@ var Arch65816 = class {
     }
     if (!isIndexed && (loweredOperand.mode === "absolute" || /^\$[\dA-Fa-f]{3,4}$/.test(operand))) {
       address5 = this.assembler.operandResolver.getnum(operand);
-      this.assembler.write1(storeOpcodes[storeOpcode].absolute);
+      this.assembler.write1(storeOpcodes[opcode].absolute);
       this.assembler.write2(address5);
       return true;
     } else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
       address5 = this.assembler.operandResolver.getnum(operand);
-      this.assembler.write1(storeOpcodes[storeOpcode].direct);
+      this.assembler.write1(storeOpcodes[opcode].direct);
       this.assembler.write1(address5);
       return true;
     } else if (isIndexed) {
-      if (storeOpcode === "STX") {
-        address5 = this.assembler.operandResolver.getnum(operand);
+      address5 = this.assembler.operandResolver.getnum(operand);
+      if (opcode === "STX") {
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          this.assembler.write1(storeOpcodes[storeOpcode].absolute);
+          this.assembler.write1(storeOpcodes[opcode].absolute);
           this.assembler.write2(address5);
         } else {
-          this.assembler.write1(storeOpcodes[storeOpcode].directY);
+          this.assembler.write1(storeOpcodes[opcode].directY);
           this.assembler.write1(address5);
         }
-        return true;
-      } else if (storeOpcode === "STY") {
-        address5 = this.assembler.operandResolver.getnum(operand);
+      } else if (opcode === "STY") {
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          this.assembler.write1(storeOpcodes[storeOpcode].absolute);
+          this.assembler.write1(storeOpcodes[opcode].absolute);
           this.assembler.write2(address5);
         } else {
-          this.assembler.write1(storeOpcodes[storeOpcode].directX);
+          this.assembler.write1(storeOpcodes[opcode].directX);
           this.assembler.write1(address5);
         }
-        return true;
-      } else if (storeOpcode === "STZ") {
-        address5 = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{3,4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
-          this.assembler.write1(storeOpcodes[storeOpcode].absoluteX);
+      } else {
+        if (/^\$[\da-f]{3,4}$/i.test(operand)) {
+          this.assembler.write1(storeOpcodes[opcode].absoluteX);
           this.assembler.write2(address5);
         } else {
-          this.assembler.write1(storeOpcodes[storeOpcode].directX);
+          this.assembler.write1(storeOpcodes[opcode].directX);
           this.assembler.write1(address5);
         }
-        return true;
       }
+      return true;
     }
     throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
   }
@@ -36744,12 +38296,13 @@ var Arch65816 = class {
       TSB: { direct: 4, absolute: 12 },
       TRB: { direct: 20, absolute: 28 }
     };
-    if (!(opcode in opcodes)) {
+    if (!isBitOpcode(opcode)) {
       return false;
     }
-    const bitOpcode = opcode;
+    const forcedMap = forcedMaps[opcode];
+    const bitModes = opcodes[opcode];
     const getForcedBitOpcode = (map, fallback) => {
-      const forced = map[len];
+      const forced = isOperandWidth(len) ? map[len] : void 0;
       return forced ?? fallback;
     };
     let address5 = 0;
@@ -36757,14 +38310,14 @@ var Arch65816 = class {
     if (operand.startsWith("#")) {
       address5 = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
-        const immediate3 = forcedMaps[bitOpcode].immediate;
+        const immediate3 = forcedMap.immediate;
         if (immediate3 === void 0) {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
         this.assembler.write1(immediate3);
         outLength = len === 1 ? 1 : 2;
       } else {
-        const immediate3 = opcodes[bitOpcode].immediate;
+        const immediate3 = bitModes.immediate;
         if (immediate3 === void 0) {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
@@ -36776,37 +38329,33 @@ var Arch65816 = class {
       address5 = this.assembler.operandResolver.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {
-          if (!forcedMaps[bitOpcode].directX) {
+          if (!forcedMap.directX) {
             throw new Error(`Opcode ${opcode} does not support indexed addressing in forced mode.`);
           }
           this.assembler.write1(
             getForcedBitOpcode(
-              forcedMaps[bitOpcode].directX,
-              forcedMaps[bitOpcode].directX[2] ?? forcedMaps[bitOpcode].directX[1] ?? 0
+              forcedMap.directX,
+              forcedMap.directX[2] ?? forcedMap.directX[1] ?? 0
             )
           );
-          outLength = len === 1 ? 1 : 2;
         } else {
           this.assembler.write1(
-            getForcedBitOpcode(
-              forcedMaps[bitOpcode].direct,
-              forcedMaps[bitOpcode].direct[2] ?? forcedMaps[bitOpcode].direct[1] ?? 0
-            )
+            getForcedBitOpcode(forcedMap.direct, forcedMap.direct[2] ?? forcedMap.direct[1] ?? 0)
           );
-          outLength = len === 1 ? 1 : 2;
         }
+        outLength = len === 1 ? 1 : 2;
       } else {
-        if (isIndexed && loweredOperand.mode === "directPageIndexedX" && /^\$[\da-f]{1,2}$/i.test(normalizedOperand) && opcodes[bitOpcode].directX) {
-          this.assembler.write1(opcodes[bitOpcode].directX);
+        if (isIndexed && loweredOperand.mode === "directPageIndexedX" && /^\$[\da-f]{1,2}$/i.test(normalizedOperand) && bitModes.directX) {
+          this.assembler.write1(bitModes.directX);
           outLength = 1;
         } else if (/^\$[\da-f]{1,2}$/i.test(normalizedOperand)) {
-          this.assembler.write1(opcodes[bitOpcode].direct);
+          this.assembler.write1(bitModes.direct);
           outLength = 1;
         } else if (/^\$[\da-f]{4}$/i.test(normalizedOperand)) {
-          if (isIndexed && opcodes[bitOpcode].absoluteX) {
-            this.assembler.write1(opcodes[bitOpcode].absoluteX);
+          if (isIndexed && bitModes.absoluteX) {
+            this.assembler.write1(bitModes.absoluteX);
           } else {
-            this.assembler.write1(opcodes[bitOpcode].absolute);
+            this.assembler.write1(bitModes.absolute);
           }
           outLength = 2;
         } else {
@@ -36839,9 +38388,8 @@ var Arch65816 = class {
       SEP: 226,
       WDM: 66
     };
-    if (opcode in opcodeMap) {
-      const genericOpcode = opcode;
-      const opcodeByte = opcodeMap[genericOpcode];
+    if (isGenericOpcode(opcode)) {
+      const opcodeByte = opcodeMap[opcode];
       if ((opcode === "REP" || opcode === "SEP") && (len !== 1 || num < 0 || num > 255)) {
         throw new Error("Error: invalid_number");
       }
@@ -36920,7 +38468,6 @@ var Arch65816 = class {
       }
       this.assembler.write1(branchOpcodes2[opcode]);
       this.assembler.write2(relativeAddress);
-      return true;
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
         throw this.assembler.diagnostics.error(
@@ -36933,8 +38480,8 @@ var Arch65816 = class {
       }
       this.assembler.write1(branchOpcodes2[opcode]);
       this.assembler.write1(signedByte2);
-      return true;
     }
+    return true;
   }
   /**
    * Fallback TSB/TRB encoder (tests call this directly). Live encode uses
@@ -36974,7 +38521,7 @@ var Arch65816 = class {
     if (dot === -1) {
       return { name: opcode, explicitLength: void 0 };
     }
-    const suffix = opcode[dot + 1];
+    const suffix = dot + 1 < opcode.length ? opcode[dot + 1] : void 0;
     if (suffix === void 0) {
       throw new Error(`Error: Invalid opcode length in '${opcode}'.`);
     }
@@ -37009,7 +38556,7 @@ var Arch65816 = class {
   }
 };
 
-// ../plugin-snes/src/architectures/spc700-decoder.ts
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
 var readLittleEndian2 = (bytes2, offset, width) => {
   let value = 0;
   for (let index = 0; index < width; index++) {
@@ -37017,6 +38564,9 @@ var readLittleEndian2 = (bytes2, offset, width) => {
   }
   return value >>> 0;
 };
+function byteAt2(bytes2, index) {
+  return index >= 0 && index < bytes2.length ? bytes2[index] : void 0;
+}
 var signedByte = (value) => value & 128 ? value - 256 : value;
 var register3 = (name) => ({ kind: "register", register: name });
 var address3 = (value, width) => ({
@@ -37057,7 +38607,8 @@ var fixedRegisters = {
   indirectXY: ["X", "Y"]
 };
 var operandsFor2 = (specification2, bytes2, logicalAddress) => {
-  const byte2 = bytes2[1] ?? 0;
+  const firstOperandByte = byteAt2(bytes2, 1);
+  const byte2 = firstOperandByte ?? 0;
   const word2 = readLittleEndian2(bytes2, 1, 2);
   const fixed = fixedRegisters[specification2.mode];
   if (fixed) {
@@ -37074,7 +38625,7 @@ var operandsFor2 = (specification2, bytes2, logicalAddress) => {
       return [
         address3(byte2, 1),
         bit(Number(specification2.mnemonic.at(-1))),
-        relative(bytes2[2] ?? 0, logicalAddress, bytes2.length)
+        relative(byteAt2(bytes2, 2) ?? 0, logicalAddress, bytes2.length)
       ];
     case "accumulatorDirect":
     case "accumulatorDirectIndexedX":
@@ -37090,15 +38641,15 @@ var operandsFor2 = (specification2, bytes2, logicalAddress) => {
     case "accumulatorImmediate":
       return [register3("A"), immediate(byte2)];
     case "directDirect":
-      return [address3(bytes2[2] ?? 0, 1), address3(byte2, 1)];
+      return [address3(byteAt2(bytes2, 2) ?? 0, 1), address3(byte2, 1)];
     case "carryMemoryBit":
     case "carryInvertedMemoryBit": {
-      const [memory, bit2] = bitAddress(bytes2);
-      return [register3("C"), memory, bit2];
+      const [memory, bitOperand] = bitAddress(bytes2);
+      return [register3("C"), memory, bitOperand];
     }
     case "memoryBitCarry": {
-      const [memory, bit2] = bitAddress(bytes2);
-      return [memory, bit2, register3("C")];
+      const [memory, bitOperand] = bitAddress(bytes2);
+      return [memory, bitOperand, register3("C")];
     }
     case "memoryBit":
       return bitAddress(bytes2);
@@ -37114,7 +38665,7 @@ var operandsFor2 = (specification2, bytes2, logicalAddress) => {
     case "absoluteAccumulator":
       return [address3(word2, 2), register3("A")];
     case "directImmediate":
-      return [address3(bytes2[2] ?? 0, 1), immediate(byte2)];
+      return [address3(byteAt2(bytes2, 2) ?? 0, 1), immediate(byte2)];
     case "registerXAbsolute":
       return [register3("X"), address3(word2, 2)];
     case "registerXDirect":
@@ -37131,7 +38682,7 @@ var operandsFor2 = (specification2, bytes2, logicalAddress) => {
       return [register3("Y"), immediate(byte2)];
     case "directRelative":
     case "directIndexedXRelative":
-      return [address3(byte2, 1), relative(bytes2[2] ?? 0, logicalAddress, bytes2.length)];
+      return [address3(byte2, 1), relative(byteAt2(bytes2, 2) ?? 0, logicalAddress, bytes2.length)];
     case "registerYRelative":
       return [register3("Y"), relative(byte2, logicalAddress, bytes2.length)];
     case "registerYADirect":
@@ -37251,7 +38802,7 @@ var Spc700Decoder = class {
         availableBytes
       };
     }
-    const specification2 = spc700Specifications[opcode];
+    const specification2 = opcode >= 0 && opcode < spc700Specifications.length ? spc700Specifications[opcode] : void 0;
     if (!specification2) {
       return {
         kind: "error",
@@ -37279,7 +38830,7 @@ var Spc700Decoder = class {
   }
 };
 
-// ../plugin-snes/src/architectures/split-operands.ts
+// packages/plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand = (text2) => text2 ? [text2] : [];
 function referenceExpressions65816(operand, depth = 0) {
   const text2 = operand.trim().replace(/^#\s*/, "");
@@ -37348,7 +38899,7 @@ var splitTopLevelCommaOperands = (text2) => {
   return operands;
 };
 
-// ../plugin-snes/src/architectures/spc700.ts
+// packages/plugin-snes/src/architectures/spc700.ts
 var lowerSpc700Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
@@ -37559,10 +39110,15 @@ function parseBitBranchOpcode(opcode) {
   if (!match) {
     return void 0;
   }
-  if (match[2] === void 0) {
-    return { family: match[1] };
+  const familyText = match[1];
+  if (familyText !== "BBS" && familyText !== "BBC") {
+    return void 0;
   }
-  return { family: match[1], mnemonicBit: Number(match[2]) };
+  const mnemonicBitText = match.length > 2 ? match[2] : void 0;
+  if (mnemonicBitText === void 0) {
+    return { family: familyText };
+  }
+  return { family: familyText, mnemonicBit: Number(mnemonicBitText) };
 }
 var wordOpsWithYaLeft = {
   CMPW: 90,
@@ -37578,9 +39134,12 @@ var singleWordOps = {
   INCW: 58
 };
 var NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
+function isNumberedBitFamily(value) {
+  return value === "NOT" || value === "OR" || value === "AND" || value === "EOR" || value === "MOV";
+}
 function parseNumberedBitOpcode(opcode) {
   const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
-  if (!match) {
+  if (!match || !isNumberedBitFamily(match[1])) {
     return void 0;
   }
   return {
@@ -37615,6 +39174,7 @@ function parseSpcBitNumber(raw) {
   }
   return Number(trimmed);
 }
+var isMovMemoryKey = (value) => value === "A,$" || value === "A,$+X" || value === "X,$" || value === "Y,$" || value === "$,A" || value === "$+X,A" || value === "$,X" || value === "$,Y";
 var ArchSPC700 = class {
   assembler;
   constructor(context) {
@@ -37633,12 +39193,11 @@ var ArchSPC700 = class {
    * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction2.mnemonic,
       instruction2.operandText,
       instruction2.loweredOperand,
-      loweredOperands
+      instruction2.loweredOperands
     );
   }
   /**
@@ -37647,12 +39206,11 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   encodeInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
       instruction2.mnemonic,
       instruction2.operands,
       instruction2.loweredOperand,
-      loweredOperands
+      instruction2.loweredOperands
     );
   }
   /**
@@ -38641,18 +40199,17 @@ var ArchSPC700 = class {
     }
     if (upper === "JMP") {
       const trimmed = operand.trim().toUpperCase();
+      let val;
       if (loweredOperand?.mode === "directPageIndexedXIndirect" || trimmed.startsWith("(") && trimmed.endsWith("+X)")) {
         this.assembler.write1(31);
         const inner = loweredOperand?.baseExpression ?? operand.trim().slice(1, operand.trim().length - 3).trim();
-        const val = resolveOperand(inner);
-        this.assembler.write2(val);
-        return true;
+        val = resolveOperand(inner);
       } else {
         this.assembler.write1(95);
-        const val = resolveOperand(operand);
-        this.assembler.write2(val);
-        return true;
+        val = resolveOperand(operand);
       }
+      this.assembler.write2(val);
+      return true;
     }
     return false;
   }
@@ -38685,7 +40242,6 @@ var ArchSPC700 = class {
           this.assembler.write1(200);
           const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 255;
           this.assembler.write1(imm);
-          return true;
         } else {
           const val = parseInt(tail.replace(/\$/g, ""), 16) & 65535;
           if (explicitlen) {
@@ -38705,15 +40261,14 @@ var ArchSPC700 = class {
               this.assembler.write2(val);
             }
           }
-          return true;
         }
+        return true;
       }
       if (leftOperandIsY) {
         if (rightLowered?.immediate ?? tail.startsWith("#")) {
           this.assembler.write1(173);
           const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 255;
           this.assembler.write1(imm);
-          return true;
         } else {
           const val = parseInt(tail.replace(/\$/g, ""), 16) & 65535;
           if (explicitlen) {
@@ -38733,8 +40288,8 @@ var ArchSPC700 = class {
               this.assembler.write2(val);
             }
           }
-          return true;
         }
+        return true;
       }
     }
     if (upper === "MOV") {
@@ -38821,15 +40376,19 @@ var ArchSPC700 = class {
       "$,X": { byte: 216, word: 201 },
       "$,Y": { byte: 203, word: 204 }
     };
-    let key3 = null;
+    let key3;
     if (/^\$[\da-f]+$/i.test(left)) {
-      key3 = `$,${right.toUpperCase()}`;
+      const candidate = `$,${right.toUpperCase()}`;
+      key3 = isMovMemoryKey(candidate) ? candidate : void 0;
     } else if (/^\$[\da-f]+\+x$/i.test(left)) {
-      key3 = `$+X,${right.toUpperCase()}`;
+      const candidate = `$+X,${right.toUpperCase()}`;
+      key3 = isMovMemoryKey(candidate) ? candidate : void 0;
     } else if (/^\$[\da-f]+$/i.test(right)) {
-      key3 = `${left.toUpperCase()},$`;
+      const candidate = `${left.toUpperCase()},$`;
+      key3 = isMovMemoryKey(candidate) ? candidate : void 0;
     } else if (/^\$[\da-f]+\+x$/i.test(right)) {
-      key3 = `${left.toUpperCase()},$+X`;
+      const candidate = `${left.toUpperCase()},$+X`;
+      key3 = isMovMemoryKey(candidate) ? candidate : void 0;
     }
     if (key3 && hasOwn(memoryMoves, key3)) {
       const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
@@ -38981,9 +40540,13 @@ var ArchSPC700 = class {
       if (!baseExpression) {
         return null;
       }
+      const index = match[2].toUpperCase();
+      if (index !== "X" && index !== "Y") {
+        return null;
+      }
       return {
         value: this.assembler.operandResolver.getnum(baseExpression),
-        index: match[2].toUpperCase(),
+        index,
         length: getAddressSize(baseExpression)
       };
     };
@@ -39249,10 +40812,10 @@ var ArchSPC700 = class {
         opcodeByte = 202;
       }
     }
-    const hex11 = mem.addressText.match(/^\$([\da-f]+)$/i);
+    const hex12 = mem.addressText.match(/^\$([\da-f]+)$/i);
     let addr;
-    if (hex11) {
-      addr = Number.parseInt(hex11[1], 16) & 65535;
+    if (hex12) {
+      addr = Number.parseInt(hex12[1], 16) & 65535;
     } else {
       addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
     }
@@ -39337,7 +40900,7 @@ var ArchSPC700 = class {
   }
 };
 
-// ../plugin-snes/src/architectures/superfx-decoder.ts
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
 var word = (bytes2, offset) => (bytes2[offset] ?? 0) | (bytes2[offset + 1] ?? 0) << 8;
 var register4 = (value) => ({ kind: "register", register: `R${value}` });
 var immediate2 = (value, width, signed2 = false) => ({
@@ -39529,7 +41092,10 @@ var truncated = (context, requiredBytes) => ({
   requiredBytes,
   availableBytes: availableAt(context)
 });
-var prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
+var prefixAlt = (opcode) => {
+  const alt = opcode - 60;
+  return opcode >= 61 && opcode <= 63 && isSuperFxAltState(alt) ? alt : void 0;
+};
 var SuperFxDecoder = class {
   decode(context) {
     const opcode = context.source.readByte(context.offset);
@@ -39630,7 +41196,7 @@ var SuperFxDecoder = class {
   }
 };
 
-// ../plugin-snes/src/asar/compatibility.ts
+// packages/plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "fastrom",
   "dpbase",
@@ -39703,7 +41269,7 @@ var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
 var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
 var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
 
-// ../plugin-snes/src/architectures/superfx.ts
+// packages/plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
@@ -39836,12 +41402,11 @@ var ArchSuperFX = class {
    * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction2.mnemonic,
       instruction2.operands,
       instruction2.loweredOperand,
-      loweredOperands
+      instruction2.loweredOperands
     );
   }
   /**
@@ -39850,12 +41415,11 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was encoded.
    */
   encodeInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
       instruction2.mnemonic,
       instruction2.operands,
       instruction2.loweredOperand,
-      loweredOperands
+      instruction2.loweredOperands
     );
   }
   /**
@@ -39891,10 +41455,12 @@ var ArchSuperFX = class {
     if (hasOwn2(PREFIXED_OPCODES, opcode)) {
       return 2;
     }
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const secondLowered = loweredOperands[1];
-    const leftOp = firstLowered?.expanded ?? operands[0] ?? "";
-    const rightOp = secondLowered?.expanded ?? operands[1] ?? "";
+    const firstLowered = loweredOperands.length > 0 ? loweredOperands[0] : loweredOperand;
+    const secondLowered = loweredOperands.length > 1 ? loweredOperands[1] : void 0;
+    const firstOperand = operands.length > 0 ? operands[0] : void 0;
+    const secondOperand = operands.length > 1 ? operands[1] : void 0;
+    const leftOp = firstLowered?.expanded ?? firstOperand ?? "";
+    const rightOp = secondLowered?.expanded ?? secondOperand ?? "";
     if (operands.length <= 1 && hasOwn2(SHORT_BRANCH_OPCODES, opcode)) {
       return 2;
     }
@@ -40024,8 +41590,10 @@ var ArchSuperFX = class {
    */
   encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
     const opcode = mnemonic.toUpperCase();
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const secondLowered = loweredOperands[1];
+    const firstLowered = loweredOperands.length > 0 ? loweredOperands[0] : loweredOperand;
+    const secondLowered = loweredOperands.length > 1 ? loweredOperands[1] : void 0;
+    const firstOperand = operands.length > 0 ? operands[0] : void 0;
+    const secondOperand = operands.length > 1 ? operands[1] : void 0;
     const operand = firstLowered?.expanded ?? "";
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
     if (hasOwn2(IMPLIED_OPCODES, opcode) || hasOwn2(PREFIXED_OPCODES, opcode)) {
@@ -40040,8 +41608,8 @@ var ArchSuperFX = class {
     if (operands.length === 2) {
       return this.handleTwoOperandOpcode(
         opcode,
-        firstLowered?.expanded ?? operands[0],
-        secondLowered?.expanded ?? operands[1],
+        firstLowered?.expanded ?? firstOperand ?? "",
+        secondLowered?.expanded ?? secondOperand ?? "",
         firstLowered,
         secondLowered
       );
@@ -40173,23 +41741,18 @@ var ArchSuperFX = class {
       switch (opcode) {
         case "MOVEB":
           this.rangeCheck(0, reg2r, 11);
-          if (reg1parr === 0) {
-            this.assembler.write1(ALT1);
-            this.assembler.write1(48 + reg2r);
-          } else {
+          if (reg1parr !== 0) {
             this.assembler.write1(176 + reg1parr);
-            this.assembler.write1(ALT1);
-            this.assembler.write1(48 + reg2r);
           }
+          this.assembler.write1(ALT1);
+          this.assembler.write1(48 + reg2r);
           return true;
         case "MOVEW":
           this.rangeCheck(0, reg2r, 11);
-          if (reg1parr === 0) {
-            this.assembler.write1(48 + reg2r);
-          } else {
+          if (reg1parr !== 0) {
             this.assembler.write1(176 + reg1parr);
-            this.assembler.write1(48 + reg2r);
           }
+          this.assembler.write1(48 + reg2r);
           return true;
       }
     }
@@ -40197,23 +41760,18 @@ var ArchSuperFX = class {
       switch (opcode) {
         case "MOVEB":
           this.rangeCheck(0, reg2parr, 11);
-          if (reg1r === 0) {
-            this.assembler.write1(ALT1);
-            this.assembler.write1(64 + reg2parr);
-          } else {
+          if (reg1r !== 0) {
             this.assembler.write1(16 + reg1r);
-            this.assembler.write1(ALT1);
-            this.assembler.write1(64 + reg2parr);
           }
+          this.assembler.write1(ALT1);
+          this.assembler.write1(64 + reg2parr);
           return true;
         case "MOVEW":
           this.rangeCheck(0, reg2parr, 11);
-          if (reg1r === 0) {
-            this.assembler.write1(64 + reg2parr);
-          } else {
+          if (reg1r !== 0) {
             this.assembler.write1(16 + reg1r);
-            this.assembler.write1(64 + reg2parr);
           }
+          this.assembler.write1(64 + reg2parr);
           return true;
       }
     }
@@ -40233,12 +41791,11 @@ var ArchSuperFX = class {
           this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
+          this.assembler.write1(ALT1);
           if (isShortRamAddress(addrVal)) {
-            this.assembler.write1(ALT1);
             this.assembler.write1(160 + reg1r);
             this.assembler.write1(this.moveShortAddressByte(addrVal));
           } else {
-            this.assembler.write1(ALT1);
             this.assembler.write1(240 + reg1r);
             this.assembler.write2(addrVal);
           }
@@ -40267,12 +41824,11 @@ var ArchSuperFX = class {
           this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
+          this.assembler.write1(ALT2);
           if (isShortRamAddress(addrVal)) {
-            this.assembler.write1(ALT2);
             this.assembler.write1(160 + reg2r);
             this.assembler.write1(this.moveShortAddressByte(addrVal));
           } else {
-            this.assembler.write1(ALT2);
             this.assembler.write1(240 + reg2r);
             this.assembler.write2(addrVal);
           }
@@ -40329,33 +41885,30 @@ var ArchSuperFX = class {
         return null;
       }
       str = str.slice(1);
-      const regnum = this.parseRegisterNumber(str.replace(/\)$/, ""));
-      if (regnum === -1) {
+      const regnum2 = this.parseRegisterNumber(str.replace(/\)$/, ""));
+      if (regnum2 === -1) {
         return null;
       }
-      return regnum;
+      return regnum2;
     }
     if (type === "r") {
       if (!str.toLowerCase().startsWith("r")) {
         return null;
       }
-      const regnum = this.parseRegisterNumber(str.slice(1));
-      if (regnum === -1) {
+      const regnum2 = this.parseRegisterNumber(str.slice(1));
+      if (regnum2 === -1) {
         return null;
       }
-      return regnum;
+      return regnum2;
     }
-    if (type === "hash") {
-      if (!str.startsWith("#")) {
-        return null;
-      }
-      const regnum = this.assembler.operandResolver.getnum(str.slice(1));
-      if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        return null;
-      }
-      return regnum;
+    if (!str.startsWith("#")) {
+      return null;
     }
-    return null;
+    const regnum = this.assembler.operandResolver.getnum(str.slice(1));
+    if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
+      return null;
+    }
+    return regnum;
   }
   /**
    * Parses the register number. E.g. '5', '10', '15'. Returns -1 if invalid.
@@ -40481,7 +42034,7 @@ var ArchSuperFX = class {
   }
 };
 
-// ../assets/src/validation.ts
+// packages/assets/src/validation.ts
 function integer4(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -40499,7 +42052,7 @@ function isNamespacedId(id) {
   return parts.length > 1 && /^[a-z][\da-z-]*$/.test(parts[0]) && parts.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part));
 }
 
-// ../assets/src/registry.ts
+// packages/assets/src/registry.ts
 var AssetRegistry = class {
   #importers = /* @__PURE__ */ new Map();
   #encoders = /* @__PURE__ */ new Map();
@@ -40580,7 +42133,7 @@ function convertAsset(registry3, request) {
   };
 }
 
-// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -41245,9 +42798,9 @@ var BS_BLOCK_DONE = 2;
 var BS_FINISH_STARTED = 3;
 var BS_FINISH_DONE = 4;
 var OS_CODE = 3;
-var err = (strm, errorCode) => {
-  strm.msg = messages_default[errorCode];
-  return errorCode;
+var err = (strm, errorCode4) => {
+  strm.msg = messages_default[errorCode4];
+  return errorCode4;
 };
 var rank = (f) => {
   return f * 2 - (f > 4 ? 9 : 0);
@@ -44018,7 +45571,7 @@ var Inflate = class {
   }
 };
 
-// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
+// node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -44110,7 +45663,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
+// node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -44128,7 +45681,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
+// node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -45373,7 +46926,7 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// ../../node_modules/@uttori/data-tools/dist/audio/audio-wav.js
+// node_modules/@uttori/data-tools/dist/audio/audio-wav.js
 var _a;
 var debug2 = (..._args) => {
 };
@@ -47343,7 +48896,7 @@ var AudioWAV = class extends data_buffer_default {
 _a = AudioWAV;
 var audio_wav_default = AudioWAV;
 
-// ../assets/src/snes.ts
+// packages/assets/src/snes.ts
 var planeOffset = (depth, plane, row) => {
   if (depth === 3 && plane === 2) {
     return 16 + row;
@@ -47368,7 +48921,7 @@ function decodePlanarTiles(bytes2, depth) {
     { length: count },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, row) => Array.from({ length: 8 }, (_3, column) => {
+      (_row, row) => Array.from({ length: 8 }, (_column, column) => {
         let pixel = 0;
         for (let plane = 0; plane < depth; plane++) {
           const byte2 = bytes2[tileIndex * size + planeOffset(depth, plane, row)];
@@ -47402,7 +48955,7 @@ function decodeMode7Tiles(bytes2) {
     { length: count },
     (_, tileIndex) => Array.from(
       { length: 8 },
-      (_2, row) => Array.from({ length: 8 }, (_3, column) => bytes2[tileIndex * 64 + row * 8 + column])
+      (_row, row) => Array.from({ length: 8 }, (_column, column) => bytes2[tileIndex * 64 + row * 8 + column])
     )
   );
 }
@@ -47472,7 +49025,7 @@ function decodeBrrBlocks(bytes2) {
   return Array.from({ length: count }, (_, blockIndex) => {
     const offset = blockIndex * 9;
     const header = bytes2[offset];
-    const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
+    const nibbles = Array.from({ length: 16 }, (_sample, sampleIndex) => {
       const byte2 = bytes2[offset + 1 + Math.floor(sampleIndex / 2)];
       const nibble2 = sampleIndex % 2 === 0 ? byte2 >> 4 : byte2 & 15;
       return nibble2 >= 8 ? nibble2 - 16 : nibble2;
@@ -47502,6 +49055,7 @@ function encodeBrrBlocks(blocks) {
   });
   return bytes2;
 }
+var isRecord28 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var sameModelValue = (left, right) => {
   if (Object.is(left, right)) {
     return true;
@@ -47509,17 +49063,95 @@ var sameModelValue = (left, right) => {
   if (Array.isArray(left) && Array.isArray(right)) {
     return left.length === right.length && left.every((entry, index) => sameModelValue(entry, right[index]));
   }
-  if (!left || !right || typeof left !== "object" || typeof right !== "object" || Array.isArray(left) || Array.isArray(right)) {
+  if (!isRecord28(left) || !isRecord28(right)) {
     return false;
   }
-  const leftRecord = left;
-  const rightRecord = right;
-  const keys = Object.keys(leftRecord);
-  return keys.length === Object.keys(rightRecord).length && keys.every(
-    (key3) => Object.hasOwn(rightRecord, key3) && sameModelValue(leftRecord[key3], rightRecord[key3])
-  );
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key3) => Object.hasOwn(right, key3) && sameModelValue(left[key3], right[key3]));
 };
-var nativeEncoder = (id, kind, output, modelField, encode, decode4) => Object.freeze({
+var readNumber = (value, label) => {
+  if (typeof value !== "number") {
+    throw new TypeError(`${label} must be a number.`);
+  }
+  return value;
+};
+var readTiles = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tile model 'tiles' must be an array.");
+  }
+  return value.map((tile, tileIndex) => {
+    if (!Array.isArray(tile)) {
+      throw new TypeError(`Tile ${tileIndex} must be an array of rows.`);
+    }
+    return tile.map((row, rowIndex) => {
+      if (!Array.isArray(row)) {
+        throw new TypeError(`Tile ${tileIndex} row ${rowIndex} must be an array of pixels.`);
+      }
+      return row.map(
+        (pixel, column) => readNumber(pixel, `Tile ${tileIndex} pixel ${column},${rowIndex}`)
+      );
+    });
+  });
+};
+var readColors = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native palette model 'colors' must be an array.");
+  }
+  return value.map((color, index) => {
+    if (!isRecord28(color)) {
+      throw new TypeError(`Color ${index} must be an object.`);
+    }
+    return {
+      red: readNumber(color.red, `Color ${index} red`),
+      green: readNumber(color.green, `Color ${index} green`),
+      blue: readNumber(color.blue, `Color ${index} blue`),
+      unusedHighBit: readNumber(color.unusedHighBit, `Color ${index} unusedHighBit`)
+    };
+  });
+};
+var readEntries = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'entries' must be an array.");
+  }
+  return value.map((entry, index) => {
+    if (!isRecord28(entry)) {
+      throw new TypeError(`Entry ${index} must be an object.`);
+    }
+    return {
+      tile: readNumber(entry.tile, `Entry ${index} tile`),
+      palette: readNumber(entry.palette, `Entry ${index} palette`),
+      priority: readNumber(entry.priority, `Entry ${index} priority`),
+      horizontalFlip: readNumber(entry.horizontalFlip, `Entry ${index} horizontalFlip`),
+      verticalFlip: readNumber(entry.verticalFlip, `Entry ${index} verticalFlip`)
+    };
+  });
+};
+var readIndexes = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native tilemap model 'indexes' must be an array.");
+  }
+  return value.map((entry, index) => readNumber(entry, `Index ${index}`));
+};
+var readBlocks = (value) => {
+  if (!Array.isArray(value)) {
+    throw new TypeError("Native BRR model 'blocks' must be an array.");
+  }
+  return value.map((block, index) => {
+    if (!isRecord28(block) || !Array.isArray(block.nibbles)) {
+      throw new TypeError(`BRR block ${index} must be an object with nibbles.`);
+    }
+    return {
+      range: readNumber(block.range, `BRR block ${index} range`),
+      filter: readNumber(block.filter, `BRR block ${index} filter`),
+      loop: readNumber(block.loop, `BRR block ${index} loop`),
+      end: readNumber(block.end, `BRR block ${index} end`),
+      nibbles: block.nibbles.map(
+        (nibble2, sampleIndex) => readNumber(nibble2, `BRR nibble ${sampleIndex}`)
+      )
+    };
+  });
+};
+var nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
   id,
   version: "1.0.0",
   inputKinds: [kind],
@@ -47528,12 +49160,12 @@ var nativeEncoder = (id, kind, output, modelField, encode, decode4) => Object.fr
     if (Object.keys(options).length !== 0) {
       throw new Error(`Native encoder '${id}' accepts no options.`);
     }
-    if (!document2.value || typeof document2.value !== "object" || Array.isArray(document2.value)) {
+    if (!isRecord28(document2.value)) {
       throw new Error(`Native encoder '${id}' requires an object model.`);
     }
     const value = document2.value;
     const bytes2 = encode(value);
-    if (!sameModelValue(decode4(bytes2), value[modelField])) {
+    if (!sameModelValue(decode(bytes2), value[modelField])) {
       throw new Error(`Native encoder '${id}' did not preserve '${modelField}'.`);
     }
     return {
@@ -47551,7 +49183,7 @@ var snesNativeEncoders = Object.freeze(
         "snes-planar-tiles",
         "tiles",
         "tiles",
-        (value) => encodePlanarTiles(value.tiles, depth),
+        (value) => encodePlanarTiles(readTiles(value.tiles), depth),
         (bytes2) => decodePlanarTiles(bytes2, depth)
       )
     ),
@@ -47560,7 +49192,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-mode7-tiles",
       "tiles",
       "tiles",
-      (value) => encodeMode7Tiles(value.tiles),
+      (value) => encodeMode7Tiles(readTiles(value.tiles)),
       decodeMode7Tiles
     ),
     nativeEncoder(
@@ -47568,7 +49200,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-palette-bgr555",
       "palette",
       "colors",
-      (value) => encodeBgr555(value.colors),
+      (value) => encodeBgr555(readColors(value.colors)),
       decodeBgr555
     ),
     nativeEncoder(
@@ -47576,7 +49208,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-bg-tilemap",
       "tilemap",
       "entries",
-      (value) => encodeBgMap(value.entries),
+      (value) => encodeBgMap(readEntries(value.entries)),
       decodeBgMap
     ),
     nativeEncoder(
@@ -47584,7 +49216,7 @@ var snesNativeEncoders = Object.freeze(
       "snes-mode7-tilemap",
       "tilemap",
       "indexes",
-      (value) => encodeMode7Map(value.indexes),
+      (value) => encodeMode7Map(readIndexes(value.indexes)),
       decodeMode7Map
     ),
     nativeEncoder(
@@ -47592,13 +49224,13 @@ var snesNativeEncoders = Object.freeze(
       "snes-brr",
       "brr",
       "blocks",
-      (value) => encodeBrrBlocks(value.blocks),
+      (value) => encodeBrrBlocks(readBlocks(value.blocks)),
       decodeBrrBlocks
     )
-  ].sort((left, right) => left.id.localeCompare(right.id))
+  ].toSorted((left, right) => left.id.localeCompare(right.id))
 );
 
-// ../assets/src/brr-codec.ts
+// packages/assets/src/brr-codec.ts
 function decodeNibble(nibble2, range2, filter, state) {
   let value = range2 <= 12 ? nibble2 << range2 >> 1 : nibble2 & ~2047;
   const previous = state.previous;
@@ -47706,9 +49338,37 @@ function encodeBrrPcm(samples, loop) {
   return bytes2;
 }
 
-// ../assets/src/audio.ts
+// packages/assets/src/audio.ts
 var MAX_WAVE_BYTES = 16 * 1024 * 1024;
 var MAX_SAMPLES = 1024 * 1024;
+var isRecord29 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var PCM_MODEL_ERROR = "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.";
+function readPcmAudio(value) {
+  if (!isRecord29(value)) {
+    throw new Error(PCM_MODEL_ERROR);
+  }
+  const samples = value.samples;
+  const sampleRate = value.sampleRate;
+  const sourceBitDepth = value.sourceBitDepth;
+  if (!(samples instanceof Int16Array) || typeof sampleRate !== "number" || !Number.isSafeInteger(sampleRate) || sampleRate < 1 || sampleRate > 384e3 || sourceBitDepth !== 8 && sourceBitDepth !== 16) {
+    throw new Error(PCM_MODEL_ERROR);
+  }
+  let loop;
+  if (value.loop !== void 0) {
+    const sourceLoop = value.loop;
+    if (!isRecord29(sourceLoop) || typeof sourceLoop.start !== "number" || typeof sourceLoop.end !== "number") {
+      throw new Error(PCM_MODEL_ERROR);
+    }
+    loop = { start: sourceLoop.start, end: sourceLoop.end };
+  }
+  return {
+    kind: "pcm-audio",
+    sampleRate,
+    sourceBitDepth,
+    samples,
+    ...loop === void 0 ? {} : { loop }
+  };
+}
 var u16le = (bytes2, offset) => bytes2[offset] | bytes2[offset + 1] << 8;
 var u32le = (bytes2, offset) => bytes2[offset] + bytes2[offset + 1] * 256 + bytes2[offset + 2] * 65536 + bytes2[offset + 3] * 16777216 >>> 0;
 var ascii = (bytes2, offset, length) => String.fromCharCode(...bytes2.subarray(offset, offset + length));
@@ -47883,12 +49543,7 @@ function withAudioEncoder(native) {
         if (document2.kind !== "pcm-audio") {
           return encoder.encode(document2, rawOptions, resources);
         }
-        if (!document2.value || typeof document2.value !== "object" || !("samples" in document2.value) || !(document2.value.samples instanceof Int16Array) || !("sampleRate" in document2.value) || typeof document2.value.sampleRate !== "number" || !Number.isSafeInteger(document2.value.sampleRate) || document2.value.sampleRate < 1 || document2.value.sampleRate > 384e3 || !("sourceBitDepth" in document2.value) || document2.value.sourceBitDepth !== 8 && document2.value.sourceBitDepth !== 16) {
-          throw new Error(
-            "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth."
-          );
-        }
-        const audio = document2.value;
+        const audio = readPcmAudio(document2.value);
         const options = resolveBrrAudioOptions(rawOptions, audio);
         const originalCount = audio.samples.length;
         if (originalCount === 0) {
@@ -47965,14 +49620,14 @@ function withAudioEncoder(native) {
             snrDb,
             loopPeakError
           },
-          normalizedOptions: { padding: options.padding, loop: loop ?? false }
+          normalizedOptions: { padding: options.padding, loop }
         };
       }
     });
   });
 }
 
-// ../assets/src/data.ts
+// packages/assets/src/data.ts
 var rawImporter = Object.freeze({
   id: "uttori.import.raw",
   version: "1.0.0",
@@ -48016,10 +49671,10 @@ var jsonImporter = Object.freeze({
   }
 });
 
-// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// node_modules/@uttori/data-tools/dist/image/data-image-png.js
 init_data_hash_crc32();
 
-// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -48169,7 +49824,7 @@ function drawBitmapText(surface, text2, x, y, color, options) {
   return metrics;
 }
 
-// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -48625,7 +50280,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug3 = () => {
 };
 if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
@@ -49554,7 +51209,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     let written = 0;
     let compressedLength = 0;
     let ended = false;
-    let errorCode = 0;
+    let errorCode4 = 0;
     inflator.onData = (chunk) => {
       if (written + chunk.length > expected) {
         throw new Error("PNG inflated data exceeds declared dimensions.");
@@ -49564,7 +51219,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     };
     inflator.onEnd = (status) => {
       ended = true;
-      errorCode = status;
+      errorCode4 = status;
     };
     for (const chunk of this.dataChunks) {
       if (chunk.length === 0) {
@@ -49577,14 +51232,14 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
       if (compressedLength > this._limits.maxInputBytes) {
         throw new RangeError("PNG exceeds the input byte limit.");
       }
-      if (!inflator.push(chunk, false) || errorCode !== 0) {
+      if (!inflator.push(chunk, false) || errorCode4 !== 0) {
         throw new Error(`Invalid PNG image data: ${zlib.msg || "inflate failure"}.`);
       }
       if (zlib.avail_in !== 0) {
         throw new Error("PNG has trailing bytes after the zlib stream.");
       }
     }
-    if (!ended || errorCode !== 0 || written !== expected) {
+    if (!ended || errorCode4 !== 0 || written !== expected) {
       throw new Error("Invalid PNG image data: incomplete zlib stream or scanline length mismatch.");
     }
     if (zlib.total_in !== compressedLength) {
@@ -50265,7 +51920,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// ../assets/src/png.ts
+// packages/assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: 16 * 1024 * 1024,
   maxPixels: 1024 * 1024,
@@ -50300,8 +51955,13 @@ var pngImporter = Object.freeze({
   }
 });
 
-// ../assets/src/image-conversion.ts
-var isRecord5 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+// packages/assets/src/image-conversion.ts
+var isRecord30 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+var isPlanarDepth = (value) => value === 2 || value === 3 || value === 4 || value === 8;
+var isSourceBitDepth = (value) => value === 1 || value === 2 || value === 4 || value === 8;
+var isRgbaTuple = (value) => Array.isArray(value) && value.length === 4 && value.every(
+  (channel) => typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255
+);
 var readInteger = (value, label, minimum, maximum) => {
   if (typeof value !== "number") {
     throw new RangeError(`${label} must be a number.`);
@@ -50334,7 +51994,7 @@ var readLayout = (raw) => {
   if (raw === void 0) {
     return { tileOrder: "row-major" };
   }
-  if (!isRecord5(raw)) {
+  if (!isRecord30(raw)) {
     throw new Error("layout must be an object.");
   }
   const tileOrder = raw.tileOrder ?? "row-major";
@@ -50394,7 +52054,7 @@ var readOptions = (raw, indexed) => {
     throw new Error("Invalid paletteExpansion profile.");
   }
   const map = raw.tilemap === void 0 ? {} : raw.tilemap;
-  if (!isRecord5(map) || Object.keys(map).some(
+  if (!isRecord30(map) || Object.keys(map).some(
     (key3) => ![
       "layout",
       "startTileIndex",
@@ -50432,7 +52092,7 @@ var externalPalette = (input) => {
     throw new Error("External palette JSON exceeds 64 KiB.");
   }
   const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.bytes));
-  if (!isRecord5(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
+  if (!isRecord30(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
     throw new Error("External palette requires version 1 and 1\u2013256 RGB8 colors.");
   }
   const transparentIndex = readInteger(
@@ -50465,7 +52125,7 @@ function selectPalette(image, options, resources, capacity2) {
       indexes = image.indexes.slice();
       sourceToNative = colors.map((_, index) => index);
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette) ? resources[options.palette] : void 0;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -50531,7 +52191,7 @@ function selectPalette(image, options, resources, capacity2) {
         indexes[pixel] = index;
       }
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette) ? resources[options.palette] : void 0;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -50641,7 +52301,7 @@ function mapOrder(width, height, layout2) {
   return order;
 }
 function imageModel(document2) {
-  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord5(document2.value)) {
+  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord30(document2.value)) {
     throw new Error("Image encoder requires imported PNG pixels.");
   }
   const value = document2.value;
@@ -50650,20 +52310,40 @@ function imageModel(document2) {
   }
   const pixels = value.width * value.height;
   if (document2.kind === "indexed-image") {
-    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || ![1, 2, 4, 8].includes(Number(value.sourceBitDepth))) {
+    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || !isSourceBitDepth(value.sourceBitDepth)) {
       throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
     }
+    const palette = [];
     for (const [index, color] of value.palette.entries()) {
-      if (!Array.isArray(color) || color.length !== 4 || color.some(
-        (channel) => typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255
-      )) {
+      if (!isRgbaTuple(color)) {
         throw new Error(`Indexed image palette entry ${index} is not RGBA8.`);
       }
+      const entry = [
+        color[0],
+        color[1],
+        color[2],
+        color[3]
+      ];
+      palette.push(entry);
     }
-  } else if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+    return {
+      kind: "indexed-image",
+      width: value.width,
+      height: value.height,
+      indexes: value.indexes,
+      palette,
+      sourceBitDepth: value.sourceBitDepth
+    };
+  }
+  if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
     throw new Error("RGBA image model has invalid pixel bytes.");
   }
-  return value;
+  return {
+    kind: "rgba-image",
+    width: value.width,
+    height: value.height,
+    rgba: value.rgba
+  };
 }
 function encodeImage(document2, rawOptions, resources, format) {
   const image = imageModel(document2);
@@ -50687,21 +52367,30 @@ function encodeImage(document2, rawOptions, resources, format) {
   const widthTiles = image.width / 8;
   const heightTiles = image.height / 8;
   const coordinates = tileCoordinates(widthTiles, heightTiles, options.layout);
-  const indexByCoordinate = new Array(coordinates.length);
+  const indexByCoordinate = Array.from({ length: coordinates.length }, () => 0);
   const tiles = coordinates.map(([tx, ty], storageIndex) => {
     indexByCoordinate[ty * widthTiles + tx] = storageIndex;
     return Array.from(
       { length: 8 },
-      (_, row) => Array.from({ length: 8 }, (_2, column) => {
+      (_, row) => Array.from({ length: 8 }, (_column, column) => {
         const sourceX = options.tilemap.horizontalFlip ? 7 - column : column;
         const sourceY = options.tilemap.verticalFlip ? 7 - row : row;
         return selection.indexes[(ty * 8 + sourceY) * image.width + tx * 8 + sourceX];
       })
     );
   });
-  const tileBytes = mode7 ? encodeMode7Tiles(tiles) : encodePlanarTiles(tiles, depth);
+  let tileBytes;
+  let decodedTiles;
+  if (mode7) {
+    tileBytes = encodeMode7Tiles(tiles);
+    decodedTiles = decodeMode7Tiles(tileBytes);
+  } else if (isPlanarDepth(depth)) {
+    tileBytes = encodePlanarTiles(tiles, depth);
+    decodedTiles = decodePlanarTiles(tileBytes, depth);
+  } else {
+    throw new Error(`Unsupported planar tile format '${format}'.`);
+  }
   const paletteBytes = encodeBgr555(colors);
-  const decodedTiles = mode7 ? decodeMode7Tiles(tileBytes) : decodePlanarTiles(tileBytes, depth);
   const decodedColors = decodeBgr555(paletteBytes);
   const preview = new Uint8Array(image.width * image.height * 4);
   for (let ty = 0; ty < heightTiles; ty++) {
@@ -50780,7 +52469,12 @@ function encodeImage(document2, rawOptions, resources, format) {
       tilemap: { bytes: tilemapBytes, mediaType: "application/octet-stream", metadata },
       preview: { bytes: preview, mediaType: "application/x-rgba", metadata }
     },
-    normalizedOptions: options
+    normalizedOptions: {
+      palette: options.palette,
+      paletteExpansion: options.paletteExpansion,
+      layout: options.layout,
+      tilemap: options.tilemap
+    }
   };
 }
 function withImageEncoders(native) {
@@ -50808,7 +52502,7 @@ function withImageEncoders(native) {
   });
 }
 
-// ../plugin-snes/src/assets/assembly-formats.ts
+// packages/plugin-snes/src/assets/assembly-formats.ts
 var registry2 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(waveImporter);
 var encoders = [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder];
 for (const encoder of encoders) {
@@ -50869,7 +52563,7 @@ var snesAssetFormats = encoders.map((encoder) => ({
   }
 }));
 
-// ../plugin-snes/src/directives/ca65-compat.ts
+// packages/plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -50884,7 +52578,8 @@ function handleA16(session) {
   getActiveArch65816(session)?.setAccumulatorWidth(true);
 }
 function handleAccu(session, words) {
-  const widthToken = words[1]?.trim();
+  const widthArgument = words.length > 1 ? words[1] : void 0;
+  const widthToken = widthArgument?.trim();
   if (widthToken === "8") {
     handleA8(session);
   } else if (widthToken === "16") {
@@ -50900,7 +52595,8 @@ function handleI16(session) {
   getActiveArch65816(session)?.setIndexWidth(true);
 }
 function handleIndex(session, words) {
-  const widthToken = words[1]?.trim();
+  const widthArgument = words.length > 1 ? words[1] : void 0;
+  const widthToken = widthArgument?.trim();
   if (widthToken === "8") {
     handleI8(session);
   } else if (widthToken === "16") {
@@ -50953,7 +52649,7 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 
-// ../plugin-snes/src/directives/freespace.ts
+// packages/plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -51009,7 +52705,7 @@ function handleProt(session, words) {
   }
 }
 
-// ../plugin-snes/src/directives/layout.ts
+// packages/plugin-snes/src/directives/layout.ts
 var MAPPER_KEYWORDS = [
   "lorom",
   "hirom",
@@ -51086,7 +52782,7 @@ function handleStartpos(session, state, words) {
   state.spcBlock.executeAddress = session.operandResolver.getnum(session.resolvedefines(words[1])) & 65535;
 }
 
-// ../plugin-snes/src/services/spc-runtime.ts
+// packages/plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService = class {
   constructor(session, state) {
     this.session = session;
@@ -51218,14 +52914,22 @@ var SnesSpcRuntimeService = class {
   }
 };
 
-// ../plugin-snes/src/directives/spc.ts
+// packages/plugin-snes/src/directives/spc.ts
 var createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
 
-// ../plugin-snes/src/session-state.ts
+// packages/plugin-snes/src/session-state.ts
 var SNES_SESSION_STATE_ID = "snes.session-state";
-var snesSessionStateKey = {
-  id: SNES_SESSION_STATE_ID
-};
+function isSessionStateKey(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey(id) {
+  const key3 = { id };
+  if (!isSessionStateKey(key3)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key3;
+}
+var snesSessionStateKey = createSessionStateKey(SNES_SESSION_STATE_ID);
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -51235,7 +52939,7 @@ function cloneSnesSessionState(value) {
   };
 }
 
-// ../plugin-snes/src/target/address-space.ts
+// packages/plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace = {
   name: "snes-rom",
   addressWidth: 24,
@@ -51417,7 +53121,7 @@ var snesRomAddressSpace = {
   }
 };
 
-// ../plugin-snes/src/tooling/directive-catalog.ts
+// packages/plugin-snes/src/tooling/directive-catalog.ts
 var op = (keyword, summary, syntax, operands) => ({
   keyword,
   summary,
@@ -52036,7 +53740,7 @@ var directiveByKeyword = new Map(
   directiveCatalog2.map((descriptor2) => [descriptor2.keyword.toLowerCase(), descriptor2])
 );
 
-// ../plugin-snes/src/assembler.ts
+// packages/plugin-snes/src/assembler.ts
 var SNES_TARGET_ID = "snes.sfc";
 var toolingFor = (keywords) => {
   const wanted = new Set(keywords);
@@ -52110,17 +53814,20 @@ var readExpressions = {
     }))
   ]
 };
+var isRecord31 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isChecksumMode = (value) => value === "asar" || value === "simple";
+var isBankCrossingHandler = (value) => typeof value === "function";
 var targetOptions = (configured) => {
-  const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
+  const value = isRecord31(configured) ? configured : {};
   const checksumMode = value.checksumMode ?? "asar";
-  if (checksumMode !== "asar" && checksumMode !== "simple") {
+  if (!isChecksumMode(checksumMode)) {
     throw new Error("checksumMode must be 'asar' or 'simple'.");
   }
   return {
     checksumMode,
     checksumEnabled: value.checksumEnabled === void 0 ? true : value.checksumEnabled === true,
     asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true,
-    onBankCrossing: typeof value.onBankCrossing === "function" ? value.onBankCrossing : void 0
+    onBankCrossing: isBankCrossingHandler(value.onBankCrossing) ? value.onBankCrossing : void 0
   };
 };
 var createInitialState = (context) => {
@@ -52492,7 +54199,7 @@ var plugin = definePlugin({
 });
 var assembler_default = plugin;
 
-// ../plugin-snes/src/disassembler/65816-state.ts
+// packages/plugin-snes/src/disassembler/65816-state.ts
 var unknown = () => ({ kind: "unknown" });
 var known = (value) => ({ kind: "known", value });
 var joinValue = (left, right) => {
@@ -52500,13 +54207,13 @@ var joinValue = (left, right) => {
     return unknown();
   }
   if (left.kind === "known" && right.kind === "known") {
-    return left.value === right.value ? left : { kind: "conflicting", values: [left.value, right.value].sort((a, b) => a - b) };
+    return left.value === right.value ? left : { kind: "conflicting", values: [left.value, right.value].toSorted((a, b) => a - b) };
   }
   const values = /* @__PURE__ */ new Set([
     ...left.kind === "known" ? [left.value] : left.values,
     ...right.kind === "known" ? [right.value] : right.values
   ]);
-  return { kind: "conflicting", values: [...values].sort((a, b) => a - b) };
+  return { kind: "conflicting", values: [...values].toSorted((a, b) => a - b) };
 };
 var sameEntry = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 var joinStack = (left, right) => {
@@ -52681,87 +54388,93 @@ var CARRY_UNKNOWN_MNEMONICS = /* @__PURE__ */ new Set([
   "SBC"
 ]);
 var transferCpu65816State = (instruction2, input) => {
-  let state = input;
+  const state = { ...input };
   for (const effect of instruction2.effects) {
     if ((effect.kind === "clearBits" || effect.kind === "setBits") && effect.target === "p") {
       const value = effect.kind === "setBits" ? 1 : 0;
-      state = {
-        ...state,
-        ...effect.mask & 1 ? { carry: known(value) } : {},
-        ...effect.mask & 16 ? { x: known(value) } : {},
-        ...effect.mask & 32 ? { m: known(value) } : {}
-      };
+      Object.assign(
+        state,
+        effect.mask & 1 ? { carry: known(value) } : {},
+        effect.mask & 16 ? { x: known(value) } : {},
+        effect.mask & 32 ? { m: known(value) } : {}
+      );
     } else if (effect.kind === "push") {
       if (effect.source === "p") {
-        state = push(state, {
-          kind: "status",
-          e: state.e,
-          m: state.m,
-          x: state.x,
-          carry: state.carry
-        });
+        Object.assign(
+          state,
+          push(state, {
+            kind: "status",
+            e: state.e,
+            m: state.m,
+            x: state.x,
+            carry: state.carry
+          })
+        );
       } else {
         const bytes2 = pushedBytes(instruction2.mnemonic, state);
         if (bytes2 === void 0) {
-          state = loseStackPrecision(state);
+          Object.assign(state, loseStackPrecision(state));
           continue;
         }
-        state = push(state, {
-          kind: "value",
-          source: effect.source,
-          bytes: bytes2,
-          value: sourceValue(effect.source, state)
-        });
+        Object.assign(
+          state,
+          push(state, {
+            kind: "value",
+            source: effect.source,
+            bytes: bytes2,
+            value: sourceValue(effect.source, state)
+          })
+        );
       }
     } else if (effect.kind === "pull") {
       const bytes2 = pulledBytes(effect.target, state);
       if (bytes2 === void 0) {
-        state = loseStackPrecision(state);
+        Object.assign(state, loseStackPrecision(state));
         continue;
       }
       const [pulledState, entry] = pull(state, bytes2);
-      state = pulledState;
+      Object.assign(state, pulledState);
       if (effect.target === "p") {
-        state = entry?.kind === "status" ? {
-          ...state,
-          e: entry.e,
-          m: entry.m,
-          x: entry.x,
-          carry: entry.carry
-        } : { ...state, m: unknown(), x: unknown(), carry: unknown() };
+        Object.assign(
+          state,
+          entry?.kind === "status" ? {
+            e: entry.e,
+            m: entry.m,
+            x: entry.x,
+            carry: entry.carry
+          } : { m: unknown(), x: unknown(), carry: unknown() }
+        );
       } else if (effect.target === "dbr") {
-        state = {
-          ...state,
+        Object.assign(state, {
           dbr: entry?.kind === "value" && entry.value.kind === "known" ? known(entry.value.value & 255) : unknown()
-        };
+        });
       } else if (effect.target === "d") {
-        state = {
-          ...state,
+        Object.assign(state, {
           d: entry?.kind === "value" ? entry.value : unknown()
-        };
+        });
       }
     } else if (effect.kind === "exchange" && effect.left === "c" && effect.right === "e") {
-      state = { ...state, carry: state.e, e: state.carry };
+      Object.assign(state, { carry: state.e, e: state.carry });
     } else if (effect.kind === "copy" && effect.to === "d") {
-      state = { ...state, d: unknown() };
+      Object.assign(state, { d: unknown() });
     } else if (effect.kind === "copy" && effect.to === "s") {
-      state = { ...state, s: unknown(), stack: { kind: "unknown" } };
+      Object.assign(state, { s: unknown(), stack: { kind: "unknown" } });
     }
   }
   if (CARRY_UNKNOWN_MNEMONICS.has(instruction2.mnemonic)) {
-    state = { ...state, carry: unknown() };
+    Object.assign(state, { carry: unknown() });
   }
   if (["BRK", "COP", "JSL", "JSR"].includes(instruction2.mnemonic)) {
-    state = loseStackPrecision(state);
+    Object.assign(state, loseStackPrecision(state));
   }
   if (instruction2.mnemonic === "RTI") {
-    state = { ...state, pbr: unknown(), stack: { kind: "unknown" } };
+    Object.assign(state, { pbr: unknown(), stack: { kind: "unknown" } });
   }
   return normalize(state);
 };
 var cpu65816StateKey = (state) => JSON.stringify(state);
 
-// ../plugin-snes/src/disassembler/address-identities.ts
+// packages/plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE = "rom.file";
 var SNES_CPU_ADDRESS_SPACE = "snes.cpu";
 var SNES_WRAM_ADDRESS_SPACE = "snes.wram";
@@ -52804,7 +54517,7 @@ var mirrorsForOffset = (fileOffset, context, canonical2) => {
     }
   }
   mirrors.add(canonical2);
-  return [...mirrors].sort((left, right) => left - right);
+  return [...mirrors].toSorted((left, right) => left - right);
 };
 var identifySnesCpuAddress = (address5, context, romSize) => {
   const fileOffset = snesRomAddressSpace.toOutputOffset(address5, context);
@@ -52826,7 +54539,88 @@ var identifySnesCpuAddress = (address5, context, romSize) => {
   };
 };
 
-// ../plugin-snes/src/disassembler/hardware-registers.ts
+// packages/plugin-snes/src/disassembler/analysis-record-values.ts
+function isOwnKey(value, key3) {
+  return Object.hasOwn(value, key3);
+}
+function completeKeys(keys) {
+  const names = [];
+  for (const key3 of Object.keys(keys)) {
+    if (isOwnKey(keys, key3)) {
+      names.push(keys[key3]);
+    }
+  }
+  return names;
+}
+function knownFieldRecord(value, keys) {
+  const record5 = {};
+  for (const key3 of keys) {
+    if (typeof key3 === "string") {
+      record5[key3] = value[key3];
+    }
+  }
+  return record5;
+}
+var cpu65816StateFields = completeKeys({
+  e: "e",
+  m: "m",
+  x: "x",
+  carry: "carry",
+  pbr: "pbr",
+  dbr: "dbr",
+  d: "d",
+  s: "s",
+  stack: "stack"
+});
+var spc700StateFields = completeKeys({
+  directPage: "directPage",
+  stack: "stack"
+});
+var superFxStateFields = completeKeys({
+  alt: "alt",
+  destinationRegister: "destinationRegister",
+  sourceRegister: "sourceRegister",
+  programBank: "programBank"
+});
+function cpu65816StateRecord(state) {
+  return knownFieldRecord(state, cpu65816StateFields);
+}
+function coverageRecord(coverage) {
+  return {
+    instructionCount: coverage.instructionCount,
+    functionCount: coverage.functionCount,
+    reachedBytes: coverage.reachedBytes,
+    totalBytes: coverage.totalBytes,
+    reachedPercent: coverage.reachedPercent
+  };
+}
+function effectiveAddressRecord(address5) {
+  return {
+    operandIndex: address5.operandIndex,
+    ...address5.address === void 0 ? {} : { address: address5.address },
+    ...address5.baseAddress === void 0 ? {} : { baseAddress: address5.baseAddress },
+    ...address5.symbol === void 0 ? {} : { symbol: address5.symbol },
+    volatile: address5.volatile,
+    ...address5.romOffset === void 0 ? {} : { romOffset: address5.romOffset },
+    explanation: address5.explanation
+  };
+}
+function effectiveAddressRecords(addresses2) {
+  return addresses2.map(effectiveAddressRecord);
+}
+function incompleteReasonRecord(reason) {
+  return {
+    kind: reason.kind,
+    address: reason.address,
+    limit: reason.limit,
+    message: reason.message
+  };
+}
+function incompleteReasonRecords(reasons) {
+  return reasons.map(incompleteReasonRecord);
+}
+
+// packages/plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "INIDISP",
@@ -53240,7 +55034,7 @@ var snesHardwareDefineRecords = () => {
       }
     }
   }
-  return values.sort(
+  return values.toSorted(
     (left, right) => left.address - right.address || left.symbol.localeCompare(right.symbol)
   );
 };
@@ -53301,7 +55095,7 @@ var renderSnesHardwareDefines = () => {
 `;
 };
 
-// ../plugin-snes/src/disassembler/rom-header.ts
+// packages/plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS = [
   "lorom",
   "hirom",
@@ -53312,6 +55106,9 @@ var SNES_MAPPERS = [
   "bigsa1rom",
   "norom"
 ];
+function isSnesMapper(value) {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
 var SNES_CPU_VECTOR_DEFINITIONS = [
   {
     id: "native-reserved-0",
@@ -53520,12 +55317,12 @@ var parseSnesInternalRomHeader = (rom, mapper) => {
   const vectors = SNES_CPU_VECTOR_DEFINITIONS.map((definition) => {
     const fileOffset = offset + definition.pointer - 65472;
     const value = rom.readByte(fileOffset) | rom.readByte(fileOffset + 1) << 8;
-    return {
-      ...definition,
-      fileOffset,
-      value,
-      ...definition.state && value !== 0 && value !== 65535 ? { targetAddress: value } : {}
-    };
+    return Object.assign(
+      {},
+      definition,
+      { fileOffset, value },
+      definition.state && value !== 0 && value !== 65535 ? { targetAddress: value } : {}
+    );
   });
   return {
     offset,
@@ -53658,7 +55455,7 @@ var detectSnesRom = (rom, options = {}) => {
       `Header override ${options.headerSize} does not match the loaded ROM view (${rom.identity.headerSize}).`
     );
   }
-  const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec)).filter((candidate) => candidate !== void 0).sort((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
+  const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec)).filter((candidate) => candidate !== void 0).toSorted((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
   if (options.mapper) {
     const selected = candidates.find((candidate) => candidate.mapper === options.mapper);
     const parsed = parseSnesInternalRomHeader(rom, options.mapper);
@@ -53674,9 +55471,12 @@ var detectSnesRom = (rom, options = {}) => {
       ...selected ? {} : { message: `Mapper '${options.mapper}' has no standard in-range header candidate.` }
     };
   }
-  const first = candidates[0];
-  const second = candidates[1];
+  const first = candidates.length > 0 ? candidates[0] : void 0;
+  const second = candidates.length > 1 ? candidates[1] : void 0;
   if (first && first.score >= 8 && (!second || first.score - second.score >= 3)) {
+    if (!isSnesMapper(first.mapper)) {
+      throw new Error(`Unsupported SNES mapper '${first.mapper}'.`);
+    }
     const mapper = first.mapper;
     return {
       status: "detected",
@@ -53694,7 +55494,7 @@ var detectSnesRom = (rom, options = {}) => {
   };
 };
 
-// ../plugin-snes/src/disassembler/65816-analysis.ts
+// packages/plugin-snes/src/disassembler/65816-analysis.ts
 var DATA_CLASSIFICATIONS = /* @__PURE__ */ new Set([
   "data8",
   "data16",
@@ -53763,12 +55563,18 @@ var controlTargetKind = (kind) => {
 var controlsFor2 = (instruction2, interruptTargets) => {
   const controls = instruction2.references.filter(
     (reference) => reference.kind === "branch" || reference.kind === "call" || reference.kind === "jump"
-  ).map((reference) => ({
-    kind: controlTargetKind(reference.kind),
-    ...reference.address === void 0 ? {} : { address: reference.address },
-    ...reference.indirect ? { indirect: true } : {},
-    ...reference.address === void 0 ? { explanation: "The decoded indirect target is not known statically." } : {}
-  }));
+  ).map(
+    (reference) => Object.assign(
+      {},
+      { kind: controlTargetKind(reference.kind) },
+      reference.address === void 0 ? {} : { address: reference.address },
+      Object.assign(
+        {},
+        reference.indirect ? { indirect: true } : {},
+        reference.address === void 0 ? { explanation: "The decoded indirect target is not known statically." } : {}
+      )
+    )
+  );
   if (instruction2.flow.kind !== "interrupt") {
     return controls;
   }
@@ -53816,22 +55622,26 @@ var effectiveAddressesFor = (instruction2, context, romSize) => instruction2.ref
   const indexed = isIndexedOrIndirect(instruction2.mode);
   const hardware = identifySnesHardwareRegister(reference.address);
   if (hardware) {
-    return {
-      operandIndex,
-      ...indexed ? { baseAddress: reference.address } : { address: reference.address },
-      symbol: hardware.symbol,
-      volatile: true,
-      explanation: indexed ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access. The final address is unresolved.` : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`
-    };
+    return Object.assign(
+      {},
+      { operandIndex },
+      indexed ? { baseAddress: reference.address } : { address: reference.address },
+      {
+        symbol: hardware.symbol,
+        volatile: true,
+        explanation: indexed ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access. The final address is unresolved.` : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`
+      }
+    );
   }
   const identity2 = indexed ? void 0 : mappedRomOffset(reference.address, context, romSize);
-  return {
-    operandIndex,
-    ...indexed ? { baseAddress: reference.address } : { address: reference.address },
-    volatile: false,
-    ...identity2 ? { romOffset: identity2.fileOffset } : {},
-    explanation: mappedAddressExplanation(indexed, identity2)
-  };
+  return Object.assign(
+    {},
+    { operandIndex },
+    indexed ? { baseAddress: reference.address } : { address: reference.address },
+    Object.assign({}, { volatile: false }, identity2 ? { romOffset: identity2.fileOffset } : {}, {
+      explanation: mappedAddressExplanation(indexed, identity2)
+    })
+  );
 });
 var knownBoolean = (value) => value.kind === "known" && (value.value === 0 || value.value === 1) ? value.value === 1 : void 0;
 var knownNumber = (value) => value.kind === "known" ? value.value : void 0;
@@ -53858,12 +55668,12 @@ var recordsFor = (result, runEvidence) => [
     mnemonic: node.mnemonic,
     mode: node.mode,
     context: node.context,
-    incomingState: node.incomingState,
-    outgoingState: node.outgoingState,
-    effectiveAddresses: node.effectiveAddresses,
+    incomingState: cpu65816StateRecord(node.incomingState),
+    outgoingState: cpu65816StateRecord(node.outgoingState),
+    effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
     entryPoint: node.entryPoint,
     evidencePath: node.evidencePath.map((id) => `static:${id}`),
-    evidence: [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].sort()
+    evidence: [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].toSorted()
   })),
   ...result.edges.map((edge) => ({
     id: `static:${edge.id}`,
@@ -53877,7 +55687,7 @@ var recordsFor = (result, runEvidence) => [
     indirect: edge.indirect,
     ...edge.override ? { override: edge.override } : {},
     ...edge.explanation ? { explanation: edge.explanation } : {},
-    evidence: [.../* @__PURE__ */ new Set([...edge.evidence, runEvidence])].sort()
+    evidence: [.../* @__PURE__ */ new Set([...edge.evidence, runEvidence])].toSorted()
   })),
   ...result.functions.map((fn) => ({
     id: `static:${fn.id}`,
@@ -53886,7 +55696,7 @@ var recordsFor = (result, runEvidence) => [
     address: fn.address,
     source: fn.source,
     evidencePath: fn.evidencePath.map((id) => `static:${id}`),
-    evidence: [.../* @__PURE__ */ new Set([...fn.evidence, runEvidence])].sort()
+    evidence: [.../* @__PURE__ */ new Set([...fn.evidence, runEvidence])].toSorted()
   })),
   ...result.conflicts.map((conflict) => ({
     id: `static:${conflict.id}`,
@@ -53896,7 +55706,7 @@ var recordsFor = (result, runEvidence) => [
     conflictKind: conflict.kind,
     message: conflict.message,
     nodes: conflict.nodes.map((id) => `static:${id}`),
-    evidence: [.../* @__PURE__ */ new Set([...conflict.evidence, runEvidence])].sort()
+    evidence: [.../* @__PURE__ */ new Set([...conflict.evidence, runEvidence])].toSorted()
   })),
   ...result.unresolved.map((flow) => ({
     id: `static:${flow.id}`,
@@ -53906,16 +55716,16 @@ var recordsFor = (result, runEvidence) => [
     flowKind: flow.kind,
     indirect: flow.indirect,
     reason: flow.reason,
-    evidence: [.../* @__PURE__ */ new Set([...flow.evidence, runEvidence])].sort()
+    evidence: [.../* @__PURE__ */ new Set([...flow.evidence, runEvidence])].toSorted()
   })),
   {
     id: "static:65816:summary",
     kind: "summary",
     architecture: "snes.65816",
     status: result.status,
-    coverage: result.coverage,
+    coverage: coverageRecord(result.coverage),
     processedWorkItems: result.processedWorkItems,
-    incompleteReasons: result.incompleteReasons,
+    incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
     evidence: [runEvidence]
   }
 ];
@@ -53930,7 +55740,7 @@ var annotationsFor = (result, runEvidence) => {
     );
   }
   for (const node of result.nodes) {
-    const evidence = [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].sort();
+    const evidence = [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].toSorted();
     const state = annotationState(stateByOffset.get(node.fileOffset) ?? node.incomingState);
     const opcodeId = `static:65816:opcode:${node.fileOffset.toString(16).padStart(6, "0")}`;
     const priorOpcode = output.get(opcodeId);
@@ -53942,7 +55752,7 @@ var annotationsFor = (result, runEvidence) => {
       classification: "opcode",
       architecture: "snes.65816",
       ...Object.keys(state).length === 0 ? {} : { state },
-      evidence: [.../* @__PURE__ */ new Set([...priorOpcode?.evidence ?? [], ...evidence])].sort()
+      evidence: [.../* @__PURE__ */ new Set([...priorOpcode?.evidence ?? [], ...evidence])].toSorted()
     });
     if (node.size > 1) {
       const operandId = `static:65816:operand:${node.fileOffset.toString(16).padStart(6, "0")}`;
@@ -53954,11 +55764,11 @@ var annotationsFor = (result, runEvidence) => {
         end: node.fileOffset + node.size,
         classification: "operand",
         architecture: "snes.65816",
-        evidence: [.../* @__PURE__ */ new Set([...priorOperand?.evidence ?? [], ...evidence])].sort()
+        evidence: [.../* @__PURE__ */ new Set([...priorOperand?.evidence ?? [], ...evidence])].toSorted()
       });
     }
   }
-  return [...output.values()].sort(
+  return [...output.values()].toSorted(
     (left, right) => left.start - right.start || left.id.localeCompare(right.id)
   );
 };
@@ -54034,12 +55844,12 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
         (rank2, id) => Math.max(rank2, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]),
         0
       )
-    })).sort(
+    })).toSorted(
       (left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id)
     );
     let state = base;
     const consumed = [];
-    const ranks = [...new Set(matching.map((entry) => entry.rank))].sort((a, b) => a - b);
+    const ranks = [...new Set(matching.map((entry) => entry.rank))].toSorted((a, b) => a - b);
     for (const rank2 of ranks) {
       const ranked = matching.filter((entry) => entry.rank === rank2);
       const candidates = ranked.map(({ annotation }) => {
@@ -54055,7 +55865,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
         }
       }
     }
-    return { state, evidence: [...new Set(consumed)].sort() };
+    return { state, evidence: [...new Set(consumed)].toSorted() };
   };
   const projectAddress = (addressSpace, address5) => {
     if (addressSpace === SNES_CPU_ADDRESS_SPACE) {
@@ -54087,7 +55897,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
       address: entry.address,
       kind: entry.kind ?? "configured",
       state: applyCpu65816StateOverride(seeded.state, entry.state ?? {}),
-      evidence: [.../* @__PURE__ */ new Set([...entry.evidence ?? [evidenceId], ...seeded.evidence])].sort()
+      evidence: [.../* @__PURE__ */ new Set([...entry.evidence ?? [evidenceId], ...seeded.evidence])].toSorted()
     });
   }
   for (const label of options.labels ?? []) {
@@ -54104,7 +55914,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
       address: address5,
       kind: "imported-label",
       state: seeded.state,
-      evidence: [.../* @__PURE__ */ new Set([...label.evidence, ...seeded.evidence])].sort(),
+      evidence: [.../* @__PURE__ */ new Set([...label.evidence, ...seeded.evidence])].toSorted(),
       detail: label.name
     });
   }
@@ -54122,7 +55932,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
       address: address5,
       kind: "manual",
       state: seeded.state,
-      evidence: [.../* @__PURE__ */ new Set([...annotation.evidence, ...seeded.evidence])].sort()
+      evidence: [.../* @__PURE__ */ new Set([...annotation.evidence, ...seeded.evidence])].toSorted()
     });
   }
   for (const targetSet of options.targetSets ?? []) {
@@ -54133,7 +55943,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
         address: address5,
         kind: "target-set",
         state: seeded.state,
-        evidence: [.../* @__PURE__ */ new Set([...targetSet.evidence, ...seeded.evidence])].sort()
+        evidence: [.../* @__PURE__ */ new Set([...targetSet.evidence, ...seeded.evidence])].toSorted()
       });
     }
   }
@@ -54141,7 +55951,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
     (override) => ({
       id: override.id,
       address: override.address,
-      targets: [...override.targets].sort((left, right) => left - right),
+      targets: [...override.targets].toSorted((left, right) => left - right),
       evidence: override.evidence
     })
   );
@@ -54237,13 +56047,13 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
     ...result,
     records: recordsFor(result, runEvidence),
     annotations: annotationsFor(result, runEvidence),
-    evidenceRecords: [...evidenceRecords.values()].sort(
+    evidenceRecords: [...evidenceRecords.values()].toSorted(
       (left, right) => left.id.localeCompare(right.id)
     )
   };
 };
 
-// ../plugin-snes/src/disassembler/dizraw-import.ts
+// packages/plugin-snes/src/disassembler/dizraw-import.ts
 import { createHash as createHash13 } from "node:crypto";
 var SUBSTITUTIONS = [
   ["0001E", "ZQ"],
@@ -54257,7 +56067,7 @@ var SUBSTITUTIONS = [
   ["00001", "ZS"],
   ["0001", "Zs"]
 ];
-var CLASSIFICATIONS = {
+var CLASSIFICATIONS3 = {
   U: "unreached",
   "+": "opcode",
   ".": "operand",
@@ -54313,14 +56123,14 @@ var fake64 = (character) => {
 };
 var decodeMetadata = (line) => {
   const padded = line.padEnd(9, "0").slice(0, 9);
-  const classification = CLASSIFICATIONS[padded[0]];
+  const classification = CLASSIFICATIONS3[padded[0]];
   if (!classification) {
     throw new Error(`Unknown .dizraw classification '${padded[0]}'.`);
   }
   const flags = fake64(padded[1]);
   const pointValue = flags >> 4 & 15;
   const architectureValue = Number.parseInt(padded[8], 16) & 3;
-  const architecture = ARCHITECTURES[architectureValue];
+  const architecture = architectureValue < ARCHITECTURES.length ? ARCHITECTURES[architectureValue] : void 0;
   if (!architecture) {
     throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
   }
@@ -54363,7 +56173,7 @@ var decodeRomByteLines = (body, maximumBytes) => {
   if (options.includes("compress_table_1")) {
     lines = lines.map((line) => {
       let decoded2 = line;
-      for (const [longText, shortText] of [...SUBSTITUTIONS].reverse()) {
+      for (const [longText, shortText] of SUBSTITUTIONS.toReversed()) {
         decoded2 = decoded2.replaceAll(shortText, longText);
       }
       return decoded2;
@@ -54466,7 +56276,8 @@ var importDizRaw = (xml, options = {}) => {
   const rootAttributes = attributes(rootMatch[1]);
   const projectAttributes = attributes(projectMatch[1]);
   const dataAttributes = attributes(data.opening);
-  const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
+  const romMapMode = dataAttributes.RomMapMode;
+  const mapper = romMapMode === void 0 ? void 0 : DIZ_MAPPERS[romMapMode];
   if (!mapper) {
     throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
   }
@@ -54650,12 +56461,12 @@ var importDizRaw = (xml, options = {}) => {
   };
 };
 
-// ../plugin-snes/src/disassembler/source-export.ts
+// packages/plugin-snes/src/disassembler/source-export.ts
 import * as fs21 from "node:fs";
 import path25 from "node:path";
 init_canonical_json();
 
-// ../plugin-snes/src/disassembler/ram-map.ts
+// packages/plugin-snes/src/disassembler/ram-map.ts
 init_canonical_json();
 import * as fs19 from "node:fs";
 import path23 from "node:path";
@@ -54664,6 +56475,52 @@ var SNES_RAM_MAP_SCHEMA_VERSION = 1;
 var SNES_RAM_MAP_SOURCE = "ram-map.json";
 var SNES_RAM_MAP_SCHEMA_SOURCE = "ram-map.schema.json";
 var SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
+var isRecord32 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRamMapVariableInput = (value) => {
+  if (!isRecord32(value)) {
+    return false;
+  }
+  if (typeof value.name !== "string") {
+    return false;
+  }
+  if (typeof value.address !== "string" && typeof value.address !== "number") {
+    return false;
+  }
+  if (value.memory !== void 0 && value.memory !== "wram" && value.memory !== "sram") {
+    return false;
+  }
+  if (value.size !== void 0 && typeof value.size !== "number") {
+    return false;
+  }
+  if (value.category !== void 0 && typeof value.category !== "string") {
+    return false;
+  }
+  if (typeof value.description !== "string") {
+    return false;
+  }
+  if (value.notes !== void 0 && !(Array.isArray(value.notes) && value.notes.every((note) => typeof note === "string"))) {
+    return false;
+  }
+  return value.sources === void 0 || Array.isArray(value.sources) && value.sources.every((source) => typeof source === "string");
+};
+var isSnesRamMapFile = (value) => {
+  if (!isRecord32(value)) {
+    return false;
+  }
+  if (value.format !== SNES_RAM_MAP_FORMAT || value.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
+    return false;
+  }
+  if (value.$schema !== void 0 && typeof value.$schema !== "string") {
+    return false;
+  }
+  if (value.source !== void 0 && typeof value.source !== "string") {
+    return false;
+  }
+  if (value.includeSourceInformation !== void 0 && typeof value.includeSourceInformation !== "boolean") {
+    return false;
+  }
+  return Array.isArray(value.variables) && value.variables.every(isRamMapVariableInput);
+};
 var hex5 = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var cleanText = (value, field) => {
   const cleaned = value.replaceAll(/\s+/g, " ").trim();
@@ -54709,33 +56566,31 @@ var parseAddress = (value, memory) => {
   return address5;
 };
 var validateSnesRamMap = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord32(value)) {
     throw new Error("RAM map must be a JSON object.");
   }
-  const file = value;
-  if (file.format !== SNES_RAM_MAP_FORMAT) {
+  if (value.format !== SNES_RAM_MAP_FORMAT) {
     throw new Error("Invalid SNES RAM-map format.");
   }
-  if (file.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
-    throw new Error(`Unsupported SNES RAM-map schema ${String(file.schemaVersion)}.`);
+  if (value.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
+    throw new Error(`Unsupported SNES RAM-map schema ${String(value.schemaVersion)}.`);
   }
-  if (!Array.isArray(file.variables)) {
+  if (!Array.isArray(value.variables)) {
     throw new Error("RAM map must contain a variables array.");
   }
-  if (file.includeSourceInformation !== void 0 && typeof file.includeSourceInformation !== "boolean") {
+  if (value.includeSourceInformation !== void 0 && typeof value.includeSourceInformation !== "boolean") {
     throw new Error("RAM-map includeSourceInformation must be a boolean.");
   }
   const names = /* @__PURE__ */ new Set();
   const addresses2 = /* @__PURE__ */ new Set();
-  const variables = file.variables.map((input, index) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) {
+  const variables = value.variables.map((input, index) => {
+    if (!isRecord32(input)) {
       throw new Error(`RAM-map variable ${index + 1} must be an object.`);
     }
-    const record5 = input;
-    if (typeof record5.name !== "string") {
+    if (typeof input.name !== "string") {
       throw new Error(`RAM-map variable ${index + 1} name must be a string.`);
     }
-    const name = cleanText(record5.name, `variable ${index + 1} name`);
+    const name = cleanText(input.name, `variable ${index + 1} name`);
     if (!/^[A-Z_a-z]\w*$/.test(name)) {
       throw new Error(`RAM-map variable name '${name}' is not an assembler identifier.`);
     }
@@ -54744,46 +56599,46 @@ var validateSnesRamMap = (value) => {
       throw new Error(`Duplicate RAM-map variable name '${name}'.`);
     }
     names.add(nameKey);
-    if (typeof record5.address !== "string" && typeof record5.address !== "number") {
+    if (typeof input.address !== "string" && typeof input.address !== "number") {
       throw new Error(`RAM-map variable '${name}' must have a string or integer address.`);
     }
-    const memory = record5.memory ?? "wram";
+    const memory = input.memory ?? "wram";
     if (memory !== "wram" && memory !== "sram") {
       throw new Error(`RAM-map memory for '${name}' must be 'wram' or 'sram'.`);
     }
-    const address5 = parseAddress(record5.address, memory);
+    const address5 = parseAddress(input.address, memory);
     if (addresses2.has(address5)) {
       throw new Error(`Duplicate RAM-map address '${hex5(address5)}'. Combine aliases in one entry.`);
     }
     addresses2.add(address5);
-    const size = record5.size ?? 1;
+    const size = input.size ?? 1;
     const end = memory === "sram" ? sramWindowEnd(address5) : 8388608;
     if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 1 || address5 + size > end) {
       throw new Error(`Invalid size for RAM-map variable '${name}'.`);
     }
-    if (record5.category !== void 0 && typeof record5.category !== "string") {
+    if (input.category !== void 0 && typeof input.category !== "string") {
       throw new Error(`RAM-map category for '${name}' must be a string.`);
     }
-    const category = record5.category === void 0 ? void 0 : cleanText(record5.category, `${name} category`);
-    if (typeof record5.description !== "string") {
+    const category = input.category === void 0 ? void 0 : cleanText(input.category, `${name} category`);
+    if (typeof input.description !== "string") {
       throw new Error(`RAM-map description for '${name}' must be a string.`);
     }
-    const description = cleanText(record5.description, `${name} description`);
-    if (record5.notes !== void 0 && !Array.isArray(record5.notes)) {
+    const description = cleanText(input.description, `${name} description`);
+    if (input.notes !== void 0 && !Array.isArray(input.notes)) {
       throw new Error(`RAM-map notes for '${name}' must be an array.`);
     }
-    const notes2 = (record5.notes ?? []).map((note) => {
+    const notes2 = (input.notes ?? []).map((note) => {
       if (typeof note !== "string") {
         throw new Error(`RAM-map notes for '${name}' must be strings.`);
       }
       return cleanText(note, `${name} note`);
     });
     let sources;
-    if (record5.sources !== void 0) {
-      if (!Array.isArray(record5.sources)) {
+    if (input.sources !== void 0) {
+      if (!Array.isArray(input.sources)) {
         throw new Error(`RAM-map sources for '${name}' must be an array.`);
       }
-      sources = record5.sources.map((source) => {
+      sources = input.sources.map((source) => {
         if (typeof source !== "string") {
           throw new Error(`RAM-map sources for '${name}' must be strings.`);
         }
@@ -54793,7 +56648,7 @@ var validateSnesRamMap = (value) => {
     return {
       name,
       address: address5,
-      ...record5.memory === void 0 ? {} : { memory },
+      ...input.memory === void 0 ? {} : { memory },
       size,
       ...category ? { category } : {},
       description,
@@ -54801,7 +56656,7 @@ var validateSnesRamMap = (value) => {
       ...sources === void 0 ? {} : { sources }
     };
   });
-  const sorted2 = variables.sort(
+  const sorted2 = variables.toSorted(
     (left, right) => left.address - right.address || left.name.localeCompare(right.name)
   );
   for (let index = 1; index < sorted2.length; index++) {
@@ -54834,10 +56689,14 @@ var loadSnesRamMap = (directory) => {
     parsed = JSON.parse(sourceBytes.toString("utf8"));
   } catch (error) {
     throw new Error(
-      `Could not parse '${SNES_RAM_MAP_SOURCE}': ${error instanceof Error ? error.message : String(error)}`
+      `Could not parse '${SNES_RAM_MAP_SOURCE}': ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     );
   }
   const variables = validateSnesRamMap(parsed);
+  if (!isSnesRamMapFile(parsed)) {
+    throw new Error("Invalid SNES RAM-map format.");
+  }
   return { file: parsed, variables, sourceBytes };
 };
 var canonicalSnesWramAddress = (address5) => {
@@ -54949,7 +56808,7 @@ var renderSnesRamMapSchema = () => canonicalJson({
   }
 });
 
-// ../plugin-snes/src/disassembler/source-layout.ts
+// packages/plugin-snes/src/disassembler/source-layout.ts
 var formatStructDeclaration = (prefix, fields, width) => {
   const indent = prefix.match(/^\s*/)?.[0] ?? "";
   const fieldIndent = `${indent}  `;
@@ -55036,7 +56895,13 @@ var wrapAssemblyComments = (source, width) => source.split("\n").flatMap((line) 
   return wrapped;
 }).join("\n");
 
-// ../plugin-snes/src/disassembler/struct-expressions.ts
+// packages/plugin-snes/src/disassembler/struct-expressions.ts
+var checked2 = (value, expression) => {
+  if (!Number.isSafeInteger(value)) {
+    throw new Error("Struct expression must evaluate to exact safe integers.");
+  }
+  return { value, expression };
+};
 var SnesStructExpressionResolver = class {
   layouts;
   bindings;
@@ -55071,12 +56936,6 @@ var SnesStructExpressionResolver = class {
     const owners = /* @__PURE__ */ new Set();
     let references = 0;
     let nodes = 0;
-    const checked2 = (value, expression) => {
-      if (!Number.isSafeInteger(value)) {
-        throw new Error("Struct expression must evaluate to exact safe integers.");
-      }
-      return { value, expression };
-    };
     const reference = (node) => {
       let root = node;
       let fieldName;
@@ -55142,23 +57001,23 @@ var SnesStructExpressionResolver = class {
           return reference(node);
         case "call": {
           const name = node.callee.name;
-          const arg = node.arguments[0];
-          if (node.arguments.length !== 1 || !arg) {
+          const callArgument = node.arguments.length === 1 ? node.arguments[0] : void 0;
+          if (!callArgument) {
             throw new Error(`Struct expression ${name}() requires one argument.`);
           }
           if (name === "bank") {
-            const resolved2 = visit(arg);
+            const resolved2 = visit(callArgument);
             return checked2(resolved2.value >> 16 & 255, `bank(${resolved2.expression})`);
           }
-          if (arg.type !== "identifier") {
+          if (callArgument.type !== "identifier") {
             throw new Error("Struct reflection requires a layout or binding name.");
           }
           if (name !== "sizeof" && name !== "countof" && name !== "bytesof" && name !== "startof" && name !== "endof") {
             throw new Error(`Unsupported struct expression function '${name}'.`);
           }
-          reference(arg);
-          const binding = this.bindings.get(arg.name);
-          const layout2 = binding?.structure ?? this.layouts.get(arg.name);
+          reference(callArgument);
+          const binding = this.bindings.get(callArgument.name);
+          const layout2 = binding?.structure ?? this.layouts.get(callArgument.name);
           if (!layout2) {
             throw new Error(
               "Struct reflection requires a layout or binding, not a scalar constant."
@@ -55170,7 +57029,7 @@ var SnesStructExpressionResolver = class {
             indexRange: { first: binding?.firstIndex ?? 0, count: binding?.count ?? 1 }
           };
           const value = name === "sizeof" ? layout2.size : getStructMetadata(definition, name);
-          return checked2(value, `${name}(${arg.name})`);
+          return checked2(value, `${name}(${callArgument.name})`);
         }
         case "unary": {
           const arg = visit(node.argument);
@@ -55235,14 +57094,27 @@ var SnesStructExpressionResolver = class {
             case ">>":
               value = left.value >> right.value;
               break;
-            default:
+            case "**":
+            case "<":
+            case ">":
+            case "<=":
+            case ">=":
+            case "==":
+            case "=":
+            case "!=":
+            case "&&":
+            case "||":
               throw new Error(`Unsupported struct expression operator '${node.operator}'.`);
           }
           return checked2(value, `(${left.expression} ${node.operator} ${right.expression})`);
         }
-        default:
+        case "defineReference":
+        case "range":
+        case "raw":
+        case "string":
           throw new Error("Unsupported struct expression syntax.");
       }
+      throw new Error("Unsupported struct expression syntax.");
     };
     const resolved = visit(parseExpressionNode(input));
     if (!references) {
@@ -55275,7 +57147,7 @@ function describeSnesStructAccess(binding, address5, width) {
         high = middle;
       }
     }
-    const candidate = structure.fields[low - 1];
+    const candidate = low > 0 ? structure.fields[low - 1] : void 0;
     const field = candidate && offset < candidate.offset + candidate.size ? candidate : void 0;
     const suffix = binding.count === 1 && index === 0 ? "" : `[${index}]`;
     const record5 = `${binding.name}${suffix}`;
@@ -55302,9 +57174,10 @@ function describeSnesStructAccess(binding, address5, width) {
   return parts;
 }
 
-// ../plugin-snes/src/disassembler/struct-instruction-uses.ts
+// packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
+var isRecord33 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var record4 = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord33(value)) {
     throw new Error("Struct instruction-use entries must be objects.");
   }
   return value;
@@ -55415,7 +57288,7 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
       ...memoryOperand ? { memoryOperand } : {},
       observations
     };
-  }).sort((a, b) => a.address - b.address);
+  }).toSorted((a, b) => a.address - b.address);
 };
 var indexSnesStructInstructionUses = (uses, rom, toFileOffset2) => {
   if (!uses?.length) {
@@ -55470,7 +57343,7 @@ var applySnesStructInstructionOperand = (instruction2, source, use) => {
       absoluteLongIndexedX: [3, "", ",x"]
     };
     const mode3 = modes[instruction2.mode];
-    const operand2 = instruction2.operands[0];
+    const operand2 = instruction2.operands.length > 0 ? instruction2.operands[0] : void 0;
     if (!mode3 || instruction2.operands.length !== 1 || operand2?.kind !== "address" || operand2.width !== mode3[0] || operand2.value !== use.memoryOperand.value || !instruction2.references.some(({ kind }) => kind === "data" || kind === "pointer")) {
       throw new Error(
         `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex7(use.address)}.`
@@ -55482,7 +57355,7 @@ var applySnesStructInstructionOperand = (instruction2, source, use) => {
   if (!use.operand) {
     return source;
   }
-  const operand = instruction2.operands[0];
+  const operand = instruction2.operands.length > 0 ? instruction2.operands[0] : void 0;
   const statusMask = instruction2.mode === "signature" && ["REP", "SEP"].includes(instruction2.mnemonic);
   if (instruction2.mode !== "immediate" && !statusMask || instruction2.operands.length !== 1 || operand?.width !== 1 && operand?.width !== 2 || operand.value !== use.operand.value || use.operand.value >= 2 ** (operand.width * 8)) {
     throw new Error(
@@ -55544,7 +57417,7 @@ var renderSnesStructUseComments = (use) => {
   return [...explanation, compactStructUseComment(omitResearchReferences(summary), locator)];
 };
 
-// ../plugin-snes/src/disassembler/struct-map.ts
+// packages/plugin-snes/src/disassembler/struct-map.ts
 import * as fs20 from "node:fs";
 import path24 from "node:path";
 var SNES_STRUCT_MAP_SOURCE = "struct-map.json";
@@ -55553,8 +57426,10 @@ var widths = { db: 1, dw: 2, dl: 3, dd: 4 };
 var fieldType = (field) => field.type ?? (["", "db", "dw", "dl", "dd"][field.size] || `db[${field.size}]`);
 var hex8 = (value) => `$${value.toString(16).toUpperCase()}`;
 var comment = (value) => value.replaceAll(/\s+/g, " ").trim();
+var isRecord34 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isStringList2 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var object = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord34(value)) {
     throw new Error("Struct-map records must be objects.");
   }
   return value;
@@ -55575,7 +57450,7 @@ var notes = (value) => {
   if (value === void 0) {
     return [];
   }
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+  if (!isStringList2(value)) {
     throw new Error("Struct-map notes must be an array of strings.");
   }
   return value.map(comment);
@@ -55605,8 +57480,8 @@ var validateSnesStructMap = (value) => {
     throw new Error("Struct map requires structures and bindings arrays.");
   }
   const names = /* @__PURE__ */ new Set();
-  const uniqueName = (value2) => {
-    const name = identifier(value2);
+  const uniqueName = (nameInput) => {
+    const name = identifier(nameInput);
     if (names.has(name.toLowerCase())) {
       throw new Error(`Duplicate struct-map name '${name}'.`);
     }
@@ -55641,7 +57516,8 @@ var validateSnesStructMap = (value) => {
           throw new Error(`Invalid field type '${id}.${name}'.`);
         }
         const match = field.type.match(/^(db|dw|dl|dd)(?:\[([1-9]\d*)])?$/i);
-        if (!match || widths[match[1].toLowerCase()] * Number(match[2] ?? 1) !== fieldSize) {
+        const repeatText = match !== null && match.length > 2 ? match[2] : void 0;
+        if (!match || widths[match[1].toLowerCase()] * Number(repeatText ?? 1) !== fieldSize) {
           throw new Error(`Field type '${id}.${name}' must match its size (${fieldSize} bytes).`);
         }
         type = field.type.toLowerCase();
@@ -55653,7 +57529,7 @@ var validateSnesStructMap = (value) => {
         ...type === void 0 ? {} : { type },
         ...field.description === void 0 ? {} : { description: comment(field.description) }
       };
-    }).sort((a, b) => a.offset - b.offset);
+    }).toSorted((a, b) => a.offset - b.offset);
     let end = 0;
     for (const field of fields) {
       if (field.offset < end || field.offset + field.size > size) {
@@ -55700,14 +57576,14 @@ var validateSnesStructMap = (value) => {
         entryComments: entryComments(entry.entryComments, firstIndex, count)
       }
     };
-  }).sort((a, b) => a.address - b.address);
+  }).toSorted((a, b) => a.address - b.address);
   for (let index = 1; index < bindings.length; index++) {
     const previous = bindings[index - 1];
     if (bindings[index].address < previous.address + previous.structure.size * previous.count) {
       throw new Error(`Struct bindings '${previous.name}' and '${bindings[index].name}' overlap.`);
     }
   }
-  const romBindings = bindings.filter((binding) => binding.fileOffset !== void 0).sort((a, b) => a.fileOffset - b.fileOffset);
+  const romBindings = bindings.filter((binding) => binding.fileOffset !== void 0).toSorted((a, b) => a.fileOffset - b.fileOffset);
   for (let index = 1; index < romBindings.length; index++) {
     const previous = romBindings[index - 1];
     if (romBindings[index].fileOffset < previous.fileOffset + previous.structure.size * previous.count) {
@@ -55885,7 +57761,7 @@ var planSnesStructRomFields = (map, romSize, cpuAddress) => {
       }
     }
   }
-  return fields.sort((a, b) => a.start - b.start);
+  return fields.toSorted((a, b) => a.start - b.start);
 };
 var renderSnesStructInitializerFields = (record5, bytes2) => {
   if (bytes2.length !== record5.end - record5.start) {
@@ -55929,7 +57805,7 @@ var renderSnesStructData = (field, start, bytes2) => {
   ];
 };
 
-// ../plugin-snes/src/disassembler/typed-data.ts
+// packages/plugin-snes/src/disassembler/typed-data.ts
 var WIDTHS = {
   data8: 1,
   data16: 2,
@@ -56008,10 +57884,13 @@ function renderSnesTypedData(bytes2, start, declaration) {
   return lines;
 }
 
-// ../plugin-snes/src/disassembler/source-export.ts
+// packages/plugin-snes/src/disassembler/source-export.ts
+function isSourceFlowMode(value) {
+  return value === "absolute" || value === "absoluteLong" || value === "relative" || value === "relativeLong";
+}
 var sourceFlowTarget = (instruction2, sourceAddress) => {
   const { mode: mode3 } = instruction2;
-  if (!["absolute", "absoluteLong", "relative", "relativeLong"].includes(mode3)) {
+  if (!isSourceFlowMode(mode3)) {
     return void 0;
   }
   const flow = instruction2.references.find(
@@ -56046,6 +57925,25 @@ var renderFlowLabel = (source, flow, name, labelAddress) => {
   }
   return `${source.slice(0, source.indexOf(" "))} ${operand}`;
 };
+function isAssetIncludeFile(value) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("version" in value) || value.version !== 1) {
+    return false;
+  }
+  return "entries" in value && Array.isArray(value.entries);
+}
+function isAssetIncludeEntry(value) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("start" in value) || !("end" in value) || !("directive" in value)) {
+    return false;
+  }
+  const { start, end, directive: directive2 } = value;
+  return typeof start === "number" && typeof end === "number" && Number.isSafeInteger(start) && Number.isSafeInteger(end) && start >= 0 && end > start && typeof directive2 === "string" && /^includeAsset\([^\n\r]+\)$/.test(directive2);
+}
 var loadAssetIncludeMap = (directory) => {
   const file = path25.join(directory, "asset-includes.json");
   if (!fs21.existsSync(file)) {
@@ -56053,15 +57951,15 @@ var loadAssetIncludeMap = (directory) => {
   }
   const sourceBytes = fs21.readFileSync(file);
   const data = JSON.parse(sourceBytes.toString("utf8"));
-  if (!data || typeof data !== "object" || data.version !== 1 || !Array.isArray(data.entries)) {
+  if (!isAssetIncludeFile(data)) {
     throw new Error("asset-includes.json requires version 1 and an entries array.");
   }
-  const entries3 = data.entries;
-  for (const entry of entries3) {
-    const item = entry;
-    if (!item || !Number.isSafeInteger(item.start) || !Number.isSafeInteger(item.end) || item.start < 0 || item.end <= item.start || typeof item.directive !== "string" || !/^includeAsset\([^\n\r]+\)$/.test(item.directive)) {
+  const entries3 = [];
+  for (const entry of data.entries) {
+    if (!isAssetIncludeEntry(entry)) {
       throw new Error("asset-includes.json has an invalid ROM span or includeAsset directive.");
     }
+    entries3.push(entry);
   }
   const ordered = [...entries3];
   ordered.sort((left, right) => left.start - right.start);
@@ -56080,7 +57978,7 @@ var applyAssetIncludes = (planned, map, metadata, bankSize) => {
   const spans = [...planned];
   let index = 0;
   const splitRawAt = (offset) => {
-    const span = spans[index];
+    const span = index >= 0 && index < spans.length ? spans[index] : void 0;
     if (!span || span.start >= offset || span.end <= offset) {
       return;
     }
@@ -56293,7 +58191,7 @@ var structuredRomLayout = (rom, mapper) => {
     }
     fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment2, "vectors"));
   }
-  const sorted2 = fields.sort((left, right) => left.start - right.start);
+  const sorted2 = fields.toSorted((left, right) => left.start - right.start);
   return {
     start: sorted2[0].start,
     end: sorted2.at(-1).end,
@@ -56318,7 +58216,7 @@ var decodeState = (record5) => ({
   ...known2(record5.d) === void 0 ? {} : { directPage: known2(record5.d) & 65535 }
 });
 var formatSnes65816SourceInstruction = (instruction2, ramVariables, sourceAddress, sourceLabels, structFields, indexedStructFields) => {
-  const decodedOperand = instruction2.operands[0];
+  const decodedOperand = instruction2.operands.length > 0 ? instruction2.operands[0] : void 0;
   const rebaseRelative = sourceAddress !== void 0 && (instruction2.mode === "relative" || instruction2.mode === "relativeLong" && instruction2.mnemonic !== "PER") && decodedOperand?.value !== void 0;
   const formatted = formatCpu65816Instruction(
     rebaseRelative ? {
@@ -56401,7 +58299,7 @@ var formatSnes65816SourceInstruction = (instruction2, ramVariables, sourceAddres
   );
   if (flow && sourceLabels && rawValue !== void 0) {
     let target = flow.address;
-    if (rebaseRelative && sourceAddress !== void 0) {
+    if (rebaseRelative) {
       target = sourceAddress & 16711680 | sourceAddress + instruction2.size + rawValue & 65535;
     } else if (instruction2.mode === "absolute" && sourceAddress !== void 0) {
       target = sourceAddress & 16711680 | rawValue;
@@ -56470,14 +58368,14 @@ var snesSourceLabelNames = (shards, mapper, romSize, ramNames = []) => {
 };
 var metadataLines = (shards, mapper, romSize, names) => {
   const values = /* @__PURE__ */ new Map();
-  const append = (offset, line) => {
+  const append2 = (offset, line) => {
     if (offset === void 0) {
       return;
     }
     values.set(offset, [...values.get(offset) ?? [], line]);
   };
-  for (const label of [...shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
-    append(toFileOffset(label.addressSpace, label.address, mapper, romSize), {
+  for (const label of [...shards.labels].toSorted((a, b) => a.id.localeCompare(b.id))) {
+    append2(toFileOffset(label.addressSpace, label.address, mapper, romSize), {
       name: names.get(label.id),
       identity: label,
       ...label.comment ? { comment: label.comment } : {},
@@ -56493,21 +58391,22 @@ var metadataLines = (shards, mapper, romSize, names) => {
     if (offset === void 0 || suppressed || values.get(offset)?.some((line) => line.name)) {
       continue;
     }
-    append(offset, {
+    append2(offset, {
       name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
       inferredFunction: true,
       identity: fn
     });
   }
-  for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
-    append(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
+  for (const region of [...shards.regions].toSorted((a, b) => a.id.localeCompare(b.id))) {
+    append2(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
       comment: `Region: ${region.name}${region.context ? ` (${region.context})` : ""}`
     });
   }
-  for (const comment2 of [...shards.comments].sort((a, b) => a.id.localeCompare(b.id))) {
-    append(toFileOffset(comment2.addressSpace, comment2.address, mapper, romSize), {
-      ...comment2.placement === "inline-instruction" ? { instructionComment: comment2.text } : { comment: comment2.text }
-    });
+  for (const comment2 of [...shards.comments].toSorted((a, b) => a.id.localeCompare(b.id))) {
+    append2(
+      toFileOffset(comment2.addressSpace, comment2.address, mapper, romSize),
+      comment2.placement === "inline-instruction" ? { instructionComment: comment2.text } : { comment: comment2.text }
+    );
   }
   return values;
 };
@@ -56566,7 +58465,7 @@ var planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables
   const conflictNodes = new Set(
     shards.analysis.filter((record5) => record5.kind === "conflict").flatMap((record5) => record5.nodes)
   );
-  const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
+  const metadataOffsets = [...metadata.keys()].toSorted((left, right) => left - right);
   const explicitMetadataOffsets = metadataOffsets.filter(
     (offset) => metadata.get(offset).some((line) => !line.inferredFunction)
   );
@@ -56596,7 +58495,7 @@ var planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables
       group.push(record5);
       grouped.set(record5.fileOffset, group);
     }
-    return [...grouped].sort(([a], [b]) => a - b).map(([, records2]) => records2);
+    return [...grouped].toSorted(([a], [b]) => a - b).map(([, records2]) => records2);
   };
   const candidates = /* @__PURE__ */ new Map();
   const context = createSnesAddressContext(mapper);
@@ -56620,7 +58519,7 @@ var planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables
     if (sourceAddress < 0) {
       continue;
     }
-    const variants = records2.sort((left, right) => left.id.localeCompare(right.id)).map((record5) => {
+    const variants = records2.toSorted((left, right) => left.id.localeCompare(right.id)).map((record5) => {
       const state = decodeState(record5.incomingState);
       const result = decoder.decode({ source, offset, logicalAddress: record5.address, state });
       if (result.kind !== "instruction" || result.instruction.size !== record5.size || result.instruction.opcode !== record5.opcode || result.instruction.specificationId !== record5.specificationId) {
@@ -56639,10 +58538,12 @@ var planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables
         )
       };
     });
-    if (variants.some((entry) => entry === void 0)) {
+    const resolved = variants.filter(
+      (entry) => entry !== void 0
+    );
+    if (resolved.length !== variants.length) {
       continue;
     }
-    const resolved = variants;
     const first = resolved[0];
     if (resolved.some(
       (entry) => entry.record.size !== first.record.size || entry.record.specificationId !== first.record.specificationId
@@ -56672,7 +58573,7 @@ var planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables
           sourceLabels
         )
       );
-      if (numericSources.some((source2) => source2 !== numericSources[0])) {
+      if (numericSources.some((numericSource) => numericSource !== numericSources[0])) {
         continue;
       }
       renderedSource = numericSources[0];
@@ -56703,7 +58604,7 @@ var planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables
       owners.set(offset, [...owners.get(offset) ?? [], instruction2.start]);
     }
   }
-  for (const [start, instruction2] of [...candidates]) {
+  for (const [start, instruction2] of candidates) {
     if ([...Array(instruction2.end - instruction2.start).keys()].some(
       (index) => (owners.get(start + index)?.length ?? 0) !== 1
     )) {
@@ -56787,7 +58688,8 @@ var planSpans = (rom, mapper, shards, instructions, metadata, annotations, struc
       if (entry.classification === "unreached" && instructionIndex.overlapping(offset, offset + 1).some((node) => node.start < offset)) {
         continue;
       }
-      const field = structIndex.overlapping(offset, offset + 1)[0];
+      const overlappingFields = structIndex.overlapping(offset, offset + 1);
+      const field = overlappingFields.length > 0 ? overlappingFields[0] : void 0;
       if (!field || offset === field.start) {
         addExternalCut(offset);
       }
@@ -56803,12 +58705,13 @@ var planSpans = (rom, mapper, shards, instructions, metadata, annotations, struc
       addExternalCut(last + 1);
     }
   }
-  const sorted2 = [...cuts].sort((left, right) => left - right);
+  const sorted2 = [...cuts].toSorted((left, right) => left - right);
   return sorted2.slice(0, -1).map((start, index) => {
     const end = sorted2[index + 1];
     const instruction2 = instructions.get(start);
     const structured = structure?.byStart.get(start);
-    const structField = structIndex.overlapping(start, end)[0];
+    const overlappingFields = structIndex.overlapping(start, end);
+    const structField = overlappingFields.length > 0 ? overlappingFields[0] : void 0;
     if (instruction2?.end === end) {
       return { start, end, role: "code", instruction: instruction2 };
     }
@@ -56861,7 +58764,7 @@ var regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions.filte
   const regionStart = toFileOffset(region.addressSpace, region.start, mapper, romSize);
   const regionLast = toFileOffset(region.addressSpace, region.end - 1, mapper, romSize);
   return regionStart !== void 0 && regionLast !== void 0 && regionStart < end && start < regionLast + 1;
-}).map((region) => region.id).sort();
+}).map((region) => region.id).toSorted();
 var exportSnes65816Source = (project, rom, directory, options) => {
   const emitFile = (_root, relative2, bytes2, kind, files2) => {
     const value = typeof bytes2 === "string" ? Buffer.from(bytes2) : bytes2;
@@ -56884,6 +58787,9 @@ var exportSnes65816Source = (project, rom, directory, options) => {
     throw new Error("structLineWidth must be an integer of at least 40 columns.");
   }
   const mapper = project.manifest.mapping.mapper;
+  if (!isSnesMapper(mapper)) {
+    throw new Error(`Unsupported SNES mapper '${mapper}'.`);
+  }
   const context = createSnesAddressContext(mapper);
   const structure = structuredRomLayout(rom, mapper);
   if (!fs21.existsSync(path25.join(directory, SNES_RAM_MAP_SOURCE))) {
@@ -57019,7 +58925,7 @@ var exportSnes65816Source = (project, rom, directory, options) => {
         name: line.name,
         addressSpace: line.identity.addressSpace,
         address: line.identity.address,
-        evidence: line.identity.evidence ?? []
+        evidence: line.identity.evidence
       }))
     );
     emitFile(
@@ -57044,7 +58950,7 @@ var exportSnes65816Source = (project, rom, directory, options) => {
     banks.set(bank, entries3);
   }
   const bankSources = [];
-  for (const [bank, bankSpans] of [...banks].sort(([left], [right]) => left - right)) {
+  for (const [bank, bankSpans] of [...banks].toSorted(([left], [right]) => left - right)) {
     const bankPath = `banks/bank-${bank.toString(16).padStart(3, "0")}.asm`;
     bankSources.push(bankPath);
     const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
@@ -57058,7 +58964,7 @@ var exportSnes65816Source = (project, rom, directory, options) => {
       const spanMetadata = metadata.get(span.start);
       const named = span.structured ? [] : renderedMetadata(spanMetadata, Boolean(span.instruction), span.structRecord ? "" : "  ");
       let closedTable = false;
-      if (table && (span.structRecord?.binding.name !== table.name || span.structRecord?.index !== table.nextIndex || named.length > 0 || nextAddress !== address5)) {
+      if (table && (span.structRecord?.binding.name !== table.name || span.structRecord.index !== table.nextIndex || named.length > 0 || nextAddress !== address5)) {
         lines.push("endDataStructs");
         table = void 0;
         closedTable = true;
@@ -57201,7 +59107,7 @@ var exportSnes65816Source = (project, rom, directory, options) => {
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
         });
       } else {
-        const typed = typedData && snesTypedDataAt(typedData, span.start, span.end);
+        const typed = snesTypedDataAt(typedData, span.start, span.end);
         if (typed) {
           lines.push(
             ...renderSnesTypedData(rom.read(span.start, span.end - span.start), span.start, typed)
@@ -57304,7 +59210,7 @@ var exportSnes65816Source = (project, rom, directory, options) => {
       reason = "No exportable instruction starts here. Rendered as a standalone comment. Inline placement remains saved.";
     }
     return reason ? [{ id: record5.id, addressSpace: record5.addressSpace, address: record5.address, reason }] : [];
-  }).sort((left, right) => left.id.localeCompare(right.id));
+  }).toSorted((left, right) => left.id.localeCompare(right.id));
   emitFile(
     directory,
     "annotation-report.json",
@@ -57374,18 +59280,32 @@ var exportSnes65816Source = (project, rom, directory, options) => {
         sha256: sourceExportSha256(ramMap.sourceBytes)
       }
     ],
-    files: files.sort((left, right) => left.path.localeCompare(right.path)),
-    spans: spans.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
+    files: files.toSorted((left, right) => left.path.localeCompare(right.path)),
+    spans: spans.toSorted(
+      (left, right) => left.start - right.start || left.id.localeCompare(right.id)
+    )
   };
   return manifest;
 };
 
-// ../plugin-snes/src/disassembler/source-build.ts
+// packages/plugin-snes/src/disassembler/source-build.ts
 import fs23 from "node:fs";
 import path28 from "node:path";
 init_canonical_json();
 
-// ../plugin-snes/src/disassembler/rom-layout/relocate.ts
+// packages/plugin-snes/src/disassembler/rom-layout/relocate.ts
+var RELOCATION_ENCODINGS = [
+  "long24",
+  "bank16",
+  "low16",
+  "bank8",
+  "relative8",
+  "relative16",
+  "length8",
+  "length16",
+  "count8",
+  "count16"
+];
 function assertSnesSplitReferences(references) {
   const pairs = /* @__PURE__ */ new Map();
   for (const reference of references) {
@@ -57437,18 +59357,7 @@ function bytes(value, width, signed2 = false) {
   return Array.from({ length: width }, (_, index) => Math.floor(unsigned2 / 2 ** (8 * index)) % 256);
 }
 function encodeSnesRelocationReference(reference, address5, encodedLength) {
-  if (![
-    "long24",
-    "bank16",
-    "low16",
-    "bank8",
-    "relative8",
-    "relative16",
-    "length8",
-    "length16",
-    "count8",
-    "count16"
-  ].includes(reference.encoding) || !Number.isSafeInteger(address5) || address5 < 0 || address5 > 16777215 || !Number.isSafeInteger(encodedLength) || encodedLength <= 0 || encodedLength > 65536) {
+  if (!RELOCATION_ENCODINGS.includes(reference.encoding) || !Number.isSafeInteger(address5) || address5 < 0 || address5 > 16777215 || !Number.isSafeInteger(encodedLength) || encodedLength <= 0 || encodedLength > 65536) {
     throw new Error(`Invalid reference encoding or target: ${reference.id}`);
   }
   const addend = reference.addend ?? 0;
@@ -57509,7 +59418,7 @@ function planSnesRelocation(options) {
     throw new Error("Invalid allocation size, alignment, or bank constraint.");
   }
   const ids = /* @__PURE__ */ new Set();
-  const occupied = [...options.objects].sort((a, b) => a.start - b.start);
+  const occupied = [...options.objects].toSorted((a, b) => a.start - b.start);
   for (const [index, item] of occupied.entries()) {
     if (ids.has(item.id)) {
       throw new Error(`Duplicate layout object: ${item.id}`);
@@ -57521,7 +59430,7 @@ function planSnesRelocation(options) {
       throw new Error("Existing object allocations overlap.");
     }
   }
-  const free = [...options.freeSpace].sort((a, b) => a.start - b.start);
+  const free = [...options.freeSpace].toSorted((a, b) => a.start - b.start);
   for (const [index, space] of free.entries()) {
     range(space.start, space.end, options.original.length, space.id);
     if (sourceContentHash(options.original.subarray(space.start, space.end)) !== space.originalSha256) {
@@ -57531,18 +59440,7 @@ function planSnesRelocation(options) {
       throw new Error("Free-space declarations overlap.");
     }
   }
-  const encodings = /* @__PURE__ */ new Set([
-    "long24",
-    "bank16",
-    "low16",
-    "bank8",
-    "relative8",
-    "relative16",
-    "length8",
-    "length16",
-    "count8",
-    "count16"
-  ]);
+  const encodings = new Set(RELOCATION_ENCODINGS);
   assertSnesSplitReferences(options.references);
   const fields = /* @__PURE__ */ new Set();
   const referenceIds = /* @__PURE__ */ new Set();
@@ -57686,7 +59584,7 @@ function planSnesRelocation(options) {
   return { object: object2, destination, encodedLength: options.encodedLength, repairs };
 }
 
-// ../plugin-snes/src/disassembler/rom-layout/check.ts
+// packages/plugin-snes/src/disassembler/rom-layout/check.ts
 function checkSnesPlacements(output, symbols, contract) {
   const diagnostics = [];
   try {
@@ -57698,10 +59596,10 @@ function checkSnesPlacements(output, symbols, contract) {
   if (objects.size !== contract.objects.length) {
     throw new Error("Repeated source placement identity.");
   }
-  const occupied = [...contract.objects].sort((a, b) => a.start - b.start);
+  const occupied = [...contract.objects].toSorted((a, b) => a.start - b.start);
   for (const [index, object2] of occupied.entries()) {
     const start = symbols.get(object2.startSymbol), end = symbols.get(object2.endSymbol);
-    if (!Number.isSafeInteger(object2.start) || object2.start < 0 || !Number.isSafeInteger(object2.length) || object2.length <= 0 || object2.start + object2.length > output.length || ![32768, 65536].includes(object2.bankSize) || !Number.isSafeInteger(object2.alignment) || object2.alignment <= 0 || object2.start % object2.alignment !== 0 || Math.floor(object2.start / object2.bankSize) !== Math.floor((object2.start + object2.length - 1) / object2.bankSize) || start !== contract.logicalAddress(object2.start) || end === void 0 || start === void 0 || end - start !== object2.length || index > 0 && occupied[index - 1].start + occupied[index - 1].length > object2.start) {
+    if (!Number.isSafeInteger(object2.start) || object2.start < 0 || !Number.isSafeInteger(object2.length) || object2.length <= 0 || object2.start + object2.length > output.length || ![32768, 65536].includes(object2.bankSize) || !Number.isSafeInteger(object2.alignment) || object2.alignment <= 0 || object2.start % object2.alignment !== 0 || Math.floor(object2.start / object2.bankSize) !== Math.floor((object2.start + object2.length - 1) / object2.bankSize) || start !== contract.logicalAddress(object2.start) || end === void 0 || end - start !== object2.length || index > 0 && occupied[index - 1].start + occupied[index - 1].length > object2.start) {
       diagnostics.push({
         code: "placement",
         offset: object2.start,
@@ -57762,7 +59660,7 @@ function checkSnesSourceLayout(options) {
       message: `ROM has ${output.length} bytes; declared layout requires ${options.expectedSize}.`
     });
   }
-  const ranges = mapping.ranges.filter((range2) => range2.outputStart !== void 0 && range2.outputEnd !== void 0).sort((a, b) => a.outputStart - b.outputStart || a.outputEnd - b.outputEnd);
+  const ranges = mapping.ranges.filter((range2) => range2.outputStart !== void 0 && range2.outputEnd !== void 0).toSorted((a, b) => a.outputStart - b.outputStart || a.outputEnd - b.outputEnd);
   let previous;
   for (const range2 of ranges) {
     if (previous && range2.outputStart < previous.outputEnd) {
@@ -57779,7 +59677,7 @@ function checkSnesSourceLayout(options) {
   }
   const states = /* @__PURE__ */ new Map();
   for (const state of options.states ?? []) {
-    if (!state || !Number.isSafeInteger(state.offset) || state.offset < 0 || state.offset >= options.expectedSize || states.has(state.offset) || [state.e, state.m, state.x].some((flag) => flag !== void 0 && typeof flag !== "boolean")) {
+    if (!Number.isSafeInteger(state.offset) || state.offset < 0 || state.offset >= options.expectedSize || states.has(state.offset) || [state.e, state.m, state.x].some((flag) => flag !== void 0 && typeof flag !== "boolean")) {
       throw new Error(
         "CPU-state contracts require unique ROM offsets and boolean E/M/X assumptions."
       );
@@ -57814,10 +59712,14 @@ function checkSnesSourceLayout(options) {
         message: "Instruction crosses its 65816 program bank boundary."
       });
     }
-    const specification2 = cpu65816Specifications[output[offset]];
+    const opcodeByte = offset >= 0 && offset < output.length ? output[offset] : void 0;
+    const specification2 = opcodeByte !== void 0 && opcodeByte < cpu65816Specifications.length ? cpu65816Specifications[opcodeByte] : void 0;
     const state = states.get(offset);
-    let expectedSize = specification2?.minimumSize;
-    if (specification2?.widthFlag) {
+    if (!specification2) {
+      continue;
+    }
+    let expectedSize = specification2.minimumSize;
+    if (specification2.widthFlag) {
       const flag = state?.e === true ? true : state?.[specification2.widthFlag];
       expectedSize = void 0;
       if (flag === true) {
@@ -57845,7 +59747,7 @@ function checkSnesSourceLayout(options) {
   }
   const extentIds = /* @__PURE__ */ new Set();
   for (const extent of options.extents ?? []) {
-    if (!extent || typeof extent.id !== "string" || !extent.id || extentIds.has(extent.id) || typeof extent.startSymbol !== "string" || !extent.startSymbol || typeof extent.endSymbol !== "string" || !extent.endSymbol || !Number.isSafeInteger(extent.size) || extent.size <= 0 || extent.size > options.expectedSize) {
+    if (typeof extent.id !== "string" || !extent.id || extentIds.has(extent.id) || typeof extent.startSymbol !== "string" || !extent.startSymbol || typeof extent.endSymbol !== "string" || !extent.endSymbol || !Number.isSafeInteger(extent.size) || extent.size <= 0 || extent.size > options.expectedSize) {
       throw new Error(
         "Fixed extents require unique IDs, start/end symbols and positive bounded sizes."
       );
@@ -57862,7 +59764,7 @@ function checkSnesSourceLayout(options) {
   return diagnostics;
 }
 
-// ../plugin-snes/src/disassembler/rom-layout/code-flow.ts
+// packages/plugin-snes/src/disassembler/rom-layout/code-flow.ts
 var sameState = (a, b) => a.e === b.e && a.m === b.m && a.x === b.x;
 function knownState(state) {
   return !!state && [state.e, state.m, state.x].every((flag) => typeof flag === "boolean") && !(state.e && (!state.m || !state.x));
@@ -57910,7 +59812,7 @@ function checkSnesCodeFlow(output, mapping, contract, declared = []) {
     }
     const instructions = mapping.instructions.filter(
       (instruction2) => instruction2.outputOffset !== void 0 && instruction2.outputOffset >= object2.start && instruction2.outputOffset < object2.start + object2.length
-    ).sort((a, b) => a.outputOffset - b.outputOffset);
+    ).toSorted((a, b) => a.outputOffset - b.outputOffset);
     const byOffset = /* @__PURE__ */ new Map();
     const byAddress = /* @__PURE__ */ new Map();
     let through = object2.start;
@@ -57980,10 +59882,7 @@ function checkSnesCodeFlow(output, mapping, contract, declared = []) {
       }
       reached.set(offset, state);
       const assumption = assumptions.get(offset);
-      if (assumption && ["e", "m", "x"].some((flag) => {
-        const key3 = flag;
-        return assumption[key3] !== void 0 && assumption[key3] !== state[key3];
-      })) {
+      if (assumption && (assumption.e !== void 0 && assumption.e !== state.e || assumption.m !== void 0 && assumption.m !== state.m || assumption.x !== void 0 && assumption.x !== state.x)) {
         fail2(
           `${object2.id}: a declared CPU state contradicts the preceding control flow.`,
           instruction2
@@ -58095,8 +59994,9 @@ function checkSnesCodeFlow(output, mapping, contract, declared = []) {
   return { diagnostics, states };
 }
 
-// ../plugin-snes/src/disassembler/rom-layout/expansion.ts
+// packages/plugin-snes/src/disassembler/rom-layout/expansion.ts
 var expansionHeaderOffset = (policy) => policy.mapper === "lorom" ? 32704 : 65472;
+var powerOfTwo = (value) => Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
 function assertSnesRomExpansion(original, size, policy) {
   if (!policy) {
     if (size !== original.length) {
@@ -58104,8 +60004,7 @@ function assertSnesRomExpansion(original, size, policy) {
     }
     return;
   }
-  const powerOfTwo = (value) => Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
-  if (!["hirom", "lorom"].includes(policy.mapper) || ![original.length, size, policy.maximumSize].every(powerOfTwo) || original.length < 65536 || size < original.length || size > policy.maximumSize || policy.maximumSize > 4194304 || !Number.isInteger(policy.fillByte) || policy.fillByte < 0 || policy.fillByte > 255 || policy.checksum !== "recalculate") {
+  if (!["hirom", "lorom"].includes(policy.mapper) || ![original.length, size, policy.maximumSize].every(powerOfTwo) || original.length < 65536 || size < original.length || size > policy.maximumSize || policy.maximumSize > 4194304 || !Number.isInteger(policy.fillByte) || policy.fillByte < 0 || policy.fillByte > 255) {
     throw new Error(
       "Expansion requires power-of-two LoROM/HiROM capacities up to 4 MiB, a byte fill and recalculated checksum."
     );
@@ -58153,7 +60052,7 @@ function checkSnesRomExpansion(output, original, size, policy, objects = []) {
       header + 28
     );
   }
-  const allocated = objects.filter((object2) => object2.start + object2.length > original.length).sort((a, b) => a.start - b.start);
+  const allocated = objects.filter((object2) => object2.start + object2.length > original.length).toSorted((a, b) => a.start - b.start);
   let index = 0;
   for (let offset = original.length; offset < size; offset++) {
     while (index < allocated.length && allocated[index].start + allocated[index].length <= offset) {
@@ -58170,7 +60069,7 @@ function checkSnesRomExpansion(output, original, size, policy, objects = []) {
   return diagnostics;
 }
 
-// ../plugin-snes/src/disassembler/rom-layout/raw-consumption.ts
+// packages/plugin-snes/src/disassembler/rom-layout/raw-consumption.ts
 import path26 from "node:path";
 function checkRawBlockConsumption(mapping, blocks) {
   const consumed = /* @__PURE__ */ new Map();
@@ -58178,7 +60077,7 @@ function checkRawBlockConsumption(mapping, blocks) {
     if (asset.format !== "raw" || asset.inputStart === void 0 || asset.inputEnd === void 0) {
       continue;
     }
-    const file = mapping.fileList[asset.assetFileIdx];
+    const file = asset.assetFileIdx >= 0 && asset.assetFileIdx < mapping.fileList.length ? mapping.fileList[asset.assetFileIdx] : void 0;
     if (!file) {
       throw new Error("Raw consumption refers to a missing source dependency.");
     }
@@ -58215,9 +60114,22 @@ function checkRawBlockConsumption(mapping, blocks) {
   return issues;
 }
 
-// ../plugin-snes/src/disassembler/source-build-cache.ts
+// packages/plugin-snes/src/disassembler/source-build-cache.ts
 import fs22 from "node:fs";
 import path27 from "node:path";
+function isRecord35(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function receiptString(record5, key3) {
+  const field = record5[key3];
+  if (field === void 0) {
+    return void 0;
+  }
+  if (typeof field !== "string") {
+    throw new Error("unrecognized build receipt");
+  }
+  return field;
+}
 function pruneSnesSourceBuilds(directory, current) {
   const warnings = [];
   const ownedNames = /* @__PURE__ */ new Set([
@@ -58245,7 +60157,15 @@ function pruneSnesSourceBuilds(directory, current) {
       if (stat2.size > 65536) {
         throw new Error("oversized build receipt");
       }
-      const value = JSON.parse(fs22.readFileSync(receipt, "utf8"));
+      const parsed = JSON.parse(fs22.readFileSync(receipt, "utf8"));
+      if (!isRecord35(parsed)) {
+        throw new Error("unrecognized build receipt");
+      }
+      const value = {
+        inputSha256: receiptString(parsed, "inputSha256"),
+        outputFile: receiptString(parsed, "outputFile"),
+        debugMapFile: receiptString(parsed, "debugMapFile")
+      };
       if (value.inputSha256 !== entry.name || value.outputFile !== path27.join(root, "program.sfc") || value.debugMapFile !== path27.join(root, "program.sfc.debug.json")) {
         throw new Error("unrecognized build receipt");
       }
@@ -58273,7 +60193,7 @@ function pruneSnesSourceBuilds(directory, current) {
   return warnings;
 }
 
-// ../plugin-snes/src/disassembler/source-build.ts
+// packages/plugin-snes/src/disassembler/source-build.ts
 var SourceBuildFiles = class extends NodeAssemblyFileProvider {
   constructor(overlays = /* @__PURE__ */ new Map()) {
     super();
@@ -58432,8 +60352,8 @@ function inspectSnesSource(options) {
 }
 function buildSnesSource(options) {
   options.signal?.throwIfAborted();
-  for (const hash of [options.toolchainSha256, options.configurationSha256]) {
-    if (!/^[\da-f]{64}$/.test(hash)) {
+  for (const hash2 of [options.toolchainSha256, options.configurationSha256]) {
+    if (!/^[\da-f]{64}$/.test(hash2)) {
       throw new Error("Source build needs exact toolchain and configuration identities.");
     }
   }
@@ -58454,7 +60374,7 @@ function buildSnesSource(options) {
   const sources = mapping.fileList.map((file) => ({
     path: path28.relative(root, file.name).replaceAll(path28.sep, "/"),
     sha256: file.sha256
-  })).sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
+  })).toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
   const outputSha256 = sourceContentHash(output);
   const inputSha256 = sourceContentHash(
     canonicalJson({
@@ -58529,15 +60449,15 @@ function buildSnesSource(options) {
   }
 }
 
-// ../plugin-snes/src/disassembler/source-generation.ts
+// packages/plugin-snes/src/disassembler/source-generation.ts
 init_canonical_json();
 import fs24 from "node:fs";
 import path29 from "node:path";
 
-// ../plugin-snes/src/disassembler/code-preservation.ts
+// packages/plugin-snes/src/disassembler/code-preservation.ts
 var union = (ranges) => {
   const merged = [];
-  for (const range2 of [...ranges].sort((left, right) => left.start - right.start)) {
+  for (const range2 of ranges.toSorted((left, right) => left.start - right.start)) {
     const previous = merged.at(-1);
     if (previous && range2.start <= previous.end) {
       merged[merged.length - 1] = {
@@ -58579,18 +60499,27 @@ var lostCodeRanges = (previous, next) => {
   return lost;
 };
 
-// ../plugin-snes/src/disassembler/source-generation.ts
+// packages/plugin-snes/src/disassembler/source-generation.ts
 function snesGenerationOptionsHash(options) {
   return sourceContentHash(
     canonicalJson({
       sourceRoot: options.sourceRoot,
-      recipes: options.recipes.map((file) => ({ path: file.path, sha256: sourceContentHash(file.bytes) })).sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))),
-      pristineAssets: [...options.pristineAssets].sort(
+      recipes: options.recipes.map((file) => ({ path: file.path, sha256: sourceContentHash(file.bytes) })).toSorted((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))),
+      pristineAssets: [...options.pristineAssets].toSorted(
         (a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path))
       ),
       codeWithdrawals: options.codeWithdrawals ?? []
     })
   );
+}
+function isRecord36(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isCodeRange(value) {
+  return isRecord36(value) && typeof value.start === "number" && typeof value.end === "number";
+}
+function isSourceCodeContract(value) {
+  return isRecord36(value) && value.format === "uttori-source-code" && value.version === 1 && typeof value.romSha256 === "string" && Array.isArray(value.ranges) && value.ranges.every(isCodeRange);
 }
 async function prepareSnesGeneration(options) {
   assertSourcePath(options.sourceRoot);
@@ -58646,12 +60575,14 @@ async function prepareSnesGeneration(options) {
           "Evidence or indexed research changed before pure rendering. Prepare a fresh input snapshot."
         );
       }
-      const rom2 = RomImage.load(options.romFile, { headerSize: project.manifest.rom.headerSize });
-      validateProjectRom(project.manifest, rom2);
-      if (rom2.identity.contentSha256 !== options.inputs.romSha256) {
+      const loadedRom = RomImage.load(options.romFile, {
+        headerSize: project.manifest.rom.headerSize
+      });
+      validateProjectRom(project.manifest, loadedRom);
+      if (loadedRom.identity.contentSha256 !== options.inputs.romSha256) {
         throw new Error("Generation ROM content identity changed.");
       }
-      const manifest2 = exportSnes65816Source(project, rom2, source, {
+      const exportedManifest = exportSnes65816Source(project, loadedRom, source, {
         sourceProjectSha256: sourceContentHash(canonicalJson(project.manifest)),
         instructionGroups: store.instructionExportGroups(),
         emitFile: (file) => {
@@ -58662,7 +60593,7 @@ async function prepareSnesGeneration(options) {
           write({ path: `${options.sourceRoot}/${file.path}`, bytes: file.bytes });
         }
       });
-      return { manifest: manifest2, rom: rom2 };
+      return { manifest: exportedManifest, rom: loadedRom };
     }, false);
     const priorFiles = new Map(prior.files.map((file) => [file.path, file]));
     const priorCode = priorFiles.get(`${options.sourceRoot}/source-code.json`);
@@ -58676,7 +60607,7 @@ async function prepareSnesGeneration(options) {
       const code = JSON.parse(
         (await sourceGit(options.repository.root, ["cat-file", "blob", priorCode.blob])).stdout.toString("utf8")
       );
-      if (code.format !== "uttori-source-code" || code.version !== 1 || code.romSha256 !== rom.identity.contentSha256 || !Array.isArray(code.ranges)) {
+      if (!isSourceCodeContract(code) || code.romSha256 !== rom.identity.contentSha256) {
         throw new Error("Accepted generation has an invalid code coverage contract.");
       }
       withdrawnCode = lostCodeRanges(
@@ -58773,7 +60704,7 @@ async function prepareSnesGeneration(options) {
   }
 }
 
-// ../plugin-snes/src/disassembler/rom-layout/source-relocation.ts
+// packages/plugin-snes/src/disassembler/rom-layout/source-relocation.ts
 import fs25 from "node:fs";
 import path30 from "node:path";
 var hex10 = (value) => `$${value.toString(16).toUpperCase()}`;
@@ -59088,7 +61019,7 @@ function prepareSnesSourceRelocation(options) {
     })) {
       throw new Error(`Free pool ${pool.id} contains source beyond raw storage declarations.`);
     }
-    const allocated = placements.filter((item) => item.start >= pool.start && item.start < pool.end).sort((a, b) => a.start - b.start);
+    const allocated = placements.filter((item) => item.start >= pool.start && item.start < pool.end).toSorted((a, b) => a.start - b.start);
     const lines = file.lines.slice(first + 1, last).filter((line) => line.trim().startsWith(";"));
     let cursor = pool.start;
     for (const item of allocated) {
@@ -59120,8 +61051,12 @@ function prepareSnesSourceRelocation(options) {
     const expression = referenceExpression(reference, moved);
     const statements = statementRepairs.get(name) ?? /* @__PURE__ */ new Map();
     const repairs = statements.get(statement) ?? [];
-    const start2 = statement.indexOf(reference.expression);
-    repairs.push({ start: start2, end: start2 + reference.expression.length, text: expression });
+    const expressionStart = statement.indexOf(reference.expression);
+    repairs.push({
+      start: expressionStart,
+      end: expressionStart + reference.expression.length,
+      text: expression
+    });
     statements.set(statement, repairs);
     statementRepairs.set(name, statements);
     return {
@@ -59136,7 +61071,7 @@ function prepareSnesSourceRelocation(options) {
     for (const [statement, repairs] of statements) {
       let after = statement;
       let right = statement.length;
-      for (const repair of repairs.sort((a, b) => b.start - a.start)) {
+      for (const repair of repairs.toSorted((a, b) => b.start - a.start)) {
         if (repair.end > right) {
           throw new Error("Reference expressions overlap inside one source statement.");
         }
@@ -59148,10 +61083,12 @@ function prepareSnesSourceRelocation(options) {
     save(name, text2.split(/\r?\n/));
   }
   const extents = (options.build.extents ?? []).map(
-    (extent) => extent.id === object2.id ? { ...extent, size: encodedLength } : extent
+    (extent) => extent.id === object2.id ? Object.assign({}, extent, { size: encodedLength }) : extent
   );
   const states = (options.build.states ?? []).map(
-    (state) => state.offset >= object2.start && state.offset < object2.start + object2.length ? { ...state, offset: plan.destination + state.offset - object2.start } : state
+    (state) => state.offset >= object2.start && state.offset < object2.start + object2.length ? Object.assign({}, state, {
+      offset: plan.destination + state.offset - object2.start
+    }) : state
   );
   const final = inspectSnesSource({
     ...options.build,
@@ -59175,7 +61112,7 @@ function prepareSnesSourceRelocation(options) {
     allowed.push([header + 28, header + 32]);
   }
   for (let offset = 0; offset < final.output.length; offset++) {
-    if (final.output[offset] !== inspected.output[offset] && !allowed.some(([start2, end2]) => offset >= start2 && offset < end2)) {
+    if (final.output[offset] !== inspected.output[offset] && !allowed.some(([allowedStart, allowedEnd]) => offset >= allowedStart && offset < allowedEnd)) {
       throw new Error(
         `Relocation changes undeclared bytes at ${hex10(offset)}. Add the missing reference or reconcile source placement.`
       );
@@ -59198,11 +61135,11 @@ function prepareSnesSourceRelocation(options) {
     edits: [...files.entries()].flatMap(([name, file]) => {
       const after = file.lines.join(file.newline);
       return after === file.text ? [] : [{ path: name, beforeSha256: sourceContentHash(file.text), before: file.text, after }];
-    }).sort((a, b) => a.path.localeCompare(b.path))
+    }).toSorted((a, b) => a.path.localeCompare(b.path))
   };
 }
 
-// ../plugin-snes/src/disassembler/spc700-address-space.ts
+// packages/plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
 var SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   id: SPC700_ARAM_ADDRESS_SPACE,
@@ -59211,11 +61148,11 @@ var SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   kind: "memory"
 });
 
-// ../plugin-snes/src/disassembler/project-initializer.ts
+// packages/plugin-snes/src/disassembler/project-initializer.ts
 import * as fs26 from "node:fs";
 import path31 from "node:path";
 
-// ../plugin-snes/src/disassembler/runtime-code.ts
+// packages/plugin-snes/src/disassembler/runtime-code.ts
 import { createHash as createHash14 } from "node:crypto";
 init_canonical_json();
 var runtimeDecodeState = (sample) => {
@@ -59224,10 +61161,15 @@ var runtimeDecodeState = (sample) => {
     return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
   };
   const p = value("p", 255);
-  const e = value("e", 1);
+  const emulation = value("e", 1);
+  const e = emulation === 0 || emulation === 1 ? emulation : void 0;
   let widths2 = {};
   if (p !== void 0) {
-    widths2 = { m: p >> 5 & 1, x: p >> 4 & 1 };
+    const memoryWidth = p >> 5 & 1;
+    const indexWidth = p >> 4 & 1;
+    if ((memoryWidth === 0 || memoryWidth === 1) && (indexWidth === 0 || indexWidth === 1)) {
+      widths2 = { m: memoryWidth, x: indexWidth };
+    }
   }
   if (e === 1) {
     widths2 = { m: 1, x: 1 };
@@ -59240,6 +61182,7 @@ var runtimeDecodeState = (sample) => {
     ...value("d", 65535) === void 0 ? {} : { directPage: value("d", 65535) }
   };
 };
+var known3 = (entry) => entry === void 0 || entry === "unknown" ? { kind: "unknown" } : { kind: "known", value: Number(entry) };
 var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onProgress) => {
   const decoder = new Cpu65816Decoder();
   const context = createSnesAddressContext(mapper);
@@ -59262,7 +61205,7 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
     if (duplicate) {
       nodes.set(id, {
         ...duplicate,
-        evidence: [.../* @__PURE__ */ new Set([...duplicate.evidence, ...sample.evidence])].sort()
+        evidence: [.../* @__PURE__ */ new Set([...duplicate.evidence, ...sample.evidence])].toSorted()
       });
       continue;
     }
@@ -59290,7 +61233,6 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
     const instruction2 = decoded.instruction;
     const fileOffset = snesRomAddressSpace.toOutputOffset(sample.address, context);
     const matchesRom = fileOffset >= 0 && fileOffset + sample.bytes.length <= rom.length && sample.bytes.every((byte2, index) => romBytes[fileOffset + index] === byte2);
-    const known3 = (entry) => entry === void 0 || entry === "unknown" ? { kind: "unknown" } : { kind: "known", value: Number(entry) };
     const incomingState = {
       e: known3(state.e),
       m: known3(state.m),
@@ -59317,7 +61259,7 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
       outgoingState: {},
       entryPoint: `captured:${sample.evidence[0]}`,
       evidencePath: [id],
-      evidence: [.../* @__PURE__ */ new Set([...prior?.evidence ?? [], ...sample.evidence])].sort(),
+      evidence: [.../* @__PURE__ */ new Set([...prior?.evidence ?? [], ...sample.evidence])].toSorted(),
       effectiveAddresses: instruction2.references.filter((ref) => ref.kind === "data" || ref.kind === "pointer").map((ref) => {
         const indexed = instruction2.mode.includes("Indexed") || instruction2.mode.includes("Indirect") || instruction2.mode.startsWith("stackRelative");
         const hardware = ref.address === void 0 ? void 0 : identifySnesHardwareRegister(ref.address);
@@ -59325,13 +61267,19 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
         if (ref.address !== void 0) {
           resolved = indexed ? { baseAddress: ref.address } : { address: ref.address };
         }
-        return {
-          operandIndex: ref.operandIndex ?? 0,
-          ...resolved,
-          volatile: !!hardware,
-          ...hardware ? { symbol: hardware.symbol } : {},
-          explanation: indexed ? "Captured instruction has an unresolved indexed/indirect operand. Consult observed bus accesses." : "Decoded from execution-time bytes and processor state."
-        };
+        return Object.assign(
+          {},
+          { operandIndex: ref.operandIndex ?? 0 },
+          resolved,
+          Object.assign(
+            {},
+            { volatile: !!hardware },
+            hardware ? { symbol: hardware.symbol } : {},
+            {
+              explanation: indexed ? "Captured instruction has an unresolved indexed/indirect operand. Consult observed bus accesses." : "Decoded from execution-time bytes and processor state."
+            }
+          )
+        );
       })
     });
     instructions.set(id, instruction2);
@@ -59442,14 +61390,14 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
         conflictKind: "runtime-code-variants",
         message: "Captured executions disagree on instruction bytes or decoding. All variants and their trace evidence are retained.",
         nodes: variants.map((node) => node.id),
-        evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort()
+        evidence: [...new Set(variants.flatMap((node) => node.evidence))].toSorted()
       });
     }
   }
-  return records2.sort((a, b) => a.id.localeCompare(b.id));
+  return records2.toSorted((a, b) => a.id.localeCompare(b.id));
 };
 
-// ../plugin-snes/src/disassembler/superfx-address-space.ts
+// packages/plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
 var SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   id: SUPERFX_ROM_ADDRESS_SPACE,
@@ -59458,7 +61406,7 @@ var SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   kind: "memory"
 });
 
-// ../plugin-snes/src/disassembler/project-initializer.ts
+// packages/plugin-snes/src/disassembler/project-initializer.ts
 var TARGET_ID = "snes.sfc";
 var ARCHITECTURE_ID = "snes.65816";
 var MAX_PERSISTED_RUNTIME_ENTRY_POINTS = 1e6;
@@ -59541,9 +61489,10 @@ var commitStagedDirectory = (staging, destination) => {
 var probeSnesProject = (options) => {
   throwIfCancelled(options.signal);
   report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
-  const rom = RomImage.load(path31.resolve(options.romFile), {
-    ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
-  });
+  const rom = RomImage.load(
+    path31.resolve(options.romFile),
+    options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
+  );
   const detection = detectSnesRom(rom, {
     ...options.mapper === void 0 ? {} : { mapper: options.mapper },
     ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
@@ -59645,6 +61594,9 @@ var createSnesAnalysisProject = (options) => {
     throw error;
   }
 };
+var codeRanges = (records2) => records2.flatMap(
+  (record5) => record5.kind === "cfg-node" && record5.fileOffset !== void 0 ? [{ start: record5.fileOffset, end: record5.fileOffset + record5.size }] : []
+);
 var analyzeSnesProject = (options) => {
   throwIfCancelled(options.signal);
   report(options, "analyze", "Preparing SQL instruction indexes.");
@@ -59708,10 +61660,11 @@ var analyzeSnesProject = (options) => {
     headerSize: loaded.manifest.rom.headerSize
   });
   validateProjectRom(loaded.manifest, rom);
-  if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
-    throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+  const mapper = loaded.manifest.mapping.mapper;
+  if (!isSnesMapper(mapper)) {
+    throw new Error(`Unsupported SNES mapper '${mapper}'.`);
   }
-  const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
+  const addressContext = createSnesAddressContext(mapper);
   const editableRecords = loaded.view.analysis.filter(
     (record5) => record5.kind === "target-override" || record5.kind === "target-set"
   );
@@ -59733,7 +61686,7 @@ var analyzeSnesProject = (options) => {
         ...previous,
         evidence: [
           .../* @__PURE__ */ new Set([...previous.evidence ?? [], ...entry.evidence ?? []])
-        ].sort()
+        ].toSorted()
       } : entry
     );
   }
@@ -59753,7 +61706,7 @@ var analyzeSnesProject = (options) => {
     }
     runtimeCandidates.set(record5.address, candidate);
   }
-  const rankedRuntime = [...runtimeCandidates.values()].sort(
+  const rankedRuntime = [...runtimeCandidates.values()].toSorted(
     (left, right) => right.count - left.count || left.address - right.address
   );
   let addedRuntimeSeeds = 0;
@@ -59765,7 +61718,7 @@ var analyzeSnesProject = (options) => {
     if (previous) {
       configured.set(candidate.address, {
         ...previous,
-        evidence: [.../* @__PURE__ */ new Set([...previous.evidence ?? [], ...candidate.evidence])].sort()
+        evidence: [.../* @__PURE__ */ new Set([...previous.evidence ?? [], ...candidate.evidence])].toSorted()
       });
       continue;
     }
@@ -59776,12 +61729,12 @@ var analyzeSnesProject = (options) => {
       id: `runtime-${candidate.address.toString(16).padStart(6, "0")}`,
       address: candidate.address,
       kind: "observation",
-      evidence: [...candidate.evidence].sort()
+      evidence: [...candidate.evidence].toSorted()
     });
     addedRuntimeSeeds++;
   }
   const runtimeSeeds = rankedRuntime.filter(({ address: address5 }) => configured.has(address5)).length;
-  const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper, {
+  const result = analyzeSnes65816(rom, mapper, {
     annotations: loaded.view.annotations,
     labels: loaded.view.labels,
     evidence: loaded.view.evidence,
@@ -59804,16 +61757,10 @@ var analyzeSnesProject = (options) => {
       );
       return capturedStore.transaction(() => {
         assertAnalysisProjectRevision(capturedStore, loaded.revision);
-        return analyzeSnesRuntimeCode(
-          loaded.view,
-          rom,
-          loaded.manifest.mapping.mapper,
-          variants,
-          (message) => {
-            throwIfCancelled(options.signal);
-            report(options, "analyze", message);
-          }
-        );
+        return analyzeSnesRuntimeCode(loaded.view, rom, mapper, variants, (message) => {
+          throwIfCancelled(options.signal);
+          report(options, "analyze", message);
+        });
       }, false);
     } finally {
       capturedStore.close();
@@ -59833,9 +61780,6 @@ var analyzeSnesProject = (options) => {
     ...capturedRecords
   ];
   if (result.status === "incomplete") {
-    const codeRanges = (records2) => records2.flatMap(
-      (record5) => record5.kind === "cfg-node" && record5.fileOffset !== void 0 ? [{ start: record5.fileOffset, end: record5.fileOffset + record5.size }] : []
-    );
     const lost = lostCodeRanges(previousCode, codeRanges(analysisRecords));
     if (lost.length > 0) {
       const bytes2 = lost.reduce((total, range2) => total + range2.end - range2.start, 0);
@@ -59938,8 +61882,9 @@ var analyzeSnesProject = (options) => {
   };
 };
 
-// ../plugin-snes/src/disassembler/rom-layout/source-expansion.ts
+// packages/plugin-snes/src/disassembler/rom-layout/source-expansion.ts
 import path32 from "node:path";
+var hex11 = (value) => `$${value.toString(16).toUpperCase()}`;
 function prepareSnesSourceExpansion(options) {
   const { build, size, expansion } = options;
   if (!build.rawBlocks || build.originalContent || size <= build.expectedSize) {
@@ -60001,7 +61946,6 @@ function prepareSnesSourceExpansion(options) {
   const entry = read(build.entrySource);
   const freeSpace = [...options.freeSpace];
   const bankSize = expansion.mapper === "lorom" ? 32768 : 65536;
-  const hex11 = (value) => `$${value.toString(16).toUpperCase()}`;
   entry.lines.push("", "; Explicit cartridge expansion storage.", expansion.mapper);
   for (let start = build.expectedSize; start < size; start += bankSize) {
     const end = Math.min(start + bankSize, size) - 1;
@@ -60061,7 +62005,7 @@ function prepareSnesSourceExpansion(options) {
   return { size, expansion, freeSpace, edits, outputSha256: sourceContentHash(final.output) };
 }
 
-// src/output-files.ts
+// packages/cli/src/output-files.ts
 import { randomUUID as randomUUID6 } from "node:crypto";
 import * as fs27 from "node:fs";
 import path33 from "node:path";
@@ -60126,17 +62070,35 @@ var publishOutputFiles = (outputs, protectedFiles) => {
   }
 };
 
-// src/source.ts
+// packages/cli/src/source.ts
 init_canonical_json();
 import { randomUUID as randomUUID8 } from "node:crypto";
 import fs30 from "node:fs";
 import path36 from "node:path";
 
-// src/source-init.ts
+// packages/cli/src/source-init.ts
 init_canonical_json();
 import { randomUUID as randomUUID7 } from "node:crypto";
 import fs28 from "node:fs";
 import path34 from "node:path";
+function importedResearchRecords(store, collection) {
+  switch (collection) {
+    case "labels":
+      return store.loadTable("labels");
+    case "comments":
+      return store.loadTable("comments");
+    case "regions":
+      return store.loadTable("regions");
+    case "annotations":
+      return store.loadTable("annotations");
+    case "analysis":
+      return store.analysisByKinds(["target-override", "target-set"]);
+    default: {
+      const leftover = collection;
+      throw new Error(`Unsupported research collection: ${String(leftover)}`);
+    }
+  }
+}
 async function initializeSnesSourceProject(options) {
   const destination = path34.resolve(options.directory);
   if (fs28.existsSync(destination)) {
@@ -60225,7 +62187,7 @@ async function initializeSnesSourceProject(options) {
           if (collection === "evidence") {
             continue;
           }
-          const records2 = collection === "analysis" ? imported.analysisByKinds(["target-override", "target-set"]) : imported.loadTable(collection);
+          const records2 = importedResearchRecords(imported, collection);
           for (const record5 of records2) {
             decisions.push({
               collection,
@@ -60451,9 +62413,30 @@ Prepare and preview regeneration while editing. Commit a checkpoint before apply
   }
 }
 
-// src/source-research.ts
+// packages/cli/src/source-research.ts
 import fs29 from "node:fs";
 import path35 from "node:path";
+function isRecord37(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray3(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+function isProjectLabel3(value) {
+  if (!isRecord37(value) || typeof value.id !== "string" || typeof value.addressSpace !== "string" || typeof value.address !== "number" || typeof value.name !== "string" || !isStringArray3(value.evidence)) {
+    return false;
+  }
+  return (value.sourceName === void 0 || typeof value.sourceName === "string") && (value.aliases === void 0 || isStringArray3(value.aliases)) && (value.suppressed === void 0 || typeof value.suppressed === "boolean") && (value.analysisEntryPoint === void 0 || typeof value.analysisEntryPoint === "boolean");
+}
+function isResearchAnalysisRecord(value) {
+  if (!isRecord37(value) || typeof value.id !== "string" || typeof value.addressSpace !== "string" || !isStringArray3(value.evidence)) {
+    return false;
+  }
+  if (value.kind === "target-override" || value.kind === "target-set") {
+    return Array.isArray(value.targets) && value.targets.every((target) => typeof target === "number") && (value.kind === "target-override" || typeof value.name === "string") && (value.kind === "target-set" || typeof value.address === "number");
+  }
+  return typeof value.start === "number" && typeof value.end === "number" && typeof value.classification === "string" && typeof value.architecture === "string";
+}
 function prepareSourceResearch(project, request = {}, buffers = []) {
   const overlays = new Map(
     buffers.map((buffer) => [
@@ -60487,6 +62470,9 @@ function prepareSourceResearch(project, request = {}, buffers = []) {
         (file) => file.document.decisions.flatMap((decision) => {
           if (decision.collection !== "annotations" && decision.collection !== "analysis" || !decision.value) {
             return [];
+          }
+          if (!isResearchAnalysisRecord(decision.value)) {
+            throw new Error("Research analysis decision does not match its collection.");
           }
           return [
             {
@@ -60530,6 +62516,9 @@ function prepareSourceResearch(project, request = {}, buffers = []) {
         if (decision.collection !== "labels" || !decision.value) {
           return [];
         }
+        if (!isProjectLabel3(decision.value)) {
+          throw new Error("Research label decision is not a project label.");
+        }
         const label = decision.value;
         return [
           {
@@ -60571,7 +62560,7 @@ function prepareSourceResearch(project, request = {}, buffers = []) {
   };
 }
 
-// src/source.ts
+// packages/cli/src/source.ts
 var loadSourceEnvironment = (configFile) => loadProjectEnvironment({
   cwd: path36.dirname(configFile),
   configFile,
@@ -60607,21 +62596,113 @@ async function candidateGeneration(project, commit) {
   const ref = await pinSourceCandidate(project.repository, commit);
   return { commit, tree, ref, descriptor: descriptor2 };
 }
-function generationRecipe(project) {
-  const recipe = readJson(
-    path36.join(project.repository.root, ".uttori/generation-inputs.json")
-  );
-  if (!recipe || recipe.format !== "uttori-snes-generation-inputs" || recipe.version !== 1 || !project.configuration.sourceRoots.includes(recipe.sourceRoot) || !Array.isArray(recipe.recipes) || !Array.isArray(recipe.pristineAssets)) {
+function sourceActionName(action) {
+  return action;
+}
+function assertSourceLayout(value, romSha256) {
+  if (typeof value !== "object" || value === null || !("format" in value) || value.format !== "uttori-snes-layout" || !("version" in value) || value.version !== 1 || !("romSha256" in value) || value.romSha256 !== romSha256 || !("size" in value) || typeof value.size !== "number" || !Number.isSafeInteger(value.size) || value.size <= 0 || !("states" in value) || !isUnknownArray7(value.states) || !("extents" in value) || !isUnknownArray7(value.extents)) {
+    throw new Error("Invalid SNES source layout contract.");
+  }
+}
+function isUnknownArray7(value) {
+  return Array.isArray(value);
+}
+function isRecord38(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSnesMapper2(value) {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
+function isExpandableMapper(value) {
+  return value === "lorom" || value === "hirom";
+}
+function isStringArray4(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+function assertSourceMergePreview(value) {
+  if (!isRecord38(value) || typeof value.head !== "string" || typeof value.sourceTree !== "string" || typeof value.candidate !== "string" || typeof value.base !== "string" || typeof value.resultTree !== "string" || !isStringArray4(value.conflicts) || typeof value.messages !== "string" || value.ref !== void 0 && typeof value.ref !== "string") {
+    throw new Error("Saved generation preview is incomplete. Prepare the generation again.");
+  }
+}
+var DIRECT_SOURCE_ACTIONS = [
+  "status",
+  "prepare",
+  "preview",
+  "apply",
+  "finish",
+  "abort",
+  "discard",
+  "clean",
+  "build",
+  "index",
+  "analyze",
+  "catalog",
+  "relocate",
+  "expand",
+  "import"
+];
+function isDirectSourceAction(value) {
+  return DIRECT_SOURCE_ACTIONS.some((action) => action === value);
+}
+function requestedMapper(value) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!isSnesMapper2(value)) {
+    throw new Error("Unsupported SNES mapper.");
+  }
+  return value;
+}
+function readAnalysisChange(file) {
+  const value = readJson(file);
+  if (!isResearchAnalysisChange(value)) {
+    throw new Error("Choose an annotation or indirect-target research action.");
+  }
+  return value;
+}
+function isResearchAnalysisChange(value) {
+  if (!isRecord38(value) || typeof value.expectedDocumentSha256 !== "string") {
+    return false;
+  }
+  if (value.kind !== "put" && value.kind !== "remove") {
+    return false;
+  }
+  if (value.collection !== "annotations" && value.collection !== "analysis") {
+    return false;
+  }
+  if (value.kind === "remove") {
+    return typeof value.id === "string";
+  }
+  return typeof value.path === "string" && typeof value.reason === "string" && isRecord38(value.value) && typeof value.value.id === "string";
+}
+function isPristineAsset(value) {
+  return typeof value === "object" && value !== null && "path" in value && typeof value.path === "string" && "sha256" in value && typeof value.sha256 === "string";
+}
+function assertGenerationRecipe(value) {
+  if (typeof value !== "object" || value === null || !("format" in value) || value.format !== "uttori-snes-generation-inputs" || !("version" in value) || value.version !== 1 || !("sourceRoot" in value) || typeof value.sourceRoot !== "string" || !("recipes" in value) || !isUnknownArray7(value.recipes) || !("pristineAssets" in value) || !isUnknownArray7(value.pristineAssets)) {
     throw new Error("Invalid SNES generation input contract.");
   }
-  for (const file of recipe.recipes) {
+  for (const file of value.recipes) {
     if (typeof file !== "string") {
       throw new Error("Generation recipe paths must be strings.");
     }
+  }
+  for (const asset of value.pristineAssets) {
+    if (!isPristineAsset(asset)) {
+      throw new Error("Invalid SNES generation input contract.");
+    }
+  }
+}
+function generationRecipe(project) {
+  const recipe = readJson(path36.join(project.repository.root, ".uttori/generation-inputs.json"));
+  assertGenerationRecipe(recipe);
+  if (!project.configuration.sourceRoots.includes(recipe.sourceRoot)) {
+    throw new Error("Invalid SNES generation input contract.");
+  }
+  for (const file of recipe.recipes) {
     assertSourcePath(file);
   }
-  const assets = recipe.pristineAssets;
-  for (const asset of assets) {
+  for (const asset of recipe.pristineAssets) {
     assertSourcePath(asset.path);
     if (!/^[\da-f]{64}$/.test(asset.sha256)) {
       throw new Error("Pristine assets require original content hashes.");
@@ -60630,7 +62711,7 @@ function generationRecipe(project) {
       throw new Error("Pristine ROM assets require a bounded, half-open original file range.");
     }
   }
-  if (new Set(assets.map((asset) => asset.path)).size !== assets.length) {
+  if (new Set(recipe.pristineAssets.map((asset) => asset.path)).size !== recipe.pristineAssets.length) {
     throw new Error("Repeated pristine asset declaration.");
   }
   return recipe;
@@ -60683,9 +62764,9 @@ async function generationInputs(project) {
   const loaded = await loadSourceEnvironment(configFile);
   let toolchain;
   try {
-    toolchain = sourceToolchain([
-      ...loaded.configuration.plugins.filter((plugin2) => !plugin2.bundled).map((plugin2) => plugin2.resolvedModule)
-    ]);
+    toolchain = sourceToolchain(
+      loaded.configuration.plugins.filter((plugin2) => !plugin2.bundled).map((plugin2) => plugin2.resolvedModule)
+    );
   } finally {
     await loaded.dispose();
   }
@@ -60739,21 +62820,20 @@ async function generationInputs(project) {
 async function withSourceBuild(project, signal, run) {
   const root = project.repository.root;
   const layout2 = readJson(path36.join(root, project.configuration.layout));
-  if (!layout2 || layout2.format !== "uttori-snes-layout" || layout2.version !== 1 || layout2.romSha256 !== project.configuration.romSha256 || !Number.isSafeInteger(layout2.size) || layout2.size <= 0 || !Array.isArray(layout2.states) || !Array.isArray(layout2.extents)) {
-    throw new Error("Invalid SNES source layout contract.");
-  }
+  assertSourceLayout(layout2, project.configuration.romSha256);
   const configFile = path36.join(root, project.configuration.buildConfig);
   const configurationBytes = fs30.readFileSync(configFile);
   const configuration = JSON.parse(configurationBytes.toString("utf8"));
-  if (configuration.entryPoints?.length !== 1 || configuration.baseImage) {
+  const entryPoints = isRecord38(configuration) && isStringArray4(configuration.entryPoints) ? configuration.entryPoints : void 0;
+  if (!entryPoints || entryPoints.length !== 1 || !isRecord38(configuration) || configuration.baseImage) {
     throw new Error(
       "Source projects require one complete ROM entry point and no base-image patch mode."
     );
   }
-  const entrySource = path36.relative(root, path36.resolve(path36.dirname(configFile), configuration.entryPoints[0])).split(path36.sep).join("/");
+  const entrySource = path36.relative(root, path36.resolve(path36.dirname(configFile), entryPoints[0])).split(path36.sep).join("/");
   assertSourcePath(entrySource);
   const raw = readJson(path36.join(path36.dirname(configFile), "source-raw.json"));
-  if (raw.format !== "uttori-source-raw" || raw.version !== 1 || raw.blockSize !== 4096 || raw.romSha256 !== project.configuration.romSha256) {
+  if (!isRecord38(raw) || raw.format !== "uttori-source-raw" || raw.version !== 1 || raw.blockSize !== 4096 || raw.romSha256 !== project.configuration.romSha256) {
     throw new Error("Regenerate the project's stable raw-block contract before building.");
   }
   const original = RomImage.load(sourceProjectLocalInputs(project).rom);
@@ -60768,7 +62848,7 @@ async function withSourceBuild(project, signal, run) {
     const store = openAnalysisProjectStore(sourceProjectLocalInputs(project).evidence);
     try {
       const manifest = store.manifest();
-      if (manifest.rom.contentSha256 !== project.configuration.romSha256 || !SNES_MAPPERS.includes(manifest.mapping.mapper)) {
+      if (manifest.rom.contentSha256 !== project.configuration.romSha256 || !isSnesMapper2(manifest.mapping.mapper)) {
         throw new Error("Source evidence has an incompatible ROM or mapper identity.");
       }
       placementMapper = manifest.mapping.mapper;
@@ -60787,9 +62867,9 @@ async function withSourceBuild(project, signal, run) {
   };
   const loaded = await loadSourceEnvironment(configFile);
   try {
-    const toolchain = sourceToolchain([
-      ...loaded.configuration.plugins.filter((plugin2) => !plugin2.bundled).map((plugin2) => plugin2.resolvedModule)
-    ]);
+    const toolchain = sourceToolchain(
+      loaded.configuration.plugins.filter((plugin2) => !plugin2.bundled).map((plugin2) => plugin2.resolvedModule)
+    );
     const result = run(
       {
         root,
@@ -60908,7 +62988,7 @@ async function executeSourceOperation(operation) {
       let mapper;
       try {
         const manifest = store.manifest();
-        if (manifest.rom.contentSha256 !== project.configuration.romSha256 || !["lorom", "hirom"].includes(manifest.mapping.mapper)) {
+        if (manifest.rom.contentSha256 !== project.configuration.romSha256 || !isExpandableMapper(manifest.mapping.mapper)) {
           throw new Error("Expansion requires matching ordinary LoROM or HiROM evidence.");
         }
         mapper = manifest.mapping.mapper;
@@ -60931,7 +63011,8 @@ async function executeSourceOperation(operation) {
       const edits = [...result.edits];
       const addJsonEdit = (name, change) => {
         const before = fs30.readFileSync(path36.join(repository.root, name), "utf8");
-        const after = JSON.stringify(change(JSON.parse(before)), null, 2) + "\n";
+        const parsed = JSON.parse(before);
+        const after = JSON.stringify(change(parsed), null, 2) + "\n";
         if (before !== after) {
           edits.push({ path: name, beforeSha256: sourceContentHash(before), before, after });
         }
@@ -60947,21 +63028,18 @@ async function executeSourceOperation(operation) {
           freeSpace: result.freeSpace
         };
       });
-      addJsonEdit(
-        project.configuration.buildConfig,
-        (configuration) => {
-          const plugins = configuration.plugins?.filter(
-            (plugin2) => plugin2.module === "@uttori/asm-plugin-snes"
+      addJsonEdit(project.configuration.buildConfig, (configuration) => {
+        const plugins = isRecord38(configuration) && Array.isArray(configuration.plugins) ? configuration.plugins.filter(
+          (plugin2) => isRecord38(plugin2) && plugin2.module === "@uttori/asm-plugin-snes" && (plugin2.options === void 0 || isRecord38(plugin2.options))
+        ) : void 0;
+        if (plugins?.length !== 1) {
+          throw new Error(
+            "Expansion needs one explicit SNES plugin configuration for checksum finalization."
           );
-          if (plugins?.length !== 1) {
-            throw new Error(
-              "Expansion needs one explicit SNES plugin configuration for checksum finalization."
-            );
-          }
-          plugins[0].options = { ...plugins[0].options, checksumEnabled: true };
-          return configuration;
         }
-      );
+        plugins[0].options = { ...plugins[0].options, checksumEnabled: true };
+        return configuration;
+      });
       return { ...result, edits };
     });
   }
@@ -61160,18 +63238,17 @@ async function executeSourceOperation(operation) {
     if (canonicalJson(current.inputs) !== canonicalJson(candidate.descriptor.inputs)) {
       throw new Error("Generation inputs changed since preparation. Prepare and preview again.");
     }
-    const preview = readJson(
-      path36.join(repository.stateDirectory, "preview.json")
-    );
+    const preview = readJson(path36.join(repository.stateDirectory, "preview.json"));
+    assertSourceMergePreview(preview);
     return applySourceGeneration(repository, candidate, preview);
   }
-  if (operation.action === "finish") {
-    return finishSourceGeneration(repository, {
-      message: operation.message ?? "Integrate regenerated source",
-      validate: async () => (await buildProject(project, operation.signal)).verification
-    });
+  if (sourceActionName(operation.action) !== "finish") {
+    throw new Error(`Unknown source action: ${sourceActionName(operation.action)}`);
   }
-  throw new Error(`Unknown source action: ${String(operation.action)}`);
+  return finishSourceGeneration(repository, {
+    message: operation.message ?? "Integrate regenerated source",
+    validate: async () => (await buildProject(project, operation.signal)).verification
+  });
 }
 var sourceUsage = `uttori-asm source <status|prepare|build|index|analyze|catalog|finish|abort|clean> <project>
 uttori-asm source init <new-folder> <original-rom> [--mapper <mapper>] [--dizraw <research.dizraw>]
@@ -61196,7 +63273,7 @@ async function runSourceCli(argv) {
       if (candidate === "--analysis" && argv.length <= 4) {
         research = {
           kind: "analysis",
-          change: argv[3] ? readJson(path36.resolve(argv[3])) : void 0
+          change: argv[3] ? readAnalysisChange(path36.resolve(argv[3])) : void 0
         };
       } else if (argv.length > 2) {
         const change = argv[3];
@@ -61245,7 +63322,7 @@ async function runSourceCli(argv) {
         action,
         directory,
         rom: candidate,
-        mapper: flags.get("--mapper"),
+        mapper: requestedMapper(flags.get("--mapper")),
         dizRawFile: flags.get("--dizraw")
       });
       console.log(JSON.stringify(result, null, 2));
@@ -61257,23 +63334,7 @@ async function runSourceCli(argv) {
       return 1;
     }
   }
-  if (!action || !directory || ![
-    "status",
-    "prepare",
-    "preview",
-    "apply",
-    "finish",
-    "abort",
-    "discard",
-    "clean",
-    "build",
-    "index",
-    "import",
-    "analyze",
-    "catalog",
-    "relocate",
-    "expand"
-  ].includes(action) || argv.length !== (["preview", "apply", "discard", "import", "relocate", "expand"].includes(action) ? 3 : 2)) {
+  if (!action || !directory || !isDirectSourceAction(action) || argv.length !== (["preview", "apply", "discard", "import", "relocate", "expand"].includes(action) ? 3 : 2)) {
     console.error(sourceUsage);
     return 1;
   }
@@ -61296,7 +63357,13 @@ async function runSourceCli(argv) {
   }
 }
 
-// src/index.ts
+// packages/cli/src/index.ts
+function isCliCommand(value) {
+  return Object.hasOwn(commandOptions, value);
+}
+function isSnesMapper3(value) {
+  return SNES_MAPPERS.some((mapper) => mapper === value);
+}
 var commandOptions = {
   assemble: [
     "--config",
@@ -61385,8 +63452,9 @@ var parseCliArguments = (argv) => {
   const pluginOptions = {};
   let command = "assemble";
   let startIndex = 0;
-  if (Object.hasOwn(commandOptions, argv[0] ?? "")) {
-    command = argv[0];
+  const requestedCommand = argv[0];
+  if (requestedCommand !== void 0 && isCliCommand(requestedCommand)) {
+    command = requestedCommand;
     startIndex = 1;
   }
   let configFile;
@@ -61410,7 +63478,9 @@ var parseCliArguments = (argv) => {
   let help = false;
   const suppliedOptions = /* @__PURE__ */ new Set();
   const requireValue2 = (flag, inlineValue, index) => {
-    const value = inlineValue ?? argv[index + 1];
+    const nextIndex = index + 1;
+    const nextArgument = nextIndex >= 0 && nextIndex < argv.length ? argv[nextIndex] : void 0;
+    const value = inlineValue ?? nextArgument;
     if (value === void 0 || value === "" || inlineValue === void 0 && value.startsWith("--")) {
       throw new Error(`${flag} requires a value.`);
     }
@@ -61474,16 +63544,19 @@ var parseCliArguments = (argv) => {
         includePaths.push(value);
         break;
       case "--mapper":
-        if (!SNES_MAPPERS.includes(value)) {
+        if (!isSnesMapper3(value)) {
           throw new Error(`--mapper must be one of: ${SNES_MAPPERS.join(", ")}.`);
         }
         mapper = value;
         break;
       case "--header-size":
-        if (value !== "0" && value !== "512") {
+        if (value === "0") {
+          headerSize = 0;
+        } else if (value === "512") {
+          headerSize = 512;
+        } else {
           throw new Error("--header-size must be 0 or 512.");
         }
-        headerSize = Number(value);
         break;
       case "--dizraw":
         dizraw = value;
@@ -61544,20 +63617,20 @@ var parseCliArguments = (argv) => {
         break;
       case "--plugin-option": {
         const colon = value.indexOf(":");
-        const equals2 = value.indexOf("=", colon + 1);
-        if (colon <= 0 || equals2 <= colon + 1) {
+        const equalsAt = value.indexOf("=", colon + 1);
+        if (colon <= 0 || equalsAt <= colon + 1) {
           throw new Error("--plugin-option must use <plugin:key=value> syntax.");
         }
         const plugin2 = value.slice(0, colon);
-        const key3 = value.slice(colon + 1, equals2);
-        const rawValue = value.slice(equals2 + 1);
+        const key3 = value.slice(colon + 1, equalsAt);
+        const rawValue = value.slice(equalsAt + 1);
         let optionValue = rawValue;
         try {
           optionValue = JSON.parse(rawValue);
         } catch {
         }
         pluginOptions[plugin2] = {
-          ...pluginOptions[plugin2] ?? {},
+          ...pluginOptions[plugin2],
           [key3]: optionValue
         };
         break;
@@ -61607,6 +63680,9 @@ var defaultOutputPath = (inputFile, extension) => {
   const parsed = path37.parse(inputFile);
   return path37.join(parsed.dir, `${parsed.name}${extension}`);
 };
+function stringifyCaught2(value) {
+  return JSON.stringify(value);
+}
 var formatFailure = (error) => {
   if (error instanceof PluginError) {
     const context = [
@@ -61616,7 +63692,7 @@ var formatFailure = (error) => {
     ].filter(Boolean);
     return `${error.code}: ${error.message}${context.length > 0 ? ` (${context.join(", ")})` : ""}`;
   }
-  return error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
+  return error instanceof Error ? error.message : stringifyCaught2(error) ?? "Unknown error";
 };
 var createAnalysisProject = (parsed, cwd) => {
   const inputFile = path37.resolve(cwd, parsed.input);
@@ -61642,7 +63718,7 @@ var createAnalysisProject = (parsed, cwd) => {
     console.log(`Success: Analysis project written to '${outputDirectory}'.`);
     if (result.importReport) {
       console.log(
-        `Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`
+        `Import: ${result.importReport.imported.metadataBytes} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`
       );
     }
     return 0;
@@ -61694,7 +63770,7 @@ var importProjectEvidence = async (parsed, cwd) => {
       headerSize: manifest.rom.headerSize
     });
     validateProjectRom(manifest, rom);
-    if (!SNES_MAPPERS.includes(manifest.mapping.mapper)) {
+    if (!isSnesMapper3(manifest.mapping.mapper)) {
       throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
     }
     const filename = path37.resolve(cwd, parsed.instructionTrace);

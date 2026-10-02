@@ -9,19 +9,19 @@ var __esm = (fn, res, err) => function __init() {
   }
 };
 
-// ../debug-adapter/src/contracts.ts
+// packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION;
 var init_contracts = __esm({
-  "../debug-adapter/src/contracts.ts"() {
+  "packages/debug-adapter/src/contracts.ts"() {
     "use strict";
     DEBUG_BACKEND_PROTOCOL_VERSION = 1;
   }
 });
 
-// ../debug-adapter/src/conformance.ts
+// packages/debug-adapter/src/conformance.ts
 var DEBUG_BACKEND_CONFORMANCE_SCENARIOS;
 var init_conformance = __esm({
-  "../debug-adapter/src/conformance.ts"() {
+  "packages/debug-adapter/src/conformance.ts"() {
     "use strict";
     DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
       "protocol-and-capabilities",
@@ -34,10 +34,10 @@ var init_conformance = __esm({
   }
 });
 
-// ../debug-adapter/src/debug-expression.ts
+// packages/debug-adapter/src/debug-expression.ts
 var MAX_MAGNITUDE, binaryPrecedence;
 var init_debug_expression = __esm({
-  "../debug-adapter/src/debug-expression.ts"() {
+  "packages/debug-adapter/src/debug-expression.ts"() {
     "use strict";
     MAX_MAGNITUDE = (1n << 256n) - 1n;
     binaryPrecedence = Object.freeze({
@@ -65,10 +65,181 @@ var init_debug_expression = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-v2.ts
-var maxU64, captureScope, captureU64, captureSession, validateCaptureRequest, validateCaptureCapabilities, validateCapturePosition;
+// packages/debug-adapter/src/capture-v2.ts
+function isFieldRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+function validateCaptureRequest(value) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture request.");
+  }
+  if (value.operation === "context") {
+    let fields2 = ["operation", "action"];
+    const action = value.action;
+    if (action === "prepare" || action === "replay" || action === "restore") {
+      fields2.push("directory", "romContentSha256", "producer");
+      validateCaptureRequest({
+        operation: "file-start",
+        file: value.directory,
+        romContentSha256: value.romContentSha256,
+        producer: value.producer,
+        bufferBytes: 8388608
+      });
+    } else if (action === "start" || action === "stop" || action === "mark") {
+      fields2.push("session");
+      captureSession(value.session);
+      if (action === "mark") {
+        fields2.push("label");
+        if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
+          throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
+        }
+      }
+    } else if (action !== "abort" && action !== "status") {
+      throw new Error("Unsupported capture context action.");
+    }
+    if (Object.keys(value).some((key) => !fields2.includes(key))) {
+      throw new Error("Unsupported capture context field.");
+    }
+    return;
+  }
+  if (value.operation === "file-capabilities") {
+    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key))) {
+      throw new Error("Unsupported native file capability field.");
+    }
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+    return;
+  }
+  if (value.operation === "file-start") {
+    if (Object.keys(value).some(
+      (key) => ![
+        "operation",
+        "scope",
+        "bufferBytes",
+        "file",
+        "romContentSha256",
+        "producer",
+        "measureStages"
+      ].includes(key)
+    )) {
+      throw new Error("Unsupported native file start field.");
+    }
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
+      throw new Error("Native file profiling must be boolean.");
+    }
+    validateCaptureRequest({
+      operation: "start",
+      bufferBytes: value.bufferBytes,
+      scope: value.scope
+    });
+    const producer = value.producer;
+    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key) => !["id", "revision"].includes(key))) {
+      throw new Error(
+        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
+      );
+    }
+    return;
+  }
+  let fields = ["operation", "session"];
+  if (value.operation === "capabilities") {
+    fields = ["operation", "scope"];
+  }
+  if (value.operation === "start") {
+    fields = ["operation", "bufferBytes", "scope"];
+  }
+  if (value.operation === "read") {
+    fields = ["operation", "session", "chunk"];
+  }
+  if (value.operation === "ack") {
+    fields = ["operation", "session", "chunk", "event"];
+  }
+  if (Object.keys(value).some((key) => !fields.includes(key))) {
+    throw new Error(
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
+    );
+  }
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+  }
+  if (value.operation === "capabilities") {
+    return;
+  }
+  if (value.operation === "start") {
+    const bufferBytes = value.bufferBytes;
+    if (typeof bufferBytes !== "number" || !Number.isSafeInteger(bufferBytes) || bufferBytes < 4718656 || bufferBytes > 64 * 1024 * 1024) {
+      throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+    }
+    return;
+  }
+  captureSession(value.session);
+  if (value.operation === "status" || value.operation === "stop" || value.operation === "abort" || value.operation === "release" || value.operation === "file-status" || value.operation === "file-stop" || value.operation === "file-abort" || value.operation === "file-release") {
+    return;
+  }
+  if (value.operation === "read" || value.operation === "ack") {
+    if (!captureU64(value.chunk)) {
+      throw new Error("Capture chunk sequence starts at one.");
+    }
+    if (value.operation === "ack" && !captureU64(value.event)) {
+      throw new Error("Capture event sequence starts at one.");
+    }
+    return;
+  }
+  throw new Error("Unsupported capture operation.");
+}
+function assertCapturePosition(value, session, scope) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture position.");
+  }
+  captureSession(value.session);
+  if (session !== void 0 && value.session !== session) {
+    throw new Error("Capture session changed.");
+  }
+  if (value.scope !== void 0) {
+    captureScope(value.scope);
+  }
+  const positionScope = value.scope === void 0 ? "snes.65816.instructions" : value.scope;
+  if (scope !== void 0 && positionScope !== captureScope(scope)) {
+    throw new Error("Capture scope changed or was not confirmed by the producer.");
+  }
+  const state = value.state;
+  if (state !== "armed" && state !== "recording" && state !== "throttled" && state !== "stopping" && state !== "draining" && state !== "complete" && state !== "incomplete") {
+    throw new Error("Invalid capture state.");
+  }
+  const bounds = [
+    value.releasedThrough,
+    value.durableThrough,
+    value.acceptedThrough,
+    value.deliveredThrough,
+    value.producedThrough
+  ].map(captureU64);
+  if (bounds.some((bound, index) => index > 0 && bound < bounds[index - 1])) {
+    throw new Error("Capture ownership boundaries are inconsistent.");
+  }
+  if (captureU64(value.chunkThrough) > captureU64(value.producedChunks)) {
+    throw new Error("Capture chunk boundary is inconsistent.");
+  }
+  captureU64(value.throttleCount);
+  if (!captureU64(value.clockNumerator) || !captureU64(value.clockDenominator)) {
+    throw new Error("Invalid capture clock domain.");
+  }
+  if (value.droppedInScope !== "0" || typeof value.error !== "string" || value.error.length > 256) {
+    throw new Error("Capture integrity failed.");
+  }
+  const bufferedBytes = value.bufferedBytes;
+  const allocatedBytes = value.allocatedBytes;
+  if (typeof bufferedBytes !== "number" || typeof allocatedBytes !== "number" || !Number.isSafeInteger(bufferedBytes) || !Number.isSafeInteger(allocatedBytes) || bufferedBytes < 0 || allocatedBytes < 0 || bufferedBytes > 64 * 1024 * 1024 || allocatedBytes > 64 * 1024 * 1024 || bufferedBytes > allocatedBytes) {
+    throw new Error("Capture allocation exceeds its bounds.");
+  }
+  if (state === "complete" && (value.error || bufferedBytes || new Set(bounds.map(String)).size !== 1 || value.chunkThrough !== value.producedChunks)) {
+    throw new Error("Capture terminal totals do not reconcile.");
+  }
+}
+var maxU64, captureScope, captureU64, captureSession, bounded, validateCaptureCapabilities, validateCapturePosition;
 var init_capture_v2 = __esm({
-  "../debug-adapter/src/capture-v2.ts"() {
+  "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
@@ -89,134 +260,7 @@ var init_capture_v2 = __esm({
       }
       return value;
     };
-    validateCaptureRequest = (value) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Invalid capture request.");
-      }
-      if (value.operation === "context") {
-        let fields2 = ["operation", "action"];
-        if (["prepare", "replay", "restore"].includes(value.action)) {
-          fields2.push("directory", "romContentSha256", "producer");
-          const request = value;
-          validateCaptureRequest({
-            operation: "file-start",
-            file: request.directory,
-            romContentSha256: request.romContentSha256,
-            producer: request.producer,
-            bufferBytes: 8388608
-          });
-        } else if (value.action === "start" || value.action === "stop" || value.action === "mark") {
-          fields2.push("session");
-          captureSession(value.session);
-          if (value.action === "mark") {
-            fields2.push("label");
-            if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
-              throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
-            }
-          }
-        } else if (value.action !== "abort" && value.action !== "status") {
-          throw new Error("Unsupported capture context action.");
-        }
-        if (Object.keys(value).some((key) => !fields2.includes(key))) {
-          throw new Error("Unsupported capture context field.");
-        }
-        return;
-      }
-      if (value.operation === "file-capabilities") {
-        if (Object.keys(value).some((key) => !["operation", "scope"].includes(key))) {
-          throw new Error("Unsupported native file capability field.");
-        }
-        if (value.scope !== void 0) {
-          captureScope(value.scope);
-        }
-        return;
-      }
-      if (value.operation === "file-start") {
-        if (Object.keys(value).some(
-          (key) => ![
-            "operation",
-            "scope",
-            "bufferBytes",
-            "file",
-            "romContentSha256",
-            "producer",
-            "measureStages"
-          ].includes(key)
-        )) {
-          throw new Error("Unsupported native file start field.");
-        }
-        if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
-          throw new Error("Native file profiling must be boolean.");
-        }
-        validateCaptureRequest({
-          operation: "start",
-          bufferBytes: value.bufferBytes,
-          scope: value.scope
-        });
-        const bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
-        if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key) => !["id", "revision"].includes(key))) {
-          throw new Error(
-            "Native file capture requires an absolute bounded path and exact ROM/producer identity."
-          );
-        }
-        return;
-      }
-      let fields = ["operation", "session"];
-      if (value.operation === "capabilities") {
-        fields = ["operation", "scope"];
-      }
-      if (value.operation === "start") {
-        fields = ["operation", "bufferBytes", "scope"];
-      }
-      if (value.operation === "read") {
-        fields = ["operation", "session", "chunk"];
-      }
-      if (value.operation === "ack") {
-        fields = ["operation", "session", "chunk", "event"];
-      }
-      if (Object.keys(value).some((key) => !fields.includes(key))) {
-        throw new Error(
-          "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
-        );
-      }
-      if (value.operation === "capabilities" || value.operation === "start") {
-        if (value.scope !== void 0) {
-          captureScope(value.scope);
-        }
-      }
-      if (value.operation === "capabilities") {
-        return;
-      }
-      if (value.operation === "start") {
-        if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024) {
-          throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
-        }
-        return;
-      }
-      captureSession(value.session);
-      if ([
-        "status",
-        "stop",
-        "abort",
-        "release",
-        "file-status",
-        "file-stop",
-        "file-abort",
-        "file-release"
-      ].includes(value.operation)) {
-        return;
-      }
-      if (value.operation === "read" || value.operation === "ack") {
-        if (!captureU64(value.chunk)) {
-          throw new Error("Capture chunk sequence starts at one.");
-        }
-        if (value.operation === "ack" && !captureU64(value.event)) {
-          throw new Error("Capture event sequence starts at one.");
-        }
-        return;
-      }
-      throw new Error("Unsupported capture operation.");
-    };
+    bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
     validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
       captureScope(scope);
       let reserve = 71;
@@ -239,7 +283,7 @@ var init_capture_v2 = __esm({
         overheadBytes: 4194304,
         resumeSession: false
       };
-      if (!value || typeof value !== "object" || Object.entries(expected).some(([key, item]) => value[key] !== item)) {
+      if (!isFieldRecord(value) || Object.entries(expected).some(([key, item]) => value[key] !== item)) {
         throw new Error("Unsupported capture scope, reserve, or ownership contract.");
       }
       if (value.nativeFile === true) {
@@ -248,73 +292,27 @@ var init_capture_v2 = __esm({
       return expected;
     };
     validateCapturePosition = (value, session, scope) => {
-      if (!value || typeof value !== "object") {
-        throw new Error("Invalid capture position.");
-      }
-      const p = value;
-      captureSession(p.session);
-      if (session !== void 0 && p.session !== session) {
-        throw new Error("Capture session changed.");
-      }
-      if (p.scope !== void 0) {
-        captureScope(p.scope);
-      }
-      if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
-        throw new Error("Capture scope changed or was not confirmed by the producer.");
-      }
-      if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
-        p.state
-      )) {
-        throw new Error("Invalid capture state.");
-      }
-      const bounds = [
-        p.releasedThrough,
-        p.durableThrough,
-        p.acceptedThrough,
-        p.deliveredThrough,
-        p.producedThrough
-      ].map(captureU64);
-      if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
-        throw new Error("Capture ownership boundaries are inconsistent.");
-      }
-      if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
-        throw new Error("Capture chunk boundary is inconsistent.");
-      }
-      captureU64(p.throttleCount);
-      if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
-        throw new Error("Invalid capture clock domain.");
-      }
-      if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
-        throw new Error("Capture integrity failed.");
-      }
-      if (![p.bufferedBytes, p.allocatedBytes].every(
-        (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-      ) || p.bufferedBytes > p.allocatedBytes) {
-        throw new Error("Capture allocation exceeds its bounds.");
-      }
-      if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
-        throw new Error("Capture terminal totals do not reconcile.");
-      }
-      return p;
+      assertCapturePosition(value, session, scope);
+      return value;
     };
   }
 });
 
-// ../debug-adapter/src/dap.ts
+// packages/debug-adapter/src/dap.ts
 var init_dap = __esm({
-  "../debug-adapter/src/dap.ts"() {
+  "packages/debug-adapter/src/dap.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/mock-script.ts
+// packages/debug-adapter/src/mock-script.ts
 var init_mock_script = __esm({
-  "../debug-adapter/src/mock-script.ts"() {
+  "packages/debug-adapter/src/mock-script.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/sidecar-protocol.ts
+// packages/debug-adapter/src/sidecar-protocol.ts
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value)) {
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
@@ -335,10 +333,10 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     throw new Error("Sidecar message sequence must be a positive safe integer.");
   }
   if (value.type === "request") {
-    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command)) {
+    if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
       throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
     }
-    assertRequestBounds(value, limits);
+    assertRequestBounds(value.command, value.arguments, limits);
     return;
   }
   if (value.type === "response") {
@@ -354,7 +352,7 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     return;
   }
   if (value.type === "event") {
-    if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
+    if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
     }
     if (!isRecord(value.body)) {
@@ -364,9 +362,9 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
-var DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord, positiveInteger, nonNegativeInteger, sessionPattern, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
+var DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord, listed, positiveInteger, nonNegativeInteger, sessionPattern, assertRequestBounds, LIMIT_NAMES, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
-  "../debug-adapter/src/sidecar-protocol.ts"() {
+  "packages/debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
     DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
     DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
@@ -408,44 +406,55 @@ var init_sidecar_protocol = __esm({
       maxQueuedBytes: 8388608
     });
     isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
     positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
     nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
     sessionPattern = /^[\w-]{32,128}$/;
-    assertRequestBounds = (message, limits) => {
-      const args = message.arguments ?? {};
-      if (!isRecord(args)) {
+    assertRequestBounds = (command, args, limits) => {
+      const record2 = args ?? {};
+      if (!isRecord(record2)) {
         throw new Error("Sidecar request arguments must be an object.");
       }
-      if (message.command === "readMemory") {
-        const count = args.count;
+      if (command === "readMemory") {
+        const count = record2.count;
         if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
           throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
         }
       }
-      if (message.command === "disassemble") {
-        const count = args.count;
+      if (command === "disassemble") {
+        const count = record2.count;
         if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
           throw new Error(
             `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
           );
         }
       }
-      if (message.command === "setBreakpoints") {
-        const breakpoints = args.breakpoints;
+      if (command === "setBreakpoints") {
+        const breakpoints = record2.breakpoints;
         if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
           throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
         }
       }
-      if (message.command === "readTrace") {
-        const maxEvents = args.maxEvents;
+      if (command === "readTrace") {
+        const maxEvents = record2.maxEvents;
         if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
           throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
         }
       }
     };
+    LIMIT_NAMES = [
+      "maxFrameBytes",
+      "maxBufferedBytes",
+      "maxMemoryReadBytes",
+      "maxDisassemblyInstructions",
+      "maxBreakpoints",
+      "maxTraceBatchEvents",
+      "maxQueuedMessages",
+      "maxQueuedBytes"
+    ];
     validateLimits = (limits) => {
-      for (const [name, value] of Object.entries(limits)) {
-        if (!positiveInteger(value)) {
+      for (const name of LIMIT_NAMES) {
+        if (!positiveInteger(limits[name])) {
           throw new Error(`${name} must be a positive safe integer.`);
         }
       }
@@ -567,60 +576,66 @@ var init_sidecar_protocol = __esm({
   }
 });
 
-// ../debug-adapter/src/node-stdio-transport.ts
+// packages/debug-adapter/src/node-stdio-transport.ts
 var DEBUG_SIDECAR_SESSION_ENV;
 var init_node_stdio_transport = __esm({
-  "../debug-adapter/src/node-stdio-transport.ts"() {
+  "packages/debug-adapter/src/node-stdio-transport.ts"() {
     "use strict";
     DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
   }
 });
 
-// ../debug-adapter/src/trace-buffer.ts
+// packages/debug-adapter/src/trace-buffer.ts
 var init_trace_buffer = __esm({
-  "../debug-adapter/src/trace-buffer.ts"() {
+  "packages/debug-adapter/src/trace-buffer.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/replay-backend.ts
+// packages/debug-adapter/src/replay-backend.ts
 var init_replay_backend = __esm({
-  "../debug-adapter/src/replay-backend.ts"() {
+  "packages/debug-adapter/src/replay-backend.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/sidecar-backend.ts
+// packages/debug-adapter/src/sidecar-backend.ts
 var init_sidecar_backend = __esm({
-  "../debug-adapter/src/sidecar-backend.ts"() {
+  "packages/debug-adapter/src/sidecar-backend.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/sidecar-client.ts
+// packages/debug-adapter/src/sidecar-client.ts
 var init_sidecar_client = __esm({
-  "../debug-adapter/src/sidecar-client.ts"() {
+  "packages/debug-adapter/src/sidecar-client.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/sidecar-server.ts
-var stepKinds, record, integer, positiveInteger2, string, optionalPositiveInteger, boolean, address, addresses, asError, DebugSidecarServer;
+// packages/debug-adapter/src/sidecar-server.ts
+function assertShutdownCommand(command) {
+  if (command !== "shutdown") {
+    throw new Error(`Unsupported command '${command}'.`);
+  }
+}
+var isStepKind, isRecord2, record, integer, positiveInteger2, string, optionalPositiveInteger, boolean, address, addresses, asError, DebugSidecarServer;
 var init_sidecar_server = __esm({
-  "../debug-adapter/src/sidecar-server.ts"() {
+  "packages/debug-adapter/src/sidecar-server.ts"() {
     "use strict";
     init_contracts();
     init_sidecar_protocol();
     init_capture_v2();
-    stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
+    isStepKind = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
+    isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     record = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (!isRecord2(value)) {
         throw new Error(`${context} must be an object.`);
       }
       return value;
     };
     integer = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum) {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       }
       return value;
@@ -808,13 +823,11 @@ var init_sidecar_server = __esm({
           return {};
         }
         if (request.command === "step") {
-          if (!stepKinds.has(args.kind)) {
-            throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+          const kind = args.kind;
+          if (typeof kind !== "string" || !isStepKind(kind)) {
+            throw new Error(`Unsupported step kind '${String(kind)}'.`);
           }
-          await this.#implementation.step(
-            positiveInteger2(args.threadId, "Step threadId"),
-            args.kind
-          );
+          await this.#implementation.step(positiveInteger2(args.threadId, "Step threadId"), kind);
           return {};
         }
         if (request.command === "threads") {
@@ -879,10 +892,8 @@ var init_sidecar_server = __esm({
         if (request.command === "ping") {
           return { pong: true };
         }
-        if (request.command === "shutdown") {
-          return {};
-        }
-        throw new Error(`Unsupported command '${String(request.command)}'.`);
+        assertShutdownCommand(request.command);
+        return {};
       }
       #backendEvent(event) {
         if (this.#closed) {
@@ -954,6 +965,7 @@ var init_sidecar_server = __esm({
             await this.#write(frame);
             frame = this.#outgoing.dequeue();
           }
+          return;
         });
         this.#writeTail = write2.catch(() => void 0);
         return write2;
@@ -962,15 +974,26 @@ var init_sidecar_server = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-context.ts
+// packages/debug-adapter/src/capture-context.ts
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
 import path from "node:path";
-var verifyCaptureContext;
+var isRecord3, digestFile, verifyCaptureContext;
 var init_capture_context = __esm({
-  "../debug-adapter/src/capture-context.ts"() {
+  "packages/debug-adapter/src/capture-context.ts"() {
     "use strict";
+    isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    digestFile = async (file, signal) => {
+      const hash = createHash("sha256");
+      for await (const bytes of createReadStream(file, { signal })) {
+        if (!Buffer.isBuffer(bytes)) {
+          throw new Error(`Expected binary capture context data in ${path.basename(file)}.`);
+        }
+        hash.update(bytes);
+      }
+      return hash.digest("hex");
+    };
     verifyCaptureContext = async (directory, identity, signal) => {
       signal?.throwIfAborted();
       const metadataFile = path.join(directory, "manifest.json");
@@ -979,8 +1002,11 @@ var init_capture_context = __esm({
         throw new Error("Invalid capture context manifest.");
       }
       const manifest = JSON.parse(await readFile(metadataFile, "utf8"));
-      const producer = manifest.producer;
-      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || producer?.id !== identity.producer.id || producer?.revision !== identity.producer.revision || !manifest.files || typeof manifest.files !== "object") {
+      if (!isRecord3(manifest)) {
+        throw new Error("Invalid capture context manifest.");
+      }
+      const producer = isRecord3(manifest.producer) ? manifest.producer : void 0;
+      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || !isRecord3(producer) || producer.id !== identity.producer.id || producer.revision !== identity.producer.revision || !isRecord3(manifest.files)) {
         throw new Error("Capture context requires the matching ROM and emulator build.");
       }
       const files = manifest.files;
@@ -1003,18 +1029,14 @@ var init_capture_context = __esm({
         signal?.throwIfAborted();
         if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
           name
-        ) || !artifact || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+        ) || !isRecord3(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
           throw new Error("Invalid capture context artifact descriptor.");
         }
         const file = path.join(directory, name), stat2 = await lstat(file);
         if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && stat2.size !== 131072 || name === "inputs.bin" && stat2.size % 18) {
           throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
-        const hash = createHash("sha256");
-        for await (const bytes of createReadStream(file, { signal })) {
-          hash.update(bytes);
-        }
-        if (hash.digest("hex") !== artifact.sha256) {
+        if (await digestFile(file, signal) !== artifact.sha256) {
           throw new Error(`Capture context checksum mismatch: ${name}.`);
         }
       }
@@ -1022,16 +1044,16 @@ var init_capture_context = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file.ts
+// packages/debug-adapter/src/capture-file.ts
 var init_capture_file = __esm({
-  "../debug-adapter/src/capture-file.ts"() {
+  "packages/debug-adapter/src/capture-file.ts"() {
     "use strict";
   }
 });
 
-// ../debug-adapter/src/index.ts
+// packages/debug-adapter/src/index.ts
 var init_src = __esm({
-  "../debug-adapter/src/index.ts"() {
+  "packages/debug-adapter/src/index.ts"() {
     "use strict";
     init_conformance();
     init_contracts();
@@ -1051,12 +1073,12 @@ var init_src = __esm({
   }
 });
 
-// ../debug-sidecar-ares/src/sidecar.ts
+// packages/debug-sidecar-ares/src/sidecar.ts
 init_src();
 import { readFile as readFile2 } from "node:fs/promises";
 import path3 from "node:path";
 
-// ../debug-sidecar-ares/src/ares-process-host.ts
+// packages/debug-sidecar-ares/src/ares-process-host.ts
 init_src();
 import { spawn } from "node:child_process";
 import { createHash as createHash2 } from "node:crypto";
@@ -1065,7 +1087,7 @@ import { mkdir, stat } from "node:fs/promises";
 import net2 from "node:net";
 import path2 from "node:path";
 
-// ../debug-sidecar-ares/src/gdb-rsp-client.ts
+// packages/debug-sidecar-ares/src/gdb-rsp-client.ts
 var asError2 = (error) => error instanceof Error ? error : new Error(String(error));
 var checksum = (payload) => {
   let value = 0;
@@ -1103,7 +1125,8 @@ var unescapePayload = (payload) => {
       result[length++] = byte;
       continue;
     }
-    const escaped = payload[++index];
+    ++index;
+    const escaped = index < payload.length ? payload[index] : void 0;
     if (escaped === void 0) {
       throw new Error("RSP payload ends inside an escape sequence.");
     }
@@ -1430,7 +1453,7 @@ var GdbRspClient = class {
   }
 };
 
-// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 import net from "node:net";
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -1570,7 +1593,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
 };
 
-// ../debug-sidecar-ares/src/ares-process-host.ts
+// packages/debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
@@ -1605,6 +1628,7 @@ var waitWithTimeout = async (promise, timeoutMs) => new Promise((resolve) => {
   void promise.then((value) => {
     clearTimeout(timer);
     resolve(value);
+    return;
   });
 });
 var NodeAresProcessHandle = class {
@@ -1650,6 +1674,9 @@ var NodeAresProcessHandle = class {
 var nodeSha256 = async (file) => {
   const digest = createHash2("sha256");
   for await (const chunk of createReadStream2(file)) {
+    if (!Buffer.isBuffer(chunk)) {
+      throw new Error(`Expected binary bytes while hashing ${file}.`);
+    }
     digest.update(chunk);
   }
   return digest.digest("hex");
@@ -1692,11 +1719,32 @@ var nodeAresProcessRuntime = Object.freeze({
     timer.unref();
   })
 });
+var isRecord4 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var manifestRecord = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord4(value)) {
     throw new Error("Ares runtime manifest must be an object.");
   }
   return value;
+};
+var NODE_PLATFORMS = [
+  "aix",
+  "android",
+  "darwin",
+  "freebsd",
+  "haiku",
+  "linux",
+  "openbsd",
+  "sunos",
+  "win32",
+  "cygwin",
+  "netbsd"
+];
+var manifestPlatform = (value) => {
+  const platform = NODE_PLATFORMS.find((candidate) => candidate === value);
+  if (!platform) {
+    throw new Error(`Ares manifest platform '${value}' is not a Node platform.`);
+  }
+  return platform;
 };
 var manifestString = (value, name) => {
   if (typeof value !== "string" || value.length === 0) {
@@ -1723,8 +1771,8 @@ var parseAresRuntimeManifest = (value) => {
     throw new Error("Ares runtime manifest resources must be an array.");
   }
   const resources = Object.freeze(
-    manifest.resources.map((value2, index) => {
-      const resource = manifestRecord(value2);
+    manifest.resources.map((entry, index) => {
+      const resource = manifestRecord(entry);
       const resourcePath = checkedResourcePath(
         manifestString(resource.path, `Ares resource ${index} path`)
       );
@@ -1769,7 +1817,7 @@ var parseAresRuntimeManifest = (value) => {
       "Ares executable SHA-256"
     ),
     romSha256: checkedSha256(manifestString(manifest.romSha256, "ROM SHA-256"), "ROM SHA-256"),
-    platform: manifestString(manifest.platform, "Ares manifest platform"),
+    platform: manifestPlatform(manifestString(manifest.platform, "Ares manifest platform")),
     architecture: manifestString(manifest.architecture, "Ares manifest architecture"),
     buildConfiguration,
     resources
@@ -1979,7 +2027,8 @@ var AresProcessHost = class {
       actual = checkedSha256(await this.#runtime.sha256(file), `Observed ${context} SHA-256`);
     } catch (error) {
       throw new Error(
-        `Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`
+        `Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`,
+        { cause: error }
       );
     }
     if (actual !== expected) {
@@ -2031,7 +2080,7 @@ var AresProcessHost = class {
   }
 };
 
-// ../core/src/decoder-types.ts
+// packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
   constructor(bytes) {
@@ -2073,10 +2122,10 @@ var Uint8ArrayDecoderSource = class {
   }
 };
 
-// ../debug-sidecar-ares/src/ares-rsp-backend.ts
+// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
 init_src();
 
-// ../plugin-snes/src/architectures/65816-spec.ts
+// packages/plugin-snes/src/architectures/65816-spec.ts
 var mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
   id,
   syntax,
@@ -2113,6 +2162,9 @@ var cpu65816Modes = Object.freeze({
   indlong: mode("absoluteIndirectLong", "[addr]", 3),
   block: mode("blockMove", "srcBank,destBank", 3)
 });
+function isCpu65816ModeKey(value) {
+  return Object.hasOwn(cpu65816Modes, value);
+}
 var opcodeRows = [
   "BRK:sig ORA:dix COP:sig ORA:sr TSB:dp ORA:dp ASL:dp ORA:dil PHP:imp ORA:immM ASL:acc PHD:imp TSB:abs ORA:abs ASL:abs ORA:long",
   "BPL:rel8 ORA:diy ORA:dpi ORA:sriy TRB:dp ORA:dpx ASL:dpx ORA:dily CLC:imp ORA:aby INC:acc TCS:imp TRB:abs ORA:abx ASL:abx ORA:longx",
@@ -2326,11 +2378,10 @@ if (entries.length !== 256) {
 var cpu65816Specifications = Object.freeze(
   entries.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const modeKey = modeKeyText;
-    const definition = cpu65816Modes[modeKey];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isCpu65816ModeKey(modeKeyText)) {
       throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
     }
+    const definition = cpu65816Modes[modeKeyText];
     let operandStatusEffect;
     if (mnemonic === "REP") {
       operandStatusEffect = "clearBits";
@@ -2355,7 +2406,7 @@ var cpu65816Specifications = Object.freeze(
   })
 );
 
-// ../plugin-snes/src/architectures/65816-decoder.ts
+// packages/plugin-snes/src/architectures/65816-decoder.ts
 var flagValue = (value) => {
   if (value === true || value === 1) {
     return 1;
@@ -2386,6 +2437,9 @@ var readLittleEndian = (bytes, offset, width) => {
   }
   return value >>> 0;
 };
+function byteAt(bytes, index) {
+  return index >= 0 && index < bytes.length ? bytes[index] : void 0;
+}
 var signed = (value, width) => {
   const signBit = 1 << width * 8 - 1;
   const modulus = 2 ** (width * 8);
@@ -2398,7 +2452,8 @@ var addressOperand = (value, width) => ({
   width
 });
 var operandsFor = (specification, bytes, logicalAddress) => {
-  const value8 = bytes[1] ?? 0;
+  const firstOperandByte = byteAt(bytes, 1);
+  const value8 = firstOperandByte ?? 0;
   const value16 = readLittleEndian(bytes, 1, 2);
   const value24 = readLittleEndian(bytes, 1, 3);
   switch (specification.mode) {
@@ -2466,14 +2521,14 @@ var operandsFor = (specification, bytes, logicalAddress) => {
     case "blockMove":
       return [
         { kind: "bank", value: value8, width: 1 },
-        { kind: "bank", value: bytes[2] ?? 0, width: 1 }
+        { kind: "bank", value: byteAt(bytes, 2) ?? 0, width: 1 }
       ];
     default:
       return [];
   }
 };
 var targetFor = (specification, operands, state, logicalAddress) => {
-  const operand = operands[0];
+  const operand = operands.length > 0 ? operands[0] : void 0;
   if (!operand) {
     return void 0;
   }
@@ -2593,7 +2648,7 @@ var Cpu65816Decoder = class {
         availableBytes
       };
     }
-    const specification = cpu65816Specifications[opcode];
+    const specification = opcode >= 0 && opcode < cpu65816Specifications.length ? cpu65816Specifications[opcode] : void 0;
     if (!specification) {
       return {
         kind: "error",
@@ -2659,7 +2714,7 @@ function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
   }
-  const operand = instruction.operands[0];
+  const operand = instruction.operands.length > 0 ? instruction.operands[0] : void 0;
   const value = operand?.value ?? 0;
   let text = "";
   switch (instruction.mode) {
@@ -2746,7 +2801,7 @@ function formatCpu65816Instruction(instruction) {
   return text ? `${instruction.mnemonic} ${text}` : instruction.mnemonic;
 }
 
-// ../debug-sidecar-ares/src/profile.ts
+// packages/debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -2831,7 +2886,7 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
   ])
 });
 
-// ../debug-sidecar-ares/src/trace-details.ts
+// packages/debug-sidecar-ares/src/trace-details.ts
 var integer2 = (value, maximum = Number.MAX_SAFE_INTEGER) => {
   if (!/^[\da-f]+$/i.test(value)) {
     throw new Error("Malformed rich trace integer.");
@@ -2912,7 +2967,7 @@ var parseAresTraceDetails = (response, maximum) => {
   };
 };
 
-// ../debug-sidecar-ares/src/ares-rsp-backend.ts
+// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
 var ARES_NAMED_MEMORY_READ_CHUNK_BYTES = 4096;
 var asError3 = (error) => error instanceof Error ? error : new Error(String(error));
 var checkedInteger = (value, context, maximum = Number.MAX_SAFE_INTEGER) => {
@@ -2958,9 +3013,10 @@ var littleEndian = (hex2) => {
   if (!bytes || bytes.join("") !== hex2) {
     throw new Error("Malformed little-endian register data.");
   }
-  return Number.parseInt([...bytes].reverse().join(""), 16);
+  return Number.parseInt(bytes.toReversed().join(""), 16);
 };
 var registerHex = (value, bits) => value.toString(16).toUpperCase().padStart(Math.ceil(bits / 4), "0");
+var encode = (value) => Buffer.from(value, "utf8").toString("hex");
 var parseRegisters = (payload) => {
   if (!/^[\dA-Fa-f]{32}$/.test(payload)) {
     throw new Error(`Expected 16 bytes of ares 65816 registers, received ${payload.length / 2}.`);
@@ -3373,7 +3429,6 @@ var AresRspDebugBackend = class {
       }
       this.#requireStopped();
       const fields2 = ["qUttoriContext", request.action];
-      const encode = (value2) => Buffer.from(value2, "utf8").toString("hex");
       if ("directory" in request) {
         if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
           throw new Error("Capture context ROM/build does not match the verified runtime.");
@@ -3456,7 +3511,6 @@ var AresRspDebugBackend = class {
           );
         }
         await this.capture({ operation: "file-capabilities", scope });
-        const encode = (value3) => Buffer.from(value3, "utf8").toString("hex");
         fields2.push(
           request.bufferBytes,
           scopes[scope],
@@ -3801,6 +3855,7 @@ var AresRspDebugBackend = class {
               text: status === "idle" ? "Capture replay reached the recorded endpoint; WRAM and input consumption match.\n" : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n"
             });
           }
+          return;
         },
         (error) => {
           this.#emit({
@@ -3846,7 +3901,7 @@ var AresRspDebugBackend = class {
   }
 };
 
-// ../debug-sidecar-ares/src/sidecar.ts
+// packages/debug-sidecar-ares/src/sidecar.ts
 var usage = `Usage: uttori-asm-debug-sidecar-ares [options]
 
 Required:
@@ -3866,7 +3921,7 @@ var parseAresSidecarArguments = (arguments_) => {
   const values = /* @__PURE__ */ new Map();
   let fastBoot = true;
   for (let index = 0; index < arguments_.length; index++) {
-    const argument = arguments_[index];
+    const argument = index >= 0 && index < arguments_.length && Object.hasOwn(arguments_, index) ? arguments_[index] : void 0;
     if (argument === void 0) {
       throw new Error("Ares sidecar arguments cannot contain holes.");
     }

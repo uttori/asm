@@ -1,8 +1,8 @@
 import sinon from "sinon";
-import { test } from "../../../tests/ava-helper.js";
 
-import { Arch65816 } from "../src/architectures/65816.js";
 import { createEncoderTestHost } from "../../../tests/architecture/test-stubs.js";
+import { test } from "../../../tests/ava-helper.js";
+import { Arch65816 } from "../src/architectures/65816.js";
 
 const createArch65816 = () => {
   const assembler = createEncoderTestHost();
@@ -10,7 +10,7 @@ const createArch65816 = () => {
   return { assembler, arch };
 };
 
-test("Arch65816.getlenfromchar resolves supported suffixes", t => {
+test("Arch65816.getlenfromchar resolves supported suffixes", (t) => {
   const { arch } = createArch65816();
 
   t.is(arch.getlenfromchar("b"), 1, "Should resolve byte suffixes");
@@ -19,25 +19,34 @@ test("Arch65816.getlenfromchar resolves supported suffixes", t => {
   t.is(arch.getlenfromchar("d"), 4, "Should resolve deprecated double-word suffixes");
 });
 
-test("Arch65816.getlenfromchar throws for invalid suffixes", t => {
+test("Arch65816.getlenfromchar throws for invalid suffixes", (t) => {
   const { arch } = createArch65816();
 
-  t.throws(() => {
-    arch.getlenfromchar("x");
-  }, { message: "Error: Invalid opcode length." });
-  t.throws(() => {
-    arch.getlenfromchar("");
-  }, { message: "Error: Invalid opcode length." });
+  t.throws(
+    () => {
+      arch.getlenfromchar("x");
+    },
+    { message: "Error: Invalid opcode length." },
+  );
+  t.throws(
+    () => {
+      arch.getlenfromchar("");
+    },
+    { message: "Error: Invalid opcode length." },
+  );
 });
 
-test("Arch65816.estimateSize rejects a trailing opcode dot", t => {
+test("Arch65816.estimateSize rejects a trailing opcode dot", (t) => {
   const { arch } = createArch65816();
-  t.throws(() => {
-    arch.estimateSize(["LDA."]);
-  }, { message: "Error: Invalid opcode length in 'LDA.'." });
+  t.throws(
+    () => {
+      arch.estimateSize(["LDA."]);
+    },
+    { message: "Error: Invalid opcode length in 'LDA.'." },
+  );
 });
 
-test("Arch65816.estimateSize uses architecture-aware sizing", t => {
+test("Arch65816.estimateSize uses architecture-aware sizing", (t) => {
   const { assembler, arch } = createArch65816();
 
   t.is(arch.estimateSize([]), 0, "Empty input reserves no bytes");
@@ -45,22 +54,34 @@ test("Arch65816.estimateSize uses architecture-aware sizing", t => {
   t.is(arch.estimateSize(["BRL", "$8100"]), 3, "Long branches reserve 3 bytes");
   t.is(arch.estimateSize(["JSL", "$808000"]), 4, "Long jumps reserve 4 bytes");
   t.is(arch.estimateSize(["LDA", "#$1000"]), 3, "Immediate word operands reserve 3 bytes");
-  t.is(arch.estimateSize(["ASL", "#3"]), 3, "Accumulator repeat pseudo-ops reserve one byte per repeat");
+  t.is(
+    arch.estimateSize(["ASL", "#3"]),
+    3,
+    "Accumulator repeat pseudo-ops reserve one byte per repeat",
+  );
   t.is(arch.estimateSize(["INC"]), 1, "Bare accumulator INC should reserve one byte");
   t.is(arch.estimateSize(["DEC"]), 1, "Bare accumulator DEC should reserve one byte");
   t.is(arch.estimateSize(["ASL", "A"]), 1, "ASL A is implied accumulator");
   t.is(arch.estimateSize(["LDA", "[$00],y"]), 2, "Indirect long indexed is two bytes");
   t.is(arch.estimateSize(["JML", "[$0000]"]), 3, "JML [$abs] is three bytes");
-  assembler.currentTargetAddress = 0x048AFD;
-  t.is(arch.estimateSize(["SBC", "_048AD3,X"]), 3, "Same-bank indexed labels should reserve absolute,X bytes");
+  assembler.currentTargetAddress = 0x048afd;
+  t.is(
+    arch.estimateSize(["SBC", "_048AD3,X"]),
+    3,
+    "Same-bank indexed labels should reserve absolute,X bytes",
+  );
   assembler.currentTargetAddress = 0x01b487;
   const tryResolveLabel = sinon.stub(assembler.operandResolver.deps, "tryResolveLabel");
   tryResolveLabel.withArgs("raphael_mode7_matrix_a_d", false).returns(0x00e954);
   t.teardown(() => tryResolveLabel.restore());
-  t.is(arch.estimateSize(["LDA", "raphael_mode7_matrix_a_d,x"]), 4, "Cross-bank bank-0 table labels should reserve long,X bytes");
+  t.is(
+    arch.estimateSize(["LDA", "raphael_mode7_matrix_a_d,x"]),
+    4,
+    "Cross-bank bank-0 table labels should reserve long,X bytes",
+  );
 });
 
-test("Arch65816.encode uses abs,x for same-bank CMP table labels", t => {
+test("Arch65816.encode uses abs,x for same-bank CMP table labels", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.currentTargetAddress = 0x04fa46;
   const tryResolveLabel = sinon.stub(assembler.operandResolver.deps, "tryResolveLabel");
@@ -71,7 +92,7 @@ test("Arch65816.encode uses abs,x for same-bank CMP table labels", t => {
   t.deepEqual(assembler.emitted, [0xdd, 0x31, 0xfa]);
 });
 
-test("Arch65816.applySepRep ignores operands that do not resolve", t => {
+test("Arch65816.applySepRep ignores operands that do not resolve", (t) => {
   const { arch } = createArch65816();
   arch.m16 = true;
   arch.x16 = true;
@@ -80,15 +101,19 @@ test("Arch65816.applySepRep ignores operands that do not resolve", t => {
   t.true(arch.x16);
 });
 
-test("Arch65816.estimateSize uses M/X flags for immediates after SEP/REP", t => {
+test("Arch65816.estimateSize uses M/X flags for immediates after SEP/REP", (t) => {
   const { arch } = createArch65816();
   t.is(arch.estimateSize(["LDA", "#$00"]), 2);
   t.is(arch.estimateSize(["REP", "#$20"]), 2);
   t.is(arch.estimateSize(["LDA", "#$00"]), 2, "Hex immediates keep their spelling width");
-  t.is(arch.estimateSize(["LDA", "#(NMI&$FFFF)"]), 3, "Math immediates follow 16-bit A after REP #$20");
+  t.is(
+    arch.estimateSize(["LDA", "#(NMI&$FFFF)"]),
+    3,
+    "Math immediates follow 16-bit A after REP #$20",
+  );
 });
 
-test("Arch65816.handleMemoryOperations encodes define-expanded DP indexed X", t => {
+test("Arch65816.handleMemoryOperations encodes define-expanded DP indexed X", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.optimizeDirectPage = false;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -102,24 +127,29 @@ test("Arch65816.handleMemoryOperations encodes define-expanded DP indexed X", t 
   });
 
   t.true(arch.handleMemoryOperations("LDA", "$78,x", 1, false, "$78,x"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xB5, 0x78]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xb5, 0x78],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.estimateInstruction consumes lowered operand metadata", t => {
+test("Arch65816.estimateInstruction consumes lowered operand metadata", (t) => {
   const { arch } = createArch65816();
   const size = arch.estimateInstruction({
     kind: "instruction",
     mnemonic: "LDA",
     operandText: "#!IMM",
     operands: ["#!IMM"],
-    loweredOperands: [{
-      raw: "#!IMM",
-      expanded: "#$12",
-      length: 1,
-      immediate: true,
-      indirect: false,
-    }],
+    loweredOperands: [
+      {
+        raw: "#!IMM",
+        expanded: "#$12",
+        length: 1,
+        immediate: true,
+        indirect: false,
+      },
+    ],
     loweredOperand: {
       raw: "#!IMM",
       expanded: "#$12",
@@ -135,7 +165,7 @@ test("Arch65816.estimateInstruction consumes lowered operand metadata", t => {
   t.is(size, 2);
 });
 
-test("Arch65816.encodeInstruction routes lowered operands without re-expansion", t => {
+test("Arch65816.encodeInstruction routes lowered operands without re-expansion", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   const memoryStub = sinon.stub(arch, "handleMemoryOperations").returns(true);
@@ -149,13 +179,15 @@ test("Arch65816.encodeInstruction routes lowered operands without re-expansion",
     mnemonic: "LDA",
     operandText: "#!IMM",
     operands: ["#!IMM"],
-    loweredOperands: [{
-      raw: "#!IMM",
-      expanded: "#$12",
-      length: 1,
-      immediate: true,
-      indirect: false,
-    }],
+    loweredOperands: [
+      {
+        raw: "#!IMM",
+        expanded: "#$12",
+        length: 1,
+        immediate: true,
+        indirect: false,
+      },
+    ],
     loweredOperand: {
       raw: "#!IMM",
       expanded: "#$12",
@@ -174,7 +206,7 @@ test("Arch65816.encodeInstruction routes lowered operands without re-expansion",
   t.true(expandOperandStub.notCalled);
 });
 
-test("Arch65816.handleMemoryBitInstructions encodes direct TSB", t => {
+test("Arch65816.handleMemoryBitInstructions encodes direct TSB", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -188,11 +220,14 @@ test("Arch65816.handleMemoryBitInstructions encodes direct TSB", t => {
 
   t.true(arch.handleMemoryBitInstructions("TSB", "$12"));
   t.true(getnumStub.calledOnceWithExactly("$12"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x04, 0x12]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x04, 0x12],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleMemoryBitInstructions encodes absolute TRB", t => {
+test("Arch65816.handleMemoryBitInstructions encodes absolute TRB", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -206,11 +241,11 @@ test("Arch65816.handleMemoryBitInstructions encodes absolute TRB", t => {
 
   t.true(arch.handleMemoryBitInstructions("TRB", "$1234"));
   t.true(getnumStub.calledOnceWithExactly("$1234"));
-  t.true(write1Stub.calledOnceWithExactly(0x1C));
+  t.true(write1Stub.calledOnceWithExactly(0x1c));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleMemoryBitInstructions returns false for unsupported opcodes", t => {
+test("Arch65816.handleMemoryBitInstructions returns false for unsupported opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -227,7 +262,7 @@ test("Arch65816.handleMemoryBitInstructions returns false for unsupported opcode
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleArithmeticOperations accepts implied accumulator form", t => {
+test("Arch65816.handleArithmeticOperations accepts implied accumulator form", (t) => {
   const { assembler, arch } = createArch65816();
   const write1Stub = sinon.stub(assembler, "write1");
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -237,11 +272,11 @@ test("Arch65816.handleArithmeticOperations accepts implied accumulator form", t 
   });
 
   t.true(arch.handleArithmeticOperations("DEC", "", 0, false));
-  t.true(write1Stub.calledOnceWithExactly(0x3A));
+  t.true(write1Stub.calledOnceWithExactly(0x3a));
   t.true(getnumStub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions returns false for unsupported opcodes", t => {
+test("Arch65816.handleBranchInstructions returns false for unsupported opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -258,7 +293,7 @@ test("Arch65816.handleBranchInstructions returns false for unsupported opcodes",
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions writes short-branch placeholders during pass 0", t => {
+test("Arch65816.handleBranchInstructions writes short-branch placeholders during pass 0", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("collectDefinitions");
   assembler.currentTargetAddress = 0x8000;
@@ -274,11 +309,14 @@ test("Arch65816.handleBranchInstructions writes short-branch placeholders during
 
   t.true(arch.handleBranchInstructions("BRA", "$8005"));
   t.true(getnumStub.calledOnceWithExactly("$8005"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x80, 0]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x80, 0],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions writes BRL placeholders during pass 1", t => {
+test("Arch65816.handleBranchInstructions writes BRL placeholders during pass 1", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("resolveLayout");
   assembler.currentTargetAddress = 0x8000;
@@ -298,7 +336,7 @@ test("Arch65816.handleBranchInstructions writes BRL placeholders during pass 1",
   t.true(write2Stub.calledOnceWithExactly(0));
 });
 
-test("Arch65816.handleBranchInstructions resolves forward + labels using the branch reference address", t => {
+test("Arch65816.handleBranchInstructions resolves forward + labels using the branch reference address", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x8000;
@@ -317,16 +355,19 @@ test("Arch65816.handleBranchInstructions resolves forward + labels using the bra
   t.true(arch.handleBranchInstructions("BRA", "++"));
   t.true(findNextLabelStub.calledOnceWithExactly("++", 0x8002));
   t.true(getnumStub.notCalled);
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x80, 0x05]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x80, 0x05],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions resolves backward - labels for negative offsets", t => {
+test("Arch65816.handleBranchInstructions resolves backward - labels for negative offsets", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x8000;
   const findPreviousLabelStub = sinon.stub(assembler.symbolScope, "findPreviousLabel");
-  findPreviousLabelStub.withArgs("--", 0x8002).returns(0x7FFD);
+  findPreviousLabelStub.withArgs("--", 0x8002).returns(0x7ffd);
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -340,11 +381,14 @@ test("Arch65816.handleBranchInstructions resolves backward - labels for negative
   t.true(arch.handleBranchInstructions("BNE", "--"));
   t.true(findPreviousLabelStub.calledOnceWithExactly("--", 0x8002));
   t.true(getnumStub.notCalled);
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xD0, 0x1FB]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xd0, 0x1fb],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions uses numeric operands for BRL", t => {
+test("Arch65816.handleBranchInstructions uses numeric operands for BRL", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x8000;
@@ -364,7 +408,7 @@ test("Arch65816.handleBranchInstructions uses numeric operands for BRL", t => {
   t.true(write2Stub.calledOnceWithExactly(0x10));
 });
 
-test("Arch65816.handleBranchInstructions throws when the relative target is NaN", t => {
+test("Arch65816.handleBranchInstructions throws when the relative target is NaN", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -377,14 +421,17 @@ test("Arch65816.handleBranchInstructions throws when the relative target is NaN"
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleBranchInstructions("BRA", "bad_label");
-  }, { message: "Error: relativeAddress is NaN." });
+  t.throws(
+    () => {
+      arch.handleBranchInstructions("BRA", "bad_label");
+    },
+    { message: "Error: relativeAddress is NaN." },
+  );
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions throws when short branches are out of range", t => {
+test("Arch65816.handleBranchInstructions throws when short branches are out of range", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x8000;
@@ -398,14 +445,17 @@ test("Arch65816.handleBranchInstructions throws when short branches are out of r
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleBranchInstructions("BCC", "$8082");
-  }, { message: "Error: Branch target out of range (128) for BCC $8082 at $8000." });
+  t.throws(
+    () => {
+      arch.handleBranchInstructions("BCC", "$8082");
+    },
+    { message: "Error: Branch target out of range (128) for BCC $8082 at $8000." },
+  );
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions treats 2-digit hex as a raw relative offset", t => {
+test("Arch65816.handleBranchInstructions treats 2-digit hex as a raw relative offset", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x3cafe;
@@ -420,11 +470,14 @@ test("Arch65816.handleBranchInstructions treats 2-digit hex as a raw relative of
   });
 
   t.true(arch.handleBranchInstructions("BNE", "$08"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xD0, 0x08]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xd0, 0x08],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBranchInstructions throws when BRL targets are out of range", t => {
+test("Arch65816.handleBranchInstructions throws when BRL targets are out of range", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x8000;
@@ -438,14 +491,17 @@ test("Arch65816.handleBranchInstructions throws when BRL targets are out of rang
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleBranchInstructions("BRL", "$10003");
-  }, { message: "Error: BRL target out of range (32768)." });
+  t.throws(
+    () => {
+      arch.handleBranchInstructions("BRL", "$10003");
+    },
+    { message: "Error: BRL target out of range (32768)." },
+  );
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handlePER encodes a resolved operand", t => {
+test("Arch65816.handlePER encodes a resolved operand", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("target_label").returns(0x3456);
@@ -463,7 +519,7 @@ test("Arch65816.handlePER encodes a resolved operand", t => {
   t.true(write2Stub.calledOnceWithExactly(0x3456));
 });
 
-test("Arch65816.handlePER throws when no operand is provided", t => {
+test("Arch65816.handlePER throws when no operand is provided", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -474,15 +530,18 @@ test("Arch65816.handlePER throws when no operand is provided", t => {
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handlePER("");
-  }, { message: "Error: PER requires an operand." });
+  t.throws(
+    () => {
+      arch.handlePER("");
+    },
+    { message: "Error: PER requires an operand." },
+  );
   t.true(getnumStub.notCalled);
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBlockMove encodes MVP with trimmed banks", t => {
+test("Arch65816.handleBlockMove encodes MVP with trimmed banks", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$01").returns(0x01);
@@ -494,14 +553,20 @@ test("Arch65816.handleBlockMove encodes MVP with trimmed banks", t => {
   });
 
   t.true(arch.handleBlockMove("MVP", " $01 , $02 "));
-  t.deepEqual(getnumStub.getCalls().map((call) => call.args[0]), ["$01", "$02"]);
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x44, 0x01, 0x02]);
+  t.deepEqual(
+    getnumStub.getCalls().map((call) => call.args[0]),
+    ["$01", "$02"],
+  );
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x44, 0x01, 0x02],
+  );
 });
 
-test("Arch65816.handleBlockMove encodes MVN", t => {
+test("Arch65816.handleBlockMove encodes MVN", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs("$7E").returns(0x7E);
+  getnumStub.withArgs("$7E").returns(0x7e);
   getnumStub.withArgs("$40").returns(0x40);
   const write1Stub = sinon.stub(assembler, "write1");
   t.teardown(() => {
@@ -510,10 +575,13 @@ test("Arch65816.handleBlockMove encodes MVN", t => {
   });
 
   t.true(arch.handleBlockMove("MVN", "$7E,$40"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x54, 0x7E, 0x40]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x54, 0x7e, 0x40],
+  );
 });
 
-test("Arch65816.handleBlockMove throws when operand count is invalid", t => {
+test("Arch65816.handleBlockMove throws when operand count is invalid", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -522,14 +590,17 @@ test("Arch65816.handleBlockMove throws when operand count is invalid", t => {
     write1Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleBlockMove("MVN", "$01");
-  }, { message: "Error: MVN requires two parameters (source, destination)." });
+  t.throws(
+    () => {
+      arch.handleBlockMove("MVN", "$01");
+    },
+    { message: "Error: MVN requires two parameters (source, destination)." },
+  );
   t.true(getnumStub.notCalled);
   t.true(write1Stub.notCalled);
 });
 
-test("Arch65816.handleGenericOpcode encodes PEA with a 16-bit operand", t => {
+test("Arch65816.handleGenericOpcode encodes PEA with a 16-bit operand", (t) => {
   const { assembler, arch } = createArch65816();
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -539,11 +610,11 @@ test("Arch65816.handleGenericOpcode encodes PEA with a 16-bit operand", t => {
   });
 
   t.true(arch.handleGenericOpcode("PEA", 0x1234, 2));
-  t.true(write1Stub.calledOnceWithExactly(0xF4));
+  t.true(write1Stub.calledOnceWithExactly(0xf4));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleGenericOpcode encodes fixed-width single-byte operand opcodes", t => {
+test("Arch65816.handleGenericOpcode encodes fixed-width single-byte operand opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const warnStub = sinon.stub(console, "warn");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -554,13 +625,16 @@ test("Arch65816.handleGenericOpcode encodes fixed-width single-byte operand opco
     write2Stub.restore();
   });
 
-  t.true(arch.handleGenericOpcode("WDM", 0xAB, 1));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x42, 0xAB]);
+  t.true(arch.handleGenericOpcode("WDM", 0xab, 1));
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x42, 0xab],
+  );
   t.true(write2Stub.notCalled);
   t.true(warnStub.notCalled);
 });
 
-test("Arch65816.handleGenericOpcode validates REP and SEP operand range", t => {
+test("Arch65816.handleGenericOpcode validates REP and SEP operand range", (t) => {
   const { assembler, arch } = createArch65816();
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -569,19 +643,25 @@ test("Arch65816.handleGenericOpcode validates REP and SEP operand range", t => {
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleGenericOpcode("REP", 0x100, 1);
-  }, { message: "Error: invalid_number" });
+  t.throws(
+    () => {
+      arch.handleGenericOpcode("REP", 0x100, 1);
+    },
+    { message: "Error: invalid_number" },
+  );
 
-  t.throws(() => {
-    arch.handleGenericOpcode("SEP", 0x12, 2);
-  }, { message: "Error: invalid_number" });
+  t.throws(
+    () => {
+      arch.handleGenericOpcode("SEP", 0x12, 2);
+    },
+    { message: "Error: invalid_number" },
+  );
 
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleGenericOpcode returns false for unmapped opcodes", t => {
+test("Arch65816.handleGenericOpcode returns false for unmapped opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -595,10 +675,10 @@ test("Arch65816.handleGenericOpcode returns false for unmapped opcodes", t => {
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", t => {
+test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs("255").returns(0x00FF);
+  getnumStub.withArgs("255").returns(0x00ff);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -611,15 +691,15 @@ test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", 
 
   t.true(arch.handleJump("JMP", "255"));
   t.true(getnumStub.calledOnceWithExactly("255"));
-  t.true(write1Stub.calledOnceWithExactly(0x4C));
-  t.true(write2Stub.calledOnceWithExactly(0x00FF));
+  t.true(write1Stub.calledOnceWithExactly(0x4c));
+  t.true(write2Stub.calledOnceWithExactly(0x00ff));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump normalizes short hex JSR operands", t => {
+test("Arch65816.handleJump normalizes short hex JSR operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs("$FF").returns(0x00FF);
+  getnumStub.withArgs("$FF").returns(0x00ff);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -633,11 +713,11 @@ test("Arch65816.handleJump normalizes short hex JSR operands", t => {
   t.true(arch.handleJump("JSR", "$FF"));
   t.true(getnumStub.calledOnceWithExactly("$FF"));
   t.true(write1Stub.calledOnceWithExactly(0x20));
-  t.true(write2Stub.calledOnceWithExactly(0x00FF));
+  t.true(write2Stub.calledOnceWithExactly(0x00ff));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump upgrades long JMP operands to JML", t => {
+test("Arch65816.handleJump upgrades long JMP operands to JML", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
@@ -652,12 +732,12 @@ test("Arch65816.handleJump upgrades long JMP operands to JML", t => {
   });
 
   t.true(arch.handleJump("JMP", "$123456"));
-  t.true(write1Stub.calledOnceWithExactly(0x5C));
+  t.true(write1Stub.calledOnceWithExactly(0x5c));
   t.true(write3Stub.calledOnceWithExactly(0x123456));
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleJump upgrades long JSR operands and preserves JML mode", t => {
+test("Arch65816.handleJump upgrades long JSR operands and preserves JML mode", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
@@ -674,17 +754,23 @@ test("Arch65816.handleJump upgrades long JSR operands and preserves JML mode", t
 
   t.true(arch.handleJump("JSR", "$123456"));
   t.true(arch.handleJump("JML", "$654321"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x22, 0x5C]);
-  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x123456, 0x654321]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x22, 0x5c],
+  );
+  t.deepEqual(
+    write3Stub.getCalls().map((call) => call.args[0]),
+    [0x123456, 0x654321],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleJump keeps banked same-bank JSR operands short", t => {
+test("Arch65816.handleJump keeps banked same-bank JSR operands short", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("resolveLayout");
-  assembler.currentTargetAddress = 0x02FFFE;
+  assembler.currentTargetAddress = 0x02fffe;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs("_02FDB3_FDB7").returns(0x02FDB6);
+  getnumStub.withArgs("_02FDB3_FDB7").returns(0x02fdb6);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -697,14 +783,14 @@ test("Arch65816.handleJump keeps banked same-bank JSR operands short", t => {
 
   t.true(arch.handleJump("JSR", "_02FDB3_FDB7"));
   t.true(write1Stub.calledOnceWithExactly(0x20));
-  t.true(write2Stub.calledOnceWithExactly(0xFDB6));
+  t.true(write2Stub.calledOnceWithExactly(0xfdb6));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump keeps bank-hinted same-bank JSR operands short during early-pass drift", t => {
+test("Arch65816.handleJump keeps bank-hinted same-bank JSR operands short during early-pass drift", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("resolveLayout");
-  assembler.currentTargetAddress = 0x0295E8;
+  assembler.currentTargetAddress = 0x0295e8;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("_02FF22").returns(0x030022);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -723,10 +809,10 @@ test("Arch65816.handleJump keeps bank-hinted same-bank JSR operands short during
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.encodeResolvedInstruction keeps raw bank hints for same-bank JSR sizing", t => {
+test("Arch65816.encodeResolvedInstruction keeps raw bank hints for same-bank JSR sizing", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.activateStage("resolveLayout");
-  assembler.currentTargetAddress = 0x0295E8;
+  assembler.currentTargetAddress = 0x0295e8;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("_02FF22").returns(0x030022);
   getnumStub.withArgs("$30022").returns(0x030022);
@@ -746,7 +832,7 @@ test("Arch65816.encodeResolvedInstruction keeps raw bank hints for same-bank JSR
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump resolves symbolic JSL operands", t => {
+test("Arch65816.handleJump resolves symbolic JSL operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.returns(0x018053);
@@ -767,7 +853,7 @@ test("Arch65816.handleJump resolves symbolic JSL operands", t => {
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleJump encodes indirect long and indexed indirect modes", t => {
+test("Arch65816.handleJump encodes indirect long and indexed indirect modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -784,12 +870,18 @@ test("Arch65816.handleJump encodes indirect long and indexed indirect modes", t 
 
   t.true(arch.handleJump("JMP", "[$1234]"));
   t.true(arch.handleJump("JSR", "($5678,x)"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xDC, 0xFC]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xdc, 0xfc],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x5678],
+  );
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump accepts indexed indirect expressions", t => {
+test("Arch65816.handleJump accepts indexed indirect expressions", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs(".8741-2").returns(0x8741);
@@ -804,15 +896,15 @@ test("Arch65816.handleJump accepts indexed indirect expressions", t => {
   });
 
   t.true(arch.handleJump("JSR", "(.8741-2,X)"));
-  t.true(write1Stub.calledOnceWithExactly(0xFC));
+  t.true(write1Stub.calledOnceWithExactly(0xfc));
   t.true(write2Stub.calledOnceWithExactly(0x8741));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump masks banked labels for indexed indirect JSR", t => {
+test("Arch65816.handleJump masks banked labels for indexed indirect JSR", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs(".offsets").returns(0x01A64D);
+  getnumStub.withArgs(".offsets").returns(0x01a64d);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -824,12 +916,12 @@ test("Arch65816.handleJump masks banked labels for indexed indirect JSR", t => {
   });
 
   t.true(arch.handleJump("JSR", "(.offsets,X)"));
-  t.true(write1Stub.calledOnceWithExactly(0xFC));
-  t.true(write2Stub.calledOnceWithExactly(0xA64D));
+  t.true(write1Stub.calledOnceWithExactly(0xfc));
+  t.true(write2Stub.calledOnceWithExactly(0xa64d));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump encodes JMP indexed indirect", t => {
+test("Arch65816.handleJump encodes JMP indexed indirect", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -844,12 +936,12 @@ test("Arch65816.handleJump encodes JMP indexed indirect", t => {
   });
 
   t.true(arch.handleJump("JMP", "($1234,x)"));
-  t.true(write1Stub.calledOnceWithExactly(0x7C));
+  t.true(write1Stub.calledOnceWithExactly(0x7c));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump encodes absolute indirect JMP", t => {
+test("Arch65816.handleJump encodes absolute indirect JMP", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -864,12 +956,12 @@ test("Arch65816.handleJump encodes absolute indirect JMP", t => {
   });
 
   t.true(arch.handleJump("JMP", "($1234)"));
-  t.true(write1Stub.calledOnceWithExactly(0x6C));
+  t.true(write1Stub.calledOnceWithExactly(0x6c));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleJump throws on invalid operands", t => {
+test("Arch65816.handleJump throws on invalid operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.throws(new Error("Label not found"));
@@ -883,16 +975,19 @@ test("Arch65816.handleJump throws on invalid operands", t => {
     write3Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleJump("JMP", "label_name");
-  }, { message: "Error: Invalid operand format for JMP: label_name" });
+  t.throws(
+    () => {
+      arch.handleJump("JMP", "label_name");
+    },
+    { message: "Error: Invalid operand format for JMP: label_name" },
+  );
   t.true(getnumStub.calledOnce);
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleStoreOperations returns false for unsupported opcodes", t => {
+test("Arch65816.handleStoreOperations returns false for unsupported opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -909,7 +1004,7 @@ test("Arch65816.handleStoreOperations returns false for unsupported opcodes", t 
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands", t => {
+test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -922,11 +1017,11 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands
   });
 
   t.true(arch.handleStoreOperations("STZ", "$1234,x", 2, true));
-  t.true(write1Stub.calledOnceWithExactly(0x9E));
+  t.true(write1Stub.calledOnceWithExactly(0x9e));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY opcodes", t => {
+test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -941,11 +1036,14 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY opcod
 
   t.true(arch.handleStoreOperations("STX", "$12,y", 1, true));
   t.true(arch.handleStoreOperations("STY", "$34,x", 1, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x96, 0x12, 0x94, 0x34]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x96, 0x12, 0x94, 0x34],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleStoreOperations encodes forced non-indexed STY and STZ", t => {
+test("Arch65816.handleStoreOperations encodes forced non-indexed STY and STZ", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -960,11 +1058,17 @@ test("Arch65816.handleStoreOperations encodes forced non-indexed STY and STZ", t
 
   t.true(arch.handleStoreOperations("STY", "$1234", 2, true));
   t.true(arch.handleStoreOperations("STZ", "$12", 1, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x8C, 0x64, 0x12]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x8c, 0x64, 0x12],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234],
+  );
 });
 
-test("Arch65816.handleStoreOperations encodes direct and indexed store modes", t => {
+test("Arch65816.handleStoreOperations encodes direct and indexed store modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -979,11 +1083,14 @@ test("Arch65816.handleStoreOperations encodes direct and indexed store modes", t
 
   t.true(arch.handleStoreOperations("STX", "$12", 1, false));
   t.true(arch.handleStoreOperations("STY", "$34,x", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x86, 0x12, 0x94, 0x34]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x86, 0x12, 0x94, 0x34],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleStoreOperations encodes 3-digit hex as absolute STZ", t => {
+test("Arch65816.handleStoreOperations encodes 3-digit hex as absolute STZ", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$CF7").returns(0xcf7);
@@ -1000,7 +1107,7 @@ test("Arch65816.handleStoreOperations encodes 3-digit hex as absolute STZ", t =>
   t.true(write2Stub.calledOnceWithExactly(0xcf7));
 });
 
-test("Arch65816.handleStoreOperations encodes absolute indexed STZ", t => {
+test("Arch65816.handleStoreOperations encodes absolute indexed STZ", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1013,11 +1120,11 @@ test("Arch65816.handleStoreOperations encodes absolute indexed STZ", t => {
   });
 
   t.true(arch.handleStoreOperations("STZ", "$1234,x", 2, false));
-  t.true(write1Stub.calledOnceWithExactly(0x9E));
+  t.true(write1Stub.calledOnceWithExactly(0x9e));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleStoreOperations encodes absolute indexed STX and STY", t => {
+test("Arch65816.handleStoreOperations encodes absolute indexed STX and STY", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1032,14 +1139,20 @@ test("Arch65816.handleStoreOperations encodes absolute indexed STX and STY", t =
 
   t.true(arch.handleStoreOperations("STX", "$1234,y", 2, false));
   t.true(arch.handleStoreOperations("STY", "$5678,x", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x8E, 0x8C]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x8e, 0x8c],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x5678],
+  );
 });
 
-test("Arch65816.handleStoreOperations encodes non-indexed absolute and directY STX", t => {
+test("Arch65816.handleStoreOperations encodes non-indexed absolute and directY STX", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs("$9ABC").returns(0x9ABC);
+  getnumStub.withArgs("$9ABC").returns(0x9abc);
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1051,11 +1164,17 @@ test("Arch65816.handleStoreOperations encodes non-indexed absolute and directY S
 
   t.true(arch.handleStoreOperations("STY", "$9ABC", 2, false));
   t.true(arch.handleStoreOperations("STX", "$12,y", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x8C, 0x96, 0x12]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x9ABC]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x8c, 0x96, 0x12],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x9abc],
+  );
 });
 
-test("Arch65816.handleStoreOperations encodes indexed direct-page STZ fallback", t => {
+test("Arch65816.handleStoreOperations encodes indexed direct-page STZ fallback", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1068,11 +1187,14 @@ test("Arch65816.handleStoreOperations encodes indexed direct-page STZ fallback",
   });
 
   t.true(arch.handleStoreOperations("STZ", "$12,x", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x74, 0x12]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x74, 0x12],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleStoreOperations throws on unsupported forced lengths and invalid operands", t => {
+test("Arch65816.handleStoreOperations throws on unsupported forced lengths and invalid operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1084,16 +1206,22 @@ test("Arch65816.handleStoreOperations throws on unsupported forced lengths and i
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleStoreOperations("STX", "$12", 3, true);
-  }, { message: "Forced length 3 not supported for STX" });
+  t.throws(
+    () => {
+      arch.handleStoreOperations("STX", "$12", 3, true);
+    },
+    { message: "Forced length 3 not supported for STX" },
+  );
 
-  t.throws(() => {
-    arch.handleStoreOperations("STZ", "not-an-address", 1, false);
-  }, { message: "Error: Invalid operand format for STZ: not-an-address" });
+  t.throws(
+    () => {
+      arch.handleStoreOperations("STZ", "not-an-address", 1, false);
+    },
+    { message: "Error: Invalid operand format for STZ: not-an-address" },
+  );
 });
 
-test("Arch65816.handleBitTestOperations returns false for unsupported opcodes", t => {
+test("Arch65816.handleBitTestOperations returns false for unsupported opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1110,7 +1238,7 @@ test("Arch65816.handleBitTestOperations returns false for unsupported opcodes", 
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleBitTestOperations encodes BIT immediate in default and forced modes", t => {
+test("Arch65816.handleBitTestOperations encodes BIT immediate in default and forced modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$0000").returns(0x0000);
@@ -1125,11 +1253,17 @@ test("Arch65816.handleBitTestOperations encodes BIT immediate in default and for
 
   t.true(arch.handleBitTestOperations("BIT", "#$0000", 2, false));
   t.true(arch.handleBitTestOperations("BIT", "#$12", 1, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x89, 0x89, 0x12]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x0000]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x89, 0x89, 0x12],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x0000],
+  );
 });
 
-test("Arch65816.handleBitTestOperations encodes indexed and absolute modes", t => {
+test("Arch65816.handleBitTestOperations encodes indexed and absolute modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1144,11 +1278,14 @@ test("Arch65816.handleBitTestOperations encodes indexed and absolute modes", t =
 
   t.true(arch.handleBitTestOperations("BIT", "$12,x", 1, true));
   t.true(arch.handleBitTestOperations("BIT", "$1234,x", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x34, 0x12, 0x3C]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x34, 0x12, 0x3c],
+  );
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleBitTestOperations encodes forced non-indexed and default non-forced branches", t => {
+test("Arch65816.handleBitTestOperations encodes forced non-indexed and default non-forced branches", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1166,11 +1303,17 @@ test("Arch65816.handleBitTestOperations encodes forced non-indexed and default n
   t.true(arch.handleBitTestOperations("BIT", "$12,x", 1, false));
   t.true(arch.handleBitTestOperations("TSB", "$34", 1, false));
   t.true(arch.handleBitTestOperations("TRB", "$1234", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x1C, 0x34, 0x12, 0x04, 0x34, 0x1C]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x1234]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x1c, 0x34, 0x12, 0x04, 0x34, 0x1c],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x1234],
+  );
 });
 
-test("Arch65816.handleBitTestOperations encodes TSB direct mode and rejects forced indexed mode", t => {
+test("Arch65816.handleBitTestOperations encodes TSB direct mode and rejects forced indexed mode", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1183,15 +1326,21 @@ test("Arch65816.handleBitTestOperations encodes TSB direct mode and rejects forc
   });
 
   t.true(arch.handleBitTestOperations("TSB", "$12", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x04, 0x12]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x04, 0x12],
+  );
   t.true(write2Stub.notCalled);
 
-  t.throws(() => {
-    arch.handleBitTestOperations("TSB", "$12,x", 1, true);
-  }, { message: "Opcode TSB does not support indexed addressing in forced mode." });
+  t.throws(
+    () => {
+      arch.handleBitTestOperations("TSB", "$12,x", 1, true);
+    },
+    { message: "Opcode TSB does not support indexed addressing in forced mode." },
+  );
 });
 
-test("Arch65816.handleBitTestOperations throws on invalid operands", t => {
+test("Arch65816.handleBitTestOperations throws on invalid operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1202,12 +1351,15 @@ test("Arch65816.handleBitTestOperations throws on invalid operands", t => {
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleBitTestOperations("BIT", "not-an-address", 1, false);
-  }, { message: "Error: Invalid operand format for BIT: not-an-address" });
+  t.throws(
+    () => {
+      arch.handleBitTestOperations("BIT", "not-an-address", 1, false);
+    },
+    { message: "Error: Invalid operand format for BIT: not-an-address" },
+  );
 });
 
-test("Arch65816.handleLoadRegister handles immediate and indexed modes", t => {
+test("Arch65816.handleLoadRegister handles immediate and indexed modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1222,11 +1374,14 @@ test("Arch65816.handleLoadRegister handles immediate and indexed modes", t => {
 
   t.true(arch.handleLoadRegister("LDX", "#$12", 1, false));
   t.true(arch.handleLoadRegister("LDY", "$1234,x", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xA2, 0x12, 0xBC]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xa2, 0x12, 0xbc],
+  );
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleLoadRegister handles LDY immediate word operands", t => {
+test("Arch65816.handleLoadRegister handles LDY immediate word operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1239,11 +1394,11 @@ test("Arch65816.handleLoadRegister handles LDY immediate word operands", t => {
   });
 
   t.true(arch.handleLoadRegister("LDY", "#$1234", 2, false));
-  t.true(write1Stub.calledOnceWithExactly(0xA0));
+  t.true(write1Stub.calledOnceWithExactly(0xa0));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleLoadRegister handles LDY fallback direct and absolute forms", t => {
+test("Arch65816.handleLoadRegister handles LDY fallback direct and absolute forms", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1258,11 +1413,17 @@ test("Arch65816.handleLoadRegister handles LDY fallback direct and absolute form
 
   t.true(arch.handleLoadRegister("LDY", "$1234", 2, false));
   t.true(arch.handleLoadRegister("LDY", "$12,x", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xAC, 0xB4, 0x12]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xac, 0xb4, 0x12],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234],
+  );
 });
 
-test("Arch65816.handleLoadRegister supports forced addressing and errors", t => {
+test("Arch65816.handleLoadRegister supports forced addressing and errors", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1275,19 +1436,28 @@ test("Arch65816.handleLoadRegister supports forced addressing and errors", t => 
   });
 
   t.true(arch.handleLoadRegister("LDX", "$12,y", 1, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xB6, 0x12]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xb6, 0x12],
+  );
   t.true(write2Stub.notCalled);
 
-  t.throws(() => {
-    arch.handleLoadRegister("LDX", "", 1, false);
-  }, { message: "Error: LDX requires an operand." });
+  t.throws(
+    () => {
+      arch.handleLoadRegister("LDX", "", 1, false);
+    },
+    { message: "Error: LDX requires an operand." },
+  );
 
-  t.throws(() => {
-    arch.handleLoadRegister("LDY", "$12", 3, true);
-  }, { message: "Forced length 3 not supported for LDY" });
+  t.throws(
+    () => {
+      arch.handleLoadRegister("LDY", "$12", 3, true);
+    },
+    { message: "Forced length 3 not supported for LDY" },
+  );
 });
 
-test("Arch65816.handleLoadRegister covers forced LDX and forced indexed LDY word forms", t => {
+test("Arch65816.handleLoadRegister covers forced LDX and forced indexed LDY word forms", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1302,11 +1472,17 @@ test("Arch65816.handleLoadRegister covers forced LDX and forced indexed LDY word
 
   t.true(arch.handleLoadRegister("LDX", "$1234", 2, true));
   t.true(arch.handleLoadRegister("LDY", "$5678,x", 2, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xAE, 0xBC]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xae, 0xbc],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x5678],
+  );
 });
 
-test("Arch65816.handleLoadRegister covers LDX fallback direct, absolute, and indexed-Y modes", t => {
+test("Arch65816.handleLoadRegister covers LDX fallback direct, absolute, and indexed-Y modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1323,11 +1499,17 @@ test("Arch65816.handleLoadRegister covers LDX fallback direct, absolute, and ind
   t.true(arch.handleLoadRegister("LDX", "$12", 1, false));
   t.true(arch.handleLoadRegister("LDX", "$1234", 2, false));
   t.true(arch.handleLoadRegister("LDX", "$5678,y", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xA6, 0x12, 0xAE, 0xBE]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xa6, 0x12, 0xae, 0xbe],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x5678],
+  );
 });
 
-test("Arch65816.handleLoadRegister covers LDX indexed direct-page and LDY direct-page fallback", t => {
+test("Arch65816.handleLoadRegister covers LDX indexed direct-page and LDY direct-page fallback", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
@@ -1342,11 +1524,14 @@ test("Arch65816.handleLoadRegister covers LDX indexed direct-page and LDY direct
 
   t.true(arch.handleLoadRegister("LDX", "$34,y", 1, false));
   t.true(arch.handleLoadRegister("LDY", "$56", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xB6, 0x34, 0xA4, 0x56]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xb6, 0x34, 0xa4, 0x56],
+  );
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleArithmeticOperations handles accumulator and addressing variants", t => {
+test("Arch65816.handleArithmeticOperations handles accumulator and addressing variants", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1364,11 +1549,14 @@ test("Arch65816.handleArithmeticOperations handles accumulator and addressing va
   t.true(arch.handleArithmeticOperations("ASL", "#3", 1, false));
   t.true(arch.handleArithmeticOperations("INC", "$12,x", 1, false));
   t.true(arch.handleArithmeticOperations("DEC", "$1234", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x0A, 0x0A, 0x0A, 0x0A, 0xF6, 0x12, 0xCE]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x0a, 0x0a, 0x0a, 0x0a, 0xf6, 0x12, 0xce],
+  );
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleArithmeticOperations supports forced modes and rejects invalid inputs", t => {
+test("Arch65816.handleArithmeticOperations supports forced modes and rejects invalid inputs", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1382,18 +1570,24 @@ test("Arch65816.handleArithmeticOperations supports forced modes and rejects inv
   });
 
   t.true(arch.handleArithmeticOperations("ROL", "$1234,x", 2, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x3E]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x3e],
+  );
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 
   t.true(arch.handleArithmeticOperations("ASL", "", 1, false));
-  t.true(write1Stub.calledWithExactly(0x0A));
+  t.true(write1Stub.calledWithExactly(0x0a));
 
-  t.throws(() => {
-    arch.handleArithmeticOperations("INC", "$12", 3, true);
-  }, { message: "Forced length for arithmetic operations must be 1 or 2 bytes." });
+  t.throws(
+    () => {
+      arch.handleArithmeticOperations("INC", "$12", 3, true);
+    },
+    { message: "Forced length for arithmetic operations must be 1 or 2 bytes." },
+  );
 });
 
-test("Arch65816.handleArithmeticOperations covers successful forced byte and word encodings", t => {
+test("Arch65816.handleArithmeticOperations covers successful forced byte and word encodings", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1410,11 +1604,17 @@ test("Arch65816.handleArithmeticOperations covers successful forced byte and wor
   t.true(arch.handleArithmeticOperations("ASL", "$12,x", 1, true));
   t.true(arch.handleArithmeticOperations("DEC", "$1234", 2, true));
   t.true(arch.handleArithmeticOperations("INC", "$56", 1, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x16, 0x12, 0xCE, 0xE6, 0x56]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x16, 0x12, 0xce, 0xe6, 0x56],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234],
+  );
 });
 
-test("Arch65816.handleArithmeticOperations returns false for unsupported opcodes with operands", t => {
+test("Arch65816.handleArithmeticOperations returns false for unsupported opcodes with operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1431,7 +1631,7 @@ test("Arch65816.handleArithmeticOperations returns false for unsupported opcodes
   t.true(write2Stub.notCalled);
 });
 
-test("Arch65816.handleArithmeticOperations throws for unsupported forced opcode branches", t => {
+test("Arch65816.handleArithmeticOperations throws for unsupported forced opcode branches", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1443,20 +1643,29 @@ test("Arch65816.handleArithmeticOperations throws for unsupported forced opcode 
     write2Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleArithmeticOperations("NOP", "$12,x", 1, true);
-  }, { message: "Opcode NOP not supported in forced indexed mode." });
+  t.throws(
+    () => {
+      arch.handleArithmeticOperations("NOP", "$12,x", 1, true);
+    },
+    { message: "Opcode NOP not supported in forced indexed mode." },
+  );
 
-  t.throws(() => {
-    arch.handleArithmeticOperations("DEC", "$12,x", 3, true);
-  }, { message: "Forced length for arithmetic operations must be 1 or 2 bytes." });
+  t.throws(
+    () => {
+      arch.handleArithmeticOperations("DEC", "$12,x", 3, true);
+    },
+    { message: "Forced length for arithmetic operations must be 1 or 2 bytes." },
+  );
 
-  t.throws(() => {
-    arch.handleArithmeticOperations("NOP", "$12", 1, true);
-  }, { message: "Opcode NOP not supported in forced non-indexed mode." });
+  t.throws(
+    () => {
+      arch.handleArithmeticOperations("NOP", "$12", 1, true);
+    },
+    { message: "Opcode NOP not supported in forced non-indexed mode." },
+  );
 });
 
-test("Arch65816.handleArithmeticOperations covers absolute-X and direct-page fallback modes", t => {
+test("Arch65816.handleArithmeticOperations covers absolute-X and direct-page fallback modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1471,11 +1680,17 @@ test("Arch65816.handleArithmeticOperations covers absolute-X and direct-page fal
 
   t.true(arch.handleArithmeticOperations("ROR", "$1234,x", 2, false));
   t.true(arch.handleArithmeticOperations("LSR", "$78", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x7E, 0x46, 0x78]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x7e, 0x46, 0x78],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234],
+  );
 });
 
-test("Arch65816.handleLogicAndCompareOperations handles immediate and routed modes", t => {
+test("Arch65816.handleLogicAndCompareOperations handles immediate and routed modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1494,12 +1709,15 @@ test("Arch65816.handleLogicAndCompareOperations handles immediate and routed mod
   t.true(arch.handleLogicAndCompareOperations("ORA", "#$12", 1, false));
   t.true(arch.handleLogicAndCompareOperations("CMP", "#$0000", 2, false));
   t.true(arch.handleLogicAndCompareOperations("AND", "[$34]", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x09, 0x12, 0xC9, 0x27, 0x34]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x09, 0x12, 0xc9, 0x27, 0x34],
+  );
   t.true(write2Stub.calledOnceWithExactly(0x0000));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations consumes lowered addressing metadata", t => {
+test("Arch65816.handleLogicAndCompareOperations consumes lowered addressing metadata", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("TARGET,x").returns({
@@ -1527,11 +1745,11 @@ test("Arch65816.handleLogicAndCompareOperations consumes lowered addressing meta
 
   t.true(arch.handleLogicAndCompareOperations("ORA", "TARGET,x", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
-  t.true(write1Stub.calledOnceWithExactly(0x1D));
+  t.true(write1Stub.calledOnceWithExactly(0x1d));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleLogicAndCompareOperations preserves forced indexed Y bases", t => {
+test("Arch65816.handleLogicAndCompareOperations preserves forced indexed Y bases", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("TARGET,y").returns({
@@ -1547,7 +1765,7 @@ test("Arch65816.handleLogicAndCompareOperations preserves forced indexed Y bases
     explicitDirectPageIndexedX: false,
   });
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-  getnumStub.withArgs("TARGET").returns(0x13EF);
+  getnumStub.withArgs("TARGET").returns(0x13ef);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -1561,10 +1779,10 @@ test("Arch65816.handleLogicAndCompareOperations preserves forced indexed Y bases
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,y"));
   t.true(getnumStub.calledOnceWithExactly("TARGET"));
   t.true(write1Stub.calledOnceWithExactly(0x19));
-  t.true(write2Stub.calledOnceWithExactly(0x13EF));
+  t.true(write2Stub.calledOnceWithExactly(0x13ef));
 });
 
-test("Arch65816.handleArithmeticOperations consumes lowered addressing metadata", t => {
+test("Arch65816.handleArithmeticOperations consumes lowered addressing metadata", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("TARGET,x").returns({
@@ -1592,11 +1810,11 @@ test("Arch65816.handleArithmeticOperations consumes lowered addressing metadata"
 
   t.true(arch.handleArithmeticOperations("ASL", "TARGET,x", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
-  t.true(write1Stub.calledOnceWithExactly(0x1E));
+  t.true(write1Stub.calledOnceWithExactly(0x1e));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleLoadRegister consumes lowered addressing metadata", t => {
+test("Arch65816.handleLoadRegister consumes lowered addressing metadata", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("$1234,y").returns({
@@ -1624,11 +1842,11 @@ test("Arch65816.handleLoadRegister consumes lowered addressing metadata", t => {
 
   t.true(arch.handleLoadRegister("LDX", "$1234,y", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("$1234,y"));
-  t.true(write1Stub.calledOnceWithExactly(0xBE));
+  t.true(write1Stub.calledOnceWithExactly(0xbe));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleLoadRegister keeps symbolic indexed operands absolute", t => {
+test("Arch65816.handleLoadRegister keeps symbolic indexed operands absolute", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("TARGET,y").returns({
@@ -1656,11 +1874,11 @@ test("Arch65816.handleLoadRegister keeps symbolic indexed operands absolute", t 
 
   t.true(arch.handleLoadRegister("LDX", "TARGET,y", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,y"));
-  t.true(write1Stub.calledOnceWithExactly(0xBE));
+  t.true(write1Stub.calledOnceWithExactly(0xbe));
   t.true(write2Stub.calledOnceWithExactly(0x8200));
 });
 
-test("Arch65816.handleLoadRegister keeps symbolic LDY indexed operands absolute", t => {
+test("Arch65816.handleLoadRegister keeps symbolic LDY indexed operands absolute", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("TARGET,x").returns({
@@ -1688,11 +1906,11 @@ test("Arch65816.handleLoadRegister keeps symbolic LDY indexed operands absolute"
 
   t.true(arch.handleLoadRegister("LDY", "TARGET,x", 1, false));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
-  t.true(write1Stub.calledOnceWithExactly(0xBC));
+  t.true(write1Stub.calledOnceWithExactly(0xbc));
   t.true(write2Stub.calledOnceWithExactly(0x8219));
 });
 
-test("Arch65816.handleStoreOperations consumes lowered addressing metadata", t => {
+test("Arch65816.handleStoreOperations consumes lowered addressing metadata", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("$1234,x").returns({
@@ -1720,11 +1938,11 @@ test("Arch65816.handleStoreOperations consumes lowered addressing metadata", t =
 
   t.true(arch.handleStoreOperations("STZ", "$1234,x", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("$1234,x"));
-  t.true(write1Stub.calledOnceWithExactly(0x9E));
+  t.true(write1Stub.calledOnceWithExactly(0x9e));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleBitTestOperations consumes lowered addressing metadata", t => {
+test("Arch65816.handleBitTestOperations consumes lowered addressing metadata", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("$1234,x").returns({
@@ -1752,11 +1970,11 @@ test("Arch65816.handleBitTestOperations consumes lowered addressing metadata", t
 
   t.true(arch.handleBitTestOperations("BIT", "$1234,x", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("$1234,x"));
-  t.true(write1Stub.calledOnceWithExactly(0x3C));
+  t.true(write1Stub.calledOnceWithExactly(0x3c));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invalid formats", t => {
+test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invalid formats", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
@@ -1772,18 +1990,24 @@ test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invali
   });
 
   t.true(arch.handleLogicAndCompareOperations("CMP", "$123456,x", 3, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xDF]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xdf],
+  );
   t.true(write3Stub.calledOnceWithExactly(0x123456));
   t.true(write2Stub.notCalled);
 
   t.false(arch.handleLogicAndCompareOperations("ADC", "$12", 1, false));
 
-  t.throws(() => {
-    arch.handleLogicAndCompareOperations("ORA", "bad", 1, false);
-  }, { message: "Error: Invalid operand format for ORA: bad" });
+  t.throws(
+    () => {
+      arch.handleLogicAndCompareOperations("ORA", "bad", 1, false);
+    },
+    { message: "Error: Invalid operand format for ORA: bad" },
+  );
 });
 
-test("Arch65816.handleLogicAndCompareOperations covers successful explicit-size indexed and non-indexed modes", t => {
+test("Arch65816.handleLogicAndCompareOperations covers successful explicit-size indexed and non-indexed modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -1805,12 +2029,21 @@ test("Arch65816.handleLogicAndCompareOperations covers successful explicit-size 
   t.true(arch.handleLogicAndCompareOperations("AND", "$1234", 2, true));
   t.true(arch.handleLogicAndCompareOperations("ORA", "$123456", 3, true));
 
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x15, 0x12, 0xDD, 0x45, 0x12, 0x2D, 0x0F]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x1234]);
-  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x123456]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x15, 0x12, 0xdd, 0x45, 0x12, 0x2d, 0x0f],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x1234],
+  );
+  t.deepEqual(
+    write3Stub.getCalls().map((call) => call.args[0]),
+    [0x123456],
+  );
 });
 
-test("Arch65816.handleLogicAndCompareOperations rejects unsupported indirect-long modes for CPX/CPY", t => {
+test("Arch65816.handleLogicAndCompareOperations rejects unsupported indirect-long modes for CPX/CPY", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
@@ -1825,18 +2058,24 @@ test("Arch65816.handleLogicAndCompareOperations rejects unsupported indirect-lon
     write3Stub.restore();
   });
 
-  t.throws(() => {
-    arch.handleLogicAndCompareOperations("CPX", "[$34]", 1, false);
-  }, { message: "Error: Invalid operand format for CPX: [$34] => undefined" });
-  t.throws(() => {
-    arch.handleLogicAndCompareOperations("CPY", "[$56],y", 1, false);
-  }, { message: "Error: Invalid operand format for CPY: [$56],y => undefined" });
+  t.throws(
+    () => {
+      arch.handleLogicAndCompareOperations("CPX", "[$34]", 1, false);
+    },
+    { message: "Error: Invalid operand format for CPX: [$34] => undefined" },
+  );
+  t.throws(
+    () => {
+      arch.handleLogicAndCompareOperations("CPY", "[$56],y", 1, false);
+    },
+    { message: "Error: Invalid operand format for CPY: [$56],y => undefined" },
+  );
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands", t => {
+test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1851,12 +2090,12 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands
   });
 
   t.true(arch.handleLogicAndCompareOperations("CPY", "#$1234", 2, false));
-  t.true(write1Stub.calledOnceWithExactly(0xC0));
+  t.true(write1Stub.calledOnceWithExactly(0xc0));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations keeps X width for lowered expressions", t => {
+test("Arch65816.handleLogicAndCompareOperations keeps X width for lowered expressions", (t) => {
   const { assembler, arch } = createArch65816();
   arch.x16 = true;
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
@@ -1879,20 +2118,12 @@ test("Arch65816.handleLogicAndCompareOperations keeps X width for lowered expres
     write2Stub.restore();
   });
 
-  t.true(
-    arch.handleLogicAndCompareOperations(
-      "CPX",
-      "#$80",
-      1,
-      false,
-      "#FontEnd-FontStart",
-    ),
-  );
-  t.true(write1Stub.calledOnceWithExactly(0xE0));
+  t.true(arch.handleLogicAndCompareOperations("CPX", "#$80", 1, false, "#FontEnd-FontStart"));
+  t.true(write1Stub.calledOnceWithExactly(0xe0));
   t.true(write2Stub.calledOnceWithExactly(0x80));
 });
 
-test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", t => {
+test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$5678").returns(0x5678);
@@ -1912,7 +2143,7 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", t
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations writes direct-page operands through write1", t => {
+test("Arch65816.handleLogicAndCompareOperations writes direct-page operands through write1", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
@@ -1928,12 +2159,15 @@ test("Arch65816.handleLogicAndCompareOperations writes direct-page operands thro
 
   t.true(arch.handleLogicAndCompareOperations("EOR", "$34", 1, false));
   t.true(getnumStub.calledOnceWithExactly("$34"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x45, 0x34]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x45, 0x34],
+  );
   t.true(write2Stub.notCalled);
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations covers remaining indexed and indirect modes", t => {
+test("Arch65816.handleLogicAndCompareOperations covers remaining indexed and indirect modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1960,25 +2194,18 @@ test("Arch65816.handleLogicAndCompareOperations covers remaining indexed and ind
   t.true(arch.handleLogicAndCompareOperations("ORA", "[$12],y", 1, false));
   t.true(arch.handleLogicAndCompareOperations("ORA", "$5678", 2, false));
 
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [
-    0x19,
-    0x15,
-    0x12,
-    0x01,
-    0x34,
-    0x11,
-    0x56,
-    0x12,
-    0x78,
-    0x17,
-    0x12,
-    0x0D,
-  ]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x19, 0x15, 0x12, 0x01, 0x34, 0x11, 0x56, 0x12, 0x78, 0x17, 0x12, 0x0d],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x5678],
+  );
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations covers non-forced absolute-X mode", t => {
+test("Arch65816.handleLogicAndCompareOperations covers non-forced absolute-X mode", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1993,12 +2220,12 @@ test("Arch65816.handleLogicAndCompareOperations covers non-forced absolute-X mod
   });
 
   t.true(arch.handleLogicAndCompareOperations("ORA", "$1234,x", 2, false));
-  t.true(write1Stub.calledOnceWithExactly(0x1D));
+  t.true(write1Stub.calledOnceWithExactly(0x1d));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative modes", t => {
+test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
@@ -2019,12 +2246,18 @@ test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative m
   t.true(arch.handleLogicAndCompareOperations("ORA", "$34,s", 1, false));
   t.true(arch.handleLogicAndCompareOperations("ORA", "($56,s),y", 1, false));
 
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x0F, 0x1F, 0x03, 0x34, 0x13, 0x56]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x0f, 0x1f, 0x03, 0x34, 0x13, 0x56],
+  );
   t.true(write2Stub.notCalled);
-  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x123456, 0x123456]);
+  t.deepEqual(
+    write3Stub.getCalls().map((call) => call.args[0]),
+    [0x123456, 0x123456],
+  );
 });
 
-test("Arch65816.handleMemoryOperations handles immediate and forced addressing", t => {
+test("Arch65816.handleMemoryOperations handles immediate and forced addressing", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("#$12").returns(0x12);
@@ -2042,32 +2275,47 @@ test("Arch65816.handleMemoryOperations handles immediate and forced addressing",
 
   t.true(arch.handleMemoryOperations("LDA", "#$12", 1, false));
   t.true(arch.handleMemoryOperations("STA", "$123456,x", 3, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xA9, 0x12, 0x9F]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xa9, 0x12, 0x9f],
+  );
   t.true(write3Stub.calledOnceWithExactly(0x123456));
   t.true(write2Stub.notCalled);
 
-  t.throws(() => {
-    arch.handleMemoryOperations("STA", "#$12", 1, false);
-  }, { message: "Error: STA does not support immediate mode." });
+  t.throws(
+    () => {
+      arch.handleMemoryOperations("STA", "#$12", 1, false);
+    },
+    { message: "Error: STA does not support immediate mode." },
+  );
 
-  t.throws(() => {
-    arch.handleMemoryOperations("LDA", "", 1, false);
-  }, { message: "Error: LDA requires an operand." });
+  t.throws(
+    () => {
+      arch.handleMemoryOperations("LDA", "", 1, false);
+    },
+    { message: "Error: LDA requires an operand." },
+  );
 });
 
-test("Arch65816.handleMemoryOperations throws for unsupported forced opcode maps", t => {
+test("Arch65816.handleMemoryOperations throws for unsupported forced opcode maps", (t) => {
   const { arch } = createArch65816();
 
-  t.throws(() => {
-    arch.handleMemoryOperations("ORA", "$12,x", 1, true);
-  }, { message: "Error: Opcode ORA not supported in forced indexed mode." });
+  t.throws(
+    () => {
+      arch.handleMemoryOperations("ORA", "$12,x", 1, true);
+    },
+    { message: "Error: Opcode ORA not supported in forced indexed mode." },
+  );
 
-  t.throws(() => {
-    arch.handleMemoryOperations("ORA", "$12", 1, true);
-  }, { message: "Error: Opcode ORA not supported in forced non-indexed mode." });
+  t.throws(
+    () => {
+      arch.handleMemoryOperations("ORA", "$12", 1, true);
+    },
+    { message: "Error: Opcode ORA not supported in forced non-indexed mode." },
+  );
 });
 
-test("Arch65816.handleMemoryOperations handles direct-page optimization and indirect forms", t => {
+test("Arch65816.handleMemoryOperations handles direct-page optimization and indirect forms", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.optimizeDirectPage = false;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -2088,12 +2336,15 @@ test("Arch65816.handleMemoryOperations handles direct-page optimization and indi
   t.true(arch.handleMemoryOperations("LDA", "($34),y", 1, false));
   t.true(arch.handleMemoryOperations("SBC", "$12", 1, false, "$12"));
   t.true(arch.handleMemoryOperations("ADC", "VALUE", 2, false, "VALUE"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x65, 0x12, 0xB1, 0x34, 0xE5, 0x12, 0x6D]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x65, 0x12, 0xb1, 0x34, 0xe5, 0x12, 0x6d],
+  );
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleMemoryOperations covers absolute indexed X and unsupported fallthrough", t => {
+test("Arch65816.handleMemoryOperations covers absolute indexed X and unsupported fallthrough", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -2109,12 +2360,12 @@ test("Arch65816.handleMemoryOperations covers absolute indexed X and unsupported
 
   t.true(arch.handleMemoryOperations("ADC", "$1234,x", 2, false));
   t.false(arch.handleMemoryOperations("ORA", "$1234,x", 2, false));
-  t.true(write1Stub.calledOnceWithExactly(0x7D));
+  t.true(write1Stub.calledOnceWithExactly(0x7d));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleMemoryOperations covers symbolic absolute indexed X fallback", t => {
+test("Arch65816.handleMemoryOperations covers symbolic absolute indexed X fallback", (t) => {
   const { assembler, arch } = createArch65816();
   assembler.optimizeDirectPage = false;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -2130,12 +2381,12 @@ test("Arch65816.handleMemoryOperations covers symbolic absolute indexed X fallba
   });
 
   t.true(arch.handleMemoryOperations("LDA", "VALUE,x", 2, false, "VALUE,x"));
-  t.true(write1Stub.calledOnceWithExactly(0xBD));
+  t.true(write1Stub.calledOnceWithExactly(0xbd));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleMemoryOperations covers absolute-Y, absolute-long, and absolute modes", t => {
+test("Arch65816.handleMemoryOperations covers absolute-Y, absolute-long, and absolute modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -2154,12 +2405,21 @@ test("Arch65816.handleMemoryOperations covers absolute-Y, absolute-long, and abs
   t.true(arch.handleMemoryOperations("STA", "$1234,y", 2, false));
   t.true(arch.handleMemoryOperations("LDA", "$123456", 3, false));
   t.true(arch.handleMemoryOperations("SBC", "$5678", 2, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x99, 0xAF, 0xED]);
-  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
-  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x123456]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x99, 0xaf, 0xed],
+  );
+  t.deepEqual(
+    write2Stub.getCalls().map((call) => call.args[0]),
+    [0x1234, 0x5678],
+  );
+  t.deepEqual(
+    write3Stub.getCalls().map((call) => call.args[0]),
+    [0x123456],
+  );
 });
 
-test("Arch65816.handleMemoryOperations encodes explicit indexed-Y symbolic operands", t => {
+test("Arch65816.handleMemoryOperations encodes explicit indexed-Y symbolic operands", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("obj.active").returns(0x1234);
@@ -2179,7 +2439,7 @@ test("Arch65816.handleMemoryOperations encodes explicit indexed-Y symbolic opera
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.handleMemoryOperations covers stack-relative and indirect-long modes", t => {
+test("Arch65816.handleMemoryOperations covers stack-relative and indirect-long modes", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -2198,12 +2458,15 @@ test("Arch65816.handleMemoryOperations covers stack-relative and indirect-long m
   t.true(arch.handleMemoryOperations("ADC", "($12,s),y", 1, false));
   t.true(arch.handleMemoryOperations("LDA", "[$34]", 1, false));
   t.true(arch.handleMemoryOperations("SBC", "[$56],y", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x73, 0x12, 0xA7, 0x34, 0xF7, 0x56]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0x73, 0x12, 0xa7, 0x34, 0xf7, 0x56],
+  );
   t.true(write2Stub.notCalled);
   t.true(write3Stub.notCalled);
 });
 
-test("Arch65816.encode keeps .b on DP-indirect instead of treating it as a label", t => {
+test("Arch65816.encode keeps .b on DP-indirect instead of treating it as a label", (t) => {
   const { assembler, arch } = createArch65816();
 
   t.true(arch.encode(["LDA.b", "[$20],y"]));
@@ -2234,15 +2497,14 @@ test("Arch65816.encode keeps .b on DP-indirect instead of treating it as a label
   t.deepEqual(assembler.emitted, [0x94, 0x48]);
 });
 
-test("Arch65816.encode treats parenthesized bank math ,x as long indexed X", t => {
+test("Arch65816.encode treats parenthesized bank math ,x as long indexed X", (t) => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.callsFake((input: string) => {
-    const text = String(input);
-    if (text.includes("$7F0000") && !/,\s*x$/i.test(text)) {
+    if (input.includes("$7F0000") && !/,\s*x$/i.test(input)) {
       return 0x7f0003;
     }
-    throw new Error(`unexpected getnum ${text}`);
+    throw new Error(`unexpected getnum ${input}`);
   });
   t.teardown(() => getnumStub.restore());
 
@@ -2254,7 +2516,7 @@ test("Arch65816.encode treats parenthesized bank math ,x as long indexed X", t =
   t.deepEqual(assembler.emitted, [0xdf, 0x03, 0x00, 0x7f]);
 });
 
-test("Arch65816.handleMemoryOperations consumes lowered addressing metadata", t => {
+test("Arch65816.handleMemoryOperations consumes lowered addressing metadata", (t) => {
   const { assembler, arch } = createArch65816();
   const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
   lowerOperandStub.withArgs("TARGET,x").returns({
@@ -2282,11 +2544,11 @@ test("Arch65816.handleMemoryOperations consumes lowered addressing metadata", t 
 
   t.true(arch.handleMemoryOperations("LDA", "TARGET,x", 2, false, "TARGET,x"));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
-  t.true(write1Stub.calledOnceWithExactly(0xBD));
+  t.true(write1Stub.calledOnceWithExactly(0xbd));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleNoOperandOperations writes single and repeated opcodes", t => {
+test("Arch65816.handleNoOperandOperations writes single and repeated opcodes", (t) => {
   const { assembler, arch } = createArch65816();
   const write1Stub = sinon.stub(assembler, "write1");
   t.teardown(() => {
@@ -2296,10 +2558,13 @@ test("Arch65816.handleNoOperandOperations writes single and repeated opcodes", t
   t.true(arch.handleNoOperandOperations("NOP", ""));
   t.true(arch.handleNoOperandOperations("PHA", "#3"));
   t.true(arch.handleNoOperandOperations("CLC", "#$2"));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xEA, 0x48, 0x48, 0x48, 0x18, 0x18]);
+  t.deepEqual(
+    write1Stub.getCalls().map((call) => call.args[0]),
+    [0xea, 0x48, 0x48, 0x48, 0x18, 0x18],
+  );
 });
 
-test("Arch65816.handleNoOperandOperations handles unsupported, zero-count, and invalid repeat inputs", t => {
+test("Arch65816.handleNoOperandOperations handles unsupported, zero-count, and invalid repeat inputs", (t) => {
   const { assembler, arch } = createArch65816();
   const write1Stub = sinon.stub(assembler, "write1");
   t.teardown(() => {
@@ -2310,18 +2575,21 @@ test("Arch65816.handleNoOperandOperations handles unsupported, zero-count, and i
   t.true(arch.handleNoOperandOperations("NOP", "#0"));
   t.true(write1Stub.notCalled);
 
-  t.throws(() => {
-    arch.handleNoOperandOperations("NOP", "#abc");
-  }, { message: "Invalid repeat count in pseudo opcode: #abc" });
+  t.throws(
+    () => {
+      arch.handleNoOperandOperations("NOP", "#abc");
+    },
+    { message: "Invalid repeat count in pseudo opcode: #abc" },
+  );
 });
 
-test("Arch65816.encode returns false for empty input", t => {
+test("Arch65816.encode returns false for empty input", (t) => {
   const { arch } = createArch65816();
 
   t.false(arch.encode([]));
 });
 
-test("Arch65816.encode routes arithmetic opcodes with explicit length suffixes", t => {
+test("Arch65816.encode routes arithmetic opcodes with explicit length suffixes", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2340,7 +2608,7 @@ test("Arch65816.encode routes arithmetic opcodes with explicit length suffixes",
   t.true(arithmeticStub.calledOnceWithExactly("ASL", "$12", 1, true));
 });
 
-test("Arch65816.encode routes no-operand opcodes before other helpers", t => {
+test("Arch65816.encode routes no-operand opcodes before other helpers", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#3").returns({ expanded: "#3", length: 1 });
@@ -2357,7 +2625,7 @@ test("Arch65816.encode routes no-operand opcodes before other helpers", t => {
   t.true(loadRegisterStub.notCalled);
 });
 
-test("Arch65816.encode routes branch helpers before generic fallback", t => {
+test("Arch65816.encode routes branch helpers before generic fallback", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$1234").returns({ expanded: "$1234", length: 2 });
@@ -2379,7 +2647,7 @@ test("Arch65816.encode routes branch helpers before generic fallback", t => {
   t.true(genericStub.calledOnceWithExactly("BRA", 0x1234, 2));
 });
 
-test("Arch65816.encode falls back to generic opcode handling with a resolved operand", t => {
+test("Arch65816.encode falls back to generic opcode handling with a resolved operand", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2400,7 +2668,7 @@ test("Arch65816.encode falls back to generic opcode handling with a resolved ope
   t.true(genericStub.calledOnceWithExactly("WDM", 0x12, 1));
 });
 
-test("Arch65816.encode routes bit-test opcodes without falling through to memory-bit helper", t => {
+test("Arch65816.encode routes bit-test opcodes without falling through to memory-bit helper", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2417,7 +2685,7 @@ test("Arch65816.encode routes bit-test opcodes without falling through to memory
   t.true(memoryBitStub.notCalled);
 });
 
-test("Arch65816.encode routes memory and load-register opcodes using expanded operands", t => {
+test("Arch65816.encode routes memory and load-register opcodes using expanded operands", (t) => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#!VALUE").returns({ expanded: "#$34", length: 1 });

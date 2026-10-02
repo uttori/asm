@@ -39,7 +39,8 @@ export function parseAssetCall(command, line) {
                 return { kind: "string", value, span: span(start, at) };
             }
             if (character === "\\") {
-                const escaped = command[at++];
+                const escaped = at < command.length ? command[at] : undefined;
+                at++;
                 if (escaped === undefined) {
                     fail("unterminated string escape");
                 }
@@ -196,14 +197,18 @@ export function parseAssetCall(command, line) {
     if (at !== command.length) {
         fail("unexpected text after call");
     }
-    if (positional.length !== 2 ||
-        positional[0].kind !== "string" ||
-        positional[1].kind !== "string") {
+    const stringArgument = (argument) => {
+        if (!argument || argument.kind !== "string") {
+            throw new Error(`includeAsset at column ${at + 1}: expected exactly two leading string arguments`);
+        }
+        return argument;
+    };
+    if (positional.length !== 2) {
         fail("expected exactly two leading string arguments");
     }
     return {
-        path: positional[0],
-        format: positional[1],
+        path: stringArgument(positional[0]),
+        format: stringArgument(positional[1]),
         options,
         span: span(callStart, at),
     };

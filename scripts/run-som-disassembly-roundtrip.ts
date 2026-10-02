@@ -3,8 +3,8 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { runCli } from "../packages/cli/src/index.js";
 import { SECRET_OF_MANA_ANALYSIS_FIXTURE } from "../fixtures/fixture-manifest.js";
+import { runCli } from "../packages/cli/src/index.js";
 
 const root = path.resolve(import.meta.dirname, "..");
 const requestedRom = process.argv[2];
@@ -33,12 +33,23 @@ const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-som-roundtrip-")
 const source = path.join(temporary, "Secret-of-Mana.source");
 try {
   const commands: readonly (readonly string[])[] = [
-    ["source", "init", rom, source, "--mapper", SECRET_OF_MANA_ANALYSIS_FIXTURE.mapper, "--dizraw", dizraw],
+    [
+      "source",
+      "init",
+      rom,
+      source,
+      "--mapper",
+      SECRET_OF_MANA_ANALYSIS_FIXTURE.mapper,
+      "--dizraw",
+      dizraw,
+    ],
     ["source", "build", source],
   ];
   for (const command of commands) {
     const exitCode = await runCli(command);
-    if (exitCode !== 0) throw new Error(`Command failed: uttori-asm ${command.join(" ")}`);
+    if (exitCode !== 0) {
+      throw new Error(`Command failed: uttori-asm ${command.join(" ")}`);
+    }
   }
   console.log(
     `Success: ${SECRET_OF_MANA_ANALYSIS_FIXTURE.displayName} passed the native-source round-trip gate.`,

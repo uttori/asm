@@ -52,12 +52,13 @@ const littleEndian = (hex) => {
     if (!bytes || bytes.join("") !== hex) {
         throw new Error("Malformed little-endian register data.");
     }
-    return Number.parseInt([...bytes].reverse().join(""), 16);
+    return Number.parseInt(bytes.toReversed().join(""), 16);
 };
 const registerHex = (value, bits) => value
     .toString(16)
     .toUpperCase()
     .padStart(Math.ceil(bits / 4), "0");
+const encode = (value) => Buffer.from(value, "utf8").toString("hex");
 const parseRegisters = (payload) => {
     if (!/^[\dA-Fa-f]{32}$/.test(payload)) {
         throw new Error(`Expected 16 bytes of ares 65816 registers, received ${payload.length / 2}.`);
@@ -480,7 +481,6 @@ export class AresRspDebugBackend {
             }
             this.#requireStopped();
             const fields = ["qUttoriContext", request.action];
-            const encode = (value) => Buffer.from(value, "utf8").toString("hex");
             if ("directory" in request) {
                 if (request.romContentSha256 !== identity.romSha256 ||
                     request.producer.id !== "ares" ||
@@ -564,7 +564,6 @@ export class AresRspDebugBackend {
                     throw new Error("Native capture identity does not match the verified ROM and executable.");
                 }
                 await this.capture({ operation: "file-capabilities", scope });
-                const encode = (value) => Buffer.from(value, "utf8").toString("hex");
                 fields.push(request.bufferBytes, scopes[scope], encode(request.file), request.romContentSha256, encode(request.producer.id), encode(request.producer.revision));
                 if (request.measureStages) {
                     fields.push("profile");
@@ -885,6 +884,7 @@ export class AresRspDebugBackend {
                             : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n",
                     });
                 }
+                return;
             }, (error) => {
                 this.#emit({
                     type: "output",

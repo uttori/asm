@@ -35,7 +35,7 @@ export interface ReplayMemoryRegion {
 export interface ReplaySnapshot {
   readonly threads: readonly DebugThread[];
   readonly frames: readonly DebugStackFrame[];
-  readonly registers: Readonly<Record<number, readonly DebugRegister[]>>;
+  readonly registers: Readonly<Partial<Record<number, readonly DebugRegister[]>>>;
   readonly memory: readonly ReplayMemoryRegion[];
   readonly instructions?: readonly DebugInstruction[];
 }
@@ -50,23 +50,32 @@ export interface ReplayScript {
 const replayArchitectureCapabilities = (script: ReplayScript): DebugArchitectureCapabilities[] => {
   const architectureNames = new Set<string>();
   for (const snapshot of script.snapshots) {
-    for (const thread of snapshot.threads) {architectureNames.add(thread.architecture);}
-    for (const frame of snapshot.frames) {architectureNames.add(frame.pc.architecture);}
-    for (const instruction of snapshot.instructions ?? [])
-      {architectureNames.add(instruction.address.architecture);}
+    for (const thread of snapshot.threads) {
+      architectureNames.add(thread.architecture);
+    }
+    for (const frame of snapshot.frames) {
+      architectureNames.add(frame.pc.architecture);
+    }
+    for (const instruction of snapshot.instructions ?? []) {
+      architectureNames.add(instruction.address.architecture);
+    }
   }
-  return [...architectureNames].sort().map((architecture): DebugArchitectureCapabilities => {
+  return [...architectureNames].toSorted().map((architecture): DebugArchitectureCapabilities => {
     const addressSpaces = new Set<string>();
     let registers = false;
     let disassemble = false;
     for (const snapshot of script.snapshots) {
       for (const frame of snapshot.frames) {
-        if (frame.pc.architecture !== architecture) {continue;}
+        if (frame.pc.architecture !== architecture) {
+          continue;
+        }
         addressSpaces.add(frame.pc.addressSpace);
         registers ||= (snapshot.registers[frame.id]?.length ?? 0) > 0;
       }
       for (const instruction of snapshot.instructions ?? []) {
-        if (instruction.address.architecture !== architecture) {continue;}
+        if (instruction.address.architecture !== architecture) {
+          continue;
+        }
         addressSpaces.add(instruction.address.addressSpace);
         disassemble = true;
       }
@@ -77,17 +86,17 @@ const replayArchitectureCapabilities = (script: ReplayScript): DebugArchitecture
           snapshot.memory.some((region) => region.addressSpace === addressSpace),
         ),
       )
-      .sort()
+      .toSorted()
       .map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
     return {
       architecture,
-      addressSpaces: [...addressSpaces].sort(),
+      addressSpaces: [...addressSpaces].toSorted(),
       memorySpaces,
       trace:
         addressSpaces.size === 0
           ? null
           : {
-              addressSpaces: [...addressSpaces].sort(),
+              addressSpaces: [...addressSpaces].toSorted(),
               maxBufferedEvents: REPLAY_TRACE_BUFFER_EVENTS,
               maxBatchEvents: REPLAY_TRACE_BATCH_EVENTS,
             },
@@ -117,8 +126,9 @@ const addressesEqual = (left: DebugAddress, right: DebugAddress): boolean =>
     (left.outputOffset !== undefined && left.outputOffset === right.outputOffset));
 
 const assertCount = (count: number): void => {
-  if (!Number.isSafeInteger(count) || count < 0)
-    {throw new Error("Count must be a non-negative integer.");}
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error("Count must be a non-negative integer.");
+  }
 };
 
 /** Deterministic in-memory backend used to prove protocol behavior without an emulator. */
@@ -139,21 +149,22 @@ export class ReplayDebugBackend implements DebugBackend {
    * @param {ReplayScript} script Replay timeline.
    */
   constructor(script: ReplayScript) {
-    if (script.snapshots.length === 0)
-      {throw new Error("Replay script requires at least one snapshot.");}
+    if (script.snapshots.length === 0) {
+      throw new Error("Replay script requires at least one snapshot.");
+    }
     this.#script = script;
     const architectures = script.architectures
       ? script.architectures.map((capability) => ({
           ...capability,
           ...(capability.stepKinds ? { stepKinds: [...capability.stepKinds] } : {}),
-          addressSpaces: [...capability.addressSpaces].sort(),
+          addressSpaces: [...capability.addressSpaces].toSorted(),
           memorySpaces: [...capability.memorySpaces]
-            .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace))
+            .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace))
             .map((memorySpace) => Object.freeze({ ...memorySpace })),
           trace: capability.trace
             ? {
                 ...capability.trace,
-                addressSpaces: [...capability.trace.addressSpaces].sort(),
+                addressSpaces: [...capability.trace.addressSpaces].toSorted(),
               }
             : null,
         }))
@@ -208,7 +219,9 @@ export class ReplayDebugBackend implements DebugBackend {
     this.#requireConnected();
     this.#trace?.stop();
     this.#connected = false;
-    if (options.terminate ?? true) {this.#emit({ type: "terminated", restart: false });}
+    if (options.terminate ?? true) {
+      this.#emit({ type: "terminated", restart: false });
+    }
     return Promise.resolve();
   }
 
@@ -284,7 +297,7 @@ export class ReplayDebugBackend implements DebugBackend {
     return Promise.resolve(
       this.#snapshot.frames
         .filter((frame) => frame.threadId === threadId)
-        .map((frame) => ({ ...frame, pc: { ...frame.pc } })),
+        .map((frame) => Object.assign({}, frame, { pc: Object.assign({}, frame.pc) })),
     );
   }
 
@@ -296,7 +309,7 @@ export class ReplayDebugBackend implements DebugBackend {
   registers(frameId: number): Promise<readonly DebugRegister[]> {
     this.#requireConnected();
     return Promise.resolve(
-      (this.#snapshot.registers[frameId] ?? []).map((register) => ({ ...register })),
+      (this.#snapshot.registers[frameId] ?? []).map((register) => Object.assign({}, register)),
     );
   }
 
@@ -312,10 +325,11 @@ export class ReplayDebugBackend implements DebugBackend {
     const spaceReadable = this.capabilities.architectures
       .find(({ architecture }) => architecture === address.architecture)
       ?.memorySpaces.some((memorySpace) => memorySpace.addressSpace === address.addressSpace);
-    if (!spaceReadable)
-      {throw new Error(
+    if (!spaceReadable) {
+      throw new Error(
         `Memory address space '${address.architecture}/${address.addressSpace}' is not readable.`,
-      );}
+      );
+    }
     const bytes = new Uint8Array(count);
     let readable = 0;
     for (let offset = 0; offset < count; offset++) {
@@ -326,7 +340,9 @@ export class ReplayDebugBackend implements DebugBackend {
           candidate.start <= current &&
           current < candidate.start + candidate.bytes.length,
       );
-      if (!region) {continue;}
+      if (!region) {
+        continue;
+      }
       bytes[offset] = region.bytes[current - region.start] ?? 0;
       readable++;
     }
@@ -341,7 +357,7 @@ export class ReplayDebugBackend implements DebugBackend {
   setBreakpoints(addresses: readonly DebugAddress[]): Promise<readonly DebugBreakpoint[]> {
     this.#requireConnected();
     this.#breakpoints.clear();
-    const sorted = [...addresses].sort(
+    const sorted = [...addresses].toSorted(
       (left, right) =>
         left.architecture.localeCompare(right.architecture) ||
         left.addressSpace.localeCompare(right.addressSpace) ||
@@ -379,33 +395,39 @@ export class ReplayDebugBackend implements DebugBackend {
             instruction.address.addressSpace === address.addressSpace &&
             instruction.address.address >= address.address,
         )
-        .sort((left, right) => left.address.address - right.address.address)
+        .toSorted((left, right) => left.address.address - right.address.address)
         .slice(0, count)
-        .map((instruction) => ({
-          ...instruction,
-          address: { ...instruction.address },
-          bytes: [...instruction.bytes],
-        })),
+        .map((instruction) =>
+          Object.assign({}, instruction, {
+            address: Object.assign({}, instruction.address),
+            bytes: Array.from(instruction.bytes),
+          }),
+        ),
     );
   }
 
   /** @inheritdoc */
   startTrace(options: DebugTraceStartOptions): Promise<void> {
     this.#requireConnected();
-    if (options.detail === "full") {throw new Error("Replay supports PC-only instruction traces.");}
+    if (options.detail === "full") {
+      throw new Error("Replay supports PC-only instruction traces.");
+    }
     const architecture = this.capabilities.architectures.find(
       (candidate) => candidate.architecture === options.architecture,
     );
-    if (!architecture?.trace?.addressSpaces.includes(options.addressSpace))
-      {throw new Error(
+    if (!architecture?.trace?.addressSpaces.includes(options.addressSpace)) {
+      throw new Error(
         `Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`,
-      );}
+      );
+    }
     const frame = this.#snapshot.frames.find(
       (candidate) =>
         candidate.pc.architecture === options.architecture &&
         candidate.pc.addressSpace === options.addressSpace,
     );
-    if (!frame) {throw new Error("Current replay snapshot has no matching trace frame.");}
+    if (!frame) {
+      throw new Error("Current replay snapshot has no matching trace frame.");
+    }
     this.#trace = new DebugTraceBuffer({
       architecture: options.architecture,
       addressSpace: options.addressSpace,
@@ -420,22 +442,27 @@ export class ReplayDebugBackend implements DebugBackend {
   readTrace(maxEvents: number): Promise<DebugTraceBatch> {
     this.#requireConnected();
     const trace = this.#trace;
-    if (!trace) {throw new Error("No replay instruction trace has been started.");}
+    if (!trace) {
+      throw new Error("No replay instruction trace has been started.");
+    }
     const capabilities = this.capabilities.architectures.find(
       ({ architecture }) => architecture === trace.architecture,
     )?.trace;
     assertCount(maxEvents);
-    if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents)
-      {throw new Error(
+    if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents) {
+      throw new Error(
         `Trace batch size must be between 1 and ${capabilities?.maxBatchEvents ?? 0}.`,
-      );}
+      );
+    }
     return Promise.resolve(trace.read(maxEvents));
   }
 
   /** @inheritdoc */
   stopTrace(): Promise<void> {
     this.#requireConnected();
-    if (!this.#trace) {throw new Error("No replay instruction trace has been started.");}
+    if (!this.#trace) {
+      throw new Error("No replay instruction trace has been started.");
+    }
     this.#trace.stop();
     return Promise.resolve();
   }
@@ -455,22 +482,30 @@ export class ReplayDebugBackend implements DebugBackend {
   }
 
   #requireConnected(): void {
-    if (!this.#connected) {throw new Error("Debug backend is not connected.");}
+    if (!this.#connected) {
+      throw new Error("Debug backend is not connected.");
+    }
   }
 
   #recordTraceAddress(threadId: number): void {
     const trace = this.#trace;
-    if (!trace?.active) {return;}
+    if (!trace?.active) {
+      return;
+    }
     const frame = this.#snapshot.frames.find(
       (candidate) =>
         candidate.threadId === threadId &&
         candidate.pc.architecture === trace.architecture &&
         candidate.pc.addressSpace === trace.addressSpace,
     );
-    if (frame) {trace.append(frame.pc.address);}
+    if (frame) {
+      trace.append(frame.pc.address);
+    }
   }
 
   #emit(event: DebugBackendEvent): void {
-    for (const listener of this.#listeners) {listener(event);}
+    for (const listener of this.#listeners) {
+      listener(event);
+    }
   }
 }

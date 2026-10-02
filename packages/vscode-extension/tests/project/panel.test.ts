@@ -3,7 +3,35 @@ import { registerHooks } from "node:module";
 import path from "node:path";
 import vm from "node:vm";
 
+import type { Uri, WebviewView } from "vscode";
+import type { LanguageClient } from "vscode-languageclient/node";
+
 import { test } from "../../../../tests/ava-helper.js";
+
+function isUri(value: object): value is Uri {
+  return (
+    "fsPath" in value &&
+    typeof value.fsPath === "string" &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  );
+}
+
+function isWebviewView(value: object): value is WebviewView {
+  return (
+    "visible" in value &&
+    typeof value.visible === "boolean" &&
+    "webview" in value &&
+    typeof value.webview === "object" &&
+    value.webview !== null &&
+    "onDidChangeVisibility" in value &&
+    typeof value.onDidChangeVisibility === "function"
+  );
+}
+
+function isLanguageClient(value: object): value is LanguageClient {
+  return "sendRequest" in value && typeof value.sendRequest === "function";
+}
 
 const host = {
   execute: async () => {},
@@ -16,7 +44,7 @@ const host = {
   documents: [] as string[],
 };
 
-(globalThis as { __uttoriPanelTest?: typeof host }).__uttoriPanelTest = host;
+Object.assign(globalThis, { __uttoriPanelTest: host });
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -72,6 +100,8 @@ registerHooks({
 const { ProjectPanelProvider } = await import("../../src/project/panel.js");
 const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
+const ignoreVisibility = (): void => {};
+const ignorePanelMessage = (_message: { type?: string; value?: unknown }): void => {};
 
 const harness = (options?: {
   getClient?: () => { sendRequest: (method: string) => Promise<unknown> } | undefined;
@@ -94,11 +124,24 @@ const harness = (options?: {
     status?: { fileCount?: number; configFile?: string };
   }> = [];
   let visible = true;
-  let onVisibility = () => {};
-  let receive = (_message: { type?: string; value?: unknown }) => {};
+  let onVisibility = ignoreVisibility;
+  let receive = ignorePanelMessage;
+  const extensionUri = uri(extensionRoot);
+  if (!isUri(extensionUri)) {
+    throw new Error("extension uri stub");
+  }
   const provider = new ProjectPanelProvider(
-    uri(extensionRoot) as never,
-    () => options?.getClient?.() as never,
+    extensionUri,
+    () => {
+      const client = options?.getClient?.();
+      if (!client) {
+        return undefined;
+      }
+      if (!isLanguageClient(client)) {
+        throw new Error("language client stub");
+      }
+      return client;
+    },
     options?.initConfig ?? (async () => {}),
   );
   const webview = {
@@ -113,7 +156,7 @@ const harness = (options?: {
       sent.push(message);
     },
   };
-  provider.resolveWebviewView({
+  const view = {
     get visible() {
       return visible;
     },
@@ -121,7 +164,11 @@ const harness = (options?: {
     onDidChangeVisibility(callback: () => void) {
       onVisibility = callback;
     },
-  } as never);
+  };
+  if (!isWebviewView(view)) {
+    throw new Error("webview view stub");
+  }
+  provider.resolveWebviewView(view);
   return {
     provider,
     sent,
@@ -250,8 +297,12 @@ test.serial(
     t.true(
       offline.sent.some((message) => message.type === "snapshot" && message.indexReady === false),
     );
+    const idleUri = uri(extensionRoot);
+    if (!isUri(idleUri)) {
+      throw new Error("extension uri stub");
+    }
     const idle = new ProjectPanelProvider(
-      uri(extensionRoot) as never,
+      idleUri,
       () => undefined,
       async () => {},
     );

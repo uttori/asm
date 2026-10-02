@@ -126,7 +126,7 @@ test("lowered directive dispatch preserves data directive behavior", (t) => {
   assembler.processNormalizedCommand(normalized, false);
 
   t.true(dataSpy.calledOnce);
-  t.truthy(dataSpy.firstCall.args[1]?.length);
+  t.truthy(dataSpy.firstCall.args[1].length);
 });
 
 test("command lowering lowers safe non-data directives directly", (t) => {

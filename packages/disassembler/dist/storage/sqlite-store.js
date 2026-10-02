@@ -7,15 +7,16 @@ import { buildAnalysisSourceCatalog, } from "../analysis/analysis-sources.js";
 import { explainProjectEvidence, } from "../analysis/project-evidence.js";
 import { TraceCache } from "../internal/trace-cache.js";
 import { ANALYSIS_PROJECT_MANIFEST, } from "../model/project-types.js";
-import { validateLoadedShards } from "../model/project-validation.js";
+import { validateAnalysisProjectManifest, validateLoadedShards, } from "../model/project-validation.js";
+import { isFiniteNumber, isRecord, isStringArray, requireMetadataRecord, } from "../model/record-shape.js";
 import { validateResearchSnapshot, } from "../research-inputs/inputs.js";
 import { mergeRuntimeEvidence, inspectRuntimeEvidence, } from "../runtime/runtime-evidence.js";
 import { annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, readInstructionExecutionSummary, } from "./sqlite-annotation-query.js";
-import { cachedCoverage, prepareCoverage, coveragePage, coverageSignature, publishCoverage, } from "./sqlite-coverage-query.js";
-import { prepareGraph, publishGraph } from "./sqlite-graph-query.js";
+import { cachedCoverage, prepareCoverage, coveragePage, coverageSignature, publishCoverage, isSqliteCoverageSummary, } from "./sqlite-coverage-query.js";
+import { prepareGraph, publishGraph, isCallGraph } from "./sqlite-graph-query.js";
 import { encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
-import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds } from "./sqlite-records.js";
+import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds, isRuntimeEvidenceRecord, } from "./sqlite-records.js";
 import { projectResearchInputs, clearResearchProjection } from "./sqlite-research-inputs.js";
 import { assertTraceRecordNamespace, SqliteRuntimeTraceBatch, } from "./sqlite-runtime-batch.js";
 import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
@@ -136,11 +137,90 @@ export const analysisProjectSqlitePath = (directory, manifest) => {
     return path.join(directory, relative);
 };
 /**
- * Decode physical storage and parse JSON. The project API owns semantic record validation.
+ * Decode physical storage and parse JSON. Callers validate the semantic record.
  * @param {unknown} payload SQLite TEXT or a supported versioned BLOB.
- * @returns {T} Parsed record, without asserting semantic validity.
+ * @returns {unknown} Parsed record, without semantic validation.
  */
 const parseRecord = (payload) => parseSqlitePayload(payload);
+function isByteList(value) {
+    return Array.isArray(value) && value.every(isFiniteNumber);
+}
+function isRuntimeState(value) {
+    return (isRecord(value) &&
+        Object.values(value).every((entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)));
+}
+function requireTraceFact(value) {
+    if (!isRecord(value)) {
+        throw new Error("Invalid indexed trace fact.");
+    }
+    if (value.kind === "execution" && isFiniteNumber(value.address)) {
+        return { kind: "execution", address: value.address };
+    }
+    if (value.kind === "instruction" &&
+        typeof value.identity === "string" &&
+        isFiniteNumber(value.address) &&
+        isByteList(value.bytes) &&
+        isRuntimeState(value.state)) {
+        return {
+            kind: "instruction",
+            identity: value.identity,
+            address: value.address,
+            bytes: value.bytes,
+            state: value.state,
+        };
+    }
+    if (value.kind === "memory" && isRuntimeEvidenceRecord(value.record)) {
+        return { kind: "memory", record: value.record };
+    }
+    throw new Error("Invalid indexed trace fact.");
+}
+function isShardKind(value) {
+    return (value === "analysis" ||
+        value === "annotations" ||
+        value === "labels" ||
+        value === "comments" ||
+        value === "regions" ||
+        value === "runtime" ||
+        value === "evidence" ||
+        value === "imports");
+}
+function isResearchUpdate(value) {
+    return (value === "analysis" || value === "annotations" || value === "comments" || value === "evidence");
+}
+function observedImportCount(counts, key) {
+    return Object.hasOwn(counts, key) ? counts[key] : undefined;
+}
+function isSafeInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value);
+}
+function isObjectRecord(value) {
+    return typeof value === "object" && value !== null;
+}
+function isIndexedExportInstruction(value, spaces, knownEvidence) {
+    if (!isObjectRecord(value)) {
+        return false;
+    }
+    const address = value.address;
+    const addressSpace = value.addressSpace;
+    const size = value.size;
+    const opcode = value.opcode;
+    const incomingState = value.incomingState;
+    const evidenceList = value.evidence;
+    return (typeof value.id === "string" &&
+        value.id !== "" &&
+        typeof addressSpace === "string" &&
+        isSafeInteger(address) &&
+        address >= 0 &&
+        address < (spaces.get(addressSpace) ?? 0) &&
+        isSafeInteger(size) &&
+        size >= 1 &&
+        isSafeInteger(opcode) &&
+        typeof value.specificationId === "string" &&
+        typeof incomingState === "object" &&
+        incomingState !== null &&
+        Array.isArray(evidenceList) &&
+        evidenceList.every((id) => typeof id === "string" && knownEvidence.has(id)));
+}
 /** File identity rejects stale connections after an external restore or atomic replacement.
  * @param {string} file Existing database path.
  * @returns {string} Device/inode identity without integer precision loss.
@@ -280,44 +360,46 @@ export class SqliteAnalysisStore {
     }
     #insertRecord(kind, value) {
         if (kind === "evidence") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             this.#insertEvidence.run(record.id, encodeSqlitePayload(JSON.stringify(record)));
             return;
         }
         if (kind === "labels") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             this.#insertLabel.run(record.id, record.addressSpace, record.address, record.name, encodeSqlitePayload(JSON.stringify(record)));
             return;
         }
         if (kind === "comments") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             this.#insertComment.run(record.id, record.addressSpace, record.address, encodeSqlitePayload(JSON.stringify(record)));
             return;
         }
         if (kind === "regions") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             this.#insertRegion.run(record.id, record.addressSpace, record.start, record.end, encodeSqlitePayload(JSON.stringify(record)));
             return;
         }
         if (kind === "annotations") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             this.#insertAnnotation.run(record.id, record.addressSpace, record.start, record.end, record.classification, encodeSqlitePayload(JSON.stringify(record)));
             return;
         }
         if (kind === "analysis") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             const located = analysisAddress(record);
             this.#insertAnalysis.run(record.id, record.kind, located.addressSpace, located.address, encodeSqlitePayload(JSON.stringify(record)));
             return;
         }
         if (kind === "imports") {
-            const record = value;
+            const record = requireMetadataRecord(kind, value);
             this.#insertImport.run(record.id, encodeSqlitePayload(JSON.stringify(record)));
             this.recordCaptureReceipt(record);
             return;
         }
-        const record = value;
-        this.#runtimeWriter.insert(record, (table, value) => this.#intern(table, value));
+        if (!isRuntimeEvidenceRecord(value)) {
+            throw new Error("Invalid stored runtime record.");
+        }
+        this.#runtimeWriter.insert(value, (table, entry) => this.#intern(table, entry));
     }
     /**
      * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
@@ -448,7 +530,7 @@ export class SqliteAnalysisStore {
                 flush();
                 for (const row of values.iterate()) {
                     yield {
-                        fact: parseRecord(row.payload),
+                        fact: requireTraceFact(parseRecord(row.payload)),
                         count: Number(row.count),
                     };
                 }
@@ -613,10 +695,11 @@ export class SqliteAnalysisStore {
         }
         this.suspendResearchInputs();
         const projected = {};
-        for (const collection of Object.keys(updates)) {
-            if (!["analysis", "annotations", "comments", "evidence"].includes(collection)) {
+        for (const key of Object.keys(updates)) {
+            if (!isResearchUpdate(key)) {
                 throw new Error("Analysis may only replace derived metadata collections.");
             }
+            const collection = key;
             const protectedIds = new Set(snapshot.decisions
                 .filter((decision) => decision.collection === collection)
                 .map((decision) => decision.id));
@@ -632,7 +715,21 @@ export class SqliteAnalysisStore {
             for (const id of protectedIds) {
                 const row = find.get(id);
                 if (row) {
-                    records.push(JSON.parse(decodeSqlitePayload(row.payload)));
+                    const parsed = JSON.parse(decodeSqlitePayload(row.payload));
+                    switch (collection) {
+                        case "analysis":
+                            records.push(requireMetadataRecord(collection, parsed));
+                            break;
+                        case "annotations":
+                            records.push(requireMetadataRecord(collection, parsed));
+                            break;
+                        case "comments":
+                            records.push(requireMetadataRecord(collection, parsed));
+                            break;
+                        case "evidence":
+                            records.push(requireMetadataRecord(collection, parsed));
+                            break;
+                    }
                 }
             }
             // The collection determines the record type; replaceTables retains byte-identical rows.
@@ -665,10 +762,11 @@ export class SqliteAnalysisStore {
             "evidence",
             "imports",
         ]);
-        for (const kind of Object.keys(shards)) {
-            if (!tables.has(kind)) {
-                throw new Error(`Unknown analysis table '${kind}'.`);
+        for (const key of Object.keys(shards)) {
+            if (!isShardKind(key) || !tables.has(key)) {
+                throw new Error(`Unknown analysis table '${key}'.`);
             }
+            const kind = key;
             if (kind === "runtime") {
                 this.#replaceRuntime(shards.runtime ?? []);
                 continue;
@@ -897,7 +995,12 @@ export class SqliteAnalysisStore {
         if (!row) {
             throw new Error("Sqlite analysis project is missing its stored manifest.");
         }
-        return { ...parseRecord(row.v), revision: this.revision() };
+        const parsed = parseRecord(row.v);
+        if (!isRecord(parsed)) {
+            throw new Error("Sqlite analysis project is missing its stored manifest.");
+        }
+        validateAnalysisProjectManifest(parsed);
+        return { ...parsed, revision: this.revision() };
     }
     /**
      * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
@@ -927,11 +1030,6 @@ export class SqliteAnalysisStore {
             }
         }
     }
-    /**
-     * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
-     * @param {string} kind Metadata table name from the semantic collection contract.
-     * @returns {Array} Decoded metadata in deterministic display order.
-     */
     loadTable(kind) {
         const order = {
             labels: "address_space, address, id",
@@ -949,7 +1047,7 @@ export class SqliteAnalysisStore {
         for (const row of this.#database
             .prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`)
             .iterate()) {
-            records.push(parseRecord(row.payload));
+            records.push(requireMetadataRecord(kind, parseRecord(row.payload)));
         }
         return records;
     }
@@ -980,7 +1078,7 @@ export class SqliteAnalysisStore {
         const analysis = this.#database
             .prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))")
             .all(ids)
-            .map((row) => parseRecord(row.payload));
+            .map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
         const before = { ...base, analysis };
         const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
         this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
@@ -1082,7 +1180,7 @@ export class SqliteAnalysisStore {
                     : `SELECT payload FROM ${kind} ORDER BY id LIMIT 200`;
                 const parameters = ids ? [JSON.stringify(ids)] : [];
                 for (const row of this.#database.prepare(sql).iterate(...parameters)) {
-                    records.push(parseRecord(row.payload));
+                    records.push(requireMetadataRecord(kind, parseRecord(row.payload)));
                 }
             }
             Object.assign(shards, { [kind]: records });
@@ -1154,7 +1252,7 @@ export class SqliteAnalysisStore {
                 .all(evidenceIds);
             const referencedBy = [...metadataRows, ...runtimeRows]
                 .map((row) => String(row.reference))
-                .sort((a, b) => a.localeCompare(b))
+                .toSorted((a, b) => a.localeCompare(b))
                 .slice(0, 200);
             const metadataCount = Number(this.#database.prepare(`SELECT count(*) AS n FROM (${metadata})`).get(evidenceIds).n);
             const runtimeCount = Number(this.#database
@@ -1175,7 +1273,12 @@ export class SqliteAnalysisStore {
         }
         this.prepareAnnotationQueries();
         try {
-            this.cachedProjection("coverage", coverageSignature(this.manifest()), ["analysis", "annotations", "regions", "runtime"], () => prepareCoverage(this.#database, this.manifest()), () => publishCoverage(this.#database));
+            this.cachedProjection("coverage", coverageSignature(this.manifest()), ["analysis", "annotations", "regions", "runtime"], () => prepareCoverage(this.#database, this.manifest()), () => publishCoverage(this.#database), (value) => {
+                if (!isSqliteCoverageSummary(value)) {
+                    throw new Error("Project changed while building coverage. Refresh the view.");
+                }
+                return value;
+            });
             const published = cachedCoverage(this.#database, this.manifest());
             if (!published) {
                 throw new Error("Project changed while building coverage. Refresh the view.");
@@ -1202,9 +1305,14 @@ export class SqliteAnalysisStore {
         this.assertCurrentAnalysis();
         let graph;
         try {
-            graph = this.cachedProjection("graph", "3", ["analysis"], () => prepareGraph(this.#database), () => publishGraph(this.#database));
+            graph = this.cachedProjection("graph", "3", ["analysis"], () => prepareGraph(this.#database), () => publishGraph(this.#database), (value) => {
+                if (!isCallGraph(value)) {
+                    throw new Error("Analysis changed while building the graph. Refresh the view.");
+                }
+                return value;
+            });
             const published = readQueryCache(this.#database, "graph", "3");
-            if (!published) {
+            if (!isCallGraph(published)) {
                 throw new Error("Analysis changed while building the graph. Refresh the view.");
             }
             graph = published;
@@ -1215,12 +1323,11 @@ export class SqliteAnalysisStore {
         const labels = this.loadTable("labels");
         return {
             ...graph,
-            functions: graph.functions.map((fn) => ({
-                ...fn,
+            functions: graph.functions.map((fn) => Object.assign({}, fn, {
                 labels: labels
                     .filter((label) => label.addressSpace === fn.addressSpace && label.address === fn.address)
                     .map(({ id, name }) => ({ id, name }))
-                    .sort((a, b) => a.id.localeCompare(b.id)),
+                    .toSorted((a, b) => a.id.localeCompare(b.id)),
             })),
         };
     }
@@ -1234,10 +1341,13 @@ export class SqliteAnalysisStore {
      * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
      * @returns {T} Current projected value.
      */
-    cachedProjection(key, signature, dependencies, compute, publish) {
+    cachedProjection(key, signature, dependencies, compute, publish, restore) {
         const cached = readQueryCache(this.#database, key, signature);
         if (cached !== undefined) {
-            return cached;
+            if (!restore) {
+                throw new Error(`Query cache '${key}' requires a restore function.`);
+            }
+            return restore(cached);
         }
         const pending = `pending:${randomUUID()}`;
         this.transaction(() => {
@@ -1274,11 +1384,11 @@ export class SqliteAnalysisStore {
         const before = this.#database
             .prepare(`SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address<? ${matches} ORDER BY address DESC,id DESC LIMIT 4`)
             .all(...parameters)
-            .reverse();
+            .toReversed();
         const after = this.#database
             .prepare(`SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address>=? ${matches} ORDER BY address,id LIMIT ?`)
             .all(...parameters, 32 - before.length);
-        return [...before, ...after].map((row) => parseRecord(row.payload));
+        return [...before, ...after].map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
     }
     /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
      * @returns {Array} Half-open ROM-content intervals.
@@ -1340,13 +1450,17 @@ export class SqliteAnalysisStore {
             const address = Number(row.address);
             const seed = seeds.get(address) ?? { count: 0, evidence: new Set() };
             seed.count += Number(row.count);
-            for (const id of JSON.parse(String(row.evidence))) {
+            const parsedEvidence = JSON.parse(String(row.evidence));
+            if (!isStringArray(parsedEvidence)) {
+                throw new Error("Invalid runtime evidence list.");
+            }
+            for (const id of parsedEvidence) {
                 seed.evidence.add(id);
             }
             seeds.set(address, seed);
         }
         return [...seeds]
-            .sort(([a], [b]) => a - b)
+            .toSorted(([a], [b]) => a - b)
             .map(([address, seed]) => ({
             id: `query:execution:${address}`,
             kind: "runtime-execution",
@@ -1354,7 +1468,7 @@ export class SqliteAnalysisStore {
             addressSpace: space,
             address,
             count: seed.count,
-            evidence: [...seed.evidence].sort(),
+            evidence: [...seed.evidence].toSorted(),
         }));
     }
     /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
@@ -1474,20 +1588,8 @@ export class SqliteAnalysisStore {
                 yield group;
                 group = [];
             }
-            const record = parseRecord(row.data);
-            if (typeof record.id !== "string" ||
-                !record.id ||
-                !Number.isSafeInteger(record.address) ||
-                record.address < 0 ||
-                record.address >= (spaces.get(record.addressSpace) ?? 0) ||
-                !Number.isSafeInteger(record.size) ||
-                record.size < 1 ||
-                !Number.isSafeInteger(record.opcode) ||
-                typeof record.specificationId !== "string" ||
-                !record.incomingState ||
-                typeof record.incomingState !== "object" ||
-                !Array.isArray(record.evidence) ||
-                record.evidence.some((id) => typeof id !== "string" || !evidence.has(id))) {
+            const record = parseSqlitePayload(row.data);
+            if (!isIndexedExportInstruction(record, spaces, evidence)) {
                 throw new Error("Invalid indexed export instruction or missing provenance.");
             }
             group.push(record);
@@ -1531,7 +1633,7 @@ export class SqliteAnalysisStore {
         for (const row of this.#database
             .prepare(`SELECT payload FROM analysis WHERE kind IN (${kinds.map(() => "?").join(",")}) ORDER BY id`)
             .iterate(...kinds)) {
-            records.push(parseRecord(row.payload));
+            records.push(requireMetadataRecord("analysis", parseRecord(row.payload)));
         }
         return records;
     }
@@ -1552,7 +1654,7 @@ export class SqliteAnalysisStore {
       UNION SELECT MIN(rowid) FROM analysis INDEXED BY query_instruction_output
       WHERE kind='cfg-node' AND query_file_offset=? GROUP BY address_space,address)`)
             .all(addressSpace, address, outputOffset ?? null);
-        return rows.map((row) => parseRecord(row.payload));
+        return rows.map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
     }
     /**
      * Materialize complete record arrays without semantic validation. Run inside a read transaction.
@@ -1568,7 +1670,7 @@ export class SqliteAnalysisStore {
             annotations: this.loadTable("annotations"),
             analysis: this.loadTable("analysis"),
             imports: this.loadTable("imports"),
-            runtime: runtime ? [...this.runtimeRecords()].sort(compareRuntimeRecordIds) : [],
+            runtime: runtime ? [...this.runtimeRecords()].toSorted(compareRuntimeRecordIds) : [],
         };
     }
     /**
@@ -1718,7 +1820,9 @@ export class SqliteAnalysisStore {
         this.#database
             .prepare(`INSERT INTO capture_catalog(sha256,profile,source_name,imported_at,last_seen_at,observed_events,dropped_events)
       VALUES(?,?,?,?,?,?,?) ON CONFLICT(sha256) DO UPDATE SET last_seen_at=excluded.last_seen_at`)
-            .run(report.sourceSha256, report.indexProfile ?? "full", report.sourceName, now, now, report.imported.busEvents ?? report.imported.executionEvents ?? 0, report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0);
+            .run(report.sourceSha256, report.indexProfile ?? "full", report.sourceName, now, now, observedImportCount(report.imported, "busEvents") ??
+            observedImportCount(report.imported, "executionEvents") ??
+            0, report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0);
     }
     /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
      * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.

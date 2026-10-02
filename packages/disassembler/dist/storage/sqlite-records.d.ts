@@ -37,6 +37,8 @@ export declare const runtimeColumns: (record: RuntimeEvidenceRecord) => {
  * @returns {RuntimeEvidenceRecord} Decoded fact in its original discriminated shape.
  */
 export declare const runtimeFromRow: (row: object) => RuntimeEvidenceRecord;
+/** Flat semantic runtime fact, as stored inside an indexed trace payload. */
+export declare function isRuntimeEvidenceRecord(value: unknown): value is RuntimeEvidenceRecord;
 /**
  * Extract a point coordinate for persisted analysis metadata. Interval-only records have none.
  * @param {AnalysisRecord} record Semantic analysis variant.

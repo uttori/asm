@@ -72,9 +72,7 @@ export interface SnesSessionState {
      */
     cpuStack: string[];
 }
-/**
- * Branded key for `SessionStateStore.get`. The brand is compile-time only.
- */
+/** Branded key for `SessionStateStore.get`. The brand is compile-time only. */
 export declare const snesSessionStateKey: SessionStateKey<SnesSessionState>;
 /**
  * Deep-clones mutable nested fields so parallel/pass clones cannot share banks

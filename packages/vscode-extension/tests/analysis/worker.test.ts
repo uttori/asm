@@ -93,6 +93,23 @@ const fixtureProject = (): AnalysisProject => {
   };
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isFixtureManifest(value: unknown): value is {
+  target: string;
+  rom: { contentSha256: string; contentSize: number };
+} {
+  return (
+    isRecord(value) &&
+    typeof value.target === "string" &&
+    isRecord(value.rom) &&
+    typeof value.rom.contentSha256 === "string" &&
+    typeof value.rom.contentSize === "number"
+  );
+}
+
 const tempProject = (t: { teardown(callback: () => void): void }): string => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-analysis-worker-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -112,17 +129,30 @@ const request = (
 test.serial("analysis worker projects catalog, coverage and bounded annotation ranges", (t) => {
   const directory = tempProject(t);
   t.is(request(directory, "clear"), undefined);
-  const catalog = request(directory, "sources") as {
-    sources: readonly { id: string }[];
-  };
+  const catalog = request(directory, "sources");
+  if (!isRecord(catalog) || !Array.isArray(catalog.sources)) {
+    throw new Error("expected source catalog");
+  }
   t.true(catalog.sources.length >= 1);
-  const manifest = request(directory, "manifest") as {
-    target: string;
-    rom: { contentSize: number };
-  };
+  const manifest = request(directory, "manifest");
+  if (
+    !isRecord(manifest) ||
+    typeof manifest.target !== "string" ||
+    !isRecord(manifest.rom) ||
+    typeof manifest.rom.contentSize !== "number"
+  ) {
+    throw new Error("expected manifest");
+  }
   t.is(manifest.target, "fixture");
   t.is(manifest.rom.contentSize, 1024);
-  const coverage = request(directory, "coverage") as { summary: { totalBytes: number } };
+  const coverage = request(directory, "coverage");
+  if (
+    !isRecord(coverage) ||
+    !isRecord(coverage.summary) ||
+    typeof coverage.summary.totalBytes !== "number"
+  ) {
+    throw new Error("expected coverage");
+  }
   t.is(coverage.summary.totalBytes, 1024);
   t.true(Array.isArray(request(directory, "segments")));
   t.true(Array.isArray(request(directory, "details")));
@@ -130,7 +160,7 @@ test.serial("analysis worker projects catalog, coverage and bounded annotation r
   t.throws(
     () =>
       request(directory, "annotations", {
-        ranges: Array.from({ length: 2001 }, () => ({}) as never),
+        ranges: Array.from({ length: 2001 }, () => ({})),
       }),
     {
       message: /At most 2000/,
@@ -147,7 +177,7 @@ test.serial("analysis worker projects catalog, coverage and bounded annotation r
         line: 1,
       },
     ],
-  }) as unknown[];
+  });
   t.true(Array.isArray(annotated));
   t.true(
     Array.isArray(
@@ -169,10 +199,10 @@ test.serial("analysis worker projects catalog, coverage and bounded annotation r
 
 test.serial("analysis worker navigation, evidence and missing payloads throw closed", (t) => {
   const directory = tempProject(t);
-  const manifest = request(directory, "manifest") as {
-    target: string;
-    rom: { contentSha256: string; contentSize: number };
-  };
+  const manifest = request(directory, "manifest");
+  if (!isFixtureManifest(manifest)) {
+    throw new Error("expected manifest");
+  }
   t.throws(() => request(directory, "navigation"), { message: /Choose an analysis location/ });
   t.throws(
     () =>
@@ -203,18 +233,25 @@ test.serial("analysis worker navigation, evidence and missing payloads throw clo
       architectureHints: ["fixture"],
       recordIds: [],
     },
-  }) as { lines: unknown[]; capturedRam: boolean };
+  });
+  if (
+    !isRecord(navigation) ||
+    !Array.isArray(navigation.lines) ||
+    typeof navigation.capturedRam !== "boolean"
+  ) {
+    throw new Error("expected navigation");
+  }
   t.true(Array.isArray(navigation.lines));
   t.is(typeof navigation.capturedRam, "boolean");
   t.truthy(request(directory, "evidenceChoices"));
   t.throws(() => request(directory, "explainEvidence"), { message: /Choose a record to explain/ });
   t.throws(() => request(directory, "sourceSummary"), { message: /Choose a source to inspect/ });
   t.throws(() => request(directory, "sourceEntries"), { message: /Choose a source to inspect/ });
-  t.throws(() => request(directory, "unknown" as never), {
+  t.throws(() => request(directory, "unknown"), {
     message: /Unknown analysis worker operation/,
   });
   for (const operation of ["graph", "heuristics"]) {
-    t.throws(() => request(directory, operation as never), {
+    t.throws(() => request(directory, operation), {
       message: /Unknown analysis worker operation/,
     });
   }
@@ -289,7 +326,16 @@ test.serial(
       const result = request(directory, "evidenceChoices", {
         sourceRoot: root,
         evidenceSelection: { labels: ["entry"] },
-      }) as { shards: { labels: { sourceName: string }[] } };
+      });
+      if (
+        !isRecord(result) ||
+        !isRecord(result.shards) ||
+        !Array.isArray(result.shards.labels) ||
+        !isRecord(result.shards.labels[0]) ||
+        typeof result.shards.labels[0].sourceName !== "string"
+      ) {
+        throw new Error("expected evidence labels");
+      }
       return result.shards.labels[0].sourceName;
     };
     t.is(readName(), "RandomByte");
@@ -318,7 +364,7 @@ test.serial(
       });
     }
     fs.writeFileSync(names, before);
-    t.throws(() => request(directory, "annotationSave" as never, { sourceRoot: root }), {
+    t.throws(() => request(directory, "annotationSave", { sourceRoot: root }), {
       message: /Unknown analysis worker operation/,
     });
     t.throws(() => request(directory, "evidenceChoices"), {

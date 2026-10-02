@@ -11,6 +11,14 @@ export const SNES_MAPPERS = [
     "norom",
 ];
 /**
+ * Accepts a supported cartridge mapper id.
+ * @param {string} value Candidate mapper name.
+ * @returns {boolean} True when `value` is one of `SNES_MAPPERS`.
+ */
+export function isSnesMapper(value) {
+    return SNES_MAPPERS.some((mapper) => mapper === value);
+}
+/**
  * Complete 32-byte 65C816 vector layout at `$FFE0–$FFFF`.
  * Reserved words are retained so source export accounts for every byte while
  * analysis seeds only architecturally meaningful handler slots.
@@ -238,12 +246,7 @@ export const parseSnesInternalRomHeader = (rom, mapper) => {
     const vectors = SNES_CPU_VECTOR_DEFINITIONS.map((definition) => {
         const fileOffset = offset + definition.pointer - 0x00ffc0;
         const value = rom.readByte(fileOffset) | (rom.readByte(fileOffset + 1) << 8);
-        return {
-            ...definition,
-            fileOffset,
-            value,
-            ...(definition.state && value !== 0 && value !== 0xffff ? { targetAddress: value } : {}),
-        };
+        return Object.assign({}, definition, { fileOffset, value }, definition.state && value !== 0 && value !== 0xffff ? { targetAddress: value } : {});
     });
     return {
         offset,
@@ -359,7 +362,7 @@ export const detectSnesRom = (rom, options = {}) => {
     }
     const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec))
         .filter((candidate) => candidate !== undefined)
-        .sort((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
+        .toSorted((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
     if (options.mapper) {
         const selected = candidates.find((candidate) => candidate.mapper === options.mapper);
         const parsed = parseSnesInternalRomHeader(rom, options.mapper);
@@ -379,9 +382,12 @@ export const detectSnesRom = (rom, options = {}) => {
                 : { message: `Mapper '${options.mapper}' has no standard in-range header candidate.` }),
         };
     }
-    const first = candidates[0];
-    const second = candidates[1];
+    const first = candidates.length > 0 ? candidates[0] : undefined;
+    const second = candidates.length > 1 ? candidates[1] : undefined;
     if (first && first.score >= 8 && (!second || first.score - second.score >= 3)) {
+        if (!isSnesMapper(first.mapper)) {
+            throw new Error(`Unsupported SNES mapper '${first.mapper}'.`);
+        }
         const mapper = first.mapper;
         return {
             status: "detected",

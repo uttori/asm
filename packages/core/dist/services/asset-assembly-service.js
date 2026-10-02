@@ -1,3 +1,15 @@
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isUnknownArray(value) {
+    return Array.isArray(value);
+}
+function isNonEmptyString(value) {
+    return typeof value === "string" && value.length > 0;
+}
+function isNonEmptyStringArray(value) {
+    return isUnknownArray(value) && value.every(isNonEmptyString);
+}
 /** One build owns its bytes and conversions across all three passes. */
 export class AssetAssemblyService {
     session;
@@ -26,6 +38,13 @@ export class AssetAssemblyService {
      */
     snapshot(path) {
         return this.#files.get(path)?.slice();
+    }
+    /** Resolve a string operand after define expansion.
+     * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
+     * @returns {string} Expanded text.
+     */
+    #text(node) {
+        return this.session.defineEngine.resolveDefinesInStringLiteral(node.value);
     }
     /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
      * @param {AssetValueNode} node Typed source value.
@@ -120,7 +139,7 @@ export class AssetAssemblyService {
         }
         if (value && typeof value === "object") {
             return `{${Object.entries(value)
-                .sort(([a], [b]) => a.localeCompare(b))
+                .toSorted(([a], [b]) => a.localeCompare(b))
                 .map(([key, item]) => `${JSON.stringify(key)}:${this.#stable(item)}`)
                 .join(",")}}`;
         }
@@ -181,8 +200,8 @@ export class AssetAssemblyService {
      */
     discoverDependencies(call) {
         const options = Object.fromEntries(Object.entries(call.options).map(([key, node]) => [key, this.#value(node)]));
-        const sourcePath = this.#resolve(this.#value(call.path));
-        const formatName = this.#value(call.format);
+        const sourcePath = this.#resolve(this.#text(call.path));
+        const formatName = this.#text(call.format);
         const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
         if (!format) {
             throw new Error(`includeAsset format '${formatName}' is unavailable on '${this.session.targetId}'.`);
@@ -199,7 +218,9 @@ export class AssetAssemblyService {
         // Compression dictionaries and other schema-declared inputs also invalidate analysis.
         let transforms = [];
         if (typeof transformSpec === "string") {
-            const compressOptions = call.options.compressOptions;
+            const compressOptions = Object.hasOwn(call.options, "compressOptions")
+                ? call.options.compressOptions
+                : undefined;
             transforms = [
                 { id: transformSpec, options: compressOptions ? this.#value(compressOptions) : {} },
             ];
@@ -216,9 +237,7 @@ export class AssetAssemblyService {
                 continue;
             }
             const suppliedOptions = "options" in item ? item.options : undefined;
-            const transformOptions = suppliedOptions && typeof suppliedOptions === "object"
-                ? suppliedOptions
-                : {};
+            const transformOptions = isRecord(suppliedOptions) ? suppliedOptions : {};
             const names = [
                 ...this.#validateTransformOptions(transform, transformOptions),
                 ...(transform.resourcePaths?.(transformOptions) ?? []),
@@ -234,8 +253,8 @@ export class AssetAssemblyService {
      */
     materialize(call) {
         const options = Object.fromEntries(Object.entries(call.options).map(([key, node]) => [key, this.#value(node)]));
-        const sourcePath = this.#resolve(this.#value(call.path));
-        const formatName = this.#value(call.format);
+        const sourcePath = this.#resolve(this.#text(call.path));
+        const formatName = this.#text(call.format);
         const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
         if (!format) {
             throw new Error(`includeAsset format '${formatName}' is unavailable on '${this.session.targetId}'.`);
@@ -251,14 +270,17 @@ export class AssetAssemblyService {
         if (output !== undefined && typeof output !== "string") {
             throw new Error("includeAsset output must be a string.");
         }
-        if (maxSize !== undefined && (!Number.isSafeInteger(maxSize) || maxSize < 0)) {
-            throw new Error("includeAsset maxSize must be a non-negative integer.");
+        let boundedSize;
+        if (maxSize !== undefined) {
+            if (typeof maxSize !== "number" || !Number.isSafeInteger(maxSize) || maxSize < 0) {
+                throw new Error("includeAsset maxSize must be a non-negative integer.");
+            }
+            boundedSize = maxSize;
         }
         const resources = {};
         const resourceIdentities = [];
         const declaredResources = format.resourcePaths?.(options) ?? [];
-        if (!Array.isArray(declaredResources) ||
-            declaredResources.some((path) => typeof path !== "string" || !path)) {
+        if (!isNonEmptyStringArray(declaredResources)) {
             throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
         }
         for (const resourceName of declaredResources) {
@@ -313,7 +335,7 @@ export class AssetAssemblyService {
         else if (compress !== undefined) {
             transformSpecs = compress;
         }
-        if (!Array.isArray(transformSpecs)) {
+        if (!isUnknownArray(transformSpecs)) {
             throw new Error("includeAsset compress must be an ID or array of { id, options }.");
         }
         if (typeof compress !== "string" && compressOptions !== undefined) {
@@ -321,34 +343,27 @@ export class AssetAssemblyService {
         }
         const transforms = [];
         for (const unknownItem of transformSpecs) {
-            if (!unknownItem ||
-                typeof unknownItem !== "object" ||
-                !("id" in unknownItem) ||
-                typeof unknownItem.id !== "string") {
+            if (!isRecord(unknownItem) || typeof unknownItem.id !== "string") {
                 throw new Error("includeAsset transform entries require an id.");
             }
-            const item = unknownItem;
-            const transform = this.session.environment.getAssetTransform(item.id, this.session.targetId);
+            const id = unknownItem.id;
+            const transform = this.session.environment.getAssetTransform(id, this.session.targetId);
             if (!transform) {
-                throw new Error(`includeAsset transform '${item.id}' is unavailable on '${this.session.targetId}'.`);
+                throw new Error(`includeAsset transform '${id}' is unavailable on '${this.session.targetId}'.`);
             }
-            const transformOptions = item.options ?? {};
-            if (!transformOptions ||
-                typeof transformOptions !== "object" ||
-                Array.isArray(transformOptions)) {
-                throw new Error(`includeAsset transform '${item.id}' options must be an object.`);
+            const transformOptions = unknownItem.options ?? {};
+            if (!isRecord(transformOptions)) {
+                throw new Error(`includeAsset transform '${id}' options must be an object.`);
             }
-            const validatedOptions = transformOptions;
-            const schemaResources = this.#validateTransformOptions(transform, validatedOptions);
-            transform.validateOptions?.(validatedOptions);
+            const schemaResources = this.#validateTransformOptions(transform, transformOptions);
+            transform.validateOptions?.(transformOptions);
             const transformResources = {};
             const transformResourceIdentities = [];
-            const declared = transform.resourcePaths?.(validatedOptions) ?? [];
-            const resourcePaths = declared;
-            if (!Array.isArray(declared) || declared.some((name) => typeof name !== "string" || !name)) {
+            const declared = transform.resourcePaths?.(transformOptions) ?? [];
+            if (!isNonEmptyStringArray(declared)) {
                 throw new Error(`Asset transform '${transform.id}' returned invalid resource paths.`);
             }
-            const names = [...new Set([...schemaResources, ...resourcePaths])];
+            const names = [...new Set([...schemaResources, ...declared])];
             for (const name of names) {
                 const path = this.#resolve(name);
                 transformResources[name] = {
@@ -359,7 +374,7 @@ export class AssetAssemblyService {
             }
             transforms.push({
                 provider: transform,
-                options: validatedOptions,
+                options: transformOptions,
                 resources: transformResources,
                 resourceIdentities: transformResourceIdentities,
             });
@@ -403,13 +418,13 @@ export class AssetAssemblyService {
                 }
                 catch (error) {
                     const message = error instanceof Error ? error.message : String(error);
-                    throw new Error(`Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`);
+                    throw new Error(`Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`, { cause: error });
                 }
             }
             this.#emissions.set(emissionKey, bytes);
         }
-        if (maxSize !== undefined && bytes.length > maxSize) {
-            throw new Error(`includeAsset output is ${bytes.length} bytes, above maxSize ${maxSize}.`);
+        if (boundedSize !== undefined && bytes.length > boundedSize) {
+            throw new Error(`includeAsset output is ${bytes.length} bytes, above maxSize ${boundedSize}.`);
         }
         this.lastEmission = {
             sourcePath,

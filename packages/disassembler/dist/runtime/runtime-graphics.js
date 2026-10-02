@@ -268,7 +268,7 @@ export const createRuntimeGraphicsAccumulator = () => {
         finish: () => ({
             model: "snes-ppu-ports-v1",
             activity: [...activity.entries()]
-                .sort(([a], [b]) => a.localeCompare(b))
+                .toSorted(([a], [b]) => a.localeCompare(b))
                 .map(([, group]) => group),
             writes,
             omittedWrites,

@@ -8,7 +8,7 @@ import {
 } from "../../src/directives/fill-pad.js";
 import { DirectiveRegistry } from "../../src/directives/registry.js";
 import type { FillPadDirectiveContext } from "../../src/directives/types.js";
-import { createOperandResolver, runtimeStub } from "./test-stubs.js";
+import { createOperandResolver, runtimeStub, testDouble } from "./test-stubs.js";
 
 type FillPadSessionOverrides = {
   currentTargetAddress?: number;
@@ -19,8 +19,8 @@ type FillPadSessionOverrides = {
 const createContext = (overrides: FillPadSessionOverrides = {}) => {
   const written: number[] = [];
   const session = {
-    fillbyte: new Array<number>(12).fill(0),
-    padbyte: new Array<number>(4).fill(0),
+    fillbyte: Array.from({ length: 12 }, () => 0),
+    padbyte: Array.from({ length: 4 }, () => 0),
     padUnit: 1,
     currentTargetAddress: overrides.currentTargetAddress ?? 0x808000,
     outputWriter: {
@@ -30,11 +30,11 @@ const createContext = (overrides: FillPadSessionOverrides = {}) => {
     write1: (value: number) => written.push(value),
   };
   return {
-    ctx: {
+    ctx: testDouble<FillPadDirectiveContext>({
       session,
       operandResolver: createOperandResolver(() => session.currentTargetAddress),
       runtime: runtimeStub,
-    } as FillPadDirectiveContext,
+    }),
     session,
     written,
   };

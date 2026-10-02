@@ -8,8 +8,11 @@ export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
 /** Default and maximum distinct-fact budget when counters or output records remain on the heap. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
+function isRowRecord(value) {
+    return !Array.isArray(value);
+}
 const record = (value, context) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    if (typeof value !== "object" || value === null || !isRowRecord(value)) {
         throw new Error(`${context} must be an object.`);
     }
     return value;
@@ -21,7 +24,7 @@ const string = (value, context) => {
     return value;
 };
 const integer = (value, context, minimum = 0) => {
-    if (!Number.isSafeInteger(value) || value < minimum) {
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
     }
     return value;
@@ -149,7 +152,7 @@ export const importRuntimeInstructionTrace = (value, context) => {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {RuntimeTraceIndexMode} mode Validated retention profile.
+ * @param {string} mode Retention profile. Only full indexing is supported.
  * @param {number} requested Explicit caller budget, if any.
  * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
  * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
@@ -239,11 +242,11 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
     let failure;
     let detailedEvents = 0;
     let memoryLoss = 0;
-    const pushChunk = (value) => {
+    const pushChunk = (input) => {
         if (finished) {
             throw new Error("Instruction trace import already finished.");
         }
-        const chunk = validateChunk(value);
+        const chunk = validateChunk(input);
         // Hash every original chunk so identity covers all supplied bytes, registers and counts.
         hash.update(chunks++ === 0 ? "[\n" : ",\n");
         // canonicalJson always has one trailing newline. Indent its text directly instead of
@@ -311,12 +314,12 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             }
         }
     };
-    const push = (value) => {
+    const push = (input) => {
         if (failure) {
             throw failure;
         }
         try {
-            pushChunk(value);
+            pushChunk(input);
         }
         catch (error) {
             // A failure can occur partway through a chunk. Latch it and release the working set so
@@ -346,15 +349,15 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         let processedRecords = 0;
         let lastProgress = performance.now();
         storage?.onMergeProgress?.(0, indexRecords);
-        const emit = (record) => {
+        const emit = (emitted) => {
             if (storage?.onRecord) {
-                storage.onRecord(record);
+                storage.onRecord(emitted);
             }
-            else if (record.kind === "runtime-execution") {
-                executions.push(record);
+            else if (emitted.kind === "runtime-execution") {
+                executions.push(emitted);
             }
             else {
-                facts.push(record);
+                facts.push(emitted);
             }
             processedRecords++;
             // Synchronous SQLite publication cannot run timer callbacks. Report from the work loop,
@@ -411,13 +414,13 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         finally {
             index.clear();
         }
-        const runtime = executions.sort((a, b) => {
+        const runtime = executions.toSorted((a, b) => {
             if (a.kind !== "runtime-execution" || b.kind !== "runtime-execution") {
                 return 0;
             }
             return a.address - b.address;
         });
-        for (const fact of facts.sort((a, b) => a.id.localeCompare(b.id))) {
+        for (const fact of facts.toSorted((a, b) => a.id.localeCompare(b.id))) {
             runtime.push(fact);
         }
         const evidence = {

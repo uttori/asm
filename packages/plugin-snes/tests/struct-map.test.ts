@@ -468,7 +468,9 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
       ...named,
       bindings: named.bindings.map((binding) =>
         binding.name === "Table"
-          ? { ...binding, entryComments: { 0: "Fragmented Candy", 1: "Cup of Wishes" } }
+          ? Object.assign({}, binding, {
+              entryComments: { 0: "Fragmented Candy", 1: "Cup of Wishes" },
+            })
           : binding,
       ),
     }),
@@ -517,10 +519,9 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
       ...expanded,
       bindings: expanded.bindings.map((binding) =>
         binding.name === "Table"
-          ? {
-              ...binding,
+          ? Object.assign({}, binding, {
               entryComments: { 1: "Candy", 2: "Cup of Wishes", 4: "Named after a gap" },
-            }
+            })
           : binding,
       ),
     }),
@@ -583,7 +584,7 @@ test("explicit field types distinguish arrays from scalars and validate their by
       {
         ...input.structures[0],
         fields: input.structures[0].fields.map((field) =>
-          field.name === "word" ? { ...field, type: "db[2]" } : field,
+          field.name === "word" ? Object.assign({}, field, { type: "db[2]" }) : field,
         ),
       },
     ],

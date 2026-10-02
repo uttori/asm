@@ -5,9 +5,26 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath } from "./git.js";
+function errorCode(error) {
+    if (typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string") {
+        return error.code;
+    }
+    return undefined;
+}
 const hashPattern = /^[\da-f]{64}$/;
 /** Runtime array check without widening the validated readonly contract to any[]. */
-const isArray = (value) => Array.isArray(value);
+function isUnknownArray(value) {
+    return Array.isArray(value);
+}
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function observedCount(counts, key) {
+    return Object.hasOwn(counts, key) ? counts[key] : undefined;
+}
 const validHash = (value) => typeof value === "string" && hashPattern.test(value);
 const validCount = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
 /** Validate names as single portable components; catalog data never selects paths outside a supplied bundle. */
@@ -31,62 +48,82 @@ function catalogPath(root, name) {
             }
         }
         catch (error) {
-            if (error.code !== "ENOENT") {
+            if (errorCode(error) !== "ENOENT") {
                 throw error;
             }
         }
     }
     return current;
 }
-/** Validate before trusting a catalog from a branch, clone or external private-input bundle. */
-export function parseSourceCaptureCatalog(value, romSha256) {
-    const catalog = value;
-    if (!catalog ||
-        catalog.format !== "uttori-capture-catalog" ||
-        catalog.version !== 1 ||
-        !validHash(catalog.romSha256) ||
-        catalog.romSha256 !== romSha256 ||
-        !isArray(catalog.captures) ||
-        catalog.captures.length > 10000) {
+function assertSourceCaptureCatalog(value, romSha256) {
+    if (!isRecord(value)) {
+        throw new Error("Invalid source capture catalog or original-ROM identity.");
+    }
+    const catalogRom = value.romSha256;
+    const captureEntries = value.captures;
+    if (value.format !== "uttori-capture-catalog" ||
+        value.version !== 1 ||
+        !validHash(catalogRom) ||
+        catalogRom !== romSha256 ||
+        !isUnknownArray(captureEntries) ||
+        captureEntries.length > 10000) {
         throw new Error("Invalid source capture catalog or original-ROM identity.");
     }
     const identities = new Set();
     const archiveOwners = new Map();
-    for (const capture of catalog.captures) {
-        if (!capture ||
-            !validHash(capture.sha256) ||
-            identities.has(capture.sha256) ||
-            !validName(capture.sourceName) ||
-            typeof capture.profile !== "string" ||
-            !capture.profile ||
-            capture.profile.length > 128 ||
-            !validCount(capture.observedEvents) ||
-            !validCount(capture.droppedEvents) ||
-            !isArray(capture.archives) ||
-            capture.archives.length > 32) {
+    for (const entry of captureEntries) {
+        if (!isRecord(entry)) {
             throw new Error("Invalid or duplicate canonical capture identity.");
         }
-        identities.add(capture.sha256);
+        const sha256 = entry.sha256;
+        const sourceName = entry.sourceName;
+        const profile = entry.profile;
+        const observedEvents = entry.observedEvents;
+        const droppedEvents = entry.droppedEvents;
+        const archiveEntries = entry.archives;
+        if (!validHash(sha256) ||
+            identities.has(sha256) ||
+            !validName(sourceName) ||
+            typeof profile !== "string" ||
+            profile === "" ||
+            profile.length > 128 ||
+            !validCount(observedEvents) ||
+            !validCount(droppedEvents) ||
+            !isUnknownArray(archiveEntries) ||
+            archiveEntries.length > 32) {
+            throw new Error("Invalid or duplicate canonical capture identity.");
+        }
+        identities.add(sha256);
         const archiveIds = new Set();
-        for (const archive of capture.archives) {
-            if (!archive ||
-                !validName(archive.name) ||
-                !validHash(archive.sha256) ||
-                !validCount(archive.bytes) ||
-                archive.bytes === 0 ||
-                (archive.companionSha256 !== undefined && !validHash(archive.companionSha256)) ||
-                archiveIds.has(archive.sha256)) {
+        for (const archiveEntry of archiveEntries) {
+            if (!isRecord(archiveEntry)) {
                 throw new Error("Invalid or duplicate capture archive binding.");
             }
-            const owner = archiveOwners.get(archive.sha256);
-            if (owner && owner !== capture.sha256) {
+            const name = archiveEntry.name;
+            const archiveSha = archiveEntry.sha256;
+            const bytes = archiveEntry.bytes;
+            const companion = archiveEntry.companionSha256;
+            if (!validName(name) ||
+                !validHash(archiveSha) ||
+                !validCount(bytes) ||
+                bytes === 0 ||
+                (companion !== undefined && !validHash(companion)) ||
+                archiveIds.has(archiveSha)) {
+                throw new Error("Invalid or duplicate capture archive binding.");
+            }
+            const owner = archiveOwners.get(archiveSha);
+            if (owner && owner !== sha256) {
                 throw new Error("One archive is bound to conflicting canonical capture identities.");
             }
-            archiveOwners.set(archive.sha256, capture.sha256);
-            archiveIds.add(archive.sha256);
+            archiveOwners.set(archiveSha, sha256);
+            archiveIds.add(archiveSha);
         }
     }
-    return catalog;
+}
+/** Validate before trusting a catalog from a branch, clone or external private-input bundle. */
+export function parseSourceCaptureCatalog(value, romSha256) {
+    assertSourceCaptureCatalog(value, romSha256);
+    return value;
 }
 /** Catalog absence is explicit during first import or extraction; malformed existing data never resets. */
 export function readSourceCaptureCatalog(root, name, romSha256) {
@@ -100,7 +137,7 @@ export function readSourceCaptureCatalog(root, name, romSha256) {
         bytes = fs.readFileSync(file);
     }
     catch (error) {
-        if (error.code !== "ENOENT") {
+        if (errorCode(error) !== "ENOENT") {
             throw error;
         }
         return { catalog: { format: "uttori-capture-catalog", version: 1, romSha256, captures: [] } };
@@ -123,7 +160,9 @@ export function reconcileSourceCaptureCatalog(catalog, reports, binding) {
             sha256: report.sourceSha256,
             sourceName,
             profile: report.indexProfile ?? "full",
-            observedEvents: report.imported.busEvents ?? report.imported.executionEvents ?? 0,
+            observedEvents: observedCount(report.imported, "busEvents") ??
+                observedCount(report.imported, "executionEvents") ??
+                0,
             droppedEvents: report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0,
             archives: captures.get(report.sourceSha256)?.archives ?? [],
         };
@@ -147,13 +186,13 @@ export function reconcileSourceCaptureCatalog(catalog, reports, binding) {
         if (!prior) {
             captures.set(capture.sha256, {
                 ...capture,
-                archives: [...capture.archives, binding.archive].sort((a, b) => a.sha256.localeCompare(b.sha256)),
+                archives: [...capture.archives, binding.archive].toSorted((a, b) => a.sha256.localeCompare(b.sha256)),
             });
         }
     }
     return parseSourceCaptureCatalog({
         ...catalog,
-        captures: [...captures.values()].sort((a, b) => a.sha256.localeCompare(b.sha256)),
+        captures: [...captures.values()].toSorted((a, b) => a.sha256.localeCompare(b.sha256)),
     }, catalog.romSha256);
 }
 /** Save only against the read snapshot; evidence imports and Git-file writes are separate durable operations. */
@@ -196,9 +235,11 @@ export async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024
     const hash = createHash("sha256");
     let bytes = 0;
     for await (const chunk of fs.createReadStream(file, { signal })) {
-        const buffer = chunk;
-        hash.update(buffer);
-        bytes += buffer.length;
+        if (!Buffer.isBuffer(chunk)) {
+            throw new Error("Capture archive read failed.");
+        }
+        hash.update(chunk);
+        bytes += chunk.length;
         if (bytes > maxBytes) {
             throw new Error("Capture archive grew beyond the project's byte budget.");
         }
@@ -222,7 +263,7 @@ export async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024
         companionSha256 = sourceContentHash(fs.readFileSync(manifestFile));
     }
     catch (error) {
-        if (error.code !== "ENOENT") {
+        if (errorCode(error) !== "ENOENT") {
             throw error;
         }
     }

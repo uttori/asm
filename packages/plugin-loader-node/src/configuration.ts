@@ -42,6 +42,14 @@ const optionalText = (
   return value;
 };
 
+/**
+ * Accepts an array of non-empty strings. Whitespace-only entries are rejected.
+ * @param {unknown} value Candidate configuration array.
+ * @returns {boolean} True when every element is a non-empty string.
+ */
+const isNonEmptyStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim() !== "");
+
 const optionalStringArray = (
   value: unknown,
   field: "includePaths" | "entryPoints",
@@ -49,13 +57,10 @@ const optionalStringArray = (
   if (value === undefined) {
     return undefined;
   }
-  if (
-    !Array.isArray(value) ||
-    value.some((item) => typeof item !== "string" || item.trim() === "")
-  ) {
+  if (!isNonEmptyStringArray(value)) {
     throw configurationError(`Configuration field '${field}' must be an array of strings.`);
   }
-  return value as string[];
+  return value;
 };
 
 const validatePluginEntry = (value: unknown, index: number): PluginModuleRequest => {

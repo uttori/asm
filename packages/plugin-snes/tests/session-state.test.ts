@@ -1,6 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
 import { Assembler } from "../../../tests/test-assembler.js";
-
 import { cloneSnesSessionState } from "../src/session-state.js";
 
 test("cloneSnesSessionState copies nested banks, cpu stack, and an open SPC block", (t) => {
@@ -26,7 +25,7 @@ test("cloneSnesSessionState copies nested banks, cpu stack, and an open SPC bloc
   cloned.spcBlock!.destination = 0x300;
   t.is(original.sa1Banks[0], 0);
   t.deepEqual(original.cpuStack, ["snes.65816"]);
-  t.is(original.spcBlock?.destination, 0x200);
+  t.is(original.spcBlock.destination, 0x200);
 });
 
 test("cloneSnesSessionState keeps a null SPC block null", (t) => {

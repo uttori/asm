@@ -1,6 +1,44 @@
 import fs from "node:fs";
 import path from "node:path";
 import { changeResearchSymbol, changeResearchAnalysis, openAnalysisProjectStore, sourceProjectLocalInputs, readResearchInputs, sourceContentHash, } from "@uttori/asm-disassembler";
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStringArray(value) {
+    return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+function isProjectLabel(value) {
+    if (!isRecord(value) ||
+        typeof value.id !== "string" ||
+        typeof value.addressSpace !== "string" ||
+        typeof value.address !== "number" ||
+        typeof value.name !== "string" ||
+        !isStringArray(value.evidence)) {
+        return false;
+    }
+    return ((value.sourceName === undefined || typeof value.sourceName === "string") &&
+        (value.aliases === undefined || isStringArray(value.aliases)) &&
+        (value.suppressed === undefined || typeof value.suppressed === "boolean") &&
+        (value.analysisEntryPoint === undefined || typeof value.analysisEntryPoint === "boolean"));
+}
+function isResearchAnalysisRecord(value) {
+    if (!isRecord(value) ||
+        typeof value.id !== "string" ||
+        typeof value.addressSpace !== "string" ||
+        !isStringArray(value.evidence)) {
+        return false;
+    }
+    if (value.kind === "target-override" || value.kind === "target-set") {
+        return (Array.isArray(value.targets) &&
+            value.targets.every((target) => typeof target === "number") &&
+            (value.kind === "target-override" || typeof value.name === "string") &&
+            (value.kind === "target-set" || typeof value.address === "number"));
+    }
+    return (typeof value.start === "number" &&
+        typeof value.end === "number" &&
+        typeof value.classification === "string" &&
+        typeof value.architecture === "string");
+}
 /** Research choices are prepared from saved files plus optional editor buffers, never written to SQLite. */
 export function prepareSourceResearch(project, request = {}, buffers = []) {
     const overlays = new Map(buffers.map((buffer) => [
@@ -30,6 +68,9 @@ export function prepareSourceResearch(project, request = {}, buffers = []) {
                 if ((decision.collection !== "annotations" && decision.collection !== "analysis") ||
                     !decision.value) {
                     return [];
+                }
+                if (!isResearchAnalysisRecord(decision.value)) {
+                    throw new Error("Research analysis decision does not match its collection.");
                 }
                 return [
                     {
@@ -67,6 +108,9 @@ export function prepareSourceResearch(project, request = {}, buffers = []) {
         const symbols = snapshot.files.flatMap((file) => file.document.decisions.flatMap((decision) => {
             if (decision.collection !== "labels" || !decision.value) {
                 return [];
+            }
+            if (!isProjectLabel(decision.value)) {
+                throw new Error("Research label decision is not a project label.");
             }
             const label = decision.value;
             return [

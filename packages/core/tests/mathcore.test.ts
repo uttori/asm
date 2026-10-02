@@ -348,7 +348,6 @@ test("math - complex expressions", (t) => {
   t.is(mathCore.math("((2 + 3) * 4 + (6 / 2)) ** 2"), 23 * 23); // 529
 
   // Mix of different operations
-  // oxlint-disable-next-line @stylistic/no-mixed-operators
   t.is(mathCore.math("10 & 7 | 4 ^ 2 + 3 * 4 / 2"), (10 & 7) | (4 ^ (2 + 6))); // 2 | 4 ^ 8 = 14
 });
 
@@ -1865,22 +1864,24 @@ test("callBuiltInFunction - round function", (t) => {
   const mathCore = new MathCore();
 
   // Test round function with different precisions
-  t.is(mathCore.callBuiltInFunction("round", [3.14159, 2]), 3.14);
-  t.is(mathCore.callBuiltInFunction("round", [3.14159, 3]), 3.142);
-  t.is(mathCore.callBuiltInFunction("round", [3.14159, 0]), 3);
-  t.is(mathCore.callBuiltInFunction("round", [-2.718, 1]), -2.7);
+  t.is(mathCore.callBuiltInFunction("round", [Math.PI, 2]), 3.14);
+  // 3.142 is the round() fixture, not a stand-in constant.
+  // oxlint-disable-next-line oxc/approx-constant
+  t.is(mathCore.callBuiltInFunction("round", [Math.PI, 3]), 3.142);
+  t.is(mathCore.callBuiltInFunction("round", [Math.PI, 0]), 3);
+  t.is(mathCore.callBuiltInFunction("round", [-Math.E, 1]), -2.7);
 
   // Test error case with wrong number of arguments
   t.throws(
     () => {
-      mathCore.callBuiltInFunction("round", [3.14159]);
+      mathCore.callBuiltInFunction("round", [Math.PI]);
     },
     { message: "round() expects exactly 2 numeric arguments." },
   );
 
   t.throws(
     () => {
-      mathCore.callBuiltInFunction("round", [3.14159, 2, 1]);
+      mathCore.callBuiltInFunction("round", [Math.PI, 2, 1]);
     },
     { message: "round() expects exactly 2 numeric arguments." },
   );

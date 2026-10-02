@@ -15,10 +15,28 @@ interface TcpTransport {
 }
 
 interface TcpOptions {
-  host?: "127.0.0.1" | "::1";
+  host?: string;
   port: number;
   connectTimeoutMs?: number;
   shutdownTimeoutMs?: number;
+}
+
+/** The transport only needs the socket methods this double implements. */
+function isNetSocket(value: ControlledSocket): value is ControlledSocket & net.Socket {
+  return (
+    typeof value.connect === "function" &&
+    typeof value.setNoDelay === "function" &&
+    typeof value.write === "function" &&
+    typeof value.end === "function" &&
+    typeof value.destroy === "function"
+  );
+}
+
+function netSocket(value: ControlledSocket): net.Socket {
+  if (!isNetSocket(value)) {
+    throw new Error("Controlled socket is missing the Node socket methods the transport calls.");
+  }
+  return value;
 }
 
 /** Manually driven socket keeps connection races and deadlines deterministic without a network. */
@@ -42,6 +60,18 @@ class ControlledSocket extends EventEmitter {
   });
 }
 
+/** Install one owned socket and restore global stubs even when an assertion fails. */
+const setup = (t: { teardown(callback: () => void): void }) => {
+  const socket = new ControlledSocket();
+  const constructor = sinon.stub(net, "Socket").returns(netSocket(socket));
+  const clock = sinon.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  t.teardown(() => {
+    constructor.restore();
+    clock.restore();
+  });
+  return { socket, clock };
+};
+
 /**
  * Register serial cases because each test temporarily replaces Node's socket constructor.
  * @param {(options: TcpOptions) => Promise<TcpTransport>} connect Production transport factory.
@@ -51,7 +81,7 @@ export function testTcpTransport(connect: (options: TcpOptions) => Promise<TcpTr
     const constructor = sinon.stub(net, "Socket");
     t.teardown(() => constructor.restore());
     for (const host of ["localhost", "0.0.0.0", "192.0.2.1"]) {
-      await t.throwsAsync(connect({ host: host as TcpOptions["host"], port: 1234 }), {
+      await t.throwsAsync(connect({ host, port: 1234 }), {
         message: /numeric loopback/,
       });
     }
@@ -67,18 +97,6 @@ export function testTcpTransport(connect: (options: TcpOptions) => Promise<TcpTr
     }
     t.false(constructor.called);
   });
-
-  /** Install one owned socket and restore global stubs even when an assertion fails. */
-  const setup = (t: { teardown(callback: () => void): void }) => {
-    const socket = new ControlledSocket();
-    const constructor = sinon.stub(net, "Socket").returns(socket as unknown as net.Socket);
-    const clock = sinon.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    t.teardown(() => {
-      constructor.restore();
-      clock.restore();
-    });
-    return { socket, clock };
-  };
 
   test.serial(
     "TCP forwards bytes, disposes subscriptions, and reports write failures",

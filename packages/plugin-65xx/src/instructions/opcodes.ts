@@ -34,7 +34,7 @@ const rows = [
 ] as const;
 
 /** WDC/ca65 short mode tags used in {@link rows}. */
-const modeNames: Readonly<Record<string, AddressingMode>> = {
+const modeNames: Partial<Record<string, AddressingMode>> = {
   imp: "implied",
   acc: "accumulator",
   imm: "immediate",
@@ -150,7 +150,9 @@ for (const form of mutableForms) {
   groups.set(key, group);
 }
 for (const group of groups.values()) {
-  const preferred = group.find((form) => form.documented) ?? group[0];
+  const documented = group.find((form) => form.documented);
+  const fallback = group.length > 0 ? group[0] : undefined;
+  const preferred = documented ?? fallback;
   // Duplicate encodings (e.g. unofficial NOP mirrors): prefer the documented
   // opcode when assembling. The full decode table still lists every cell.
   if (preferred) {
@@ -209,6 +211,10 @@ export const nmos6502xCpu: CpuDefinition = Object.freeze({
   features: new Set<CpuFeature>(["nmos", "undocumented"]),
 });
 
+function cpuVariantForms(cpuId: string): readonly InstructionForm[] | undefined {
+  return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : undefined;
+}
+
 /**
  * Looks up the NMOS decode-table form for a byte.
  *
@@ -229,7 +235,7 @@ export function getOpcodeForm(opcode: number): InstructionForm {
  * @returns {readonly InstructionForm[]} The decode table.
  */
 export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[] {
-  const variantForms = variantFormsByCpuId[cpu.id];
+  const variantForms = cpuVariantForms(cpu.id);
   if (variantForms) {
     return variantForms;
   }
@@ -243,7 +249,7 @@ export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[
  * @returns {readonly InstructionForm[]} The assembly forms.
  */
 export function getCpuAssemblyForms(cpu: CpuDefinition): readonly InstructionForm[] {
-  const variantForms = variantFormsByCpuId[cpu.id];
+  const variantForms = cpuVariantForms(cpu.id);
   if (variantForms) {
     return variantForms;
   }

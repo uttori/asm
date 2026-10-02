@@ -10,6 +10,7 @@ import {
   SidecarDebugBackend,
   createDebugMapReplayScript,
   createDebugSidecarSessionToken,
+  validateCaptureResult,
   type DebugBackend,
   type DebugAdapterSessionOptions,
   type DapProtocolMessage,
@@ -17,7 +18,7 @@ import {
   type ReplayScript,
   LosslessCaptureFileRecorder,
   NativeCaptureFileRecorder,
-  type CaptureResultV2,
+  type NativeCaptureFilePosition,
 } from "@uttori/asm-debug-adapter";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
 import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
@@ -46,6 +47,7 @@ import {
   type OutputChannel,
 } from "vscode";
 
+import { isAcceptedDebugMap, isStoredDebugMap } from "../analysis/debug-maps.js";
 import { runtimeBindingFromLaunch } from "../runtime/binding.js";
 import { LiveBusAnalysis } from "../runtime/live-bus-analysis.js";
 import { acquireTraceLease } from "../runtime/trace-lease.js";
@@ -106,7 +108,7 @@ export interface EmulatorRuntimeBinding {
 const EMULATOR_RUNTIME_BINDINGS_KEY = "uttoriAsm.emulatorRuntimeBindings.v1";
 
 /** Saved emulator selections keyed by the full workspace-folder URI string. */
-type EmulatorRuntimeBindings = Record<string, EmulatorRuntimeBinding>;
+type EmulatorRuntimeBindings = Partial<Record<string, EmulatorRuntimeBinding>>;
 
 /**
  * Prefer the workspace containing the resource, otherwise use the first open folder; return
@@ -245,7 +247,7 @@ export const configureEmulatorRuntime = async (
     return undefined;
   }
 
-  const manifest = JSON.parse(fs.readFileSync(runtimeManifest, "utf8")) as unknown;
+  const manifest: unknown = JSON.parse(fs.readFileSync(runtimeManifest, "utf8"));
   parseAresRuntimeManifest(manifest);
   const binding: EmulatorRuntimeBinding = {
     backend: "ares",
@@ -410,6 +412,113 @@ const stringField = (value: unknown, name: string): string => {
   return value;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isUttoriDebugConfiguration(value: DebugConfiguration): value is UttoriDebugConfiguration {
+  return (
+    typeof value.program === "string" &&
+    value.program.length > 0 &&
+    typeof value.debugMap === "string" &&
+    value.debugMap.length > 0 &&
+    (value.backend === undefined || value.backend === "replay" || value.backend === "ares") &&
+    optionalString(value.sourceRoot) &&
+    optionalString(value.replay) &&
+    optionalString(value.runtimeManifest) &&
+    optionalString(value.emulator) &&
+    optionalString(value.runtimeDirectory) &&
+    optionalString(value.sidecar) &&
+    optionalString(value.aresSystem) &&
+    (value.fastBoot === undefined || typeof value.fastBoot === "boolean")
+  );
+}
+
+/** Launch settings with the required ROM pair present and optional fields left uncoerced. */
+function debugConfiguration(session: DebugSession): UttoriDebugConfiguration {
+  const configuration = session.configuration;
+  if (
+    typeof configuration.program !== "string" ||
+    !configuration.program ||
+    typeof configuration.debugMap !== "string" ||
+    !configuration.debugMap
+  ) {
+    throw new Error("Uttori ASM debugging requires 'program' and 'debugMap'.");
+  }
+  if (!isUttoriDebugConfiguration(configuration)) {
+    throw new Error("Invalid debug configuration.");
+  }
+  return configuration;
+}
+
+function parsedReplayScript(text: string): ReplayScript {
+  const value: unknown = JSON.parse(text);
+  if (!isReplayScript(value)) {
+    throw new Error("Invalid replay script.");
+  }
+  return value;
+}
+
+function isTraceCapability(value: unknown): value is TraceCapability {
+  return (
+    isRecord(value) &&
+    typeof value.architecture === "string" &&
+    typeof value.addressSpace === "string" &&
+    typeof value.maxBufferedEvents === "number" &&
+    typeof value.maxBatchEvents === "number" &&
+    (value.instructionDetails === undefined || typeof value.instructionDetails === "boolean")
+  );
+}
+
+function isNativeFilePosition(value: unknown): value is NativeCaptureFilePosition {
+  return (
+    isRecord(value) &&
+    (value.fileState === "preparing" ||
+      value.fileState === "writing" ||
+      value.fileState === "complete" ||
+      value.fileState === "incomplete") &&
+    typeof value.fileBytes === "string" &&
+    typeof value.fileBatches === "string"
+  );
+}
+
+function isEditorTraceBatch(value: unknown): value is EditorTraceBatch {
+  return (
+    isRecord(value) &&
+    typeof value.architecture === "string" &&
+    typeof value.addressSpace === "string" &&
+    typeof value.sequenceStart === "number" &&
+    Array.isArray(value.addresses) &&
+    value.addresses.every((address) => typeof address === "number") &&
+    typeof value.droppedEvents === "number" &&
+    typeof value.active === "boolean" &&
+    (value.details === undefined || Array.isArray(value.details)) &&
+    (value.unattributedMemoryAccesses === undefined ||
+      typeof value.unattributedMemoryAccesses === "number")
+  );
+}
+
+function isReplayScript(value: unknown): value is ReplayScript {
+  if (!isRecord(value) || !Array.isArray(value.snapshots)) {
+    return false;
+  }
+  if (value.architectures !== undefined && !Array.isArray(value.architectures)) {
+    return false;
+  }
+  return value.snapshots.every(
+    (snapshot) =>
+      isRecord(snapshot) &&
+      Array.isArray(snapshot.threads) &&
+      Array.isArray(snapshot.frames) &&
+      isRecord(snapshot.registers) &&
+      Array.isArray(snapshot.memory),
+  );
+}
+
 /**
  * Combine the selected stream with the session ROM hash and producer identity; throw if
  * validated session identity is unavailable or malformed.
@@ -423,7 +532,7 @@ const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTra
     throw new Error("No loaded debug-session identity is available.");
   }
   const map = loaded.map;
-  const romContentSha256 = stringField(map.output?.sha256, "debugMap.output.sha256").toLowerCase();
+  const romContentSha256 = stringField(map.output.sha256, "debugMap.output.sha256").toLowerCase();
   if (!/^[\da-f]{64}$/.test(romContentSha256)) {
     throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
   }
@@ -439,22 +548,20 @@ const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTra
  * @returns {EditorTraceMetadata["producer"]} Producer ID and revision derived from persisted build identities.
  */
 const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadata["producer"] => {
-  const configuration = session.configuration as UttoriDebugConfiguration;
+  const configuration = debugConfiguration(session);
   const folder = session.workspaceFolder;
   const kind = configuration.backend ?? "replay";
   if (kind === "replay") {
     return {
       id: "debug-map-replay",
-      revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value"),
+      revision: stringField(map.fingerprint.value, "debugMap.fingerprint.value"),
     };
   }
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
-  const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as Record<string, unknown>;
+  const parsed: unknown = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+  const manifest = isRecord(parsed) ? parsed : {};
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
-  const revision =
-    kind === "ares"
-      ? stringField(manifest.forkRevision, "runtimeManifest.forkRevision")
-      : stringField(manifest.upstreamRevision, "runtimeManifest.upstreamRevision");
+  const revision = stringField(manifest.forkRevision, "runtimeManifest.forkRevision");
   const executable = stringField(manifest.executableSha256, "runtimeManifest.executableSha256");
   return { id: kind, revision: `${revision}:${patch}:${executable}` };
 };
@@ -468,11 +575,9 @@ const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadat
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showQuickPick
  */
 const chooseTrace = async (session: DebugSession): Promise<TraceCapability | undefined> => {
-  const result = (await session.customRequest("uttori/traceCapabilities")) as {
-    traces?: TraceCapability[];
-  };
-  const traces = result.traces ?? [];
-  if (traces.length === 0) {
+  const result: unknown = await session.customRequest("uttori/traceCapabilities");
+  const traces = isRecord(result) && Array.isArray(result.traces) ? result.traces : [];
+  if (!traces.every(isTraceCapability) || traces.length === 0) {
     throw new Error("The active backend has no instruction trace stream.");
   }
   if (traces.length === 1) {
@@ -596,7 +701,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       scope: captureScope,
       context: settings.get<boolean>("debug.captureContext", true),
       transport: async (request) =>
-        (await session.customRequest("uttori/capture", request)) as CaptureResultV2,
+        validateCaptureResult(await session.customRequest("uttori/capture", request)),
     });
     let live: LiveBusAnalysis | undefined;
     if (liveProject && recorder instanceof NativeCaptureFileRecorder) {
@@ -630,13 +735,16 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
         void recorder.completion.then(
           (summary) => {
             clearInterval(polling);
-            analysis.update(
-              summary.position as import("@uttori/asm-debug-adapter").NativeCaptureFilePosition,
-            );
+            if (!isNativeFilePosition(summary.position)) {
+              throw new Error("Invalid native file state.");
+            }
+            analysis.update(summary.position);
+            return;
           },
           () => {
             clearInterval(polling);
             analysis.cancel();
+            return;
           },
         );
         void analysis.completion
@@ -646,11 +754,13 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
                 `Assembly: live bus analysis published ${result.added.runtime.toLocaleString()} new facts from ${result.observedEvents.toLocaleString()} accesses.`,
               );
               void commands.executeCommand("asm.sources.refresh");
+              return;
             },
             (error: unknown) => {
               void window.showWarningMessage(
                 `Assembly live analysis stopped: ${error instanceof Error ? error.message : String(error)} The ACT2 recording remains available for offline import.`,
               );
+              return;
             },
           )
           .finally(() => {
@@ -692,8 +802,13 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       file: destination.fsPath,
       ...metadata,
       maxBatchEvents: trace.maxBatchEvents,
-      readTrace: async (maxEvents): Promise<EditorTraceBatch> =>
-        (await session.customRequest("uttori/readTrace", { maxEvents })) as EditorTraceBatch,
+      readTrace: async (maxEvents): Promise<EditorTraceBatch> => {
+        const batch: unknown = await session.customRequest("uttori/readTrace", { maxEvents });
+        if (!isEditorTraceBatch(batch)) {
+          throw new Error("Invalid trace batch shape.");
+        }
+        return batch;
+      },
       stopTrace: async () => {
         await session.customRequest("uttori/stopTrace");
       },
@@ -1005,29 +1120,30 @@ const loadConfiguration = (
   readonly output: Uint8Array;
   readonly sourceRoot: string;
 } => {
-  const configuration = session.configuration as UttoriDebugConfiguration;
-  if (!configuration.program || !configuration.debugMap) {
-    throw new Error("Uttori ASM debugging requires 'program' and 'debugMap'.");
-  }
+  const configuration = debugConfiguration(session);
   const folder = session.workspaceFolder;
   const program = resolvedPath(configuration.program, folder);
   const mapFile = resolvedPath(configuration.debugMap, folder);
   const output = new Uint8Array(fs.readFileSync(program));
-  const map = JSON.parse(fs.readFileSync(mapFile, "utf8")) as DebugMap;
-  const issues = [...validateDebugMap(map, output)];
+  const parsedMap: unknown = JSON.parse(fs.readFileSync(mapFile, "utf8"));
+  if (!isStoredDebugMap(parsedMap)) {
+    throw new Error("Invalid debug map.");
+  }
+  const issues = [...validateDebugMap(parsedMap, output)];
   // Reject even a mutually valid ROM/map pair when it is not the successful build selected for launch.
-  if (configuration.outputSha256 && configuration.outputSha256 !== map.output.sha256) {
+  if (configuration.outputSha256 && configuration.outputSha256 !== parsedMap.output.sha256) {
     issues.push("ROM differs from the selected build.");
   }
   if (
     configuration.debugMapFingerprint &&
-    configuration.debugMapFingerprint !== map.fingerprint.value
+    configuration.debugMapFingerprint !== parsedMap.fingerprint.value
   ) {
     issues.push("Debug map differs from the selected build.");
   }
-  if (issues.length) {
-    throw new Error(issues.join(" "));
+  if (issues.length || !isAcceptedDebugMap(parsedMap)) {
+    throw new Error(issues.join(" ") || "Invalid debug map.");
   }
+  const map = parsedMap;
   const kind = configuration.backend ?? "replay";
   const backend = (() => {
     if (kind !== "replay") {
@@ -1041,9 +1157,7 @@ const loadConfiguration = (
       );
     }
     const script: ReplayScript = configuration.replay
-      ? (JSON.parse(
-          fs.readFileSync(resolvedPath(configuration.replay, folder), "utf8"),
-        ) as ReplayScript)
+      ? parsedReplayScript(fs.readFileSync(resolvedPath(configuration.replay, folder), "utf8"))
       : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
@@ -1162,7 +1276,7 @@ class UttoriDebugConfigurationProvider implements DebugConfigurationProvider {
         ...configuration,
         type: UTTORI_ASM_DEBUG_TYPE,
         request: "launch",
-        name: configuration.name ?? "Debug Git Source",
+        name: configuration.name,
         program: built.outputFile,
         debugMap: built.debugMapFile,
         outputSha256: built.verification.outputSha256,
@@ -1222,18 +1336,16 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
     let loaded: ReturnType<typeof loadConfiguration>;
     try {
       if (session.configuration.backend === "ares") {
-        const manifest = parseAresRuntimeManifest(
-          JSON.parse(
-            fs.readFileSync(
-              requiredLivePath(
-                (session.configuration as UttoriDebugConfiguration).runtimeManifest,
-                "runtimeManifest",
-                session.workspaceFolder,
-              ),
-              "utf8",
-            ),
-          ),
+        const runtimeManifest =
+          typeof session.configuration.runtimeManifest === "string"
+            ? session.configuration.runtimeManifest
+            : undefined;
+        const manifestText = fs.readFileSync(
+          requiredLivePath(runtimeManifest, "runtimeManifest", session.workspaceFolder),
+          "utf8",
         );
+        const manifestValue: unknown = JSON.parse(manifestText);
+        const manifest = parseAresRuntimeManifest(manifestValue);
         log(
           manifest.frontend === "desktop"
             ? "ares desktop: a game window will open with video, audio, and controller input. Launch pauses at entry. Continue (F5) starts the game. Configure controls in ares Settings → Input."

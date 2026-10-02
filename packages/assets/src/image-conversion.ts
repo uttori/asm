@@ -50,6 +50,20 @@ interface ImageOptions {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
+const isPlanarDepth = (value: number): value is PlanarDepth =>
+  value === 2 || value === 3 || value === 4 || value === 8;
+
+const isSourceBitDepth = (value: unknown): value is IndexedImage["sourceBitDepth"] =>
+  value === 1 || value === 2 || value === 4 || value === 8;
+
+const isRgbaTuple = (value: unknown): value is readonly [number, number, number, number] =>
+  Array.isArray(value) &&
+  value.length === 4 &&
+  value.every(
+    (channel): channel is number =>
+      typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255,
+  );
+
 const readInteger = (value: unknown, label: string, minimum: number, maximum: number): number => {
   if (typeof value !== "number") {
     throw new RangeError(`${label} must be a number.`);
@@ -268,7 +282,9 @@ function selectPalette(
       indexes = image.indexes.slice();
       sourceToNative = colors.map((_, index) => index);
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette)
+        ? resources[options.palette]
+        : undefined;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -339,7 +355,9 @@ function selectPalette(
         indexes[pixel] = index;
       }
     } else {
-      const resource = resources[options.palette];
+      const resource = Object.hasOwn(resources, options.palette)
+        ? resources[options.palette]
+        : undefined;
       if (!resource) {
         throw new Error(`Missing palette resource '${options.palette}'.`);
       }
@@ -490,7 +508,13 @@ export function decodeBgScreenMap(bytes: Uint8Array, width: number, height: numb
   if (encoded.length !== width * height) {
     throw new Error("BG screen map byte count is invalid.");
   }
-  const logical = Array.from({ length: encoded.length }, () => ({ tile: 0, palette: 0, priority: 0, horizontalFlip: 0, verticalFlip: 0 }));
+  const logical = Array.from({ length: encoded.length }, () => ({
+    tile: 0,
+    palette: 0,
+    priority: 0,
+    horizontalFlip: 0,
+    verticalFlip: 0,
+  }));
   order.forEach((position, index) => {
     logical[position] = encoded[index];
   });
@@ -501,14 +525,14 @@ export function decodeBgScreenMap(bytes: Uint8Array, width: number, height: numb
  * @param {readonly number[]} indexes Row-major tile indexes.
  * @param {number} width Width in cells.
  * @param {number} height Height in cells.
- * @param {"full" | "partial"} layout Hardware map or partial upload contract.
+ * @param {string} layout `"full"` for the hardware map, or `"partial"` for an upload rectangle.
  * @returns {Uint8Array} Owned native map bytes.
  */
 export function encodeMode7MapLayout(
   indexes: readonly number[],
   width: number,
   height: number,
-  layout: "full" | "partial",
+  layout: string,
 ): Uint8Array {
   if (
     !Number.isSafeInteger(width) ||
@@ -554,29 +578,41 @@ function imageModel(document: AssetDocument): ImageModel {
       !Array.isArray(value.palette) ||
       value.palette.length < 1 ||
       value.palette.length > 256 ||
-      ![1, 2, 4, 8].includes(Number(value.sourceBitDepth))
+      !isSourceBitDepth(value.sourceBitDepth)
     ) {
       throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
     }
+    const palette: (readonly [number, number, number, number])[] = [];
     for (const [index, color] of value.palette.entries()) {
-      if (
-        !Array.isArray(color) ||
-        color.length !== 4 ||
-        color.some(
-          (channel: unknown) =>
-            typeof channel !== "number" ||
-            !Number.isInteger(channel) ||
-            channel < 0 ||
-            channel > 255,
-        )
-      ) {
+      if (!isRgbaTuple(color)) {
         throw new Error(`Indexed image palette entry ${index} is not RGBA8.`);
       }
+      const entry: readonly [number, number, number, number] = [
+        color[0],
+        color[1],
+        color[2],
+        color[3],
+      ];
+      palette.push(entry);
     }
-  } else if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+    return {
+      kind: "indexed-image",
+      width: value.width,
+      height: value.height,
+      indexes: value.indexes,
+      palette,
+      sourceBitDepth: value.sourceBitDepth,
+    };
+  }
+  if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
     throw new Error("RGBA image model has invalid pixel bytes.");
   }
-  return value as unknown as ImageModel;
+  return {
+    kind: "rgba-image",
+    width: value.width,
+    height: value.height,
+    rgba: value.rgba,
+  };
 }
 
 /** Build tiles, CGRAM, map, and composed preview from one exact palette/index decision.
@@ -620,7 +656,7 @@ function encodeImage(
   const tiles: Tile[] = coordinates.map(([tx, ty], storageIndex) => {
     indexByCoordinate[ty * widthTiles + tx] = storageIndex;
     return Array.from({ length: 8 }, (_, row) =>
-      Array.from({ length: 8 }, (_, column) => {
+      Array.from({ length: 8 }, (_column, column) => {
         // Pre-invert map flips so the displayed image remains pixel-exact.
         const sourceX = options.tilemap.horizontalFlip ? 7 - column : column;
         const sourceY = options.tilemap.verticalFlip ? 7 - row : row;
@@ -628,13 +664,18 @@ function encodeImage(
       }),
     );
   });
-  const tileBytes = mode7
-    ? encodeMode7Tiles(tiles)
-    : encodePlanarTiles(tiles, depth as PlanarDepth);
+  let tileBytes: Uint8Array;
+  let decodedTiles: ReturnType<typeof decodeMode7Tiles>;
+  if (mode7) {
+    tileBytes = encodeMode7Tiles(tiles);
+    decodedTiles = decodeMode7Tiles(tileBytes);
+  } else if (isPlanarDepth(depth)) {
+    tileBytes = encodePlanarTiles(tiles, depth);
+    decodedTiles = decodePlanarTiles(tileBytes, depth);
+  } else {
+    throw new Error(`Unsupported planar tile format '${format}'.`);
+  }
   const paletteBytes = encodeBgr555(colors);
-  const decodedTiles = mode7
-    ? decodeMode7Tiles(tileBytes)
-    : decodePlanarTiles(tileBytes, depth as PlanarDepth);
   const decodedColors = decodeBgr555(paletteBytes);
   const preview = new Uint8Array(image.width * image.height * 4);
   for (let ty = 0; ty < heightTiles; ty++) {
@@ -724,7 +765,12 @@ function encodeImage(
       tilemap: { bytes: tilemapBytes, mediaType: "application/octet-stream", metadata },
       preview: { bytes: preview, mediaType: "application/x-rgba", metadata },
     },
-    normalizedOptions: options as unknown as Readonly<Record<string, unknown>>,
+    normalizedOptions: {
+      palette: options.palette,
+      paletteExpansion: options.paletteExpansion,
+      layout: options.layout,
+      tilemap: options.tilemap,
+    },
   };
 }
 

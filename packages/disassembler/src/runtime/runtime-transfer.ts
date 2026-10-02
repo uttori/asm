@@ -73,82 +73,104 @@ export interface RuntimeTransferSummary {
   readonly omittedWindows: number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+const readRegister = (
+  configuration: Record<string, unknown>,
+  field: string,
+  maximum: number,
+  message: string,
+): number => {
+  const count = configuration[field];
+  if (!(isInteger(count) && count >= 0 && count <= maximum)) {
+    throw new Error(message);
+  }
+  return count;
+};
+
 /** Normalize boundary fields for deterministic hashing. Common event ordering is validated by the importer.
- * @param {RuntimeTransferBoundary} marker Untrusted marker from a transport-neutral source.
+ * @param {unknown} marker Untrusted marker from a transport-neutral source.
  * @returns {RuntimeTransferBoundary} Canonical marker. Inconsistent counts/configuration throw.
  */
-export const validateRuntimeTransferBoundary = (
-  marker: RuntimeTransferBoundary,
-): RuntimeTransferBoundary => {
-  const { configuration: c } = marker;
+export const validateRuntimeTransferBoundary = (marker: unknown): RuntimeTransferBoundary => {
+  if (!isRecord(marker) || !isRecord(marker.configuration)) {
+    throw new Error("Invalid transfer boundary attribution or count.");
+  }
+  const configuration = marker.configuration;
+  const actor = marker.actor;
+  const channel = marker.channel;
+  const boundary = marker.boundary;
+  const transferId = marker.transferId;
+  const pc = marker.pc;
+  const context = marker.context;
+  const transferred = marker.transferred;
+  const sequence = marker.sequence;
+  const ordinal = marker.ordinal;
+  const cycle = marker.cycle;
+  const hcounter = marker.hcounter;
+  const vcounter = marker.vcounter;
   if (
-    !c ||
-    !["dma", "hdma"].includes(marker.actor) ||
-    !Number.isInteger(marker.channel) ||
-    marker.channel < 0 ||
-    marker.channel > 7 ||
-    !["begin", "complete", "interrupted"].includes(marker.boundary) ||
-    typeof marker.transferId !== "string" ||
-    !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) ||
-    BigInt(marker.transferId) > 0xffffffffffffffffn ||
-    !Number.isInteger(marker.pc) ||
-    marker.pc < 0 ||
-    marker.pc > 0xffffff ||
-    !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) ||
-    !Number.isInteger(marker.transferred) ||
-    marker.transferred < 0 ||
-    marker.transferred > 65536
+    (actor !== "dma" && actor !== "hdma") ||
+    !(isInteger(channel) && channel >= 0 && channel <= 7) ||
+    (boundary !== "begin" && boundary !== "complete" && boundary !== "interrupted") ||
+    typeof transferId !== "string" ||
+    !/^(0|[1-9]\d{0,19})$/.test(transferId) ||
+    BigInt(transferId) > 0xffffffffffffffffn ||
+    !(isInteger(pc) && pc >= 0 && pc <= 0xffffff) ||
+    (context !== "unattributed" &&
+      context !== "instruction" &&
+      context !== "interrupt" &&
+      context !== "wait" &&
+      context !== "stop") ||
+    !(isInteger(transferred) && transferred >= 0 && transferred <= 65536) ||
+    typeof sequence !== "string" ||
+    typeof ordinal !== "string" ||
+    typeof cycle !== "string" ||
+    !isInteger(hcounter) ||
+    !isInteger(vcounter)
   ) {
     throw new Error("Invalid transfer boundary attribution or count.");
   }
-  for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"] as const) {
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255) {
-      throw new Error("Invalid transfer byte register.");
-    }
-  }
-  for (const field of ["a1t", "das", "a2a"] as const) {
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535) {
-      throw new Error("Invalid transfer word register.");
-    }
-  }
-  if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15) {
-    throw new Error("Invalid transfer channel flags.");
-  }
-  if (marker.boundary === "begin") {
-    if (marker.transferId !== marker.sequence || marker.transferred !== 0) {
+  const dmap = readRegister(configuration, "dmap", 255, "Invalid transfer byte register.");
+  const bbad = readRegister(configuration, "bbad", 255, "Invalid transfer byte register.");
+  const a1b = readRegister(configuration, "a1b", 255, "Invalid transfer byte register.");
+  const dasb = readRegister(configuration, "dasb", 255, "Invalid transfer byte register.");
+  const ntlr = readRegister(configuration, "ntlr", 255, "Invalid transfer byte register.");
+  const a1t = readRegister(configuration, "a1t", 65535, "Invalid transfer word register.");
+  const das = readRegister(configuration, "das", 65535, "Invalid transfer word register.");
+  const a2a = readRegister(configuration, "a2a", 65535, "Invalid transfer word register.");
+  const flags = readRegister(configuration, "flags", 15, "Invalid transfer channel flags.");
+  if (boundary === "begin") {
+    if (transferId !== sequence || transferred !== 0) {
       throw new Error("Invalid transfer begin identity.");
     }
-  } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1) {
+  } else if (BigInt(transferId) >= BigInt(sequence) || transferred < 1) {
     throw new Error("Invalid transfer end identity.");
   }
-  if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4)) {
+  if (actor === "hdma" && (boundary === "interrupted" || transferred > 4)) {
     throw new Error("Invalid HDMA payload-burst boundary.");
   }
   return {
     kind: "transfer",
-    sequence: marker.sequence,
-    ordinal: marker.ordinal,
-    cycle: marker.cycle,
-    transferId: marker.transferId,
-    pc: marker.pc,
-    boundary: marker.boundary,
-    actor: marker.actor,
-    channel: marker.channel,
-    context: marker.context,
-    hcounter: marker.hcounter,
-    vcounter: marker.vcounter,
-    transferred: marker.transferred,
-    configuration: {
-      dmap: c.dmap,
-      bbad: c.bbad,
-      a1t: c.a1t,
-      a1b: c.a1b,
-      das: c.das,
-      dasb: c.dasb,
-      a2a: c.a2a,
-      ntlr: c.ntlr,
-      flags: c.flags,
-    },
+    sequence,
+    ordinal,
+    cycle,
+    transferId,
+    pc,
+    boundary,
+    actor,
+    channel,
+    context,
+    hcounter,
+    vcounter,
+    transferred,
+    configuration: { dmap, bbad, a1t, a1b, das, dasb, a2a, ntlr, flags },
   };
 };
 
@@ -297,7 +319,7 @@ export const createRuntimeTransferAccumulator = () => {
       open.clear();
       return {
         activity: [...activity.entries()]
-          .sort(([a], [b]) => a.localeCompare(b))
+          .toSorted(([a], [b]) => a.localeCompare(b))
           .map(([, value]) => value),
         windows,
         omittedWindows,

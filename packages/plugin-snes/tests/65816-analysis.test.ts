@@ -213,6 +213,22 @@ test("same-rank contradictory runtime width observations stay ambiguous", (t) =>
   t.true(result.conflicts.some((conflict) => conflict.kind === "state-ambiguity"));
 });
 
+const instruction = (
+  mnemonic: string,
+  effects: StaticInstruction["effects"],
+): StaticInstruction => ({
+  specificationId: mnemonic,
+  address: 0x808000,
+  fileOffset: 0,
+  size: 1,
+  opcode: 0,
+  mnemonic,
+  mode: "implied",
+  effects,
+  flow: { kind: "fallthrough", fallthrough: true },
+  targets: [],
+});
+
 test("65816 abstract state distinguishes unknown and conflicting joins and tracks PHK/PLB", (t) => {
   const unknownState = unknownCpu65816State();
   const m8 = applyCpu65816StateOverride(unknownState, { e: 0, m: 1 });
@@ -220,21 +236,6 @@ test("65816 abstract state distinguishes unknown and conflicting joins and track
   const joined = joinCpu65816States(m8, m16);
   t.is(joined.m.kind, "conflicting");
 
-  const instruction = (
-    mnemonic: string,
-    effects: StaticInstruction["effects"],
-  ): StaticInstruction => ({
-    specificationId: mnemonic,
-    address: 0x808000,
-    fileOffset: 0,
-    size: 1,
-    opcode: 0,
-    mnemonic,
-    mode: "implied",
-    effects,
-    flow: { kind: "fallthrough", fallthrough: true },
-    targets: [],
-  });
   const pushed = transferCpu65816State(
     instruction("PHK", [{ kind: "push", source: "pbr" }]),
     applyCpu65816StateOverride(resetCpu65816State(), { programBank: 0x80 }),

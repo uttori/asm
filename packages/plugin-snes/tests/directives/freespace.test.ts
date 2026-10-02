@@ -1,7 +1,10 @@
 import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
-
-import { handleFreespace, handleFreespaceByte, handleProt } from "../../src/directives/freespace.js";
+import {
+  handleFreespace,
+  handleFreespaceByte,
+  handleProt,
+} from "../../src/directives/freespace.js";
 
 test("SNES freespace directives own allocation and fill policy", (t) => {
   const assembler = new Assembler(new Uint8Array(0x90000));
@@ -15,9 +18,10 @@ test("SNES freespace directives own allocation and fill policy", (t) => {
   handleFreespace(assembler, state, ["freedata"]);
   t.is(state.activeFreespaceStartOffset, 0x90000);
   t.is(state.activeFreespaceContentStartOffset, 0x90008);
-  t.deepEqual([...assembler.outputBytes.slice(0x90000, 0x90008)], [
-    0x53, 0x54, 0x41, 0x52, 0x00, 0x00, 0xff, 0xff,
-  ]);
+  t.deepEqual(
+    assembler.outputBytes.slice(0x90000, 0x90008),
+    [0x53, 0x54, 0x41, 0x52, 0x00, 0x00, 0xff, 0xff],
+  );
 });
 
 test("SNES freespace policy rejects unsupported contexts", (t) => {
@@ -48,12 +52,13 @@ test("SNES PROT emits resolved and deferred address records", (t) => {
   t.throws(() => handleProt(assembler, ["prot"]));
   handleProt(assembler, ["prot", "known,", "forward"]);
 
-  t.deepEqual([...assembler.outputBytes.slice(0, 16)], [
-    0x50, 0x52, 0x4f, 0x54, 0x06,
-    0x67, 0x45, 0x23,
-    0x00, 0x00, 0x00,
-    0x53, 0x54, 0x4f, 0x50, 0x00,
-  ]);
+  t.deepEqual(
+    assembler.outputBytes.slice(0, 16),
+    [
+      0x50, 0x52, 0x4f, 0x54, 0x06, 0x67, 0x45, 0x23, 0x00, 0x00, 0x00, 0x53, 0x54, 0x4f, 0x50,
+      0x00,
+    ],
+  );
 });
 
 test("SNES freespacebyte requires exactly one parameter", (t) => {

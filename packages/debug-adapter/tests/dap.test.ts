@@ -29,8 +29,236 @@ const request = (seq: number, command: string, args: Record<string, unknown> = {
   arguments: args,
 });
 
-const response = (messages: Awaited<ReturnType<DebugAdapterSession["dispatch"]>>): DapResponse =>
-  messages[0] as DapResponse;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** DAP replies and events share one array; only a response may satisfy a request assertion. */
+const response = (messages: Awaited<ReturnType<DebugAdapterSession["dispatch"]>>): DapResponse => {
+  const message = messages[0];
+  if (message.type !== "response") {
+    throw new Error("Expected a DAP response.");
+  }
+  return message;
+};
+
+const bodyRecord = (body: unknown): Record<string, unknown> => {
+  if (!isRecord(body)) {
+    throw new Error("Expected a DAP response body.");
+  }
+  return body;
+};
+
+const stringField = (record: Record<string, unknown>, key: string): string => {
+  const value = record[key];
+  if (typeof value !== "string") {
+    throw new Error(`Expected ${key} to be a string.`);
+  }
+  return value;
+};
+
+const numberField = (record: Record<string, unknown>, key: string): number => {
+  const value = record[key];
+  if (typeof value !== "number") {
+    throw new Error(`Expected ${key} to be a number.`);
+  }
+  return value;
+};
+
+const booleanField = (record: Record<string, unknown>, key: string): boolean => {
+  const value = record[key];
+  if (typeof value !== "boolean") {
+    throw new Error(`Expected ${key} to be a boolean.`);
+  }
+  return value;
+};
+
+const recordField = (record: Record<string, unknown>, key: string): Record<string, unknown> => {
+  const value = record[key];
+  if (!isRecord(value)) {
+    throw new Error(`Expected ${key} to be an object.`);
+  }
+  return value;
+};
+
+const objectArray = (record: Record<string, unknown>, key: string): Record<string, unknown>[] => {
+  const value = record[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected ${key} to be an array.`);
+  }
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new Error(`Expected ${key}[${index}] to be an object.`);
+    }
+    return entry;
+  });
+};
+
+const numberList = (record: Record<string, unknown>, key: string): number[] => {
+  const value = record[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected ${key} to be an array of numbers.`);
+  }
+  return value.map((entry, index) => {
+    if (typeof entry !== "number") {
+      throw new Error(`Expected ${key}[${index}] to be a number.`);
+    }
+    return entry;
+  });
+};
+
+const verifiedLineBreakpoints = (body: unknown) => ({
+  breakpoints: objectArray(bodyRecord(body), "breakpoints").map((entry) => ({
+    verified: booleanField(entry, "verified"),
+    line: numberField(entry, "line"),
+  })),
+});
+
+const verifiedBreakpoints = (body: unknown) => ({
+  breakpoints: objectArray(bodyRecord(body), "breakpoints").map((entry) => ({
+    verified: booleanField(entry, "verified"),
+  })),
+});
+
+const locationBreakpoints = (body: unknown) => ({
+  breakpoints: objectArray(bodyRecord(body), "breakpoints").map((entry) => ({
+    line: numberField(entry, "line"),
+    column: numberField(entry, "column"),
+  })),
+});
+
+const namedSourceFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => ({
+    name: stringField(entry, "name"),
+    line: numberField(entry, "line"),
+    source: { path: stringField(recordField(entry, "source"), "path") },
+  })),
+});
+
+const lineFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => ({
+    line: numberField(entry, "line"),
+  })),
+});
+
+const sourcePathFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => ({
+    line: numberField(entry, "line"),
+    source: { path: stringField(recordField(entry, "source"), "path") },
+  })),
+});
+
+const disassemblyFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => {
+    const source = recordField(entry, "source");
+    return {
+      line: numberField(entry, "line"),
+      source: {
+        sourceReference: numberField(source, "sourceReference"),
+        path: stringField(source, "path"),
+        presentationHint: stringField(source, "presentationHint"),
+      },
+    };
+  }),
+});
+
+const sourceReferenceFrames = (body: unknown) => ({
+  stackFrames: objectArray(bodyRecord(body), "stackFrames").map((entry) => ({
+    source: {
+      sourceReference: numberField(recordField(entry, "source"), "sourceReference"),
+    },
+  })),
+});
+
+const scopeReferences = (body: unknown) => ({
+  scopes: objectArray(bodyRecord(body), "scopes").map((entry) => ({
+    variablesReference: numberField(entry, "variablesReference"),
+  })),
+});
+
+const namedScopes = (body: unknown) => ({
+  scopes: objectArray(bodyRecord(body), "scopes").map((entry) => ({
+    name: stringField(entry, "name"),
+    variablesReference: numberField(entry, "variablesReference"),
+  })),
+});
+
+const namedVariables = (body: unknown) => ({
+  variables: objectArray(bodyRecord(body), "variables").map((entry) => ({
+    name: stringField(entry, "name"),
+    value: stringField(entry, "value"),
+    type: stringField(entry, "type"),
+    variablesReference: numberField(entry, "variablesReference"),
+  })),
+});
+
+const memoryVariables = (body: unknown) => ({
+  variables: objectArray(bodyRecord(body), "variables").map((entry) => ({
+    name: stringField(entry, "name"),
+    memoryReference: stringField(entry, "memoryReference"),
+  })),
+});
+
+const stackVariables = (body: unknown) => ({
+  variables: objectArray(bodyRecord(body), "variables").map((entry) => ({
+    name: stringField(entry, "name"),
+    value: stringField(entry, "value"),
+    type: stringField(entry, "type"),
+    memoryReference: stringField(entry, "memoryReference"),
+    variablesReference: numberField(entry, "variablesReference"),
+  })),
+});
+
+const evaluation = (body: unknown) => {
+  const record = bodyRecord(body);
+  return {
+    result: stringField(record, "result"),
+    type: stringField(record, "type"),
+    variablesReference: numberField(record, "variablesReference"),
+  };
+};
+
+const memoryRead = (body: unknown) => {
+  const record = bodyRecord(body);
+  return {
+    data: stringField(record, "data"),
+    unreadableBytes: numberField(record, "unreadableBytes"),
+  };
+};
+
+const instructionText = (body: unknown) => ({
+  instructions: objectArray(bodyRecord(body), "instructions").map((entry) => ({
+    instruction: stringField(entry, "instruction"),
+  })),
+});
+
+const sourceContent = (body: unknown) => ({
+  content: stringField(bodyRecord(body), "content"),
+});
+
+const threadList = (body: unknown) => ({
+  threads: objectArray(bodyRecord(body), "threads").map((entry) => ({
+    id: numberField(entry, "id"),
+    name: stringField(entry, "name"),
+  })),
+});
+
+const traceCapabilities = (body: unknown) => ({
+  traces: objectArray(bodyRecord(body), "traces").map((entry) => ({
+    architecture: stringField(entry, "architecture"),
+    addressSpace: stringField(entry, "addressSpace"),
+  })),
+});
+
+const traceBatch = (body: unknown) => {
+  const record = bodyRecord(body);
+  return {
+    addresses: numberList(record, "addresses"),
+    active: booleanField(record, "active"),
+  };
+};
+
+const breakpointLocationsSupported = (body: unknown): boolean =>
+  booleanField(bodyRecord(body), "supportsBreakpointLocationsRequest");
 
 const snapshot = (cpuAddress: number): ReplaySnapshot => ({
   threads: [
@@ -192,10 +420,8 @@ test("live DAP handshake connects before initialized and configures breakpoints 
   );
   // Future events must not stay queued in the completed launch request's async context.
   await fixture.backend.step(1, "instruction");
-  t.is(
-    messages.at(-1)?.type === "event" && (messages.at(-1) as { event: string }).event,
-    "stopped",
-  );
+  const latest = messages.at(-1);
+  t.is(latest?.type === "event" ? latest.event : undefined, "stopped");
   t.is(messages.at(-1)?.seq, 10);
 });
 
@@ -261,7 +487,8 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
     ]),
     [[1, "response", "initialize"]],
   );
-  t.true(Boolean((initialize[0] as DapResponse).body && (initialize[0] as DapResponse).success));
+  const initialized = response(initialize);
+  t.true(Boolean(initialized.body && initialized.success));
 
   const launch = await fixture.session.dispatch(request(2, "launch"));
   t.deepEqual(
@@ -283,9 +510,7 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
       breakpoints: [{ line: 2 }, { line: 99 }],
     }),
   );
-  const breakpointBody = response(sourceBreakpoints).body as {
-    breakpoints: Array<{ verified: boolean; line: number }>;
-  };
+  const breakpointBody = verifiedLineBreakpoints(response(sourceBreakpoints).body);
   t.deepEqual(
     breakpointBody.breakpoints.map(({ verified, line }) => ({ verified, line })),
     [
@@ -294,32 +519,40 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
     ],
   );
 
-  const stack = response(await fixture.session.dispatch(request(4, "stackTrace", { threadId: 1 })))
-    .body as { stackFrames: Array<{ name: string; line: number; source: { path: string } }> };
+  const stack = namedSourceFrames(
+    response(await fixture.session.dispatch(request(4, "stackTrace", { threadId: 1 }))).body,
+  );
   t.is(stack.stackFrames[0]?.line, 2);
   t.is(stack.stackFrames[0]?.name, "65816 (current frame only)");
   t.is(stack.stackFrames[0]?.source.path, fixture.source);
 
-  const scopes = response(await fixture.session.dispatch(request(5, "scopes", { frameId: 10 })))
-    .body as { scopes: Array<{ variablesReference: number }> };
-  const variables = response(
-    await fixture.session.dispatch(
-      request(6, "variables", { variablesReference: scopes.scopes[0]?.variablesReference }),
-    ),
-  ).body as { variables: Array<{ name: string; value: string }> };
+  const scopes = scopeReferences(
+    response(await fixture.session.dispatch(request(5, "scopes", { frameId: 10 }))).body,
+  );
+  const variables = namedVariables(
+    response(
+      await fixture.session.dispatch(
+        request(6, "variables", { variablesReference: scopes.scopes[0]?.variablesReference }),
+      ),
+    ).body,
+  );
   t.deepEqual(variables.variables, [
     { name: "A", value: "0x1234", type: "uint16", variablesReference: 0 },
   ]);
 
-  const registerWatch = response(
-    await fixture.session.dispatch(request(7, "evaluate", { expression: "a", frameId: 10 })),
-  ).body as { result: string; type: string; variablesReference: number };
+  const registerWatch = evaluation(
+    response(
+      await fixture.session.dispatch(request(7, "evaluate", { expression: "a", frameId: 10 })),
+    ).body,
+  );
   t.deepEqual(registerWatch, { result: "0x1234", type: "uint16", variablesReference: 0 });
-  const expressionWatch = response(
-    await fixture.session.dispatch(
-      request(8, "evaluate", { expression: "($10 + A) & $FFFF", frameId: 10 }),
-    ),
-  ).body as { result: string; type: string; variablesReference: number };
+  const expressionWatch = evaluation(
+    response(
+      await fixture.session.dispatch(
+        request(8, "evaluate", { expression: "($10 + A) & $FFFF", frameId: 10 }),
+      ),
+    ).body,
+  );
   t.deepEqual(expressionWatch, { result: "0x1244", type: "integer", variablesReference: 0 });
   const invalidWatch = response(
     await fixture.session.dispatch(request(9, "evaluate", { expression: "missing", frameId: 10 })),
@@ -327,51 +560,57 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
   t.false(invalidWatch.success);
   t.regex(invalidWatch.message ?? "", /Unknown register 'missing'/);
 
-  const instructionBreakpoints = response(
-    await fixture.session.dispatch(
-      request(10, "setInstructionBreakpoints", {
-        breakpoints: [
-          {
-            instructionReference: formatDebugAddress({
-              architecture: "snes.65816",
-              addressSpace: "snes.cpu",
-              address: 0x008001,
-              outputOffset: 1,
-            }),
-          },
-        ],
-      }),
-    ),
-  ).body as { breakpoints: Array<{ verified: boolean }> };
+  const instructionBreakpoints = verifiedBreakpoints(
+    response(
+      await fixture.session.dispatch(
+        request(10, "setInstructionBreakpoints", {
+          breakpoints: [
+            {
+              instructionReference: formatDebugAddress({
+                architecture: "snes.65816",
+                addressSpace: "snes.cpu",
+                address: 0x008001,
+                outputOffset: 1,
+              }),
+            },
+          ],
+        }),
+      ),
+    ).body,
+  );
   t.true(instructionBreakpoints.breakpoints[0]?.verified);
 
-  const memory = response(
-    await fixture.session.dispatch(
-      request(11, "readMemory", {
-        memoryReference: formatDebugAddress({
-          architecture: "snes.65816",
-          addressSpace: "snes.cpu",
-          address: 0x008000,
+  const memory = memoryRead(
+    response(
+      await fixture.session.dispatch(
+        request(11, "readMemory", {
+          memoryReference: formatDebugAddress({
+            architecture: "snes.65816",
+            addressSpace: "snes.cpu",
+            address: 0x008000,
+          }),
+          count: 2,
         }),
-        count: 2,
-      }),
-    ),
-  ).body as { data: string; unreadableBytes: number };
+      ),
+    ).body,
+  );
   t.is(memory.data, Buffer.from([0xea, 0xdb]).toString("base64"));
   t.is(memory.unreadableBytes, 0);
 
-  const disassembly = response(
-    await fixture.session.dispatch(
-      request(12, "disassemble", {
-        memoryReference: formatDebugAddress({
-          architecture: "snes.spc700",
-          addressSpace: "spc.aram",
-          address: 0x200,
+  const disassembly = instructionText(
+    response(
+      await fixture.session.dispatch(
+        request(12, "disassemble", {
+          memoryReference: formatDebugAddress({
+            architecture: "snes.spc700",
+            addressSpace: "spc.aram",
+            address: 0x200,
+          }),
+          instructionCount: 1,
         }),
-        instructionCount: 1,
-      }),
-    ),
-  ).body as { instructions: Array<{ instruction: string }> };
+      ),
+    ).body,
+  );
   t.is(disassembly.instructions[0]?.instruction, "nop");
 
   const step = await fixture.session.dispatch(request(13, "next", { threadId: 1 }));
@@ -379,9 +618,9 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
     step.map((message) => ("event" in message ? message.event : message.command)),
     ["next", "continued", "stopped"],
   );
-  const advanced = response(
-    await fixture.session.dispatch(request(14, "stackTrace", { threadId: 1 })),
-  ).body as { stackFrames: Array<{ line: number }> };
+  const advanced = lineFrames(
+    response(await fixture.session.dispatch(request(14, "stackTrace", { threadId: 1 }))).body,
+  );
   t.is(advanced.stackFrames[0]?.line, 3);
 
   const disconnect = await fixture.session.dispatch(request(15, "disconnect"));
@@ -399,38 +638,41 @@ test("DAP advertises executable breakpoint locations and moves directive breakpo
   });
 
   const initialize = response(await fixture.session.dispatch(request(1, "initialize")));
-  t.true(
-    (initialize.body as { supportsBreakpointLocationsRequest?: boolean })
-      .supportsBreakpointLocationsRequest,
-  );
+  t.true(breakpointLocationsSupported(initialize.body));
   await fixture.session.dispatch(request(2, "launch"));
-  const locations = response(
-    await fixture.session.dispatch(
-      request(3, "breakpointLocations", {
-        source: { path: fixture.source },
-        line: 1,
-        endLine: 3,
-      }),
-    ),
-  ).body as { breakpoints: Array<{ line: number; column: number }> };
+  const locations = locationBreakpoints(
+    response(
+      await fixture.session.dispatch(
+        request(3, "breakpointLocations", {
+          source: { path: fixture.source },
+          line: 1,
+          endLine: 3,
+        }),
+      ),
+    ).body,
+  );
   t.deepEqual(locations.breakpoints, [
     { line: 2, column: 1 },
     { line: 3, column: 1 },
   ]);
 
-  const moved = response(
-    await fixture.session.dispatch(
-      request(4, "setBreakpoints", {
-        source: { path: fixture.source },
-        breakpoints: [{ line: 1 }],
-      }),
-    ),
-  ).body as { breakpoints: Array<{ verified: boolean; line: number }> };
+  const moved = verifiedLineBreakpoints(
+    response(
+      await fixture.session.dispatch(
+        request(4, "setBreakpoints", {
+          source: { path: fixture.source },
+          breakpoints: [{ line: 1 }],
+        }),
+      ),
+    ).body,
+  );
   t.deepEqual(
     moved.breakpoints.map(({ verified, line }) => ({ verified, line })),
     [{ verified: true, line: 2 }],
   );
 });
+
+const unsupported = (): Promise<never> => Promise.reject(new Error("Not used by this test."));
 
 test("DAP installs and removes source breakpoints while running without exposing maintenance stops", async (t) => {
   const fixture = setup();
@@ -444,7 +686,6 @@ test("DAP installs and removes source breakpoints while running without exposing
       listener(event);
     }
   };
-  const unsupported = (): Promise<never> => Promise.reject(new Error("Not used by this test."));
   const backend: DebugBackend = {
     protocolVersion: fixture.backend.protocolVersion,
     capabilities: fixture.backend.capabilities,
@@ -553,7 +794,8 @@ test("DAP installs and removes source breakpoints while running without exposing
   );
 
   await session.dispatch(request(6, "pause", { threadId: 1 }));
-  t.is(messages.at(-1)?.type === "event" ? messages.at(-1).event : undefined, "stopped");
+  const paused = messages.at(-1);
+  t.is(paused?.type === "event" ? paused.event : undefined, "stopped");
 });
 
 test("DAP resolves mirrored PCs and supplies virtual disassembly sources", async (t) => {
@@ -565,25 +807,22 @@ test("DAP resolves mirrored PCs and supplies virtual disassembly sources", async
   await fixture.session.dispatch(request(1, "initialize"));
   await fixture.session.dispatch(request(2, "launch"));
 
-  const cpu = response(await fixture.session.dispatch(request(3, "stackTrace", { threadId: 1 })))
-    .body as { stackFrames: Array<{ line: number; source: { path?: string } }> };
+  const cpu = sourcePathFrames(
+    response(await fixture.session.dispatch(request(3, "stackTrace", { threadId: 1 }))).body,
+  );
   t.is(cpu.stackFrames[0]?.line, 2);
   t.is(cpu.stackFrames[0]?.source.path, fixture.source);
 
-  const spc = response(await fixture.session.dispatch(request(4, "stackTrace", { threadId: 2 })))
-    .body as {
-    stackFrames: Array<{
-      line: number;
-      source: { sourceReference: number; path: string; presentationHint: string };
-    }>;
-  };
+  const spc = disassemblyFrames(
+    response(await fixture.session.dispatch(request(4, "stackTrace", { threadId: 2 }))).body,
+  );
   const sourceReference = spc.stackFrames[0]?.source.sourceReference;
   t.truthy(sourceReference);
   t.is(spc.stackFrames[0]?.source.path, `/uttori-disassembly/snes.spc700/${sourceReference}.asm`);
   t.is(spc.stackFrames[0]?.source.presentationHint, "normal");
-  const virtual = response(
-    await fixture.session.dispatch(request(5, "source", { sourceReference })),
-  ).body as { content: string };
+  const virtual = sourceContent(
+    response(await fixture.session.dispatch(request(5, "source", { sourceReference }))).body,
+  );
   t.true(virtual.content.startsWith("; Debugger disassembly (temporary, read-only view)\n"));
   t.regex(virtual.content, /; Shown because the current instruction has no matching source line/);
   // The execution highlight must point at the instruction, below the explanation.
@@ -593,9 +832,9 @@ test("DAP resolves mirrored PCs and supplies virtual disassembly sources", async
   );
 
   await fixture.session.dispatch(request(6, "next", { threadId: 2 }));
-  const refreshed = response(
-    await fixture.session.dispatch(request(7, "stackTrace", { threadId: 2 })),
-  ).body as { stackFrames: Array<{ source: { sourceReference: number } }> };
+  const refreshed = sourceReferenceFrames(
+    response(await fixture.session.dispatch(request(7, "stackTrace", { threadId: 2 }))).body,
+  );
   t.not(refreshed.stackFrames[0]?.source.sourceReference, sourceReference);
 });
 
@@ -607,19 +846,22 @@ test("DAP groups processor registers and exposes decoded flags, safe memory, and
   });
   await fixture.session.dispatch(request(1, "launch"));
   await fixture.session.dispatch(request(2, "stackTrace", { threadId: 1 }));
-  const scopeBody = response(await fixture.session.dispatch(request(3, "scopes", { frameId: 10 })))
-    .body as { scopes: Array<{ name: string; variablesReference: number }> };
+  const scopeBody = namedScopes(
+    response(await fixture.session.dispatch(request(3, "scopes", { frameId: 10 }))).body,
+  );
   t.deepEqual(
     scopeBody.scopes.map(({ name }) => name),
     ["65816 Registers", "65816 CPU", "65816 Flags", "65816 Memory Spaces", "65816 Stack Bytes"],
   );
 
   const flagsScope = scopeBody.scopes.find(({ name }) => name === "65816 Flags");
-  const flags = response(
-    await fixture.session.dispatch(
-      request(4, "variables", { variablesReference: flagsScope?.variablesReference }),
-    ),
-  ).body as { variables: Array<{ name: string; value: string }> };
+  const flags = namedVariables(
+    response(
+      await fixture.session.dispatch(
+        request(4, "variables", { variablesReference: flagsScope?.variablesReference }),
+      ),
+    ).body,
+  );
   t.deepEqual(
     flags.variables.map(({ name, value }) => ({ name, value })),
     [
@@ -636,11 +878,13 @@ test("DAP groups processor registers and exposes decoded flags, safe memory, and
   );
 
   const memoryScope = scopeBody.scopes.find(({ name }) => name === "65816 Memory Spaces");
-  const spaces = response(
-    await fixture.session.dispatch(
-      request(5, "variables", { variablesReference: memoryScope?.variablesReference }),
-    ),
-  ).body as { variables: Array<{ name: string; memoryReference: string }> };
+  const spaces = memoryVariables(
+    response(
+      await fixture.session.dispatch(
+        request(5, "variables", { variablesReference: memoryScope?.variablesReference }),
+      ),
+    ).body,
+  );
   t.deepEqual(
     spaces.variables.map(({ name }) => name),
     ["snes.cpu"],
@@ -648,11 +892,13 @@ test("DAP groups processor registers and exposes decoded flags, safe memory, and
   t.truthy(spaces.variables[0]?.memoryReference);
 
   const stackScope = scopeBody.scopes.find(({ name }) => name === "65816 Stack Bytes");
-  const stack = response(
-    await fixture.session.dispatch(
-      request(6, "variables", { variablesReference: stackScope?.variablesReference }),
-    ),
-  ).body as { variables: Array<{ name: string; value: string }> };
+  const stack = stackVariables(
+    response(
+      await fixture.session.dispatch(
+        request(6, "variables", { variablesReference: stackScope?.variablesReference }),
+      ),
+    ).body,
+  );
   t.deepEqual(stack.variables[0], {
     name: "0x01f1",
     value: "00 01 02 03 04 05 06 07",
@@ -695,9 +941,7 @@ test("DAP reports and rejects unavailable live-style step semantics instead of a
     fs.rmSync(fixture.directory, { recursive: true, force: true });
   });
   await session.dispatch(request(1, "launch"));
-  const threads = response(await session.dispatch(request(2, "threads"))).body as {
-    threads: Array<{ id: number; name: string }>;
-  };
+  const threads = threadList(response(await session.dispatch(request(2, "threads"))).body);
   t.regex(threads.threads.find(({ id }) => id === 1)?.name ?? "", /step over, step out/);
 
   const unavailable = response(await session.dispatch(request(3, "next", { threadId: 1 })));
@@ -731,29 +975,32 @@ test("DAP adds host annotations to disassembly without changing backend instruct
     fs.rmSync(fixture.directory, { recursive: true, force: true });
   });
   await session.dispatch(request(1, "launch"));
-  const disassembly = response(
-    await session.dispatch(
-      request(2, "disassemble", {
-        memoryReference: formatDebugAddress({
-          architecture: "snes.spc700",
-          addressSpace: "spc.aram",
-          address: 0x200,
+  const disassembly = instructionText(
+    response(
+      await session.dispatch(
+        request(2, "disassemble", {
+          memoryReference: formatDebugAddress({
+            architecture: "snes.spc700",
+            addressSpace: "spc.aram",
+            address: 0x200,
+          }),
+          instructionCount: 1,
         }),
-        instructionCount: 1,
-      }),
-    ),
-  ).body as { instructions: Array<{ instruction: string }> };
+      ),
+    ).body,
+  );
   t.is(disassembly.instructions[0]?.instruction, "nop ; ▶ 3× · state p=$20");
 
-  const stack = response(await session.dispatch(request(3, "stackTrace", { threadId: 2 })))
-    .body as {
-    stackFrames: Array<{ source: { sourceReference: number } }>;
-  };
-  const source = response(
-    await session.dispatch(
-      request(4, "source", { sourceReference: stack.stackFrames[0]?.source.sourceReference }),
-    ),
-  ).body as { content: string };
+  const stack = sourceReferenceFrames(
+    response(await session.dispatch(request(3, "stackTrace", { threadId: 2 }))).body,
+  );
+  const source = sourceContent(
+    response(
+      await session.dispatch(
+        request(4, "source", { sourceReference: stack.stackFrames[0]?.source.sourceReference }),
+      ),
+    ).body,
+  );
   t.regex(source.content, /nop ; ▶ 3× · state p=\$20/);
   const withoutAnnotations = response(
     await session.dispatch(
@@ -785,12 +1032,14 @@ test("debug-map replay stepping advances the highlighted native source line", as
     fs.rmSync(fixture.directory, { recursive: true, force: true });
   });
   await session.dispatch(request(1, "launch"));
-  const before = response(await session.dispatch(request(2, "stackTrace", { threadId: 1 })))
-    .body as { stackFrames: Array<{ line: number }> };
+  const before = lineFrames(
+    response(await session.dispatch(request(2, "stackTrace", { threadId: 1 }))).body,
+  );
   t.is(before.stackFrames[0]?.line, 2);
   await session.dispatch(request(3, "next", { threadId: 1 }));
-  const after = response(await session.dispatch(request(4, "stackTrace", { threadId: 1 })))
-    .body as { stackFrames: Array<{ line: number }> };
+  const after = lineFrames(
+    response(await session.dispatch(request(4, "stackTrace", { threadId: 1 }))).body,
+  );
   t.is(after.stackFrames[0]?.line, 3);
 });
 
@@ -801,16 +1050,9 @@ test("DAP exposes explicit bounded trace recording only through custom requests"
     fs.rmSync(fixture.directory, { recursive: true, force: true });
   });
   await fixture.session.dispatch(request(1, "launch"));
-  const capabilities = response(
-    await fixture.session.dispatch(request(2, "uttori/traceCapabilities")),
-  ).body as {
-    traces: Array<{
-      architecture: string;
-      addressSpace: string;
-      maxBufferedEvents: number;
-      maxBatchEvents: number;
-    }>;
-  };
+  const capabilities = traceCapabilities(
+    response(await fixture.session.dispatch(request(2, "uttori/traceCapabilities"))).body,
+  );
   t.true(
     capabilities.traces.some(
       ({ architecture, addressSpace }) =>
@@ -829,9 +1071,10 @@ test("DAP exposes explicit bounded trace recording only through custom requests"
   );
   await fixture.session.dispatch(request(4, "next", { threadId: 1 }));
   t.true(response(await fixture.session.dispatch(request(5, "uttori/stopTrace"))).success);
-  const batch = response(
-    await fixture.session.dispatch(request(6, "uttori/readTrace", { maxEvents: 16 })),
-  ).body as { addresses: number[]; active: boolean };
+  const batch = traceBatch(
+    response(await fixture.session.dispatch(request(6, "uttori/readTrace", { maxEvents: 16 })))
+      .body,
+  );
   t.deepEqual(batch.addresses, [0x008000, 0x008001]);
   t.false(batch.active);
 });

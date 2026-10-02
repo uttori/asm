@@ -77,6 +77,12 @@ export function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTP
         copyRuns,
     };
 }
+/** Reject non-objects before reading `mode` or `unusedHeaderByte`.
+ * @param {unknown} options Caller-supplied encoder options.
+ */
+function assertLzOptions(options) {
+    assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
+}
 /**
  * Encode bytes for the game's $C14C30 decoder. Each mode chooses a lowest-cost
  * token parse from bounded match candidates, preferring longer runs and then
@@ -84,13 +90,13 @@ export function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTP
  * The unused header byte is explicit because original ROM headers may differ.
  * This does not preserve an original stream's token choices.
  * @param {Uint8Array} source Plain bytes to encode.
- * @param {Readonly<Record<string, unknown>>} [options] `mode` and `unusedHeaderByte`.
+ * @param {unknown} [options] `mode` and `unusedHeaderByte`.
  * @returns {Uint8Array} Shortest accepted stream for the selected mode.
  */
 export function compressSomLz(source, options = {}) {
     assert(source instanceof Uint8Array, "Expected byte input.");
     assert(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
-    assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
+    assertLzOptions(options);
     assert(Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)), "Unknown LZ option.");
     const selected = options.mode ?? "auto";
     const header = options.unusedHeaderByte ?? 0;

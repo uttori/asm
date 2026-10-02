@@ -59,7 +59,7 @@ const translation = (
   }
   return {
     byteToToken,
-    tokenToByte: tokenToByte.sort(([a], [b]) => b.length - a.length || a.localeCompare(b)),
+    tokenToByte: tokenToByte.toSorted(([a], [b]) => b.length - a.length || a.localeCompare(b)),
   };
 };
 

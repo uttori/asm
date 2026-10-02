@@ -34,6 +34,9 @@ export const cpu65816Modes = Object.freeze({
     indlong: mode("absoluteIndirectLong", "[addr]", 3),
     block: mode("blockMove", "srcBank,destBank", 3),
 });
+function isCpu65816ModeKey(value) {
+    return Object.hasOwn(cpu65816Modes, value);
+}
 /**
  * The opcode rows for the 65816.
  */
@@ -270,11 +273,10 @@ if (entries.length !== 256) {
  */
 export const cpu65816Specifications = Object.freeze(entries.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
-    const modeKey = modeKeyText;
-    const definition = cpu65816Modes[modeKey];
-    if (!mnemonic || !definition) {
+    if (!mnemonic || !isCpu65816ModeKey(modeKeyText)) {
         throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
     }
+    const definition = cpu65816Modes[modeKeyText];
     let operandStatusEffect;
     if (mnemonic === "REP") {
         operandStatusEffect = "clearBits";
@@ -325,6 +327,6 @@ export function buildCpu65816Catalog() {
             });
         }
     }
-    return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+    return [...grouped.values()].toSorted((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
 //# sourceMappingURL=65816-spec.js.map

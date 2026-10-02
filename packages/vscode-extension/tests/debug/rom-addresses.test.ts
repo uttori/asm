@@ -14,6 +14,21 @@ import { test } from "../../../../tests/ava-helper.js";
 import { ControlledExecutionBackend } from "../../../debug-adapter/tests/fixtures/controlled-execution-backend.js";
 import { createSnesDebugAddressResolvers } from "../../src/debug/rom-addresses.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDapResponse(value: unknown): value is DapResponse {
+  return (
+    isRecord(value) &&
+    value.type === "response" &&
+    typeof value.seq === "number" &&
+    typeof value.request_seq === "number" &&
+    typeof value.success === "boolean" &&
+    typeof value.command === "string"
+  );
+}
+
 /** Complete static-mapper ROM with a plausible header. No private game assets are needed. */
 const setup = (t: ExecutionContext, mapper: "lorom" | "hirom", headerSize = 0) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-debug-alias-"));
@@ -114,15 +129,18 @@ test("source aliases share a native table with exact instruction breakpoints and
   });
   t.teardown(() => session.dispose());
   let seq = 0;
-  const request = async (command: string, args = {}) =>
-    (
-      await session.dispatch({
-        seq: ++seq,
-        type: "request",
-        command,
-        arguments: args,
-      })
-    )[0] as DapResponse;
+  const request = async (command: string, args = {}) => {
+    const [message] = await session.dispatch({
+      seq: ++seq,
+      type: "request",
+      command,
+      arguments: args,
+    });
+    if (!isDapResponse(message)) {
+      throw new Error("expected a DAP response");
+    }
+    return message;
+  };
   await request("launch");
   const sourceArgs = { source: { path: fixture.source }, breakpoints: [{ line: 1 }] };
   const source = await request("setBreakpoints", sourceArgs);
@@ -147,10 +165,11 @@ test("source aliases share a native table with exact instruction breakpoints and
   // A failed alias must leave the single gutter marker unverified.
   const set = backend.setBreakpoints.bind(backend);
   backend.setBreakpoints = async (addresses) =>
-    (await set(addresses)).map((entry) => ({
-      ...entry,
-      verified: entry.address.address !== 0x008000,
-    }));
+    (await set(addresses)).map((entry) =>
+      Object.assign({}, entry, {
+        verified: entry.address.address !== 0x008000,
+      }),
+    );
   const partial = await request("setBreakpoints", sourceArgs);
   t.like(partial.body, { breakpoints: [{ verified: false, line: 2 }] });
 });

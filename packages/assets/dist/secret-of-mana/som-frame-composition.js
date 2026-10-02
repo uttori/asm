@@ -1,11 +1,26 @@
 import { expandIndexedGrid } from "@uttori/asm-assets/image";
 import { decodeBodyFrame } from "./som-body-frame.js";
-/** True when a block stores an expanded `[segment, tile]` reference.
- * @param {TileReference} ref ROM address or segment tile pair.
- * @returns {boolean} Whether `ref` is a two-element segment reference.
+/** True when a block stores a list rather than a ROM address.
+ * @param {unknown} value Candidate tile reference.
+ * @returns {boolean} Whether `value` is an array.
  */
-function isSegmentTile(ref) {
-    return Array.isArray(ref);
+function isUnknownArray(value) {
+    return Array.isArray(value);
+}
+/** Two finite integers, the shape stored for a frame origin.
+ * @param {unknown} value Candidate origin pair.
+ * @returns {boolean} Whether `value` is a safe-integer pair.
+ */
+function isIntegerPair(value) {
+    if (!Array.isArray(value) || value.length !== 2) {
+        return false;
+    }
+    for (const component of value) {
+        if (typeof component !== "number" || !Number.isSafeInteger(component)) {
+            return false;
+        }
+    }
+    return true;
 }
 /** Canonical comparable fields; descriptive extensions never supply competing geometry.
  * @param {FramePlacement} p One derived tile occurrence.
@@ -52,15 +67,18 @@ export function deriveFramePlacements(layout, frame) {
         external.set(e.romAddress, e);
     }
     const resolve = (ref) => {
-        if (isSegmentTile(ref)) {
+        if (isUnknownArray(ref)) {
             const segmentName = ref[0];
             const tile = ref[1];
+            const segment = typeof segmentName === "string" && Object.hasOwn(layout.segments, segmentName)
+                ? layout.segments[segmentName]
+                : undefined;
             if (ref.length !== 2 ||
                 typeof segmentName !== "string" ||
                 typeof tile !== "number" ||
                 !Number.isSafeInteger(tile) ||
                 tile < 0 ||
-                tile >= (layout.segments[segmentName]?.tiles.length ?? 0)) {
+                tile >= (segment?.tiles.length ?? 0)) {
                 throw new Error(`Invalid expanded graphics reference: ${frame.id}.`);
             }
             return { segment: segmentName, tile };
@@ -86,9 +104,6 @@ export function deriveFramePlacements(layout, frame) {
         }
         return { external: structuredClone(e) };
     };
-    if (!frame.blocks) {
-        throw new Error(`Invalid native block: ${frame.id}.`);
-    }
     const ids = new Set();
     return frame.blocks.flatMap((block) => {
         if (typeof block.id !== "string" ||
@@ -109,7 +124,7 @@ export function deriveFramePlacements(layout, frame) {
             cellWidth: 8,
             cellHeight: 8,
             cells: references.map((_, index) => ({ source: String(index) })),
-        }).map((p, index) => ({
+        }).map((p, index) => Object.assign({}, {
             id: `${block.id}:tile-${index}`,
             block: block.id,
             quadrant: index,
@@ -117,8 +132,7 @@ export function deriveFramePlacements(layout, frame) {
             y: p.y,
             flipX: p.flipX,
             flipY: p.flipY,
-            ...references[index],
-        }));
+        }, references[index]));
     });
 }
 /** Check raw body evidence against editable blocks before interpreting any derived geometry.
@@ -160,9 +174,7 @@ export function validateNativeFrame(frame) {
             }
             const relative = decoded.tileOffsets[index * 4 + quadrant];
             const base = (address & 0xff0000) | ((address - relative) & 0xffff);
-            if (graphicsBase === undefined) {
-                graphicsBase = base;
-            }
+            graphicsBase ??= base;
             if (base !== graphicsBase) {
                 throw new Error(`Native tile references disagree: ${frame.id}/${block.id}.`);
             }
@@ -183,10 +195,7 @@ export function validateFrameComposition(layout, frame) {
         return undefined;
     }
     const placements = frame.placements;
-    if (!Array.isArray(frame.origin) ||
-        frame.origin.length !== 2 ||
-        frame.origin.some((v) => !Number.isSafeInteger(v)) ||
-        !placements) {
+    if (!isIntegerPair(frame.origin) || !placements) {
         throw new Error(`Incomplete retained composition: ${frame.id}.`);
     }
     const expected = deriveFramePlacements(layout, frame);

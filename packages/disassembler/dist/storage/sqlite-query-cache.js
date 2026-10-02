@@ -52,7 +52,11 @@ export const readQueryCache = (db, key, signature) => {
     const row = db
         .prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?")
         .get(key, signature);
-    return row ? JSON.parse(String(row.payload)) : undefined;
+    if (!row) {
+        return undefined;
+    }
+    const parsed = JSON.parse(String(row.payload));
+    return parsed;
 };
 /** Publish a complete projection atomically with the read snapshot used to compute it.
  * @param {DatabaseSync} db Connection in the owning write transaction.

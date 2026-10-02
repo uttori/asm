@@ -45,11 +45,19 @@ export interface SnesStructInstructionUse {
   readonly observations: readonly SnesStructAccessObservation[];
 }
 
+/**
+ * Accepts a JSON object. Arrays and null are not instruction-use records.
+ * @param {unknown} value Candidate record.
+ * @returns {boolean} True when `value` is a non-array object.
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 const record = (value: unknown): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new Error("Struct instruction-use entries must be objects.");
   }
-  return value as Record<string, unknown>;
+  return value;
 };
 const integer = (value: unknown, min: number, max: number): number => {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) {
@@ -191,7 +199,7 @@ export const validateSnesStructInstructionUses = (
         observations,
       };
     })
-    .sort((a, b) => a.address - b.address);
+    .toSorted((a, b) => a.address - b.address);
 };
 
 /**
@@ -268,7 +276,7 @@ export const applySnesStructInstructionOperand = (
     // The expression names encoded operand bytes, never the dereferenced or indexed address.
     // Preserve pointer delimiters for scoped direct-page locals. The whitelist excludes
     // indirect control flow and stack modes, which have different operand contracts.
-    const modes: Record<string, readonly [number, string, string]> = {
+    const modes: Partial<Record<string, readonly [number, string, string]>> = {
       direct: [1, "", ""],
       directIndexedX: [1, "", ",x"],
       directIndexedY: [1, "", ",y"],
@@ -284,7 +292,7 @@ export const applySnesStructInstructionOperand = (
       absoluteLongIndexedX: [3, "", ",x"],
     };
     const mode = modes[instruction.mode];
-    const operand = instruction.operands[0];
+    const operand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
     if (
       !mode ||
       instruction.operands.length !== 1 ||
@@ -303,7 +311,7 @@ export const applySnesStructInstructionOperand = (
   if (!use.operand) {
     return source;
   }
-  const operand = instruction.operands[0];
+  const operand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
   // REP/SEP have fixed byte status masks, represented as signature operands by the decoder.
   // Do not broaden this to BRK/COP/WDM signatures, which are not ordinary immediate values.
   const statusMask =

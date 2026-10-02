@@ -75,7 +75,8 @@ export class DataStructEngine {
         if (!match || !definition) {
             throw new Error(`Unknown dataStruct record '${reference}'.`);
         }
-        const index = match[2] === undefined ? 0 : this.host.operandResolver.getnum(match[2]);
+        const indexText = match.length > 2 ? match[2] : undefined;
+        const index = indexText === undefined ? 0 : this.host.operandResolver.getnum(indexText);
         if (!Number.isSafeInteger(index) || index < 0) {
             throw new Error(`Invalid record index '${reference}'.`);
         }
@@ -91,7 +92,7 @@ export class DataStructEngine {
         if (definition.parent || definition.extensionSize > 0) {
             throw new Error(`dataStruct does not initialize extended layouts ('${definition.name}'). Use raw data directives.`);
         }
-        const fields = [...(definition.fields?.values() ?? [])].sort((a, b) => a.offset - b.offset);
+        const fields = [...(definition.fields?.values() ?? [])].toSorted((a, b) => a.offset - b.offset);
         let end = 0;
         for (const field of fields) {
             if (field.offset !== end) {
@@ -153,14 +154,14 @@ export class DataStructEngine {
             if (!this.host.canEmitBytes) {
                 continue;
             }
-            for (const [index, expression] of items.entries()) {
+            for (const [itemIndex, expression] of items.entries()) {
                 const number = this.host.operandResolver.getnum(expression);
                 if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
                     throw new Error(`Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`);
                 }
                 if (this.host.recordStructField) {
                     fields.push({
-                        reference: field.array ? `${name}[${index}]` : name,
+                        reference: field.array ? `${name}[${itemIndex}]` : name,
                         expression,
                         offset: bytes.length,
                         width: field.width,

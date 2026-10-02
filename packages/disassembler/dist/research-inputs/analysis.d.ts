@@ -34,5 +34,5 @@ export interface ResearchAnalysisEdit {
  * Prepare one Git-backed analysis decision with manual provenance. Imported records remain in the
  * evidence store; removing this declaration reveals them again on the next projection refresh.
  */
-export declare function changeResearchAnalysis(snapshot: ResearchSnapshot, change: ResearchAnalysisChange, spaces: readonly AddressSpaceDescriptor[]): ResearchAnalysisEdit;
+export declare function changeResearchAnalysis(snapshot: ResearchSnapshot, change: ResearchAnalysisChange | null | undefined, spaces: readonly AddressSpaceDescriptor[]): ResearchAnalysisEdit;
 //# sourceMappingURL=analysis.d.ts.map
