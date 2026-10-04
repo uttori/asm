@@ -51,6 +51,7 @@ export * from "./project/project-store.js";
 export * from "./project/project-transaction.js";
 export * from "./project/runtime-trace-project.js";
 export * from "./project/runtime-bus-project.js";
+export * from "./project/capture-notes.js";
 
 export * from "./source/source-export.js";
 export * from "./source-project/git.js";

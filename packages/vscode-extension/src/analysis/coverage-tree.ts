@@ -1,5 +1,5 @@
 /**
- * Read-only tree view over a validated native analysis project's ROM coverage map.
+ * Native coverage summary with paged conflicts and actions for editing Git research.
  * @see https://code.visualstudio.com/api/extension-guides/tree-view
  */
 import * as path from "node:path";
@@ -16,6 +16,7 @@ import {
   TreeItemCollapsibleState,
   Uri,
   workspace,
+  type Command,
   type Event,
   type Disposable,
   type TreeDataProvider,
@@ -24,7 +25,7 @@ import {
 import { informationHex } from "../editor-info/format.js";
 import { analysisWorker } from "./worker-client.js";
 
-/** Maximum segment or diagnostic rows requested from the worker for one expanded coverage page. */
+/** Maximum conflict rows requested from the worker for one expanded page. */
 const PAGE_SIZE = 200;
 /**
  * Workspace-search glob excluding dependencies, Git internals, and local-only project copies
@@ -47,15 +48,6 @@ export function initializeAnalysisProjectDiscovery(root: () => string | undefine
   };
 }
 
-/** Compact diagnostic row returned by the analysis worker for display in the coverage tree. */
-type CoverageDetail = {
-  readonly id: string;
-  readonly label: string;
-  readonly description?: string;
-  readonly tooltip?: string;
-  readonly icon: string;
-};
-
 /**
  * Coverage row with either materialized children or a worker page descriptor; optional edit
  * targets retain exact ROM intervals.
@@ -63,9 +55,8 @@ type CoverageDetail = {
 type CoverageTreeNode = {
   readonly loadProject?: boolean;
   readonly remotePage?: {
-    readonly operation: "segments" | "details";
     readonly offset: number;
-    readonly count: number;
+    readonly count?: number;
   };
   readonly id: string;
   readonly label: string;
@@ -78,9 +69,10 @@ type CoverageTreeNode = {
   readonly contentSize?: number;
   readonly projectDirectory?: string;
   readonly editTarget?: AnalysisCoverageEditTarget;
+  readonly command?: Command;
 };
 
-/** Local project/range identity carried by editable ROM-map segment tree items. */
+/** Local project/range identity carried by editable conflict tree items. */
 export interface AnalysisCoverageEditTarget {
   readonly projectDirectory: string;
   readonly start: number;
@@ -117,7 +109,6 @@ function isCoverageManifest(value: unknown): value is {
 }
 
 const COVERAGE_CLASSIFICATIONS = ["opcode", "operand", "data", "asset", "unknown"] as const;
-const COVERAGE_RUNTIME = ["executed", "operand", "read", "written"] as const;
 
 function isCountRecord<T extends string>(
   value: unknown,
@@ -128,27 +119,19 @@ function isCountRecord<T extends string>(
 
 interface CoverageSummaryView {
   readonly contentSize: number;
-  readonly detailCount: number;
   readonly summary: {
     readonly totalBytes: number;
     readonly classifiedBytes: number;
     readonly unknownBytes: number;
     readonly conflictBytes: number;
-    readonly segmentCount: number;
     readonly bytesByClassification: Readonly<
       Record<(typeof COVERAGE_CLASSIFICATIONS)[number], number>
     >;
-    readonly bytesByRuntimeCoverage: Readonly<Record<(typeof COVERAGE_RUNTIME)[number], number>>;
   };
 }
 
 function isCoverageSummary(value: unknown): value is CoverageSummaryView {
-  if (
-    !isRecord(value) ||
-    typeof value.contentSize !== "number" ||
-    typeof value.detailCount !== "number" ||
-    !isRecord(value.summary)
-  ) {
+  if (!isRecord(value) || typeof value.contentSize !== "number" || !isRecord(value.summary)) {
     return false;
   }
   const summary = value.summary;
@@ -157,9 +140,7 @@ function isCoverageSummary(value: unknown): value is CoverageSummaryView {
     typeof summary.classifiedBytes === "number" &&
     typeof summary.unknownBytes === "number" &&
     typeof summary.conflictBytes === "number" &&
-    typeof summary.segmentCount === "number" &&
-    isCountRecord(summary.bytesByClassification, COVERAGE_CLASSIFICATIONS) &&
-    isCountRecord(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME)
+    isCountRecord(summary.bytesByClassification, COVERAGE_CLASSIFICATIONS)
   );
 }
 
@@ -168,7 +149,7 @@ function isCoverageSegment(value: unknown): value is RomCoverageSegment {
     isRecord(value) &&
     typeof value.start === "number" &&
     typeof value.end === "number" &&
-    (value.status === "unknown" || value.status === "classified" || value.status === "conflict") &&
+    value.status === "conflict" &&
     Array.isArray(value.classifications) &&
     value.classifications.every(
       (entry) =>
@@ -188,17 +169,6 @@ function isCoverageSegment(value: unknown): value is RomCoverageSegment {
     isStringArray(value.runtimeIds) &&
     isStringArray(value.conflictIds) &&
     isStringArray(value.regionIds)
-  );
-}
-
-function isCoverageDetail(value: unknown): value is CoverageDetail {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.label === "string" &&
-    typeof value.icon === "string" &&
-    (value.description === undefined || typeof value.description === "string") &&
-    (value.tooltip === undefined || typeof value.tooltip === "string")
   );
 }
 
@@ -306,12 +276,11 @@ const summaryNode = (
   );
 
 /**
- * Project coverage totals immediately while leaving ROM segments and diagnostics as paged worker
- * requests.
+ * Project totals immediately; conflicting intervals load only when their summary row is expanded.
  * @param {string} projectId Project-specific row ID prefix.
  * @param {string} projectDirectory Absolute native project directory for paged requests.
- * @param {CoverageSummaryView} map Coverage totals and diagnostic count from the worker.
- * @returns {readonly CoverageTreeNode[]} Summary categories and lazy segment/diagnostic pages.
+ * @param {CoverageSummaryView} map Coverage totals from the worker.
+ * @returns {readonly CoverageTreeNode[]} Summary categories, including a lazy conflict list.
  */
 const mapChildren = (
   projectId: string,
@@ -328,7 +297,17 @@ const mapChildren = (
     ),
     summaryNode(projectId, "Classified", summary.classifiedBytes, summary.totalBytes, "pass"),
     summaryNode(projectId, "Unknown", summary.unknownBytes, summary.totalBytes, "question"),
-    summaryNode(projectId, "Conflict", summary.conflictBytes, summary.totalBytes, "warning"),
+    {
+      ...summaryNode(projectId, "Conflict", summary.conflictBytes, summary.totalBytes, "warning"),
+      state:
+        summary.conflictBytes > 0
+          ? TreeItemCollapsibleState.Collapsed
+          : TreeItemCollapsibleState.None,
+      tooltip: "Expand to inspect conflicting ranges and edit the research that controls analysis.",
+      ...(summary.conflictBytes > 0
+        ? { remotePage: { offset: 0 }, projectDirectory, contentSize: map.contentSize }
+        : {}),
+    },
   ];
   const classifications = (["opcode", "operand", "data", "asset", "unknown"] as const).map(
     (classification) =>
@@ -339,15 +318,6 @@ const mapChildren = (
         summary.totalBytes,
         classification === "unknown" ? "question" : "symbol-color",
       ),
-  );
-  const runtime = (["executed", "operand", "read", "written"] as const).map((coverage) =>
-    summaryNode(
-      projectId,
-      coverage,
-      summary.bytesByRuntimeCoverage[coverage],
-      summary.totalBytes,
-      coverage === "executed" ? "debug-alt" : "pulse",
-    ),
   );
 
   return [
@@ -365,40 +335,6 @@ const mapChildren = (
       classifications,
       "symbol-color",
     ),
-    group(
-      `${projectId}:runtime`,
-      "Runtime coverage",
-      `${formatBytes(summary.bytesByRuntimeCoverage.executed)} executed`,
-      runtime,
-      "debug-alt",
-    ),
-    {
-      id: `${projectId}:segments`,
-      label: "ROM map segments",
-      description: `${summary.segmentCount.toLocaleString("en-US")} coalesced`,
-      tooltip:
-        "Half-open ROM-content intervals. Expand a page to inspect at most 200 segments at a time.",
-      icon: "list-tree",
-      state: TreeItemCollapsibleState.Collapsed,
-      remotePage: { operation: "segments", offset: 0, count: map.summary.segmentCount },
-      contentSize: map.contentSize,
-      projectDirectory,
-    },
-    {
-      id: `${projectId}:projection`,
-      label: "Projection diagnostics",
-      description:
-        map.detailCount === 0
-          ? "all map-relevant records projected"
-          : `${map.detailCount.toLocaleString("en-US")} item(s)`,
-      tooltip:
-        "CPU and RAM addresses are never guessed into ROM offsets. Records without explicit file identities remain visible here.",
-      icon: map.detailCount === 0 ? "pass" : "warning",
-      state:
-        map.detailCount === 0 ? TreeItemCollapsibleState.None : TreeItemCollapsibleState.Collapsed,
-      remotePage: { operation: "details", offset: 0, count: map.detailCount },
-      projectDirectory,
-    },
   ];
 };
 
@@ -415,7 +351,7 @@ const pageLabel = (start: number, end: number, width: number): string =>
 
 /**
  * Turn a half-open ROM-content segment into an editable row, preserving evidence IDs and
- * prioritizing conflict/unknown icons.
+ * retaining actionable conflict provenance.
  * @param {string} parentId Parent row identity used to derive a stable segment ID.
  * @param {RomCoverageSegment} segment Half-open ROM-content interval and its evidence.
  * @param {number} contentSize Total ROM-content bytes, used to size address labels.
@@ -444,31 +380,37 @@ const segmentNode = (
   ]
     .filter((value): value is string => value !== undefined)
     .join("\n");
-  let icon = "symbol-color";
-  if (segment.status === "conflict") {
-    icon = "warning";
-  } else if (segment.status === "unknown") {
-    icon = "question";
-  } else if (segment.runtime.includes("executed")) {
-    icon = "debug-alt";
-  }
+  const editTarget: AnalysisCoverageEditTarget = {
+    projectDirectory,
+    start: segment.start,
+    end: segment.end,
+    annotationIds: segment.annotationIds,
+    analysisIds: segment.analysisIds,
+    runtimeIds: segment.runtimeIds,
+    conflictIds: segment.conflictIds,
+    regionIds: segment.regionIds,
+  };
+  const id = `${parentId}:${segment.start}:${segment.end}`;
+  // Each action carries the original range and evidence IDs; edits must never target a page boundary.
+  const actions = [
+    ["Explain conflicting evidence", "asm.coverage.explainEvidence", "info"],
+    ["Classify range…", "asm.coverage.classifyRange", "edit"],
+    ["Set CPU state / entry point…", "asm.coverage.setStateEntryPoint", "symbol-variable"],
+    ["Resolve control-flow target…", "asm.coverage.resolveTarget", "references"],
+  ].map(([label, command, actionIcon]): CoverageTreeNode =>
+    Object.assign(leaf(`${id}:${command}`, label, "", actionIcon), {
+      command: { command, title: label, arguments: [{ editTarget }] },
+    }),
+  );
   return {
-    id: `${parentId}:${segment.start}:${segment.end}`,
+    id,
     label: pageLabel(segment.start, segment.end, width),
     description: `${formatBytes(segment.end - segment.start)} · ${classifications}${runtime}`,
     tooltip,
-    icon,
-    state: TreeItemCollapsibleState.None,
-    editTarget: {
-      projectDirectory,
-      start: segment.start,
-      end: segment.end,
-      annotationIds: segment.annotationIds,
-      analysisIds: segment.analysisIds,
-      runtimeIds: segment.runtimeIds,
-      conflictIds: segment.conflictIds,
-      regionIds: segment.regionIds,
-    },
+    icon: "warning",
+    state: TreeItemCollapsibleState.Collapsed,
+    editTarget,
+    children: actions,
   };
 };
 
@@ -534,6 +476,7 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
     item.description = element.description;
     item.tooltip = element.tooltip ?? element.label;
     item.iconPath = new ThemeIcon(element.icon);
+    item.command = element.command;
     item.contextValue = element.editTarget ? "analysisCoverageSegment" : "analysisCoverage";
     if (element.resourceUri) {
       item.resourceUri = element.resourceUri;
@@ -562,36 +505,33 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
       }
     }
     if (element.remotePage) {
-      const { operation, offset, count } = element.remotePage;
-      if (count <= PAGE_SIZE) {
+      const { offset } = element.remotePage;
+      let count = element.remotePage.count;
+      if (count === undefined || count <= PAGE_SIZE) {
         try {
-          if (operation === "segments") {
-            const segments = await analysisWorker().request(element.projectDirectory!, operation, {
-              offset,
-            });
-            if (!Array.isArray(segments) || !segments.every(isCoverageSegment)) {
-              throw new Error("Analysis coverage segments are unavailable.");
-            }
-            return segments
+          const page = await analysisWorker().request(
+            element.projectDirectory!,
+            "coverageConflicts",
+            { offset },
+          );
+          if (
+            !isRecord(page) ||
+            typeof page.count !== "number" ||
+            !Array.isArray(page.segments) ||
+            !page.segments.every(isCoverageSegment)
+          ) {
+            throw new Error("Analysis conflicts are unavailable.");
+          }
+          count ??= page.count;
+          if (count <= PAGE_SIZE) {
+            return page.segments
               .slice(0, count)
               .map((segment) =>
                 segmentNode(element.id, segment, element.contentSize!, element.projectDirectory!),
               );
           }
-          const details = await analysisWorker().request(element.projectDirectory!, operation, {
-            offset,
-          });
-          if (!Array.isArray(details) || !details.every(isCoverageDetail)) {
-            throw new Error("Analysis coverage details are unavailable.");
-          }
-          return details.slice(0, count).map((detail) =>
-            Object.assign({}, detail, {
-              id: `${element.id}:${detail.id}`,
-              state: TreeItemCollapsibleState.None,
-            }),
-          );
         } catch (error) {
-          return [leaf(`${element.id}:error`, "Could not load page", String(error), "error")];
+          return [leaf(`${element.id}:error`, "Could not load conflicts", String(error), "error")];
         }
       }
       let stride = PAGE_SIZE;
@@ -607,7 +547,7 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
           state: TreeItemCollapsibleState.Collapsed,
           projectDirectory: element.projectDirectory,
           contentSize: element.contentSize,
-          remotePage: { operation, offset: offset + index, count: Math.min(stride, count - index) },
+          remotePage: { offset: offset + index, count: Math.min(stride, count - index) },
         });
       }
       return pages;

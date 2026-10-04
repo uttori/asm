@@ -70,10 +70,20 @@ export function spritePaletteColors(catalog, id) {
 /** Emit the catalogue's exact little-endian ROM words, including unused high bits.
  * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
  * @param {string} id Six-digit ROM address.
- * @returns {Uint8Array} Little-endian BGR555 words.
+ * @param {object} range Optional zero-based word slice; omitted count emits the remaining words.
+ * @returns {Uint8Array} Little-endian BGR555 words. Invalid or empty slices throw.
  */
-export function spritePaletteBytes(catalog, id) {
-    const words = paletteRecord(catalog, id).words;
+export function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
+    const record = paletteRecord(catalog, id);
+    const count = wordCount ?? record.words.length - wordOffset;
+    if (!Number.isSafeInteger(wordOffset) ||
+        !Number.isSafeInteger(count) ||
+        wordOffset < 0 ||
+        count < 1 ||
+        wordOffset + count > record.words.length) {
+        throw new Error(`Invalid ROM palette word slice ${id}.`);
+    }
+    const words = record.words.slice(wordOffset, wordOffset + count);
     const bytes = new Uint8Array(words.length * 2);
     for (const [index, raw] of words.entries()) {
         const word = Number.parseInt(raw, 16);
@@ -81,6 +91,20 @@ export function spritePaletteBytes(catalog, id) {
         bytes[index * 2 + 1] = word >>> 8;
     }
     return bytes;
+}
+/** Overlapping display views must agree on each physical ROM word; neither can silently win. */
+export function validateSpritePaletteAliases(catalog) {
+    const words = new Map();
+    for (const id of Object.keys(catalog.palettes)) {
+        const record = paletteRecord(catalog, id), start = Number.parseInt(id, 16);
+        for (const [index, raw] of record.words.entries()) {
+            const address = start + index * 2, word = raw.toUpperCase();
+            if (words.has(address) && words.get(address) !== word) {
+                throw new Error(`Conflicting palette aliases at ROM ${address.toString(16).toUpperCase()}.`);
+            }
+            words.set(address, word);
+        }
+    }
 }
 /** Show stored colors as 8×8 swatches with a one-pixel grid and source grouping.
  * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
@@ -140,6 +164,7 @@ export function parseSpritePaletteCatalog(bytes) {
     if (!isSpritePaletteCatalog(parsed)) {
         throw new Error("Sprite palette catalogue must contain version 1 palette records.");
     }
+    validateSpritePaletteAliases(parsed);
     return parsed;
 }
 /** Parse a palette sidecar named by includeAsset; every atlas shares this resource.

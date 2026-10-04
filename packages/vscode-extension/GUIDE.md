@@ -15,7 +15,7 @@ The extension, workers, language server, and embedded sidecars run on VS Code's 
 - Signature help, semantic tokens, and cross-file rename for user-defined symbols.
 - **Uttori SNES** and **Uttori 65xx** language modes (status bar / Change Language Mode). SNES is the default for `.asm` and includes SPC700, Super FX, and mapper directives. 65xx is CPU-only.
 - Inline **Uttori ASM Debugger** with replay and live ares backends. Source / instruction breakpoints, stepping, threads, stack frames, registers, native watch expressions, memory, and virtual disassembly source.
-- Native **Analysis Coverage** tree for ROM classifications, conflicts, runtime coverage, and projection diagnostics.
+- Native **Analysis Coverage** tree for ROM classifications and actionable conflicts.
 - Hash-gated inline source and disassembly annotations for effective addresses, runtime coverage, memory access, and static/observed CPU state.
 
 ## Building
@@ -54,17 +54,19 @@ An intentional edited ROM need not equal the original; the incoming pure generat
 
 ## Analysis Coverage
 
-The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates native metadata and builds projections in background Node processes using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. SQLite selects and pages the required records. Summaries and at most 200 rows per page cross back to the UI. Sources are expanded lazily, and inline annotations request only visible source lines. Requests within each process run one at a time. Reads have a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode / operand / data asset classifications, and executed / operand / read / written runtime overlays.
+The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates native metadata and builds projections in background Node processes using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. SQLite selects and pages the required records. Summaries and at most 200 rows per page cross back to the UI. Sources are expanded lazily, and inline annotations request only visible source lines. Requests within each process run one at a time. Reads have a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode / operand / data / asset classifications.
 
-The ROM map is a coalesced list of half-open file-offset segments, paged at 200 rows so expanding a large ROM cannot enqueue the entire map in VS Code at once. CPU and RAM addresses are never guessed into ROM offsets: records without an explicit file address or file offset remain visible under **Projection diagnostics**.
+Expand **Summary → Conflict** to inspect conflicting ROM ranges. Each range provides **Explain conflicting evidence**, **Classify range**, **Set CPU state / entry point**, and **Resolve control-flow target** actions. Conflict pages contain at most 200 ranges; actions retain their exact interval and evidence IDs.
 
 Coverage actions open tracked research declarations for the selected source project. The selected
 project's local evidence binding also drives Coverage and Sources in worktrees. SQLite imports and
 research projections remain transactional; authored changes live in Git files, not database undo history.
 
+The native **Index Details** view reports index readiness, files, symbols, references, current errors, reindex time, and root-cache counts. Click **Errors** to open Problems. Counts include assembly and configuration errors and update with language-server notifications.
+
 ## Sources navigation
 
-The **Sources** view groups persisted capture and import evidence. Selecting a location retains its address space, ROM identity, captured bytes, and record provenance.
+The **Sources** view lists import identities with generated **Capture Notes** and **Added Code** links. Capture archives are temporary inputs and may be deleted after import; viewing reports and code never requires them.
 
 Opening a location first looks for an exact current debug-map source range with matching ROM output identity and matching source-file hash. If no current source exists, an active Uttori debug session can provide virtual disassembly through DAP. The final fallback is a read-only view of persisted CFG records. It does not re-decode the ROM and marks unavailable operand bytes as `??`. Stale source mappings are reported rather than trusted.
 
@@ -146,10 +148,15 @@ Replay scripts can model instruction, step-in, step-over, and step-out transitio
 ## Commands
 
 - **Assembly Source: Select Source Project** chooses the repository/worktree for subsequent actions.
-- **Prepare Regeneration**, **Preview Regeneration**, **Apply Regeneration**, **Validate and Finish Merge**,
-  and **Abort Regeneration** operate on the selected project and native Git state.
+- The Source Project tree recommends the next valid step: **Analyze Evidence** → **Prepare Regeneration**
+  → **Preview with Current Edits** → save/commit a checkpoint → **Apply Previewed Generation**
+  → resolve/stage changes → **Validate and Finish Regeneration**. Finish builds, validates and commits
+  the merge. **Abort Regeneration** returns to the checkpoint.
+- **Build Current Source** assembles saved source for running or debugging, independently of regeneration
+  or Git commits. If inputs change during a build, the error names the files and offers **Save All and Rebuild**.
 - **Edit Symbol Research** and **Edit Analysis Research** prepare tracked declaration edits.
 - **Import Capture** adds compatible JSON/ACT2 evidence and its portable catalog identity.
+- **Refresh Capture Catalog** reconciles retained evidence identities when **Next** reports an outdated catalog.
 - **Analyze Evidence** refreshes derived code using the selected branch's research.
 - **Relocate Object** and **Expand ROM Capacity** propose supported layout changes and repair known references.
 - **Assembly: Build Binary**, **Run in Emulator**, **Debug in Emulator**, and **Run and Watch** use the
@@ -160,9 +167,9 @@ Replay scripts can model instruction, step-in, step-over, and step-out transitio
 
 ### Inspect Imported Sources
 
-**Sources** lists imported artifacts by content identity, most recently imported captures first. Receipt timestamps also handle reimports. Sources without recorded dates follow in name order. Expand a source to inspect observed instructions, recorded memory accesses, attributed metadata, and capture notes. Instruction totals count distinct architecture/address-space/PC identities. Execution counts include all observations. Memory counts describe persisted fact rows, including differing values or processor states.
+**Sources** lists imported artifacts by content identity, most recently imported captures first. Expand a new import to read **Capture Notes**. After **Analyze Evidence**, **Added Code** shows newly decoded ROM bytes compared with the previous analysis, with links to current source or saved disassembly. If several imports await the same pass, the report names the batch; research changes in that pass also contribute. Legacy imports may have no generated report.
 
-SQLite selects each page before decoding its records. The catalog reads only imports, evidence, and capture receipt timestamps. Opening a source never loads the full CFG or register history. Pages contain at most 200 items. Click an instruction or memory access to navigate to its qualified source or saved disassembly. **Assembly: Refresh Sources** (`asm.sources.refresh`) refreshes the view after external changes.
+Reports are generated beside the private evidence database, independently of disposable capture archives. Pages contain at most 200 items. **Assembly: Refresh Sources** (`asm.sources.refresh`) refreshes the view after external changes.
 
 Use **Assembly: Show Analysis Output** for evidence-query diagnostics. Source operation progress and
 failures appear in the source output channel. Cancellation and worker failure preserve authored files;
@@ -205,9 +212,9 @@ Workspace plugin configuration is disabled in restricted workspaces. Trust the w
 
 Use the runtime recording commands to record a bounded window, then **Import Capture** in the Source Project tree.
 
-`asm.debug.traceDetail` selects full execution details (default) or explicit PC-only recording. Full capture rejects runtimes without instruction-detail support. Check the active workspace's `launch.json` runtime paths and restart debugging with a rich-trace build. Capture notifications show the selected mode and report dropped events, including when stopping to analyze. Both modes still use bounded buffers: a longer recording can lose events and does not guarantee more unique code coverage. New trace producer identities include the executable SHA-256 so supplemental runtime builds can be distinguished. Captured RAM instructions open from Sources using their saved bytes. See [configuration, workflow, and remaining trace limits](https://github.com/uttori/asm/blob/master/packages/plugin-snes/ANALYSIS.md).
+`asm.debug.traceDetail` selects full execution details (default) or explicit PC-only recording. Full capture rejects runtimes without instruction-detail support. Check the active workspace's `launch.json` runtime paths and restart debugging with a rich-trace build. Capture notifications show the selected mode and report dropped events, including when stopping to analyze. Both modes still use bounded buffers: a longer recording can lose events and does not guarantee more unique code coverage. New trace producer identities include the executable SHA-256 so supplemental runtime builds can be distinguished. Captured RAM instructions remain available in analyzed disassembly using their saved bytes. See [configuration, workflow, and remaining trace limits](https://github.com/uttori/asm/blob/master/packages/plugin-snes/ANALYSIS.md).
 
-The sidebar provides **Project**, **Outline**, **Source Project**, **Sources**, and **Analysis Coverage**.
+The sidebar provides **Project**, **Index Details**, **Outline**, **Source Project**, **Sources**, and **Analysis Coverage**.
 The source tree reflects the selected repository, candidate, merge state, and last validated build.
 
 ### Editing the Webviews

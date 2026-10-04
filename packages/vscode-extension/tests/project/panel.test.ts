@@ -62,6 +62,10 @@ registerHooks({
           import path from "node:path";
           const host = globalThis.__uttoriPanelTest;
           const uri = (file) => ({ fsPath: file, toString: () => "file://" + file });
+          export class EventEmitter { event = () => {}; fire() {} dispose() {} }
+          export class ThemeIcon { constructor(id) { this.id = id; } }
+          export class TreeItem { constructor(label, collapsibleState) { this.label = label; this.collapsibleState = collapsibleState; } }
+          export const TreeItemCollapsibleState = { None: 0 };
           export const ConfigurationTarget = { Workspace: 2 };
           export const Uri = {
             file: uri,
@@ -97,6 +101,7 @@ registerHooks({
   },
 });
 
+const { IndexDetailsProvider } = await import("../../src/project/index-tree.js");
 const { ProjectPanelProvider } = await import("../../src/project/panel.js");
 const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
@@ -230,6 +235,15 @@ test.serial(
     t.notThrows(() => new vm.Script(js));
     t.false(js.includes("innerHTML"), "project names, paths and status are rendered as text");
     await h.provider.refresh();
+    const index = new IndexDetailsProvider(() => h.provider.snapshot());
+    t.teardown(() => index.dispose());
+    const rows = await index.getChildren();
+    const errors = rows.find(({ label }) => label === "Errors")!;
+    t.is(index.getTreeItem(errors).description, "1");
+    t.is(index.getTreeItem(errors).command?.command, "workbench.actions.view.problems");
+    t.false(rows.some(({ label }) => label === "Target" || label === "Config"));
+    t.false(h.webview.html.includes("Index Details"));
+    t.false(h.webview.html.includes("project-header"));
     t.true(
       h.sent.some(
         (message) =>

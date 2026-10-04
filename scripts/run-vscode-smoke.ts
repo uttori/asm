@@ -306,7 +306,8 @@ const main = async (): Promise<void> => {
       const developmentPaths = [extensionDevelopmentPath];
       if (
         process.env.UTTORI_VSCODE_BINARY_PREVIEW === "1" ||
-        process.env.UTTORI_VSCODE_SOURCE_LAUNCH === "1"
+        process.env.UTTORI_VSCODE_SOURCE_LAUNCH === "1" ||
+        process.env.UTTORI_VSCODE_SOURCE_LIFECYCLE === "1"
       ) {
         // Only the disposable manifest points at the instrumented test entry.
         // Workers, resources and production composition come from the same build.

@@ -873,7 +873,7 @@ connection.onRequest("asm/status", async () => {
       fileCount: 0,
       symbolCount: 0,
       referenceCount: 0,
-      errorCount: 0,
+      errorCount: configurationDiagnostic?.diagnostic.severity === DiagnosticSeverity.Error ? 1 : 0,
       entryPoints: settings.entryPoints,
       includePaths: settings.includePaths,
       lastReindexRootCount: 0,
@@ -886,8 +886,13 @@ connection.onRequest("asm/status", async () => {
       baseImage: settings.baseImage,
     };
   }
+  const status = index.getStatus();
   return {
-    ...index.getStatus(),
+    ...status,
+    // Configuration diagnostics are published separately, but still contribute to the visible error total.
+    errorCount:
+      status.errorCount +
+      (configurationDiagnostic?.diagnostic.severity === DiagnosticSeverity.Error ? 1 : 0),
     configFile: settings.configFile,
     target: settings.target,
     architecture: settings.architecture,

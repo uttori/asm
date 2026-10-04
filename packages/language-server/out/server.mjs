@@ -54770,7 +54770,7 @@ function renderSymbolDocs(index2, symbol) {
   }
   const annotation = symbolAnnotation(index2, symbol);
   if (annotation) {
-    lines.push("", annotation);
+    lines.push("", annotation.replace(/\n/g, "  \n"));
   }
   lines.push("", `Defined in \`${path12.basename(symbol.location.file)}\``);
   return lines.join("\n");
@@ -54794,7 +54794,7 @@ function symbolAnnotation(index2, symbol) {
     leading.unshift(sourceLine.replace(/^\s*;\s?/, "").trimEnd());
   }
   const trailing = lineCommentText(lines[line] ?? "");
-  const parts = leading.filter((entry) => entry.length > 0);
+  const parts = [...leading];
   if (trailing) {
     parts.push(trailing);
   }
@@ -56351,7 +56351,7 @@ connection.onRequest("asm/status", async () => {
       fileCount: 0,
       symbolCount: 0,
       referenceCount: 0,
-      errorCount: 0,
+      errorCount: configurationDiagnostic?.diagnostic.severity === import_node.DiagnosticSeverity.Error ? 1 : 0,
       entryPoints: settings.entryPoints,
       includePaths: settings.includePaths,
       lastReindexRootCount: 0,
@@ -56364,8 +56364,11 @@ connection.onRequest("asm/status", async () => {
       baseImage: settings.baseImage
     };
   }
+  const status = index.getStatus();
   return {
-    ...index.getStatus(),
+    ...status,
+    // Configuration diagnostics are published separately, but still contribute to the visible error total.
+    errorCount: status.errorCount + (configurationDiagnostic?.diagnostic.severity === import_node.DiagnosticSeverity.Error ? 1 : 0),
     configFile: settings.configFile,
     target: settings.target,
     architecture: settings.architecture,

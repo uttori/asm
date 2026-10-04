@@ -155,7 +155,7 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
         });
         instructions.set(id, instruction);
     }
-    onProgress?.(`Connecting ${nodes.size} captured instruction variants.`);
+    onProgress?.(`Decoded ${observations.toLocaleString("en-US")} instruction observations into ${nodes.size.toLocaleString("en-US")} variants; connecting their control flow.`);
     const byAddress = new Map();
     for (const node of nodes.values()) {
         const entries = byAddress.get(node.address) ?? [];
@@ -164,7 +164,11 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
     }
     const edges = [];
     const entries = new Set();
+    let connected = 0;
     for (const node of nodes.values()) {
+        if (++connected % 10000 === 0) {
+            onProgress?.(`Connected ${connected.toLocaleString("en-US")}/${nodes.size.toLocaleString("en-US")} variants (${((100 * connected) / nodes.size).toFixed(1)}%).`);
+        }
         const instruction = instructions.get(node.id);
         const targets = instruction.references
             .filter((ref) => ["call", "branch", "jump"].includes(ref.kind))
@@ -212,7 +216,11 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
     for (const entry of entries) {
         ownership.set(entry, entry);
     }
+    let propagated = 0;
     for (const id of queue) {
+        if (++propagated % 10000 === 0) {
+            onProgress?.(`Propagated function ownership through ${propagated.toLocaleString("en-US")} blocks, ${(queue.length - propagated).toLocaleString("en-US")} queued.`);
+        }
         const owner = ownership.get(id);
         for (const edge of outgoing.get(id) ?? []) {
             if (!edge.to || edge.edgeKind === "call" || entries.has(edge.to)) {
@@ -274,6 +282,7 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
             });
         }
     }
+    onProgress?.(`Prepared ${records.length.toLocaleString("en-US")} captured code records from ${nodes.size.toLocaleString("en-US")} instruction variants and ${edges.length.toLocaleString("en-US")} control-flow edges.`);
     return records.toSorted((a, b) => a.id.localeCompare(b.id));
 };
 //# sourceMappingURL=runtime-code.js.map

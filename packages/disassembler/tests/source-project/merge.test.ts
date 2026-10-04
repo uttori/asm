@@ -75,6 +75,113 @@ async function commit(repository: SourceRepository, message: string): Promise<vo
   await sourceGit(repository.root, ["commit", "-m", message]);
 }
 
+for (const change of ["switch", "rename", "older-baseline"] as const) {
+  test(`completed regeneration does not block another branch after ${change}`, async (t) => {
+    const { repository, baseline } = await fixture();
+    t.teardown(() => fs.rmSync(repository.root, { recursive: true, force: true }));
+    const journal = path.join(repository.stateDirectory, "merge.json");
+    if (change === "rename") {
+      await sourceGit(repository.root, ["branch", "-m", "codex/research"]);
+    } else {
+      await sourceGit(repository.root, ["switch", "-c", "codex/research"]);
+    }
+    if (change === "older-baseline") {
+      const first = await retainSourceGeneration(repository, {
+        inputs,
+        parent: baseline.commit,
+        files: [{ path: "main.asm", bytes: Buffer.from("db $07\n") }],
+      });
+      await applySourceGeneration(
+        repository,
+        first,
+        await previewSourceGeneration(repository, first.commit),
+      );
+      t.is(
+        (
+          await finishSourceGeneration(repository, {
+            message: "Research generation",
+            validate: verification,
+          })
+        ).phase,
+        "verified",
+      );
+      await sourceGit(repository.root, ["switch", "main"]);
+    }
+    const priorJournal = fs.readFileSync(journal);
+    t.is((await sourceMergeStatus(repository)).phase, "idle");
+    t.deepEqual(
+      fs.readFileSync(journal),
+      priorJournal,
+      "Read-only status preserves the prior recovery receipt.",
+    );
+    const incoming = await retainSourceGeneration(repository, {
+      inputs,
+      parent: baseline.commit,
+      files: [{ path: "main.asm", bytes: Buffer.from("db $08\n") }],
+    });
+    const preview = await previewSourceGeneration(repository, incoming.commit);
+    t.is((await applySourceGeneration(repository, incoming, preview)).phase, "merging");
+    t.is(
+      (
+        await finishSourceGeneration(repository, {
+          message: "New branch generation",
+          validate: verification,
+        })
+      ).phase,
+      "verified",
+    );
+    t.is(fs.readFileSync(path.join(repository.root, "main.asm"), "utf8"), "db $08\n");
+    t.is((await sourceStatus(repository)).length, 0);
+  });
+}
+
+test("branch changes cannot retire a journal whose merge never committed", async (t) => {
+  const { repository, baseline } = await fixture();
+  t.teardown(() => fs.rmSync(repository.root, { recursive: true, force: true }));
+  const incoming = await retainSourceGeneration(repository, {
+    inputs,
+    parent: baseline.commit,
+    files: [{ path: "main.asm", bytes: Buffer.from("db $07\n") }],
+  });
+  const preview = await previewSourceGeneration(repository, incoming.commit);
+  const result = await faultWorker({
+    root: repository.root,
+    generation: incoming,
+    preview,
+    action: "apply",
+    killAfterJournal: true,
+  });
+  t.is(result.signal, "SIGKILL");
+  const journal = path.join(repository.stateDirectory, "merge.json");
+  const priorJournal = fs.readFileSync(journal);
+  await sourceGit(repository.root, ["switch", "-c", "codex/research"]);
+  t.is((await sourceMergeStatus(repository)).phase, "diverged");
+  await t.throwsAsync(applySourceGeneration(repository, incoming, preview), {
+    message: /Resolve the previous regeneration/,
+  });
+  t.deepEqual(fs.readFileSync(journal), priorJournal);
+  // Even a validation receipt written before a failed commit cannot prove completion elsewhere.
+  const pending = JSON.parse(priorJournal.toString());
+  fs.writeFileSync(
+    journal,
+    JSON.stringify({
+      ...pending,
+      validatedTree: preview.resultTree,
+      verification: await verification(),
+    }),
+  );
+  t.is((await sourceMergeStatus(repository)).phase, "diverged");
+  await sourceGit(repository.root, ["switch", "main"]);
+  await applySourceGeneration(repository, incoming, preview);
+  await sourceGit(repository.root, ["branch", "codex/research-active", "HEAD"]);
+  await sourceGit(repository.root, ["symbolic-ref", "HEAD", "refs/heads/codex/research-active"]);
+  t.is(
+    (await sourceMergeStatus(repository)).phase,
+    "diverged",
+    "An active native merge always retains its branch guard.",
+  );
+});
+
 /** A child may die after a successful Git write; the parent asserts durable state without its memory. */
 async function faultWorker(request: Record<string, unknown>) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-fault-"));

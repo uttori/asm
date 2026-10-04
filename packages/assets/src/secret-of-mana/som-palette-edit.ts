@@ -7,6 +7,7 @@ import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atla
 import {
   spritePaletteBytes,
   spritePaletteColors,
+  validateSpritePaletteAliases,
   type SpritePaletteCatalog,
 } from "./som-sprite-palettes.js";
 import type { FrameLayout, SpriteAtlasSource } from "./som-types.js";
@@ -174,13 +175,14 @@ export function planSpritePaletteEdits(
   atlases: readonly SpriteAtlasSource[],
   edits: readonly { palette: string; index: number; rgb: number[] }[],
 ) {
+  validateSpritePaletteAliases(catalog);
   const audit = inspectSpritePaletteUsers(catalog, atlases);
   if (audit.errors.length) {
     throw new Error(audit.errors.join("\n"));
   }
   const next = structuredClone(catalog);
   const changed = new Set<string>();
-  const slots = new Set<string>();
+  const slots = new Set<number>();
   for (const edit of edits) {
     spritePaletteBytes(catalog, edit.palette);
     const record = next.palettes[edit.palette];
@@ -194,11 +196,11 @@ export function planSpritePaletteEdits(
     ) {
       throw new Error(`Invalid palette slot ${edit.palette}:${edit.index}.`);
     }
-    const key = `${edit.palette}:${edit.index}`;
-    if (slots.has(key)) {
-      throw new Error(`Duplicate palette edit ${key}.`);
+    const address = Number.parseInt(record.romAddress, 16) + offset * 2;
+    if (slots.has(address)) {
+      throw new Error(`Duplicate palette edit ${edit.palette}:${edit.index}.`);
     }
-    slots.add(key);
+    slots.add(address);
     const channels = edit.rgb.map((color) => {
       if (!Number.isInteger(color) || color < 0 || color > 255) {
         throw new Error("Palette edits require RGB8.");
@@ -216,8 +218,15 @@ export function planSpritePaletteEdits(
       .toUpperCase()
       .padStart(4, "0");
     if (record.words[offset].toUpperCase() !== word) {
-      record.words[offset] = word;
-      changed.add(edit.palette);
+      // Several displayed palettes can alias a physical word. Propagate the edit
+      // before updating every affected PNG so their colors cannot disagree with ROM.
+      for (const [id, alias] of Object.entries(next.palettes)) {
+        const index = (address - Number.parseInt(alias.romAddress, 16)) / 2;
+        if (Number.isInteger(index) && index >= 0 && index < alias.words.length) {
+          alias.words[index] = word;
+          changed.add(id);
+        }
+      }
     }
   }
   const images = new Map<string, Uint8Array>();

@@ -11385,6 +11385,16 @@ function withImageEncoders(native) {
 }
 
 // packages/assets/src/preview.ts
+function rgbaNativePng(rgba, width, height) {
+  integer(width, "Image width", 1, 4096);
+  integer(height, "Image height", 1, 4096);
+  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+    throw new Error("Image pixels are missing or exceed the four-megapixel limit.");
+  }
+  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+  const surface = new RgbaSurface(width, height, bytes, { copy: false, maxPixels: 2048 * 2048 });
+  return data_image_png_default.encodeRGBA(surface, { filter: "none", level: 6, maxPixels: 2048 * 2048 });
+}
 function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
   integer(width, "Preview width", 1, 4096);
   integer(height, "Preview height", 1, 4096);
@@ -11729,8 +11739,13 @@ function spritePaletteColors(catalog, id) {
   }
   return colors;
 }
-function spritePaletteBytes(catalog, id) {
-  const words = paletteRecord(catalog, id).words;
+function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
+  const record = paletteRecord(catalog, id);
+  const count = wordCount ?? record.words.length - wordOffset;
+  if (!Number.isSafeInteger(wordOffset) || !Number.isSafeInteger(count) || wordOffset < 0 || count < 1 || wordOffset + count > record.words.length) {
+    throw new Error(`Invalid ROM palette word slice ${id}.`);
+  }
+  const words = record.words.slice(wordOffset, wordOffset + count);
   const bytes = new Uint8Array(words.length * 2);
   for (const [index, raw] of words.entries()) {
     const word = Number.parseInt(raw, 16);
@@ -11738,6 +11753,21 @@ function spritePaletteBytes(catalog, id) {
     bytes[index * 2 + 1] = word >>> 8;
   }
   return bytes;
+}
+function validateSpritePaletteAliases(catalog) {
+  const words = /* @__PURE__ */ new Map();
+  for (const id of Object.keys(catalog.palettes)) {
+    const record = paletteRecord(catalog, id), start = Number.parseInt(id, 16);
+    for (const [index, raw] of record.words.entries()) {
+      const address = start + index * 2, word = raw.toUpperCase();
+      if (words.has(address) && words.get(address) !== word) {
+        throw new Error(
+          `Conflicting palette aliases at ROM ${address.toString(16).toUpperCase()}.`
+        );
+      }
+      words.set(address, word);
+    }
+  }
 }
 function spritePalettePreview(catalog, id) {
   const palette = paletteRecord(catalog, id);
@@ -11787,6 +11817,7 @@ function parseSpritePaletteCatalog(bytes) {
   if (!isSpritePaletteCatalog(parsed)) {
     throw new Error("Sprite palette catalogue must contain version 1 palette records.");
   }
+  validateSpritePaletteAliases(parsed);
   return parsed;
 }
 function readSpritePaletteCatalog(options, resources) {
@@ -12909,7 +12940,15 @@ var plugin = definePlugin({
         if (source.mediaType !== "application/json" || typeof options.palette !== "string") {
           throw new Error("SoM palette asset requires a JSON catalogue and palette address.");
         }
-        const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette);
+        for (const name of ["wordOffset", "wordCount"]) {
+          if (options[name] !== void 0 && typeof options[name] !== "number") {
+            throw new Error(`SoM palette ${name} must be a number.`);
+          }
+        }
+        const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
+          wordOffset: options.wordOffset,
+          wordCount: options.wordCount
+        });
         return { primaryOutput: "palette", outputs: { palette: { bytes } } };
       }
     });
@@ -13180,7 +13219,7 @@ function convertSomRoomPreview(input) {
       rgbaPreviewPng(preview.rgba, preview.width, preview.height, 192)
     ).toString("base64"),
     composedPngBase64: Buffer.from(
-      rgbaPreviewPng(preview.rgba, preview.width, preview.height)
+      rgbaNativePng(preview.rgba, preview.width, preview.height)
     ).toString("base64")
   };
 }
@@ -13243,16 +13282,11 @@ function convertAssetPreview(input) {
     const width = Number(preview.metadata?.width);
     const height = Number(preview.metadata?.height);
     const thumbnail = rgbaPreviewPng(preview.bytes, width, height, 192);
-    const composed = rgbaPreviewPng(preview.bytes, width, height, 1024);
+    const composed = rgbaNativePng(preview.bytes, width, height);
     const indexes = preview.metadata?.tileIndexByCoordinate;
     let storage;
     if (Array.isArray(indexes) && width % 8 === 0 && height % 8 === 0) {
-      storage = rgbaPreviewPng(
-        storagePixels(preview.bytes, width, height, indexes),
-        width,
-        height,
-        1024
-      );
+      storage = rgbaNativePng(storagePixels(preview.bytes, width, height, indexes), width, height);
     }
     return {
       ...common,

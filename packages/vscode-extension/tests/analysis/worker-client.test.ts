@@ -29,17 +29,6 @@ function isSources(
   );
 }
 
-function isSourceSummary(value: unknown): value is {
-  readonly summary: { readonly instructionCount: number; readonly contributionCount: number };
-} {
-  return (
-    isRecord(value) &&
-    isRecord(value.summary) &&
-    typeof value.summary.instructionCount === "number" &&
-    typeof value.summary.contributionCount === "number"
-  );
-}
-
 function isCoverage(value: unknown): value is {
   readonly summary: { readonly totalBytes: number; readonly classifiedBytes: number };
   readonly segments: readonly unknown[];
@@ -50,18 +39,6 @@ function isCoverage(value: unknown): value is {
     typeof value.summary.totalBytes === "number" &&
     typeof value.summary.classifiedBytes === "number" &&
     Array.isArray(value.segments)
-  );
-}
-
-function isSegments(
-  value: unknown,
-): value is readonly { readonly start: number; readonly end: number }[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (segment) =>
-        isRecord(segment) && typeof segment.start === "number" && typeof segment.end === "number",
-    )
   );
 }
 
@@ -79,13 +56,6 @@ function isAnnotationRows(value: unknown): value is readonly {
         Array.isArray(row.annotation.stateObservations) &&
         row.annotation.stateObservations.every((observation) => isRecord(observation)),
     )
-  );
-}
-
-function isDetails(value: unknown): value is readonly { readonly description: string }[] {
-  return (
-    Array.isArray(value) &&
-    value.every((detail) => isRecord(detail) && typeof detail.description === "string")
   );
 }
 
@@ -140,7 +110,10 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     },
     logLevel: "silent",
   });
-  const client = new AnalysisWorkerClient(workerFile);
+  const logs: { level: string; message: string }[] = [];
+  const client = new AnalysisWorkerClient(workerFile, {
+    log: (level, message) => logs.push({ level, message }),
+  });
   const project: AnalysisProject = {
     manifest: {
       format: ANALYSIS_PROJECT_FORMAT,
@@ -181,6 +154,15 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
           evidence: ["test"],
         })),
         ...Array.from({ length: 300 }, (_, index) => ({
+          id: `conflicting-${index}`,
+          addressSpace: "rom.file",
+          start: index,
+          end: index + 1,
+          architecture: "fixture",
+          classification: "opcode" as const,
+          evidence: ["test"],
+        })),
+        ...Array.from({ length: 300 }, (_, index) => ({
           id: `cpu-${index}`,
           addressSpace: "cpu",
           start: index,
@@ -195,6 +177,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
   };
   try {
     publishAnalysisProject(projectDirectory, project);
+    fs.unlinkSync(path.join(projectDirectory, "analysis.json"));
     // Invalid CFG payloads must not prevent the lightweight Sources catalog from loading.
     const database = new DatabaseSync(path.join(projectDirectory, "analysis.sqlite"));
     database.exec(
@@ -208,34 +191,20 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       }
       ({ sources } = catalog);
       t.is(sources.length, 1, "source listing needs no runtime or CFG table");
+      t.true(fs.existsSync(path.join(projectDirectory, "analysis.json")));
       await t.notThrowsAsync(
-        client.request(projectDirectory, "sourceSummary", { sourceId: sources[0].id }),
+        client.request(projectDirectory, "sourceNotes", { sourceId: sources[0].id }),
       );
     } finally {
       database.exec("DELETE FROM analysis WHERE id='invalid'");
       database.close();
     }
     const sourceId = sources![0].id;
-    const sourceSummary = await client.request(projectDirectory, "sourceSummary", { sourceId });
-    if (!isSourceSummary(sourceSummary)) {
-      throw new Error("expected source summary");
-    }
-    t.is(sourceSummary.summary.instructionCount, 300);
-    t.is(sourceSummary.summary.contributionCount, 600);
-    const instructionPage = await client.request(projectDirectory, "sourceEntries", {
-      sourceId,
-      sourceGroup: "instructions",
-    });
-    const instructionOffset = await client.request(projectDirectory, "sourceEntries", {
-      sourceId,
-      sourceGroup: "instructions",
-      offset: 200,
-    });
-    if (!Array.isArray(instructionPage) || !Array.isArray(instructionOffset)) {
-      throw new Error("expected source entries");
-    }
-    t.is(instructionPage.length, 200);
-    t.is(instructionOffset.length, 100);
+    t.is(
+      await client.request(projectDirectory, "sourceNotes", { sourceId }),
+      null,
+      "legacy imports need no capture archive or fabricated report",
+    );
     const navigationTarget = {
       projectDirectory,
       target: "fixture",
@@ -268,67 +237,54 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       throw new Error("expected coverage");
     }
     t.is(map.summary.totalBytes, 1024);
-    t.is(map.summary.classifiedBytes, 300);
+    t.is(map.summary.classifiedBytes, 0);
     t.deepEqual(map.segments, [], "summary does not copy full projection to UI");
-    const first = await client.request(projectDirectory, "segments");
-    const second = await client.request(projectDirectory, "segments", { offset: 200 });
-    if (!isSegments(first) || !isSegments(second)) {
-      throw new Error("expected coverage segments");
-    }
-    t.is(first.length, 200);
-    t.is(first[0].start, 0);
-    t.is(second[0].start, first.at(-1)!.end);
-    t.true(second.length <= 200);
-    const [annotationRows, detailRows] = await Promise.all([
-      client.request(projectDirectory, "annotations", {
-        ranges: [
-          {
-            architecture: "fixture",
-            addressSpace: "cpu",
-            start: 0,
-            end: 2,
-            sourceId: 0,
-            line: 1,
-          },
-        ],
-      }),
-      client.request(projectDirectory, "details"),
-    ]);
-    if (!isAnnotationRows(annotationRows) || !isDetails(detailRows)) {
-      throw new Error("expected annotations and details");
-    }
-    const annotations = annotationRows;
-    const details = detailRows;
-    t.is(annotations.length, 2);
-    t.deepEqual(annotations[0].annotation.stateObservations[0].state, { m: true });
-    t.deepEqual(annotations[0].annotation.stateObservations[0].evidence, ["test"]);
-    t.is(details.length, 200);
-    t.is(details[0].description, "non-file-address-space");
-    const detailOffset = await client.request(projectDirectory, "details", { offset: 400 });
-    if (!Array.isArray(detailOffset)) {
-      throw new Error("expected detail page");
-    }
-    t.is(detailOffset.length, 200);
-    await t.throwsAsync(client.request(projectDirectory, "segments", { offset: -1 }), {
+    const conflicts = await client.request(projectDirectory, "coverageConflicts");
+    const laterConflicts = await client.request(projectDirectory, "coverageConflicts", {
+      offset: 200,
+    });
+    if (
+      !isRecord(conflicts) ||
+      !Array.isArray(conflicts.segments) ||
+      !isRecord(laterConflicts) ||
+      !Array.isArray(laterConflicts.segments)
+    )
+      throw new Error("expected conflict pages");
+    t.is(conflicts.count, 300);
+    t.is(conflicts.segments.length, 200);
+    t.is(laterConflicts.segments.length, 100);
+    t.deepEqual(conflicts.segments[0].classifications, ["opcode", "data"]);
+    t.is(laterConflicts.segments[0].start, 200);
+    const annotationRows = await client.request(projectDirectory, "annotations", {
+      ranges: [
+        { architecture: "fixture", addressSpace: "cpu", start: 0, end: 2, sourceId: 0, line: 1 },
+      ],
+    });
+    if (!isAnnotationRows(annotationRows)) throw new Error("expected annotations");
+    t.is(annotationRows.length, 2);
+    t.deepEqual(annotationRows[0].annotation.stateObservations[0].state, { m: true });
+    t.deepEqual(annotationRows[0].annotation.stateObservations[0].evidence, ["test"]);
+    await t.throwsAsync(client.request(projectDirectory, "coverageConflicts", { offset: -1 }), {
       message: /offset/,
     });
     await t.throwsAsync(client.request(path.join(directory, "missing"), "manifest"));
+    t.true(
+      logs.some(({ level, message }) => level === "debug" && message.includes("Analysis sources:")),
+    );
+    t.true(
+      logs.some(
+        ({ level, message }) =>
+          level === "error" && message.includes("Analysis manifest") && message.includes("missing"),
+      ),
+    );
     t.deepEqual(await client.request(projectDirectory, "annotations"), []);
     publishAnalysisProject(projectDirectory, {
       ...project,
       shards: { ...project.shards, annotations: [] },
     });
     client.invalidate();
-    const revisedSummary = await client.request(projectDirectory, "sourceSummary", { sourceId });
     const revisedCoverage = await client.request(projectDirectory, "coverage");
-    if (!isSourceSummary(revisedSummary) || !isCoverage(revisedCoverage)) {
-      throw new Error("expected revised source projection");
-    }
-    t.is(
-      revisedSummary.summary.contributionCount,
-      0,
-      "source counts follow committed database revisions",
-    );
+    if (!isCoverage(revisedCoverage)) throw new Error("expected revised coverage");
     t.is(revisedCoverage.summary.classifiedBytes, 0);
     client.dispose();
     const restarted = await client.request(projectDirectory, "coverage");
@@ -425,7 +381,7 @@ test("projection process gives queued pages their own timeout and keeps the pare
   });
   const start = performance.now();
   const results = await Promise.all(
-    (["coverage", "annotations", "details"] as const).map((operation) =>
+    (["coverage", "annotations", "coverageConflicts"] as const).map((operation) =>
       pidArgsOf(client.request("busy", operation)),
     ),
   );
@@ -454,7 +410,7 @@ test("projection failures and timeouts report the operation/budget, reject queue
   t.deepEqual(first.args, ["--max-old-space-size=128"]);
   const failed = await Promise.allSettled([
     client.request("crash", "annotations"),
-    client.request("normal", "details"),
+    client.request("normal", "coverageConflicts"),
   ]);
   for (const result of failed) {
     t.is(result.status, "rejected");
@@ -466,16 +422,16 @@ test("projection failures and timeouts report the operation/budget, reject queue
       /Analysis annotations process exited \(23\).*128 MiB.*test projection failure/s,
     );
   }
-  const recovered = await pidOf(client.request("normal", "details"));
+  const recovered = await pidOf(client.request("normal", "coverageConflicts"));
   t.not(recovered.pid, first.pid);
   maxMemoryMiB = 256;
-  const resized = await pidArgsOf(client.request("normal", "details"));
+  const resized = await pidArgsOf(client.request("normal", "coverageConflicts"));
   t.not(resized.pid, recovered.pid, "a changed project budget restarts the process");
   t.deepEqual(resized.args, ["--max-old-space-size=256"]);
-  await t.throwsAsync(client.request("timeout", "details"), {
-    message: /Analysis details process exceeded 1 seconds.*256 MiB/,
+  await t.throwsAsync(client.request("timeout", "coverageConflicts"), {
+    message: /Analysis coverageConflicts process exceeded 1 seconds.*256 MiB/,
   });
-  t.not((await pidOf(client.request("normal", "details"))).pid, resized.pid);
+  t.not((await pidOf(client.request("normal", "coverageConflicts"))).pid, resized.pid);
   maxMemoryMiB = 0;
   await t.throwsAsync(client.request("normal", "coverage"), {
     message: /asm.analysis.maxMemoryMiB/,

@@ -247,6 +247,7 @@ export function buildSnesSource(options) {
         outputFile,
         debugMapFile,
         inputSha256,
+        inputs: sources,
         outputSize: output.length,
         debugMapFingerprint: map.fingerprint.value,
         verification,

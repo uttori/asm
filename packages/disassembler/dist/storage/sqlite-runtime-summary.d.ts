@@ -32,9 +32,9 @@ export declare const runtimeSummaryInputSql: (incremental: boolean) => string;
  * @param {string} space Exact instruction address space.
  * @param {readonly string[]} fields Ordered decoder fields; other registers remain in full evidence.
  * @param {StateMasks} masks Grouping-only masks for valid numeric fields.
- * @param {Function} [onProgress] Cumulative observations staged in this build; throwing aborts it.
+ * @param {Function} [onProgress] Cumulative and total observations in this build snapshot; throwing aborts it.
  * @returns {IterableIterator<RuntimeEvidenceRecord>} One representative per decoder key and evidence list.
  */
-export declare const runtimeInstructionSummary: (db: DatabaseSync, transaction: Transaction, architecture: string, space: string, fields: readonly string[], masks: StateMasks, onProgress?: (observations: number) => void) => IterableIterator<RuntimeEvidenceRecord>;
+export declare const runtimeInstructionSummary: (db: DatabaseSync, transaction: Transaction, architecture: string, space: string, fields: readonly string[], masks: StateMasks, onProgress?: (observations: number, totalObservations: number) => void) => IterableIterator<RuntimeEvidenceRecord>;
 export {};
 //# sourceMappingURL=sqlite-runtime-summary.d.ts.map

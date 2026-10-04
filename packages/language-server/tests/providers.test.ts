@@ -159,6 +159,27 @@ test("document symbols keep original source lines when comments precede labels",
   t.is(reset?.selectionRange.start.line, 7);
 });
 
+test("symbol hover preserves comment lines and blank comment separators", (t) => {
+  const file = path.resolve("/virtual/decompress.asm");
+  const source = [
+    "org $8000",
+    "; JSL wrapper around DecompressLz / $C14C30",
+    "; JSL entry: JSR DecompressLz then RTL; A low=ROM source bank,",
+    "; Y=destination offset.",
+    ";",
+    "; Returns via RTL.",
+    "DecompressLz_LongCall: ; trailing detail",
+    "rtl",
+    "jsl DecompressLz_LongCall",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(file, source);
+  const hover = hoverFor(index, file, { line: 8, character: 8 }, source);
+  const rendered = JSON.stringify(hover);
+  t.true(rendered.includes("$C14C30  \\nJSL entry"));
+  t.true(rendered.includes("Y=destination offset.  \\n  \\nReturns via RTL.  \\ntrailing detail"));
+});
+
 test("macro document symbols jump to the header, not endmacro", (t) => {
   const macroFile = path.resolve("/virtual/macros.asm");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());

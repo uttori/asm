@@ -1,4 +1,6 @@
 import type { Tile } from "./snes.js";
+/** Encode original RGBA pixels without resizing, within the same four-megapixel input budget as thumbnails. */
+export declare function rgbaNativePng(rgba: Uint8Array | Uint8ClampedArray, width: number, height: number): Uint8Array;
 /** Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
  * @param {Uint8Array | Uint8ClampedArray} rgba Exact row-major RGBA8 pixels, including Canvas buffers.
  * @param {number} width Original pixel width.

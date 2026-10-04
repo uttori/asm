@@ -28,9 +28,15 @@ export declare function spritePaletteColors(catalog: SpritePaletteCatalog, id: s
 /** Emit the catalogue's exact little-endian ROM words, including unused high bits.
  * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
  * @param {string} id Six-digit ROM address.
- * @returns {Uint8Array} Little-endian BGR555 words.
+ * @param {object} range Optional zero-based word slice; omitted count emits the remaining words.
+ * @returns {Uint8Array} Little-endian BGR555 words. Invalid or empty slices throw.
  */
-export declare function spritePaletteBytes(catalog: SpritePaletteCatalog, id: string): Uint8Array<ArrayBuffer>;
+export declare function spritePaletteBytes(catalog: SpritePaletteCatalog, id: string, { wordOffset, wordCount }?: {
+    wordOffset?: number;
+    wordCount?: number;
+}): Uint8Array<ArrayBuffer>;
+/** Overlapping display views must agree on each physical ROM word; neither can silently win. */
+export declare function validateSpritePaletteAliases(catalog: SpritePaletteCatalog): void;
 /** Show stored colors as 8×8 swatches with a one-pixel grid and source grouping.
  * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
  * @param {string} id Six-digit ROM address.

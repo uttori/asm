@@ -282,10 +282,38 @@ export async function sourceMergeStatus(repository: SourceRepository): Promise<S
   ).stdout
     .toString("utf8")
     .trim();
+  const mergeHead = path.join(repository.gitDirectory, "MERGE_HEAD");
   if (branch !== journal.branch) {
+    // A completed journal belongs to its original branch, not every subsequent checkout in this
+    // worktree. Require both a validation receipt and committed ancestry before letting a new
+    // branch start regeneration. HEAD supplies the proof when the original branch was renamed.
+    if (!fs.existsSync(mergeHead) && journal.validatedTree && journal.verification) {
+      for (const revision of [journal.branch, head]) {
+        const recordedHead = await sourceGit(
+          repository.root,
+          ["rev-parse", "--verify", `${revision}^{commit}`],
+          {
+            acceptedCodes: [0, 128],
+          },
+        );
+        const committedHead = recordedHead.stdout.toString("utf8").trim();
+        // A validation written before commit is insufficient when that branch still points at
+        // the pre-merge checkpoint, even if the candidate was already in older source history.
+        if (recordedHead.code !== 0 || committedHead === journal.before) {
+          continue;
+        }
+        const completed = await sourceGit(
+          repository.root,
+          ["merge-base", "--is-ancestor", journal.candidate, committedHead],
+          { acceptedCodes: [0, 1, 128] },
+        );
+        if (completed.code === 0) {
+          return { phase: "idle", head, conflicts };
+        }
+      }
+    }
     return { phase: "diverged", head, conflicts, journal };
   }
-  const mergeHead = path.join(repository.gitDirectory, "MERGE_HEAD");
   if (fs.existsSync(mergeHead)) {
     const pending = fs.readFileSync(mergeHead, "utf8").trim();
     const phase = pending === journal.candidate && head === journal.before ? "merging" : "diverged";

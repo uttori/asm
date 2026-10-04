@@ -164,6 +164,77 @@ test("database snapshots and optimistic revisions stay correct when the watcher 
   );
 });
 
+test("a missing watcher pointer is recovered from committed SQLite state without changing its revision", (t) => {
+  const root = temporary();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  publishAnalysisProject(root, changed(fixture(), 1));
+  const writer = openAnalysisProjectStore(root);
+  try {
+    const before = loadAnalysisProjectSnapshot(root);
+    commitAnalysisProjectTransaction(root, before.revision, changed(before, 2));
+    const committed = loadAnalysisProjectSnapshot(root);
+    const inode = fs.statSync(path.join(root, "analysis.sqlite")).ino;
+    fs.unlinkSync(path.join(root, "analysis.json"));
+    t.deepEqual(loadAnalysisProjectSnapshot(root), committed);
+    t.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(root, "analysis.json"), "utf8")),
+      committed.manifest,
+    );
+    t.is(fs.statSync(path.join(root, "analysis.sqlite")).ino, inode);
+    t.deepEqual(loadAnalysisProjectSnapshot(root), committed);
+    t.throws(() => commitAnalysisProjectTransaction(root, before.revision, before), {
+      name: "AnalysisProjectStaleError",
+    });
+  } finally {
+    writer.close();
+  }
+});
+
+test("missing watcher recovery never creates or initializes absent, empty, corrupt or unpublished storage", (t) => {
+  const root = temporary();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const file = path.join(root, "analysis.sqlite");
+  const pointer = path.join(root, "analysis.json");
+  t.throws(() => openAnalysisProjectStore(root), { message: /does not exist/ });
+  t.false(fs.existsSync(file));
+  fs.writeFileSync(file, "");
+  t.throws(() => openAnalysisProjectStore(root), {
+    message: /Unsupported analysis storage format 0/,
+  });
+  t.is(fs.statSync(file).size, 0);
+  fs.writeFileSync(file, "not a SQLite database");
+  t.throws(() => openAnalysisProjectStore(root), { message: /not a database/ });
+  t.is(fs.readFileSync(file, "utf8"), "not a SQLite database");
+  fs.unlinkSync(file);
+  publishAnalysisProject(root, fixture());
+  fs.unlinkSync(pointer);
+  const database = new DatabaseSync(file);
+  try {
+    database.exec("PRAGMA user_version=99");
+    t.throws(() => openAnalysisProjectStore(root), {
+      message: /Unsupported analysis storage format 99/,
+    });
+    t.is(database.prepare("PRAGMA user_version").get()!.user_version, 99);
+    database.exec("PRAGMA user_version=4; DELETE FROM meta WHERE k='manifest'");
+    t.throws(() => openAnalysisProjectStore(root), { message: /missing its stored manifest/ });
+    t.false(fs.existsSync(pointer));
+  } finally {
+    database.close();
+  }
+});
+
+test("an existing corrupt watcher pointer is reported without overwriting it or the database", (t) => {
+  const root = temporary();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  publishAnalysisProject(root, fixture());
+  const pointer = path.join(root, "analysis.json");
+  fs.writeFileSync(pointer, "invalid JSON");
+  t.throws(() => openAnalysisProjectStore(root), { instanceOf: SyntaxError });
+  t.is(fs.readFileSync(pointer, "utf8"), "invalid JSON");
+  fs.unlinkSync(pointer);
+  t.is(loadAnalysisProject(root).manifest.revision, 1);
+});
+
 test("an interrupted writer leaves the last committed SQLite project readable", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));

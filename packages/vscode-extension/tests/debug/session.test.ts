@@ -128,6 +128,8 @@ const host = {
   factory: undefined as DebugAdapterDescriptorFactory | undefined,
   configurationProvider: undefined as DebugConfigurationProvider | undefined,
   commandResult: undefined as unknown,
+  terminate: undefined as ((session: DebugSession) => void) | undefined,
+  warningResult: undefined as Promise<unknown> | undefined,
 };
 
 Object.assign(globalThis, { __uttoriDebugTest: host });
@@ -154,9 +156,13 @@ registerHooks({
           export class TreeItem { constructor(label) { this.label = label; } }
           export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };
           export class EventEmitter {
-            event = () => ({ dispose() {} });
-            fire() {}
-            dispose() {}
+            listeners = new Set();
+            event = (listener) => {
+              this.listeners.add(listener);
+              return { dispose: () => this.listeners.delete(listener) };
+            };
+            fire(value) { for (const listener of this.listeners) listener(value); }
+            dispose() { this.listeners.clear(); }
           }
           export class DebugAdapterInlineImplementation {
             constructor(adapter) { this.adapter = adapter; }
@@ -186,6 +192,7 @@ registerHooks({
             showOpenDialog: async () => host.dialogs.shift(),
             showInformationMessage: async (message) => { host.messages.push(message); },
             showErrorMessage: async (message) => { host.messages.push(message); },
+            showWarningMessage: async (message) => { host.messages.push(message); return host.warningResult; },
             createOutputChannel: (name) => ({
               name,
               appendLine() {},
@@ -214,7 +221,10 @@ registerHooks({
               host.providers.push("adapter:" + type);
               return { dispose() {} };
             },
-            onDidTerminateDebugSession: () => ({ dispose() {} }),
+            onDidTerminateDebugSession: (listener) => {
+              host.terminate = listener;
+              return { dispose() { host.terminate = undefined; } };
+            },
             onDidStartDebugSession: () => ({ dispose() {} }),
           };
         `,
@@ -231,6 +241,8 @@ const {
   configureEmulatorRuntime,
   registerDebugging,
 } = await import("../../src/debug/session.js");
+const { runtimeCapturePhase, onDidChangeRuntimeCapture } =
+  await import("../../src/runtime/capture-state.js");
 
 const reset = (): void => {
   host.trusted = true;
@@ -249,6 +261,8 @@ const reset = (): void => {
   host.factory = undefined;
   host.configurationProvider = undefined;
   host.commandResult = undefined;
+  host.terminate = undefined;
+  host.warningResult = undefined;
 };
 
 const workspaceFolder = (file: string): WorkspaceFolder => {
@@ -510,22 +524,38 @@ test.serial(
     const adapter = descriptor;
     t.teardown(() => adapter.adapter.dispose());
     host.activeSession = session;
-    host.destination = uri(path.join(directory, "capture.act2"));
+    const phases: string[] = [];
+    const changes = onDidChangeRuntimeCapture((phase) => phases.push(phase));
+    t.teardown(() => changes.dispose());
     const waitFor = async (condition: () => boolean): Promise<void> => {
       for (let attempt = 0; attempt < 200 && !condition(); attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 5));
       }
       t.true(condition());
     };
+    // A cancelled save picker must release setup so the visible Start action can be used again.
+    host.commands.get("asm.trace.start")?.();
+    t.is(runtimeCapturePhase(), "starting");
+    await waitFor(() => runtimeCapturePhase() === "idle");
+    t.is(stub.callCount, 0);
+    host.destination = uri(path.join(directory, "capture.act2"));
     host.commands.get("asm.trace.start")?.();
     await waitFor(() => host.messages.some((message) => message.includes("recording lossless")));
+    t.is(runtimeCapturePhase(), "recording");
+    host.commands.get("asm.trace.start")?.();
+    await waitFor(() =>
+      host.messages.some((message) => message.includes("setup is already active")),
+    );
+    t.is(runtimeCapturePhase(), "recording");
+    t.is(stub.callCount, 1);
     host.commands.get("asm.trace.stopAnalyze")?.();
     await waitFor(() => stopRequested);
+    t.is(runtimeCapturePhase(), "finalizing");
     t.like(host.progress[0], {
       title: "Assembly: stopping recording and finalizing capture…",
       cancellable: false,
     });
-    t.deepEqual(host.executed, []);
+    t.false(host.executed.includes("asm.source.importCapture"));
     const summary = {
       file: host.destination.fsPath,
       archive: host.destination.fsPath,
@@ -539,9 +569,37 @@ test.serial(
     }
     release(summary);
     await waitFor(() => host.executed.includes("asm.source.importCapture"));
+    t.is(runtimeCapturePhase(), "idle");
+    t.deepEqual(phases, ["starting", "idle", "starting", "recording", "finalizing", "idle"]);
     t.true(
       host.messages.some((message) => message.includes("1,000,000 instruction event(s) retained")),
     );
+    // Losing the debugger finalizes the recording as incomplete. A still-visible warning must
+    // not keep the next recording's controls disabled after that file is safely published.
+    let publish!: (summary: CaptureFileSummary) => void;
+    const terminatedCompletion = new Promise<CaptureFileSummary>((resolve) => {
+      publish = resolve;
+    });
+    const terminatedRecorder = {
+      completion: terminatedCompletion,
+      stop: () => terminatedCompletion,
+      finishIncomplete: () => terminatedCompletion,
+    };
+    if (!isRecorder(terminatedRecorder)) {
+      throw new Error("terminated recorder stub");
+    }
+    stub.onSecondCall().resolves(terminatedRecorder);
+    host.destination = uri(path.join(directory, "terminated.act2"));
+    host.commands.get("asm.trace.start")?.();
+    await waitFor(() => runtimeCapturePhase() === "recording");
+    host.warningResult = new Promise(() => {});
+    host.terminate?.(session);
+    t.is(runtimeCapturePhase(), "finalizing");
+    publish({ ...summary, file: host.destination.fsPath, complete: false });
+    await waitFor(() =>
+      host.messages.some((message) => message.includes("Preserved an incomplete")),
+    );
+    t.is(runtimeCapturePhase(), "idle");
   },
 );
 
@@ -585,7 +643,10 @@ test.serial(
     t.is(result?.program, "/current.sfc");
     t.is(result?.debugMap, "/current.map");
     t.is(result?.outputSha256, "rom");
-    t.deepEqual(host.executed, ["asm.source.buildProject"]);
+    t.deepEqual(
+      host.executed.filter((command) => command !== "setContext"),
+      ["asm.source.buildProject"],
+    );
     host.commandResult = undefined;
     t.is(await resolve(folder, configuration), undefined);
     host.trusted = false;

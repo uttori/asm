@@ -2023,7 +2023,8 @@ function renderSymbolDocs(index: WorkspaceIndex, symbol: AssemblySymbolDefinitio
   }
   const annotation = symbolAnnotation(index, symbol);
   if (annotation) {
-    lines.push("", annotation);
+    // Markdown soft breaks collapse comment lines; hard breaks preserve their source layout.
+    lines.push("", annotation.replace(/\n/g, "  \n"));
   }
   lines.push("", `Defined in \`${path.basename(symbol.location.file)}\``);
   return lines.join("\n");
@@ -2058,7 +2059,7 @@ function symbolAnnotation(
     leading.unshift(sourceLine.replace(/^\s*;\s?/, "").trimEnd());
   }
   const trailing = lineCommentText(lines[line] ?? "");
-  const parts = leading.filter((entry) => entry.length > 0);
+  const parts = [...leading];
   if (trailing) {
     parts.push(trailing);
   }

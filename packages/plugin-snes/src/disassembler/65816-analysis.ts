@@ -776,6 +776,7 @@ export const analyzeSnes65816 = (
       ...(options.maxWorkItems === undefined ? {} : { maxWorkItems: options.maxWorkItems }),
       ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
       targetOverrides,
+      onProgress: options.onProgress,
     },
   );
 

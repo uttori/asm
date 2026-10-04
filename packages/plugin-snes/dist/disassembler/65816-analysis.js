@@ -573,6 +573,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
         ...(options.maxWorkItems === undefined ? {} : { maxWorkItems: options.maxWorkItems }),
         ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
         targetOverrides,
+        onProgress: options.onProgress,
     });
     return {
         ...result,

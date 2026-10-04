@@ -79,6 +79,62 @@ test("comment wrapping preserves quotes, paragraphs, indentation and long tokens
   t.is(wrapAssemblyComments('db "a; b"\n', 20), 'db "a; b"\n');
 });
 
+test("fenced pseudocode preserves indentation, literal paths and assembled bytes", (t) => {
+  const block = [
+    ";",
+    "; Pseudocode:",
+    "; ```c",
+    "; for (i = 0; i < ACTOR_PALETTE_COLOR_COUNT; ++i) {",
+    ';   note = "research/captures/literal.md; not a citation";',
+    ";   staging[first_color + i] = base[first_color + i];",
+    "; }",
+    "; ```",
+  ].join("\n");
+  const input = [
+    "lorom",
+    "org $808000",
+    "; Restore all opaque colors without modifying the base palette.",
+    block,
+    "Routine:",
+    "  LDA #$20",
+    "  RTS",
+  ].join("\n");
+  for (const width of [20, 40, 80]) {
+    const output = wrapAssemblyComments(omitAssemblyResearchReferences(input), width);
+    t.true(output.includes(block));
+    t.is(wrapAssemblyComments(output, width), output);
+    t.is(omitAssemblyResearchReferences(output), output);
+    const assembler = new Assembler();
+    try {
+      assembler.assembleSource(output, "pseudocode.asm");
+      t.deepEqual(assembler.getBinaryOutput(), Uint8Array.from([0xa9, 0x20, 0x60]));
+    } finally {
+      assembler.dispose();
+    }
+  }
+});
+
+test("comment fences close by marker and cannot leak into executable source", (t) => {
+  const input = [
+    "; ~~~c",
+    ";   preserve_this_long_statement_and_indent();",
+    "; ```",
+    "; ~~~~",
+    "; This prose resumes ordinary wrapping after the matching fence.",
+    "; ```c",
+    ";   unfinished();",
+    "  RTS",
+    "; This prose after executable source still wraps into shorter lines.",
+    "  LDA #$20 ; ```c does not start a standalone fence",
+    "; Research: research/captures/scene.md.",
+  ].join("\n");
+  const output = wrapAssemblyComments(omitAssemblyResearchReferences(input), 32);
+  t.true(output.includes(";   preserve_this_long_statement_and_indent();\n; ```\n; ~~~~"));
+  t.true(output.includes("; This prose resumes ordinary\n; wrapping"));
+  t.true(output.includes("  RTS\n; This prose after executable\n; source"));
+  t.false(output.includes("research/captures/scene.md"));
+});
+
 test("wrapped records and table rows preserve array bytes and instruction source locations", (t) => {
   const values = Array.from(
     { length: 128 },

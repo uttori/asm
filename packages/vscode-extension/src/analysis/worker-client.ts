@@ -20,6 +20,8 @@ interface PendingProjection {
  * 60 seconds.
  */
 export interface AnalysisWorkerOptions {
+  /** Lifecycle messages contain operation names and paths, never projected evidence payloads. */
+  readonly log?: (level: "debug" | "error", message: string) => void;
   /** Evaluated per request so selecting a source worktree changes external evidence query context. */
   readonly sourceRoot?: () => string | undefined;
   readonly maxMemoryMiB?: (directory: string) => number;
@@ -64,13 +66,7 @@ export class AnalysisWorkerClient {
     operation: AnalysisWorkerOperation,
     options: Pick<
       AnalysisWorkerRequest,
-      | "offset"
-      | "ranges"
-      | "sourceId"
-      | "sourceGroup"
-      | "navigationTarget"
-      | "evidenceSelection"
-      | "evidenceRecord"
+      "offset" | "ranges" | "sourceId" | "navigationTarget" | "evidenceSelection" | "evidenceRecord"
     > = {},
   ): Promise<unknown> {
     if (this.options.isolateAnnotations && interactiveOperations.has(operation)) {
@@ -107,7 +103,12 @@ export class AnalysisWorkerClient {
         this.#inflight.delete(key);
       }
     };
-    void promise.then(forget, forget);
+    void promise.then(forget, (error: unknown) => {
+      forget();
+      if (operation !== "clear") {
+        this.options.log?.("error", `Analysis ${operation} (${directory}): ${String(error)}`);
+      }
+    });
     this.#dispatch();
     return promise;
   }
@@ -122,6 +123,12 @@ export class AnalysisWorkerClient {
     }
     this.#active = pending;
     try {
+      if (pending.message.operation !== "clear") {
+        this.options.log?.(
+          "debug",
+          `Analysis ${pending.message.operation}: ${pending.message.directory}`,
+        );
+      }
       const maxMemoryMiB =
         pending.message.operation === "clear"
           ? this.#memoryMiB

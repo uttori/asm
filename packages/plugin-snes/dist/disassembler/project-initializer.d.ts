@@ -1,4 +1,4 @@
-import { type AnalysisProjectManifest, type ImportReport, type ProjectMapping, type RomIdentity, type StaticAnalysisIncompleteReason, type ResearchSnapshot } from "@uttori/asm-disassembler";
+import { type AnalysisProjectManifest, type ImportReport, type ProjectMapping, type RomIdentity, type StaticAnalysisIncompleteReason, type ResearchSnapshot, type CaptureAddedCode } from "@uttori/asm-disassembler";
 import { type Snes65816EntryPoint } from "./65816-analysis.js";
 import { type SnesMapper, type SnesRomDetection } from "./rom-header.js";
 /** Stable target id written to native SNES analysis projects. */
@@ -12,6 +12,8 @@ export interface SnesProjectInitializationProgress {
     readonly message: string;
     /** Instruction observations grouped so far; these derived counts are not published yet. */
     readonly processedObservations?: number;
+    /** Exact grouping input count from the same SQLite read snapshot. */
+    readonly totalObservations?: number;
 }
 /** Shared cancellation and progress controls for long-running operations. */
 export interface SnesProjectOperationOptions {
@@ -84,6 +86,8 @@ export interface AnalyzeSnesProjectResult {
     readonly status: "complete" | "incomplete";
     readonly instructions: number;
     readonly capturedInstructions: number;
+    /** ROM bytes newly decoded by this pass compared with the previously published code coverage. */
+    readonly addedCode: readonly CaptureAddedCode[];
     readonly runtimePcsWithoutCode: number;
     readonly functions: number;
     readonly conflicts: number;

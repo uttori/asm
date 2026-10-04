@@ -4,6 +4,23 @@ import { RgbaSurface } from "@uttori/data-tools/image/rgba-surface";
 import type { Tile } from "./snes.js";
 import { integer } from "./validation.js";
 
+/** Encode original RGBA pixels without resizing, within the same four-megapixel input budget as thumbnails. */
+export function rgbaNativePng(
+  rgba: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number,
+): Uint8Array {
+  integer(width, "Image width", 1, 4096);
+  integer(height, "Image height", 1, 4096);
+  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+    throw new Error("Image pixels are missing or exceed the four-megapixel limit.");
+  }
+  // Preserve a Canvas buffer's byte offset and avoid copying an already bounded pixel surface.
+  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+  const surface = new RgbaSurface(width, height, bytes, { copy: false, maxPixels: 2048 * 2048 });
+  return ImagePNG.encodeRGBA(surface, { filter: "none", level: 6, maxPixels: 2048 * 2048 });
+}
+
 /** Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
  * @param {Uint8Array | Uint8ClampedArray} rgba Exact row-major RGBA8 pixels, including Canvas buffers.
  * @param {number} width Original pixel width.

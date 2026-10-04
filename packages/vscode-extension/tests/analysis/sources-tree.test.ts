@@ -11,6 +11,7 @@ const host = {
     options?: { offset?: number; sourceId?: string };
   }[],
   sources: [] as AnalysisEvidenceSource[],
+  legacy: false,
 };
 
 Object.assign(globalThis, { __uttoriAnalysisSourcesTest: host });
@@ -82,30 +83,25 @@ registerHooks({
               if (operation === "sources") {
                 return { manifest, sources: host.sources };
               }
-              if (operation === "sourceSummary") {
+              if (operation === "sourceNotes") {
+                if (host.legacy) return null;
                 return {
-                  manifest,
-                  summary: {
-                    source: host.sources[0],
-                    instructionCount: 450,
-                    memoryCount: 0,
-                    contributionCount: 0,
+                  format: "uttori-capture-notes", version: 1,
+                  sourceSha256: host.sources[0].sha256,
+                  sourceName: host.sources[0].name,
+                  importedAt: 1000,
+                  notes: ["450 instructions imported"],
+                  analysis: {
+                    status: "complete", sources: host.sources.map((source) => source.name),
+                    addedCode: Array.from({ length: 450 }, (_, index) => ({
+                      start: 0x3002c + index, end: 0x3002d + index,
+                      addressSpace: "snes.cpu", address: 0xc3002c + index,
+                      recordIds: ["node"],
+                    })),
                   },
                 };
               }
-              return [
-                {
-                  id: "pc",
-                  label: "$C3002C",
-                  description: "snes.cpu",
-                  detail: "Captured bytes: A9 01",
-                  addressSpace: "snes.cpu",
-                  address: 0xc3002c,
-                  architecture: "snes.65816",
-                  outputOffsets: [0x3002c],
-                  recordIds: ["node"],
-                },
-              ];
+              throw new Error(operation);
             },
           });
         `,
@@ -117,7 +113,7 @@ registerHooks({
 
 const { AnalysisSourcesProvider: Provider } = await import("../../src/analysis/sources-tree.js");
 
-test("Sources lists metadata immediately, pages on demand, navigates qualified locations", async (t) => {
+test("Sources pages generated import gains and navigates code without reading capture archives", async (t) => {
   host.sources = ["capture-a", "capture-b"].map((name) => ({
     id: name,
     name: `${name}.json`,
@@ -128,6 +124,7 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     reports: [],
   }));
   host.calls = [];
+  host.legacy = false;
   const provider = new Provider() as AnalysisSourcesProvider;
   t.teardown(() => provider.dispose());
   const roots = await provider.getChildren();
@@ -141,16 +138,15 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
   );
   t.is(provider.getTreeItem(roots[0]).contextValue, "analysisSource");
   const children = await provider.getChildren(roots[0]);
-  const unique = children.find(({ label }) => label === "Observed instructions")!;
-  t.is(provider.getTreeItem(unique).description, "450");
+  const unique = children.find(({ label }) => label === "Added Code")!;
+  t.is(provider.getTreeItem(unique).description, "450 ROM bytes · complete");
   const pages = await provider.getChildren(unique);
   t.deepEqual(
     pages.map(({ label }) => label),
     ["1–200", "201–400", "401–450"],
   );
-  t.is(host.calls.filter(({ operation }) => operation === "sourceEntries").length, 0);
+  t.is(host.calls.filter(({ operation }) => operation === "sourceNotes").length, 1);
   const entries = await provider.getChildren(pages[1]);
-  t.is(host.calls.at(-1)?.options?.offset, 200);
   const navigation = provider.getTreeItem(entries[0]).command!;
   t.is(navigation.command, "asm.analysis.navigate");
   t.deepEqual(JSON.parse(JSON.stringify(navigation.arguments?.[0])), {
@@ -159,15 +155,25 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     romContentSha256: "a".repeat(64),
     romContentSize: 1024,
     addressSpace: "snes.cpu",
-    address: 0xc3002c,
-    outputOffsets: [0x3002c],
+    address: 0xc3002c + 200,
+    outputOffsets: [0x3002c + 200],
     architectureHints: ["snes.65816"],
     recordIds: ["node"],
   });
   t.false(children.some(({ label }) => label === "Compared with"));
-  const notes = children.find(({ label }) => label === "Capture notes & interpretation");
+  const notes = children.find(({ label }) => label === "Capture Notes");
   if (!notes) {
     throw new Error("missing capture notes");
   }
-  t.deepEqual(await provider.getChildren(notes), []);
+  t.deepEqual(
+    (await provider.getChildren(notes)).map(({ label }) => label),
+    ["450 instructions imported"],
+  );
+  host.legacy = true;
+  provider.refresh();
+  const legacy = await provider.getChildren((await provider.getChildren())[0]);
+  t.deepEqual(
+    legacy.map(({ label }) => label),
+    ["No generated notes for this legacy import"],
+  );
 });

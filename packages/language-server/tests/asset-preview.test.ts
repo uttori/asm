@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { waveImporter, writePcmWave, type PcmAudio } from "@uttori/asm-assets/audio";
+import { rgbaNativePng } from "@uttori/asm-assets/preview";
 
 import { test } from "../../../tests/ava-helper.js";
 import { convertAssetPreview } from "../src/asset-preview-conversion.js";
@@ -42,6 +43,25 @@ test("editor image preview renders composed and native storage PNGs from direct 
       Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     );
   }
+});
+
+test("full previews retain original dimensions beyond thumbnail and 1024-pixel limits", (t) => {
+  const width = 2048;
+  const height = 8;
+  const pixels = new Uint8Array(width * height * 4);
+  for (let offset = 3; offset < pixels.length; offset += 4) pixels[offset] = 255;
+  const preview = convertAssetPreview({
+    source: { bytes: rgbaNativePng(pixels, width, height), mediaType: "image/png" },
+    resources: {},
+    format: "snes.tile.4bpp",
+    options: { palette: "auto" },
+  });
+  for (const media of [preview.composedPngBase64, preview.storagePngBase64]) {
+    const png = Buffer.from(media ?? "", "base64");
+    t.is(png.readUInt32BE(16), width);
+    t.is(png.readUInt32BE(20), height);
+  }
+  t.true(Buffer.from(preview.thumbnailPngBase64 ?? "", "base64").readUInt32BE(16) <= 192);
 });
 
 test("editor audio preview keeps source PCM distinct from decoded BRR", (t) => {

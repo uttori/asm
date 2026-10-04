@@ -8,10 +8,10 @@ import { SqliteAnalysisStore } from "../storage/sqlite-store.js";
  */
 export declare const parseAnalysisProjectManifest: (input: unknown) => AnalysisProjectManifest;
 /**
- * Open the existing database selected by a validated pointer, without creating missing files.
- * Requires a readable, valid analysis.json even when the database exists. Opening checks the
- * physical format, not every record. Snapshot loaders perform semantic validation.
- * @param {string} directory Project root containing analysis.json.
+ * Open an existing database without initializing storage. A missing watcher pointer is recovered
+ * from its validated SQLite manifest; malformed or unreadable pointers still fail explicitly.
+ * Opening checks the physical format, not every record. Snapshot loaders validate records.
+ * @param {string} directory Project root containing analysis.sqlite and an optional watcher pointer.
  * @returns {SqliteAnalysisStore} Owned connection. Close exactly once in a finally block.
  */
 export declare const openAnalysisProjectStore: (directory: string) => SqliteAnalysisStore;

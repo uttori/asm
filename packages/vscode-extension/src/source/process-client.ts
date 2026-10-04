@@ -30,6 +30,7 @@ export class SourceProcessClient {
       return Promise.reject(new Error("Source worker heap budget must be at least 128 MiB."));
     }
     return new Promise((resolve, reject) => {
+      const started = Date.now();
       const child = fork(this.file, [], {
         execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
         env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
@@ -70,8 +71,10 @@ export class SourceProcessClient {
       });
       child.on("message", (message: { type: string; message?: string; value?: T }) => {
         if (message.type === "progress" && typeof message.message === "string") {
-          this.log(message.message);
-          options.onProgress?.(message.message);
+          // All phases get elapsed time, including Git/SQLite operations without a fixed work total.
+          const progress = `[${((Date.now() - started) / 1000).toFixed(1)}s] ${message.message}`;
+          this.log(progress);
+          options.onProgress?.(progress);
         } else if (message.type === "result") {
           response = { value: message.value! };
         } else if (message.type === "error") {

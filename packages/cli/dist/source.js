@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, } from "@uttori/asm-disassembler";
+import { RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, fingerprintNodeToolchain } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { buildSnesSource, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, snesRomAddressSpace, } from "@uttori/asm-plugin-snes";
 import { initializeSnesSourceProject } from "./source-init.js";
@@ -210,6 +210,12 @@ function generationRecipe(project) {
                 asset.romRange.end <= asset.romRange.start)) {
             throw new Error("Pristine ROM assets require a bounded, half-open original file range.");
         }
+        if (asset.originalBlob !== undefined &&
+            (asset.romRange ||
+                typeof asset.originalBlob !== "string" ||
+                !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob))) {
+            throw new Error("Pristine assets require one immutable original blob or ROM extraction.");
+        }
     }
     if (new Set(recipe.pristineAssets.map((asset) => asset.path)).size !== recipe.pristineAssets.length) {
         throw new Error("Repeated pristine asset declaration.");
@@ -228,7 +234,7 @@ async function generationInputs(project) {
     const prior = await verifySourceGeneration(project.repository, parent);
     const priorFiles = new Map(prior.files.map((file) => [file.path, file.sha256]));
     for (const asset of recipe.pristineAssets) {
-        if (!asset.romRange && priorFiles.get(asset.path) !== asset.sha256) {
+        if (!asset.romRange && !asset.originalBlob && priorFiles.get(asset.path) !== asset.sha256) {
             throw new Error(`Pristine asset identity changed: ${asset.path}`);
         }
     }
@@ -450,9 +456,61 @@ export async function executeSourceOperation(operation) {
         return prepareSourceResearch(project, operation.research, operation.overlays);
     }
     if (operation.action === "status") {
+        const status = await sourceMergeStatus(repository);
+        let candidateAccepted = false;
+        if (operation.candidate) {
+            assertSourceObjectId(operation.candidate);
+            candidateAccepted =
+                (await acceptedSourceGeneration(repository, status.head)) === operation.candidate;
+        }
+        let analysisReady = false;
+        let analysisReason;
+        let catalogReady;
+        let catalogReason;
+        // Status reads the selected research/evidence identities; it must not analyze or regenerate
+        // merely because the tree refreshed. Missing local evidence still permits source/Git inspection.
+        try {
+            const store = openAnalysisProjectStore(sourceProjectLocalInputs(project).evidence);
+            try {
+                const snapshot = readSourceCaptureCatalog(repository.root, project.configuration.captures, project.configuration.romSha256);
+                const reconciled = reconcileSourceCaptureCatalog(snapshot.catalog, store.loadTable("imports"));
+                catalogReady =
+                    Boolean(snapshot.fileSha256) &&
+                        canonicalJson(reconciled) === canonicalJson(snapshot.catalog);
+                if (!catalogReady) {
+                    catalogReason =
+                        "Refresh Capture Catalog to record the retained evidence identities before preparing.";
+                }
+                if (!store.researchInputsAreCurrent(project.research.hash)) {
+                    analysisReason =
+                        "Selected research changed. Analyze Evidence before preparing a generation.";
+                }
+                else {
+                    store.assertCurrentAnalysis();
+                    analysisReady = true;
+                }
+            }
+            finally {
+                store.close();
+            }
+        }
+        catch (error) {
+            analysisReason = error instanceof Error ? error.message : String(error);
+        }
+        const working = await sourceStatus(repository);
         return {
-            ...(await sourceMergeStatus(repository)),
-            dirty: (await sourceStatus(repository)).length > 0,
+            ...status,
+            dirty: working.length > 0,
+            unstaged: (await sourceGit(repository.root, ["diff", "--name-only"])).stdout.length > 0 ||
+                working
+                    .toString()
+                    .split("\0")
+                    .some((entry) => entry.startsWith("?? ")),
+            candidateAccepted,
+            analysisReady,
+            analysisReason,
+            catalogReady,
+            catalogReason,
         };
     }
     if (operation.action === "abort") {
@@ -621,7 +679,8 @@ export async function executeSourceOperation(operation) {
     };
     if (operation.action === "analyze") {
         const local = sourceProjectLocalInputs(project);
-        return analyzeSnesProject({
+        const pendingNotes = pendingCaptureImportNotes(local.evidence);
+        const result = analyzeSnesProject({
             projectDirectory: local.evidence,
             romFile: local.rom,
             signal: operation.signal,
@@ -630,6 +689,8 @@ export async function executeSourceOperation(operation) {
             onProgress: (progress) => operation.onProgress?.(progress.message),
             ...researchOptions,
         });
+        completeCaptureImportNotes(local.evidence, pendingNotes, result.status, result.addedCode);
+        return result;
     }
     if (operation.action === "import") {
         if (!operation.capture) {
@@ -665,7 +726,15 @@ export async function executeSourceOperation(operation) {
             }
             const store = openAnalysisProjectStore(local.evidence);
             try {
-                const catalog = reconcileSourceCaptureCatalog(catalogSnapshot.catalog, store.loadTable("imports"), { sourceSha256: result.sourceSha256, archive });
+                const reports = store.loadTable("imports");
+                const report = reports.find((entry) => entry.sourceSha256 === result.sourceSha256);
+                if (report) {
+                    writeCaptureImportNotes(local.evidence, report);
+                }
+                const catalog = reconcileSourceCaptureCatalog(catalogSnapshot.catalog, reports, {
+                    sourceSha256: result.sourceSha256,
+                    archive,
+                });
                 writeSourceCaptureCatalog(repository.root, project.configuration.captures, catalog, catalogSnapshot.fileSha256);
             }
             finally {
@@ -688,13 +757,33 @@ export async function executeSourceOperation(operation) {
         if (!operation.candidate) {
             throw new Error("Apply requires the previewed generation commit.");
         }
+        assertSourceObjectId(operation.candidate);
+        const status = await sourceMergeStatus(repository);
+        // Finish releases the preview and candidate pins. A repeated Apply must return the current
+        // state without repinning or revalidating historical inputs against subsequent edits.
+        if ((await acceptedSourceGeneration(repository, status.head)) === operation.candidate) {
+            operation.onProgress?.("This generation is already integrated. No merge was applied.");
+            return status;
+        }
+        let preview;
+        try {
+            preview = readJson(path.join(repository.stateDirectory, "preview.json"));
+        }
+        catch (error) {
+            // A private preview is disposable, but applying an unreviewed merge is never a fallback.
+            if (isRecord(error) && error.code === "ENOENT") {
+                throw new Error("Preview this generation with current edits before applying it.", {
+                    cause: error,
+                });
+            }
+            throw error;
+        }
+        assertSourceMergePreview(preview);
         const candidate = await candidateGeneration(project, operation.candidate);
         const current = await generationInputs(project);
         if (canonicalJson(current.inputs) !== canonicalJson(candidate.descriptor.inputs)) {
             throw new Error("Generation inputs changed since preparation. Prepare and preview again.");
         }
-        const preview = readJson(path.join(repository.stateDirectory, "preview.json"));
-        assertSourceMergePreview(preview);
         return applySourceGeneration(repository, candidate, preview);
     }
     if (sourceActionName(operation.action) !== "finish") {

@@ -10,22 +10,8 @@ body {
   margin: 0;
   padding: 0 0 12px;
 }
-.project-header,
-.section,
 .section-content {
   padding: 12px;
-}
-.project-header {
-  padding-bottom: 8px;
-}
-.heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-#projectName {
-  overflow-wrap: anywhere;
 }
 h2 {
   font-size: 11px;
@@ -163,22 +149,6 @@ select {
 }
 .item span {
   flex: 1;
-  overflow-wrap: anywhere;
-}
-.status {
-  margin: 0;
-}
-.status .row {
-  display: grid;
-  grid-template-columns: minmax(60px, 1fr) 2fr;
-  gap: 8px;
-  padding: 4px 0;
-}
-.status dt {
-  color: var(--vscode-descriptionForeground);
-}
-.status dd {
-  margin: 0;
   overflow-wrap: anywhere;
 }
 .notice,

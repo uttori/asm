@@ -154,8 +154,7 @@ test.serial("analysis worker projects catalog, coverage and bounded annotation r
     throw new Error("expected coverage");
   }
   t.is(coverage.summary.totalBytes, 1024);
-  t.true(Array.isArray(request(directory, "segments")));
-  t.true(Array.isArray(request(directory, "details")));
+  t.deepEqual(request(directory, "coverageConflicts"), { count: 0, segments: [] });
   t.deepEqual(request(directory, "annotations", { ranges: [] }), []);
   t.throws(
     () =>
@@ -245,8 +244,7 @@ test.serial("analysis worker navigation, evidence and missing payloads throw clo
   t.is(typeof navigation.capturedRam, "boolean");
   t.truthy(request(directory, "evidenceChoices"));
   t.throws(() => request(directory, "explainEvidence"), { message: /Choose a record to explain/ });
-  t.throws(() => request(directory, "sourceSummary"), { message: /Choose a source to inspect/ });
-  t.throws(() => request(directory, "sourceEntries"), { message: /Choose a source to inspect/ });
+  t.throws(() => request(directory, "sourceNotes"), { message: /Choose a source to inspect/ });
   t.throws(() => request(directory, "unknown"), {
     message: /Unknown analysis worker operation/,
   });
@@ -353,8 +351,7 @@ test.serial(
     t.is(readName(), "RandomByte", "Raw observations and their selected names remain queryable");
     for (const operation of [
       "coverage",
-      "segments",
-      "details",
+      "coverageConflicts",
       "annotations",
       "debugAnnotations",
       "navigation",

@@ -22,6 +22,8 @@ import {
   type RomIdentity,
   type StaticAnalysisIncompleteReason,
   type ResearchSnapshot,
+  type CaptureAddedCode,
+  type AnalysisControlFlowNodeRecord,
 } from "@uttori/asm-disassembler";
 
 import { snesRomAddressSpace } from "../target/address-space.js";
@@ -48,6 +50,8 @@ import { SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR } from "./superfx-address-space.js
 /** Stable target id written to native SNES analysis projects. */
 const TARGET_ID = "snes.sfc";
 const ARCHITECTURE_ID = "snes.65816";
+/** Stable digit grouping for progress messages, independent of the worker locale. */
+const count = (value: number): string => value.toLocaleString("en-US");
 const MAX_PERSISTED_RUNTIME_ENTRY_POINTS = 1_000_000;
 
 /** Stages emitted by project initialization progress callbacks. */
@@ -59,6 +63,8 @@ export interface SnesProjectInitializationProgress {
   readonly message: string;
   /** Instruction observations grouped so far; these derived counts are not published yet. */
   readonly processedObservations?: number;
+  /** Exact grouping input count from the same SQLite read snapshot. */
+  readonly totalObservations?: number;
 }
 
 /** Shared cancellation and progress controls for long-running operations. */
@@ -143,6 +149,8 @@ export interface AnalyzeSnesProjectResult {
   readonly status: "complete" | "incomplete";
   readonly instructions: number;
   readonly capturedInstructions: number;
+  /** ROM bytes newly decoded by this pass compared with the previously published code coverage. */
+  readonly addedCode: readonly CaptureAddedCode[];
   readonly runtimePcsWithoutCode: number;
   readonly functions: number;
   readonly conflicts: number;
@@ -408,7 +416,11 @@ export const analyzeSnesProject = (
   options: AnalyzeSnesProjectOptions,
 ): AnalyzeSnesProjectResult => {
   throwIfCancelled(options.signal);
-  report(options, "analyze", "Preparing SQL instruction indexes.");
+  const started = Date.now();
+  const elapsed = (): string => `${((Date.now() - started) / 1000).toFixed(1)}s elapsed`;
+  const progress = (stage: SnesProjectInitializationStage, message: string): void =>
+    report(options, stage, `${message} (${elapsed()})`);
+  progress("analyze", "Phase 1/6: preparing SQL instruction indexes.");
   const projectDirectory = path.resolve(options.projectDirectory);
   const store = openAnalysisProjectStore(projectDirectory);
   let previousCode: { start: number; end: number }[] = [];
@@ -419,22 +431,34 @@ export const analyzeSnesProject = (
       }
       const revision = analysisProjectRevision(store.manifest());
       store.prepareAnnotationQueries();
-      report(options, "analyze", "Grouping captured instruction variants in SQLite.");
+      progress("analyze", "Phase 2/6: grouping captured instruction variants in SQLite.");
+      const groupingStarted = Date.now();
       store.runtimeInstructionVariants(
         ARCHITECTURE_ID,
         SNES_CPU_ADDRESS_SPACE,
         ["p", "P", "e", "E", "db", "DB", "d", "D"],
         { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } },
-        (processedObservations) => {
+        (processedObservations, totalObservations) => {
+          const percent =
+            totalObservations === 0 ? 100 : (processedObservations / totalObservations) * 100;
+          let remaining = "estimating remaining time";
+          if (processedObservations > 0) {
+            const seconds = (Date.now() - groupingStarted) / 1000;
+            remaining = `~${((seconds * (totalObservations - processedObservations)) / processedObservations).toFixed(1)}s remaining`;
+          }
+          if (processedObservations === totalObservations) {
+            remaining = "grouping input complete";
+          }
           throwIfCancelled(options.signal);
           options.onProgress?.({
             stage: "analyze",
-            message: "Grouping captured instruction variants in SQLite.",
+            message: `Phase 2/6: grouped ${count(processedObservations)}/${count(totalObservations)} captured instruction observations (${percent.toFixed(1)}%, ${remaining}; ${elapsed()}).`,
             processedObservations,
+            totalObservations,
           });
         },
       );
-      report(options, "analyze", "Loading metadata, execution seeds and known code.");
+      progress("analyze", "Phase 3/6: loading metadata, execution seeds and known code.");
       return store.transaction(() => {
         assertAnalysisProjectRevision(store, revision);
         const manifest = store.manifest();
@@ -468,7 +492,10 @@ export const analyzeSnesProject = (
       store.close();
     }
   })();
-  report(options, "analyze", "Building static analysis from the validated runtime view.");
+  progress(
+    "analyze",
+    `Loaded ${count(loaded.view.annotations.length)} annotations, ${count(loaded.view.labels.length)} labels, ${count(loaded.view.runtime.length)} execution seeds and ${count(previousCode.length)} known code ranges.`,
+  );
   const rom = RomImage.load(path.resolve(options.romFile), {
     headerSize: loaded.manifest.rom.headerSize,
   });
@@ -558,7 +585,18 @@ export const analyzeSnesProject = (
     addedRuntimeSeeds++;
   }
   const runtimeSeeds = rankedRuntime.filter(({ address }) => configured.has(address)).length;
+  progress(
+    "analyze",
+    `Phase 4/6: exploring static control flow from ${count(configured.size)} entry points.`,
+  );
   const result = analyzeSnes65816(rom, mapper, {
+    onProgress: ({ processedWorkItems, queuedWorkItems, instructions }) => {
+      throwIfCancelled(options.signal);
+      progress(
+        "analyze",
+        `Phase 4/6: ${count(processedWorkItems)} work items processed, ${count(queuedWorkItems)} queued, ${count(instructions)} instructions decoded.`,
+      );
+    },
     annotations: loaded.view.annotations,
     labels: loaded.view.labels,
     evidence: loaded.view.evidence,
@@ -569,7 +607,10 @@ export const analyzeSnesProject = (
     ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
   });
   throwIfCancelled(options.signal);
-  report(options, "analyze", "Decoding captured instruction variants.");
+  progress(
+    "analyze",
+    `Static pass ${result.status}: ${count(result.processedWorkItems)} work items, ${count(result.nodes.length)} instructions, ${count(result.conflicts.length)} conflicts. Phase 5/6: decoding captured instruction variants.`,
+  );
   const capturedStore = openAnalysisProjectStore(projectDirectory);
   const capturedRecords = (() => {
     try {
@@ -583,7 +624,7 @@ export const analyzeSnesProject = (
         assertAnalysisProjectRevision(capturedStore, loaded.revision);
         return analyzeSnesRuntimeCode(loaded.view, rom, mapper, variants, (message) => {
           throwIfCancelled(options.signal);
-          report(options, "analyze", message);
+          progress("analyze", `Phase 5/6: ${message}`);
         });
       }, false);
     } finally {
@@ -649,7 +690,36 @@ export const analyzeSnesProject = (
     ),
     ...result.evidenceRecords,
   ];
-  report(options, "commit", "Publishing analysis after checking for concurrent edits.");
+  // Compare byte unions rather than instruction counts: mirrored contexts and changed boundaries
+  // must not inflate the import report's gains. Navigation retains a real instruction identity.
+  const addedRanges = lostCodeRanges(codeRanges(analysisRecords), previousCode);
+  const codeNodes = analysisRecords
+    .filter(
+      (record): record is AnalysisControlFlowNodeRecord =>
+        record.kind === "cfg-node" && record.fileOffset !== undefined,
+    )
+    .toSorted((left, right) => left.fileOffset! - right.fileOffset!);
+  let codeIndex = 0;
+  const addedCode = addedRanges.map((range): CaptureAddedCode => {
+    while (
+      codeIndex < codeNodes.length &&
+      codeNodes[codeIndex].fileOffset! + codeNodes[codeIndex].size <= range.start
+    ) {
+      codeIndex++;
+    }
+    const node = codeNodes[codeIndex];
+    return {
+      start: range.start,
+      end: range.end,
+      addressSpace: node.addressSpace,
+      address: node.address,
+      recordIds: [node.id],
+    };
+  });
+  progress(
+    "commit",
+    `Phase 6/6: publishing ${count(analysisRecords.length)} analysis records, ${count(annotations.length)} annotations, ${count(comments.length)} comments and ${count(evidence.length)} evidence records.`,
+  );
   throwIfCancelled(options.signal);
   const updates = {
     analysis: analysisRecords,
@@ -671,10 +741,9 @@ export const analyzeSnesProject = (
           options.research!,
           updates,
           (collection) =>
-            report(
-              options,
+            progress(
               "commit",
-              `Prepared ${collection}; validating the atomic analysis publication.`,
+              `Phase 6/6: prepared ${collection}; validating the atomic analysis publication.`,
             ),
         );
         // Validate the complete derived graph against the final projected metadata. Runtime facts
@@ -685,7 +754,7 @@ export const analyzeSnesProject = (
           ...projected,
           runtime: [],
         });
-        report(options, "commit", "Validated selected research and complete derived graph.");
+        progress("commit", "Phase 6/6: validated selected research and complete derived graph.");
         return publication.manifest();
       });
       publication.writePointer(projectDirectory);
@@ -700,6 +769,7 @@ export const analyzeSnesProject = (
     status: result.status,
     instructions: analysisRecords.filter((record) => record.kind === "cfg-node").length,
     capturedInstructions: capturedRecords.filter((record) => record.kind === "cfg-node").length,
+    addedCode,
     runtimePcsWithoutCode: (() => {
       const covered = new Set(
         analysisRecords

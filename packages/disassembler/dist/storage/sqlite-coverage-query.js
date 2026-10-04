@@ -400,4 +400,21 @@ export const coveragePage = (db, kind, offset) => {
         .all(offset)
         .map((row) => JSON.parse(String(row.payload)));
 };
+/**
+ * Page only conflicting ROM intervals, retaining their evidence IDs for inspection and research edits.
+ * The caller ensures the projection is current and owns the read snapshot. Offsets count conflicts,
+ * not all ROM segments; no full coverage map is materialized.
+ */
+export const coverageConflictPage = (db, offset) => {
+    if (!Number.isSafeInteger(offset) || offset < 0) {
+        throw new Error("Invalid analysis page offset.");
+    }
+    const condition = "json_extract(payload,'$.status')='conflict'";
+    const count = Number(db.prepare(`SELECT count(*) AS n FROM query_coverage_segments WHERE ${condition}`).get().n);
+    const segments = db
+        .prepare(`SELECT payload FROM query_coverage_segments WHERE ${condition} ORDER BY start LIMIT 200 OFFSET ?`)
+        .all(offset)
+        .map((row) => JSON.parse(String(row.payload)));
+    return { count, segments };
+};
 //# sourceMappingURL=sqlite-coverage-query.js.map

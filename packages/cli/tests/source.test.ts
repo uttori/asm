@@ -17,6 +17,8 @@ import {
   type SourceMergeStatus,
   acceptedSourceGeneration,
   openSourceProject,
+  sourceProjectLocalInputs,
+  readCaptureImportNotes,
   readSourceCaptureCatalog,
   sourceContentHash,
   readSourceInputSnapshot,
@@ -193,7 +195,10 @@ async function fixture(teardown: (cleanup: () => void) => void) {
       target: "snes.sfc",
       rom: rom.identity,
       mapping: { mapper: "lorom", source: "override", candidates: [] },
-      addressSpaces: [{ id: "snes.cpu", name: "CPU", kind: "cpu", addressBits: 24 }],
+      addressSpaces: [
+        { id: "snes.cpu", name: "CPU", kind: "cpu", addressBits: 24 },
+        { id: "rom.file", name: "ROM file offset", kind: "file", addressBits: 24 },
+      ],
     },
     shards: {
       analysis: [],
@@ -333,6 +338,11 @@ test("headless source commands preserve an edited raw byte through verified rege
   );
   t.is(generation.verification.outputSha256, rom.identity.contentSha256);
   const candidate = generation.generation.commit;
+  const repository = await sourceRepository(directory);
+  const previewFile = path.join(repository.stateDirectory, "preview.json");
+  await t.throwsAsync(executeSourceOperation({ directory, action: "apply", candidate }), {
+    message: /Preview this generation with current edits/,
+  });
   const capturedRecipe = fs.readFileSync(path.join(directory, "source/ram-map.json"));
   const capturedResearch = fs.readFileSync(path.join(directory, ".uttori/research/names.json"));
   const preview = await expectOperation(
@@ -344,13 +354,45 @@ test("headless source commands preserve an edited raw byte through verified rege
     isMergePreview,
   );
   t.deepEqual(preview.conflicts, []);
+  fs.unlinkSync(previewFile);
+  await t.throwsAsync(executeSourceOperation({ directory, action: "apply", candidate }), {
+    message: /Preview this generation with current edits/,
+  });
+  await executeSourceOperation({ directory, action: "preview", candidate });
   await t.throwsAsync(executeSourceOperation({ directory, action: "apply", candidate }), {
     message: /Commit or move/,
   });
   await sourceGit(directory, ["add", "--all"]);
   await sourceGit(directory, ["commit", "-m", "Edit raw byte"]);
+  // A checkpoint or ignored-file cleanup can remove the disposable hint after preview. Apply
+  // must validate the same database inputs and preserve the edited byte through the merge.
+  fs.unlinkSync(path.join(directory, ".uttori-local/evidence/analysis.json"));
   await executeSourceOperation({ directory, action: "apply", candidate });
+  t.true(fs.existsSync(path.join(directory, ".uttori-local/evidence/analysis.json")));
   t.is((await expectOperation({ directory, action: "finish" }, isMergeStatus)).phase, "verified");
+  t.false(fs.existsSync(previewFile));
+  const head = (await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString();
+  const refs = (await sourceGit(directory, ["show-ref"])).stdout.toString();
+  await executeSourceOperation({ directory, action: "apply", candidate });
+  const completedStatus = await executeSourceOperation({ directory, action: "status", candidate });
+  t.true(isRecord(completedStatus) && completedStatus.candidateAccepted === true);
+  // Later staged and unstaged edits, including generation inputs, are independent of a finished
+  // merge. A stale editor command must preserve both and must not recreate the released preview.
+  const recipeFile = path.join(directory, "source/ram-map.json");
+  fs.appendFileSync(recipeFile, "\n");
+  await sourceGit(directory, ["add", "source/ram-map.json"]);
+  fs.appendFileSync(recipeFile, "\n");
+  const index = (await sourceGit(directory, ["write-tree"])).stdout.toString();
+  const dirtyRecipe = fs.readFileSync(recipeFile);
+  const journalFile = path.join(repository.stateDirectory, "merge.json");
+  const journal = fs.readFileSync(journalFile);
+  await executeSourceOperation({ directory, action: "apply", candidate });
+  t.is((await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString(), head);
+  t.is((await sourceGit(directory, ["show-ref"])).stdout.toString(), refs);
+  t.is((await sourceGit(directory, ["write-tree"])).stdout.toString(), index);
+  t.deepEqual(fs.readFileSync(recipeFile), dirtyRecipe);
+  t.deepEqual(fs.readFileSync(journalFile), journal);
+  t.false(fs.existsSync(previewFile));
   const built = await expectOperation({ directory, action: "build" }, isSnesSourceBuild);
   const expected = rom.read(0, rom.length)!.slice();
   expected[7] = 0xeb;
@@ -414,6 +456,46 @@ test("new pristine native resources are extracted from pinned ROM ranges, never 
   });
 });
 
+test("reviewed original asset blobs ignore working edits and reject invalid identities", async (t) => {
+  const { directory, rom } = await fixture((cleanup) => t.teardown(cleanup));
+  const file = path.join(directory, ".uttori/generation-inputs.json");
+  const recipe = JSON.parse(fs.readFileSync(file, "utf8"));
+  const assetPath = "source/assets/native/reviewed.bin";
+  fs.mkdirSync(path.dirname(path.join(directory, assetPath)), { recursive: true });
+  const original = Buffer.from(rom.read(11, 17)!);
+  fs.writeFileSync(path.join(directory, assetPath), original);
+  await sourceGit(directory, ["add", "--", assetPath]);
+  const originalBlob = (await sourceGit(directory, ["rev-parse", `:${assetPath}`])).stdout
+    .toString()
+    .trim();
+  const asset = { path: assetPath, sha256: sourceContentHash(original), originalBlob };
+  recipe.pristineAssets = [asset];
+  const write = () => fs.writeFileSync(file, JSON.stringify(recipe));
+  write();
+  fs.writeFileSync(path.join(directory, assetPath), Buffer.alloc(17, 0x42));
+  const result = await expectOperation({ directory, action: "prepare" }, isPreparedGeneration);
+  t.deepEqual(
+    (await sourceGit(directory, ["show", `${result.generation.commit}:${assetPath}`])).stdout,
+    original,
+  );
+  t.deepEqual(fs.readFileSync(path.join(directory, assetPath)), Buffer.alloc(17, 0x42));
+  t.is(result.verification.outputSha256, rom.identity.contentSha256);
+  asset.sha256 = "0".repeat(64);
+  write();
+  await t.throwsAsync(executeSourceOperation({ directory, action: "prepare" }), {
+    message: /Pristine asset content/,
+  });
+  asset.sha256 = sourceContentHash(original);
+  asset.originalBlob = "HEAD";
+  write();
+  await t.throwsAsync(executeSourceOperation({ directory, action: "prepare" }), {
+    message: /immutable original blob/,
+  });
+  asset.originalBlob = "0".repeat(40);
+  write();
+  await t.throwsAsync(executeSourceOperation({ directory, action: "prepare" }));
+});
+
 test("capture import records portable archive identity and survives idempotent retry", async (t) => {
   const { directory, rom } = await fixture((cleanup) => t.teardown(cleanup));
   const file = path.join(directory, ".uttori-local/capture.json");
@@ -466,10 +548,36 @@ test("capture import records portable archive identity and survives idempotent r
       .fileSha256,
     saved.fileSha256,
   );
+  const readyStatus = await executeSourceOperation({ directory, action: "status" });
+  t.true(isRecord(readyStatus) && readyStatus.catalogReady === true);
+  // A branch can retain an older catalog while its local SQLite store contains newer imports.
+  // Status must expose the repair without mutating the tracked catalog during a tree refresh.
+  const staleCatalog = JSON.stringify({ ...saved.catalog, captures: [] });
+  fs.writeFileSync(path.join(directory, ".uttori/captures.json"), staleCatalog);
+  const staleStatus = await executeSourceOperation({ directory, action: "status" });
+  t.true(isRecord(staleStatus) && staleStatus.catalogReady === false);
+  t.is(fs.readFileSync(path.join(directory, ".uttori/captures.json"), "utf8"), staleCatalog);
   t.deepEqual(await executeSourceOperation({ directory, action: "catalog" }), {
     captures: 1,
-    retainedEvidenceRequired: 0,
+    // Reconciliation can restore the evidence identity, but cannot invent the deleted archive path.
+    retainedEvidenceRequired: 1,
   });
+  const evidence = sourceProjectLocalInputs(await openSourceProject(directory)).evidence;
+  const notes = readCaptureImportNotes(evidence, imported.sourceSha256);
+  t.truthy(notes);
+  t.is(notes?.analysis, undefined);
+  // Capture archives are disposable. Analysis, generated notes and saved-code navigation use evidence.
+  fs.unlinkSync(file);
+  const configFile = path.join(directory, ".uttori/project.json");
+  const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+  // This all-NOP fixture has no terminating instruction; bound exploration to exercise reporting.
+  fs.writeFileSync(configFile, JSON.stringify({ ...config, limits: { analysisWorkItems: 64 } }));
+  const analyzed = await executeSourceOperation({ directory, action: "analyze" });
+  t.true(isRecord(analyzed) && Array.isArray(analyzed.addedCode));
+  const completed = readCaptureImportNotes(evidence, imported.sourceSha256);
+  t.is(completed?.analysis?.status, "incomplete");
+  t.deepEqual(completed?.analysis?.sources, ["capture.json"]);
+  t.false(fs.existsSync(file));
 });
 
 for (const phase of ["export", "verification"] as const) {

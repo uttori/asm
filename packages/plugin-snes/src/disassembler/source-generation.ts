@@ -24,7 +24,7 @@ import { lostCodeRanges } from "./code-preservation.js";
 import { buildSnesSource, type SnesSourceBuild } from "./source-build.js";
 import { exportSnes65816Source } from "./source-export.js";
 
-/** Original asset inputs are borrowed from the accepted pure tree, never from an edited working PNG/JSON/WAV. */
+/** Original assets come from immutable Git objects or original ROM bytes, never live working files. */
 export interface PrepareSnesGenerationOptions {
   readonly repository: SourceRepository;
   readonly parent: string;
@@ -37,12 +37,14 @@ export interface PrepareSnesGenerationOptions {
   readonly recipes: readonly SourceGenerationFile[];
   /** Exact research/configuration/catalog and evidence-manifest bytes retained in generation history. */
   readonly inputFiles: readonly SourceGenerationFile[];
-  /** Repository-relative pristine inputs, taken from the accepted generation or explicitly extracted original ROM bytes. */
+  /** Repository-relative pristine inputs; the complete generation must still rebuild the original ROM. */
   readonly pristineAssets: readonly {
     readonly path: string;
     readonly sha256: string;
     /** Half-open, headerless original-ROM file offsets. This admits new binary inputs without trusting edited working files. */
     readonly romRange?: { readonly start: number; readonly end: number };
+    /** Explicit immutable blob for a newly decoded/reviewed original asset; SHA-256 guards its bytes. */
+    readonly originalBlob?: string;
   }[];
   /** Git-reviewed exceptions for withdrawing previously emitted code; reasons remain in the input receipt. */
   readonly codeWithdrawals?: readonly {
@@ -271,7 +273,18 @@ export async function prepareSnesGeneration(
         throw new Error(`Pristine asset is outside this source projection: ${name}`);
       }
       let bytes: Uint8Array;
-      if (asset.romRange) {
+      if (asset.originalBlob !== undefined) {
+        if (asset.romRange || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob)) {
+          throw new Error(`Invalid original asset blob declaration for ${name}.`);
+        }
+        // Admission pins reviewed bytes, not a path that an editor can mutate during preparation.
+        // The full original-ROM build below must succeed before any candidate is retained.
+        bytes = (
+          await sourceGit(options.repository.root, ["cat-file", "blob", asset.originalBlob], {
+            signal: options.signal,
+          })
+        ).stdout;
+      } else if (asset.romRange) {
         const { start, end } = asset.romRange;
         if (
           !Number.isSafeInteger(start) ||
@@ -296,8 +309,8 @@ export async function prepareSnesGeneration(
           })
         ).stdout;
       }
-      // Both admission routes verify immutable inputs. A working PNG, native stream,
-      // or resource edit can never become the next pure baseline by being reread here.
+      // Every admission route verifies immutable inputs. Working source edits are
+      // merged separately; no mutable PNG, stream or resource path is reread here.
       if (sourceContentHash(bytes) !== asset.sha256) {
         throw new Error(`Pristine asset content does not match its declared identity: ${name}`);
       }

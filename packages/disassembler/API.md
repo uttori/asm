@@ -134,9 +134,11 @@ Filesystem writes outside the database, including source export, do not share th
 
 The watcher pointer is refreshed after commit. If refresh fails, a process warning reports it.
 The commit result still succeeds, and its maintenance warning array does not collect that warning.
-A stale **valid** pointer can reopen the authoritative database. A missing/corrupt pointer prevents
-`openAnalysisProjectStore()` from opening. Do not treat a parse failure as an empty project. Restore
-a validated backup into a new directory before continuing. Keep the original files for diagnosis.
+A stale **valid** pointer can reopen the authoritative database. If the pointer is missing,
+`openAnalysisProjectStore()` validates the existing current-format database and its stored manifest,
+then atomically recreates the watcher hint without changing records or revision. It never creates
+or initializes a missing, empty, corrupt or unpublished database. An existing malformed or unreadable
+pointer still fails explicitly and is preserved for diagnosis; a parse failure is never an empty project.
 
 `loadAnalysisProjectViewSnapshot()` loads metadata only by default. An explicit reducer streams and
 validates runtime rows in the same snapshot without retaining the full history. Use

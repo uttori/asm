@@ -71,6 +71,17 @@ test("workspace index exposes empty and populated artifact collections", (t) => 
   t.is(index.getFileAnalysis(file)?.file, file);
 });
 
+test("index error totals follow current diagnostics and clear after fixing source", (t) => {
+  const file = path.resolve("/virtual/errors.asm");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [file] }));
+  index.openDocument(file, 'org $8000\nincsrc "missing.asm"\n');
+  index.reindex();
+  t.true(index.getStatus().errorCount > 0);
+  index.updateDocument(file, "org $8000\nnop\n");
+  index.reindex();
+  t.is(index.getStatus().errorCount, 0);
+});
+
 test("workspace index batches document updates until reindex", (t) => {
   const file = path.resolve("/virtual/batched.asm");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());

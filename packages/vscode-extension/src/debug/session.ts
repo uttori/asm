@@ -49,6 +49,11 @@ import {
 
 import { isAcceptedDebugMap, isStoredDebugMap } from "../analysis/debug-maps.js";
 import { runtimeBindingFromLaunch } from "../runtime/binding.js";
+import {
+  onDidChangeRuntimeCapture,
+  runtimeCapturePhase,
+  setRuntimeCapturePhase,
+} from "../runtime/capture-state.js";
 import { LiveBusAnalysis } from "../runtime/live-bus-analysis.js";
 import { acquireTraceLease } from "../runtime/trace-lease.js";
 import {
@@ -779,6 +784,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     void recorder.completion.catch((error: unknown) => {
       if (activeTraceRecording?.recorder === recorder) {
         activeTraceRecording = undefined;
+        setRuntimeCapturePhase("idle");
       }
       void window.showErrorMessage(
         `Assembly lossless capture failed: ${error instanceof Error ? error.message : String(error)}. The partial ACT2 archive retains committed evidence. Emulation remains stopped on producer failure.`,
@@ -827,6 +833,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       return;
     }
     activeTraceRecording = undefined;
+    setRuntimeCapturePhase("idle");
     void window.showErrorMessage(
       `Assembly trace recording failed: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -843,17 +850,21 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
  */
 const startRuntimeTrace = async (): Promise<void> => {
   const release = acquireTraceLease();
+  setRuntimeCapturePhase("starting");
   try {
     await startRuntimeTraceWithLease();
     if (activeTraceRecording) {
+      setRuntimeCapturePhase("recording");
       void activeTraceRecording.recorder.completion.then(release, release);
       return;
     }
   } catch (error) {
     release();
+    setRuntimeCapturePhase("idle");
     throw error;
   }
   release();
+  setRuntimeCapturePhase("idle");
 };
 
 /** Save a named visual milestone at an acknowledged pause; leave the game paused
@@ -933,16 +944,26 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
     throw new Error("No Uttori ASM trace recording is active.");
   }
   activeTraceRecording = undefined;
+  setRuntimeCapturePhase("finalizing");
   // Finalization can drain a large archive and hash/sync its graphics companion. Show this
   // phase immediately and keep it non-cancellable so a stop cannot interrupt durable publication.
-  const summary = await window.withProgress(
-    {
-      location: ProgressLocation.Notification,
-      title: "Assembly: stopping recording and finalizing capture…",
-      cancellable: false,
-    },
-    () => active.recorder.stop(),
-  );
+  const finalize = async () => {
+    try {
+      return await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: "Assembly: stopping recording and finalizing capture…",
+          cancellable: false,
+        },
+        () => active.recorder.stop(),
+      );
+    } finally {
+      // Stop owns the detached recorder until publication settles, including failure. Import
+      // happens afterward and must not leave the capture controls stuck in a busy phase.
+      setRuntimeCapturePhase("idle");
+    }
+  };
+  const summary = await finalize();
   // Bus evidence has its own importer: observed accesses cannot supply instruction bytes or code seeds.
   if ("scope" in summary && summary.scope !== "snes.65816.instructions") {
     if (active.live) {
@@ -1009,8 +1030,12 @@ const debugSessionTerminated = (session: DebugSession): void => {
     return;
   }
   activeTraceRecording = undefined;
+  setRuntimeCapturePhase("finalizing");
   void active.recorder
     .finishIncomplete()
+    // Notification promises can wait for dismissal. Recording is idle as soon as publication
+    // settles, so the capture controls must not wait for the user to acknowledge the result.
+    .finally(() => setRuntimeCapturePhase("idle"))
     .then((summary) =>
       window.showWarningMessage(
         `Assembly: debug session ended. Preserved an incomplete ${summary.observedEvents}-event trace at ${summary.file}.`,
@@ -1382,6 +1407,10 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
   }
 }
 
+/** Publish recorder state to contributed command and toolbar enablement. */
+const updateCaptureContext = () =>
+  commands.executeCommand("setContext", "uttori.capturePhase", runtimeCapturePhase());
+
 /**
  * Registers the Uttori ASM debug configuration and inline adapter factories.
  * @param {string} extensionRoot Absolute installed extension root containing bundled sidecars.
@@ -1392,8 +1421,11 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
  */
 export const registerDebugging = (extensionRoot: string): readonly Disposable[] => {
   debuggingExtensionRoot = extensionRoot;
+  // The same state drives tree rows and contributed toolbar/command enablement.
+  void updateCaptureContext();
   const output = window.createOutputChannel("Uttori Emulator");
   return [
+    onDidChangeRuntimeCapture(() => void updateCaptureContext()),
     {
       dispose: () => {
         for (const analysis of liveAnalyses) {

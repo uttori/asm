@@ -9,7 +9,7 @@ import {
 } from "@uttori/asm-assets/audio";
 import { rawEncoder, rawImporter, jsonImporter } from "@uttori/asm-assets/data";
 import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
-import { rgbaPreviewPng, waveformPreviewPng } from "@uttori/asm-assets/preview";
+import { rgbaNativePng, rgbaPreviewPng, waveformPreviewPng } from "@uttori/asm-assets/preview";
 import {
   convertBossImage,
   convertBrrWave,
@@ -245,7 +245,7 @@ function convertSomRoomPreview(input: AssetPreviewInput): AssetPreviewResult {
       rgbaPreviewPng(preview.rgba, preview.width, preview.height, 192),
     ).toString("base64"),
     composedPngBase64: Buffer.from(
-      rgbaPreviewPng(preview.rgba, preview.width, preview.height),
+      rgbaNativePng(preview.rgba, preview.width, preview.height),
     ).toString("base64"),
   };
 }
@@ -324,16 +324,11 @@ export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResul
     const width = Number(preview.metadata?.width);
     const height = Number(preview.metadata?.height);
     const thumbnail = rgbaPreviewPng(preview.bytes, width, height, 192);
-    const composed = rgbaPreviewPng(preview.bytes, width, height, 1024);
+    const composed = rgbaNativePng(preview.bytes, width, height);
     const indexes = preview.metadata?.tileIndexByCoordinate;
     let storage: Uint8Array | undefined;
     if (Array.isArray(indexes) && width % 8 === 0 && height % 8 === 0) {
-      storage = rgbaPreviewPng(
-        storagePixels(preview.bytes, width, height, indexes),
-        width,
-        height,
-        1024,
-      );
+      storage = rgbaNativePng(storagePixels(preview.bytes, width, height, indexes), width, height);
     }
     return {
       ...common,

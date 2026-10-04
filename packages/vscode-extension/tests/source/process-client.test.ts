@@ -36,7 +36,8 @@ test("source workers retain buffer bytes and report progress before a completed 
     { maxMemoryMiB: 128, onProgress: (message) => progress.push(message) },
   );
   t.deepEqual(result, [0, 128, 255]);
-  t.deepEqual(progress, ["Assembling"]);
+  t.is(progress.length, 1);
+  t.regex(progress[0], /^\[\d+\.\d+s\] Assembling$/);
 });
 
 test("cancelling a synchronous source worker releases the editor with an honest recovery diagnostic", async (t) => {
@@ -52,7 +53,7 @@ test("cancelling a synchronous source worker releases the editor with an honest 
         maxMemoryMiB: 128,
         signal: abort.signal,
         onProgress: (message) => {
-          if (message === "Started") {
+          if (message.endsWith("Started")) {
             abort.abort();
           }
         },

@@ -158,7 +158,9 @@ preserve omitted runtime history. Complete replacements replace it. Unchanged ro
 SQLite WAL handles interrupted writers and concurrent readers. The database retains imported
 evidence; Git files are authoritative for research choices.
 `analysis.json` is atomically refreshed after commit for watchers. A failed pointer refresh is a
-warning about an already committed operation, not a failed edit. Explicit compaction checkpoints and
+warning about an already committed operation, not a failed edit. A missing hint is recreated on open
+from the validated existing SQLite manifest; absent or invalid storage and malformed existing hints
+still fail explicitly. Recovery does not initialize storage or change its revision. Explicit compaction checkpoints and
 VACUUMs the database and prunes unused dictionaries. Normal edits create no filesystem generations.
 Current projects use schema 3 and SQLite storage format 4 exclusively. The sole existing database
 has already been converted; older storage readers and migration commands are removed. Imports

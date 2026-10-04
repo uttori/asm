@@ -1,7 +1,7 @@
 import type { AssemblerEnvironment } from "@uttori/asm-core";
 import { type SourceRepository, type SourceGeneration, type SourceGenerationFile, type SourceGenerationInputs } from "@uttori/asm-disassembler";
 import { type SnesSourceBuild } from "./source-build.js";
-/** Original asset inputs are borrowed from the accepted pure tree, never from an edited working PNG/JSON/WAV. */
+/** Original assets come from immutable Git objects or original ROM bytes, never live working files. */
 export interface PrepareSnesGenerationOptions {
     readonly repository: SourceRepository;
     readonly parent: string;
@@ -14,7 +14,7 @@ export interface PrepareSnesGenerationOptions {
     readonly recipes: readonly SourceGenerationFile[];
     /** Exact research/configuration/catalog and evidence-manifest bytes retained in generation history. */
     readonly inputFiles: readonly SourceGenerationFile[];
-    /** Repository-relative pristine inputs, taken from the accepted generation or explicitly extracted original ROM bytes. */
+    /** Repository-relative pristine inputs; the complete generation must still rebuild the original ROM. */
     readonly pristineAssets: readonly {
         readonly path: string;
         readonly sha256: string;
@@ -23,6 +23,8 @@ export interface PrepareSnesGenerationOptions {
             readonly start: number;
             readonly end: number;
         };
+        /** Explicit immutable blob for a newly decoded/reviewed original asset; SHA-256 guards its bytes. */
+        readonly originalBlob?: string;
     }[];
     /** Git-reviewed exceptions for withdrawing previously emitted code; reasons remain in the input receipt. */
     readonly codeWithdrawals?: readonly {

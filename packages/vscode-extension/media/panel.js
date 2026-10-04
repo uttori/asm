@@ -92,38 +92,10 @@ window.addEventListener("message", ({ data }) => {
   const { status, metadata } = data;
   trusted = data.trusted;
   $("trustNotice").hidden = trusted;
-  $("projectName").textContent = data.projectName || "Assembly project";
   $("configAction").textContent = status.configFile
     ? "Open project configuration"
     : "Initialize project configuration";
   $("configAction").dataset.cmd = status.configFile ? "openConfig" : "initConfig";
-  $("status").replaceChildren();
-  const rows = [
-    ["Target", status.target || metadata?.activeTarget || "No target selected"],
-    ["Index", data.indexReady ? "Ready" : "Waiting for source index"],
-    ["Files", status.fileCount],
-    ["Symbols", status.symbolCount],
-    ["Errors", status.errorCount],
-    [
-      "Last reindex",
-      status.lastReindexDurationMs == null ? "—" : `${status.lastReindexDurationMs} ms`,
-    ],
-    [
-      "Roots",
-      `${status.lastReindexRootCount} (${status.lastReindexCachedRoots} cached, ${status.lastReindexAnalyzedRoots} analyzed)`,
-    ],
-    ["Config", status.configFile || "Not configured"],
-  ];
-  for (const [label, value] of rows) {
-    const row = document.createElement("div");
-    row.className = "row";
-    const term = document.createElement("dt");
-    const definition = document.createElement("dd");
-    term.textContent = label;
-    definition.textContent = String(value);
-    row.append(term, definition);
-    $("status").append(row);
-  }
   fillList("entryPoints", status.entryPoints || [], "removeEntryPoint");
   fillList("includePaths", status.includePaths || [], "removeIncludePath");
   fillSelect("target", metadata?.targets || [], status.target || metadata?.activeTarget || "");

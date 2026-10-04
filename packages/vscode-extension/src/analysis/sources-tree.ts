@@ -1,11 +1,7 @@
 /** Lazy, read-only source attribution in the assembly sidebar. */
 import * as path from "node:path";
 
-import type {
-  AnalysisEvidenceSource,
-  AnalysisSourceEntry,
-  AnalysisSourceGroup,
-} from "@uttori/asm-disassembler";
+import { isCaptureImportNotes, type AnalysisEvidenceSource } from "@uttori/asm-disassembler";
 import {
   EventEmitter,
   ThemeIcon,
@@ -78,54 +74,22 @@ function isEvidenceSource(value: unknown): value is AnalysisEvidenceSource {
   );
 }
 
-function isSourceCatalog(
-  value: unknown,
-): value is { readonly sources: readonly AnalysisEvidenceSource[] } {
-  return isRecord(value) && Array.isArray(value.sources) && value.sources.every(isEvidenceSource);
-}
-
-interface SourceSummaryView {
+function isSourceCatalog(value: unknown): value is {
+  readonly sources: readonly AnalysisEvidenceSource[];
   readonly manifest: {
     readonly target: string;
     readonly rom: { readonly contentSha256: string; readonly contentSize: number };
   };
-  readonly summary: {
-    readonly instructionCount: number;
-    readonly memoryCount: number;
-    readonly contributionCount: number;
-    readonly source: AnalysisEvidenceSource;
-  };
-}
-
-function isSourceSummary(value: unknown): value is SourceSummaryView {
+} {
   return (
     isRecord(value) &&
+    Array.isArray(value.sources) &&
+    value.sources.every(isEvidenceSource) &&
     isRecord(value.manifest) &&
     typeof value.manifest.target === "string" &&
     isRecord(value.manifest.rom) &&
     typeof value.manifest.rom.contentSha256 === "string" &&
-    typeof value.manifest.rom.contentSize === "number" &&
-    isRecord(value.summary) &&
-    typeof value.summary.instructionCount === "number" &&
-    typeof value.summary.memoryCount === "number" &&
-    typeof value.summary.contributionCount === "number" &&
-    isEvidenceSource(value.summary.source)
-  );
-}
-
-function isSourceEntry(value: unknown): value is AnalysisSourceEntry {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.label === "string" &&
-    typeof value.description === "string" &&
-    typeof value.detail === "string" &&
-    Array.isArray(value.outputOffsets) &&
-    value.outputOffsets.every((offset) => typeof offset === "number") &&
-    isStringArray(value.recordIds) &&
-    (value.addressSpace === undefined || typeof value.addressSpace === "string") &&
-    (value.address === undefined || typeof value.address === "number") &&
-    (value.architecture === undefined || typeof value.architecture === "string")
+    typeof value.manifest.rom.contentSize === "number"
   );
 }
 
@@ -144,10 +108,6 @@ interface SourceTarget {
   readonly source: AnalysisEvidenceSource;
 }
 
-interface SourceManifestView {
-  readonly target: string;
-  readonly rom: { readonly contentSha256: string; readonly contentSize: number };
-}
 /**
  * Source/evidence row with optional lazy children, a VS Code command, and source identity for
  * context-menu actions.
@@ -164,7 +124,7 @@ export interface AnalysisSourcesTreeNode {
 }
 
 /**
- * Source metadata loads immediately. SQL counts and result pages stay in the analysis process.
+ * Source metadata loads immediately. Generated notes and added-code links load on expansion, independently of the original capture archive.
  * @see https://code.visualstudio.com/api/references/vscode-api#TreeDataProvider
  */
 export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSourcesTreeNode> {
@@ -347,154 +307,87 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
 
   async #sourceChildren(target: SourceTarget): Promise<AnalysisSourcesTreeNode[]> {
     const id = this.#sourceKey(target);
-    const loaded = await analysisWorker().request(target.directory, "sourceSummary", {
+    const notes = await analysisWorker().request(target.directory, "sourceNotes", {
       sourceId: target.source.id,
     });
-    if (!isSourceSummary(loaded)) {
-      throw new Error("Analysis source summary is unavailable.");
+    if (!notes) {
+      // Older imports lack a before/after report. Do not invent gains from current evidence totals.
+      return [
+        { id: `${id}:legacy`, label: "No generated notes for this legacy import", icon: "info" },
+      ];
     }
-    const { manifest, summary } = loaded;
-    const children: AnalysisSourcesTreeNode[] = [];
-    const group = (
-      name: AnalysisSourceGroup,
-      label: string,
-      total: number,
-      icon: string,
-      description = count(total),
-      tooltip?: string,
-    ): void => {
-      children.push({
-        id: `${id}:${name}`,
-        label,
-        description,
-        tooltip,
-        icon,
-        ...(total ? { load: () => this.#pages(target, manifest, name, 0, total) } : {}),
-      });
-    };
-    group(
-      "instructions",
-      "Observed instructions",
-      summary.instructionCount,
-      "list-flat",
-      count(summary.instructionCount),
-      "Directly captured instruction addresses, qualified by architecture and address space. No capture subtraction or static-provenance inference.",
-    );
-    group(
-      "memory",
-      "Memory observations",
-      summary.memoryCount,
-      "references",
-      count(summary.memoryCount),
-      "Persisted memory records, including distinct value/state variants. Expand to page through the records.",
-    );
-    group(
-      "contributions",
-      "Attributed metadata",
-      summary.contributionCount,
-      "note",
-      count(summary.contributionCount),
-      "Labels, comments, classifications and regions carrying this source's evidence.",
-    );
-    const details = [
-      ...summary.source.reports.flatMap((report) =>
-        Object.entries(report.imported).map(
-          ([field, value]) => `${report.sourceName}: ${count(value)} ${field} imported`,
-        ),
-      ),
-      ...summary.source.reports.flatMap((report) =>
-        report.warnings.concat(
-          report.unsupported.map((loss) => `${loss.field}: ${loss.reason} (${loss.count})`),
-        ),
-      ),
+    if (!isCaptureImportNotes(notes)) {
+      throw new Error("Generated capture notes are unavailable.");
+    }
+    const children: AnalysisSourcesTreeNode[] = [
+      {
+        id: `${id}:notes`,
+        label: "Capture Notes",
+        description: count(notes.notes.length),
+        icon: "note",
+        load: () =>
+          this.#localPages(
+            `${id}:notes`,
+            notes.notes.map((text, index) => ({
+              id: `${id}:note:${index}`,
+              label: text,
+              tooltip: text,
+              icon: "info",
+            })),
+          ),
+      },
     ];
+    if (!notes.analysis) {
+      children.push({
+        id: `${id}:pending`,
+        label: "Analyze evidence to see added code",
+        icon: "clock",
+      });
+      return children;
+    }
+    const analysis = notes.analysis;
+    const catalog = await analysisWorker().request(target.directory, "sources");
+    if (!isSourceCatalog(catalog)) {
+      throw new Error("Analysis source identity is unavailable.");
+    }
+    const { manifest } = catalog;
+    const bytes = analysis.addedCode.reduce((total, range) => total + range.end - range.start, 0);
     children.push({
-      id: `${id}:notes`,
-      label: "Capture notes & interpretation",
-      description: count(details.length),
-      icon: "info",
+      id: `${id}:code`,
+      label: "Added Code",
+      description: `${count(bytes)} ROM bytes · ${analysis.status}`,
+      tooltip: `New ROM code from the analysis following these imports: ${analysis.sources.join(", ")}. Research changes in that pass also contribute.`,
+      icon: "diff-added",
       load: () =>
         this.#localPages(
-          `${id}:notes`,
-          details.map((text, index) => ({
-            id: `${id}:note:${index}`,
-            label: text,
-            tooltip: text,
-            icon: "info",
-          })),
+          `${id}:code`,
+          analysis.addedCode.map((range, index) => {
+            const navigation: AnalysisNavigationTarget = {
+              projectDirectory: target.directory,
+              target: manifest.target,
+              romContentSha256: manifest.rom.contentSha256,
+              romContentSize: manifest.rom.contentSize,
+              addressSpace: range.addressSpace,
+              address: range.address,
+              outputOffsets: [range.start],
+              architectureHints: ["snes.65816"],
+              recordIds: range.recordIds,
+            };
+            return {
+              id: `${id}:code:${index}`,
+              label: `$${range.start.toString(16).toUpperCase().padStart(6, "0")}–$${range.end.toString(16).toUpperCase().padStart(6, "0")}`,
+              description: `${count(range.end - range.start)} bytes`,
+              tooltip: `New ROM bytes [${range.start}, ${range.end}). Open current source or analyzed disassembly.`,
+              icon: "diff-added",
+              command: {
+                command: "asm.analysis.navigate",
+                title: "Open added code",
+                arguments: [navigation],
+              },
+            };
+          }),
         ),
     });
     return children;
-  }
-
-  async #pages(
-    target: SourceTarget,
-    manifest: SourceManifestView,
-    group: AnalysisSourceGroup,
-    start: number,
-    total: number,
-  ): Promise<AnalysisSourcesTreeNode[]> {
-    const id = `${this.#sourceKey(target)}:${group}`;
-    if (total <= PAGE_SIZE) {
-      const entries = await analysisWorker().request(target.directory, "sourceEntries", {
-        sourceId: target.source.id,
-        sourceGroup: group,
-        offset: start,
-      });
-      if (!Array.isArray(entries) || !entries.every(isSourceEntry)) {
-        throw new Error("Analysis source entries are unavailable.");
-      }
-      return entries.map((entry) => {
-        const navigation: AnalysisNavigationTarget | undefined =
-          entry.address !== undefined && entry.addressSpace
-            ? {
-                projectDirectory: target.directory,
-                target: manifest.target,
-                romContentSha256: manifest.rom.contentSha256,
-                romContentSize: manifest.rom.contentSize,
-                addressSpace: entry.addressSpace,
-                address: entry.address,
-                outputOffsets: entry.outputOffsets,
-                architectureHints: entry.architecture ? [entry.architecture] : [],
-                recordIds: entry.recordIds,
-              }
-            : undefined;
-        return Object.assign(
-          {
-            id: `${id}:${entry.id}`,
-            label: entry.label,
-            description: entry.description,
-            tooltip: entry.detail,
-            icon: "location",
-          },
-          navigation
-            ? {
-                command: {
-                  command: "asm.analysis.navigate",
-                  title: "Open source or disassembly",
-                  arguments: [navigation],
-                },
-              }
-            : {},
-        );
-      });
-    }
-    let stride = PAGE_SIZE;
-    while (Math.ceil(total / stride) > PAGE_SIZE) {
-      stride *= PAGE_SIZE;
-    }
-    const pages: AnalysisSourcesTreeNode[] = [];
-    for (let offset = 0; offset < total; offset += stride) {
-      const from = start + offset;
-      const size = Math.min(stride, total - offset);
-      pages.push({
-        id: `${id}:page:${from}`,
-        label: `${count(from + 1)}–${count(from + size)}`,
-        description: `${count(size)} items`,
-        icon: "list-selection",
-        load: () => this.#pages(target, manifest, group, from, size),
-      });
-    }
-    return pages;
   }
 }

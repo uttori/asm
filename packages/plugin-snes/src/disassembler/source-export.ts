@@ -953,7 +953,8 @@ const renderedMetadata = (
     const indent = line.name || index < lastLabelIndex ? "" : bodyIndent;
     if (line.comment) {
       for (const text of line.comment.split(/\r\n|[\n\r\u2028\u2029]/)) {
-        output.push(`${indent}; ${text}`);
+        const body = text ? ` ${text}` : "";
+        output.push(`${indent};${body}`);
       }
     }
     if (line.name) {

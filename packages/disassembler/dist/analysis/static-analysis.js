@@ -199,6 +199,14 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         }
         const item = queue.shift();
         processedWorkItems++;
+        // Report before early-continue paths so repeated state joins still show forward progress.
+        if (processedWorkItems % 4096 === 0) {
+            options.onProgress?.({
+                processedWorkItems,
+                queuedWorkItems: queue.length,
+                instructions: nodes.size,
+            });
+        }
         const enteredState = adapter.enterAddress?.(item.state, item.address) ?? item.state;
         const nodeId = nodeIdFor(item.address, item.context);
         const previousState = states.get(nodeId);
@@ -442,6 +450,11 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             });
         }
     }
+    options.onProgress?.({
+        processedWorkItems,
+        queuedWorkItems: queue.length,
+        instructions: nodes.size,
+    });
     const reachedOffsets = new Set();
     for (const offsets of ownedByNode.values()) {
         for (const offset of offsets) {

@@ -54,6 +54,7 @@ import {
   registerDebugging,
   type BuiltDebugArtifacts,
 } from "./debug/session.js";
+import { IndexDetailsProvider } from "./project/index-tree.js";
 import { ProjectOutlineProvider } from "./project/outline-tree.js";
 import { ProjectPanelProvider } from "./project/panel.js";
 import { SourceController } from "./source/controller.js";
@@ -217,7 +218,13 @@ export function activate(context: ExtensionContext): void {
   const binaryDrafts = new BinaryDrafts();
   context.subscriptions.push(binaryDrafts);
   registerPngEditor(context, binaryDrafts);
+  const analysisOutputChannel = window.createOutputChannel("Uttori Analysis", { log: true });
+  context.subscriptions.push(analysisOutputChannel);
+  // Register diagnostics before workers and source commands so their startup failures share the
+  // same channel. Its first entry explains the purpose before a project is selected.
+  analysisOutputChannel.info("Git source operations and analysis diagnostics are ready.");
   const worker = initializeAnalysisWorker(context.extensionPath, {
+    log: (level, message) => analysisOutputChannel[level](message),
     sourceRoot: () => sourceController?.root,
     maxMemoryMiB: (directory) =>
       workspace
@@ -249,7 +256,7 @@ export function activate(context: ExtensionContext): void {
   outputChannel = window.createOutputChannel("Uttori Assembly Language Server", {
     log: true,
   });
-  sourceController = new SourceController(context, outputChannel, binaryDrafts);
+  sourceController = new SourceController(context, analysisOutputChannel, binaryDrafts);
   context.subscriptions.push(
     sourceController,
     initializeAnalysisProjectDiscovery(() => sourceController?.root),
@@ -315,6 +322,11 @@ export function activate(context: ExtensionContext): void {
     () => client,
     () => initConfig(),
   );
+  const indexProvider = new IndexDetailsProvider(() => panelProvider.snapshot());
+  const refreshProjectViews = (): void => {
+    void panelProvider.refresh();
+    indexProvider.refresh();
+  };
   const outlineProvider = new ProjectOutlineProvider(() => client);
   const coverageProvider = new AnalysisCoverageProvider();
   const sourcesProvider = new AnalysisSourcesProvider();
@@ -354,14 +366,14 @@ export function activate(context: ExtensionContext): void {
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
 
-  const analysisOutputChannel = window.createOutputChannel("Uttori Analysis", { log: true });
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath),
-    analysisOutputChannel,
     outputChannel,
     statusItem,
     analysisAnnotationController,
     sourcesProvider,
+    indexProvider,
+    window.createTreeView(IndexDetailsProvider.viewId, { treeDataProvider: indexProvider }),
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
@@ -459,7 +471,7 @@ export function activate(context: ExtensionContext): void {
       evidenceInspector.explainEvidence(coverageProvider.editTarget(element)),
     ),
     workspace.onDidGrantWorkspaceTrust(() => {
-      void panelProvider.refresh();
+      refreshProjectViews();
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions(),
@@ -485,7 +497,7 @@ export function activate(context: ExtensionContext): void {
         configurationIdentity !== previousAnalysisConfiguration
       ) {
         previousAnalysisConfiguration = configurationIdentity;
-        void panelProvider.refresh();
+        refreshProjectViews();
         outlineProvider.refresh();
         refreshAnalysisViews();
       }
@@ -504,6 +516,7 @@ export function activate(context: ExtensionContext): void {
     ) {
       void client.setTrace(Trace.Verbose);
     }
+    refreshProjectViews();
     context.subscriptions.push(
       client.onRequest("asm/researchBuffers", ({ root }: { root: string }) => {
         // Include unsaved/new JSON documents in the same F2 transaction while leaving their language
@@ -536,7 +549,7 @@ export function activate(context: ExtensionContext): void {
         return buffers;
       }),
       client.onNotification("asm/indexUpdated", () => {
-        void panelProvider.refresh();
+        refreshProjectViews();
         outlineProvider.refresh();
       }),
     );

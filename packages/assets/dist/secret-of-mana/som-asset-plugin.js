@@ -405,7 +405,17 @@ const plugin = definePlugin({
                 if (source.mediaType !== "application/json" || typeof options.palette !== "string") {
                     throw new Error("SoM palette asset requires a JSON catalogue and palette address.");
                 }
-                const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette);
+                // Palette views can share trailing ROM words. Emit one bounded owner for each
+                // physical span while retaining both complete display palettes in the catalogue.
+                for (const name of ["wordOffset", "wordCount"]) {
+                    if (options[name] !== undefined && typeof options[name] !== "number") {
+                        throw new Error(`SoM palette ${name} must be a number.`);
+                    }
+                }
+                const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
+                    wordOffset: options.wordOffset,
+                    wordCount: options.wordCount,
+                });
                 return { primaryOutput: "palette", outputs: { palette: { bytes } } };
             },
         });

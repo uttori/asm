@@ -107,7 +107,7 @@ export class AnalysisEvidenceInspector {
       if (choices.length === 0) {
         await window.showInformationMessage(
           target
-            ? "This ROM-map segment has no persisted record with explainable evidence."
+            ? "This conflict range has no persisted record with explainable evidence."
             : "The selected project has no persisted record to explain.",
         );
         return;
@@ -115,7 +115,7 @@ export class AnalysisEvidenceInspector {
       const selected = await window.showQuickPick(choices, {
         title: "Explain Analysis Evidence",
         placeHolder:
-          "Choose a record (up to 200 per collection). Open a coverage segment to narrow the list",
+          "Choose a record (up to 200 per collection). Expand a conflict range to narrow the list",
       });
       if (!selected) {
         return;

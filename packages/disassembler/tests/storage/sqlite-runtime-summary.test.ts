@@ -196,12 +196,15 @@ test("grouping progress can interrupt staging without publishing partial counts;
     0,
   );
   progress.length = 0;
+  const totals: number[] = [];
   const rows = [
-    ...store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks, (count) =>
-      progress.push(count),
-    ),
+    ...store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks, (count, total) => {
+      progress.push(count);
+      totals.push(total);
+    }),
   ];
   t.deepEqual(progress, [4096, 4100]);
+  t.deepEqual(totals, [4100, 4100]);
   t.is(rows.length, 1);
   t.is(rows[0].count, 12300);
   t.is(rows[0].id, "row-0");

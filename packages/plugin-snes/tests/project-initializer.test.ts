@@ -309,6 +309,12 @@ test("runtime-observed PCs seed analysis and increase measurable native-source c
       ],
     });
     t.is(analyzed.runtimeSeeds, 3);
+    t.true(analyzed.addedCode.some((range) => range.start <= 0x10 && range.end > 0x10));
+    t.true(
+      analyzed.addedCode.every(
+        (range) => range.addressSpace === "snes.cpu" && range.recordIds.length > 0,
+      ),
+    );
     t.is(analyzed.omittedRuntimeSeeds, 0);
     const exported = renderAnalysisFixture({
       projectDirectory: path.join(outputDirectory, "analysis"),
@@ -328,6 +334,11 @@ test("runtime-observed PCs seed analysis and increase measurable native-source c
       romFile,
     });
     t.is(repeated.runtimeSeeds, 3, "persisted runtime facts remain analysis seeds");
+    t.deepEqual(
+      repeated.addedCode,
+      [],
+      "reanalysis never recounts already decoded ROM bytes as import gains",
+    );
     const repeatedExport = renderAnalysisFixture({
       projectDirectory: path.join(outputDirectory, "analysis"),
       sourceDirectory: outputDirectory,

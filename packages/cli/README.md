@@ -53,6 +53,13 @@ ignored `.uttori-local/`; a clone needs its own local binding and retained evide
 Working source may intentionally differ from the ROM; only pure generations require original-ROM
 equality. ROMs and emulator binaries are not distributed.
 
+Pristine assets in `.uttori/generation-inputs.json` normally come from the accepted pure generation.
+New original assets may instead declare a bounded `romRange` or an `originalBlob` containing an
+immutable Git blob ID, never both. Each declaration requires the exact SHA-256 of its bytes.
+Commit and verify decoded asset sources before admitting their blob IDs; preparation still rejects
+any candidate that does not rebuild the original ROM. Mutable edits remain part of the reviewed
+merge, not the next pure baseline.
+
 The executable exits with 0 on success or 1 on failure. Check stderr for diagnostics and stdout for
 command results. For embedding, import `parseCliArguments` or `runCli` from the package root.
 See the guide for output channels, defaults, overwrite rules, and interruption behavior.

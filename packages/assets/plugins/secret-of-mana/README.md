@@ -102,6 +102,12 @@ The same record assembles at its original bank position:
 includeAsset("../assets/palettes/rom-palettes.json", "som.palette.bgr555", palette: "C81000")
 ```
 
+Overlapping display views must contain identical words at shared ROM addresses.
+Use optional zero-based `wordOffset` and positive `wordCount` to emit disjoint
+physical spans while keeping complete palette views. Neko's C821EE view emits
+13 words; its final two words are emitted by the existing C82208 view. The palette
+editor propagates shared-word edits to all aliases and affected atlas PNGs.
+
 The plugin preserves bit 15 of every word, including the `FFFF` cannon palette.
 Actor palettes emit fifteen stored words (`firstIndex: 1`), while boss palettes
 emit sixteen (`firstIndex: 0`). Background groups can contain 105 words, and effect

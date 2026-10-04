@@ -93,8 +93,8 @@ __export(worker_exports, {
   runAnalysisWorkerRequest: () => runAnalysisWorkerRequest
 });
 module.exports = __toCommonJS(worker_exports);
-var fs8 = __toESM(require("node:fs"), 1);
-var path8 = __toESM(require("node:path"), 1);
+var fs9 = __toESM(require("node:fs"), 1);
+var path9 = __toESM(require("node:path"), 1);
 var import_node_worker_threads = require("node:worker_threads");
 
 // packages/disassembler/src/model/project-types.ts
@@ -3879,6 +3879,19 @@ var coveragePage = (db, kind, offset) => {
   const order = kind === "segments" ? "start" : "kind,id,reason";
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
+var coverageConflictPage = (db, offset) => {
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new Error("Invalid analysis page offset.");
+  }
+  const condition = "json_extract(payload,'$.status')='conflict'";
+  const count = Number(
+    db.prepare(`SELECT count(*) AS n FROM query_coverage_segments WHERE ${condition}`).get().n
+  );
+  const segments = db.prepare(
+    `SELECT payload FROM query_coverage_segments WHERE ${condition} ORDER BY start LIMIT 200 OFFSET ?`
+  ).all(offset).map((row) => JSON.parse(String(row.payload)));
+  return { count, segments };
+};
 
 // packages/disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
@@ -3962,14 +3975,14 @@ var prepareGraph = (db) => {
   for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
     if (row.kind === "cfg-node") {
       const node = requireNode(row.payload);
-      const path9 = node.evidencePath.length ? node.evidencePath : [node.id];
+      const path10 = node.evidencePath.length ? node.evidencePath : [node.id];
       let owner = node.functionEntry;
-      for (let i = path9.length - 1; i >= 0; i--) {
+      for (let i = path10.length - 1; i >= 0; i--) {
         if (owner) {
           break;
         }
-        if (entries.has(path9[i])) {
-          owner = path9[i];
+        if (entries.has(path10[i])) {
+          owner = path10[i];
           break;
         }
       }
@@ -5035,15 +5048,21 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
         const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
           VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
           total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+        const source = incremental ? "query_runtime_variant_pending p CROSS JOIN runtime_observations o ON o.oid=p.oid" : "runtime_observations o NOT INDEXED";
+        const totalObservations = Number(
+          db.prepare(`SELECT count(*) AS n FROM ${source}
+          CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+          WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`).get(architecture, space).n
+        );
         let observations = 0;
         for (const row of db.prepare(runtimeSummaryInputSql(incremental)).iterate(architecture, space)) {
           accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
           observations++;
           if (observations % 4096 === 0) {
-            onProgress?.(observations);
+            onProgress?.(observations, totalObservations);
           }
         }
-        onProgress?.(observations);
+        onProgress?.(observations, totalObservations);
       }, false);
       transaction(() => {
         if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
@@ -6702,6 +6721,11 @@ var SqliteAnalysisStore = class {
     this.coverageSummary();
     return this.transaction(() => coveragePage(this.#database, kind, offset), false);
   }
+  /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
+  coverageConflicts(offset = 0) {
+    this.coverageSummary();
+    return this.transaction(() => coverageConflictPage(this.#database, offset), false);
+  }
   /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
    * @returns {object} Functions, calls, unresolved sites, and ownership.
    */
@@ -6831,7 +6855,7 @@ var SqliteAnalysisStore = class {
    * @param {string} space Exact instruction address space.
    * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
    * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-   * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
+   * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
    * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
    * Prepare before starting the consuming read transaction.
    */
@@ -7265,26 +7289,82 @@ var parseAnalysisProjectManifest = (input) => {
   return input;
 };
 var openAnalysisProjectStore = (directory) => {
-  const manifest = parseAnalysisProjectManifest(
-    JSON.parse(fs5.readFileSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
-  );
+  let pointer;
+  try {
+    pointer = fs5.readFileSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+      throw error;
+    }
+    const store = new SqliteAnalysisStore(analysisProjectSqlitePath(directory, {}), false);
+    try {
+      parseAnalysisProjectManifest(store.manifest());
+      store.writePointer(directory);
+      return store;
+    } catch (recoveryError) {
+      store.close();
+      throw recoveryError;
+    }
+  }
+  const manifest = parseAnalysisProjectManifest(JSON.parse(pointer));
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/source-project/project.ts
+// packages/disassembler/src/project/capture-notes.ts
 var import_node_fs5 = __toESM(require("node:fs"), 1);
 var import_node_path6 = __toESM(require("node:path"), 1);
+function notesPath(directory, sha256) {
+  if (!/^[\da-f]{64}$/.test(sha256)) {
+    throw new Error("Invalid capture notes identity.");
+  }
+  return import_node_path6.default.join(directory, "capture-notes", `${sha256}.json`);
+}
+function isRecord8(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStrings(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+function isAddedCode(value) {
+  return isRecord8(value) && typeof value.start === "number" && Number.isSafeInteger(value.start) && value.start >= 0 && typeof value.end === "number" && Number.isSafeInteger(value.end) && value.end > value.start && typeof value.addressSpace === "string" && typeof value.address === "number" && Number.isSafeInteger(value.address) && value.address >= 0 && isStrings(value.recordIds);
+}
+function isCaptureImportNotes(value) {
+  if (!isRecord8(value) || value.format !== "uttori-capture-notes" || value.version !== 1 || typeof value.sourceSha256 !== "string" || typeof value.sourceName !== "string" || typeof value.importedAt !== "number" || !Number.isFinite(value.importedAt) || !isStrings(value.notes)) {
+    return false;
+  }
+  const analysis = value.analysis;
+  return analysis === void 0 || isRecord8(analysis) && (analysis.status === "complete" || analysis.status === "incomplete") && isStrings(analysis.sources) && Array.isArray(analysis.addedCode) && analysis.addedCode.every(isAddedCode);
+}
+function readCaptureImportNotes(directory, sha256) {
+  const file = notesPath(directory, sha256);
+  if (!import_node_fs5.default.existsSync(file)) {
+    return void 0;
+  }
+  const stat = import_node_fs5.default.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024) {
+    throw new Error("Capture notes exceed their 16 MiB regular-file budget.");
+  }
+  const notes = JSON.parse(import_node_fs5.default.readFileSync(file, "utf8"));
+  if (!isCaptureImportNotes(notes) || notes.sourceSha256 !== sha256) {
+    throw new Error("Invalid capture import notes.");
+  }
+  return notes;
+}
+
+// packages/disassembler/src/source-project/project.ts
+var import_node_fs6 = __toESM(require("node:fs"), 1);
+var import_node_path7 = __toESM(require("node:path"), 1);
 function isUnknownArray3(value) {
   return Array.isArray(value);
 }
-function isRecord8(value) {
+function isRecord9(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSafeInteger7(value) {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 function assertSourceProjectConfiguration(value) {
-  if (!isRecord8(value)) {
+  if (!isRecord9(value)) {
     throw new Error("Invalid Git source project configuration.");
   }
   const id = value.id;
@@ -7308,7 +7388,7 @@ function assertSourceProjectConfiguration(value) {
     assertSourcePath(name);
   }
   if (value.limits !== void 0) {
-    if (!isRecord8(value.limits)) {
+    if (!isRecord9(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
     for (const [name, limit] of Object.entries(value.limits)) {
@@ -7325,7 +7405,7 @@ function parseSourceProject(value) {
   return value;
 }
 function assertSourceProjectLocalInputs(value) {
-  if (!isRecord8(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
+  if (!isRecord9(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
     throw new Error(
       "Configure the local ROM and evidence paths before running this source project."
     );
@@ -7333,13 +7413,13 @@ function assertSourceProjectLocalInputs(value) {
 }
 function readSourceProjectLocalInputs(root) {
   const local = JSON.parse(
-    import_node_fs5.default.readFileSync(import_node_path6.default.join(root, ".uttori-local/project.json"), "utf8")
+    import_node_fs6.default.readFileSync(import_node_path7.default.join(root, ".uttori-local/project.json"), "utf8")
   );
   assertSourceProjectLocalInputs(local);
   return {
     ...local,
-    rom: import_node_path6.default.resolve(root, local.rom),
-    evidence: import_node_path6.default.resolve(root, local.evidence)
+    rom: import_node_path7.default.resolve(root, local.rom),
+    evidence: import_node_path7.default.resolve(root, local.evidence)
   };
 }
 
@@ -7350,7 +7430,7 @@ var informationHex = (value, digits = 4) => {
   return `${sign}$${Math.abs(value).toString(16).toUpperCase().padStart(digits, "0")}`;
 };
 var clip = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
-function isRecord9(value) {
+function isRecord10(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function jsonText(value) {
@@ -7363,7 +7443,7 @@ var stateValue = (value, present = true, includeStructures = false) => {
   if (!present) {
     return "\u2205";
   }
-  if (isRecord9(value)) {
+  if (isRecord10(value)) {
     if (value.kind === "known" && "value" in value) {
       return stateValue(value.value, true, includeStructures);
     }
@@ -7608,24 +7688,24 @@ var projectAnalysisNavigation = (project, target, executionCounts) => {
 };
 
 // packages/vscode-extension/src/analysis/research-context.ts
-var import_node_fs6 = __toESM(require("node:fs"), 1);
-var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_fs7 = __toESM(require("node:fs"), 1);
+var import_node_path8 = __toESM(require("node:path"), 1);
 function readConfiguration(file) {
-  if (import_node_fs6.default.statSync(file).size > 1024 * 1024) {
+  if (import_node_fs7.default.statSync(file).size > 1024 * 1024) {
     throw new Error(`Source project configuration exceeds 1 MiB: ${file}`);
   }
-  return JSON.parse(import_node_fs6.default.readFileSync(file, "utf8"));
+  return JSON.parse(import_node_fs7.default.readFileSync(file, "utf8"));
 }
 function analysisResearchContext(directory, preferredRoot) {
-  const evidence = import_node_fs6.default.realpathSync(directory);
+  const evidence = import_node_fs7.default.realpathSync(directory);
   const inspect = (root) => {
-    const file = import_node_path7.default.join(root, ".uttori/project.json");
-    if (!import_node_fs6.default.existsSync(file)) {
+    const file = import_node_path8.default.join(root, ".uttori/project.json");
+    if (!import_node_fs7.default.existsSync(file)) {
       return void 0;
     }
     const configuration = parseSourceProject(readConfiguration(file));
     const local = readSourceProjectLocalInputs(root);
-    if (import_node_fs6.default.realpathSync(local.evidence) !== evidence) {
+    if (import_node_fs7.default.realpathSync(local.evidence) !== evidence) {
       return void 0;
     }
     return {
@@ -7637,17 +7717,17 @@ function analysisResearchContext(directory, preferredRoot) {
     };
   };
   if (preferredRoot) {
-    const selected = inspect(import_node_path7.default.resolve(preferredRoot));
+    const selected = inspect(import_node_path8.default.resolve(preferredRoot));
     if (selected) {
       return selected;
     }
   }
-  for (let root = import_node_path7.default.resolve(directory); ; root = import_node_path7.default.dirname(root)) {
+  for (let root = import_node_path8.default.resolve(directory); ; root = import_node_path8.default.dirname(root)) {
     const selected = inspect(root);
     if (selected) {
       return selected;
     }
-    if (import_node_fs6.default.existsSync(import_node_path7.default.join(root, ".git")) || import_node_path7.default.dirname(root) === root) {
+    if (import_node_fs7.default.existsSync(import_node_path8.default.join(root, ".git")) || import_node_path8.default.dirname(root) === root) {
       return void 0;
     }
   }
@@ -7664,11 +7744,11 @@ var readAnalysisSourceCatalog = (directory) => {
 };
 
 // packages/vscode-extension/src/analysis/worker.ts
-function isRecord10(value) {
+function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isDebugMapRange(value) {
-  return isRecord10(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.start === "number" && typeof value.end === "number" && typeof value.sourceId === "number" && typeof value.line === "number" && (value.outputStart === void 0 || typeof value.outputStart === "number") && (value.outputEnd === void 0 || typeof value.outputEnd === "number");
+  return isRecord11(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.start === "number" && typeof value.end === "number" && typeof value.sourceId === "number" && typeof value.line === "number" && (value.outputStart === void 0 || typeof value.outputStart === "number") && (value.outputEnd === void 0 || typeof value.outputEnd === "number");
 }
 function debugMapRanges(values) {
   if (!values.every(isDebugMapRange)) {
@@ -7678,7 +7758,7 @@ function debugMapRanges(values) {
 }
 var database;
 var projectDatabase = (directory) => {
-  const stat = fs8.statSync(path8.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
+  const stat = fs9.statSync(path9.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
   const identity = `${stat.dev}:${stat.ino}`;
   if (database?.directory !== directory || database.identity !== identity) {
     database?.store.close();
@@ -7773,23 +7853,15 @@ var projectRequest = (message) => {
       return output;
     }, false);
   }
-  if (message.operation === "sourceSummary" || message.operation === "sourceEntries") {
-    if (!message.sourceId) {
+  if (message.operation === "sourceNotes") {
+    const source = store.transaction(
+      () => store.sourceCatalog().sources.find(({ id }) => id === message.sourceId),
+      false
+    );
+    if (!source) {
       throw new Error("Choose a source to inspect.");
     }
-    store.prepareSourceQueries();
-    if (message.operation === "sourceEntries" && message.sourceGroup === "instructions") {
-      store.prepareAnnotationQueries();
-    }
-    return store.transaction(() => {
-      if (message.operation === "sourceSummary") {
-        return store.sourceSummary(message.sourceId);
-      }
-      if (!message.sourceGroup) {
-        throw new Error("Choose a source contribution group.");
-      }
-      return store.sourcePage(message.sourceId, message.sourceGroup, message.offset);
-    }, false);
+    return source.sha256 ? readCaptureImportNotes(message.directory, source.sha256) ?? null : null;
   }
   const manifest = store.transaction(() => store.manifest(), false);
   if (message.operation === "manifest") {
@@ -7839,8 +7911,8 @@ var projectRequest = (message) => {
   if (message.operation === "coverage") {
     return store.coverageSummary();
   }
-  if (message.operation === "segments" || message.operation === "details") {
-    return store.coveragePage(message.operation, message.offset);
+  if (message.operation === "coverageConflicts") {
+    return store.coverageConflicts(message.offset);
   }
   throw new Error("Unknown analysis worker operation.");
 };
@@ -7862,7 +7934,7 @@ var request = (message) => {
       store.writePointer(message.directory);
     }
   }
-  if (["coverage", "segments", "details", "annotations", "debugAnnotations", "navigation"].includes(
+  if (["coverage", "coverageConflicts", "annotations", "debugAnnotations", "navigation"].includes(
     message.operation
   )) {
     store.assertCurrentAnalysis();

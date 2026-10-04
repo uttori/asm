@@ -33,10 +33,24 @@ This example demonstrates assembly. It is not a bootable game. For NES / 6502 pr
 - `includeAsset` format/option completion, path navigation, image thumbnails, and WAVE/BRR comparison previews.
 
 Run **Assembly Source: Create Git Source Project** (or **Create Git Source Project from Diz Research**).
-Use the **Source Project** tree to select a project, import captures, analyze evidence, prepare and
-preview regeneration, and apply it after a Git checkpoint. Resolve conflicts in VS Code's native
-Merge Editor and Source Control, then **Validate and Finish Merge**. Assembly and assets are ordinary
-editable files. F2 updates supported symbol uses and their tracked research identity. **Edit Symbol
+The **Source Project** tree shows a **Next** action and an ordered **Update Source from Evidence** flow:
+
+1. **Analyze Evidence** after importing captures or changing analysis research.
+2. **Prepare Regeneration** to generate an incoming candidate.
+3. **Preview with Current Edits** to review the proposed merge, including supported unsaved edits.
+4. Save files and commit your reviewed checkpoint in Source Control, then **Apply Previewed Generation**.
+5. Resolve conflicts with the native Merge Editor and stage the intended changes in Source Control.
+6. **Validate and Finish Regeneration** builds the staged result, validates it and creates the merge commit.
+
+If retained captures are missing from the tracked catalog, **Next** first offers **Refresh Capture Catalog**.
+This records their identities without reimporting captures or regenerating source.
+
+**Build Current Source** is separate: save your edits and build whenever you want to run or debug.
+It requires no Git commit and does not incorporate new evidence. If an input changes during a build,
+the error names the affected files, offers **Save All and Rebuild**, and links to **Uttori Analysis**
+output for details. Unchanged save notifications and unrelated evidence/output files do not reject a build.
+
+Assembly and assets are ordinary editable files. F2 updates supported symbol uses and their tracked research identity. **Edit Symbol
 Research** and **Edit Analysis Research** open normal JSON documents with native undo, save and Git diffs.
 
 Hover a PNG `includeAsset` statement to inspect source and native sizes and its composed thumbnail. Open the restricted **Asset Preview** link for composed and native storage order. Hover a WAVE-to-BRR statement for a waveform and select **Play source PCM and decoded BRR** to open a player. Playback begins only when you press a player control and stops when the panel closes or hides. A missing, invalid, cancelled, or edited input does not reuse old media. Preview is available in trusted file workspaces; builds remain authoritative for custom converters, numeric expressions, and emitted addresses.
@@ -46,7 +60,15 @@ backend/runtime. The extension builds that workspace and supplies the verified R
 fixed `program`/`debugMap` paths are unnecessary. A failed build cancels launch. Build & Run,
 Build & Debug and Watch use the same selected source workflow.
 
+The **Capture** group in Source Project exposes **Start Capture**, **Stop Capture**, and **Stop
+Capture and Import Evidence**. Launch either an ares golden-ROM or Git source debug session,
+choose the recording file, then Continue (F5) to record execution. Stop finalizes the archive and
+offers import; Stop and Import also imports it into the selected source project. Recording and
+finalization state stays visible, including recordings started from the command palette. The
+Source Project title also has Record/Stop buttons during an ares debug session.
+
 Indexed PNG and palette custom editors share VS Code's save/undo/recovery lifecycle. Preview can include unsaved supported text and binary edits; merge application requires saving and committing a checkpoint.
+Apply appears after preview and a clean saved checkpoint, and is retired when the merge starts. Finish becomes available once conflicts are resolved and changes staged. Finish clears the completed candidate, including stale selections restored from editor state. After reloading with a pending candidate, preview again before applying; a missing private preview produces a recovery instruction instead of a filesystem error.
 
 ## Editor Information
 
@@ -96,7 +118,7 @@ Use `uttori-asm.config.json` for project plugins, target, architecture, and path
 
 Built-in assembly works in Restricted Mode. Workspace plugins execute code and require Workspace Trust. Analysis edits and live emulator launch require a trusted local filesystem workspace. Virtual workspaces are unsupported. Remote native-emulator workflows have not been validated. Replay is a snapshot viewer, not an emulator. Ares capabilities depend on its separately verified runtime.
 
-For build failures, check **Output → Uttori Assembly Language Server**. Analysis and emulator operations have **Uttori Analysis** and **Uttori Emulator** output channels. Rebuild stale debug maps or regenerate stale source before retrying navigation/debugging.
+For Git source builds, regeneration, imports and analysis queries, check **Output → Uttori Analysis**. It is available as soon as the extension activates and opens automatically when a source command fails. Standalone assembly builds and language-server diagnostics use **Uttori Assembly Language Server**; emulator operations use **Uttori Emulator**. Rebuild stale debug maps or regenerate stale source before retrying navigation/debugging.
 
 Document formatting is unsupported in v1.0.0.
 

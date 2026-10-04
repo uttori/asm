@@ -37,6 +37,8 @@ const host = {
   executed: [] as unknown[][],
   errors: [] as string[],
   infos: [] as string[],
+  output: [] as { channel: string; level: string; message: string }[],
+  shownOutput: [] as string[],
   stopped: 0,
   clients: [] as { start: () => Promise<void>; stop: () => Promise<void> }[],
 };
@@ -179,14 +181,14 @@ registerHooks({
             visibleTextEditors: [],
             createOutputChannel: (name) => ({
               name,
-              info() {},
-              error() {},
+              info(message) { host.output.push({ channel: name, level: "info", message }); },
+              error(message) { host.output.push({ channel: name, level: "error", message }); },
               warn() {},
               debug() {},
               trace() {},
               appendLine() {},
               append() {},
-              show() {},
+              show() { host.shownOutput.push(name); },
               hide() {},
               clear() {},
               dispose() {},
@@ -316,6 +318,8 @@ test.serial(
     host.executed = [];
     host.errors = [];
     host.infos = [];
+    host.output = [];
+    host.shownOutput = [];
     host.stopped = 0;
     host.clients = [];
     const context = {
@@ -337,10 +341,18 @@ test.serial(
       throw new Error("extension context stub");
     }
     activate(context);
+    t.true(
+      host.output.some(({ channel, level }) => channel === "Uttori Analysis" && level === "info"),
+    );
     t.true(host.commands.has("asm.build"));
     t.true(host.commands.has("asm.toggleWatch"));
     t.true(host.commands.has("asm.openPanel"));
     t.true(host.commands.has("asm.outline.refresh"));
+    await host.commands.get("asm.source.select")?.(directory);
+    t.true(
+      host.output.some(({ channel, level }) => channel === "Uttori Analysis" && level === "error"),
+    );
+    t.true(host.shownOutput.includes("Uttori Analysis"));
     await host.commands.get("asm.outline.refresh")?.();
     await host.commands.get("asm.openPanel")?.();
     t.true(host.executed.some((args) => args[0] === "uttori-asm.projectPanel.focus"));

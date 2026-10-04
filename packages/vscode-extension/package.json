@@ -51,7 +51,7 @@
     "vscode-languageserver-types": "^3.18.4"
   },
   "devDependencies": {
-    "@types/vscode": "1.140.0",
+    "@types/vscode": "1.125.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2"
   },
@@ -180,19 +180,23 @@
       },
       {
         "command": "asm.trace.start",
-        "title": "Start Runtime Trace Recording",
-        "category": "Assembly"
+        "title": "Start Capture",
+        "category": "Assembly",
+        "icon": "$(record)",
+        "enablement": "isWorkspaceTrusted && debugType == uttori-asm && uttori.capturePhase == idle"
       },
       {
         "command": "asm.trace.stop",
-        "title": "Stop Runtime Trace Recording",
-        "category": "Assembly"
+        "title": "Stop Capture",
+        "category": "Assembly",
+        "icon": "$(debug-stop)",
+        "enablement": "uttori.capturePhase == recording"
       },
       {
         "command": "asm.trace.stopAnalyze",
         "title": "Stop Capture and Import Evidence",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.capturePhase == recording"
       },
       {
         "command": "asm.analysis.showOutput",
@@ -270,6 +274,12 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
+        "command": "asm.source.catalog",
+        "title": "Refresh Capture Catalog",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.source.prepare",
         "title": "Prepare Regeneration",
         "category": "Assembly",
@@ -283,7 +293,7 @@
       },
       {
         "command": "asm.source.apply",
-        "title": "Apply Regeneration after Checkpoint",
+        "title": "Apply Previewed Generation",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
@@ -313,7 +323,7 @@
       },
       {
         "command": "asm.source.build",
-        "title": "Build and Check Source",
+        "title": "Build Current Source",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
@@ -407,6 +417,16 @@
         }
       ],
       "view/title": [
+        {
+          "command": "asm.trace.start",
+          "when": "view == uttori-asm.sourceProject && debugType == uttori-asm && uttori.capturePhase == idle",
+          "group": "navigation@1"
+        },
+        {
+          "command": "asm.trace.stop",
+          "when": "view == uttori-asm.sourceProject && uttori.capturePhase == recording",
+          "group": "navigation@1"
+        },
         {
           "command": "asm.outline.refresh",
           "when": "view == uttori-asm.projectOutline",
@@ -720,6 +740,11 @@
           "type": "webview",
           "id": "uttori-asm.projectPanel",
           "name": "Project"
+        },
+        {
+          "type": "tree",
+          "id": "uttori-asm.indexDetails",
+          "name": "Index Details"
         },
         {
           "type": "tree",

@@ -5253,6 +5253,19 @@ var coveragePage = (db, kind, offset) => {
   const order = kind === "segments" ? "start" : "kind,id,reason";
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
+var coverageConflictPage = (db, offset) => {
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new Error("Invalid analysis page offset.");
+  }
+  const condition = "json_extract(payload,'$.status')='conflict'";
+  const count = Number(
+    db.prepare(`SELECT count(*) AS n FROM query_coverage_segments WHERE ${condition}`).get().n
+  );
+  const segments = db.prepare(
+    `SELECT payload FROM query_coverage_segments WHERE ${condition} ORDER BY start LIMIT 200 OFFSET ?`
+  ).all(offset).map((row) => JSON.parse(String(row.payload)));
+  return { count, segments };
+};
 
 // packages/disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
@@ -6409,15 +6422,21 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
         const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
           VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
           total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+        const source = incremental ? "query_runtime_variant_pending p CROSS JOIN runtime_observations o ON o.oid=p.oid" : "runtime_observations o NOT INDEXED";
+        const totalObservations = Number(
+          db.prepare(`SELECT count(*) AS n FROM ${source}
+          CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+          WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`).get(architecture, space).n
+        );
         let observations = 0;
         for (const row of db.prepare(runtimeSummaryInputSql(incremental)).iterate(architecture, space)) {
           accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
           observations++;
           if (observations % 4096 === 0) {
-            onProgress?.(observations);
+            onProgress?.(observations, totalObservations);
           }
         }
-        onProgress?.(observations);
+        onProgress?.(observations, totalObservations);
       }, false);
       transaction(() => {
         if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
@@ -8076,6 +8095,11 @@ var SqliteAnalysisStore = class {
     this.coverageSummary();
     return this.transaction(() => coveragePage(this.#database, kind, offset), false);
   }
+  /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
+  coverageConflicts(offset = 0) {
+    this.coverageSummary();
+    return this.transaction(() => coverageConflictPage(this.#database, offset), false);
+  }
   /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
    * @returns {object} Functions, calls, unresolved sites, and ownership.
    */
@@ -8205,7 +8229,7 @@ var SqliteAnalysisStore = class {
    * @param {string} space Exact instruction address space.
    * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
    * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-   * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
+   * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
    * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
    * Prepare before starting the consuming read transaction.
    */
@@ -8639,9 +8663,24 @@ var parseAnalysisProjectManifest = (input) => {
   return input;
 };
 var openAnalysisProjectStore = (directory) => {
-  const manifest = parseAnalysisProjectManifest(
-    JSON.parse(fs4.readFileSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
-  );
+  let pointer;
+  try {
+    pointer = fs4.readFileSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+      throw error;
+    }
+    const store = new SqliteAnalysisStore(analysisProjectSqlitePath(directory, {}), false);
+    try {
+      parseAnalysisProjectManifest(store.manifest());
+      store.writePointer(directory);
+      return store;
+    } catch (recoveryError) {
+      store.close();
+      throw recoveryError;
+    }
+  }
+  const manifest = parseAnalysisProjectManifest(JSON.parse(pointer));
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 

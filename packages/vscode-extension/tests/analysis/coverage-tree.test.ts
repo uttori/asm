@@ -180,7 +180,7 @@ test.serial(
 );
 
 test.serial(
-  "AnalysisCoverageProvider loads roots, errors, summaries and paged segments",
+  "AnalysisCoverageProvider loads roots, errors, summaries and paged conflicts",
   async (t) => {
     const provider = new AnalysisCoverageProvider();
     host.analysisProject = "/fixture/zero";
@@ -216,12 +216,7 @@ test.serial(
     t.true(errorRoot.tooltip?.includes("busy"));
 
     host.analysisProject = "/fixture/ok";
-    const segments = [
-      segment({ status: "conflict", conflictIds: ["c1"], runtime: ["executed"] }),
-      segment({ start: 1, end: 2, status: "unknown", classifications: ["unknown"] }),
-      segment({ start: 2, end: 3, runtime: ["executed"] }),
-      segment({ start: 3, end: 5, status: "classified", classifications: ["data"] }),
-    ];
+    const segments = [segment({ status: "conflict", conflictIds: ["c1"], runtime: ["executed"] })];
     host.request = async (_directory, operation, options) => {
       if (operation === "manifest") {
         return manifest;
@@ -233,16 +228,14 @@ test.serial(
             totalBytes: 1,
             classifiedBytes: 1,
             segmentCount: 201,
+            conflictBytes: 1,
             bytesByRuntimeCoverage: { executed: 1, operand: 0, read: 0, written: 0 },
           }),
           detailCount: 2,
         };
       }
-      if (operation === "segments") {
-        return options?.offset === 0 ? segments : [];
-      }
-      if (operation === "details") {
-        return [{ id: "d0", label: "gap", description: "missing file offset", icon: "warning" }];
+      if (operation === "coverageConflicts") {
+        return { count: 201, segments: options?.offset === 0 ? segments : [] };
       }
       throw new Error(operation);
     };
@@ -251,23 +244,16 @@ test.serial(
     const groups = await provider.getChildren(root);
     t.deepEqual(
       groups.map((node) => node.label),
-      [
-        "Summary",
-        "Classifications",
-        "Runtime coverage",
-        "ROM map segments",
-        "Projection diagnostics",
-      ],
+      ["Summary", "Classifications"],
     );
     const romContent = (await provider.getChildren(groups[0])).find(
       (node) => node.label === "ROM content",
     );
     t.is(romContent?.description, "1 byte");
-    const executed = (await provider.getChildren(groups[2])).find(
-      (node) => node.label === "executed",
-    );
-    t.true(executed?.description?.includes("1 byte"));
-    const pages = await provider.getChildren(groups[3]);
+    const conflict = (await provider.getChildren(groups[0])).find(
+      (node) => node.label === "Conflict",
+    )!;
+    const pages = await provider.getChildren(conflict);
     t.is(pages[0]?.label, "Items 1–200");
     t.is(pages[1]?.label, "Items 201–201");
     const loaded = await provider.getChildren(pages[0]);
@@ -279,7 +265,7 @@ test.serial(
         }
         return icon.id;
       }),
-      ["warning", "question", "debug-alt", "symbol-color"],
+      ["warning"],
     );
     t.is(provider.getTreeItem(loaded[0]).contextValue, "analysisCoverageSegment");
     t.deepEqual(provider.editTarget(loaded[0]), {
@@ -294,9 +280,12 @@ test.serial(
     });
     t.is(provider.editTarget(undefined), undefined);
     t.is(provider.editTarget({}), undefined);
-    const details = await provider.getChildren(groups[4]);
-    t.is(details[0]?.id, `${groups[4].id}:d0`);
-    t.is(details[0]?.label, "gap");
+    const actions = await provider.getChildren(loaded[0]);
+    t.is(provider.getTreeItem(actions[1]).command?.command, "asm.coverage.classifyRange");
+    t.deepEqual(
+      provider.editTarget(provider.getTreeItem(actions[1]).command?.arguments?.[0]),
+      provider.editTarget(loaded[0]),
+    );
 
     host.analysisProject = "/fixture/huge";
     host.request = async (_directory, operation) => {
@@ -304,12 +293,19 @@ test.serial(
         return manifest;
       }
       if (operation === "coverage") {
-        return { contentSize: 1, summary: summary({ segmentCount: 40001 }), detailCount: 0 };
+        return { contentSize: 1, summary: summary({ conflictBytes: 1 }), detailCount: 0 };
+      }
+      if (operation === "coverageConflicts") {
+        return { count: 40001, segments: [] };
       }
       throw new Error(operation);
     };
     const hugePages = await provider.getChildren(
-      (await provider.getChildren((await provider.getChildren())[0]))[3],
+      (
+        await provider.getChildren(
+          (await provider.getChildren((await provider.getChildren())[0]))[0],
+        )
+      ).find((node) => node.label === "Conflict")!,
     );
     t.is(hugePages[0]?.label, "Items 1–40000");
     t.is(hugePages[1]?.label, "Items 40001–40001");
@@ -327,7 +323,7 @@ test.serial(
   },
 );
 
-test.serial("segment pages surface worker errors", async (t) => {
+test.serial("conflict pages surface worker errors", async (t) => {
   const provider = new AnalysisCoverageProvider();
   host.analysisProject = "/fixture/page";
   host.request = async (_directory, operation) => {
@@ -335,11 +331,18 @@ test.serial("segment pages surface worker errors", async (t) => {
       return manifest;
     }
     if (operation === "coverage") {
-      return { contentSize: 8, summary: summary({ segmentCount: 2 }), detailCount: 1 };
+      return {
+        contentSize: 8,
+        summary: summary({ segmentCount: 2, conflictBytes: 1 }),
+        detailCount: 1,
+      };
     }
     throw new Error("page failed");
   };
   const groups = await provider.getChildren((await provider.getChildren())[0]);
-  t.is((await provider.getChildren(groups[3]))[0]?.label, "Could not load page");
+  const conflict = (await provider.getChildren(groups[0])).find(
+    (node) => node.label === "Conflict",
+  )!;
+  t.is((await provider.getChildren(conflict))[0]?.label, "Could not load conflicts");
   provider.refresh();
 });

@@ -160,7 +160,7 @@ const isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== unde
  * @param {string} space Exact instruction address space.
  * @param {readonly string[]} fields Ordered decoder fields; other registers remain in full evidence.
  * @param {StateMasks} masks Grouping-only masks for valid numeric fields.
- * @param {Function} [onProgress] Cumulative observations staged in this build; throwing aborts it.
+ * @param {Function} [onProgress] Cumulative and total observations in this build snapshot; throwing aborts it.
  * @returns {IterableIterator<RuntimeEvidenceRecord>} One representative per decoder key and evidence list.
  */
 export const runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress) => {
@@ -195,6 +195,15 @@ export const runtimeInstructionSummary = (db, transaction, architecture, space, 
                 const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
           VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
           total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+                // Count compact location rows in the same snapshot, without invoking the payload decoder.
+                const source = incremental
+                    ? "query_runtime_variant_pending p CROSS JOIN runtime_observations o ON o.oid=p.oid"
+                    : "runtime_observations o NOT INDEXED";
+                const totalObservations = Number(db
+                    .prepare(`SELECT count(*) AS n FROM ${source}
+          CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+          WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`)
+                    .get(architecture, space).n);
                 let observations = 0;
                 // SQLite callbacks can retain native buffer handles until the outer statement returns.
                 // GROUP BY/INSERT SELECT would inflate the whole capture in one step, defeating the bounded
@@ -206,10 +215,10 @@ export const runtimeInstructionSummary = (db, transaction, architecture, space, 
                     accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
                     observations++;
                     if (observations % 4096 === 0) {
-                        onProgress?.(observations);
+                        onProgress?.(observations, totalObservations);
                     }
                 }
-                onProgress?.(observations);
+                onProgress?.(observations, totalObservations);
             }, false);
             transaction(() => {
                 if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !==

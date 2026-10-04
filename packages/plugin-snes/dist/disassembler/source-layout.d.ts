@@ -28,7 +28,8 @@ export declare const omitAssemblyResearchReferences: (source: string) => string;
 /**
  * Wrap assembly comments at whitespace without splitting words, URLs or assembly tokens.
  * Width includes indentation and `; `. Oversized inline comments move above their code;
- * existing line/paragraph boundaries and code indentation are retained. Long words may exceed width.
+ * existing line/paragraph boundaries and code indentation are retained. Fenced comment code
+ * is verbatim, even beyond width; long prose words may also exceed width.
  * Callers validate width as an integer of at least 20 columns.
  * @param {string} source Assembly with original comment paragraph boundaries.
  * @param {number} width Preferred line width including indentation and comment marker.

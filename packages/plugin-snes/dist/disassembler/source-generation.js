@@ -164,7 +164,17 @@ export async function prepareSnesGeneration(options) {
                 throw new Error(`Pristine asset is outside this source projection: ${name}`);
             }
             let bytes;
-            if (asset.romRange) {
+            if (asset.originalBlob !== undefined) {
+                if (asset.romRange || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob)) {
+                    throw new Error(`Invalid original asset blob declaration for ${name}.`);
+                }
+                // Admission pins reviewed bytes, not a path that an editor can mutate during preparation.
+                // The full original-ROM build below must succeed before any candidate is retained.
+                bytes = (await sourceGit(options.repository.root, ["cat-file", "blob", asset.originalBlob], {
+                    signal: options.signal,
+                })).stdout;
+            }
+            else if (asset.romRange) {
                 const { start, end } = asset.romRange;
                 if (!Number.isSafeInteger(start) ||
                     !Number.isSafeInteger(end) ||
@@ -184,8 +194,8 @@ export async function prepareSnesGeneration(options) {
                     signal: options.signal,
                 })).stdout;
             }
-            // Both admission routes verify immutable inputs. A working PNG, native stream,
-            // or resource edit can never become the next pure baseline by being reread here.
+            // Every admission route verifies immutable inputs. Working source edits are
+            // merged separately; no mutable PNG, stream or resource path is reread here.
             if (sourceContentHash(bytes) !== asset.sha256) {
                 throw new Error(`Pristine asset content does not match its declared identity: ${name}`);
             }

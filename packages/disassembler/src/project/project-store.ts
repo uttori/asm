@@ -45,16 +45,33 @@ export const parseAnalysisProjectManifest = (input: unknown): AnalysisProjectMan
 };
 
 /**
- * Open the existing database selected by a validated pointer, without creating missing files.
- * Requires a readable, valid analysis.json even when the database exists. Opening checks the
- * physical format, not every record. Snapshot loaders perform semantic validation.
- * @param {string} directory Project root containing analysis.json.
+ * Open an existing database without initializing storage. A missing watcher pointer is recovered
+ * from its validated SQLite manifest; malformed or unreadable pointers still fail explicitly.
+ * Opening checks the physical format, not every record. Snapshot loaders validate records.
+ * @param {string} directory Project root containing analysis.sqlite and an optional watcher pointer.
  * @returns {SqliteAnalysisStore} Owned connection. Close exactly once in a finally block.
  */
 export const openAnalysisProjectStore = (directory: string): SqliteAnalysisStore => {
-  const manifest = parseAnalysisProjectManifest(
-    JSON.parse(fs.readFileSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8")),
-  );
+  let pointer: string;
+  try {
+    pointer = fs.readFileSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+      throw error;
+    }
+    // Ignored local hints can disappear during cleanup. Recover only published current storage;
+    // an absent, empty, unsupported or corrupt database must never become a fresh project.
+    const store = new SqliteAnalysisStore(analysisProjectSqlitePath(directory, {}), false);
+    try {
+      parseAnalysisProjectManifest(store.manifest());
+      store.writePointer(directory);
+      return store;
+    } catch (recoveryError) {
+      store.close();
+      throw recoveryError;
+    }
+  }
+  const manifest = parseAnalysisProjectManifest(JSON.parse(pointer));
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 

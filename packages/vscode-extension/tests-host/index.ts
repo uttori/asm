@@ -18,6 +18,7 @@ import { runPngEditorSmoke } from "./png-editor.js";
 import { runReleaseAcceptance } from "./release-acceptance.js";
 import { runSourceGitUiSmoke } from "./source-git-ui.js";
 import { runSourceLaunchSmoke } from "./source-launch.js";
+import { runSourceLifecycleSmoke } from "./source-lifecycle.js";
 import { runSourceWorkflowSmoke } from "./source-workflow.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -490,6 +491,9 @@ export async function run(): Promise<void> {
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
   if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
+    if (process.env.UTTORI_VSCODE_SOURCE_LIFECYCLE === "1") {
+      return runSourceLifecycleSmoke(folder);
+    }
     if (process.env.UTTORI_VSCODE_SOURCE_LAUNCH === "1") {
       return runSourceLaunchSmoke(folder);
     }
@@ -579,31 +583,24 @@ export async function run(): Promise<void> {
       vscode.TreeItemCollapsibleState.Collapsed,
     );
     const groups = await coverage.getChildren(roots[0]);
-    const segments = groups.find(({ label }) => label === "ROM map segments");
-    assert.ok(segments);
-    const pages = await coverage.getChildren(segments);
-    assert.equal(pages.length, 3);
-    assert.equal((await coverage.getChildren(pages[0])).length, 200);
+    assert.deepEqual(
+      groups.map(({ label }) => label),
+      ["Summary", "Classifications"],
+    );
+    const conflict = (await coverage.getChildren(groups[0])).find(
+      ({ label }) => label === "Conflict",
+    );
+    assert.ok(conflict);
     const sources = new AnalysisSourcesProvider();
     try {
       const sourceRoots = await sources.getChildren();
       const chest = sourceRoots.find(({ label }) => label === "chest.json");
       assert.ok(chest);
       const sourceGroups = await sources.getChildren(chest);
-      // Sources show directly observed addresses. Overlap with another capture is retained.
-      const observed = sourceGroups.find(({ label }) => label === "Observed instructions");
-      assert.ok(observed);
-      assert.equal(sources.getTreeItem(observed).description, "500");
-      const sourcePages = await sources.getChildren(observed);
-      assert.equal(sourcePages.length, 3);
-      const entries = await sources.getChildren(sourcePages[0]);
-      assert.equal(entries.length, 200);
-      assert.equal(sources.getTreeItem(entries[0]).command?.command, "asm.analysis.navigate");
-      const location: unknown = sources.getTreeItem(entries[0]).command?.arguments?.[0];
-      if (!isRecord(location)) {
-        assert.fail("Navigate command is missing its address.");
-      }
-      assert.equal(location.address, 0x808000);
+      assert.deepEqual(
+        sourceGroups.map(({ label }) => label),
+        ["No generated notes for this legacy import"],
+      );
       await vscode.commands.executeCommand("uttori-asm.sources.focus");
     } finally {
       sources.dispose();

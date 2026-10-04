@@ -2,7 +2,7 @@ import { rewriteIndexedPng } from "@uttori/asm-assets/image";
 import { readAssetPng } from "../png.js";
 import { convertBossImage } from "./som-asset-plugin.js";
 import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atlas.js";
-import { spritePaletteBytes, spritePaletteColors, } from "./som-sprite-palettes.js";
+import { spritePaletteBytes, spritePaletteColors, validateSpritePaletteAliases, } from "./som-sprite-palettes.js";
 /** A use is an identity tuple, not a display name or an ordering-dependent user entry.
  * @param {string} palette Catalogue palette id.
  * @param {string} atlas Atlas id.
@@ -141,6 +141,7 @@ export function frameAtlasPreservedChunks(atlas, catalog) {
  * @returns {{catalog: SpritePaletteCatalog, images: Map<string, Uint8Array>, palettes: string[]}} Updated catalogue and owned PNG bytes.
  */
 export function planSpritePaletteEdits(catalog, atlases, edits) {
+    validateSpritePaletteAliases(catalog);
     const audit = inspectSpritePaletteUsers(catalog, atlases);
     if (audit.errors.length) {
         throw new Error(audit.errors.join("\n"));
@@ -159,11 +160,11 @@ export function planSpritePaletteEdits(catalog, atlases, edits) {
             edit.rgb.length !== 3) {
             throw new Error(`Invalid palette slot ${edit.palette}:${edit.index}.`);
         }
-        const key = `${edit.palette}:${edit.index}`;
-        if (slots.has(key)) {
-            throw new Error(`Duplicate palette edit ${key}.`);
+        const address = Number.parseInt(record.romAddress, 16) + offset * 2;
+        if (slots.has(address)) {
+            throw new Error(`Duplicate palette edit ${edit.palette}:${edit.index}.`);
         }
-        slots.add(key);
+        slots.add(address);
         const channels = edit.rgb.map((color) => {
             if (!Number.isInteger(color) || color < 0 || color > 255) {
                 throw new Error("Palette edits require RGB8.");
@@ -181,8 +182,15 @@ export function planSpritePaletteEdits(catalog, atlases, edits) {
             .toUpperCase()
             .padStart(4, "0");
         if (record.words[offset].toUpperCase() !== word) {
-            record.words[offset] = word;
-            changed.add(edit.palette);
+            // Several displayed palettes can alias a physical word. Propagate the edit
+            // before updating every affected PNG so their colors cannot disagree with ROM.
+            for (const [id, alias] of Object.entries(next.palettes)) {
+                const index = (address - Number.parseInt(alias.romAddress, 16)) / 2;
+                if (Number.isInteger(index) && index >= 0 && index < alias.words.length) {
+                    alias.words[index] = word;
+                    changed.add(id);
+                }
+            }
         }
     }
     const images = new Map();

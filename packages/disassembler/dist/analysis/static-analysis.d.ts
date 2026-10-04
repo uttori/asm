@@ -134,6 +134,14 @@ export interface StaticAnalysisLimits {
     readonly maxWorkItems?: number;
     /** Nonnegative call-context depth. Zero discards call history, and deeper calls report a bound. */
     readonly maxCallDepth?: number;
+    /** Cumulative explored work and remaining queue, reported at bounded intervals and completion.
+     * The queue can grow during discovery; it is not a fixed total. Throwing aborts analysis.
+     */
+    readonly onProgress?: (progress: {
+        readonly processedWorkItems: number;
+        readonly queuedWorkItems: number;
+        readonly instructions: number;
+    }) => void;
 }
 /** Architecture-specific decode and abstract-state operations. */
 export interface StaticAnalysisAdapter<State> {

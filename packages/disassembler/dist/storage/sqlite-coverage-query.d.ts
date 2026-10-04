@@ -34,4 +34,13 @@ export declare const publishCoverage: (db: DatabaseSync) => void;
  * @returns {unknown[]} At most 200 rows.
  */
 export declare const coveragePage: (db: DatabaseSync, kind: "segments" | "details", offset: number) => unknown[];
+/**
+ * Page only conflicting ROM intervals, retaining their evidence IDs for inspection and research edits.
+ * The caller ensures the projection is current and owns the read snapshot. Offsets count conflicts,
+ * not all ROM segments; no full coverage map is materialized.
+ */
+export declare const coverageConflictPage: (db: DatabaseSync, offset: number) => {
+    count: number;
+    segments: unknown[];
+};
 //# sourceMappingURL=sqlite-coverage-query.d.ts.map

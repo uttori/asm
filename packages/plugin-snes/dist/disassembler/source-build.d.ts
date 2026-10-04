@@ -34,6 +34,11 @@ export interface SnesSourceBuild {
     readonly outputFile: string;
     readonly debugMapFile: string;
     readonly inputSha256: string;
+    /** Exact consumed saved files, relative to the source root; timestamps and editor events are not input identities. */
+    readonly inputs: readonly {
+        readonly path: string;
+        readonly sha256: string;
+    }[];
     readonly outputSize: number;
     /** Debugger map identity differs from the SHA-256 of its serialized file. */
     readonly debugMapFingerprint: string;

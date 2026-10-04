@@ -10,18 +10,6 @@
     <title>Assembly Project</title>
   </head>
   <body>
-    <header class="project-header">
-      <div class="heading-row">
-        <strong id="projectName">Assembly Project</strong>
-        <button
-          class="quiet"
-          data-cmd="refresh"
-          title="Refresh project status"
-          aria-label="Refresh project status">
-          ↻
-        </button>
-      </div>
-    </header>
     <p id="trustNotice" class="notice" hidden>Trust this workspace to edit project settings.</p>
     <p id="actionStatus" class="action-status" role="status" aria-live="polite" hidden></p>
     <main>
@@ -44,11 +32,6 @@
           <div class="list" id="includePaths"></div>
           <button class="quiet" data-cmd="addIncludePath" data-trusted>Add Folder…</button>
         </div>
-      </details>
-
-      <details id="diagnosticsSection">
-        <summary>Index Details</summary>
-        <dl class="status section-content" id="status"></dl>
       </details>
     </main>
     <script nonce="{{nonce}}" src="{{scriptUri}}"></script>

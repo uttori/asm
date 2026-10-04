@@ -8,7 +8,7 @@ import {
   SqliteAnalysisStore,
   buildInstructionAnalysisAnnotations,
   openAnalysisProjectStore,
-  type AnalysisSourceGroup,
+  readCaptureImportNotes,
   type ShardKind,
   type InstructionAnalysisAnnotation,
 } from "@uttori/asm-disassembler";
@@ -23,17 +23,12 @@ import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import { analysisResearchContext } from "./research-context.js";
 import { readAnalysisSourceCatalog } from "./sources-data.js";
 
-/**
- * IPC request with a correlation ID, project directory, and operation-specific selectors; loaded
- * project shards never enter the message.
- */
 /** Operations the extension host may request. The worker still rejects any other string. */
 export type AnalysisWorkerOperation =
   | "clear"
   | "manifest"
   | "coverage"
-  | "segments"
-  | "details"
+  | "coverageConflicts"
   | "annotationSummary"
   | "annotations"
   | "debugAnnotations"
@@ -41,9 +36,12 @@ export type AnalysisWorkerOperation =
   | "evidenceChoices"
   | "explainEvidence"
   | "sources"
-  | "sourceSummary"
-  | "sourceEntries";
+  | "sourceNotes";
 
+/**
+ * IPC request with a correlation ID, project directory, and operation-specific selectors; loaded
+ * project shards never enter the message.
+ */
 export interface AnalysisWorkerRequest {
   readonly id: number;
   readonly directory: string;
@@ -55,7 +53,6 @@ export interface AnalysisWorkerRequest {
   readonly sourceId?: string;
   readonly evidenceSelection?: Partial<Record<ShardKind, readonly string[]>>;
   readonly evidenceRecord?: { kind: ShardKind; id: string };
-  readonly sourceGroup?: AnalysisSourceGroup;
   readonly offset?: number;
   readonly ranges?: readonly unknown[];
 }
@@ -203,23 +200,17 @@ const projectRequest = (message: AnalysisWorkerRequest): unknown => {
       return output;
     }, false);
   }
-  if (message.operation === "sourceSummary" || message.operation === "sourceEntries") {
-    if (!message.sourceId) {
+  if (message.operation === "sourceNotes") {
+    const source = store.transaction(
+      () => store.sourceCatalog().sources.find(({ id }) => id === message.sourceId),
+      false,
+    );
+    if (!source) {
       throw new Error("Choose a source to inspect.");
     }
-    store.prepareSourceQueries();
-    if (message.operation === "sourceEntries" && message.sourceGroup === "instructions") {
-      store.prepareAnnotationQueries();
-    }
-    return store.transaction(() => {
-      if (message.operation === "sourceSummary") {
-        return store.sourceSummary(message.sourceId!);
-      }
-      if (!message.sourceGroup) {
-        throw new Error("Choose a source contribution group.");
-      }
-      return store.sourcePage(message.sourceId!, message.sourceGroup, message.offset);
-    }, false);
+    return source.sha256
+      ? (readCaptureImportNotes(message.directory, source.sha256) ?? null)
+      : null;
   }
   const manifest = store.transaction(() => store.manifest(), false);
   if (message.operation === "manifest") {
@@ -272,8 +263,8 @@ const projectRequest = (message: AnalysisWorkerRequest): unknown => {
   if (message.operation === "coverage") {
     return store.coverageSummary();
   }
-  if (message.operation === "segments" || message.operation === "details") {
-    return store.coveragePage(message.operation, message.offset);
+  if (message.operation === "coverageConflicts") {
+    return store.coverageConflicts(message.offset);
   }
   throw new Error("Unknown analysis worker operation.");
 };
@@ -304,7 +295,7 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     }
   }
   if (
-    ["coverage", "segments", "details", "annotations", "debugAnnotations", "navigation"].includes(
+    ["coverage", "coverageConflicts", "annotations", "debugAnnotations", "navigation"].includes(
       message.operation,
     )
   ) {

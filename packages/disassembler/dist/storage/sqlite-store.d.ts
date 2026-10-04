@@ -232,6 +232,11 @@ export declare class SqliteAnalysisStore {
      * @returns {unknown[]} Persisted rows, never the full ROM map.
      */
     coveragePage(kind: "segments" | "details", offset?: number): unknown[];
+    /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
+    coverageConflicts(offset?: number): {
+        count: number;
+        segments: unknown[];
+    };
     /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
      * @returns {object} Functions, calls, unresolved sites, and ownership.
      */
@@ -287,14 +292,14 @@ export declare class SqliteAnalysisStore {
      * @param {string} space Exact instruction address space.
      * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
      * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-     * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
+     * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
      * Prepare before starting the consuming read transaction.
      */
     runtimeInstructionVariants(architecture: string, space: string, stateFields: readonly string[], masks?: Readonly<Record<string, {
         readonly max: number;
         readonly mask: number;
-    }>>, onProgress?: (observations: number) => void): IterableIterator<RuntimeEvidenceRecord>;
+    }>>, onProgress?: (observations: number, totalObservations: number) => void): IterableIterator<RuntimeEvidenceRecord>;
     /** Exact execution seed totals grouped by PC, without decoding execution payloads.
      * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
      * storage. Static seed selection needs their union, not millions of duplicate PC records.

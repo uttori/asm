@@ -12,7 +12,7 @@ import { isFiniteNumber, isRecord, isStringArray, requireMetadataRecord, } from 
 import { validateResearchSnapshot, } from "../research-inputs/inputs.js";
 import { mergeRuntimeEvidence, inspectRuntimeEvidence, } from "../runtime/runtime-evidence.js";
 import { annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, readInstructionExecutionSummary, } from "./sqlite-annotation-query.js";
-import { cachedCoverage, prepareCoverage, coveragePage, coverageSignature, publishCoverage, isSqliteCoverageSummary, } from "./sqlite-coverage-query.js";
+import { cachedCoverage, prepareCoverage, coveragePage, coverageConflictPage, coverageSignature, publishCoverage, isSqliteCoverageSummary, } from "./sqlite-coverage-query.js";
 import { prepareGraph, publishGraph, isCallGraph } from "./sqlite-graph-query.js";
 import { encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
@@ -1298,6 +1298,11 @@ export class SqliteAnalysisStore {
         this.coverageSummary();
         return this.transaction(() => coveragePage(this.#database, kind, offset), false);
     }
+    /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
+    coverageConflicts(offset = 0) {
+        this.coverageSummary();
+        return this.transaction(() => coverageConflictPage(this.#database, offset), false);
+    }
     /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
      * @returns {object} Functions, calls, unresolved sites, and ownership.
      */
@@ -1427,7 +1432,7 @@ export class SqliteAnalysisStore {
      * @param {string} space Exact instruction address space.
      * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
      * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-     * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
+     * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
      * Prepare before starting the consuming read transaction.
      */

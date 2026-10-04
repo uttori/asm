@@ -62,6 +62,55 @@ const commentOffset = (line: string): number => {
 };
 
 /**
+ * Transform prose comments while retaining standalone Markdown code fences verbatim.
+ * Fences cannot cross an assembly instruction or a non-comment line; malformed metadata
+ * therefore cannot suppress formatting in the next code block.
+ * @param {string} source Assembly with semicolon-prefixed comment lines.
+ * @param {(line: string, offset: number) => string[]} transform Prose transform; offset is -1 without a real comment.
+ * @returns {string} Source with fenced comment whitespace and contents unchanged.
+ */
+const mapAssemblyCommentProse = (
+  source: string,
+  transform: (line: string, offset: number) => string[],
+): string => {
+  const output: string[] = [];
+  let fence: { marker: string; length: number } | undefined;
+  for (const line of source.split("\n")) {
+    const offset = commentOffset(line);
+    if (offset < 0 || line.slice(0, offset).trim()) {
+      // Only standalone comment runs own fences; inline comments still follow normal rules.
+      fence = undefined;
+      output.push(...transform(line, offset));
+      continue;
+    }
+    const delimiter = line
+      .slice(offset + 1)
+      .trim()
+      .match(/^(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      output.push(line);
+      // Info strings and shorter/different markers are code, not closing delimiters.
+      if (
+        delimiter &&
+        delimiter[1][0] === fence.marker &&
+        delimiter[1].length >= fence.length &&
+        !delimiter[2].trim()
+      ) {
+        fence = undefined;
+      }
+      continue;
+    }
+    if (delimiter) {
+      fence = { marker: delimiter[1][0], length: delimiter[1].length };
+      output.push(line);
+      continue;
+    }
+    output.push(...transform(line, offset));
+  }
+  return output.join("\n");
+};
+
+/**
  * Remove local research citations from display prose while retaining the explanation.
  * Curated metadata keeps the complete evidence. Only the conventional research/ paths
  * are recognized; ordinary links, file names and assembly text are not rewritten.
@@ -91,63 +140,56 @@ export const omitResearchReferences = (text: string): string =>
  * @returns {string} Assembly with evidence-only comment lines removed.
  */
 export const omitAssemblyResearchReferences = (source: string): string =>
-  source
-    .split("\n")
-    .flatMap((line) => {
-      const offset = commentOffset(line);
-      if (offset < 0) {
-        return [line];
-      }
-      const body = line.slice(offset + 1);
-      if (!/(?:\.\.\/)*research\//i.test(body)) {
-        return [line];
-      }
-      const comment = omitResearchReferences(body);
-      if (comment) {
-        return [`${line.slice(0, offset)}; ${comment}`];
-      }
-      const code = line.slice(0, offset).trimEnd();
-      return code ? [code] : [];
-    })
-    .join("\n");
+  mapAssemblyCommentProse(source, (line, offset) => {
+    if (offset < 0) {
+      return [line];
+    }
+    const body = line.slice(offset + 1);
+    if (!/(?:\.\.\/)*research\//i.test(body)) {
+      return [line];
+    }
+    const comment = omitResearchReferences(body);
+    if (comment) {
+      return [`${line.slice(0, offset)}; ${comment}`];
+    }
+    const code = line.slice(0, offset).trimEnd();
+    return code ? [code] : [];
+  });
 
 /**
  * Wrap assembly comments at whitespace without splitting words, URLs or assembly tokens.
  * Width includes indentation and `; `. Oversized inline comments move above their code;
- * existing line/paragraph boundaries and code indentation are retained. Long words may exceed width.
+ * existing line/paragraph boundaries and code indentation are retained. Fenced comment code
+ * is verbatim, even beyond width; long prose words may also exceed width.
  * Callers validate width as an integer of at least 20 columns.
  * @param {string} source Assembly with original comment paragraph boundaries.
  * @param {number} width Preferred line width including indentation and comment marker.
  * @returns {string} Equivalent assembly with bounded comment lines.
  */
 export const wrapAssemblyComments = (source: string, width: number): string =>
-  source
-    .split("\n")
-    .flatMap((line) => {
-      const offset = commentOffset(line);
-      if (offset < 0 || line.length <= width) {
-        return [line];
+  mapAssemblyCommentProse(source, (line, offset) => {
+    if (offset < 0 || line.length <= width) {
+      return [line];
+    }
+    const code = line.slice(0, offset).trimEnd();
+    const indent = line.match(/^\s*/)?.[0] ?? "";
+    const prefix = `${indent}; `;
+    const words = line
+      .slice(offset + 1)
+      .trim()
+      .split(/\s+/);
+    const wrapped: string[] = [];
+    let current = prefix;
+    for (const word of words) {
+      if (current !== prefix && current.length + 1 + word.length > width) {
+        wrapped.push(current);
+        current = prefix;
       }
-      const code = line.slice(0, offset).trimEnd();
-      const indent = line.match(/^\s*/)?.[0] ?? "";
-      const prefix = `${indent}; `;
-      const words = line
-        .slice(offset + 1)
-        .trim()
-        .split(/\s+/);
-      const wrapped: string[] = [];
-      let current = prefix;
-      for (const word of words) {
-        if (current !== prefix && current.length + 1 + word.length > width) {
-          wrapped.push(current);
-          current = prefix;
-        }
-        current += `${current === prefix ? "" : " "}${word}`;
-      }
-      wrapped.push(current);
-      if (code) {
-        wrapped.push(code);
-      }
-      return wrapped;
-    })
-    .join("\n");
+      current += `${current === prefix ? "" : " "}${word}`;
+    }
+    wrapped.push(current);
+    if (code) {
+      wrapped.push(code);
+    }
+    return wrapped;
+  });

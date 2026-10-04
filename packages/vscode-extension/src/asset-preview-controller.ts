@@ -304,7 +304,7 @@ export class AssetPreviewController implements Disposable {
             width > 0 &&
             width <= 256
           ) {
-            paletteStyle = ` style="image-rendering:pixelated;max-width:100%;width:${width * 8}px;height:auto"`;
+            paletteStyle = ` style="image-rendering:pixelated;width:${width * 8}px;height:auto"`;
           }
         }
         body += `<h2>Composed image</h2><img alt="Composed asset"${paletteStyle} src="data:image/png;base64,${media.composedPngBase64}">`;
@@ -327,7 +327,8 @@ export class AssetPreviewController implements Disposable {
         body += `<h2>Decoded BRR</h2><audio controls preload="none" src="data:audio/wav;base64,${media.decodedWavBase64}"></audio>`;
       }
     }
-    panel.webview.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; style-src 'unsafe-inline'"><style>body{font:13px sans-serif;padding:16px}img{max-width:100%;image-rendering:pixelated}audio{display:block;width:100%}</style></head><body>${body}</body></html>`;
+    // Preserve native pixels and allow scrolling; fitting the viewport hides full-size image detail.
+    panel.webview.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; style-src 'unsafe-inline'"><style>body{font:13px sans-serif;padding:16px}img{max-width:none;image-rendering:pixelated}audio{display:block;width:100%}</style></head><body>${body}</body></html>`;
   }
 
   /** Dispose the panel to stop any active audio element. */

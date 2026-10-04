@@ -136,6 +136,14 @@ export interface StaticAnalysisLimits {
   readonly maxWorkItems?: number;
   /** Nonnegative call-context depth. Zero discards call history, and deeper calls report a bound. */
   readonly maxCallDepth?: number;
+  /** Cumulative explored work and remaining queue, reported at bounded intervals and completion.
+   * The queue can grow during discovery; it is not a fixed total. Throwing aborts analysis.
+   */
+  readonly onProgress?: (progress: {
+    readonly processedWorkItems: number;
+    readonly queuedWorkItems: number;
+    readonly instructions: number;
+  }) => void;
 }
 
 /** Architecture-specific decode and abstract-state operations. */
@@ -531,6 +539,14 @@ export const analyzeStaticControlFlow = <State>(
     }
     const item = queue.shift()!;
     processedWorkItems++;
+    // Report before early-continue paths so repeated state joins still show forward progress.
+    if (processedWorkItems % 4096 === 0) {
+      options.onProgress?.({
+        processedWorkItems,
+        queuedWorkItems: queue.length,
+        instructions: nodes.size,
+      });
+    }
     const enteredState = adapter.enterAddress?.(item.state, item.address) ?? item.state;
     const nodeId = nodeIdFor(item.address, item.context);
     const previousState = states.get(nodeId);
@@ -786,6 +802,12 @@ export const analyzeStaticControlFlow = <State>(
       });
     }
   }
+
+  options.onProgress?.({
+    processedWorkItems,
+    queuedWorkItems: queue.length,
+    instructions: nodes.size,
+  });
 
   const reachedOffsets = new Set<number>();
   for (const offsets of ownedByNode.values()) {

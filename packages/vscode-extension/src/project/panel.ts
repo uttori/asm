@@ -62,7 +62,7 @@ type ProjectMetadata = {
 };
 
 /**
- * Webview view that edits `asm.*` settings and displays analysis status.
+ * Webview view that edits `asm.*` settings. Index facts are displayed by the native Index Details view.
  * @see https://code.visualstudio.com/api/references/vscode-api#WebviewViewProvider
  * @see https://code.visualstudio.com/api/references/vscode-api#WorkspaceConfiguration.update
  * @see https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
@@ -124,7 +124,6 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       type: "snapshot",
       ...snapshot,
       trusted: workspace.isTrusted,
-      projectName: workspace.name,
     });
   }
 
@@ -163,7 +162,6 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   private async executeMessage(message: { type: string; value?: unknown }): Promise<void> {
     switch (message.type) {
       case "ready":
-      case "refresh":
         await this.refresh();
         return;
       case "initConfig":
