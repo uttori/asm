@@ -12,22 +12,30 @@ import { buildSnesSource } from "../../packages/plugin-snes/src/disassembler/sou
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const root = path.join(application, "experiments/secret-of-mana-git-workflow-full");
 const configFile = path.join(root, "disassembly/uttori-asm.config.json");
+/** @type {Array<{path:string,sha256:string}>} Source identities included in the toolchain hash. */
 const inputs = [];
+/** Collect regular source files in stable order so toolchain identities are reproducible.
+ * @param {string} directory Source directory to traverse recursively.
+ * @returns {void} Appends file hashes to inputs.
+ */
 function collect(directory) {
   for (const item of fs
     .readdirSync(directory, { withFileTypes: true })
     .toSorted((a, b) => a.name.localeCompare(b.name))) {
     const file = path.join(directory, item.name);
-    if (item.isDirectory()) collect(file);
-    else if (item.isFile())
+    if (item.isDirectory()) {
+      collect(file);
+    } else if (item.isFile()) {
       inputs.push({
         path: path.relative(application, file),
         sha256: sourceContentHash(fs.readFileSync(file)),
       });
+    }
   }
 }
-for (const name of ["core", "plugin-snes", "assets", "disassembler", "plugin-loader-node"])
+for (const name of ["core", "plugin-snes", "assets", "disassembler", "plugin-loader-node"]) {
   collect(path.join(application, "packages", name, "src"));
+}
 inputs.push({
   path: "package-lock.json",
   sha256: sourceContentHash(fs.readFileSync(path.join(application, "package-lock.json"))),

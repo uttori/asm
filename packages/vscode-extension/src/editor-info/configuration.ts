@@ -64,6 +64,8 @@ export interface EditorInformationConfiguration {
  * @param {string} key Relative key under asm.
  * @returns {T | undefined} Effective explicit value, preserving VS Code's language/scope precedence.
  */
+// The caller selects VS Code's setting contract, matching inspect<T> and get<T>.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 export const explicitSetting = <T>(
   configuration: WorkspaceConfiguration,
   key: string,

@@ -20,7 +20,7 @@ import { renderWebviewTemplate } from "../webview-template.js";
  * Language-server status snapshot for the settings panel, including index counts, last-reindex
  * milliseconds, and effective project settings.
  */
-type ProjectStatus = {
+export type ProjectStatus = {
   fileCount: number;
   symbolCount: number;
   referenceCount: number;
@@ -42,7 +42,7 @@ type ProjectStatus = {
  * Target or architecture catalog option supplied by the language server; target entries may
  * advertise architecture/output defaults.
  */
-type CatalogEntry = {
+export type CatalogEntry = {
   id: string;
   displayName?: string;
   aliases?: string[];
@@ -54,7 +54,7 @@ type CatalogEntry = {
  * Available target/architecture catalogs and active IDs used to populate and validate panel
  * selections.
  */
-type ProjectMetadata = {
+export type ProjectMetadata = {
   activeTarget: string;
   activeArchitecture: string;
   targets: CatalogEntry[];
@@ -164,18 +164,6 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       case "ready":
         await this.refresh();
         return;
-      case "initConfig":
-        await this.initConfig();
-        await this.refresh();
-        return;
-      case "openConfig": {
-        const { status } = await this.snapshot();
-        const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (root && status.configFile) {
-          await window.showTextDocument(Uri.file(path.resolve(root, status.configFile)));
-        }
-        return;
-      }
       case "addEntryPoint":
         await this.addPath("entryPoints", false);
         return;
@@ -199,6 +187,21 @@ export class ProjectPanelProvider implements WebviewViewProvider {
         return;
       default:
         return;
+    }
+  }
+
+  /** Opens the effective project configuration, initializing the default file when none is configured. */
+  async openConfiguration(): Promise<void> {
+    const { status } = await this.snapshot();
+    const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (root && status.configFile) {
+      await window.showTextDocument(Uri.file(path.resolve(root, status.configFile)));
+      return;
+    }
+    // Initialization preserves an existing default file and derives missing settings from the host.
+    if (!status.configFile) {
+      await this.initConfig();
+      await this.refresh();
     }
   }
 

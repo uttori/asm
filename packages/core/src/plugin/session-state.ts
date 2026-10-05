@@ -15,16 +15,6 @@ import type { OwnedContribution } from "./environment.js";
 export type PluginStateSnapshot = Map<string, unknown>;
 
 /**
- * Values in the session map are the objects each slot factory returned.
- * The key brand is the type of that factory; the id selects which entry.
- * @param {unknown} value Stored slot value.
- * @returns {boolean} Whether `value` is the branded slot type.
- */
-function isSlotValue<T>(value: unknown): value is T {
-  return value !== undefined || Object.is(value, undefined);
-}
-
-/**
  * Owns the mutable plugin state for exactly one assembler session.
  *
  * Values are created once per session, cloned into stage snapshots, restored when a
@@ -79,13 +69,10 @@ export class PluginSessionStateStore implements SessionStateStore {
       });
     }
     const value = this.#values.get(slot.id);
-    if (!isSlotValue<T>(value)) {
-      throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
-        code: "PLUGIN_CONFIGURATION_INVALID",
-        contributionId: slot.id,
-      });
-    }
-    return value;
+    // The branded key selects a value created by its owning factory, including legitimate undefined values.
+    // Runtime shape checks cannot establish a plugin-defined T; the factory/key contract owns this boundary.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    return value as T;
   }
 
   /**

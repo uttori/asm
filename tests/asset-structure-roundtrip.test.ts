@@ -183,7 +183,7 @@ test("production tilemap host edits native owners and preserves the complete ROM
   t.is((await service.apply(manifest, output, noEdit.id)).transaction, undefined);
   const after = {
     ...before,
-    palette: before.palette.map((color): [number, number, number, number] => [...color]),
+    palette: before.palette.map(([r, g, b, a]): [number, number, number, number] => [r, g, b, a]),
   };
   after.tilesets[0].indexes[64] ^= 1;
   after.palette[1] = [16, 0, 0, 255];

@@ -88,6 +88,8 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
     await vscode.window.showTextDocument(buffer);
     await vscode.commands.executeCommand("undo");
     const undoDeadline = Date.now() + 5000;
+    // The document-change event updates isDirty while the delay yields; the prior assertion is only a snapshot.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     while (buffer.isDirty && Date.now() < undoDeadline) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
@@ -99,7 +101,7 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
       "uttori.indexedPng",
       { preview: false },
     );
-    const png = await vscode.commands.executeCommand<{ dirty: boolean }>(
+    const png = await vscode.commands.executeCommand<{ dirty: boolean } | undefined>(
       "uttori.tests.png",
       image,
       2,
@@ -115,7 +117,12 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
       undefined,
     );
     assert.equal(
-      (await vscode.commands.executeCommand<{ dirty: boolean }>("uttori.tests.png", image))?.dirty,
+      (
+        await vscode.commands.executeCommand<{ dirty: boolean } | undefined>(
+          "uttori.tests.png",
+          image,
+        )
+      )?.dirty,
       true,
     );
     assert.deepEqual(fs.readFileSync(image), imageBefore);
@@ -131,7 +138,7 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
     const revertDeadline = Date.now() + 5000;
     let clean = false;
     while (!clean && Date.now() < revertDeadline) {
-      const state = await vscode.commands.executeCommand<{ dirty: boolean }>(
+      const state = await vscode.commands.executeCommand<{ dirty: boolean } | undefined>(
         "uttori.tests.png",
         image,
         undefined,
@@ -145,7 +152,8 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
             tab.isDirty,
         ),
       );
-      clean = state?.dirty === false && !dirtyTab;
+      // Missing command results cannot prove that the custom document has finished reverting.
+      clean = state !== undefined && !state.dirty && !dirtyTab;
       if (!clean) {
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
@@ -205,21 +213,20 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
         listener?.dispose();
       }
     });
-    const applied = await vscode.commands.executeCommand<{ review: unknown; transaction: string }>(
-      "asm.asset.apply",
-      {
-        action: "asset-apply",
-        directory: root,
-        document,
-        manifest,
-        review: reviewed.id,
-      },
-    );
+    const applied = await vscode.commands.executeCommand<
+      { review: unknown; transaction: string } | undefined
+    >("asm.asset.apply", {
+      action: "asset-apply",
+      directory: root,
+      document,
+      manifest,
+      review: reviewed.id,
+    });
     assert.ok(applied?.transaction);
     assert.equal(readAssetImportReview(applied.review).id, reviewed.id);
-    const build = await vscode.commands.executeCommand<{ verification: { outputSha256: string } }>(
-      "asm.source.build",
-    );
+    const build = await vscode.commands.executeCommand<
+      { verification: { outputSha256: string } } | undefined
+    >("asm.source.build");
     assert.equal(build?.verification.outputSha256, hash(expected));
     checks.push(
       "the live publication gate applies the exact reviewed plan and the normal full ROM matches the independent bit oracle",
@@ -232,7 +239,7 @@ export async function runAssetInterchangeSmoke(folder: vscode.WorkspaceFolder): 
     report.error = error instanceof Error ? error.stack : String(error);
     throw error;
   } finally {
-    for (const resource of resources.reverse()) {
+    for (const resource of resources.toReversed()) {
       resource.dispose();
     }
     fs.writeFileSync(

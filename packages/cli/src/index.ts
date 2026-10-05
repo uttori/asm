@@ -191,7 +191,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   const pluginOptions: Record<string, Record<string, unknown>> = {};
   let command: CliCommand = "assemble";
   let startIndex = 0;
-  const requestedCommand = argv[0];
+  const requestedCommand = argv.at(0);
   if (requestedCommand !== undefined && isCliCommand(requestedCommand)) {
     command = requestedCommand;
     startIndex = 1;

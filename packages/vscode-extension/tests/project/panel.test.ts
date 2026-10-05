@@ -193,6 +193,7 @@ test.serial(
   "Project snapshots, settings and path edits round-trip through workspace state",
   async (t) => {
     let configured = 0;
+    let configFile = "asm.json";
     const h = harness({
       initConfig: async () => {
         configured += 1;
@@ -208,7 +209,7 @@ test.serial(
               lastReindexRootCount: 1,
               lastReindexCachedRoots: 0,
               lastReindexAnalyzedRoots: 1,
-              configFile: "asm.json",
+              configFile,
             };
           }
           return {
@@ -250,7 +251,7 @@ test.serial(
           message.type === "snapshot" && message.indexReady && message.status?.fileCount === 4,
       ),
     );
-    await h.provider.onMessage({ type: "openConfig" });
+    await h.provider.openConfiguration();
     t.deepEqual(host.documents, []);
     host.folders = [{ uri: { fsPath: "/project" } }];
     host.config.buildOutput = "game.smc";
@@ -289,10 +290,12 @@ test.serial(
     host.picked = [{ fsPath: "/abs/boot.asm" }];
     await h.provider.onMessage({ type: "addEntryPoint" });
     t.deepEqual(host.config.entryPoints, ["/other/lib", "/abs/boot.asm"]);
-    await h.provider.onMessage({ type: "initConfig" });
+    configFile = "";
+    await h.provider.openConfiguration();
     t.is(configured, 1);
+    configFile = "asm.json";
     host.folders = [{ uri: { fsPath: "/project" } }];
-    await h.provider.onMessage({ type: "openConfig" });
+    await h.provider.openConfiguration();
     t.deepEqual(host.documents, [path.resolve("/project", "asm.json")]);
     await h.provider.onMessage({ type: "ready" });
     h.setVisible(false);

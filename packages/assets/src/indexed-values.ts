@@ -15,11 +15,11 @@ export function indexedPalette(value: unknown): IndexedColor[] {
     const channels: unknown[] = slot;
     const result: [number, number, number, number] = [0, 0, 0, 0];
     for (let channel = 0; channel < 4; channel++) {
-      const value = channels[channel];
-      if (typeof value !== "number") {
+      const channelValue = channels[channel];
+      if (typeof channelValue !== "number") {
         throw new TypeError("Palette channel must be a number.");
       }
-      result[channel] = integer(value, "Palette channel", 0, 255);
+      result[channel] = integer(channelValue, "Palette channel", 0, 255);
     }
     return result;
   });

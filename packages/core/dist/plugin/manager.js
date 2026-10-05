@@ -559,7 +559,7 @@ export class PluginManager {
             const invalidSchema = schema !== undefined &&
                 (!isRecord(schema) ||
                     Object.values(schema).some((field) => !isRecord(field) ||
-                        !["string", "integer", "boolean", "enum"].includes(String(field.type)) ||
+                        !["string", "integer", "boolean", "enum"].includes(field.type) ||
                         (field.type === "enum" && !Array.isArray(field.enum)) ||
                         (field.required !== undefined && typeof field.required !== "boolean") ||
                         (field.resource !== undefined && (!field.resource || field.type !== "string")) ||

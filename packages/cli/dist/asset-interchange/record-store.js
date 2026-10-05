@@ -10,7 +10,8 @@ export function assetHash(bytes) {
     return createHash("sha256").update(bytes).digest("hex");
 }
 const storagePath = assetPath;
-const stagingPattern = /^\.staging-[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/;
+// oxlint-disable-next-line security/detect-unsafe-regex
+const stagingPattern = /^\.staging-[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 /** Staging locators name private crash leftovers and are never valid completed-record identities. */
 export function readAssetStagingId(value) {
     if (typeof value !== "string" || !stagingPattern.test(value)) {
@@ -35,7 +36,8 @@ function recordDirectory(directory) {
 /** Only publication-owned filenames are removable, including a writer killed before its temporary rename. */
 function stagingFileLimit(name) {
     // durableReplace appends a UUID and .tmp; the destination still has to be a known private record file.
-    const temporary = /^(.*)\.([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})\.tmp$/.exec(name), destination = temporary?.[1] ?? name;
+    // oxlint-disable-next-line security/detect-unsafe-regex
+    const temporary = /^(.*)\.([\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12})\.tmp$/.exec(name), destination = temporary?.[1] ?? name;
     if (destination === "record.json") {
         return ASSET_LIMITS.baselineMetadataBytes;
     }

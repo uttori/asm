@@ -45,6 +45,7 @@ if (scope !== "cmos-vendor" && scope !== "huc6280-m740") {
   throw new Error(`Unknown fixture scope '${scope}'.`);
 }
 
+/** Emit a representative ca65 operand; unsupported codecs must fail rather than become implied instructions. */
 function sourceFor(form: InstructionForm, endLabel: string): string {
   const operand = (() => {
     switch (form.mode) {
@@ -118,6 +119,8 @@ function sourceFor(form: InstructionForm, endLabel: string): string {
       case "basePageIndirectIndexedZ":
         return "[$12],z";
     }
+    // Keep a runtime failure for malformed external forms even though the declared union is exhaustive.
+    throw new Error("Unsupported ca65 fixture addressing mode.");
   })();
   return `  ${form.mnemonic}${operand ? ` ${operand}` : ""}`;
 }

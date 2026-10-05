@@ -590,9 +590,11 @@ export class Arch65xx implements ArchitectureEncoder {
       const byteMode = mappedAddressingMode(absoluteToDirect, mode);
       const wordMode = mappedAddressingMode(directToAbsolute, mode);
       const alreadyRequestedWidth =
-        (forcedWidth === 1 && mode?.startsWith("zeroPage")) ||
+        (forcedWidth === 1 && mode !== undefined && mode.startsWith("zeroPage")) ||
         (forcedWidth === 2 &&
-          (mode === "absolute" || mode === "indirect" || mode?.startsWith("absoluteIndexed")));
+          (mode === "absolute" ||
+            mode === "indirect" ||
+            (mode !== undefined && mode.startsWith("absoluteIndexed"))));
       if (!byteMode && !wordMode && !alreadyRequestedWidth) {
         throw this.context.diagnostics.error(
           `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode}.`,

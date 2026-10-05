@@ -116,6 +116,8 @@ export class AresRspDebugBackend {
         }
         return {
             ...ARES_RSP_CAPABILITIES,
+            // Negotiated capabilities must copy nested values so enabling rich trace cannot mutate the shared baseline.
+            // oxlint-disable-next-line oxc/no-map-spread
             architectures: ARES_RSP_CAPABILITIES.architectures.map((architecture) => {
                 if (architecture.architecture === "snes.65816") {
                     return {

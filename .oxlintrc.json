@@ -1,15 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "eslint",
-    "import",
-    "jsdoc",
-    "node",
-    "oxc",
-    "promise",
-    "typescript",
-    "unicorn"
-  ],
+  "plugins": ["eslint", "import", "jsdoc", "node", "oxc", "promise", "typescript", "unicorn"],
   "jsPlugins": [
     "@stylistic/eslint-plugin",
     "eslint-plugin-ava",
@@ -98,12 +89,16 @@
     "WritableStreamDefaultWriter": "readonly"
   },
   "ignorePatterns": [
-    "dist/**",
-    "src/generated/**",
+    // Lint handwritten inputs; emitted JavaScript loses TypeScript contracts and is rebuilt from src.
+    "**/dist/**",
+    "**/src/generated/**",
     "packages/cli/out/**",
     "packages/language-server/out/**",
     "packages/vscode-extension/out/**",
     "packages/vscode-extension/server/**",
+    "packages/debug-sidecar-ares/out/**",
+    "packages/vscode-extension/sidecars/**",
+    "packages/vscode-extension/tests-host/out/**",
     "**/node_modules",
     "**/__MACOSX/**",
     "**/._*"
@@ -129,6 +124,8 @@
       }
     ],
     "no-nested-ternary": "error",
+    "no-shadow": "error",
+    "no-unmodified-loop-condition": "error",
     "no-param-reassign": "off",
     "no-plusplus": "off",
     "no-underscore-dangle": "off",
@@ -148,7 +145,7 @@
     "import/default": "error",
     "import/namespace": "error",
     "import/no-cycle": "error",
-    "import/no-duplicates": "warn",
+    "import/no-duplicates": "error",
     "import/no-named-as-default-member": "warn",
     "import/no-named-as-default": "warn",
     "import/no-self-import": "error",
@@ -213,6 +210,11 @@
         "allowConstantLoopConditions": "only-allowed-literals"
       }
     ],
+    "typescript/no-unnecessary-type-conversion": "error",
+    "typescript/no-unnecessary-boolean-literal-compare": "error",
+    "typescript/no-unnecessary-type-parameters": "error",
+    // Static utility classes retain public APIs; empty classes remain invalid.
+    "typescript/no-extraneous-class": ["error", { "allowStaticOnly": true }],
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/no-unsafe-argument": "error",
@@ -232,7 +234,8 @@
     "typescript/prefer-function-type": "error",
     "typescript/prefer-literal-enum-member": "error",
     "typescript/prefer-namespace-keyword": "error",
-    "typescript/prefer-nullish-coalescing": "warn",
+    // Empty strings are intentional sentinels for source paths, IDs and editor settings.
+    "typescript/prefer-nullish-coalescing": ["error", { "ignorePrimitives": { "string": true } }],
     "typescript/prefer-promise-reject-errors": "error",
     "typescript/prefer-readonly": "error",
     "typescript/require-await": "error",
@@ -245,6 +248,9 @@
     "typescript/unified-signatures": "error",
 
     "unicorn/error-message": "error",
+    "unicorn/consistent-function-scoping": "error",
+    "unicorn/no-array-sort": "error",
+    "unicorn/no-array-reverse": "error",
     "unicorn/no-process-exit": "error",
     "unicorn/prefer-node-protocol": "error",
     "unicorn/require-post-message-target-origin": "off",
@@ -261,17 +267,17 @@
         "security/detect-new-buffer": "warn",
         "security/detect-no-csrf-before-method-override": "warn",
         "security/detect-non-literal-fs-filename": "off",
-        "security/detect-non-literal-regexp": "warn",
+        "security/detect-non-literal-regexp": "error",
         "security/detect-non-literal-require": "off",
         "security/detect-object-injection": "off",
         "security/detect-possible-timing-attacks": "warn",
         "security/detect-pseudoRandomBytes": "warn",
-        "security/detect-unsafe-regex": "warn",
-        "security/detect-bidi-characters": "warn",
+        "security/detect-unsafe-regex": "error",
+        "security/detect-bidi-characters": "error",
         "@stylistic/dot-location": ["warn", "property"],
         "@stylistic/new-parens": "warn",
         "@stylistic/no-mixed-operators": [
-          "warn",
+          "error",
           {
             "groups": [
               ["&", "|", "^", "~", "<<", ">>", ">>>"],
@@ -366,10 +372,7 @@
       }
     },
     {
-      "files": [
-        "**/*.ts",
-        "**/*.tsx"
-      ],
+      "files": ["**/*.ts", "**/*.tsx"],
       "rules": {
         "jsdoc/require-param": "off",
         "jsdoc/require-param-type": "off",

@@ -422,7 +422,7 @@ export function frameAtlasSegmentOrder(layout, selection) {
         }
         return { name, start, end };
     })
-        .sort((a, b) => a.start - b.start);
+        .toSorted((a, b) => a.start - b.start);
     for (let index = 1; index < spans.length; index++) {
         // Concatenation cannot insert padding or emit the same ROM bytes twice.
         if (spans[index].start !== spans[index - 1].end) {

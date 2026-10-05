@@ -55,7 +55,7 @@ export function createTilemapInventory(
 } {
   validateIndexedOwnership(ownership);
   const { views } = ownership,
-    first = views[0];
+    first = views.at(0);
   if (!first || views.some((view) => view.width !== first.width || view.height !== first.height)) {
     throw new Error("A shared tileset inventory requires uniform view geometry.");
   }

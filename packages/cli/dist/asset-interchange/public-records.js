@@ -25,7 +25,9 @@ export function digest(value) {
 }
 export function locator(value) {
     const result = text(value);
-    if (!/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/.test(result)) {
+    // Fixed groups bound matching work and enforce the complete lowercase export UUID.
+    // oxlint-disable-next-line optimize-regex/optimize-regex
+    if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/.test(result)) {
         throw new Error("Invalid asset export locator.");
     }
     return result;

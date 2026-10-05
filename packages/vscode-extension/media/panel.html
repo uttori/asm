@@ -12,27 +12,19 @@
   <body>
     <p id="trustNotice" class="notice" hidden>Trust this workspace to edit project settings.</p>
     <p id="actionStatus" class="action-status" role="status" aria-live="polite" hidden></p>
-    <main>
-      <details id="settingsSection" open>
-        <summary>Project Settings <span class="detail-hint">Build & Paths</span></summary>
-        <div class="section-content">
-          <button class="full" id="configAction" data-cmd="initConfig" data-trusted>
-            Initialize Project Configuration
-          </button>
-          <label for="target">Target</label>
-          <select id="target" data-trusted></select>
-          <label for="architecture">Architecture</label>
-          <select id="architecture" data-trusted></select>
-          <label for="buildOutput">Build Output</label>
-          <input id="buildOutput" placeholder="game.sfc" data-trusted />
-          <h3>Entry points</h3>
-          <div class="list" id="entryPoints"></div>
-          <button class="quiet" data-cmd="addEntryPoint" data-trusted>Add File…</button>
-          <h3>Include paths</h3>
-          <div class="list" id="includePaths"></div>
-          <button class="quiet" data-cmd="addIncludePath" data-trusted>Add Folder…</button>
-        </div>
-      </details>
+    <main class="section-content">
+      <label for="target">Target</label>
+      <select id="target" data-trusted></select>
+      <label for="architecture">Architecture</label>
+      <select id="architecture" data-trusted></select>
+      <label for="buildOutput">Build Output</label>
+      <input id="buildOutput" placeholder="game.sfc" data-trusted />
+      <h3>Entry points</h3>
+      <div class="list" id="entryPoints"></div>
+      <button class="quiet" data-cmd="addEntryPoint" data-trusted>Add File…</button>
+      <h3>Include paths</h3>
+      <div class="list" id="includePaths"></div>
+      <button class="quiet" data-cmd="addIncludePath" data-trusted>Add Folder…</button>
     </main>
     <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
   </body>

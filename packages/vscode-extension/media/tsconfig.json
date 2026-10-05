@@ -4,7 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "customConditions": ["uttori-source"],
-    "lib": ["ES2024", "DOM"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "moduleDetection": "force",
     "types": ["node"],
     "allowJs": true,
     "checkJs": true,
@@ -12,5 +13,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["indexed-png.js", "webview-api.d.ts"]
+  "include": ["*.js", "webview-api.d.ts"]
 }

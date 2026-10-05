@@ -287,7 +287,7 @@ test("encoder rejects excessive aggregate structure before invoking compression 
       flags: 3,
       name: String(layer),
     })),
-    links = layers.map((_, layer) => ({
+    links = layers.map((_entry, layer) => ({
       kind: "linked" as const,
       layer,
       frame: 0,
@@ -305,7 +305,7 @@ test("encoder rejects excessive aggregate structure before invoking compression 
       durationMs: 1,
       cels:
         frame === 0
-          ? layers.map((_, layer) => ({
+          ? layers.map((_entry, layer) => ({
               kind: "raster" as const,
               layer,
               x: 0,

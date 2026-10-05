@@ -14,7 +14,11 @@ const el = (id) => {
   }
   return element;
 };
-const canvas = /** @type {HTMLCanvasElement} */ (el("image"));
+const imageControl = el("image");
+if (!(imageControl instanceof HTMLCanvasElement)) {
+  throw new Error("The PNG editor image control must be a canvas.");
+}
+const canvas = imageControl;
 const context = canvas.getContext("2d");
 if (!context) {
   throw new Error("A 2D canvas is required for indexed PNG editing.");
@@ -30,7 +34,10 @@ let zoom = vscode.getState()?.zoom ?? 4;
 /** @type {Set<number> | undefined} */
 let stroke;
 let pending = false;
-const zoomControl = /** @type {HTMLSelectElement} */ (el("zoom"));
+const zoomControl = el("zoom");
+if (!(zoomControl instanceof HTMLSelectElement)) {
+  throw new Error("The PNG editor zoom control must be a select.");
+}
 zoomControl.value = String(zoom);
 
 function draw() {
@@ -43,8 +50,8 @@ function draw() {
   canvas.style.width = `${state.width * zoom}px`;
   canvas.style.height = `${state.height * zoom}px`;
   const pixels = new ImageData(state.width, state.height);
-  for (let at = 0; at < state.indexes.length; at++) {
-    pixels.data.set(state.palette[state.indexes[at]], at * 4);
+  for (let pixel = 0; pixel < state.indexes.length; pixel++) {
+    pixels.data.set(state.palette[state.indexes[pixel]], pixel * 4);
   }
   paintContext.putImageData(pixels, 0, 0);
   if (state.regions) {
@@ -97,13 +104,16 @@ function paletteGroups() {
     return;
   }
   const starts = state.regions
-    ? [...new Set(state.regions.map((region) => region.paletteStart))].sort((a, b) => a - b)
+    ? [...new Set(state.regions.map((region) => region.paletteStart))].toSorted((a, b) => a - b)
     : Array.from({ length: Math.ceil(state.palette.length / 16) }, (_, index) => index * 16);
   if (!starts.includes(paletteStart)) {
     paletteStart = starts[0] ?? 0;
     selected = 0;
   }
-  const control = /** @type {HTMLSelectElement} */ (el("palette-group"));
+  const control = el("palette-group");
+  if (!(control instanceof HTMLSelectElement)) {
+    throw new Error("The PNG editor palette group control must be a select.");
+  }
   const paletteLength = state.palette.length;
   control.replaceChildren(
     ...starts.map((start) => {
@@ -117,7 +127,11 @@ function paletteGroups() {
   el("palette-group-label").hidden = starts.length < 2;
 }
 el("palette-group").addEventListener("change", () => {
-  paletteStart = Number(/** @type {HTMLSelectElement} */ (el("palette-group")).value);
+  const control = el("palette-group");
+  if (!(control instanceof HTMLSelectElement)) {
+    throw new Error("The PNG editor palette group control must be a select.");
+  }
+  paletteStart = Number(control.value);
   // Keep transparency selected across groups; otherwise retain the local color slot.
   if (selected !== 0) {
     selected = Math.min(paletteStart + (selected % 16), (state?.palette.length ?? 1) - 1);
@@ -228,26 +242,31 @@ canvas.addEventListener("pointercancel", () => {
   stroke = undefined;
   draw();
 });
-window.addEventListener("message", (event) => {
-  // Only the extension posts this contract. Stroke messages in the reverse direction remain untrusted.
-  const data = /** @type {ImageMessage | {type:'error',text:string}} */ (event.data);
-  if (data.type === "image") {
-    state = {
-      ...data,
-      indexes: Uint8Array.from(atob(data.indexes), (character) => character.charCodeAt(0)),
-    };
-    selected = Math.min(selected, state.palette.length - 1);
-    pending = false;
-    stroke = undefined;
-    el("size").textContent = `${state.width} × ${state.height}`;
-    el("error").textContent = data.diskIssue ?? "";
-    el("guidance").hidden = !data.regions;
-    paletteGroups();
-    slots();
-    draw();
-  } else if (data.type === "error") {
-    el("error").textContent = data.text;
-    pending = false;
-  }
-});
+window.addEventListener(
+  "message",
+  (/** @type {MessageEvent<ImageMessage | {type:'error',text:string}>} */ event) => {
+    // Only the extension posts this contract. Stroke messages in the reverse direction remain untrusted.
+    const data = event.data;
+    if (data.type === "image") {
+      state = {
+        ...data,
+        indexes: Uint8Array.from(atob(data.indexes), (character) => character.charCodeAt(0)),
+      };
+      selected = Math.min(selected, state.palette.length - 1);
+      pending = false;
+      stroke = undefined;
+      el("size").textContent = `${state.width} × ${state.height}`;
+      el("error").textContent = data.diskIssue ?? "";
+      el("guidance").hidden = !data.regions;
+      paletteGroups();
+      slots();
+      draw();
+      // Ignore unknown host message kinds rather than treating them as failed edits.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
+    } else if (data.type === "error") {
+      el("error").textContent = data.text;
+      pending = false;
+    }
+  },
+);
 vscode.postMessage({ type: "ready" });

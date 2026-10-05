@@ -13,7 +13,13 @@ export const DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
 const fail = (message) => {
     throw new Error(message);
 };
-const requireValue = (value, message) => value === undefined ? fail(message) : value;
+/** Undefined marks an absent result; other values, including null, retain their contract meaning. */
+const requireValue = (value, message) => {
+    if (value === undefined) {
+        return fail(message);
+    }
+    return value;
+};
 const addressesMatch = (left, right) => left.architecture === right.architecture &&
     left.addressSpace === right.addressSpace &&
     (left.address === right.address ||

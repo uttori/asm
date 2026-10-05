@@ -28,7 +28,7 @@ SourceProcessClient.prototype.run = async function <T>(
   if (operation.action === "asset-apply" && assetPublicationEvent) {
     const event = assetPublicationEvent;
     assetPublicationEvent = undefined;
-    const beforePublish = options?.onBeforePublish;
+    const beforePublish = options.onBeforePublish;
     options = {
       ...options,
       onBeforePublish: async (paths) => {

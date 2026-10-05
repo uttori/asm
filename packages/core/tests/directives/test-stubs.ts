@@ -20,16 +20,12 @@ export const createOperandResolver = (getCurrentAddress = (): number => 0): Oper
     requireStaticLabelLookup: () => false,
   });
 
-function isTestDouble<T>(value: object): value is T {
-  return typeof value === "object";
-}
-
 /** Partial doubles stand in for the methods a single test calls. */
+// The caller chooses the interface exercised by this intentionally incomplete test double.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 export function testDouble<T>(value: object): T {
-  if (!isTestDouble<T>(value)) {
-    throw new Error("Expected an object test double.");
-  }
-  return value;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  return value as T;
 }
 
 export const runtimeStub = testDouble<DirectiveRuntimeService>({});

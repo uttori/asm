@@ -162,6 +162,8 @@ function publish(repository, journal, signal, onStage) {
             if (hash !== item.before && hash !== item.after) {
                 throw new Error(`Source changed during publication: ${item.path}.`);
             }
+            // Public ROM/source hashes establish integrity, not secret credentials; constant-time comparison adds no protection.
+            // oxlint-disable-next-line security/detect-possible-timing-attacks
             if (hash !== item[journal.direction]) {
                 durableReplace(file, stagedBytes(repository, journal, i, journal.direction), fs.statSync(file).mode & 0o777);
             }
@@ -257,6 +259,8 @@ export function applySourceFileTransaction(repository, replacements, options = {
 }
 /** Explicit recovery completes or rolls back known bytes. It never overwrites an unknown external replacement. */
 export function recoverSourceFileTransaction(repository, direction, options = {}) {
+    // Recovery can be requested by untyped hosts; reject unknown directions before acquiring the publication lease.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     if (direction !== "before" && direction !== "after") {
         throw new Error("Invalid source recovery direction.");
     }

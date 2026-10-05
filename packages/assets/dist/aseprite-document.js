@@ -20,8 +20,12 @@ export function resolveAsepriteCels(document) {
             if (cel.kind === "linked") {
                 integer(cel.frame, "Linked frame", 0, document.frames.length - 1);
             }
-            else if (cel.kind !== "raster" && cel.kind !== "tilemap") {
-                throw new Error("Unsupported Aseprite cel kind.");
+            else {
+                // JavaScript callers can supply an unknown kind; reject it before resolving payload links.
+                // oxlint-disable-next-line typescript/no-unnecessary-condition
+                if (cel.kind !== "raster" && cel.kind !== "tilemap") {
+                    throw new Error("Unsupported Aseprite cel kind.");
+                }
             }
             layers.set(cel.layer, cel);
         }
@@ -139,6 +143,8 @@ export function validateAsepriteDocument(document) {
     }
     for (const layer of document.layers) {
         integer(layer.flags, "Layer flags", 0, 127);
+        // Public JavaScript callers can supply unsupported layer kinds despite the TypeScript union.
+        // oxlint-disable-next-line typescript/no-unnecessary-condition
         if (layer.flags & (8 | 64) || (layer.kind !== "raster" && layer.kind !== "tilemap")) {
             throw new Error("Unsupported Aseprite background/reference/group layer.");
         }
@@ -165,6 +171,7 @@ export function validateAsepriteDocument(document) {
             integer(cel.y, "Cel y", -32768, 32767);
             integer(cel.zIndex, "Cel z-index", -32768, 32767);
             addText(cel.userData);
+            // Links share their target's storage; only concrete cels consume the aggregate decoded-byte budget.
             if (cel.kind === "linked") {
                 integer(cel.frame, "Linked frame", 0, document.frames.length - 1);
             }
@@ -175,6 +182,8 @@ export function validateAsepriteDocument(document) {
                     throw new Error("Aseprite raster layer or palette slot mismatch.");
                 }
                 bytes = boundedSum(bytes, cel.indexes.length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
+                // Keep the explicit kind boundary for JavaScript callers; the final else rejects unknown payloads.
+                // oxlint-disable-next-line typescript/no-unnecessary-condition
             }
             else if (cel.kind === "tilemap") {
                 validateMasks(cel);
@@ -422,11 +431,12 @@ export async function decodeAsepriteDocument(bytes, signal) {
                         diagonalMask: data.u32(),
                     };
                     data.take(10);
-                    const count = boundedProduct(columns, rows, ASSET_LIMITS.references, "Tilemap cells");
-                    reserve(boundedProduct(count, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
-                    const raw = await rasterZlib(data.take(data.bytes.length - data.position), boundedProduct(count, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"), signal);
-                    const cells = new Uint32Array(count), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
-                    for (let cell = 0; cell < count; cell++) {
+                    const cellCount = boundedProduct(columns, rows, ASSET_LIMITS.references, "Tilemap cells");
+                    reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
+                    const raw = await rasterZlib(data.take(data.bytes.length - data.position), boundedProduct(cellCount, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"), signal);
+                    const cells = new Uint32Array(cellCount), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+                    // Widen native words into one canonical buffer; DataView keeps decoding independent of host byte order.
+                    for (let cell = 0; cell < cellCount; cell++) {
                         if (bits === 8) {
                             cells[cell] = raw[cell];
                         }
@@ -453,10 +463,11 @@ export async function decodeAsepriteDocument(bytes, signal) {
                 if (frameIndex !== 0 || tilesets.length >= ASSET_LIMITS.tilesets) {
                     throw new Error("Aseprite tileset declaration limit/order.");
                 }
-                const id = data.u32(), flags = data.u32(), tileCount = data.u32(), tileWidth = data.u16(), tileHeight = data.u16(), baseIndex = data.i16();
+                const id = data.u32(), tilesetFlags = data.u32(), tileCount = data.u32(), tileWidth = data.u16(), tileHeight = data.u16(), baseIndex = data.i16();
                 data.take(14);
                 const name = data.text();
-                if (flags & ~62 || !(flags & 2)) {
+                // Only embedded storage has a bounded payload here; external tileset references cannot authorize pixels.
+                if (tilesetFlags & ~62 || !(tilesetFlags & 2)) {
                     throw new Error("External or unsupported Aseprite tileset.");
                 }
                 integer(tileCount, "Tileset tiles", 1, ASSET_LIMITS.owners);
@@ -466,7 +477,7 @@ export async function decodeAsepriteDocument(bytes, signal) {
                 const tileData = Array.from({ length: tileCount }, () => undefined);
                 const set = {
                     id,
-                    flags,
+                    flags: tilesetFlags,
                     tileCount,
                     tileWidth,
                     tileHeight,
@@ -543,7 +554,8 @@ export async function decodeAsepriteDocument(bytes, signal) {
                 }
                 if (extraFlags & 1 && lastCel?.kind === "raster") {
                     const expected = [lastCel.x, lastCel.y, lastCel.width, lastCel.height];
-                    if (bounds.some((value, i) => value !== expected[i] * 65536)) {
+                    // Extra bounds use fixed-point coordinates; native inverses require the original integer geometry.
+                    if (bounds.some((value, bound) => value !== expected[bound] * 65536)) {
                         throw new Error("Scaled or fractional Aseprite cel bounds are unsupported.");
                     }
                 }
@@ -705,6 +717,8 @@ function encodedStructureBytes(document) {
     }
     return size;
 }
+/** Empty user-data records retain attachment positions even when their text is absent. */
+const userDataChunk = (text) => chunk(0x2020, text === undefined ? new Fields().u32(0).build() : new Fields().u32(1).text(text).build());
 /** Encode deterministic structure with embedded tile storage and stable metadata attachment order. */
 export async function encodeAsepriteDocument(document, signal) {
     signal?.throwIfAborted();
@@ -720,7 +734,6 @@ export async function encodeAsepriteDocument(document, signal) {
         throw new Error("All Aseprite layers require UUIDs when UUID storage is enabled.");
     }
     const allFrames = [];
-    const user = (text) => chunk(0x2020, text === undefined ? new Fields().u32(0).build() : new Fields().u32(1).text(text).build());
     for (let frameIndex = 0; frameIndex < document.frames.length; frameIndex++) {
         signal?.throwIfAborted();
         const frame = document.frames[frameIndex], chunks = [];
@@ -735,10 +748,10 @@ export async function encodeAsepriteDocument(document, signal) {
             }
             chunks.push(chunk(0x2019, palette.build()));
             if (document.exportId) {
-                chunks.push(user(ID_PREFIX + document.exportId));
+                chunks.push(userDataChunk(ID_PREFIX + document.exportId));
             }
             else if (document.userData !== undefined) {
-                chunks.push(user(document.userData));
+                chunks.push(userDataChunk(document.userData));
             }
             for (const set of document.tilesets) {
                 const fields = new Fields()
@@ -754,14 +767,14 @@ export async function encodeAsepriteDocument(document, signal) {
                 fields.u32(compressed.length).raw(compressed);
                 chunks.push(chunk(0x2023, fields.build()));
                 if (set.userData !== undefined || set.tileData.some((text) => text !== undefined)) {
-                    chunks.push(user(set.userData));
+                    chunks.push(userDataChunk(set.userData));
                     // Empty entries retain per-tile attachment positions; only trailing absent records may be omitted.
                     let last = set.tileData.length - 1;
                     while (last >= 0 && set.tileData[last] === undefined) {
                         last--;
                     }
                     for (let tile = 0; tile <= last; tile++) {
-                        chunks.push(user(set.tileData[tile]));
+                        chunks.push(userDataChunk(set.tileData[tile]));
                     }
                 }
             }
@@ -784,7 +797,7 @@ export async function encodeAsepriteDocument(document, signal) {
                 }
                 chunks.push(chunk(0x2004, fields.build()));
                 if (layer.userData !== undefined) {
-                    chunks.push(user(layer.userData));
+                    chunks.push(userDataChunk(layer.userData));
                 }
             }
             if (document.tags.length) {
@@ -801,7 +814,7 @@ export async function encodeAsepriteDocument(document, signal) {
                 chunks.push(chunk(0x2018, fields.build()));
                 if (document.tags.some((tag) => tag.userData !== undefined)) {
                     for (const tag of document.tags) {
-                        chunks.push(user(tag.userData));
+                        chunks.push(userDataChunk(tag.userData));
                     }
                 }
             }
@@ -851,7 +864,7 @@ export async function encodeAsepriteDocument(document, signal) {
             }
             chunks.push(chunk(0x2005, fields.build()));
             if (cel.userData !== undefined) {
-                chunks.push(user(cel.userData));
+                chunks.push(userDataChunk(cel.userData));
             }
         }
         integer(chunks.length, "Frame chunks", 0, ASSET_LIMITS.chunks);

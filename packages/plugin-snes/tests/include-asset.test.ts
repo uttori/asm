@@ -328,7 +328,7 @@ test("emission descriptors retain evaluated declarations and isolate mutating fo
             throw new Error("Missing declared layout.");
           }
           t.is(layout.stride, 3);
-          t.is(resources?.["palette.bin"].bytes[0], 9);
+          t.is(resources["palette.bin"].bytes[0], 9);
           retainedFormat = Buffer.from(source.bytes);
           source.bytes.fill(0);
           resources!["palette.bin"].bytes.fill(0);

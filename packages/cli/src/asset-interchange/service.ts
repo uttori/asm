@@ -394,8 +394,8 @@ export class AssetInterchangeService<Selection, Bindings> {
       if (!Array.isArray(view.placements) || view.placements.length > ASSET_LIMITS.owners) {
         throw new Error("Invalid private raster placement inventory.");
       }
-      const placements = view.placements.map((value) => {
-        const entry = object(value);
+      const placements = view.placements.map((candidate) => {
+        const entry = object(candidate);
         return {
           view: text(entry.view),
           x: number(entry.x, ASSET_LIMITS.interchangeSide),
@@ -556,7 +556,7 @@ export class AssetInterchangeService<Selection, Bindings> {
         throw new Error("Adapter omitted export identity.");
       }
       // Every adapter read is a dependency even when the adapter forgets its explicit declaration.
-      const names = [...new Set([...exported.dependencies, ...adapterReads])].sort();
+      const names = [...new Set([...exported.dependencies, ...adapterReads])].toSorted();
       this.drafts(build.root, names, [outputs.document, outputs.manifest]);
       const dependencies = names.map((name) => ({
         path: name,
@@ -624,7 +624,7 @@ export class AssetInterchangeService<Selection, Bindings> {
       this.stores(build.root).exports.publish(id, baseline, signal);
       return manifest;
     } catch (cause) {
-      for (const item of written.reverse()) {
+      for (const item of written.toReversed()) {
         if (
           fs.existsSync(item.file) &&
           assetHash(readAssetFile(item.file, this.codec.fileBytes)) === item.hash

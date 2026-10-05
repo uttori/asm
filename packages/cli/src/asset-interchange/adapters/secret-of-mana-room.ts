@@ -77,6 +77,10 @@ function romOffset(address: number): number {
   return (address - 0xc00000) % 0x200000;
 }
 
+/** Identity binds original ROM offset and bit depth; presentation positions carry no ownership. */
+const identify = (tile: SomRoomNativeTile): string =>
+  JSON.stringify([romOffset(tile.address), tile.depth]);
+
 function inspect(context: AssetAdapterContext, selection: SomRoomSelection) {
   if (context.build.output.length !== 0x200000) {
     throw new Error("Room native loader requires a headerless 2 MiB USA source build.");
@@ -266,8 +270,6 @@ function inspect(context: AssetAdapterContext, selection: SomRoomSelection) {
     nativeTiles = new Map<string, SomRoomNativeTile>(),
     consumers = new Map<string, Set<string>>(),
     readonly = new Set<string>();
-  const identify = (tile: SomRoomNativeTile): string =>
-    JSON.stringify([romOffset(tile.address), tile.depth]);
   for (const entry of rooms) {
     for (const tile of entry.state.inventory) {
       const id = identify(tile),

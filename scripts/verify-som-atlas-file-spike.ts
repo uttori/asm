@@ -18,6 +18,8 @@ import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
 const originalSha256 = "4c15013131351e694e05f22e38bb1b3e4031dedac77ec75abecebe8520d82d5f";
 
 /** Read trusted fixture declarations, never editor-supplied source authority. */
+// Fixture callers declare known local schemas; editor-supplied inputs use separate runtime validators.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 function fixtureJson<T>(file: string): T {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return JSON.parse(fs.readFileSync(file, "utf8")) as T;

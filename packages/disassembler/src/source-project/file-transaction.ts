@@ -218,6 +218,8 @@ function publish(
       if (hash !== item.before && hash !== item.after) {
         throw new Error(`Source changed during publication: ${item.path}.`);
       }
+      // Public ROM/source hashes establish integrity, not secret credentials; constant-time comparison adds no protection.
+      // oxlint-disable-next-line security/detect-possible-timing-attacks
       if (hash !== item[journal.direction]) {
         durableReplace(
           file,
@@ -345,6 +347,8 @@ export function recoverSourceFileTransaction(
     readonly validate?: (journal: SourceFileTransaction) => void;
   } = {},
 ): SourceFileTransaction | undefined {
+  // Recovery can be requested by untyped hosts; reject unknown directions before acquiring the publication lease.
+  // oxlint-disable-next-line typescript/no-unnecessary-condition
   if (direction !== "before" && direction !== "after") {
     throw new Error("Invalid source recovery direction.");
   }

@@ -30,10 +30,10 @@ export interface InterchangeChanges {
 }
 /** Attach stable identities when building presentations; names and numeric storage indexes remain arbitrary. */
 export declare const interchangeIdentity: Readonly<{
-    view: (id: string) => string;
-    role: (id: string) => string;
-    tileset: (id: string) => string;
-    timeline: (id: string) => string;
+    view: (identity: string) => string;
+    role: (identity: string) => string;
+    tileset: (identity: string) => string;
+    timeline: (identity: string) => string;
 }>;
 /** Normalize structure and reconcile deltas against the exported private authority without any source writes. */
 export declare function inspectTilemapInterchange(baseline: TilemapInterchangeBaseline, after: AsepriteDocument): InterchangeChanges;

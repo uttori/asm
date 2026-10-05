@@ -3073,6 +3073,8 @@ var AresRspDebugBackend = class {
     }
     return {
       ...ARES_RSP_CAPABILITIES,
+      // Negotiated capabilities must copy nested values so enabling rich trace cannot mutate the shared baseline.
+      // oxlint-disable-next-line oxc/no-map-spread
       architectures: ARES_RSP_CAPABILITIES.architectures.map((architecture) => {
         if (architecture.architecture === "snes.65816") {
           return {
@@ -3916,7 +3918,14 @@ Optional:
   --no-fast-boot        Disable the ares fast-boot setting
   --help                Show this help
 `;
-var optionNames = /* @__PURE__ */ new Set(["--manifest", "--ares", "--rom", "--rom-sha256", "--runtime-dir", "--system"]);
+var optionNames = /* @__PURE__ */ new Set([
+  "--manifest",
+  "--ares",
+  "--rom",
+  "--rom-sha256",
+  "--runtime-dir",
+  "--system"
+]);
 var parseAresSidecarArguments = (arguments_) => {
   const values = /* @__PURE__ */ new Map();
   let fastBoot = true;
@@ -3979,7 +3988,10 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   const runtimeManifest = parseAresRuntimeManifest(
     JSON.parse(await readFile2(options.manifest, "utf8"))
   );
-  const manifest = { ...runtimeManifest, romSha256: options.romSha256 ?? runtimeManifest.romSha256 };
+  const manifest = {
+    ...runtimeManifest,
+    romSha256: options.romSha256 ?? runtimeManifest.romSha256
+  };
   const host = new AresProcessHost({
     executable: options.executable,
     rom: options.rom,

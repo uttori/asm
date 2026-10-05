@@ -16,6 +16,7 @@ npm install @uttori/asm-disassembler
 
 ```js
 import { readFileSync } from "node:fs";
+
 import { RomImage } from "@uttori/asm-disassembler";
 
 const rom = new RomImage(readFileSync("game.sfc"), { headerSize: 0 });

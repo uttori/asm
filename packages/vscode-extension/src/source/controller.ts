@@ -182,6 +182,12 @@ class SourceRow extends TreeItem {
   }
 }
 
+/** A cancelled file picker leaves the asset operation untouched. */
+const chooseAssetFile = async (title: string, extensions: string[]): Promise<string | undefined> =>
+  (
+    await window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } })
+  )?.[0]?.fsPath;
+
 /** A selected ROM project, native Git review, and shared background operations; source edits stay in editors. */
 export class SourceController implements TreeDataProvider<SourceRow>, Disposable {
   readonly #changed = new EventEmitter<SourceRow | undefined>();
@@ -949,10 +955,6 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     if (!root) {
       return undefined;
     }
-    const choose = async (title: string, extensions: string[]): Promise<string | undefined> =>
-      (
-        await window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } })
-      )?.[0]?.fsPath;
     let operation: AssetFileOperation;
     if (request !== undefined) {
       const selected = readAssetOperation(request);
@@ -987,7 +989,9 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       if (!adapter) {
         return undefined;
       }
-      const selection = await choose("Select the source asset selection declaration", ["json"]);
+      const selection = await chooseAssetFile("Select the source asset selection declaration", [
+        "json",
+      ]);
       if (!selection) {
         return undefined;
       }
@@ -1031,11 +1035,15 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         presentation: presentation.id,
       };
     } else if (action === "review") {
-      const manifest = await choose("Select the asset export manifest", ["json"]);
+      const manifest = await chooseAssetFile("Select the asset export manifest", ["json"]);
       if (!manifest) {
         return undefined;
       }
-      const document = await choose("Select the saved edited asset", ["aseprite", "ase", "png"]);
+      const document = await chooseAssetFile("Select the saved edited asset", [
+        "aseprite",
+        "ase",
+        "png",
+      ]);
       if (!document) {
         return undefined;
       }
@@ -1127,6 +1135,8 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     } finally {
       this.#busy = undefined;
       this.#changed.fire(undefined);
+      // Saved-input callbacks can set this flag across awaits; publication and external changes both invalidate the build.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
       if (published || this.#assetSavedInputPending) {
         this.#buildStale = true;
         this.#savedInput.fire();
@@ -1221,7 +1231,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
           direction: direction.id,
           drafts: versions
             .filter((entry) => entry.dirty)
-            .map(({ path, version, opaque }) => ({ path, version, opaque })),
+            .map((entry) => ({ path: entry.path, version: entry.version, opaque: entry.opaque })),
         },
         epoch,
         versions,
@@ -1236,6 +1246,8 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     } finally {
       this.#busy = undefined;
       this.#changed.fire(undefined);
+      // Recovery awaits can receive saved-input events; emit one invalidation after releasing the busy state.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
       if (recovered || this.#assetSavedInputPending) {
         this.#buildStale = true;
         this.#savedInput.fire();

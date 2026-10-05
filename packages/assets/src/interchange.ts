@@ -62,10 +62,10 @@ export interface InterchangeChanges {
 
 /** Attach stable identities when building presentations; names and numeric storage indexes remain arbitrary. */
 export const interchangeIdentity = Object.freeze({
-  view: (id: string): string => VIEW + id,
-  role: (id: string): string => ROLE + id,
-  tileset: (id: string): string => SET + id,
-  timeline: (id: string): string => TAG + id,
+  view: (identity: string): string => VIEW + identity,
+  role: (identity: string): string => ROLE + identity,
+  tileset: (identity: string): string => SET + identity,
+  timeline: (identity: string): string => TAG + identity,
 });
 
 /** Require an intact opaque ID; rendering equality cannot recover stripped or duplicated metadata. */
@@ -163,7 +163,8 @@ function cellValue(
   if (!(set.flags & 4) && word === 0xffffffff) {
     return null;
   }
-  const view = ids[(word & payload.idMask) >>> 0];
+  // An encoded tile ID can exceed the private inventory even when its bit mask is valid.
+  const view = ids.at((word & payload.idMask) >>> 0);
   if (view === null) {
     return null;
   }
@@ -312,6 +313,14 @@ function compareRaster(
   compare(afterCel, newRaster, beforeCel, oldRaster);
 }
 
+/** Compare native timeline identities independently of editor tag ordering and names. */
+const timelineTags = (document: AsepriteDocument): string[] =>
+  document.tags
+    .map((tag) =>
+      JSON.stringify([id(tag.userData, TAG), tag.from, tag.to, tag.direction, tag.repeat]),
+    )
+    .toSorted();
+
 /** Normalize structure and reconcile deltas against the exported private authority without any source writes. */
 export function inspectTilemapInterchange(
   baseline: TilemapInterchangeBaseline,
@@ -429,13 +438,7 @@ export function inspectTilemapInterchange(
       throw new Error("Read-only interchange stacking changed.");
     }
   }
-  const tags = (document: AsepriteDocument): string[] =>
-    document.tags
-      .map((tag) =>
-        JSON.stringify([id(tag.userData, TAG), tag.from, tag.to, tag.direction, tag.repeat]),
-      )
-      .toSorted();
-  if (JSON.stringify(tags(before)) !== JSON.stringify(tags(after))) {
+  if (JSON.stringify(timelineTags(before)) !== JSON.stringify(timelineTags(after))) {
     throw new Error("Read-only interchange timeline membership changed.");
   }
   const pixels = reconcileIndexedViews(baseline.ownership, [...newInventory.views.values()]);

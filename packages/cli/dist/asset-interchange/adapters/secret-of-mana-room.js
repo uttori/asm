@@ -41,6 +41,8 @@ function romOffset(address) {
     }
     return (address - 0xc00000) % 0x200000;
 }
+/** Identity binds original ROM offset and bit depth; presentation positions carry no ownership. */
+const identify = (tile) => JSON.stringify([romOffset(tile.address), tile.depth]);
 function inspect(context, selection) {
     if (context.build.output.length !== 0x200000) {
         throw new Error("Room native loader requires a headerless 2 MiB USA source build.");
@@ -165,7 +167,7 @@ function inspect(context, selection) {
         }
         const key = canonicalJson([
             room.header.slice(0, 3),
-            [...new Set(room.pieces.map((piece) => piece.layout))].sort((a, b) => a - b),
+            [...new Set(room.pieces.map((piece) => piece.layout))].toSorted((a, b) => a - b),
         ]);
         let state = states.get(key);
         if (!state) {
@@ -181,7 +183,6 @@ function inspect(context, selection) {
     });
     const selected = rooms.find((entry) => entry.file === selection.room);
     const bindings = new Map(), nativeTiles = new Map(), consumers = new Map(), readonly = new Set();
-    const identify = (tile) => JSON.stringify([romOffset(tile.address), tile.depth]);
     for (const entry of rooms) {
         for (const tile of entry.state.inventory) {
             const id = identify(tile), binding = raw(romOffset(tile.address), tile.native.length);
@@ -200,7 +201,7 @@ function inspect(context, selection) {
     // Different-depth or partial source overlaps have no independent inverse; retain their artwork without authorizing writes.
     const extents = [...nativeTiles]
         .map(([id, tile]) => ({ id, offset: romOffset(tile.address), size: tile.native.length }))
-        .sort((a, b) => a.offset - b.offset);
+        .toSorted((a, b) => a.offset - b.offset);
     for (let index = 0; index < extents.length; index++) {
         for (let next = index + 1; next < extents.length && extents[next].offset < extents[index].offset + extents[index].size; next++) {
             readonly.add(extents[index].id);
@@ -309,7 +310,7 @@ export const somRoomSourceAdapter = {
                 owners: baseline.ownership.owners.map((owner) => owner.id),
                 paletteAddress: current.selected.state.paletteAddress,
             },
-            dependencies: [...current.dependencies].sort(),
+            dependencies: [...current.dependencies].toSorted(),
         };
     },
     plan(context, selection, bindings, changes) {
@@ -401,7 +402,7 @@ export const somRoomSourceAdapter = {
                         offset,
                         before: file.before.slice(start, end),
                         after: file.after.slice(start, end),
-                        consumers: [...resources.get(file.path)].sort(),
+                        consumers: [...resources.get(file.path)].toSorted(),
                     });
                     start = -1;
                 };

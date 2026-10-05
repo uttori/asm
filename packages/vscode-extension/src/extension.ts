@@ -443,6 +443,7 @@ export function activate(context: ExtensionContext): void {
       configureEmulatorRuntime(context, window.activeTextEditor?.document.uri),
     ),
     commands.registerCommand("asm.initConfig", () => initConfig()),
+    commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
     commands.registerCommand("asm.openPanel", () =>
       commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
     ),
@@ -815,7 +816,11 @@ function scheduleWatchBuild(): void {
     watchBuildRunning = true;
     void (async () => {
       try {
-        while (watchEnabled && watchEntryUri) {
+        // Build awaits let editor events stop watching or replace the selected entry between iterations.
+        for (;;) {
+          if (!watchEnabled || !watchEntryUri) {
+            return;
+          }
           const epoch = watchEpoch;
           const result = await runBuild(watchEntryUri, true);
           if (!watchIsEnabled()) {

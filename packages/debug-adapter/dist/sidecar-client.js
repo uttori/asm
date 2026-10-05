@@ -61,9 +61,9 @@ export class DebugSidecarClient {
         return { dispose: () => this.#closeListeners.delete(listener) };
     }
     /**
-   * Sends one bounded command and resolves its paired response. A command error rejects only this
-   * request. Timeout, malformed input, or transport failure closes the connection and rejects all
-   * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
+     * Sends one bounded command and resolves its paired response. A command error rejects only this
+     * request. Timeout, malformed input, or transport failure closes the connection and rejects all
+     * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
      * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
      * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
      * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
@@ -98,9 +98,11 @@ export class DebugSidecarClient {
         if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes) {
             return Promise.reject(new Error("Queued sidecar request bytes exceed the backpressure limit."));
         }
+        // Reserve bytes before queuing so concurrent callers cannot each pass the same backpressure check.
         this.#queuedWriteBytes += frame.length;
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => this.#fail(new Error(`Sidecar request '${command}' timed out.`)), this.#requestTimeoutMs);
+            // Register the waiter before writing because an in-process transport can deliver the reply immediately.
             this.#pending.set(sequence, { resolve, reject, timer });
             const write = this.#writeTail
                 .then(() => {
@@ -182,6 +184,8 @@ export class DebugSidecarClient {
         this.#closeListeners.clear();
         this.#eventListeners.clear();
         if (closeTransport) {
+            // Close listeners are synchronous; best-effort transport shutdown must absorb an already terminal failure.
+            // oxlint-disable-next-line promise/no-promise-in-callback
             void this.#transport.close().catch(() => undefined);
         }
     }

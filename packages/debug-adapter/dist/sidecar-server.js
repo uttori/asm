@@ -126,6 +126,8 @@ export class DebugSidecarServer {
         }
         this.#closed = true;
         this.#eventSubscription.dispose();
+        // Drain the asynchronous write queue before closing; a failed write must not prevent transport cleanup.
+        // oxlint-disable-next-line promise/no-promise-in-callback
         await this.#writeTail.catch(() => undefined);
         await this.#closeTransport(error);
     }

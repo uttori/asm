@@ -164,6 +164,21 @@ that editor's own API declarations and checks SQLite in the real Extension Host.
 - Run `npm run fmt` to format owned files. If a new path is not covered by the root scripts, add it to
   the appropriate formatting, lint, and TypeScript scope.
 
+`npm run lint` checks handwritten packages (including webviews, demos and build scripts),
+development scripts, the fixture manifest and tests in one pass. `npm run lint:fix`
+uses that same scope; package `dist` files and bundled executables are rebuilt from their inputs.
+The root `tsconfig.json` covers build scripts and demos outside package source configurations;
+the webview configuration checks every handwritten browser script.
+
+Duplicate imports, shadowed names, misleading loop conditions, redundant type conversions,
+unnecessary generic parameters, unnecessary mutating collection copies, pure nested helpers, ambiguous mixed operators,
+and unsafe or dynamic regular expressions fail lint. Static utility classes preserve existing APIs,
+and empty strings retain their role as unset path/identifier sentinels. Runtime condition checks,
+callback/promise boundaries, immutable object copies and heuristic security/performance suggestions
+remain warnings that require review. Use a narrow disable only when an adjacent comment explains
+the contract the rule cannot see; unused disables fail lint. In particular, preserve validation for
+untyped JavaScript callers and state changes delivered by callbacks during an `await`.
+
 Do not weaken a conservative result to make generated output look cleaner. Unknown, ambiguous,
 unreached, conflicting, or unsupported bytes must remain visible and round-trip through raw data.
 

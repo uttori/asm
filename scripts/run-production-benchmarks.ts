@@ -66,7 +66,7 @@ function isGolden(value: unknown): value is Golden {
   return isRecord(value) && typeof value.bytes === "number" && typeof value.sha256 === "string";
 }
 
-function readGoldenMap(value: unknown): Record<string, Golden> {
+function readGoldenMap(value: unknown): Partial<Record<string, Golden>> {
   if (!isRecord(value)) {
     throw new Error("Benchmark goldens must be an object.");
   }

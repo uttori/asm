@@ -67,8 +67,9 @@ export class DebugSidecarClient {
     this.#transport = options.transport;
     this.#session = options.session;
     this.#requestTimeoutMs = options.requestTimeoutMs ?? 5_000;
-    if (!Number.isSafeInteger(this.#requestTimeoutMs) || this.#requestTimeoutMs <= 0)
-      {throw new Error("Sidecar request timeout must be a positive safe integer.");}
+    if (!Number.isSafeInteger(this.#requestTimeoutMs) || this.#requestTimeoutMs <= 0) {
+      throw new Error("Sidecar request timeout must be a positive safe integer.");
+    }
     this.#limits = options.limits ?? DEFAULT_DEBUG_SIDECAR_LIMITS;
     this.#parser = new DebugSidecarMessageParser(this.#limits);
     this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
@@ -107,9 +108,9 @@ export class DebugSidecarClient {
   }
 
   /**
- * Sends one bounded command and resolves its paired response. A command error rejects only this
- * request. Timeout, malformed input, or transport failure closes the connection and rejects all
- * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
+   * Sends one bounded command and resolves its paired response. A command error rejects only this
+   * request. Timeout, malformed input, or transport failure closes the connection and rejects all
+   * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
    * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
    * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
    * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
@@ -118,11 +119,15 @@ export class DebugSidecarClient {
     command: DebugSidecarRequest["command"],
     arguments_: Readonly<Record<string, unknown>> = {},
   ): Promise<unknown> {
-    if (this.#closed) {return Promise.reject(new Error("Sidecar client is closed."));}
-    if (this.#pending.size >= this.#limits.maxQueuedMessages)
-      {return Promise.reject(new Error("Too many pending sidecar requests."));}
-    if (!Number.isSafeInteger(this.#nextSequence) || this.#nextSequence <= 0)
-      {return Promise.reject(new Error("Sidecar request sequence exhausted."));}
+    if (this.#closed) {
+      return Promise.reject(new Error("Sidecar client is closed."));
+    }
+    if (this.#pending.size >= this.#limits.maxQueuedMessages) {
+      return Promise.reject(new Error("Too many pending sidecar requests."));
+    }
+    if (!Number.isSafeInteger(this.#nextSequence) || this.#nextSequence <= 0) {
+      return Promise.reject(new Error("Sidecar request sequence exhausted."));
+    }
     const sequence = this.#nextSequence++;
     const message: DebugSidecarRequest = {
       protocol: DEBUG_SIDECAR_PROTOCOL,
@@ -139,20 +144,25 @@ export class DebugSidecarClient {
     } catch (error) {
       return Promise.reject(asError(error));
     }
-    if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes)
-      {return Promise.reject(
+    if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes) {
+      return Promise.reject(
         new Error("Queued sidecar request bytes exceed the backpressure limit."),
-      );}
+      );
+    }
+    // Reserve bytes before queuing so concurrent callers cannot each pass the same backpressure check.
     this.#queuedWriteBytes += frame.length;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
         () => this.#fail(new Error(`Sidecar request '${command}' timed out.`)),
         this.#requestTimeoutMs,
       );
+      // Register the waiter before writing because an in-process transport can deliver the reply immediately.
       this.#pending.set(sequence, { resolve, reject, timer });
       const write = this.#writeTail
         .then(() => {
-          if (this.#closed) {throw new Error("Sidecar client is closed.");}
+          if (this.#closed) {
+            throw new Error("Sidecar client is closed.");
+          }
           return this.#transport.write(frame);
         })
         .finally(() => {
@@ -168,32 +178,44 @@ export class DebugSidecarClient {
    * @returns {Promise<void>} Completion of the transport close.
    */
   async close(): Promise<void> {
-    if (this.#closed) {return;}
+    if (this.#closed) {
+      return;
+    }
     this.#fail(new Error("Sidecar client closed."), false);
     await this.#transport.close();
   }
 
   #receive(data: Uint8Array): void {
-    if (this.#closed) {return;}
+    if (this.#closed) {
+      return;
+    }
     try {
       for (const message of this.#parser.push(data)) {
-        if (message.session !== this.#session)
-          {throw new Error("Sidecar message session does not match this connection.");}
-        if (message.type === "request")
-          {throw new Error("Sidecar server sent a request on a client-only channel.");}
+        if (message.session !== this.#session) {
+          throw new Error("Sidecar message session does not match this connection.");
+        }
+        if (message.type === "request") {
+          throw new Error("Sidecar server sent a request on a client-only channel.");
+        }
         if (message.type === "event") {
-          for (const listener of this.#eventListeners) {listener(message);}
+          for (const listener of this.#eventListeners) {
+            listener(message);
+          }
           continue;
         }
         const pending = this.#pending.get(message.requestSequence);
-        if (!pending)
-          {throw new Error(
+        if (!pending) {
+          throw new Error(
             `Sidecar response references unknown request ${message.requestSequence}.`,
-          );}
+          );
+        }
         clearTimeout(pending.timer);
         this.#pending.delete(message.requestSequence);
-        if (message.success) {pending.resolve(message.result);}
-        else {pending.reject(new Error(message.error ?? "Sidecar request failed."));}
+        if (message.success) {
+          pending.resolve(message.result);
+        } else {
+          pending.reject(new Error(message.error ?? "Sidecar request failed."));
+        }
       }
     } catch (error) {
       this.#fail(asError(error));
@@ -201,7 +223,9 @@ export class DebugSidecarClient {
   }
 
   #fail(error: Error, closeTransport = true): void {
-    if (this.#closed) {return;}
+    if (this.#closed) {
+      return;
+    }
     this.#closed = true;
     this.#closeError = error;
     this.#dataSubscription.dispose();
@@ -211,10 +235,14 @@ export class DebugSidecarClient {
       pending.reject(error);
     }
     this.#pending.clear();
-    for (const listener of this.#closeListeners) {listener(error);}
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
     this.#closeListeners.clear();
     this.#eventListeners.clear();
     if (closeTransport) {
+      // Close listeners are synchronous; best-effort transport shutdown must absorb an already terminal failure.
+      // oxlint-disable-next-line promise/no-promise-in-callback
       void this.#transport.close().catch(() => undefined);
     }
   }

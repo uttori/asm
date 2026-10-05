@@ -341,7 +341,7 @@ export const renderSnesRamDefines = (variables, options = {}) => {
                 variable.category,
                 variable.description,
                 variable.size === 1 ? undefined : `Size: ${variable.size} bytes.`,
-                ...variable.notes.filter((note) => options.includeSourceInformation || !isLegacySourceNote(note)),
+                ...variable.notes.filter((note) => options.includeSourceInformation === true || !isLegacySourceNote(note)),
                 ...(options.includeSourceInformation ? (variable.sources ?? []) : []),
             ].filter((entry) => Boolean(entry));
             const categorySeparator = variable.category ? " — " : "";

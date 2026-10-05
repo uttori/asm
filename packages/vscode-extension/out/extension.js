@@ -33509,7 +33509,12 @@ var init_conformance = __esm({
     fail = (message) => {
       throw new Error(message);
     };
-    requireValue = (value, message) => value === void 0 ? fail(message) : value;
+    requireValue = (value, message) => {
+      if (value === void 0) {
+        return fail(message);
+      }
+      return value;
+    };
     addressesMatch = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && (left.address === right.address || left.outputOffset !== void 0 && left.outputOffset === right.outputOffset);
     assertAddress = (actual, expected, context) => {
       if (!addressesMatch(actual, expected)) {
@@ -37813,13 +37818,13 @@ var init_sidecar_client = __esm({
         return { dispose: () => this.#closeListeners.delete(listener) };
       }
       /**
-      * Sends one bounded command and resolves its paired response. A command error rejects only this
-      * request. Timeout, malformed input, or transport failure closes the connection and rejects all
-      * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
-        * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
-        * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
-        * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
-        */
+       * Sends one bounded command and resolves its paired response. A command error rejects only this
+       * request. Timeout, malformed input, or transport failure closes the connection and rejects all
+       * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
+       * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
+       * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
+       * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
+       */
       request(command, arguments_ = {}) {
         if (this.#closed) {
           return Promise.reject(new Error("Sidecar client is closed."));
@@ -52383,18 +52388,6 @@ var ProjectPanelProvider = class {
       case "ready":
         await this.refresh();
         return;
-      case "initConfig":
-        await this.initConfig();
-        await this.refresh();
-        return;
-      case "openConfig": {
-        const { status } = await this.snapshot();
-        const root = import_vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (root && status.configFile) {
-          await import_vscode18.window.showTextDocument(import_vscode18.Uri.file(path37.resolve(root, status.configFile)));
-        }
-        return;
-      }
       case "addEntryPoint":
         await this.addPath("entryPoints", false);
         return;
@@ -52418,6 +52411,19 @@ var ProjectPanelProvider = class {
         return;
       default:
         return;
+    }
+  }
+  /** Opens the effective project configuration, initializing the default file when none is configured. */
+  async openConfiguration() {
+    const { status } = await this.snapshot();
+    const root = import_vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (root && status.configFile) {
+      await import_vscode18.window.showTextDocument(import_vscode18.Uri.file(path37.resolve(root, status.configFile)));
+      return;
+    }
+    if (!status.configFile) {
+      await this.initConfig();
+      await this.refresh();
     }
   }
   /**
@@ -52570,7 +52576,7 @@ function digest(value) {
 }
 function locator(value) {
   const result = text(value);
-  if (!/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/.test(result)) {
+  if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/.test(result)) {
     throw new Error("Invalid asset export locator.");
   }
   return result;
@@ -52637,8 +52643,8 @@ function readAssetOperation(value) {
       throw new Error("Invalid asset draft inventory.");
     }
     let pathBytes = 0;
-    drafts = input.drafts.map((value2) => {
-      const draft = object(value2), file = text(draft.path);
+    drafts = input.drafts.map((candidate) => {
+      const draft = object(candidate), file = text(draft.path);
       pathBytes += new TextEncoder().encode(file).length;
       if (pathBytes > ASSET_LIMITS.metadataBytes || typeof draft.opaque !== "boolean") {
         throw new Error("Invalid asset draft metadata.");
@@ -53510,12 +53516,14 @@ var SourceProcessClient = class {
               });
               await options.onBeforePublish(paths);
               options.signal?.throwIfAborted();
+              return;
             }).then(
               () => {
                 if (child.connected) {
                   child.send({ type: "publish-confirm" }, () => {
                   });
                 }
+                return;
               },
               (error) => {
                 if (child.connected) {
@@ -53732,6 +53740,7 @@ var SourceRow = class extends import_vscode23.TreeItem {
   }
   children;
 };
+var chooseAssetFile = async (title, extensions) => (await import_vscode23.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
 var SourceController = class {
   constructor(context, output, binaryDrafts = new BinaryDrafts()) {
     this.context = context;
@@ -54390,7 +54399,6 @@ var SourceController = class {
     if (!root) {
       return void 0;
     }
-    const choose = async (title, extensions) => (await import_vscode23.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
     let operation;
     if (request !== void 0) {
       const selected = readAssetOperation(request);
@@ -54414,7 +54422,9 @@ var SourceController = class {
       if (!adapter) {
         return void 0;
       }
-      const selection = await choose("Select the source asset selection declaration", ["json"]);
+      const selection = await chooseAssetFile("Select the source asset selection declaration", [
+        "json"
+      ]);
       if (!selection) {
         return void 0;
       }
@@ -54456,11 +54466,15 @@ var SourceController = class {
         presentation: presentation.id
       };
     } else if (action === "review") {
-      const manifest = await choose("Select the asset export manifest", ["json"]);
+      const manifest = await chooseAssetFile("Select the asset export manifest", ["json"]);
       if (!manifest) {
         return void 0;
       }
-      const document = await choose("Select the saved edited asset", ["aseprite", "ase", "png"]);
+      const document = await chooseAssetFile("Select the saved edited asset", [
+        "aseprite",
+        "ase",
+        "png"
+      ]);
       if (!document) {
         return void 0;
       }
@@ -54622,7 +54636,7 @@ var SourceController = class {
           action: "asset-recover",
           directory: root,
           direction: direction.id,
-          drafts: versions.filter((entry) => entry.dirty).map(({ path: path45, version, opaque }) => ({ path: path45, version, opaque }))
+          drafts: versions.filter((entry) => entry.dirty).map((entry) => ({ path: entry.path, version: entry.version, opaque: entry.opaque }))
         },
         epoch,
         versions
@@ -55457,6 +55471,7 @@ function activate(context) {
       () => configureEmulatorRuntime(context, import_vscode24.window.activeTextEditor?.document.uri)
     ),
     import_vscode24.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode24.commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
     import_vscode24.commands.registerCommand(
       "asm.openPanel",
       () => import_vscode24.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
@@ -55714,7 +55729,10 @@ function scheduleWatchBuild() {
     watchBuildRunning = true;
     void (async () => {
       try {
-        while (watchEnabled && watchEntryUri) {
+        for (; ; ) {
+          if (!watchEnabled || !watchEntryUri) {
+            return;
+          }
           const epoch = watchEpoch;
           const result = await runBuild(watchEntryUri, true);
           if (!watchIsEnabled()) {

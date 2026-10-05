@@ -95,8 +95,9 @@ function number(value: unknown, label: string, minimum: number, maximum: number)
   return integer(value, label, minimum, maximum);
 }
 
+/** Copy validated readonly colors into tuples the editor may mutate without changing the baseline. */
 function colors(value: unknown): SpriteEditorColor[] {
-  return indexedPalette(value).map((color) => [...color]);
+  return indexedPalette(value).map(([r, g, b, a]) => [r, g, b, a]);
 }
 
 function uniqueIds(values: readonly string[], label: string): void {
@@ -107,6 +108,8 @@ function uniqueIds(values: readonly string[], label: string): void {
 
 /** Bound dimensions, inventory and adapter capabilities before allocating editor images. */
 export function validateSpriteEditorBundle(bundle: SpriteEditorBundle): void {
+  // Serialized bundles can reach this public validator without compile-time literal guarantees.
+  // oxlint-disable-next-line typescript/no-unnecessary-condition
   if (bundle.format !== "uttori-sprite-editor" || bundle.version !== 1) {
     throw new Error("Unsupported sprite editing schema.");
   }
@@ -237,7 +240,8 @@ export function inspectSpriteEditorResult(
     }
     seen.add(id);
     const order = bundle.images.findIndex((v) => v.id === id);
-    const before = bundle.images[order];
+    // A missing identity yields -1; reject it rather than letting Array.at select the last image.
+    const before = order < 0 ? undefined : bundle.images.at(order);
     if (
       !before ||
       image.frame !== before.frame ||

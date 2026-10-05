@@ -104,7 +104,11 @@ test("live worker stages provisional facts, then publishes the same result as of
     128,
   );
   t.teardown(() => client.cancel());
-  for (let i = 0; !progress && i < 200; i++) {
+  // Progress arrives from the worker while delay yields to the event loop.
+  for (let i = 0; i < 200; i++) {
+    if (progress) {
+      break;
+    }
     await delay(10);
   }
   t.is(progress?.busEvents, 1);

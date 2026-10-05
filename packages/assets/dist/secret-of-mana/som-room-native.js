@@ -196,7 +196,7 @@ export function loadSomRoomNative(room, reader) {
     const words = decodeSomRoomMetatiles(read(address, metatileEnd - address));
     const layerWords = [0, 1].map((layer) => {
         const half = (room.header[2] >>> (6 + layer)) & 1;
-        return [...words.subarray(half * 768, (half + 1) * 768)];
+        return Array.from(words.subarray(half * 768, (half + 1) * 768));
     });
     const thresholds = [u16(0xcd0000), u16(0xcd0002), u16(0xcd0004)];
     const bankFor = (value) => {
@@ -210,17 +210,17 @@ export function loadSomRoomNative(room, reader) {
     integer(room.pieces.length, "Room pieces", 0, 65536);
     const layouts = {};
     let layoutPixels = 0;
-    for (const id of new Set(room.pieces.map((piece) => piece.layout))) {
-        integer(id, "Native map piece", 1, 1022);
-        const address = bankFor(id) * 65536 + u16(0xcd0004 + id * 2), end = bankFor(id + 1) * 65536 + u16(0xcd0006 + id * 2);
-        if (end <= address || end > 0xe00000 || end - address > 32768) {
+    for (const layoutId of new Set(room.pieces.map((piece) => piece.layout))) {
+        integer(layoutId, "Native map piece", 1, 1022);
+        const layoutAddress = bankFor(layoutId) * 65536 + u16(0xcd0004 + layoutId * 2), layoutEnd = bankFor(layoutId + 1) * 65536 + u16(0xcd0006 + layoutId * 2);
+        if (layoutEnd <= layoutAddress || layoutEnd > 0xe00000 || layoutEnd - layoutAddress > 32768) {
             throw new Error("Map piece requires a monotone adjacent-address bound.");
         }
-        const bytes = read(address, end - address);
+        const bytes = read(layoutAddress, layoutEnd - layoutAddress);
         // Native dimensions are in the first two bytes; reject aggregate layout expansion before allocating another decoded array.
         layoutPixels = boundedSum(layoutPixels, ((bytes[0] >>> 1) + 1) * ((bytes[1] >>> 1) + 1), ASSET_LIMITS.references, "Room layout cells");
         const decoded = decodeMapPiece(bytes);
-        layouts[id] = { width: decoded.width, height: decoded.height, tiles: decoded.tiles };
+        layouts[layoutId] = { width: decoded.width, height: decoded.height, tiles: decoded.tiles };
     }
     return {
         inventory,

@@ -289,6 +289,7 @@ export class GdbRspClient {
                 const low = hexDigit(this.#buffer[hash + 2]);
                 this.#start = hash + 3;
                 this.#scan = this.#start + 1;
+                // Reject this packet and request retransmission before any decoded payload reaches consumers.
                 if (high < 0 || low < 0 || ((high << 4) | low) !== checksum(payload)) {
                     void this.#write(Uint8Array.of(0x2d)).catch((error) => this.#fail(asError(error)));
                     continue;
@@ -333,6 +334,7 @@ export class GdbRspClient {
     }
     #deliver(payload) {
         const stopped = stop(payload);
+        // Stop events are asynchronous except for explicit handshake requests; they cannot consume an ordinary reply.
         if (stopped && !this.#pending?.acceptStop) {
             for (const listener of this.#stopListeners) {
                 listener(stopped);
@@ -387,6 +389,8 @@ export class GdbRspClient {
         }
         this.#closeListeners.clear();
         if (closeTransport) {
+            // Synchronous close notification must trigger transport cleanup without rethrowing its terminal failure.
+            // oxlint-disable-next-line promise/no-promise-in-callback
             void this.#transport.close().catch(() => undefined);
         }
     }

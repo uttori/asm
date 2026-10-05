@@ -12174,7 +12174,7 @@ function frameAtlasSegmentOrder(layout2, selection) {
       throw new Error(`Native frame atlas span exceeds the 24-bit address space: ${name}.`);
     }
     return { name, start, end };
-  }).sort((a, b) => a.start - b.start);
+  }).toSorted((a, b) => a.start - b.start);
   for (let index = 1; index < spans.length; index++) {
     if (spans[index].start !== spans[index - 1].end) {
       throw new Error("Selected frame atlas segments must be contiguous without gaps or overlaps.");

@@ -158,26 +158,27 @@ function parsePointerSection(
   label: string,
   filenames: Map<string, string>,
 ): AssetEntry[] {
-  const block = source.match(new RegExp(`${label}Start:([\\s\\S]*?)${label}End:`, "m"));
-  if (!block) {
+  // Literal delimiters avoid interpreting section labels as regular-expression syntax.
+  const marker = `${label}Start:`;
+  const start = source.indexOf(marker);
+  const end = source.indexOf(`${label}End:`, start + marker.length);
+  if (start < 0 || end < 0) {
     return [];
   }
+  const block = source.slice(start + marker.length, end);
 
   const entries: AssetEntry[] = [];
   const linePattern = /^\s*dl\s+\$([\dA-Fa-f]+)\s*,\s*\$([\dA-Fa-f]+)\s*,\s*(\w+)\s*,/gm;
-  let match: RegExpExecArray | null = linePattern.exec(block[1]);
+  let match: RegExpExecArray | null = linePattern.exec(block);
   while (match) {
     const nameLabel = match[3];
-    let filename = filenames.get(nameLabel);
-    if (!filename) {
-      filename = `${nameLabel}.bin`;
-    }
+    const filename = filenames.get(nameLabel) ?? `${nameLabel}.bin`;
     entries.push({
       start: Number.parseInt(match[1], 16),
       end: Number.parseInt(match[2], 16),
       filename,
     });
-    match = linePattern.exec(block[1]);
+    match = linePattern.exec(block);
   }
   return entries;
 }
@@ -372,7 +373,7 @@ function main(): void {
 }
 
 const launchedDirectly =
-  process.argv[1] !== undefined &&
+  process.argv.at(1) !== undefined &&
   pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
 if (launchedDirectly) {
   main();

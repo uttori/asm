@@ -112,7 +112,7 @@ export const parseCliArguments = (argv) => {
     const pluginOptions = {};
     let command = "assemble";
     let startIndex = 0;
-    const requestedCommand = argv[0];
+    const requestedCommand = argv.at(0);
     if (requestedCommand !== undefined && isCliCommand(requestedCommand)) {
         command = requestedCommand;
         startIndex = 1;

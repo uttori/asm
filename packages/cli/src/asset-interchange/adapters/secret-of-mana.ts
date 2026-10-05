@@ -163,7 +163,8 @@ function atlas(
   for (const emission of emissions) {
     const inputs = resourceInputs(context, emission);
     for (const [key, value] of Object.entries(inputs)) {
-      if (resources[key] && !equal(resources[key].bytes, value.bytes)) {
+      // Resource identifiers are data, so inherited object properties never establish an existing input.
+      if (Object.hasOwn(resources, key) && !equal(resources[key].bytes, value.bytes)) {
         throw new Error(`Ambiguous declared resource ${key}.`);
       }
       resources[key] = value;
@@ -171,7 +172,7 @@ function atlas(
     if (emission.format === "som.boss.graphics") {
       const options = emission.conversion!.options,
         segment = text(options.segment);
-      if (nativeOptions[segment]) {
+      if (Object.hasOwn(nativeOptions, segment)) {
         throw new Error(`Duplicate native segment emission: ${segment}.`);
       }
       nativeOptions[segment] = options;
@@ -285,7 +286,8 @@ function inspect(context: AssetAdapterContext, selection: SomSpriteSelection) {
       segments = frameAtlasSegmentOrder(selected.layout, selector);
     }
     for (const segment of segments) {
-      if (!selected.layout.segments[segment] || owned.has(segment)) {
+      // Each conversion must own one declared segment exactly once; missing names cannot inherit object properties.
+      if (!Object.hasOwn(selected.layout.segments, segment) || owned.has(segment)) {
         throw new Error(`Incomplete or duplicate native ownership: ${segment}.`);
       }
       owned.add(segment);
@@ -455,7 +457,7 @@ export const somSpriteSourceAdapter: AssetSourceAdapter<SomSpriteSelection, SomS
     const palettePlan = planSpritePaletteWords(
       current.catalog,
       changes.colors.map((change) => {
-        const slot = bindings.paletteSlots[change.index];
+        const slot = bindings.paletteSlots.at(change.index);
         if (!slot || !presentation.baseline.editablePaletteSlots.includes(change.index)) {
           throw new Error("Unknown native SoM palette authority.");
         }

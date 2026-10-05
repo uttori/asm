@@ -123,7 +123,12 @@ var init_conformance = __esm({
     fail = (message) => {
       throw new Error(message);
     };
-    requireValue = (value, message) => value === void 0 ? fail(message) : value;
+    requireValue = (value, message) => {
+      if (value === void 0) {
+        return fail(message);
+      }
+      return value;
+    };
     addressesMatch = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && (left.address === right.address || left.outputOffset !== void 0 && left.outputOffset === right.outputOffset);
     assertAddress = (actual, expected, context) => {
       if (!addressesMatch(actual, expected)) {
@@ -4581,13 +4586,13 @@ var init_sidecar_client = __esm({
         return { dispose: () => this.#closeListeners.delete(listener) };
       }
       /**
-      * Sends one bounded command and resolves its paired response. A command error rejects only this
-      * request. Timeout, malformed input, or transport failure closes the connection and rejects all
-      * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
-        * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
-        * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
-        * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
-        */
+       * Sends one bounded command and resolves its paired response. A command error rejects only this
+       * request. Timeout, malformed input, or transport failure closes the connection and rejects all
+       * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
+       * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
+       * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
+       * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
+       */
       request(command, arguments_ = {}) {
         if (this.#closed) {
           return Promise.reject(new Error("Sidecar client is closed."));
@@ -20225,7 +20230,7 @@ function assetHash(bytes3) {
   return createHash12("sha256").update(bytes3).digest("hex");
 }
 var storagePath = assetPath;
-var stagingPattern = /^\.staging-[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/;
+var stagingPattern = /^\.staging-[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 function readAssetStagingId(value) {
   if (typeof value !== "string" || !stagingPattern.test(value)) {
     throw new Error("Invalid asset staging directory identity.");
@@ -20246,9 +20251,7 @@ function recordDirectory(directory) {
   return absolute;
 }
 function stagingFileLimit(name3) {
-  const temporary = /^(.*)\.([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})\.tmp$/.exec(
-    name3
-  ), destination = temporary?.[1] ?? name3;
+  const temporary = /^(.*)\.([\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12})\.tmp$/.exec(name3), destination = temporary?.[1] ?? name3;
   if (destination === "record.json") {
     return ASSET_LIMITS.baselineMetadataBytes;
   }
@@ -20465,15 +20468,15 @@ function unpack(metadata, directory) {
       if (entry.kind === "array") {
         result3 = entry.values.map((item) => atom(item, depth + 1));
       } else if (entry.kind === "object") {
-        const object6 = {};
+        const object7 = {};
         for (const pair of entry.values) {
-          if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== "string" || Object.hasOwn(object6, pair[0])) {
+          if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== "string" || Object.hasOwn(object7, pair[0])) {
             throw new Error("Invalid asset metadata property.");
           }
           safeKey(pair[0]);
-          object6[pair[0]] = atom(pair[1], depth + 1);
+          object7[pair[0]] = atom(pair[1], depth + 1);
         }
-        result3 = object6;
+        result3 = object7;
       } else {
         throw new Error("Invalid asset metadata node kind.");
       }
@@ -20793,8 +20796,8 @@ function chunk(type, data) {
 
 // packages/assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
-  const pixels = rasterArea(image.width, image.height, "Indexed");
-  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
+  const pixels2 = rasterArea(image.width, image.height, "Indexed");
+  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels2) {
     throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
   }
 }
@@ -20932,11 +20935,11 @@ function indexedPalette(value) {
     const channels = slot;
     const result = [0, 0, 0, 0];
     for (let channel = 0; channel < 4; channel++) {
-      const value2 = channels[channel];
-      if (typeof value2 !== "number") {
+      const channelValue = channels[channel];
+      if (typeof channelValue !== "number") {
         throw new TypeError("Palette channel must be a number.");
       }
-      result[channel] = integer(value2, "Palette channel", 0, 255);
+      result[channel] = integer(channelValue, "Palette channel", 0, 255);
     }
     return result;
   });
@@ -20990,8 +20993,10 @@ function resolveAsepriteCels(document) {
       }
       if (cel.kind === "linked") {
         integer(cel.frame, "Linked frame", 0, document.frames.length - 1);
-      } else if (cel.kind !== "raster" && cel.kind !== "tilemap") {
-        throw new Error("Unsupported Aseprite cel kind.");
+      } else {
+        if (cel.kind !== "raster" && cel.kind !== "tilemap") {
+          throw new Error("Unsupported Aseprite cel kind.");
+        }
       }
       layers.set(cel.layer, cel);
     }
@@ -21399,15 +21404,15 @@ async function decodeAsepriteDocument(bytes3, signal) {
             diagonalMask: data.u32()
           };
           data.take(10);
-          const count3 = boundedProduct(columns2, rows, ASSET_LIMITS.references, "Tilemap cells");
-          reserve(boundedProduct(count3, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
+          const cellCount = boundedProduct(columns2, rows, ASSET_LIMITS.references, "Tilemap cells");
+          reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
           const raw = await rasterZlib(
             data.take(data.bytes.length - data.position),
-            boundedProduct(count3, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"),
+            boundedProduct(cellCount, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"),
             signal
           );
-          const cells = new Uint32Array(count3), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
-          for (let cell = 0; cell < count3; cell++) {
+          const cells = new Uint32Array(cellCount), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+          for (let cell = 0; cell < cellCount; cell++) {
             if (bits === 8) {
               cells[cell] = raw[cell];
             } else if (bits === 16) {
@@ -21430,10 +21435,10 @@ async function decodeAsepriteDocument(bytes3, signal) {
         if (frameIndex !== 0 || tilesets.length >= ASSET_LIMITS.tilesets) {
           throw new Error("Aseprite tileset declaration limit/order.");
         }
-        const id2 = data.u32(), flags2 = data.u32(), tileCount = data.u32(), tileWidth = data.u16(), tileHeight = data.u16(), baseIndex = data.i16();
+        const id2 = data.u32(), tilesetFlags = data.u32(), tileCount = data.u32(), tileWidth = data.u16(), tileHeight = data.u16(), baseIndex = data.i16();
         data.take(14);
         const name3 = data.text();
-        if (flags2 & ~62 || !(flags2 & 2)) {
+        if (tilesetFlags & ~62 || !(tilesetFlags & 2)) {
           throw new Error("External or unsupported Aseprite tileset.");
         }
         integer(tileCount, "Tileset tiles", 1, ASSET_LIMITS.owners);
@@ -21450,7 +21455,7 @@ async function decodeAsepriteDocument(bytes3, signal) {
         const tileData = Array.from({ length: tileCount }, () => void 0);
         const set = {
           id: id2,
-          flags: flags2,
+          flags: tilesetFlags,
           tileCount,
           tileWidth,
           tileHeight,
@@ -21526,7 +21531,7 @@ async function decodeAsepriteDocument(bytes3, signal) {
         }
         if (extraFlags & 1 && lastCel?.kind === "raster") {
           const expected = [lastCel.x, lastCel.y, lastCel.width, lastCel.height];
-          if (bounds.some((value, i8) => value !== expected[i8] * 65536)) {
+          if (bounds.some((value, bound) => value !== expected[bound] * 65536)) {
             throw new Error("Scaled or fractional Aseprite cel bounds are unsupported.");
           }
         }
@@ -21688,6 +21693,10 @@ function encodedStructureBytes(document) {
   }
   return size;
 }
+var userDataChunk = (text4) => chunk(
+  8224,
+  text4 === void 0 ? new Fields().u32(0).build() : new Fields().u32(1).text(text4).build()
+);
 async function encodeAsepriteDocument(document, signal) {
   signal?.throwIfAborted();
   validateAsepriteDocument(document);
@@ -21702,10 +21711,6 @@ async function encodeAsepriteDocument(document, signal) {
     throw new Error("All Aseprite layers require UUIDs when UUID storage is enabled.");
   }
   const allFrames = [];
-  const user = (text4) => chunk(
-    8224,
-    text4 === void 0 ? new Fields().u32(0).build() : new Fields().u32(1).text(text4).build()
-  );
   for (let frameIndex = 0; frameIndex < document.frames.length; frameIndex++) {
     signal?.throwIfAborted();
     const frame = document.frames[frameIndex], chunks = [];
@@ -21716,9 +21721,9 @@ async function encodeAsepriteDocument(document, signal) {
       }
       chunks.push(chunk(8217, palette.build()));
       if (document.exportId) {
-        chunks.push(user(ID_PREFIX + document.exportId));
+        chunks.push(userDataChunk(ID_PREFIX + document.exportId));
       } else if (document.userData !== void 0) {
-        chunks.push(user(document.userData));
+        chunks.push(userDataChunk(document.userData));
       }
       for (const set of document.tilesets) {
         const fields = new Fields().u32(set.id).u32(set.flags).u32(set.tileCount).u16(set.tileWidth).u16(set.tileHeight).u16(set.baseIndex).raw(new Uint8Array(14)).text(set.name);
@@ -21726,13 +21731,13 @@ async function encodeAsepriteDocument(document, signal) {
         fields.u32(compressed.length).raw(compressed);
         chunks.push(chunk(8227, fields.build()));
         if (set.userData !== void 0 || set.tileData.some((text4) => text4 !== void 0)) {
-          chunks.push(user(set.userData));
+          chunks.push(userDataChunk(set.userData));
           let last = set.tileData.length - 1;
           while (last >= 0 && set.tileData[last] === void 0) {
             last--;
           }
           for (let tile = 0; tile <= last; tile++) {
-            chunks.push(user(set.tileData[tile]));
+            chunks.push(userDataChunk(set.tileData[tile]));
           }
         }
       }
@@ -21746,7 +21751,7 @@ async function encodeAsepriteDocument(document, signal) {
         }
         chunks.push(chunk(8196, fields.build()));
         if (layer.userData !== void 0) {
-          chunks.push(user(layer.userData));
+          chunks.push(userDataChunk(layer.userData));
         }
       }
       if (document.tags.length) {
@@ -21757,7 +21762,7 @@ async function encodeAsepriteDocument(document, signal) {
         chunks.push(chunk(8216, fields.build()));
         if (document.tags.some((tag) => tag.userData !== void 0)) {
           for (const tag of document.tags) {
-            chunks.push(user(tag.userData));
+            chunks.push(userDataChunk(tag.userData));
           }
         }
       }
@@ -21791,7 +21796,7 @@ async function encodeAsepriteDocument(document, signal) {
       }
       chunks.push(chunk(8197, fields.build()));
       if (cel.userData !== void 0) {
-        chunks.push(user(cel.userData));
+        chunks.push(userDataChunk(cel.userData));
       }
     }
     integer(chunks.length, "Frame chunks", 0, ASSET_LIMITS.chunks);
@@ -21868,7 +21873,7 @@ function inspectAtlasChanges(before, after, policy) {
   const colors = indexedPaletteChanges(before.palette, after.palette, policy.editablePaletteSlots);
   const claimed = new Uint8Array(before.indexes.length);
   const ids = /* @__PURE__ */ new Set();
-  const pixels = [];
+  const pixels2 = [];
   for (const owner of policy.owners) {
     if (!owner.id || ids.has(owner.id)) {
       throw new Error("Missing or duplicate atlas owner.");
@@ -21889,13 +21894,13 @@ function inspectAtlasChanges(before, after, policy) {
       }
     }
     if (newPixels.indexes.some((index, i) => index !== oldPixels.indexes[i])) {
-      pixels.push({ owner: owner.id, indexes: newPixels.indexes });
+      pixels2.push({ owner: owner.id, indexes: newPixels.indexes });
     }
   }
   if (after.indexes.some((index, i) => index !== before.indexes[i] && !claimed[i])) {
     throw new Error("Atlas padding or derived preview pixels changed.");
   }
-  return { pixels, colors };
+  return { pixels: pixels2, colors };
 }
 
 // packages/assets/src/aseprite.ts
@@ -21994,27 +21999,27 @@ var asepriteAtlasCodec = Object.freeze({
 });
 
 // packages/assets/src/indexed-ownership.ts
+var isObject2 = (input) => !!input && typeof input === "object" && !Array.isArray(input);
+var object = (input) => {
+  if (!isObject2(input)) {
+    throw new Error("Invalid ownership record.");
+  }
+  return input;
+};
+var pixels = (input) => {
+  if (typeof input.id !== "string" || typeof input.width !== "number" || typeof input.height !== "number" || !(input.indexes instanceof Uint8Array)) {
+    throw new Error("Invalid ownership pixels.");
+  }
+  return { id: input.id, width: input.width, height: input.height, indexes: input.indexes };
+};
 function readIndexedOwnership(value) {
-  const isObject6 = (input2) => !!input2 && typeof input2 === "object" && !Array.isArray(input2);
-  const object6 = (input2) => {
-    if (!isObject6(input2)) {
-      throw new Error("Invalid ownership record.");
-    }
-    return input2;
-  };
-  const pixels = (input2) => {
-    if (typeof input2.id !== "string" || typeof input2.width !== "number" || typeof input2.height !== "number" || !(input2.indexes instanceof Uint8Array)) {
-      throw new Error("Invalid ownership pixels.");
-    }
-    return { id: input2.id, width: input2.width, height: input2.height, indexes: input2.indexes };
-  };
-  const input = object6(value);
+  const input = object(value);
   const slotMaps = /* @__PURE__ */ new WeakMap();
   if (!Array.isArray(input.owners) || !Array.isArray(input.views) || input.owners.length > ASSET_LIMITS.owners || input.views.length > ASSET_LIMITS.owners) {
     throw new Error("Invalid ownership inventory.");
   }
   const owners = input.owners.map((item) => {
-    const entry = object6(item);
+    const entry = object(item);
     if (!Array.isArray(entry.allowedIndexes) || entry.allowedIndexes.length > 256 || entry.editable !== void 0 && typeof entry.editable !== "boolean") {
       throw new Error("Invalid allowed slots.");
     }
@@ -22024,10 +22029,11 @@ function readIndexedOwnership(value) {
       }
       return slot;
     });
-    return { ...pixels(entry), allowedIndexes, editable: entry.editable };
+    const { id: id2, width, height, indexes } = pixels(entry);
+    return { id: id2, width, height, indexes, allowedIndexes, editable: entry.editable };
   });
   const views = input.views.map((item) => {
-    const entry = object6(item);
+    const entry = object(item);
     if (typeof entry.owner !== "string" || !Array.isArray(entry.indexMap) || entry.indexMap.length > 256 || entry.flipX !== void 0 && typeof entry.flipX !== "boolean" || entry.flipY !== void 0 && typeof entry.flipY !== "boolean") {
       throw new Error("Invalid ownership view.");
     }
@@ -22041,8 +22047,12 @@ function readIndexedOwnership(value) {
       });
       slotMaps.set(entry.indexMap, indexMap);
     }
+    const { id: id2, width, height, indexes } = pixels(entry);
     return {
-      ...pixels(entry),
+      id: id2,
+      width,
+      height,
+      indexes,
       owner: entry.owner,
       indexMap,
       flipX: entry.flipX,
@@ -22066,7 +22076,7 @@ function nativeOffset(view, offset) {
   return ny * view.width + nx;
 }
 function nativeSlot(view, slot, owner) {
-  const mapped = view.indexMap[slot];
+  const mapped = view.indexMap.at(slot);
   if (mapped === void 0 || mapped === null || !owner.allowedIndexes.includes(mapped)) {
     throw new Error(`View ${view.id}: unmapped or forbidden display slot ${slot}.`);
   }
@@ -22221,10 +22231,10 @@ function interchangeCapabilities(...profiles) {
   };
 }
 var interchangeIdentity = Object.freeze({
-  view: (id2) => VIEW + id2,
-  role: (id2) => ROLE + id2,
-  tileset: (id2) => SET + id2,
-  timeline: (id2) => TAG + id2
+  view: (identity4) => VIEW + identity4,
+  role: (identity4) => ROLE + identity4,
+  tileset: (identity4) => SET + identity4,
+  timeline: (identity4) => TAG + identity4
 });
 function id(value, prefix) {
   if (!value?.startsWith(prefix) || value.length <= prefix.length || value.length > 1024 + prefix.length) {
@@ -22286,7 +22296,7 @@ function cellValue(payload, set, ids, offset, transforms) {
   if (!(set.flags & 4) && word2 === 4294967295) {
     return null;
   }
-  const view = ids[(word2 & payload.idMask) >>> 0];
+  const view = ids.at((word2 & payload.idMask) >>> 0);
   if (view === null) {
     return null;
   }
@@ -22366,6 +22376,9 @@ function compareRaster(beforeCel, before, afterCel, after, transparent) {
   compare(beforeCel, oldRaster, afterCel, newRaster);
   compare(afterCel, newRaster, beforeCel, oldRaster);
 }
+var timelineTags = (document) => document.tags.map(
+  (tag) => JSON.stringify([id(tag.userData, TAG), tag.from, tag.to, tag.direction, tag.repeat])
+).toSorted();
 function inspectTilemapInterchange(baseline, after) {
   const before = baseline.document;
   validateAsepriteDocument(before);
@@ -22444,22 +22457,19 @@ function inspectTilemapInterchange(baseline, after) {
       throw new Error("Read-only interchange stacking changed.");
     }
   }
-  const tags = (document) => document.tags.map(
-    (tag) => JSON.stringify([id(tag.userData, TAG), tag.from, tag.to, tag.direction, tag.repeat])
-  ).sort();
-  if (JSON.stringify(tags(before)) !== JSON.stringify(tags(after))) {
+  if (JSON.stringify(timelineTags(before)) !== JSON.stringify(timelineTags(after))) {
     throw new Error("Read-only interchange timeline membership changed.");
   }
-  const pixels = reconcileIndexedViews(baseline.ownership, [...newInventory.views.values()]);
+  const pixels2 = reconcileIndexedViews(baseline.ownership, [...newInventory.views.values()]);
   const colors = indexedPaletteChanges(
     before.palette,
     after.palette,
     baseline.editablePaletteSlots
   );
-  if (!baseline.capabilities.pixelEdits && pixels.length || !baseline.capabilities.paletteEdits && colors.length) {
+  if (!baseline.capabilities.pixelEdits && pixels2.length || !baseline.capabilities.paletteEdits && colors.length) {
     throw new Error("Interchange edit exceeds exported capabilities.");
   }
-  return { pixels, colors };
+  return { pixels: pixels2, colors };
 }
 
 // packages/assets/src/presentation-layout.ts
@@ -22650,16 +22660,16 @@ function inspectRasterInterchange(baseline, document) {
   if (after.indexes.some((slot, index) => slot !== before.indexes[index] && !claimed[index])) {
     throw new Error("Read-only raster inventory padding changed.");
   }
-  const pixels = reconcileIndexedViews(baseline.ownership, candidates);
+  const pixels2 = reconcileIndexedViews(baseline.ownership, candidates);
   const colors = indexedPaletteChanges(
     before.palette,
     after.palette,
     baseline.editablePaletteSlots
   );
-  if (!baseline.capabilities.pixelEdits && pixels.length || !baseline.capabilities.paletteEdits && colors.length) {
+  if (!baseline.capabilities.pixelEdits && pixels2.length || !baseline.capabilities.paletteEdits && colors.length) {
     throw new Error("Raster edits exceed the advertised native capabilities.");
   }
-  return { pixels, colors };
+  return { pixels: pixels2, colors };
 }
 
 // packages/cli/src/asset-interchange/service.ts
@@ -23919,7 +23929,7 @@ var PluginManager = class {
       validateAliases(record6.value.aliases, transaction.manifest.id, record6.contributionId);
       const schema = record6.value.optionSchema;
       const invalidSchema = schema !== void 0 && (!isRecord24(schema) || Object.values(schema).some(
-        (field) => !isRecord24(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (!field.resource || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
+        (field) => !isRecord24(field) || !["string", "integer", "boolean", "enum"].includes(field.type) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (!field.resource || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
       ));
       if (!import_semver.default.valid(record6.value.version) || typeof record6.value.encode !== "function" || typeof record6.value.decode !== "function" || invalidSchema || record6.value.validateOptions !== void 0 && typeof record6.value.validateOptions !== "function" || record6.value.resourcePaths !== void 0 && typeof record6.value.resourcePaths !== "function" || record6.value.targets !== void 0 && (!isArray3(record6.value.targets) || record6.value.targets.some((target) => typeof target !== "string"))) {
         this.#malformed(transaction, record6);
@@ -24058,9 +24068,6 @@ var PluginManager = class {
 };
 
 // packages/core/src/plugin/session-state.ts
-function isSlotValue(value) {
-  return value !== void 0 || Object.is(value, void 0);
-}
 var PluginSessionStateStore = class {
   #contributions;
   #values;
@@ -24105,12 +24112,6 @@ var PluginSessionStateStore = class {
       });
     }
     const value = this.#values.get(slot.id);
-    if (!isSlotValue(value)) {
-      throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
-        code: "PLUGIN_CONFIGURATION_INVALID",
-        contributionId: slot.id
-      });
-    }
     return value;
   }
   /**
@@ -34222,16 +34223,16 @@ var Assembler = class _Assembler {
    * @param {ReferenceExpressionNode} object The object of a member access.
    * @returns {string | undefined} The container name.
    */
-  structSegmentContainerName(object6) {
-    switch (object6.type) {
+  structSegmentContainerName(object7) {
+    switch (object7.type) {
       case "identifier":
-        return object6.name;
+        return object7.name;
       case "defineReference":
-        return this.structNameFromDefine(object6.name ?? object6.content) ?? object6.name;
+        return this.structNameFromDefine(object7.name ?? object7.content) ?? object7.name;
       case "member":
-        return object6.property.name;
+        return object7.property.name;
       case "index":
-        return this.structSegmentContainerName(object6.object);
+        return this.structSegmentContainerName(object7.object);
       default:
         return void 0;
     }
@@ -36071,38 +36072,38 @@ var Assembler = class _Assembler {
         return this.resolveExpressionInput(value);
       }
       case "member": {
-        const object6 = this.resolveReferenceExpressionNode(expression.object);
-        if (!isReferenceExpressionNode(object6)) {
+        const object7 = this.resolveReferenceExpressionNode(expression.object);
+        if (!isReferenceExpressionNode(object7)) {
           const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
           if (expandedReference) {
             return expandedReference;
           }
           return {
             type: "raw",
-            value: `${renderExpressionNode(object6)}.${expression.property.name}`
+            value: `${renderExpressionNode(object7)}.${expression.property.name}`
           };
         }
         return {
           ...expression,
-          object: object6
+          object: object7
         };
       }
       case "index": {
-        const object6 = this.resolveReferenceExpressionNode(expression.object);
+        const object7 = this.resolveReferenceExpressionNode(expression.object);
         const index = this.resolveExpressionNode(expression.index);
-        if (!isReferenceExpressionNode(object6)) {
+        if (!isReferenceExpressionNode(object7)) {
           const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
           if (expandedReference) {
             return expandedReference;
           }
           return {
             type: "raw",
-            value: `${renderExpressionNode(object6)}[${renderExpressionNode(index)}]`
+            value: `${renderExpressionNode(object7)}[${renderExpressionNode(index)}]`
           };
         }
         return {
           ...expression,
-          object: object6,
+          object: object7,
           index
         };
       }
@@ -52562,7 +52563,7 @@ function unfilterRow(row, previous, bpp, length, filter) {
       throw new Error(`Invalid PNG scanline filter ${filter}.`);
   }
 }
-function unfilterScanline(filter, pixels, scanline, bpp, offset, length) {
+function unfilterScanline(filter, pixels2, scanline, bpp, offset, length) {
   if (!Number.isSafeInteger(bpp) || bpp < 1 || bpp > 2147483647) {
     throw new RangeError("Unfilter stride must be an integer in [1, 2147483647].");
   }
@@ -52572,25 +52573,25 @@ function unfilterScanline(filter, pixels, scanline, bpp, offset, length) {
   if (!Number.isSafeInteger(length) || length < 0 || length > 2147483647) {
     throw new RangeError("Unfilter length must be an integer in [0, 2147483647].");
   }
-  if (offset + length > pixels.length || length > scanline.length) {
+  if (offset + length > pixels2.length || length > scanline.length) {
     throw new RangeError("Unfilter buffer is too small.");
   }
   const row = Uint8Array.from(scanline.slice(0, length));
   const previous = new Uint8Array(length);
   if (offset >= length) {
     for (let i = 0; i < length; i++) {
-      previous[i] = pixels[offset - length + i];
+      previous[i] = pixels2[offset - length + i];
     }
   }
   unfilterRow(row, previous, bpp, length, filter);
-  if (pixels instanceof Uint8Array) {
-    pixels.set(row, offset);
+  if (pixels2 instanceof Uint8Array) {
+    pixels2.set(row, offset);
   } else {
     for (let i = 0; i < length; i++) {
-      pixels[offset + i] = row[i];
+      pixels2[offset + i] = row[i];
     }
   }
-  return pixels;
+  return pixels2;
 }
 function validateIndexed(image, bitDepth, maxPixels) {
   if (!Number.isSafeInteger(image.width) || image.width < 1 || image.width > 2147483647) {
@@ -53508,13 +53509,13 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (this.colorType !== 3) {
       throw new Error("PNG does not contain indexed pixels.");
     }
-    const pixels = this.decodePixels();
-    if (!(pixels instanceof Uint8Array)) {
+    const pixels2 = this.decodePixels();
+    if (!(pixels2 instanceof Uint8Array)) {
       throw new Error("Indexed PNG pixels must be byte-sized samples.");
     }
-    let indexes = pixels;
+    let indexes = pixels2;
     if (copy) {
-      indexes = Uint8Array.from(pixels);
+      indexes = Uint8Array.from(pixels2);
     }
     return {
       kind: "indexed-image",
@@ -53537,9 +53538,9 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (typeof copy !== "boolean") {
       throw new TypeError("copy must be a boolean.");
     }
-    const pixels = this.decodePixels();
-    if (this.colorType === 6 && this.bitDepth === 8 && pixels instanceof Uint8Array) {
-      return new RgbaSurface(this.width, this.height, pixels, {
+    const pixels2 = this.decodePixels();
+    if (this.colorType === 6 && this.bitDepth === 8 && pixels2 instanceof Uint8Array) {
+      return new RgbaSurface(this.width, this.height, pixels2, {
         copy,
         maxPixels: this._limits.maxPixels
       });
@@ -53987,8 +53988,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param length Length
    * @returns Pixels
    */
-  static unFilterNone(pixels, scanline, bpp, offset, length) {
-    return unfilterScanline(0, pixels, scanline, bpp, offset, length);
+  static unFilterNone(pixels2, scanline, bpp, offset, length) {
+    return unfilterScanline(0, pixels2, scanline, bpp, offset, length);
   }
   /**
    * The Sub() filter transmits the difference between each byte and the value of the corresponding byte of the prior pixel.
@@ -54000,8 +54001,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param length Length
    * @returns Pixels
    */
-  static unFilterSub(pixels, scanline, bpp, offset, length) {
-    return unfilterScanline(1, pixels, scanline, bpp, offset, length);
+  static unFilterSub(pixels2, scanline, bpp, offset, length) {
+    return unfilterScanline(1, pixels2, scanline, bpp, offset, length);
   }
   /**
    * The Up() filter is just like the Sub() filter except that the pixel immediately above the current pixel, rather than just to its left, is used as the predictor.
@@ -54013,8 +54014,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param length Length
    * @returns Pixels
    */
-  static unFilterUp(pixels, scanline, bpp, offset, length) {
-    return unfilterScanline(2, pixels, scanline, bpp, offset, length);
+  static unFilterUp(pixels2, scanline, bpp, offset, length) {
+    return unfilterScanline(2, pixels2, scanline, bpp, offset, length);
   }
   /**
    * The Average() filter uses the average of the two neighboring pixels (left and above) to predict the value of a pixel.
@@ -54026,8 +54027,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param length Length
    * @returns Pixels
    */
-  static unFilterAverage(pixels, scanline, bpp, offset, length) {
-    return unfilterScanline(3, pixels, scanline, bpp, offset, length);
+  static unFilterAverage(pixels2, scanline, bpp, offset, length) {
+    return unfilterScanline(3, pixels2, scanline, bpp, offset, length);
   }
   /**
    * The Paeth() filter computes a simple linear function of the three neighboring pixels (left, above, upper left), then chooses as predictor the neighboring pixel closest to the computed value.
@@ -54053,8 +54054,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param length Length
    * @returns Pixels
    */
-  static unFilterPaeth(pixels, scanline, bpp, offset, length) {
-    return unfilterScanline(4, pixels, scanline, bpp, offset, length);
+  static unFilterPaeth(pixels2, scanline, bpp, offset, length) {
+    return unfilterScanline(4, pixels2, scanline, bpp, offset, length);
   }
 };
 var data_image_png_default = ImagePNG;
@@ -54466,9 +54467,9 @@ function imageModel(document) {
   if (value.kind !== document.kind || typeof value.width !== "number" || typeof value.height !== "number" || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || value.width < 1 || value.height < 1 || value.width > ASSET_LIMITS.rasterPixels || value.height > Math.floor(ASSET_LIMITS.rasterPixels / value.width)) {
     throw new Error("Image model has invalid dimensions or kind.");
   }
-  const pixels = value.width * value.height;
+  const pixels2 = value.width * value.height;
   if (document.kind === "indexed-image") {
-    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || !isSourceBitDepth(value.sourceBitDepth)) {
+    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels2 || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || !isSourceBitDepth(value.sourceBitDepth)) {
       throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
     }
     const palette = [];
@@ -54493,7 +54494,7 @@ function imageModel(document) {
       sourceBitDepth: value.sourceBitDepth
     };
   }
-  if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+  if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels2 * 4) {
     throw new Error("RGBA image model has invalid pixel bytes.");
   }
   return {
@@ -58899,7 +58900,7 @@ var renderSnesRamDefines = (variables, options = {}) => {
         variable.description,
         variable.size === 1 ? void 0 : `Size: ${variable.size} bytes.`,
         ...variable.notes.filter(
-          (note) => options.includeSourceInformation || !isLegacySourceNote(note)
+          (note) => options.includeSourceInformation === true || !isLegacySourceNote(note)
         ),
         ...options.includeSourceInformation ? variable.sources ?? [] : []
       ].filter((entry) => Boolean(entry));
@@ -59612,7 +59613,7 @@ var hex8 = (value) => `$${value.toString(16).toUpperCase()}`;
 var comment = (value) => value.replaceAll(/\s+/g, " ").trim();
 var isRecord35 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var isStringList2 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
-var object = (value) => {
+var object2 = (value) => {
   if (!isRecord35(value)) {
     throw new Error("Struct-map records must be objects.");
   }
@@ -59641,7 +59642,7 @@ var notes = (value) => {
 };
 var entryComments = (value, firstIndex, count2) => {
   const result = {};
-  for (const [key3, text4] of Object.entries(object(value))) {
+  for (const [key3, text4] of Object.entries(object2(value))) {
     const index = Number(key3);
     if (!/^(0|[1-9]\d*)$/.test(key3) || !Number.isSafeInteger(index) || index < firstIndex || index >= firstIndex + count2) {
       throw new Error(
@@ -59656,7 +59657,7 @@ var entryComments = (value, firstIndex, count2) => {
   return result;
 };
 var validateSnesStructMap = (value) => {
-  const file = object(value);
+  const file = object2(value);
   if (file.format !== "uttori-asm-snes-struct-map" || file.schemaVersion !== 1) {
     throw new Error("Unsupported SNES struct-map format or schema.");
   }
@@ -59673,7 +59674,7 @@ var validateSnesStructMap = (value) => {
     return name3;
   };
   const structures = file.structures.map((input) => {
-    const entry = object(input);
+    const entry = object2(input);
     const id2 = uniqueName(entry.id);
     const size = integer6(entry.size, 1, 65536);
     if (entry.byteOrder !== void 0 && entry.byteOrder !== "little") {
@@ -59684,7 +59685,7 @@ var validateSnesStructMap = (value) => {
     }
     const fieldNames = /* @__PURE__ */ new Set();
     const fields = entry.fields.map((inputField) => {
-      const field = object(inputField);
+      const field = object2(inputField);
       const name3 = identifier(field.name);
       if (fieldNames.has(name3.toLowerCase())) {
         throw new Error(`Duplicate struct field '${id2}.${name3}'.`);
@@ -59725,7 +59726,7 @@ var validateSnesStructMap = (value) => {
   });
   const byName = new Map(structures.map((structure) => [structure.id, structure]));
   const bindings = file.bindings.map((input) => {
-    const entry = object(input);
+    const entry = object2(input);
     const name3 = uniqueName(entry.name);
     const structure = byName.get(String(entry.structure));
     if (!structure) {
@@ -59780,7 +59781,7 @@ var validateSnesStructMap = (value) => {
     throw new Error("Struct-map constants must be an array.");
   }
   const constants = (file.constants ?? []).map((input) => {
-    const entry = object(input);
+    const entry = object2(input);
     if (typeof entry.description !== "string" || !entry.description.trim()) {
       throw new Error("Struct-map constants require a description.");
     }
@@ -61615,16 +61616,16 @@ function encodeSnesRelocationReference(reference, address5, encodedLength) {
   return bytes(value, referenceWidth(reference), signed2);
 }
 function planSnesRelocation(options) {
-  const object6 = options.objects.find((item) => item.id === options.objectId);
-  if (!object6) {
+  const object7 = options.objects.find((item) => item.id === options.objectId);
+  if (!object7) {
     throw new Error(`Unknown movable object: ${options.objectId}`);
   }
-  if (!object6.movable || !object6.referencesComplete || object6.kind === "code" && !object6.closedControlFlow) {
+  if (!object7.movable || !object7.referencesComplete || object7.kind === "code" && !object7.closedControlFlow) {
     throw new Error(
       "Relocation requires a movable object, complete reference declaration, and closed code boundaries."
     );
   }
-  if (!Number.isSafeInteger(options.encodedLength) || options.encodedLength <= 0 || !Number.isSafeInteger(object6.alignment) || object6.alignment <= 0 || ![32768, 65536].includes(object6.bankSize)) {
+  if (!Number.isSafeInteger(options.encodedLength) || options.encodedLength <= 0 || !Number.isSafeInteger(object7.alignment) || object7.alignment <= 0 || ![32768, 65536].includes(object7.bankSize)) {
     throw new Error("Invalid allocation size, alignment, or bank constraint.");
   }
   const ids = /* @__PURE__ */ new Set();
@@ -61673,7 +61674,7 @@ function planSnesRelocation(options) {
     }
     fieldExtents.push({ start: reference.offset, end: reference.offset + width });
   }
-  const targetReferences = options.references.filter((reference) => reference.target === object6.id);
+  const targetReferences = options.references.filter((reference) => reference.target === object7.id);
   for (const reference of targetReferences) {
     const addend = reference.addend ?? 0;
     if (!Number.isSafeInteger(addend) || addend < 0 || addend >= options.encodedLength) {
@@ -61695,7 +61696,7 @@ function planSnesRelocation(options) {
       throw new PlacementConstraint("Allocation has no contiguous supported SNES bus address.");
     }
     return targetReferences.map((reference) => {
-      if (candidate !== object6.start && reference.offset < object6.start + object6.length && reference.offset + referenceWidth(reference) > object6.start) {
+      if (candidate !== object7.start && reference.offset < object7.start + object7.length && reference.offset + referenceWidth(reference) > object7.start) {
         throw new Error(
           `Reference ${reference.id} lies inside the moved object; provide symbolic reassembly before relocating it.`
         );
@@ -61718,13 +61719,13 @@ function planSnesRelocation(options) {
       options.current.length,
       "requested allocation"
     );
-    const originalSlot = candidate === object6.originalStart && options.encodedLength <= object6.originalEnd - object6.originalStart;
-    const currentSlot = candidate === object6.start && options.encodedLength <= object6.length;
+    const originalSlot = candidate === object7.originalStart && options.encodedLength <= object7.originalEnd - object7.originalStart;
+    const currentSlot = candidate === object7.start && options.encodedLength <= object7.length;
     const declaredFree = free.some(
       (space) => candidate >= space.start && candidate + options.encodedLength <= space.end
     );
-    if (!originalSlot && !currentSlot && !declaredFree || candidate % object6.alignment !== 0 || Math.floor(candidate / object6.bankSize) !== Math.floor((candidate + options.encodedLength - 1) / object6.bankSize) || occupied.some(
-      (item) => item.id !== object6.id && item.start < candidate + options.encodedLength && candidate < item.start + item.length
+    if (!originalSlot && !currentSlot && !declaredFree || candidate % object7.alignment !== 0 || Math.floor(candidate / object7.bankSize) !== Math.floor((candidate + options.encodedLength - 1) / object7.bankSize) || occupied.some(
+      (item) => item.id !== object7.id && item.start < candidate + options.encodedLength && candidate < item.start + item.length
     ) || fieldExtents.some(
       (field) => field.start < candidate + options.encodedLength && candidate < field.end
     )) {
@@ -61734,29 +61735,29 @@ function planSnesRelocation(options) {
     }
     repairsAt(candidate);
     destination = candidate;
-  } else if (options.encodedLength <= object6.length && Math.floor(object6.start / object6.bankSize) === Math.floor((object6.start + options.encodedLength - 1) / object6.bankSize)) {
-    destination = object6.start;
+  } else if (options.encodedLength <= object7.length && Math.floor(object7.start / object7.bankSize) === Math.floor((object7.start + options.encodedLength - 1) / object7.bankSize)) {
+    destination = object7.start;
   } else {
     for (const space of free) {
-      let candidate = Math.ceil(space.start / object6.alignment) * object6.alignment;
+      let candidate = Math.ceil(space.start / object7.alignment) * object7.alignment;
       while (candidate + options.encodedLength <= space.end) {
-        const bankEnd = (Math.floor(candidate / object6.bankSize) + 1) * object6.bankSize;
+        const bankEnd = (Math.floor(candidate / object7.bankSize) + 1) * object7.bankSize;
         if (candidate + options.encodedLength > bankEnd) {
-          candidate = Math.ceil(bankEnd / object6.alignment) * object6.alignment;
+          candidate = Math.ceil(bankEnd / object7.alignment) * object7.alignment;
           continue;
         }
         const conflict = occupied.find(
           (item) => item.start < candidate + options.encodedLength && candidate < item.start + item.length
         );
         if (conflict) {
-          candidate = Math.ceil((conflict.start + conflict.length) / object6.alignment) * object6.alignment;
+          candidate = Math.ceil((conflict.start + conflict.length) / object7.alignment) * object7.alignment;
           continue;
         }
         const field = fieldExtents.find(
           (item) => item.start < candidate + options.encodedLength && candidate < item.end
         );
         if (field) {
-          candidate = Math.ceil(field.end / object6.alignment) * object6.alignment;
+          candidate = Math.ceil(field.end / object7.alignment) * object7.alignment;
           continue;
         }
         try {
@@ -61768,7 +61769,7 @@ function planSnesRelocation(options) {
             throw error;
           }
           rejectedPlacement = error;
-          candidate += object6.alignment;
+          candidate += object7.alignment;
         }
       }
       if (destination !== void 0) {
@@ -61781,7 +61782,7 @@ function planSnesRelocation(options) {
       "No declared free extent satisfies this growth. Declare more space or an explicit expansion policy."
     );
   }
-  if (destination !== object6.start) {
+  if (destination !== object7.start) {
     for (let offset = destination; offset < destination + options.encodedLength; offset++) {
       if (options.current[offset] !== options.original[offset]) {
         throw new Error(
@@ -61791,7 +61792,7 @@ function planSnesRelocation(options) {
     }
   }
   const repairs = repairsAt(destination);
-  return { object: object6, destination, encodedLength: options.encodedLength, repairs };
+  return { object: object7, destination, encodedLength: options.encodedLength, repairs };
 }
 
 // packages/plugin-snes/src/disassembler/rom-layout/check.ts
@@ -61802,34 +61803,34 @@ function checkSnesPlacements(output, symbols, contract2) {
   } catch (error) {
     diagnostics.push({ code: "reference", message: String(error) });
   }
-  const objects = new Map(contract2.objects.map((object6) => [object6.id, object6]));
+  const objects = new Map(contract2.objects.map((object7) => [object7.id, object7]));
   if (objects.size !== contract2.objects.length) {
     throw new Error("Repeated source placement identity.");
   }
   const occupied = [...contract2.objects].toSorted((a, b) => a.start - b.start);
-  for (const [index, object6] of occupied.entries()) {
-    const start = symbols.get(object6.startSymbol), end = symbols.get(object6.endSymbol);
-    if (!Number.isSafeInteger(object6.start) || object6.start < 0 || !Number.isSafeInteger(object6.length) || object6.length <= 0 || object6.start + object6.length > output.length || ![32768, 65536].includes(object6.bankSize) || !Number.isSafeInteger(object6.alignment) || object6.alignment <= 0 || object6.start % object6.alignment !== 0 || Math.floor(object6.start / object6.bankSize) !== Math.floor((object6.start + object6.length - 1) / object6.bankSize) || start !== contract2.logicalAddress(object6.start) || end === void 0 || end - start !== object6.length || index > 0 && occupied[index - 1].start + occupied[index - 1].length > object6.start) {
+  for (const [index, object7] of occupied.entries()) {
+    const start = symbols.get(object7.startSymbol), end = symbols.get(object7.endSymbol);
+    if (!Number.isSafeInteger(object7.start) || object7.start < 0 || !Number.isSafeInteger(object7.length) || object7.length <= 0 || object7.start + object7.length > output.length || ![32768, 65536].includes(object7.bankSize) || !Number.isSafeInteger(object7.alignment) || object7.alignment <= 0 || object7.start % object7.alignment !== 0 || Math.floor(object7.start / object7.bankSize) !== Math.floor((object7.start + object7.length - 1) / object7.bankSize) || start !== contract2.logicalAddress(object7.start) || end === void 0 || end - start !== object7.length || index > 0 && occupied[index - 1].start + occupied[index - 1].length > object7.start) {
       diagnostics.push({
         code: "placement",
-        offset: object6.start,
-        message: `Source object ${object6.id} no longer matches its declared placement and extent. Prepare relocation or reconcile its layout.`
+        offset: object7.start,
+        message: `Source object ${object7.id} no longer matches its declared placement and extent. Prepare relocation or reconcile its layout.`
       });
     }
   }
   const ids = /* @__PURE__ */ new Set();
   const fields = /* @__PURE__ */ new Set();
   for (const reference of contract2.references) {
-    const object6 = objects.get(reference.target);
-    if (!object6 || ids.has(reference.id)) {
+    const object7 = objects.get(reference.target);
+    if (!object7 || ids.has(reference.id)) {
       throw new Error(`Unknown or repeated reference target: ${reference.id}`);
     }
     ids.add(reference.id);
     try {
       const expected = encodeSnesRelocationReference(
         reference,
-        contract2.logicalAddress(object6.start),
-        object6.length
+        contract2.logicalAddress(object7.start),
+        object7.length
       );
       if (!Number.isSafeInteger(reference.offset) || reference.offset < 0 || reference.offset + expected.length > output.length) {
         throw new Error("Reference field is outside the current ROM.");
@@ -61992,44 +61993,44 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
       line: instruction2?.line
     });
   };
-  for (const object6 of contract2.objects.filter((item) => item.kind === "code")) {
+  for (const object7 of contract2.objects.filter((item) => item.kind === "code")) {
     const before = diagnostics.length;
-    const entry = assumptions.get(object6.start);
-    if (!object6.closedControlFlow || !knownState(entry)) {
+    const entry = assumptions.get(object7.start);
+    if (!object7.closedControlFlow || !knownState(entry)) {
       fail2(
-        `${object6.id}: closed code requires explicit, coherent E/M/X entry state.`,
+        `${object7.id}: closed code requires explicit, coherent E/M/X entry state.`,
         void 0,
-        object6.start
+        object7.start
       );
       continue;
     }
-    if (object6.returnInstruction !== "RTS" && object6.returnInstruction !== "RTL") {
+    if (object7.returnInstruction !== "RTS" && object7.returnInstruction !== "RTL") {
       fail2(
-        `${object6.id}: declare RTS or RTL as the code return convention.`,
+        `${object7.id}: declare RTS or RTL as the code return convention.`,
         void 0,
-        object6.start
+        object7.start
       );
       continue;
     }
-    const exit = object6.exitState ?? entry;
+    const exit = object7.exitState ?? entry;
     if (!knownState(exit)) {
       fail2(
-        `${object6.id}: exit state requires coherent boolean E/M/X flags.`,
+        `${object7.id}: exit state requires coherent boolean E/M/X flags.`,
         void 0,
-        object6.start
+        object7.start
       );
       continue;
     }
     const instructions = mapping.instructions.filter(
-      (instruction2) => instruction2.outputOffset !== void 0 && instruction2.outputOffset >= object6.start && instruction2.outputOffset < object6.start + object6.length
+      (instruction2) => instruction2.outputOffset !== void 0 && instruction2.outputOffset >= object7.start && instruction2.outputOffset < object7.start + object7.length
     ).toSorted((a, b) => a.outputOffset - b.outputOffset);
     const byOffset = /* @__PURE__ */ new Map();
     const byAddress = /* @__PURE__ */ new Map();
-    let through = object6.start;
+    let through = object7.start;
     for (const instruction2 of instructions) {
       if (instruction2.architecture !== "snes.65816" || instruction2.outputOffset !== through || !Number.isSafeInteger(instruction2.size) || instruction2.size <= 0) {
         fail2(
-          `${object6.id}: code bytes must be owned by contiguous 65816 instructions. Split data and additional entry points into separate objects.`,
+          `${object7.id}: code bytes must be owned by contiguous 65816 instructions. Split data and additional entry points into separate objects.`,
           instruction2
         );
         break;
@@ -62038,29 +62039,29 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
       byAddress.set(instruction2.address, through);
       through += instruction2.size;
     }
-    if (through !== object6.start + object6.length) {
+    if (through !== object7.start + object7.length) {
       fail2(
-        `${object6.id}: the code extent contains unclassified bytes or crosses its boundary.`,
+        `${object7.id}: the code extent contains unclassified bytes or crosses its boundary.`,
         void 0,
         through
       );
     }
     for (const state of declared) {
-      if (state.offset >= object6.start && state.offset < object6.start + object6.length && !byOffset.has(state.offset)) {
+      if (state.offset >= object7.start && state.offset < object7.start + object7.length && !byOffset.has(state.offset)) {
         fail2(
-          `${object6.id}: a CPU-state assumption points inside an instruction or data.`,
+          `${object7.id}: a CPU-state assumption points inside an instruction or data.`,
           void 0,
           state.offset
         );
       }
     }
     if (contract2.references.some(
-      (reference) => reference.target === object6.id && (reference.addend ?? 0) !== 0
+      (reference) => reference.target === object7.id && (reference.addend ?? 0) !== 0
     )) {
       fail2(
-        `${object6.id}: interior code entries require a separate entry contract.`,
+        `${object7.id}: interior code entries require a separate entry contract.`,
         void 0,
-        object6.start
+        object7.start
       );
     }
     if (diagnostics.length !== before) {
@@ -62068,13 +62069,13 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
     }
     const reached = /* @__PURE__ */ new Map();
     const queue = [
-      { offset: object6.start, state: { e: entry.e, m: entry.m, x: entry.x, stackBytes: 0 } }
+      { offset: object7.start, state: { e: entry.e, m: entry.m, x: entry.x, stackBytes: 0 } }
     ];
     for (const { offset, state } of queue) {
       const instruction2 = byOffset.get(offset);
       if (!instruction2) {
         fail2(
-          `${object6.id}: control flow leaves its declared block or enters the middle of an instruction at $${offset.toString(16)}.`,
+          `${object7.id}: control flow leaves its declared block or enters the middle of an instruction at $${offset.toString(16)}.`,
           void 0,
           offset
         );
@@ -62084,7 +62085,7 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
       if (previous) {
         if (!sameState(previous, state) || previous.stackBytes !== state.stackBytes) {
           fail2(
-            `${object6.id}: control-flow paths disagree on E/M/X or stack depth at this instruction.`,
+            `${object7.id}: control-flow paths disagree on E/M/X or stack depth at this instruction.`,
             instruction2
           );
         }
@@ -62094,7 +62095,7 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
       const assumption = assumptions.get(offset);
       if (assumption && (assumption.e !== void 0 && assumption.e !== state.e || assumption.m !== void 0 && assumption.m !== state.m || assumption.x !== void 0 && assumption.x !== state.x)) {
         fail2(
-          `${object6.id}: a declared CPU state contradicts the preceding control flow.`,
+          `${object7.id}: a declared CPU state contradicts the preceding control flow.`,
           instruction2
         );
       }
@@ -62102,7 +62103,7 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
       const expectedSize = spec.minimumSize + (spec.widthFlag && !state[spec.widthFlag] ? 1 : 0);
       if (instruction2.size !== expectedSize) {
         fail2(
-          `${object6.id}: ${spec.mnemonic} emits ${instruction2.size} bytes but propagated CPU state requires ${expectedSize}.`,
+          `${object7.id}: ${spec.mnemonic} emits ${instruction2.size} bytes but propagated CPU state requires ${expectedSize}.`,
           instruction2
         );
         continue;
@@ -62111,7 +62112,7 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
         spec.mnemonic
       )) {
         fail2(
-          `${object6.id}: ${spec.mnemonic} requires an unsupported callee, indirect, stack or PC-relative state contract.`,
+          `${object7.id}: ${spec.mnemonic} requires an unsupported callee, indirect, stack or PC-relative state contract.`,
           instruction2
         );
         continue;
@@ -62143,20 +62144,20 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
       if (stackDelta !== 0) {
         next = { ...next, stackBytes: state.stackBytes + stackDelta };
         if (next.stackBytes < 0) {
-          fail2(`${object6.id}: stack pull consumes the caller's saved frame.`, instruction2);
+          fail2(`${object7.id}: stack pull consumes the caller's saved frame.`, instruction2);
           continue;
         }
       }
       if (spec.flow.kind === "return") {
-        if (spec.mnemonic !== object6.returnInstruction || next.stackBytes !== 0) {
+        if (spec.mnemonic !== object7.returnInstruction || next.stackBytes !== 0) {
           fail2(
-            `${object6.id}: return violates its ${object6.returnInstruction} convention or leaves an unbalanced stack.`,
+            `${object7.id}: return violates its ${object7.returnInstruction} convention or leaves an unbalanced stack.`,
             instruction2
           );
         }
         if (!sameState(next, exit)) {
           fail2(
-            `${object6.id}: ${spec.mnemonic} does not satisfy the declared E/M/X exit state.`,
+            `${object7.id}: ${spec.mnemonic} does not satisfy the declared E/M/X exit state.`,
             instruction2
           );
         }
@@ -62177,7 +62178,7 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
         const target = byAddress.get(address5);
         if (target === void 0) {
           fail2(
-            `${object6.id}: ${spec.mnemonic} target $${address5.toString(16)} leaves the block or is not an instruction boundary.`,
+            `${object7.id}: ${spec.mnemonic} target $${address5.toString(16)} leaves the block or is not an instruction boundary.`,
             instruction2
           );
         } else {
@@ -62190,9 +62191,9 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
     }
     if (reached.size !== instructions.length) {
       fail2(
-        `${object6.id}: not every declared instruction is reachable from its entry. Separate extra entries or embedded data.`,
+        `${object7.id}: not every declared instruction is reachable from its entry. Separate extra entries or embedded data.`,
         void 0,
-        object6.start
+        object7.start
       );
     }
     if (diagnostics.length === before) {
@@ -62262,7 +62263,7 @@ function checkSnesRomExpansion(output, original, size, policy, objects = []) {
       header + 28
     );
   }
-  const allocated = objects.filter((object6) => object6.start + object6.length > original.length).toSorted((a, b) => a.start - b.start);
+  const allocated = objects.filter((object7) => object7.start + object7.length > original.length).toSorted((a, b) => a.start - b.start);
   let index = 0;
   for (let offset = original.length; offset < size; offset++) {
     while (index < allocated.length && allocated[index].start + allocated[index].length <= offset) {
@@ -62491,9 +62492,9 @@ function inspectSnesSource(options) {
     const requestedSymbols = /* @__PURE__ */ new Set([
       ...options.resolveSymbols ?? [],
       ...(options.extents ?? []).flatMap((extent) => [extent.startSymbol, extent.endSymbol]),
-      ...(options.placements?.objects ?? []).flatMap((object6) => [
-        object6.startSymbol,
-        object6.endSymbol
+      ...(options.placements?.objects ?? []).flatMap((object7) => [
+        object7.startSymbol,
+        object7.endSymbol
       ])
     ]);
     for (const name3 of requestedSymbols) {
@@ -62515,7 +62516,7 @@ function inspectSnesSource(options) {
       expectedSize: options.expectedSize,
       states: [...provenStates.values()],
       extents: options.extents,
-      requiredCpuStateRanges: options.placements?.objects.filter((object6) => object6.kind === "code").map((object6) => ({ start: object6.start, end: object6.start + object6.length })),
+      requiredCpuStateRanges: options.placements?.objects.filter((object7) => object7.kind === "code").map((object7) => ({ start: object7.start, end: object7.start + object7.length })),
       symbols
     });
     if (options.expansion && (!options.rawBlocks || options.originalContent)) {
@@ -62846,7 +62847,7 @@ async function prepareSnesGeneration(options) {
       }
       let bytes3;
       if (asset.originalBlob !== void 0) {
-        if (asset.romRange || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob)) {
+        if (asset.romRange || !/^(?:[\da-f]{40}|[\da-f]{64})$/.test(asset.originalBlob)) {
           throw new Error(`Invalid original asset blob declaration for ${name3}.`);
         }
         bytes3 = (await sourceGit(options.repository.root, ["cat-file", "blob", asset.originalBlob], {
@@ -63021,14 +63022,14 @@ function referenceStatement(inspection, reference) {
   }
   return { file: owner.file, statement: lines.join(source.newline) };
 }
-function referenceExpression(reference, object6) {
+function referenceExpression(reference, object7) {
   if (reference.encoding.startsWith("length")) {
-    return `(${object6.endSymbol} - ${object6.startSymbol})`;
+    return `(${object7.endSymbol} - ${object7.startSymbol})`;
   }
   if (reference.encoding.startsWith("count")) {
-    return `((${object6.endSymbol} - ${object6.startSymbol}) / ${reference.unitSize})`;
+    return `((${object7.endSymbol} - ${object7.startSymbol}) / ${reference.unitSize})`;
   }
-  let expression = object6.startSymbol;
+  let expression = object7.startSymbol;
   if (reference.addend) {
     expression = `(${expression} + ${reference.addend})`;
   }
@@ -63041,8 +63042,8 @@ function referenceExpression(reference, object6) {
   return expression;
 }
 function prepareSnesSourceRelocation(options) {
-  const object6 = options.objects.find((item) => item.id === options.objectId);
-  if (!object6 || !/^[\w.:-]+$/.test(object6.id)) {
+  const object7 = options.objects.find((item) => item.id === options.objectId);
+  if (!object7 || !/^[\w.:-]+$/.test(object7.id)) {
     throw new Error("Select one declared source object.");
   }
   if (options.build.originalContent) {
@@ -63053,13 +63054,13 @@ function prepareSnesSourceRelocation(options) {
     throw new Error("Relocation needs a valid stable raw-block contract.");
   }
   assertSourcePath(raw.directory);
-  if (![object6.start, object6.length, object6.originalStart, object6.originalEnd].every(
+  if (![object7.start, object7.length, object7.originalStart, object7.originalEnd].every(
     Number.isSafeInteger
-  ) || object6.start < 0 || object6.length <= 0 || object6.start + object6.length > options.build.expectedSize || object6.originalStart < 0 || object6.originalEnd <= object6.originalStart || object6.originalEnd > raw.original.length) {
+  ) || object7.start < 0 || object7.length <= 0 || object7.start + object7.length > options.build.expectedSize || object7.originalStart < 0 || object7.originalEnd <= object7.originalStart || object7.originalEnd > raw.original.length) {
     throw new Error("Source object extents must fit their original and current ROMs.");
   }
-  if (object6.kind === "code") {
-    const entry = options.build.states?.find((state) => state.offset === object6.start);
+  if (object7.kind === "code") {
+    const entry = options.build.states?.find((state) => state.offset === object7.start);
     if (!entry || [entry.e, entry.m, entry.x].some((flag) => typeof flag !== "boolean")) {
       throw new Error("Movable code requires explicit E/M/X entry assumptions.");
     }
@@ -63088,14 +63089,14 @@ function prepareSnesSourceRelocation(options) {
     file.lines = lines;
     overlays.set(name3, Buffer.from(lines.join(file.newline)));
   };
-  const objectFile = read(object6.file);
-  const start = boundary(objectFile.lines, object6.startSymbol, Boolean(object6.structure));
-  const end = boundary(objectFile.lines, object6.endSymbol);
+  const objectFile = read(object7.file);
+  const start = boundary(objectFile.lines, object7.startSymbol, Boolean(object7.structure));
+  const end = boundary(objectFile.lines, object7.endSymbol);
   if (end <= start) {
     throw new Error("Object source boundaries are reversed.");
   }
-  const beginMarker = `; @uttori-placement ${object6.id} begin`;
-  const endMarker = `; @uttori-placement ${object6.id} end`;
+  const beginMarker = `; @uttori-placement ${object7.id} begin`;
+  const endMarker = `; @uttori-placement ${object7.id} end`;
   const oldBegin = objectFile.lines.indexOf(beginMarker);
   const oldEnd = objectFile.lines.indexOf(endMarker);
   const missingBegin = oldBegin < 0;
@@ -63114,31 +63115,31 @@ function prepareSnesSourceRelocation(options) {
     const lines = [beginMarker, `org ${hex10(options.logicalAddress(destination))}`, ...body];
     if (restore) {
       lines.push(
-        `org ${hex10(options.logicalAddress(object6.originalStart))}`,
-        ...rawLines(options.build, object6.file, object6.originalStart, object6.originalEnd)
+        `org ${hex10(options.logicalAddress(object7.originalStart))}`,
+        ...rawLines(options.build, object7.file, object7.originalStart, object7.originalEnd)
       );
     }
-    if (!restore && destination === object6.originalStart && movedLength !== void 0 && movedLength < object6.originalEnd - object6.originalStart) {
+    if (!restore && destination === object7.originalStart && movedLength !== void 0 && movedLength < object7.originalEnd - object7.originalStart) {
       lines.push(
         ...rawLines(
           options.build,
-          object6.file,
-          object6.originalStart + movedLength,
-          object6.originalEnd
+          object7.file,
+          object7.originalStart + movedLength,
+          object7.originalEnd
         )
       );
     }
-    lines.push(`org ${hex10(options.logicalAddress(object6.originalEnd))}`, endMarker);
-    save2(object6.file, [...prefix, ...lines, ...suffix]);
+    lines.push(`org ${hex10(options.logicalAddress(object7.originalEnd))}`, endMarker);
+    save2(object7.file, [...prefix, ...lines, ...suffix]);
   };
   let movedLength;
   const writeStructure = (destination, count2) => {
-    if (!object6.structure) {
+    if (!object7.structure) {
       return;
     }
-    const definition = read(object6.structure.file);
+    const definition = read(object7.structure.file);
     const declarations = definition.lines.flatMap(
-      (line, index) => line.trim().startsWith(`struct ${object6.startSymbol} `) ? [index] : []
+      (line, index) => line.trim().startsWith(`struct ${object7.startSymbol} `) ? [index] : []
     );
     const declaration = declarations[0];
     const finish2 = definition.lines.findIndex(
@@ -63148,22 +63149,22 @@ function prepareSnesSourceRelocation(options) {
       throw new Error("Typed relocation requires one plain addressed array with firstindex 0.");
     }
     const lines = [...definition.lines];
-    lines[declaration] = `struct ${object6.startSymbol} ${hex10(options.logicalAddress(destination))}`;
+    lines[declaration] = `struct ${object7.startSymbol} ${hex10(options.logicalAddress(destination))}`;
     lines[finish2] = `endstruct count ${count2} firstindex 0`;
-    save2(object6.structure.file, lines);
+    save2(object7.structure.file, lines);
   };
-  if (object6.structure) {
-    if (object6.structure.file === object6.file) {
+  if (object7.structure) {
+    if (object7.structure.file === object7.file) {
       throw new Error(
         "Keep an addressed table's declaration in a separate struct include before relocating it."
       );
     }
-    if (!Number.isSafeInteger(object6.structure.recordSize) || object6.structure.recordSize <= 0 || object6.structure.recordSize > object6.bankSize) {
+    if (!Number.isSafeInteger(object7.structure.recordSize) || object7.structure.recordSize <= 0 || object7.structure.recordSize > object7.bankSize) {
       throw new Error("Typed relocation requires a bounded positive record size.");
     }
-    writeStructure(object6.start, Math.floor(object6.bankSize / object6.structure.recordSize));
+    writeStructure(object7.start, Math.floor(object7.bankSize / object7.structure.recordSize));
   }
-  writeObject(object6.start, object6.start !== object6.originalStart);
+  writeObject(object7.start, object7.start !== object7.originalStart);
   const inspected = inspectSnesSource({
     ...options.build,
     // A growing object may already cross its old bank. Measure with linear PC semantics;
@@ -63172,14 +63173,14 @@ function prepareSnesSourceRelocation(options) {
     placements: void 0,
     overlays,
     resolveSymbols: [
-      object6.startSymbol,
-      object6.endSymbol,
-      ...object6.structure ? [`${object6.startSymbol}[1]`] : []
+      object7.startSymbol,
+      object7.endSymbol,
+      ...object7.structure ? [`${object7.startSymbol}[1]`] : []
     ]
   });
-  const encodedLength = inspected.symbols.get(object6.endSymbol) - inspected.symbols.get(object6.startSymbol);
+  const encodedLength = inspected.symbols.get(object7.endSymbol) - inspected.symbols.get(object7.startSymbol);
   movedLength = encodedLength;
-  if (object6.structure && (inspected.symbols.get(`${object6.startSymbol}[1]`) - inspected.symbols.get(object6.startSymbol) !== object6.structure.recordSize || encodedLength % object6.structure.recordSize !== 0)) {
+  if (object7.structure && (inspected.symbols.get(`${object7.startSymbol}[1]`) - inspected.symbols.get(object7.startSymbol) !== object7.structure.recordSize || encodedLength % object7.structure.recordSize !== 0)) {
     throw new Error("Typed relocation requires complete records matching its declared stride.");
   }
   for (const pool of options.freeSpace) {
@@ -63190,7 +63191,7 @@ function prepareSnesSourceRelocation(options) {
     }
   }
   const measuredReferences = options.references.map((reference) => {
-    if (reference.target !== object6.id || reference.expression !== referenceExpression(reference, object6)) {
+    if (reference.target !== object7.id || reference.expression !== referenceExpression(reference, object7)) {
       return reference;
     }
     return {
@@ -63213,20 +63214,20 @@ function prepareSnesSourceRelocation(options) {
     objects: options.objects,
     freeSpace: options.freeSpace,
     references: measuredReferences,
-    objectId: object6.id,
+    objectId: object7.id,
     encodedLength,
     destination: options.destination,
     logicalAddress: options.logicalAddress
   });
-  const moved = { ...object6, start: plan.destination, length: encodedLength };
-  if (object6.kind === "code" && Math.floor(options.logicalAddress(plan.destination) / 65536) !== Math.floor(options.logicalAddress(object6.originalStart) / 65536)) {
+  const moved = { ...object7, start: plan.destination, length: encodedLength };
+  if (object7.kind === "code" && Math.floor(options.logicalAddress(plan.destination) / 65536) !== Math.floor(options.logicalAddress(object7.originalStart) / 65536)) {
     throw new Error("Source code relocation currently preserves the original program bank.");
   }
-  writeObject(plan.destination, plan.destination !== object6.originalStart);
-  if (object6.structure) {
-    writeStructure(plan.destination, encodedLength / object6.structure.recordSize);
+  writeObject(plan.destination, plan.destination !== object7.originalStart);
+  if (object7.structure) {
+    writeStructure(plan.destination, encodedLength / object7.structure.recordSize);
   }
-  const placements = options.objects.map((item) => item.id === object6.id ? moved : item);
+  const placements = options.objects.map((item) => item.id === object7.id ? moved : item);
   for (const pool of options.freeSpace) {
     const file = read(pool.file);
     const first = boundary(file.lines, pool.startSymbol);
@@ -63253,7 +63254,7 @@ function prepareSnesSourceRelocation(options) {
   }
   const statementRepairs = /* @__PURE__ */ new Map();
   const references = options.references.map((reference) => {
-    if (reference.target !== object6.id) {
+    if (reference.target !== object7.id) {
       return reference;
     }
     const owner = referenceStatement(inspected, reference);
@@ -63301,11 +63302,11 @@ function prepareSnesSourceRelocation(options) {
     save2(name3, text4.split(/\r?\n/));
   }
   const extents = (options.build.extents ?? []).map(
-    (extent) => extent.id === object6.id ? Object.assign({}, extent, { size: encodedLength }) : extent
+    (extent) => extent.id === object7.id ? Object.assign({}, extent, { size: encodedLength }) : extent
   );
   const states = (options.build.states ?? []).map(
-    (state) => state.offset >= object6.start && state.offset < object6.start + object6.length ? Object.assign({}, state, {
-      offset: plan.destination + state.offset - object6.start
+    (state) => state.offset >= object7.start && state.offset < object7.start + object7.length ? Object.assign({}, state, {
+      offset: plan.destination + state.offset - object7.start
     }) : state
   );
   const final = inspectSnesSource({
@@ -63314,14 +63315,14 @@ function prepareSnesSourceRelocation(options) {
     overlays,
     extents,
     states,
-    resolveSymbols: [object6.startSymbol, object6.endSymbol]
+    resolveSymbols: [object7.startSymbol, object7.endSymbol]
   });
   if (final.diagnostics.length) {
     throw new Error(final.diagnostics.map((item) => `${item.code}: ${item.message}`).join("\n"));
   }
   const allowed = [
-    [object6.start, object6.start + object6.length],
-    [object6.originalStart, object6.originalEnd],
+    [object7.start, object7.start + object7.length],
+    [object7.originalStart, object7.originalEnd],
     [plan.destination, plan.destination + encodedLength],
     ...plan.repairs.map((repair) => [repair.offset, repair.offset + repair.after.length])
   ];
@@ -65330,7 +65331,7 @@ async function executeSourceOperation(operation) {
         {
           ...layout2,
           objects: objects.map(
-            (object6) => object6.id === result.object.id ? result.object : object6
+            (object7) => object7.id === result.object.id ? result.object : object7
           ),
           references: result.references,
           extents: result.extents,
@@ -65533,11 +65534,11 @@ async function executeSourceOperation(operation) {
 }
 
 // packages/cli/src/asset-interchange/public-records.ts
-function isObject2(value) {
+function isObject3(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-function object2(value) {
-  if (!isObject2(value)) {
+function object3(value) {
+  if (!isObject3(value)) {
     throw new Error("Invalid asset record object.");
   }
   return value;
@@ -65557,7 +65558,7 @@ function digest(value) {
 }
 function locator(value) {
   const result = text2(value);
-  if (!/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/.test(result)) {
+  if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/.test(result)) {
     throw new Error("Invalid asset export locator.");
   }
   return result;
@@ -65581,7 +65582,7 @@ function bytes2(value) {
   return value;
 }
 function capabilities(value) {
-  const input = object2(value);
+  const input = object3(value);
   if (typeof input.pixelEdits !== "boolean" || typeof input.paletteEdits !== "boolean" || typeof input.tileReferences !== "boolean" || typeof input.previewTimeline !== "boolean") {
     throw new Error("Invalid asset capabilities.");
   }
@@ -65593,11 +65594,11 @@ function capabilities(value) {
   };
 }
 function contract(value) {
-  const input = object2(value);
+  const input = object3(value);
   return { id: text2(input.id), version: number(input.version, 65535) };
 }
 function readAssetExportManifest(value) {
-  const input = object2(value);
+  const input = object3(value);
   if (input.format !== "uttori-asset-export" || input.version !== 2) {
     throw new Error("Unsupported asset manifest; re-export is required.");
   }
@@ -65613,16 +65614,16 @@ function readAssetExportManifest(value) {
   };
 }
 function readAssetImportReview(value) {
-  const input = object2(value);
+  const input = object3(value);
   if (input.format !== "uttori-asset-review" || input.version !== 2 || !Array.isArray(input.files) || input.files.length > 65536 || !Array.isArray(input.effects) || input.effects.length > 65536) {
     throw new Error("Unsupported asset review summary.");
   }
   const files = input.files.map((entry) => {
-    const file = object2(entry), name3 = text2(file.path);
+    const file = object3(entry), name3 = text2(file.path);
     assertSourcePath(name3);
     return { path: name3, before: digest(file.before), after: digest(file.after) };
   }), effects4 = input.effects.map((entry) => {
-    const effect = object2(entry);
+    const effect = object3(entry);
     return {
       resource: text2(effect.resource),
       offset: number(effect.offset, Number.MAX_SAFE_INTEGER),
@@ -65699,7 +65700,7 @@ function fileHashes(value) {
   }
   const seen = /* @__PURE__ */ new Set();
   return value.map((entry) => {
-    const item = object2(entry), name3 = text2(item.path);
+    const item = object3(entry), name3 = text2(item.path);
     assertSourcePath(name3);
     if (seen.has(name3)) {
       throw new Error(`Duplicate asset dependency: ${name3}.`);
@@ -65715,7 +65716,7 @@ function replacements(value) {
   const seen = /* @__PURE__ */ new Set();
   let total = 0;
   return value.map((entry) => {
-    const item = object2(entry), name3 = text2(item.path);
+    const item = object3(entry), name3 = text2(item.path);
     assertSourcePath(name3);
     if (seen.has(name3)) {
       throw new Error("Duplicate asset source replacement.");
@@ -65737,7 +65738,7 @@ function effects3(value) {
   }
   let total = 0;
   return value.map((entry) => {
-    const item = object2(entry), before = Uint8Array.from(bytes2(item.before)), after = Uint8Array.from(bytes2(item.after));
+    const item = object3(entry), before = Uint8Array.from(bytes2(item.before)), after = Uint8Array.from(bytes2(item.after));
     if (!before.length || before.length !== after.length) {
       throw new Error("Native effects require a fixed nonempty extent.");
     }
@@ -65874,7 +65875,7 @@ var AssetInterchangeService = class {
     }
   }
   parseBaseline(value) {
-    const input = object2(value), view = object2(input.presentation);
+    const input = object3(value), view = object3(input.presentation);
     if (input.format !== "uttori-asset-baseline" || input.version !== 2 || view.kind !== "tilemap" && view.kind !== "raster") {
       throw new Error("Unsupported asset baseline; re-export is required.");
     }
@@ -65902,8 +65903,8 @@ var AssetInterchangeService = class {
       if (!Array.isArray(view.placements) || view.placements.length > ASSET_LIMITS.owners) {
         throw new Error("Invalid private raster placement inventory.");
       }
-      const placements = view.placements.map((value2) => {
-        const entry = object2(value2);
+      const placements = view.placements.map((candidate) => {
+        const entry = object3(candidate);
         return {
           view: text2(entry.view),
           x: number(entry.x, ASSET_LIMITS.interchangeSide),
@@ -65926,7 +65927,7 @@ var AssetInterchangeService = class {
     };
   }
   parseReview(value) {
-    const input = object2(value), summary = object2(input.summary);
+    const input = object3(value), summary = object3(input.summary);
     if (input.format !== "uttori-asset-reviewed-plan" || input.version !== 2 || summary.format !== "uttori-asset-review" || summary.version !== 2) {
       throw new Error("Unsupported asset review; review again.");
     }
@@ -66024,7 +66025,7 @@ var AssetInterchangeService = class {
       if (presentation.document.exportId !== id2) {
         throw new Error("Adapter omitted export identity.");
       }
-      const names = [.../* @__PURE__ */ new Set([...exported.dependencies, ...adapterReads])].sort();
+      const names = [.../* @__PURE__ */ new Set([...exported.dependencies, ...adapterReads])].toSorted();
       this.drafts(build.root, names, [outputs.document, outputs.manifest]);
       const dependencies = names.map((name3) => ({
         path: name3,
@@ -66089,7 +66090,7 @@ var AssetInterchangeService = class {
       this.stores(build.root).exports.publish(id2, baseline, signal);
       return manifest;
     } catch (cause) {
-      for (const item of written.reverse()) {
+      for (const item of written.toReversed()) {
         if (fs34.existsSync(item.file) && assetHash(readAssetFile(item.file, this.codec.fileBytes)) === item.hash) {
           fs34.unlinkSync(item.file);
         }
@@ -66962,7 +66963,7 @@ function frameAtlasSegmentOrder(layout2, selection) {
       throw new Error(`Native frame atlas span exceeds the 24-bit address space: ${name3}.`);
     }
     return { name: name3, start, end };
-  }).sort((a, b) => a.start - b.start);
+  }).toSorted((a, b) => a.start - b.start);
   for (let index = 1; index < spans.length; index++) {
     if (spans[index].start !== spans[index - 1].end) {
       throw new Error("Selected frame atlas segments must be contiguous without gaps or overlaps.");
@@ -67628,21 +67629,21 @@ function convertBossImage(source, options, resources = {}) {
     throw new Error("Boss sizePolicy must be fixed or encoded.");
   }
   const layout2 = options.layout ? readFrameLayout(options, resources) : void 0;
-  let pixels;
+  let pixels2;
   let segmentName;
   if (layout2) {
     if (typeof options.segment !== "string") {
       throw new Error("Frame atlas segment is required.");
     }
     segmentName = options.segment;
-    pixels = encodeFrameAtlas(
+    pixels2 = encodeFrameAtlas(
       source,
       layout2,
       segmentName,
       readSpritePaletteCatalog(options, resources)
     );
   } else {
-    pixels = convertAsset(registry3, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
+    pixels2 = convertAsset(registry3, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
   }
   const segmentIndex = segmentName ? Object.keys(layout2?.segments ?? {}).indexOf(segmentName) : -1;
   if (segmentIndex > 25) {
@@ -67666,12 +67667,12 @@ function convertBossImage(source, options, resources = {}) {
     if (original.length !== byteLength) {
       throw new Error("Boss native data has the wrong byte length.");
     }
-    const decoded = decodeBossStream(original, storage, pixels.length);
-    if (decoded.bytes.every((byte2, index) => byte2 === pixels[index])) {
+    const decoded = decodeBossStream(original, storage, pixels2.length);
+    if (decoded.bytes.every((byte2, index) => byte2 === pixels2[index])) {
       return { primaryOutput: "graphics", outputs: { graphics: { bytes: original } } };
     }
   }
-  const intermediate = encodeBossGraphics(pixels);
+  const intermediate = encodeBossGraphics(pixels2);
   let encoded = intermediate;
   if (storage === "lz-rle") {
     const selectedMode = original ? original[0] : mode3;
@@ -67686,8 +67687,8 @@ function convertBossImage(source, options, resources = {}) {
       "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
     );
   }
-  const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
-  if (verified.some((byte2, index) => byte2 !== pixels[index])) {
+  const verified = decodeBossStream(encoded, storage, pixels2.length).bytes;
+  if (verified.some((byte2, index) => byte2 !== pixels2[index])) {
     throw new Error("Boss graphics inverse failed.");
   }
   if (sizePolicy === "encoded") {
@@ -68352,11 +68353,11 @@ function planSomAtlasImport(atlas2, catalog, changes) {
 }
 
 // packages/assets/src/secret-of-mana/som-observation-evidence.ts
-function isObject3(value) {
+function isObject4(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-function object3(value) {
-  if (!isObject3(value)) {
+function object4(value) {
+  if (!isObject4(value)) {
     throw new Error("Invalid SoM observation record.");
   }
   return value;
@@ -68390,12 +68391,12 @@ function ticks(value) {
   return result;
 }
 function readSomObservationDeclaration(value) {
-  const input = object3(value), pivot = object3(input.pivot);
+  const input = object4(value), pivot = object4(input.pivot);
   if (input.format !== "som.sprite.observations" || input.version !== 1 || !Array.isArray(input.ranges) || input.ranges.length > ASSET_LIMITS.frames || !Array.isArray(input.paletteBanks) || input.paletteBanks.length > 8) {
     throw new Error("Unsupported SoM observation declaration.");
   }
   const paletteBanks = input.paletteBanks.map((entry) => {
-    const bank = object3(entry);
+    const bank = object4(entry);
     if (typeof bank.bytes !== "string" || !/^[\da-f]{64}$/i.test(bank.bytes)) {
       throw new Error("Invalid observed palette bytes.");
     }
@@ -68410,7 +68411,7 @@ function readSomObservationDeclaration(value) {
   const ids = /* @__PURE__ */ new Set();
   let previous = 0n;
   const ranges = input.ranges.map((entry) => {
-    const range2 = object3(entry), id2 = identity3(range2.id), start = ticks(range2.start), end = ticks(range2.end);
+    const range2 = object4(entry), id2 = identity3(range2.id), start = ticks(range2.start), end = ticks(range2.end);
     if (ids.has(id2) || end <= start || start < previous) {
       throw new Error("Invalid or overlapping observed sequence range.");
     }
@@ -68434,15 +68435,15 @@ function readSomObservationDeclaration(value) {
   };
 }
 function resolveSomObservationEvidence(proofValue, declaration, poses) {
-  const proof = object3(proofValue);
+  const proof = object4(proofValue);
   if (proof.format !== "som-castle-boss-display-proof" || proof.version !== 1 || proof.romSha256 !== declaration.romSha256 || !Array.isArray(proof.captures) || proof.captures.length > 1024) {
     throw new Error("Unsupported or foreign SoM display evidence.");
   }
-  const captures = proof.captures.map(object3).filter((capture2) => capture2.slug === declaration.capture);
+  const captures = proof.captures.map(object4).filter((capture2) => capture2.slug === declaration.capture);
   if (captures.length !== 1) {
     throw new Error("Missing or duplicate observation capture.");
   }
-  const capture = captures[0], clock = object3(capture.clock);
+  const capture = captures[0], clock = object4(capture.clock);
   if (clock.id !== "snes.master" || clock.numerator !== "236250000" || clock.denominator !== "11") {
     throw new Error("Unsupported observation master-clock contract.");
   }
@@ -68463,7 +68464,7 @@ function resolveSomObservationEvidence(proofValue, declaration, poses) {
   }
   let previous = -1n;
   const samples = capture.matched.map((value) => {
-    const sample = object3(value), start = ticks(sample.visibleStart), end = ticks(sample.visibleEnd), pose = identity3(sample.frame);
+    const sample = object4(value), start = ticks(sample.visibleStart), end = ticks(sample.visibleEnd), pose = identity3(sample.frame);
     if (start <= previous || end <= start || typeof sample.flipX !== "boolean" || typeof sample.flipY !== "boolean" || !Array.isArray(sample.paletteBanks) || sample.paletteBanks.length > 8) {
       throw new Error("Invalid or unordered observation sample.");
     }
@@ -68493,7 +68494,7 @@ function resolveSomObservationEvidence(proofValue, declaration, poses) {
     if (!Array.isArray(sample.paletteBanks)) {
       return false;
     }
-    const banks = sample.paletteBanks.map(object3);
+    const banks = sample.paletteBanks.map(object4);
     if (banks.length !== declaration.paletteBanks.length || new Set(banks.map((bank) => bank.bank)).size !== banks.length) {
       return false;
     }
@@ -68565,7 +68566,7 @@ function tilemapPresentationCel(layer, x, y, columns2, rows, cells) {
 }
 function createTilemapInventory(ownership, nativeWidth, nativeHeight, name3) {
   validateIndexedOwnership(ownership);
-  const { views } = ownership, first = views[0];
+  const { views } = ownership, first = views.at(0);
   if (!first || views.some((view) => view.width !== first.width || view.height !== first.height)) {
     throw new Error("A shared tileset inventory requires uniform view geometry.");
   }
@@ -68865,11 +68866,11 @@ function createSomSpriteInterchange(atlas2, catalog, exportId, runs = []) {
 
 // packages/cli/src/asset-interchange/adapters/secret-of-mana.ts
 init_canonical_json();
-function isObject4(value) {
+function isObject5(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-function object4(value) {
-  if (!isObject4(value)) {
+function object5(value) {
+  if (!isObject5(value)) {
     throw new Error("Invalid SoM interchange declaration.");
   }
   return value;
@@ -68935,14 +68936,14 @@ function atlas(context, user, catalog, emissions = []) {
   for (const emission of emissions) {
     const inputs = resourceInputs(context, emission);
     for (const [key3, value] of Object.entries(inputs)) {
-      if (resources[key3] && !equal2(resources[key3].bytes, value.bytes)) {
+      if (Object.hasOwn(resources, key3) && !equal2(resources[key3].bytes, value.bytes)) {
         throw new Error(`Ambiguous declared resource ${key3}.`);
       }
       resources[key3] = value;
     }
     if (emission.format === "som.boss.graphics") {
       const options = emission.conversion.options, segment = text3(options.segment);
-      if (nativeOptions[segment]) {
+      if (Object.hasOwn(nativeOptions, segment)) {
         throw new Error(`Duplicate native segment emission: ${segment}.`);
       }
       nativeOptions[segment] = options;
@@ -69024,7 +69025,7 @@ function inspect(context, selection) {
       segments = frameAtlasSegmentOrder(selected.layout, selector);
     }
     for (const segment of segments) {
-      if (!selected.layout.segments[segment] || owned.has(segment)) {
+      if (!Object.hasOwn(selected.layout.segments, segment) || owned.has(segment)) {
         throw new Error(`Incomplete or duplicate native ownership: ${segment}.`);
       }
       owned.add(segment);
@@ -69056,7 +69057,7 @@ function inspect(context, selection) {
       }
     }
   }
-  return { selected, all, catalog, emitted, dependencies: [...dependencies].sort() };
+  return { selected, all, catalog, emitted, dependencies: [...dependencies].toSorted() };
 }
 function observedRuns(context, selection, source) {
   if (!selection.observations) {
@@ -69068,7 +69069,7 @@ function observedRuns(context, selection, source) {
   }
   const declaration = readSomObservationDeclaration(
     JSON.parse(new TextDecoder().decode(declarationBytes))
-  ), bytes3 = context.read(selection.observations.proof), project = object4(JSON.parse(new TextDecoder().decode(context.read(".uttori/project.json"))));
+  ), bytes3 = context.read(selection.observations.proof), project = object5(JSON.parse(new TextDecoder().decode(context.read(".uttori/project.json"))));
   if (project.romSha256 !== declaration.romSha256 || createHash16("sha256").update(bytes3).digest("hex") !== declaration.proofSha256) {
     throw new Error("Observation proof does not match its declared ROM/source identity.");
   }
@@ -69093,17 +69094,17 @@ var somSpriteSourceAdapter = {
     previewTimeline: true
   },
   readSelection(value) {
-    const input = object4(value);
+    const input = object5(value);
     if (!Array.isArray(input.atlases) || !input.atlases.length || input.atlases.length > 65536) {
       throw new Error("Missing SoM consumer closure.");
     }
     const atlases = input.atlases.map((entry) => {
-      const user = object4(entry);
+      const user = object5(entry);
       return { id: text3(user.id), image: name(user.image), layout: name(user.layout) };
     });
     let observations;
     if (input.observations !== void 0) {
-      const selection = object4(input.observations);
+      const selection = object5(input.observations);
       observations = { declaration: name(selection.declaration), proof: name(selection.proof) };
     }
     const result = {
@@ -69122,12 +69123,12 @@ var somSpriteSourceAdapter = {
     return result;
   },
   readBindings(value) {
-    const input = object4(value);
+    const input = object5(value);
     if (!Array.isArray(input.paletteSlots) || input.paletteSlots.length > 256) {
       throw new Error("Invalid SoM palette binding.");
     }
     const paletteSlots = input.paletteSlots.map((entry) => {
-      const slot = object4(entry);
+      const slot = object5(entry);
       if (typeof slot.index !== "number" || !Number.isInteger(slot.index) || slot.index < 0 || slot.index > 15) {
         throw new Error("Invalid SoM palette slot.");
       }
@@ -69162,7 +69163,7 @@ var somSpriteSourceAdapter = {
     const palettePlan = planSpritePaletteWords(
       current.catalog,
       changes.colors.map((change) => {
-        const slot = bindings.paletteSlots[change.index];
+        const slot = bindings.paletteSlots.at(change.index);
         if (!slot || !presentation.baseline.editablePaletteSlots.includes(change.index)) {
           throw new Error("Unknown native SoM palette authority.");
         }
@@ -69713,7 +69714,7 @@ function loadSomRoomNative(room, reader) {
   const words = decodeSomRoomMetatiles(read(address5, metatileEnd - address5));
   const layerWords = [0, 1].map((layer) => {
     const half = room.header[2] >>> 6 + layer & 1;
-    return [...words.subarray(half * 768, (half + 1) * 768)];
+    return Array.from(words.subarray(half * 768, (half + 1) * 768));
   });
   const thresholds = [u16(13434880), u16(13434882), u16(13434884)];
   const bankFor = (value) => {
@@ -69727,13 +69728,13 @@ function loadSomRoomNative(room, reader) {
   integer(room.pieces.length, "Room pieces", 0, 65536);
   const layouts = {};
   let layoutPixels = 0;
-  for (const id3 of new Set(room.pieces.map((piece) => piece.layout))) {
-    integer(id3, "Native map piece", 1, 1022);
-    const address6 = bankFor(id3) * 65536 + u16(13434884 + id3 * 2), end2 = bankFor(id3 + 1) * 65536 + u16(13434886 + id3 * 2);
-    if (end2 <= address6 || end2 > 14680064 || end2 - address6 > 32768) {
+  for (const layoutId of new Set(room.pieces.map((piece) => piece.layout))) {
+    integer(layoutId, "Native map piece", 1, 1022);
+    const layoutAddress = bankFor(layoutId) * 65536 + u16(13434884 + layoutId * 2), layoutEnd = bankFor(layoutId + 1) * 65536 + u16(13434886 + layoutId * 2);
+    if (layoutEnd <= layoutAddress || layoutEnd > 14680064 || layoutEnd - layoutAddress > 32768) {
       throw new Error("Map piece requires a monotone adjacent-address bound.");
     }
-    const bytes3 = read(address6, end2 - address6);
+    const bytes3 = read(layoutAddress, layoutEnd - layoutAddress);
     layoutPixels = boundedSum(
       layoutPixels,
       ((bytes3[0] >>> 1) + 1) * ((bytes3[1] >>> 1) + 1),
@@ -69741,7 +69742,7 @@ function loadSomRoomNative(room, reader) {
       "Room layout cells"
     );
     const decoded = decodeMapPiece(bytes3);
-    layouts[id3] = { width: decoded.width, height: decoded.height, tiles: decoded.tiles };
+    layouts[layoutId] = { width: decoded.width, height: decoded.height, tiles: decoded.tiles };
   }
   return {
     inventory: inventory2,
@@ -69772,11 +69773,11 @@ function loadSomRoomNative(room, reader) {
 
 // packages/cli/src/asset-interchange/adapters/secret-of-mana-room.ts
 init_canonical_json();
-function isObject5(value) {
+function isObject6(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-function object5(value) {
-  if (!isObject5(value)) {
+function object6(value) {
+  if (!isObject6(value)) {
     throw new Error("Invalid room declaration.");
   }
   return value;
@@ -69803,6 +69804,7 @@ function romOffset(address5) {
   }
   return (address5 - 12582912) % 2097152;
 }
+var identify = (tile) => JSON.stringify([romOffset(tile.address), tile.depth]);
 function inspect2(context, selection) {
   if (context.build.output.length !== 2097152) {
     throw new Error("Room native loader requires a headerless 2 MiB USA source build.");
@@ -69908,7 +69910,7 @@ function inspect2(context, selection) {
     }
     const key3 = canonicalJson([
       room.header.slice(0, 3),
-      [...new Set(room.pieces.map((piece) => piece.layout))].sort((a, b) => a - b)
+      [...new Set(room.pieces.map((piece) => piece.layout))].toSorted((a, b) => a - b)
     ]);
     let state = states.get(key3);
     if (!state) {
@@ -69934,7 +69936,6 @@ function inspect2(context, selection) {
   });
   const selected = rooms.find((entry) => entry.file === selection.room);
   const bindings = /* @__PURE__ */ new Map(), nativeTiles = /* @__PURE__ */ new Map(), consumers = /* @__PURE__ */ new Map(), readonly = /* @__PURE__ */ new Set();
-  const identify = (tile) => JSON.stringify([romOffset(tile.address), tile.depth]);
   for (const entry of rooms) {
     for (const tile of entry.state.inventory) {
       const id2 = identify(tile), binding = raw(romOffset(tile.address), tile.native.length);
@@ -69949,7 +69950,7 @@ function inspect2(context, selection) {
       consumers.set(id2, users);
     }
   }
-  const extents = [...nativeTiles].map(([id2, tile]) => ({ id: id2, offset: romOffset(tile.address), size: tile.native.length })).sort((a, b) => a.offset - b.offset);
+  const extents = [...nativeTiles].map(([id2, tile]) => ({ id: id2, offset: romOffset(tile.address), size: tile.native.length })).toSorted((a, b) => a.offset - b.offset);
   for (let index = 0; index < extents.length; index++) {
     for (let next = index + 1; next < extents.length && extents[next].offset < extents[index].offset + extents[index].size; next++) {
       readonly.add(extents[index].id);
@@ -70005,7 +70006,7 @@ var somRoomSourceAdapter = {
     previewTimeline: true
   },
   readSelection(value) {
-    const input = object5(value);
+    const input = object6(value);
     if (!Array.isArray(input.rooms) || !input.rooms.length || input.rooms.length > 511) {
       throw new Error("Missing complete room consumer closure.");
     }
@@ -70016,7 +70017,7 @@ var somRoomSourceAdapter = {
     let story;
     if (input.story !== void 0) {
       story = {};
-      for (const [key3, state] of Object.entries(object5(input.story))) {
+      for (const [key3, state] of Object.entries(object6(input.story))) {
         if (!/^(?:0|[1-9]\d{0,2})$/.test(key3) || Number(key3) > 255 || typeof state !== "number" || !Number.isInteger(state) || state < 0 || state > 255) {
           throw new Error("Invalid room story state.");
         }
@@ -70026,7 +70027,7 @@ var somRoomSourceAdapter = {
     return { room, rooms, story };
   },
   readBindings(value) {
-    const input = object5(value);
+    const input = object6(value);
     if (!Array.isArray(input.owners) || input.owners.length > 4096 || input.owners.some((id2) => typeof id2 !== "string" || id2.length > 1024) || typeof input.paletteAddress !== "number" || !Number.isInteger(input.paletteAddress)) {
       throw new Error("Invalid private room native bindings.");
     }
@@ -70053,7 +70054,7 @@ var somRoomSourceAdapter = {
         owners: baseline.ownership.owners.map((owner) => owner.id),
         paletteAddress: current.selected.state.paletteAddress
       },
-      dependencies: [...current.dependencies].sort()
+      dependencies: [...current.dependencies].toSorted()
     };
   },
   plan(context, selection, bindings, changes) {
@@ -70142,7 +70143,7 @@ var somRoomSourceAdapter = {
             offset,
             before: file.before.slice(start, end),
             after: file.after.slice(start, end),
-            consumers: [...resources.get(file.path)].sort()
+            consumers: [...resources.get(file.path)].toSorted()
           });
           start = -1;
         };
@@ -70193,7 +70194,7 @@ var somRoomSourceAdapter = {
       for (const [file, preview] of previews) {
         const before = current.source(file), original = parseRoomPreview(before);
         preview.provenance = {
-          ...object5(preview.provenance),
+          ...object6(preview.provenance),
           romSha256: createHash17("sha256").update(expected).digest("hex")
         };
         if (canonicalJson(original) !== canonicalJson(preview)) {
@@ -70222,7 +70223,7 @@ function retirementIds(value, read) {
   return result.toSorted();
 }
 function readAssetRetentionPolicy(value) {
-  const input = object2(value);
+  const input = object3(value);
   const policy = {
     exports: retirementIds(input.exports, locator),
     reviews: retirementIds(input.reviews, digest)
@@ -70230,7 +70231,7 @@ function readAssetRetentionPolicy(value) {
   if (input.staging === void 0) {
     return policy;
   }
-  const staging = object2(input.staging);
+  const staging = object3(input.staging);
   return {
     ...policy,
     staging: {
@@ -70247,14 +70248,14 @@ async function cleanupAssetInterchange(directory, value, applyPlan) {
     const root = path43.join(repository.root, ".uttori-local/asset-interchange");
     const exports = new AssetRecordStore(path43.join(root, "exports")), reviews = new AssetRecordStore(path43.join(root, "reviews"));
     const exported = exports.inventory((entry) => {
-      const input = object2(entry);
+      const input = object3(entry);
       if (input.format !== "uttori-asset-baseline" || input.version !== 2) {
         throw new Error("Unsupported asset baseline in cleanup inventory.");
       }
       return readAssetExportManifest(input.manifest);
     });
     const reviewed = reviews.inventory((entry) => {
-      const input = object2(entry);
+      const input = object3(entry);
       if (input.format !== "uttori-asset-reviewed-plan" || input.version !== 2) {
         throw new Error("Unsupported asset review in cleanup inventory.");
       }
@@ -70417,15 +70418,15 @@ var indexedPngStructureCodec = Object.freeze({
 
 // packages/cli/src/asset-interchange/operation-records.ts
 function readAssetOperation(value) {
-  const input = object2(value), directory = text2(input.directory);
+  const input = object3(value), directory = text2(input.directory);
   let drafts;
   if (input.drafts !== void 0) {
     if (!Array.isArray(input.drafts) || input.drafts.length > 65536) {
       throw new Error("Invalid asset draft inventory.");
     }
     let pathBytes = 0;
-    drafts = input.drafts.map((value2) => {
-      const draft = object2(value2), file = text2(draft.path);
+    drafts = input.drafts.map((candidate) => {
+      const draft = object3(candidate), file = text2(draft.path);
       pathBytes += new TextEncoder().encode(file).length;
       if (pathBytes > ASSET_LIMITS.metadataBytes || typeof draft.opaque !== "boolean") {
         throw new Error("Invalid asset draft metadata.");

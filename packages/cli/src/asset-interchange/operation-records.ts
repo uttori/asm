@@ -47,8 +47,8 @@ export function readAssetOperation(value: unknown): AssetOperation {
       throw new Error("Invalid asset draft inventory.");
     }
     let pathBytes = 0;
-    drafts = input.drafts.map((value) => {
-      const draft = object(value),
+    drafts = input.drafts.map((candidate) => {
+      const draft = object(candidate),
         file = text(draft.path);
       pathBytes += new TextEncoder().encode(file).length;
       if (pathBytes > ASSET_LIMITS.metadataBytes || typeof draft.opaque !== "boolean") {

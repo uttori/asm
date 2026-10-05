@@ -1,6 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import { mutableSpriteResult } from "../../../tests/fixtures/sprite-source.js";
-import { spriteFixture } from "../../../tests/fixtures/sprite-source.js";
+import { mutableSpriteResult, spriteFixture } from "../../../tests/fixtures/sprite-source.js";
 import { encodeFrameAtlas } from "../src/secret-of-mana/som-frame-atlas.js";
 import {
   createSomSpriteEditorBundle,

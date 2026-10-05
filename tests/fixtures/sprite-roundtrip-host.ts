@@ -69,6 +69,8 @@ const equal = (a: Uint8Array, b: Uint8Array): boolean => Buffer.from(a).equals(b
 const jsonBytes = (value: unknown): Uint8Array =>
   new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
 /** Read host-authored declarations. Editor JSON is independently validated as unknown input. */
+// The caller selects the host-authored fixture contract at this deliberate typed JSON boundary.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 function readJson<T>(file: string): T {
   const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
   // Local session and project contracts are trusted inputs; downstream native checks reject corruption.
@@ -405,7 +407,11 @@ async function freshSession(directory: string, sessionId: string) {
   const project = await openSourceProject(directory);
   const session = readJson<Session>(sessionFile(project.repository.root, sessionId));
   if (
+    // Saved host fixtures can be edited on disk, so schema literals still need runtime validation.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     session.format !== "uttori-sprite-session" ||
+    // A corrupt local schema revision cannot authorize native publication.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     session.version !== 1 ||
     session.bundle.session !== sessionId ||
     session.selection.directory !== project.repository.root

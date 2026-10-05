@@ -120,7 +120,7 @@ export function createSomSpriteEditorBundle(
     width: 256,
     height: Math.max(256, stripY),
     transparentIndex: 0,
-    palette: spritePaletteColors(catalog, paletteId).map((v) => [...v]),
+    palette: spritePaletteColors(catalog, paletteId).map(([r, g, b, a]) => [r, g, b, a]),
     // Color zero can contain hidden native data, even when firstIndex is zero.
     editablePaletteIndexes: Array.from(
       { length: Math.min(stored.words.length, 15) },

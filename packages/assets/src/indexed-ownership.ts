@@ -37,27 +37,31 @@ export interface IndexedViewCandidate extends IndexedPixels {
   readonly id: string;
 }
 
+/** Persisted inventories require plain records before any native mapping is read. */
+const isObject = (input: unknown): input is Record<string, unknown> =>
+  !!input && typeof input === "object" && !Array.isArray(input);
+/** Parsed primitives and arrays cannot carry native owner/view declarations. */
+const object = (input: unknown): Record<string, unknown> => {
+  if (!isObject(input)) {
+    throw new Error("Invalid ownership record.");
+  }
+  return input;
+};
+/** Check field types without copying the pixel buffer; inventory validation bounds its dimensions later. */
+const pixels = (input: Record<string, unknown>): IndexedPixels & { readonly id: string } => {
+  if (
+    typeof input.id !== "string" ||
+    typeof input.width !== "number" ||
+    typeof input.height !== "number" ||
+    !(input.indexes instanceof Uint8Array)
+  ) {
+    throw new Error("Invalid ownership pixels.");
+  }
+  return { id: input.id, width: input.width, height: input.height, indexes: input.indexes };
+};
+
 /** Reconstruct persisted authority without trusting a JSON type assertion or imported native mappings. */
 export function readIndexedOwnership(value: unknown): IndexedOwnership {
-  const isObject = (input: unknown): input is Record<string, unknown> =>
-    !!input && typeof input === "object" && !Array.isArray(input);
-  const object = (input: unknown): Record<string, unknown> => {
-    if (!isObject(input)) {
-      throw new Error("Invalid ownership record.");
-    }
-    return input;
-  };
-  const pixels = (input: Record<string, unknown>): IndexedPixels & { readonly id: string } => {
-    if (
-      typeof input.id !== "string" ||
-      typeof input.width !== "number" ||
-      typeof input.height !== "number" ||
-      !(input.indexes instanceof Uint8Array)
-    ) {
-      throw new Error("Invalid ownership pixels.");
-    }
-    return { id: input.id, width: input.width, height: input.height, indexes: input.indexes };
-  };
   const input = object(value);
   const slotMaps = new WeakMap<object, readonly (number | null)[]>();
   if (
@@ -83,7 +87,8 @@ export function readIndexedOwnership(value: unknown): IndexedOwnership {
       }
       return slot;
     });
-    return { ...pixels(entry), allowedIndexes, editable: entry.editable };
+    const { id, width, height, indexes } = pixels(entry);
+    return { id, width, height, indexes, allowedIndexes, editable: entry.editable };
   });
   const views = input.views.map((item): IndexedOwnerView => {
     const entry = object(item);
@@ -107,8 +112,12 @@ export function readIndexedOwnership(value: unknown): IndexedOwnership {
       // One palette map can serve the full inventory without allocating 256 entries per view.
       slotMaps.set(entry.indexMap, indexMap);
     }
+    const { id, width, height, indexes } = pixels(entry);
     return {
-      ...pixels(entry),
+      id,
+      width,
+      height,
+      indexes,
       owner: entry.owner,
       indexMap,
       flipX: entry.flipX,
@@ -138,7 +147,7 @@ function nativeOffset(view: IndexedOwnerView, offset: number): number {
 
 /** Fail on unmapped/invalid display slots, including slots whose RGB happens to match another. */
 function nativeSlot(view: IndexedOwnerView, slot: number, owner: IndexedOwner): number {
-  const mapped = view.indexMap[slot];
+  const mapped = view.indexMap.at(slot);
   if (mapped === undefined || mapped === null || !owner.allowedIndexes.includes(mapped)) {
     throw new Error(`View ${view.id}: unmapped or forbidden display slot ${slot}.`);
   }

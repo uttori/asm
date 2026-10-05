@@ -434,7 +434,7 @@ export const renderSnesRamDefines = (
         variable.description,
         variable.size === 1 ? undefined : `Size: ${variable.size} bytes.`,
         ...variable.notes.filter(
-          (note) => options.includeSourceInformation || !isLegacySourceNote(note),
+          (note) => options.includeSourceInformation === true || !isLegacySourceNote(note),
         ),
         ...(options.includeSourceInformation ? (variable.sources ?? []) : []),
       ].filter((entry): entry is string => Boolean(entry));

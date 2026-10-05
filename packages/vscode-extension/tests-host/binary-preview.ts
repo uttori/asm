@@ -135,7 +135,11 @@ export async function runBinaryPreviewSmoke(
     try {
       await vscode.commands.executeCommand("vscode.openWith", uri, "uttori.pngSmoke");
       const openDeadline = Date.now() + 15000;
-      while (!opaqueDocument && Date.now() < openDeadline) {
+      // The custom-editor callback publishes the document while the smoke test yields.
+      while (Date.now() < openDeadline) {
+        if (opaqueDocument) {
+          break;
+        }
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
       assert.ok(opaqueDocument);

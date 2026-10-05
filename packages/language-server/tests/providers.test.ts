@@ -160,8 +160,8 @@ test("document symbols keep original source lines when comments precede labels",
 });
 
 test("symbol hover preserves comment lines and blank comment separators", (t) => {
-  const file = path.resolve("/virtual/decompress.asm");
-  const source = [
+  const hoverFile = path.resolve("/virtual/decompress.asm");
+  const hoverSource = [
     "org $8000",
     "; JSL wrapper around DecompressLz / $C14C30",
     "; JSL entry: JSR DecompressLz then RTL; A low=ROM source bank,",
@@ -173,8 +173,8 @@ test("symbol hover preserves comment lines and blank comment separators", (t) =>
     "jsl DecompressLz_LongCall",
   ].join("\n");
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
-  index.openDocument(file, source);
-  const hover = hoverFor(index, file, { line: 8, character: 8 }, source);
+  index.openDocument(hoverFile, hoverSource);
+  const hover = hoverFor(index, hoverFile, { line: 8, character: 8 }, hoverSource);
   const rendered = JSON.stringify(hover);
   t.true(rendered.includes("$C14C30  \\nJSL entry"));
   t.true(rendered.includes("Y=destination offset.  \\n  \\nReturns via RTL.  \\ntrailing detail"));

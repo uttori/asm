@@ -57,9 +57,7 @@ function recordDirectory(directory: string): string {
 function stagingFileLimit(name: string): number {
   // durableReplace appends a UUID and .tmp; the destination still has to be a known private record file.
   // oxlint-disable-next-line security/detect-unsafe-regex
-  const temporary = /^(.*)\.([\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12})\.tmp$/.exec(
-      name,
-    ),
+  const temporary = /^(.*)\.([\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12})\.tmp$/.exec(name),
     destination = temporary?.[1] ?? name;
   if (destination === "record.json") {
     return ASSET_LIMITS.baselineMetadataBytes;

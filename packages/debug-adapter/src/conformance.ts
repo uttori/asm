@@ -72,8 +72,13 @@ const fail = (message: string): never => {
   throw new Error(message);
 };
 
-const requireValue = <Value>(value: Value | undefined, message: string): Value =>
-  value === undefined ? fail(message) : value;
+/** Undefined marks an absent result; other values, including null, retain their contract meaning. */
+const requireValue = <Value>(value: Value | undefined, message: string): Value => {
+  if (value === undefined) {
+    return fail(message);
+  }
+  return value;
+};
 
 const addressesMatch = (left: DebugAddress, right: DebugAddress): boolean =>
   left.architecture === right.architecture &&

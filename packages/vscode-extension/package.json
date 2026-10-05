@@ -116,6 +116,13 @@
         "category": "Assembly"
       },
       {
+        "command": "asm.openConfig",
+        "title": "Open Project Configuration",
+        "icon": "$(go-to-file)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.openPanel",
         "title": "Open Project Panel",
         "category": "Assembly"
@@ -441,6 +448,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "asm.openConfig",
+          "when": "view == uttori-asm.projectPanel",
+          "group": "navigation"
+        },
         {
           "command": "asm.trace.start",
           "when": "view == uttori-asm.sourceProject && debugType == uttori-asm && uttori.capturePhase == idle",

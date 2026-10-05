@@ -585,7 +585,6 @@ test("project panel CSS uses VS Code workbench tokens", (t) => {
   t.true(css.includes("@media (max-width: 250px)"));
   t.true(css.includes("--vscode-dropdown-background"));
   t.true(css.includes("--vscode-focusBorder"));
-  t.true(css.includes("--vscode-list-hoverBackground"));
   t.true(css.includes("--vscode-descriptionForeground"));
   t.true(css.includes("--vscode-button-hoverBackground"));
   t.true(panel.includes("displayName"));

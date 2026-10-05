@@ -87,6 +87,10 @@ test("untrusted inventory, identity, palette and derived artwork mutations rejec
       r.images[0].id = "unknown";
     },
     (r: any) => {
+      // An unknown identity must not resolve to the final image through a negative lookup index.
+      r.images[1].id = "unknown";
+    },
+    (r: any) => {
       r.images[0].width++;
     },
     (r: any) => {

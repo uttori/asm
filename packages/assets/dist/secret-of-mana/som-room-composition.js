@@ -18,6 +18,8 @@ export function somRoomPaletteColor(word, transparent) {
 /** Invert the established floor expansion exactly, preserving bit 15; off-grid RGB8 colors require an explicit user correction. */
 export function somRoomPaletteWord(before, color) {
     integer(before, "Room palette word", 0, 65535);
+    // Tuple types disappear for JavaScript callers; opaque RGBA arity is a native encoding invariant.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     if (color.length !== 4 || color[3] !== 255) {
         throw new Error("Room palette edits require opaque RGB8.");
     }

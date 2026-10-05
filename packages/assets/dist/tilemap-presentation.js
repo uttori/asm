@@ -26,7 +26,7 @@ export function tilemapPresentationCel(layer, x, y, columns, rows, cells) {
  */
 export function createTilemapInventory(ownership, nativeWidth, nativeHeight, name) {
     validateIndexedOwnership(ownership);
-    const { views } = ownership, first = views[0];
+    const { views } = ownership, first = views.at(0);
     if (!first || views.some((view) => view.width !== first.width || view.height !== first.height)) {
         throw new Error("A shared tileset inventory requires uniform view geometry.");
     }

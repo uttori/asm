@@ -140,6 +140,7 @@ await build({
 
 // Build from source on every package operation: copying an optional pre-existing bundle can
 // silently ship a stale server or omit it entirely. Native emulator artifacts remain external.
+/** @type {Array<[string, string, boolean]>} Source, packaged path and CommonJS shim requirement. */
 const embeddedExecutables = [
   ["../language-server/src/server.ts", "server/server.mjs", true],
   ["../debug-sidecar-ares/src/sidecar.ts", "sidecars/ares.mjs", false],

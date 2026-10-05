@@ -407,7 +407,7 @@ async function main(): Promise<void> {
     const aggregate = aggregateSamples(samples);
     results.push({ mode, samples, aggregate });
 
-    const lastSample = samples[samples.length - 1];
+    const lastSample = samples.at(-1);
     console.log(
       `chou/${mode.padEnd(14)} median ${formatMs(aggregate.wallMs.median).padStart(10)}` +
         `  MAD ${formatMs(aggregate.wallMs.medianAbsoluteDeviation).padStart(8)}` +

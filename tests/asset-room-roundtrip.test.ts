@@ -59,7 +59,8 @@ test("room pixel/palette import attributes exact native bytes, preserves geometr
   expected[0x30001] = 0x80;
   t.deepEqual((await inspectSourceProject(fixture.directory)).output, expected);
   for (const entry of fixture.files.filter(
-    (entry) => entry.path !== "source/native.bin" && entry.path !== "source/preview.json",
+    (candidate) =>
+      candidate.path !== "source/native.bin" && candidate.path !== "source/preview.json",
   )) {
     t.deepEqual(fs.readFileSync(path.join(fixture.directory, entry.path)), entry.bytes);
   }
@@ -94,7 +95,7 @@ test("changed room cells and incomplete consumer closure reject without source w
   const document = await decodeAsepriteDocument(fs.readFileSync(file)),
     cel = document.frames
       .at(-1)!
-      .cels.find((cel) => cel.kind === "tilemap" && cel.cells.some(Boolean))!;
+      .cels.find((candidate) => candidate.kind === "tilemap" && candidate.cells.some(Boolean))!;
   if (cel.kind !== "tilemap") {
     throw new Error("Expected map cells.");
   }

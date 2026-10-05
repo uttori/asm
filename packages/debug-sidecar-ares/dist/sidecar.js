@@ -17,7 +17,14 @@ Optional:
   --no-fast-boot        Disable the ares fast-boot setting
   --help                Show this help
 `;
-const optionNames = new Set(["--manifest", "--ares", "--rom", "--rom-sha256", "--runtime-dir", "--system"]);
+const optionNames = new Set([
+    "--manifest",
+    "--ares",
+    "--rom",
+    "--rom-sha256",
+    "--runtime-dir",
+    "--system",
+]);
 /**
  * Strict shell-independent parser for the production sidecar executable.
  * @param {readonly string[]} arguments_ Sidecar command-line arguments.
@@ -94,7 +101,10 @@ export const runAresSidecar = async (arguments_, environment = process.env) => {
     const runtimeManifest = parseAresRuntimeManifest(JSON.parse(await readFile(options.manifest, "utf8")));
     // A modification selects a new ROM identity for this session only. Executable and
     // resource pins still come from the installed runtime; its saved manifest is unchanged.
-    const manifest = { ...runtimeManifest, romSha256: options.romSha256 ?? runtimeManifest.romSha256 };
+    const manifest = {
+        ...runtimeManifest,
+        romSha256: options.romSha256 ?? runtimeManifest.romSha256,
+    };
     const host = new AresProcessHost({
         executable: options.executable,
         rom: options.rom,
@@ -119,9 +129,13 @@ export const runAresSidecar = async (arguments_, environment = process.env) => {
         }
         ending = true;
         if (error) {
+            // Error reporting is best effort so a broken stderr cannot prevent native host shutdown.
+            // oxlint-disable-next-line promise/no-promise-in-callback
             await write(process.stderr, `${error.stack ?? error.message}\n`).catch(() => undefined);
         }
         process.stdin.pause();
+        // The protocol close callback owns asynchronous host teardown even after transport failure.
+        // oxlint-disable-next-line promise/no-promise-in-callback
         await host.terminate().catch(() => undefined);
         await new Promise((resolve) => process.stdout.end(resolve));
     };

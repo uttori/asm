@@ -18744,7 +18744,7 @@ var PluginManager = class {
       validateAliases(record2.value.aliases, transaction.manifest.id, record2.contributionId);
       const schema = record2.value.optionSchema;
       const invalidSchema = schema !== void 0 && (!isRecord2(schema) || Object.values(schema).some(
-        (field) => !isRecord2(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (!field.resource || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
+        (field) => !isRecord2(field) || !["string", "integer", "boolean", "enum"].includes(field.type) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (!field.resource || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
       ));
       if (!import_semver.default.valid(record2.value.version) || typeof record2.value.encode !== "function" || typeof record2.value.decode !== "function" || invalidSchema || record2.value.validateOptions !== void 0 && typeof record2.value.validateOptions !== "function" || record2.value.resourcePaths !== void 0 && typeof record2.value.resourcePaths !== "function" || record2.value.targets !== void 0 && (!isArray(record2.value.targets) || record2.value.targets.some((target) => typeof target !== "string"))) {
         this.#malformed(transaction, record2);
@@ -18883,9 +18883,6 @@ var PluginManager = class {
 };
 
 // packages/core/src/plugin/session-state.ts
-function isSlotValue(value) {
-  return value !== void 0 || Object.is(value, void 0);
-}
 var PluginSessionStateStore = class {
   #contributions;
   #values;
@@ -18930,12 +18927,6 @@ var PluginSessionStateStore = class {
       });
     }
     const value = this.#values.get(slot.id);
-    if (!isSlotValue(value)) {
-      throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
-        code: "PLUGIN_CONFIGURATION_INVALID",
-        contributionId: slot.id
-      });
-    }
     return value;
   }
   /**
@@ -30576,7 +30567,7 @@ var Arch65xx = class {
     if (forcedWidth) {
       const byteMode = mappedAddressingMode(absoluteToDirect, mode3);
       const wordMode = mappedAddressingMode(directToAbsolute, mode3);
-      const alreadyRequestedWidth = forcedWidth === 1 && mode3?.startsWith("zeroPage") || forcedWidth === 2 && (mode3 === "absolute" || mode3 === "indirect" || mode3?.startsWith("absoluteIndexed"));
+      const alreadyRequestedWidth = forcedWidth === 1 && mode3 !== void 0 && mode3.startsWith("zeroPage") || forcedWidth === 2 && (mode3 === "absolute" || mode3 === "indirect" || mode3 !== void 0 && mode3.startsWith("absoluteIndexed"));
       if (!byteMode && !wordMode && !alreadyRequestedWidth) {
         throw this.context.diagnostics.error(
           `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode3}.`
