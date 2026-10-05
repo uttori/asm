@@ -12086,7 +12086,66 @@ function encodeInspectedFrameSegment(inspected, segmentName) {
     4
   );
 }
+function readFrameAtlasSelection(options) {
+  if (options.segment !== void 0 && options.segments !== void 0) {
+    throw new Error("Specify segment or segments, not both.");
+  }
+  if (options.segment !== void 0) {
+    if (typeof options.segment !== "string")
+      throw new Error("Frame atlas segment must be a string.");
+    return options.segment;
+  }
+  if (options.segments !== void 0) {
+    if (!Array.isArray(options.segments) || options.segments.some((name) => typeof name !== "string")) {
+      throw new Error("Frame atlas segments must be an array of strings.");
+    }
+    return options.segments;
+  }
+  return void 0;
+}
+function frameAtlasSegmentOrder(layout2, selection) {
+  const names = selection ?? Object.keys(layout2.segments);
+  if (!names.length || new Set(names).size !== names.length) {
+    throw new Error("Frame atlas selection must contain unique, nonempty segments.");
+  }
+  const spans = names.map((name) => {
+    const segment = Object.hasOwn(layout2.segments, name) ? layout2.segments[name] : void 0;
+    if (!segment || !/^[\da-f]{6}$/i.test(segment.romAddress) || !Array.isArray(segment.tiles) || !segment.tiles.length) {
+      throw new Error(`Invalid native frame atlas span: ${name}.`);
+    }
+    const start = Number.parseInt(segment.romAddress, 16);
+    const end = start + segment.tiles.length * 32;
+    if (end > 16777216) {
+      throw new Error(`Native frame atlas span exceeds the 24-bit address space: ${name}.`);
+    }
+    return { name, start, end };
+  }).sort((a, b) => a.start - b.start);
+  for (let index = 1; index < spans.length; index++) {
+    if (spans[index].start !== spans[index - 1].end) {
+      throw new Error("Selected frame atlas segments must be contiguous without gaps or overlaps.");
+    }
+  }
+  return spans.map((span) => span.name);
+}
+function encodeInspectedFrameSegments(inspected, selection) {
+  const chunks = frameAtlasSegmentOrder(inspected.layout, selection).map(
+    (name) => encodeInspectedFrameSegment(inspected, name)
+  );
+  const bytes = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
 function encodeFrameAtlas(source, layout2, segmentName, catalog) {
+  if (typeof segmentName !== "string") {
+    return encodeInspectedFrameSegments(
+      inspectFrameAtlas(source, layout2, catalog, { whole: true }),
+      segmentName
+    );
+  }
   return encodeInspectedFrameSegment(
     inspectFrameAtlas(source, layout2, catalog, { segmentName }),
     segmentName
@@ -12946,8 +13005,8 @@ var plugin = definePlugin({
           }
         }
         const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
-          wordOffset: options.wordOffset,
-          wordCount: options.wordCount
+          wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : void 0,
+          wordCount: typeof options.wordCount === "number" ? options.wordCount : void 0
         });
         return { primaryOutput: "palette", outputs: { palette: { bytes } } };
       }
@@ -12963,14 +13022,14 @@ var plugin = definePlugin({
     });
     context.registerAssetFormat({
       id: "som.sprite.frames",
-      version: "1.0.0",
+      version: "1.1.0",
       targets: ["snes.sfc"],
       resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
       convert(source, options, resources) {
         const tiles = encodeFrameAtlas(
           source,
           readFrameLayout(options, resources),
-          typeof options.segment === "string" ? options.segment : "",
+          readFrameAtlasSelection(options),
           readSpritePaletteCatalog(options, resources)
         );
         return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
@@ -13101,11 +13160,16 @@ function storagePixels(composed, width, height, indexByCoordinate) {
 function convertSomFramePreview(input) {
   const layout2 = readFrameLayout(input.options, input.resources);
   const catalog = readSpritePaletteCatalog(input.options, input.resources);
-  const segment = input.options.segment;
-  if (typeof segment !== "string") {
+  const selection = readFrameAtlasSelection(input.options);
+  if (input.format === "som.boss.graphics" && typeof selection !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
-  const inspected = inspectFrameAtlas(input.source, layout2, catalog, { segmentName: segment });
+  const named = typeof selection === "string";
+  const inspected = inspectFrameAtlas(input.source, layout2, catalog, {
+    segmentName: named ? selection : void 0,
+    whole: !named
+  });
+  const segments = named ? [selection] : frameAtlasSegmentOrder(layout2, selection);
   let encodedBytes;
   let output;
   if (input.format === "som.boss.graphics") {
@@ -13113,7 +13177,8 @@ function convertSomFramePreview(input) {
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
-    encodedBytes = encodeInspectedFrameSegment(inspected, segment).length;
+    if (named) encodedBytes = encodeInspectedFrameSegment(inspected, selection).length;
+    else encodedBytes = encodeInspectedFrameSegments(inspected, segments).length;
     output = "tiles";
   }
   if (input.output !== void 0 && input.output !== output) {
@@ -13129,11 +13194,15 @@ function convertSomFramePreview(input) {
     }
     rgba.set(color, pixel * 4);
   }
-  const paletteId = layout2.paletteRefs[layout2.segments[segment].palette];
-  const palette = Object.hasOwn(catalog.palettes, paletteId) ? catalog.palettes[paletteId] : void 0;
-  if (!palette) {
-    throw new Error(`Unknown sprite palette ${paletteId}.`);
-  }
+  const paletteIds = [
+    ...new Set(segments.map((name) => layout2.paletteRefs[layout2.segments[name].palette]))
+  ];
+  const palettes = paletteIds.map((paletteId) => {
+    const palette = Object.hasOwn(catalog.palettes, paletteId) ? catalog.palettes[paletteId] : void 0;
+    if (!palette) throw new Error(`Unknown sprite palette ${paletteId}.`);
+    return { paletteId, paletteRomAddress: palette.romAddress, paletteUsers: palette.users };
+  });
+  const primaryPalette = palettes[0];
   return {
     kind: "image",
     sourceBytes: input.source.bytes.length,
@@ -13141,10 +13210,10 @@ function convertSomFramePreview(input) {
     format: input.format,
     output,
     metadata: {
-      segment,
-      paletteId,
-      paletteRomAddress: palette.romAddress,
-      paletteUsers: palette.users
+      segment: named ? selection : void 0,
+      segments,
+      ...primaryPalette,
+      palettes
     },
     thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, image.width, image.height, 192)).toString(
       "base64"

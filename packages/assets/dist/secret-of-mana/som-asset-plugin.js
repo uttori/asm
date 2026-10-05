@@ -7,7 +7,7 @@ import { definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
 import { readPcmAudio } from "../audio.js";
 import { readAssetPng } from "../png.js";
 import { encodeBossGraphics, expandBossGraphics } from "./som-boss-graphics.js";
-import { encodeFrameAtlas, readFrameLayout } from "./som-frame-atlas.js";
+import { encodeFrameAtlas, readFrameAtlasSelection, readFrameLayout } from "./som-frame-atlas.js";
 import { compressSomLz, decompressSomLz } from "./som-lz.js";
 import { convertRoomAsset } from "./som-room-assets.js";
 import { parseSpritePaletteCatalog, readSpritePaletteCatalog, spritePaletteBytes, } from "./som-sprite-palettes.js";
@@ -413,8 +413,8 @@ const plugin = definePlugin({
                     }
                 }
                 const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
-                    wordOffset: options.wordOffset,
-                    wordCount: options.wordCount,
+                    wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : undefined,
+                    wordCount: typeof options.wordCount === "number" ? options.wordCount : undefined,
                 });
                 return { primaryOutput: "palette", outputs: { palette: { bytes } } };
             },
@@ -428,11 +428,12 @@ const plugin = definePlugin({
         });
         context.registerAssetFormat({
             id: "som.sprite.frames",
-            version: "1.0.0",
+            version: "1.1.0",
             targets: ["snes.sfc"],
             resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
             convert(source, options, resources) {
-                const tiles = encodeFrameAtlas(source, readFrameLayout(options, resources), typeof options.segment === "string" ? options.segment : "", readSpritePaletteCatalog(options, resources));
+                // An omitted selector owns the whole contiguous atlas; gaps require an explicit selection.
+                const tiles = encodeFrameAtlas(source, readFrameLayout(options, resources), readFrameAtlasSelection(options), readSpritePaletteCatalog(options, resources));
                 return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
             },
         });

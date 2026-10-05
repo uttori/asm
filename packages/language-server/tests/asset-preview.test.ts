@@ -191,6 +191,48 @@ test("SoM frame preview validates a shared ROM palette and renders the authored 
   );
 });
 
+test("combined SoM frame previews retain the atlas and all palette users", (t) => {
+  const root = path.resolve("secret-of-mana/disassembly/assets");
+  const palettes = {
+    bytes: fs.readFileSync(path.join(root, "palettes/rom-palettes.json")),
+    mediaType: "application/json",
+  };
+  const preview = (name: string, segments?: string[]) => {
+    const source = fs.readFileSync(path.join(root, `images/${name}-frames.png`));
+    const result = convertAssetPreview({
+      source: { bytes: source, mediaType: "image/png" },
+      resources: {
+        "layout.json": {
+          bytes: fs.readFileSync(path.join(root, `images/${name}-frames.layout.json`)),
+          mediaType: "application/json",
+        },
+        "palettes.json": palettes,
+      },
+      format: "som.sprite.frames",
+      options: { layout: "layout.json", palettes: "palettes.json", segments },
+    });
+    t.deepEqual(Buffer.from(result.composedPngBase64 ?? "", "base64"), source);
+    return result;
+  };
+  const woman = preview("npc/potos-old-woman");
+  t.is(woman.encodedBytes, 1760);
+  t.is(woman.metadata?.paletteId, "C827AC");
+  t.is((woman.metadata?.segments as string[]).length, 7);
+  const cannon = preview("objects/cannon", [
+    "cannon-bottom-right-tiles",
+    "cannon-top-corner-tiles",
+    "cannon-middle-left-tiles",
+    "cannon-middle-right-tiles",
+    "cannon-bottom-left-tiles",
+  ]);
+  t.is(cannon.encodedBytes, 1728);
+  t.deepEqual(
+    (cannon.metadata?.palettes as { paletteId: string }[]).map((palette) => palette.paletteId),
+    ["C8296E", "C8298C", "C829E6", "C829C8", "C82A04"],
+  );
+  t.throws(() => preview("objects/cannon"), { message: /gaps or overlaps/ });
+});
+
 test("SoM boss frame preview reports its fixed compressed ROM span", (t) => {
   const root = path.resolve("secret-of-mana/disassembly/assets");
   const layoutName = "../assets/images/enemy/mantis-ant-frames.layout.json";

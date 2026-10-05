@@ -230,6 +230,56 @@ test("project asset includes survive export and split native raw spans at exact 
   t.is(fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8"), bank);
 });
 
+test("combined asset includes retain interior annotations and exact native output", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-interior-comments-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture();
+  const annotated: AnalysisProject = {
+    ...project,
+    shards: {
+      ...project.shards,
+      comments: [
+        { id: "first-pose", addressSpace: "rom.file", address: 0x20,
+          text: "First pose uses palette $C827AC.", evidence: ["legacy"] },
+        { id: "later-pose", addressSpace: "rom.file", address: 0x22,
+          text: "Later pose tiles.\nNative palette indexes remain unchanged.", evidence: ["legacy"] },
+        { id: "following-owner", addressSpace: "rom.file", address: 0x24,
+          text: "Separate following data.", evidence: ["legacy"] },
+      ],
+    },
+  };
+  const directive = 'includeAsset("../assets/poses.bin", "raw")';
+  fs.writeFileSync(path.join(directory, "asset-includes.json"), JSON.stringify({
+    version: 1, entries: [{ start: 0x20, end: 0x24, directive }],
+  }));
+  renderSourceFixture(annotated, rom, directory, options);
+  fs.writeFileSync(path.join(directory, "assets/poses.bin"), rom.read(0x20, 4)!);
+  const bank = fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8");
+  t.true(bank.includes(`  ; At asset offset $000002:\n  ; Later pose tiles.\n  ; Native palette indexes remain unchanged.\n  ${directive}`));
+  t.is(bank.match(/Later pose tiles/g)?.length, 1);
+  t.true(bank.indexOf("Separate following data.") > bank.indexOf(directive));
+  const romFile = path.join(directory, "original.sfc");
+  fs.writeFileSync(romFile, rom.bytes());
+  t.true((await verifyRenderedFixture({ sourceDirectory: directory, romFile })).comparison.equal);
+});
+
+test("combined asset includes still reject interior labels and observed code", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-interior-conflicts-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture();
+  const directive = 'includeAsset("../assets/poses.bin", "raw")';
+  const mapFile = path.join(directory, "asset-includes.json");
+  fs.writeFileSync(mapFile, JSON.stringify({ version: 1, entries: [{ start: 0x20, end: 0x24, directive }] }));
+  const labelled: AnalysisProject = {
+    ...project,
+    shards: { ...project.shards, labels: [{ id: "interior-entry", addressSpace: "rom.file",
+      address: 0x22, name: "SecondPoseTiles", sourceName: "SecondPoseTiles", evidence: ["legacy"] }] },
+  };
+  t.throws(() => renderSourceFixture(labelled, rom, directory, options), { message: /conflicts with exported data or metadata/ });
+  fs.writeFileSync(mapFile, JSON.stringify({ version: 1, entries: [{ start: 0, end: 5, directive }] }));
+  t.throws(() => renderSourceFixture(project, rom, directory, options), { message: /conflicts with exported data or metadata/ });
+});
+
 /** Automatic function marker seeded by an imported entry point, not a reviewed source label. */
 const inferredEntry = (address: number): AnalysisFunctionRecord => ({
   id: `static:function:${address.toString(16)}`,

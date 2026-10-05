@@ -144,8 +144,8 @@ optional `flipX`/`flipY` tell the importer to undo the displayed orientation. In
 zero or the guide index becomes transparent tile color zero. Other indexes must belong
 to that segment's palette group. The importer rejects a changed PNG palette relative
 to the catalogue, an invalid rectangle, or a color from another group.
-`romAddress`, `frames[].name`, and `frames[].bounds` help editors and exporters;
-tile encoding uses the rectangle list.
+`romAddress` orders combined spans; tile encoding uses the rectangle list.
+`frames[].name` and `frames[].bounds` describe the displayed poses.
 Each segment's `tileAtlas` records the bottom strip's `bounds`, `columns`, pixel
 `step`, and `sourceOnly` tile indexes. The bottom tile at index `i` begins at
 `bounds[0] + (i % columns) * step`, `bounds[1] + floor(i / columns) * step`.
@@ -183,6 +183,18 @@ includeAsset("../assets/images/npc/actor-frames.png", "som.sprite.frames",
              palettes: "../assets/palettes/rom-palettes.json", segment: "actor-main")
 ```
 
+Omit `segment` when all segments of an atlas occupy one uninterrupted ROM range.
+One include then encodes the entire atlas in ascending `romAddress` order. The physical
+segment IDs, frame references and per-segment palette groups stay in the sidecar, so
+new contiguous poses can extend the same asset without adding another source entry.
+For one continuous subset of a gapped atlas, use `segments: ["actor-main", "actor-extra"]`.
+The codec rejects empty selections, duplicate ownership, gaps and overlaps; it never
+inserts padding. `segment` and `segments` are mutually exclusive. Preserve separate
+includes where a named internal source label must remain addressable. Masked/compressed
+boss streams continue to require their individual `segment` and storage options.
+The source exporter preserves interior annotations above a combined include with their
+relative asset offsets. Comments alone do not require separate emission boundaries.
+
 To add a sprite from scratch:
 
 1. Establish the exact ROM tile extent, palette address, and frame geometry from
@@ -201,8 +213,10 @@ To add a sprite from scratch:
    to its 8×8 rectangles; point visible tiles to a complete frame occurrence.
    Record the bottom geometry and source-only indexes in `tileAtlas`. Repeated
    poses can display the same tile, but one rectangle is authoritative.
-4. Add `includeAsset` at the original ROM position with `layout`, `palettes` and
-   `segment`. Use `som.sprite.frames` for plain 4bpp; use `som.boss.graphics` with
+4. Add `includeAsset` at the original ROM position with `layout` and `palettes`.
+   Prefer one include per continuous run; use `segment` or `segments` to select a
+   subset when the atlas has gaps or internal labels. Update `asset-includes.json`
+   to own the exact combined extent. Use `som.sprite.frames` for plain 4bpp; use `som.boss.graphics` with
    `layout`, `segment`, `storage`, and `byteLength`
    for masked/compressed boss segments. Preserve the exact boss stream in the matching
    `soMA`, `soMB`, ... chunk until an intentional pixel edit needs recompression.

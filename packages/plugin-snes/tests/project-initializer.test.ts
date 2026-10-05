@@ -22,6 +22,7 @@ import {
   probeSnesProject,
 } from "../src/index.js";
 
+/** Small LoROM with a reset entry and no interrupt handlers outside the tested code. */
 const fixtureRom = (): Uint8Array => {
   const bytes = new Uint8Array(0x8000).fill(0xea);
   bytes.set([0xea, 0xea, 0xdb]);
@@ -33,6 +34,8 @@ const fixtureRom = (): Uint8Array => {
   bytes[0x7fc0 + 0x1d] = 0xed;
   bytes[0x7fc0 + 0x1e] = 0x34;
   bytes[0x7fc0 + 0x1f] = 0x12;
+  // NOP padding would turn unused vectors into $EAEA entry points and analyze unrelated padding.
+  bytes.fill(0, 0x7fe0);
   bytes[0x7ffc] = 0x00;
   bytes[0x7ffd] = 0x80;
   return bytes;
@@ -156,8 +159,6 @@ test("incomplete reanalysis preserves known code and the saved project", async (
   const romFile = path.join(temporary, "fixture.sfc");
   const outputDirectory = path.join(temporary, "workspace");
   const bytes = fixtureRom();
-  bytes.fill(0, 0x7fe0);
-  bytes.set([0x00, 0x80], 0x7ffc);
   await fs.writeFile(romFile, bytes);
   await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const projectDirectory = path.join(outputDirectory, "analysis");
@@ -183,8 +184,6 @@ test("background reanalysis does not overwrite an edit published while it was ru
   const romFile = path.join(temporary, "fixture.sfc");
   const outputDirectory = path.join(temporary, "workspace");
   const bytes = fixtureRom();
-  bytes.fill(0, 0x7fe0);
-  bytes.set([0, 0x80], 0x7ffc);
   await fs.writeFile(romFile, bytes);
   await initializeAnalysisFixture({ romFile, outputDirectory, mapper: "lorom" });
   const projectDirectory = path.join(outputDirectory, "analysis");
@@ -361,8 +360,6 @@ test("separate captures accumulate code and compatible CPU-state changes do not 
   const romFile = path.join(temporary, "fixture.sfc");
   const sourceDirectory = path.join(temporary, "workspace");
   const bytes = fixtureRom();
-  bytes.fill(0, 0x7fe0);
-  bytes.set([0, 0x80], 0x7ffc);
   bytes.set([0xa9, 1, 0xdb], 0x10);
   bytes.set([0xa9, 2, 0xdb], 0x20);
   await fs.writeFile(romFile, bytes);

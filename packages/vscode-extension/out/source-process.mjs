@@ -57396,13 +57396,18 @@ var applyAssetIncludes = (planned, map, metadata, bankSize) => {
     }
     let end = entry.start;
     const entryComments2 = [];
+    const interiorComments = [];
     while (index < spans.length && end < entry.end) {
       splitRawAt(entry.end);
       const span = spans[index];
-      if (span.start !== end || span.end > entry.end || span.instruction || span.structured || span.start !== entry.start && metadata.has(span.start)) {
+      const interiorMetadata = span.start !== entry.start ? metadata.get(span.start) : void 0;
+      if (span.start !== end || span.end > entry.end || span.instruction || span.structured || interiorMetadata?.some((line) => line.name)) {
         throw new Error(
           `Asset include at ROM offset ${hex9(entry.start)} conflicts with exported data or metadata.`
         );
+      }
+      if (interiorMetadata?.length) {
+        interiorComments.push({ offset: span.start, lines: interiorMetadata });
       }
       const record5 = span.structRecord ?? span.structField?.record;
       const comment2 = record5?.binding.entryComments?.[record5.index];
@@ -57420,7 +57425,8 @@ var applyAssetIncludes = (planned, map, metadata, bankSize) => {
       end: entry.end,
       role: "raw",
       assetInclude: entry.directive,
-      ...entryComments2.length ? { assetEntryComments: entryComments2 } : {}
+      ...entryComments2.length ? { assetEntryComments: entryComments2 } : {},
+      ...interiorComments.length ? { assetInteriorComments: interiorComments } : {}
     });
   }
   while (index < spans.length) {
@@ -58422,6 +58428,10 @@ var exportSnes65816Source = (project, rom, directory, options) => {
       } else if (span.assetInclude) {
         for (const comment2 of span.assetEntryComments ?? []) {
           lines.push(`  ; ${comment2}`);
+        }
+        for (const annotation of span.assetInteriorComments ?? []) {
+          lines.push(`  ; At asset offset ${hex9(annotation.offset - span.start)}:`);
+          lines.push(...renderedMetadata(annotation.lines));
         }
         lines.push(`  ${span.assetInclude}`);
         spans.push({

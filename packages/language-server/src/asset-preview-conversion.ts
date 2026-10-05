@@ -17,7 +17,10 @@ import {
 } from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
 import {
   encodeInspectedFrameSegment,
+  encodeInspectedFrameSegments,
+  frameAtlasSegmentOrder,
   inspectFrameAtlas,
+  readFrameAtlasSelection,
   readFrameLayout,
 } from "@uttori/asm-assets/secret-of-mana/som-frame-atlas";
 import {
@@ -108,11 +111,16 @@ function storagePixels(
 function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
   const layout = readFrameLayout(input.options, input.resources);
   const catalog = readSpritePaletteCatalog(input.options, input.resources);
-  const segment = input.options.segment;
-  if (typeof segment !== "string") {
+  const selection = readFrameAtlasSelection(input.options);
+  if (input.format === "som.boss.graphics" && typeof selection !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
-  const inspected = inspectFrameAtlas(input.source, layout, catalog, { segmentName: segment });
+  const named = typeof selection === "string";
+  const inspected = inspectFrameAtlas(input.source, layout, catalog, {
+    segmentName: named ? selection : undefined,
+    whole: !named,
+  });
+  const segments = named ? [selection] : frameAtlasSegmentOrder(layout, selection);
   let encodedBytes: number;
   let output: string;
   if (input.format === "som.boss.graphics") {
@@ -122,7 +130,8 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
-    encodedBytes = encodeInspectedFrameSegment(inspected, segment).length;
+    if (named) encodedBytes = encodeInspectedFrameSegment(inspected, selection).length;
+    else encodedBytes = encodeInspectedFrameSegments(inspected, segments).length;
     output = "tiles";
   }
   if (input.output !== undefined && input.output !== output) {
@@ -139,13 +148,18 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     }
     rgba.set(color, pixel * 4);
   }
-  const paletteId = layout.paletteRefs[layout.segments[segment].palette];
-  const palette: SpritePaletteRecord | undefined = Object.hasOwn(catalog.palettes, paletteId)
-    ? catalog.palettes[paletteId]
-    : undefined;
-  if (!palette) {
-    throw new Error(`Unknown sprite palette ${paletteId}.`);
-  }
+  const paletteIds = [
+    ...new Set(segments.map((name) => layout.paletteRefs[layout.segments[name].palette])),
+  ];
+  const palettes = paletteIds.map((paletteId) => {
+    const palette: SpritePaletteRecord | undefined = Object.hasOwn(catalog.palettes, paletteId)
+      ? catalog.palettes[paletteId]
+      : undefined;
+    if (!palette) throw new Error(`Unknown sprite palette ${paletteId}.`);
+    return { paletteId, paletteRomAddress: palette.romAddress, paletteUsers: palette.users };
+  });
+  // Preserve the single-palette metadata contract; combined spans also expose every palette user.
+  const primaryPalette = palettes[0];
   return {
     kind: "image",
     sourceBytes: input.source.bytes.length,
@@ -153,10 +167,10 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     format: input.format,
     output,
     metadata: {
-      segment,
-      paletteId,
-      paletteRomAddress: palette.romAddress,
-      paletteUsers: palette.users,
+      segment: named ? selection : undefined,
+      segments,
+      ...primaryPalette,
+      palettes,
     },
     thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, image.width, image.height, 192)).toString(
       "base64",

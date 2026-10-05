@@ -462,19 +462,117 @@ export function encodeInspectedFrameSegment(inspected: InspectedFrameAtlas, segm
   );
 }
 
-/** Existing assembly entry point; inspection/extraction is also available without native encoding.
+/** Read mutually exclusive assembly selectors; omission selects the whole contiguous atlas.
+ * @param {Readonly<Record<string, unknown>>} options Resolved assembly options.
+ * @returns {string | string[] | undefined} Named segment, selected run, or whole-atlas selection.
+ * Invalid types and simultaneous selectors throw before encoding or previewing.
+ */
+export function readFrameAtlasSelection(
+  options: Readonly<Record<string, unknown>>,
+): string | string[] | undefined {
+  if (options.segment !== undefined && options.segments !== undefined) {
+    throw new Error("Specify segment or segments, not both.");
+  }
+  if (options.segment !== undefined) {
+    if (typeof options.segment !== "string")
+      throw new Error("Frame atlas segment must be a string.");
+    return options.segment;
+  }
+  if (options.segments !== undefined) {
+    if (
+      !Array.isArray(options.segments) ||
+      options.segments.some((name) => typeof name !== "string")
+    ) {
+      throw new Error("Frame atlas segments must be an array of strings.");
+    }
+    return options.segments;
+  }
+  return undefined;
+}
+
+/** Resolve a nonempty selection in ROM order, rejecting gaps, overlaps and duplicate ownership.
+ * Each native 4bpp tile occupies 32 bytes; the selected spans must form one continuous run.
+ * @param {FrameLayout} layout Sidecar retaining physical segment identities.
+ * @param {readonly string[]} [selection] Segment names; omission selects the entire atlas.
+ * @returns {string[]} Names in ascending ROM address order; malformed spans throw.
+ */
+export function frameAtlasSegmentOrder(
+  layout: FrameLayout,
+  selection?: readonly string[],
+): string[] {
+  const names = selection ?? Object.keys(layout.segments);
+  if (!names.length || new Set(names).size !== names.length) {
+    throw new Error("Frame atlas selection must contain unique, nonempty segments.");
+  }
+  const spans = names
+    .map((name) => {
+      const segment = Object.hasOwn(layout.segments, name) ? layout.segments[name] : undefined;
+      if (
+        !segment ||
+        !/^[\da-f]{6}$/i.test(segment.romAddress) ||
+        !Array.isArray(segment.tiles) ||
+        !segment.tiles.length
+      ) {
+        throw new Error(`Invalid native frame atlas span: ${name}.`);
+      }
+      const start = Number.parseInt(segment.romAddress, 16);
+      const end = start + segment.tiles.length * 32;
+      if (end > 0x1000000) {
+        throw new Error(`Native frame atlas span exceeds the 24-bit address space: ${name}.`);
+      }
+      return { name, start, end };
+    })
+    .sort((a, b) => a.start - b.start);
+  for (let index = 1; index < spans.length; index++) {
+    // Concatenation cannot insert padding or emit the same ROM bytes twice.
+    if (spans[index].start !== spans[index - 1].end) {
+      throw new Error("Selected frame atlas segments must be contiguous without gaps or overlaps.");
+    }
+  }
+  return spans.map((span) => span.name);
+}
+
+/** Encode one continuous run from a whole-atlas inspection, preserving each segment's palette indexes.
+ * @param {InspectedFrameAtlas} inspected Whole-atlas inspection containing every selected segment.
+ * @param {readonly string[]} [selection] Physical segment names; omission selects the entire atlas.
+ * @returns {Uint8Array} Owned native tile bytes in ROM order; invalid ownership throws.
+ */
+export function encodeInspectedFrameSegments(
+  inspected: InspectedFrameAtlas,
+  selection?: readonly string[],
+) {
+  const chunks = frameAtlasSegmentOrder(inspected.layout, selection).map((name) =>
+    encodeInspectedFrameSegment(inspected, name),
+  );
+  const bytes = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
+
+/** Assembly entry point for a named segment or a continuous run of segments.
  * @param {AssetInput} source Indexed PNG.
  * @param {FrameLayout} layout Frame atlas sidecar.
- * @param {string} segmentName Segment to encode.
+ * @param {string | readonly string[] | undefined} segmentName One segment, a contiguous selection,
+ * or undefined for the entire atlas. Multiple spans are emitted in ROM address order.
  * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @returns {Uint8Array} Native 4bpp tile bytes.
+ * @returns {Uint8Array} Native 4bpp tile bytes; gapped or overlapping selections throw.
  */
 export function encodeFrameAtlas(
   source: AssetInput,
   layout: FrameLayout,
-  segmentName: string,
+  segmentName: string | readonly string[] | undefined,
   catalog: SpritePaletteCatalog,
 ) {
+  if (typeof segmentName !== "string") {
+    return encodeInspectedFrameSegments(
+      inspectFrameAtlas(source, layout, catalog, { whole: true }),
+      segmentName,
+    );
+  }
   return encodeInspectedFrameSegment(
     inspectFrameAtlas(source, layout, catalog, { segmentName }),
     segmentName,

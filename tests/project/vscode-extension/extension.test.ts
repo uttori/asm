@@ -364,6 +364,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   const views = manifest.contributes.views["uttori-asm"] ?? [];
   t.deepEqual(Object.fromEntries(views.map(({ id, type }) => [id, type])), {
     "uttori-asm.projectPanel": "webview",
+    "uttori-asm.indexDetails": "tree",
     "uttori-asm.projectOutline": "tree",
     "uttori-asm.sourceProject": "tree",
     "uttori-asm.sources": "tree",

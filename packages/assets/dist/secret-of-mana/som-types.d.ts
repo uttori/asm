@@ -15,8 +15,11 @@ export interface FrameTileAtlas {
 }
 /** One ROM graphics span and the editor rectangles that sample it. */
 export interface FrameSegment {
+    /** Authoritative rectangles in native tile order; each 4bpp tile occupies 32 ROM bytes. */
     tiles: FrameTilePlacement[];
+    /** Zero-based source palette group in the layout's paletteRefs array. */
     palette: number;
+    /** Six hexadecimal digits naming the first native byte, without a dollar or 0x prefix. */
     romAddress: string;
     tileAtlas?: FrameTileAtlas;
 }

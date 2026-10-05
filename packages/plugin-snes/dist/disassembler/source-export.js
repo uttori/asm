@@ -137,10 +137,10 @@ const loadAssetIncludeMap = (directory) => {
     return { sourceBytes, entries: ordered };
 };
 /**
- * Replace complete non-code spans only; a changed analysis boundary must be reviewed.
+ * Replace complete non-code spans, retaining interior comments without swallowing named boundaries.
  * @param {PlannedSpan[]} planned Native spans from code, annotations and struct bindings.
  * @param {AssetIncludeMap | undefined} map Project-owned includes with half-open ROM file offsets.
- * @param {ReadonlyMap<number, NamedLine[]>} metadata Labels and comments whose interior boundaries must survive export.
+ * @param {ReadonlyMap<number, NamedLine[]>} metadata Labels retain physical boundaries; displaced comments retain relative offsets.
  * @param {number} bankSize ROM bytes per emitted bank for the active mapper.
  * @returns {PlannedSpan[]} Spans with includes substituted and uncovered raw bytes retained.
  */
@@ -175,15 +175,30 @@ const applyAssetIncludes = (planned, map, metadata, bankSize) => {
             throw new Error(`Asset include at ROM offset ${hex(entry.start)} does not start on one bank-local span.`);
         }
         let end = entry.start;
+        const entryComments = [];
+        const interiorComments = [];
         while (index < spans.length && end < entry.end) {
             splitRawAt(entry.end);
             const span = spans[index];
+            const interiorMetadata = span.start !== entry.start ? metadata.get(span.start) : undefined;
             if (span.start !== end ||
                 span.end > entry.end ||
                 span.instruction ||
                 span.structured ||
-                (span.start !== entry.start && metadata.has(span.start))) {
+                interiorMetadata?.some((line) => line.name)) {
                 throw new Error(`Asset include at ROM offset ${hex(entry.start)} conflicts with exported data or metadata.`);
+            }
+            // Comments do not own bytes. Move them above the include with their original offset;
+            // labels still require a source boundary so references cannot silently lose their target.
+            if (interiorMetadata?.length) {
+                interiorComments.push({ offset: span.start, lines: interiorMetadata });
+            }
+            // An editable asset replaces the record directive, but its researched identity still
+            // belongs beside the bytes. Capture it once at the record start before dropping spans.
+            const record = span.structRecord ?? span.structField?.record;
+            const comment = record?.binding.entryComments?.[record.index];
+            if (record?.start === span.start && comment) {
+                entryComments.push(`${record.binding.name}[${record.index}]: ${comment}`);
             }
             end = span.end;
             index++;
@@ -191,7 +206,14 @@ const applyAssetIncludes = (planned, map, metadata, bankSize) => {
         if (end !== entry.end) {
             throw new Error(`Asset include at ROM offset ${hex(entry.start)} has no exact end boundary.`);
         }
-        result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
+        result.push({
+            start: entry.start,
+            end: entry.end,
+            role: "raw",
+            assetInclude: entry.directive,
+            ...(entryComments.length ? { assetEntryComments: entryComments } : {}),
+            ...(interiorComments.length ? { assetInteriorComments: interiorComments } : {}),
+        });
     }
     while (index < spans.length) {
         result.push(spans[index++]);
@@ -1229,6 +1251,13 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                 });
             }
             else if (span.assetInclude) {
+                for (const comment of span.assetEntryComments ?? []) {
+                    lines.push(`  ; ${comment}`);
+                }
+                for (const annotation of span.assetInteriorComments ?? []) {
+                    lines.push(`  ; At asset offset ${hex(annotation.offset - span.start)}:`);
+                    lines.push(...renderedMetadata(annotation.lines));
+                }
                 lines.push(`  ${span.assetInclude}`);
                 spans.push({
                     id: `asset:${span.start.toString(16).padStart(6, "0")}`,

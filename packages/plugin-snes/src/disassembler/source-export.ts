@@ -205,6 +205,11 @@ interface PlannedSpan {
   readonly assetInclude?: string;
   /** Entry identities displaced by an asset include, in original ROM record order. */
   readonly assetEntryComments?: readonly string[];
+  /** Interior annotations moved beside a combined include, retaining their original file offsets. */
+  readonly assetInteriorComments?: readonly {
+    readonly offset: number;
+    readonly lines: readonly NamedLine[];
+  }[];
 }
 
 interface AssetIncludeMap {
@@ -282,10 +287,10 @@ const loadAssetIncludeMap = (directory: string): AssetIncludeMap | undefined => 
 };
 
 /**
- * Replace complete non-code spans only; a changed analysis boundary must be reviewed.
+ * Replace complete non-code spans, retaining interior comments without swallowing named boundaries.
  * @param {PlannedSpan[]} planned Native spans from code, annotations and struct bindings.
  * @param {AssetIncludeMap | undefined} map Project-owned includes with half-open ROM file offsets.
- * @param {ReadonlyMap<number, NamedLine[]>} metadata Labels and comments whose interior boundaries must survive export.
+ * @param {ReadonlyMap<number, NamedLine[]>} metadata Labels retain physical boundaries; displaced comments retain relative offsets.
  * @param {number} bankSize ROM bytes per emitted bank for the active mapper.
  * @returns {PlannedSpan[]} Spans with includes substituted and uncovered raw bytes retained.
  */
@@ -332,19 +337,26 @@ const applyAssetIncludes = (
     }
     let end = entry.start;
     const entryComments: string[] = [];
+    const interiorComments: NonNullable<PlannedSpan["assetInteriorComments"]>[number][] = [];
     while (index < spans.length && end < entry.end) {
       splitRawAt(entry.end);
       const span = spans[index];
+      const interiorMetadata = span.start !== entry.start ? metadata.get(span.start) : undefined;
       if (
         span.start !== end ||
         span.end > entry.end ||
         span.instruction ||
         span.structured ||
-        (span.start !== entry.start && metadata.has(span.start))
+        interiorMetadata?.some((line) => line.name)
       ) {
         throw new Error(
           `Asset include at ROM offset ${hex(entry.start)} conflicts with exported data or metadata.`,
         );
+      }
+      // Comments do not own bytes. Move them above the include with their original offset;
+      // labels still require a source boundary so references cannot silently lose their target.
+      if (interiorMetadata?.length) {
+        interiorComments.push({ offset: span.start, lines: interiorMetadata });
       }
       // An editable asset replaces the record directive, but its researched identity still
       // belongs beside the bytes. Capture it once at the record start before dropping spans.
@@ -365,6 +377,7 @@ const applyAssetIncludes = (
       role: "raw",
       assetInclude: entry.directive,
       ...(entryComments.length ? { assetEntryComments: entryComments } : {}),
+      ...(interiorComments.length ? { assetInteriorComments: interiorComments } : {}),
     });
   }
   while (index < spans.length) {
@@ -1857,6 +1870,10 @@ export const exportSnes65816Source = (
       } else if (span.assetInclude) {
         for (const comment of span.assetEntryComments ?? []) {
           lines.push(`  ; ${comment}`);
+        }
+        for (const annotation of span.assetInteriorComments ?? []) {
+          lines.push(`  ; At asset offset ${hex(annotation.offset - span.start)}:`);
+          lines.push(...renderedMetadata(annotation.lines));
         }
         lines.push(`  ${span.assetInclude}`);
         spans.push({

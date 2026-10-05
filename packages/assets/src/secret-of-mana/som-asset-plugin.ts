@@ -14,7 +14,7 @@ import { readPcmAudio, type PcmAudio } from "../audio.js";
 import { readAssetPng } from "../png.js";
 import type { AssetInput, AssetOutput } from "../registry.js";
 import { encodeBossGraphics, expandBossGraphics } from "./som-boss-graphics.js";
-import { encodeFrameAtlas, readFrameLayout } from "./som-frame-atlas.js";
+import { encodeFrameAtlas, readFrameAtlasSelection, readFrameLayout } from "./som-frame-atlas.js";
 import { compressSomLz, decompressSomLz } from "./som-lz.js";
 import { convertRoomAsset } from "./som-room-assets.js";
 import {
@@ -493,15 +493,16 @@ const plugin = definePlugin({
     });
     context.registerAssetFormat({
       id: "som.sprite.frames",
-      version: "1.0.0",
+      version: "1.1.0",
       targets: ["snes.sfc"],
       resourcePaths: (options) =>
         [options.layout, options.palettes].filter((path) => typeof path === "string"),
       convert(source, options, resources) {
+        // An omitted selector owns the whole contiguous atlas; gaps require an explicit selection.
         const tiles = encodeFrameAtlas(
           source,
           readFrameLayout(options, resources),
-          typeof options.segment === "string" ? options.segment : "",
+          readFrameAtlasSelection(options),
           readSpritePaletteCatalog(options, resources),
         );
         return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
