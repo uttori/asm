@@ -342,6 +342,10 @@ try {
       return [];
     }
     const parsedManifest: unknown = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    // Private tooling/extension workspaces need not expose a published runtime API.
+    if (isRecord(parsedManifest) && parsedManifest.private === true) {
+      return [];
+    }
     const manifest = readPackageManifest(parsedManifest);
     return manifest.private ? [] : [{ directory, manifest }];
   });
@@ -532,6 +536,7 @@ try {
         "contracts.mts",
         "storage.mts",
         "cli.mts",
+        "asset-interchange.mts",
         "processors.mts",
         "traces.mts",
       ],
@@ -545,6 +550,7 @@ try {
   console.log(run(process.execPath, ["compiled/contracts.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/storage.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/cli.mjs"], consumer).trim());
+  console.log(run(process.execPath, ["compiled/asset-interchange.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/processors.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/traces.mjs"], consumer).trim());
   // Declaration comments are part of the installed editor experience, not just source docs.

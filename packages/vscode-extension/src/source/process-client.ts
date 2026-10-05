@@ -1,9 +1,12 @@
 import { fork, type ChildProcess } from "node:child_process";
 
+import type { AssetOperation } from "@uttori/asm-cli/asset-interchange";
 import type { SourceOperation } from "@uttori/asm-cli/source";
 
 /** Serializable request: buffers use advanced IPC serialization, while cancellation stays process-local. */
-export type SourceProcessOperation = Omit<SourceOperation, "signal" | "onProgress">;
+export type SourceProcessOperation =
+  | Omit<SourceOperation, "signal" | "onProgress">
+  | AssetOperation;
 
 /** Isolate assembly/SQLite CPU and memory from the extension host; dispose terminates owned children. */
 export class SourceProcessClient {
@@ -20,6 +23,8 @@ export class SourceProcessClient {
       readonly maxMemoryMiB: number;
       readonly signal?: AbortSignal;
       readonly onProgress?: (message: string) => void;
+      /** Live source/editor version check; returning rejects or acknowledges the worker's final publication gate. */
+      readonly onBeforePublish?: (paths: readonly string[]) => void | Promise<void>;
     },
   ): Promise<T> {
     options.signal?.throwIfAborted();
@@ -69,18 +74,68 @@ export class SourceProcessClient {
         stderr = (stderr + bytes.toString()).slice(-8192);
         this.log(bytes.toString());
       });
-      child.on("message", (message: { type: string; message?: string; value?: T }) => {
-        if (message.type === "progress" && typeof message.message === "string") {
-          // All phases get elapsed time, including Git/SQLite operations without a fixed work total.
-          const progress = `[${((Date.now() - started) / 1000).toFixed(1)}s] ${message.message}`;
-          this.log(progress);
-          options.onProgress?.(progress);
-        } else if (message.type === "result") {
-          response = { value: message.value! };
-        } else if (message.type === "error") {
-          response = { error: new Error(message.message ?? "Source operation failed.") };
-        }
-      });
+      child.on(
+        "message",
+        (message: { type: string; message?: string; value?: T; paths?: unknown }) => {
+          if (message.type === "progress" && typeof message.message === "string") {
+            // All phases get elapsed time, including Git/SQLite operations without a fixed work total.
+            const progress = `[${((Date.now() - started) / 1000).toFixed(1)}s] ${message.message}`;
+            this.log(progress);
+            options.onProgress?.(progress);
+          } else if (message.type === "result") {
+            response = { value: message.value! };
+          } else if (message.type === "error") {
+            response = { error: new Error(message.message ?? "Source operation failed.") };
+          } else if (message.type === "publish-check") {
+            // Only bounded path metadata crosses IPC. Native payloads remain in the worker, and absence of a coordinator denies publication.
+            void Promise.resolve()
+              .then(async () => {
+                options.signal?.throwIfAborted();
+                if (
+                  !options.onBeforePublish ||
+                  !Array.isArray(message.paths) ||
+                  message.paths.length > 65536 ||
+                  message.paths.some((item: unknown) => typeof item !== "string")
+                ) {
+                  throw new Error("Invalid or uncoordinated asset publication check.");
+                }
+                let bytes = 0;
+                const paths = message.paths.map((item: unknown) => {
+                  if (typeof item !== "string") {
+                    throw new Error("Invalid asset publication path.");
+                  }
+                  bytes += Buffer.byteLength(item, "utf8");
+                  if (bytes > 16 * 1024 * 1024) {
+                    throw new Error("Asset publication metadata exceeds its byte budget.");
+                  }
+                  return item;
+                });
+                await options.onBeforePublish(paths);
+                options.signal?.throwIfAborted();
+                return;
+              })
+              .then(
+                () => {
+                  if (child.connected) {
+                    child.send({ type: "publish-confirm" }, () => {});
+                  }
+                  return;
+                },
+                (error: unknown) => {
+                  if (child.connected) {
+                    child.send(
+                      {
+                        type: "publish-confirm",
+                        error: error instanceof Error ? error.message : String(error),
+                      },
+                      () => {},
+                    );
+                  }
+                },
+              );
+          }
+        },
+      );
       child.on("error", (error) => finish(error));
       child.on("exit", (code, signal) => {
         this.#children.delete(child);

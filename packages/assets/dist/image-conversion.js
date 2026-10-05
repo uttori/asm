@@ -1,3 +1,4 @@
+import { ASSET_LIMITS } from "./limits.js";
 import { decodeBgMap, decodeBgr555, decodeMode7Tiles, decodePlanarTiles, encodeBgr555, encodeBgMap, encodeMode7Map, encodeMode7Tiles, encodePlanarTiles, } from "./snes.js";
 import { integer } from "./validation.js";
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -444,7 +445,8 @@ function imageModel(document) {
         !Number.isSafeInteger(value.height) ||
         value.width < 1 ||
         value.height < 1 ||
-        value.width * value.height > 1024 * 1024) {
+        value.width > ASSET_LIMITS.rasterPixels ||
+        value.height > Math.floor(ASSET_LIMITS.rasterPixels / value.width)) {
         throw new Error("Image model has invalid dimensions or kind.");
     }
     const pixels = value.width * value.height;

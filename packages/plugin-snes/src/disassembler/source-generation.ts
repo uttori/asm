@@ -274,7 +274,7 @@ export async function prepareSnesGeneration(
       }
       let bytes: Uint8Array;
       if (asset.originalBlob !== undefined) {
-        if (asset.romRange || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob)) {
+        if (asset.romRange || !/^(?:[\da-f]{40}|[\da-f]{64})$/.test(asset.originalBlob)) {
           throw new Error(`Invalid original asset blob declaration for ${name}.`);
         }
         // Admission pins reviewed bytes, not a path that an editor can mutate during preparation.

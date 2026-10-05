@@ -13,7 +13,8 @@ interface RoomEntity extends RoomCondition {
     entity: number;
     interaction: number;
 }
-interface RoomPiece extends RoomCondition {
+/** Native conditional placement in 16-pixel metatile units; a layer transition retains its explicit marker. */
+export interface RoomPiece extends RoomCondition {
     marker?: number;
     layer: number;
     layout: number;
@@ -53,6 +54,8 @@ export interface RoomPreview {
     version: number;
     tilesets: Record<string, RoomPreviewTileset>;
     layouts: Record<string, RoomPreviewLayout>;
+    /** Descriptive capture/initial-loader evidence; source write authority is resolved separately. */
+    provenance?: unknown;
 }
 /** One room owns three discontiguous sections; shared layouts, graphics and palettes remain references.
  * @param {AssetInput} source JSON room records.
@@ -95,7 +98,7 @@ export declare function renderRoomAsset(room: RoomAsset, preview: RoomPreview, {
     layer?: unknown;
     story?: Readonly<Record<string, number>>;
 }): {
-    rgba: Uint8Array<ArrayBuffer>;
+    rgba: Uint8Array;
     width: number;
     height: number;
     tileset: string;

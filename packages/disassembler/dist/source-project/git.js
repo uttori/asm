@@ -1,7 +1,15 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { acquireFileLease } from "../internal/durable-files.js";
+import { sourceFilePublicationEpoch } from "./file-transaction.js";
 export { assertSourcePath } from "../internal/source-inputs.js";
+/** Coordinate ordinary source publication with existing native regeneration/merge operations.
+ * The caller owns the lease and must release it in finally; a live process's lease is never stolen.
+ */
+export function acquireSourceOperationLease(repository) {
+    return acquireFileLease(path.join(repository.stateDirectory, "operation.lock"));
+}
 /** A Git command failure carries diagnostics without treating a merge conflict as an exception. */
 export class SourceGitError extends Error {
     args;
@@ -99,10 +107,12 @@ export async function sourceRepository(directory) {
 }
 /** NUL-delimited porcelain preserves filenames with spaces, tabs, and embedded newlines. */
 export async function sourceStatus(repository) {
+    sourceFilePublicationEpoch(repository);
     return (await sourceGit(repository.root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"])).stdout;
 }
 /** Reject concurrent Git operations before touching the index or worktree. */
 export function assertNoSourceOperation(repository) {
+    sourceFilePublicationEpoch(repository);
     for (const name of [
         "MERGE_HEAD",
         "CHERRY_PICK_HEAD",

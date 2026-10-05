@@ -72,6 +72,8 @@ export interface FrameRecord {
     blocks?: FrameBlock[];
     placements?: FramePlacement[];
     nativeFrame?: NativeFrameRecord;
+    /** Retained castle-boss record identity; its different encoding is read-only through ordinary body-coordinate edits. */
+    bossFrame?: NativeFrameRecord;
     origin?: [number, number];
 }
 /** Version 1 frame-atlas sidecar shared by inspection, encoding, and authoring. */
@@ -99,5 +101,7 @@ export interface SpriteAtlasSource {
     source: AssetInput;
     layout: FrameLayout;
     nativeOptions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    /** Complete declared include resources, keyed by the names used in evaluated conversion options. */
+    resources?: Readonly<Record<string, AssetInput>>;
 }
 //# sourceMappingURL=som-types.d.ts.map

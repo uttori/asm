@@ -2,6 +2,9 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { acquireFileLease, type FileLease } from "../internal/durable-files.js";
+import { sourceFilePublicationEpoch } from "./file-transaction.js";
+
 export { assertSourcePath } from "../internal/source-inputs.js";
 
 /** Repository and per-worktree state directories, resolved by Git rather than assuming .git is a directory. */
@@ -9,6 +12,13 @@ export interface SourceRepository {
   readonly root: string;
   readonly gitDirectory: string;
   readonly stateDirectory: string;
+}
+
+/** Coordinate ordinary source publication with existing native regeneration/merge operations.
+ * The caller owns the lease and must release it in finally; a live process's lease is never stolen.
+ */
+export function acquireSourceOperationLease(repository: SourceRepository): FileLease {
+  return acquireFileLease(path.join(repository.stateDirectory, "operation.lock"));
 }
 
 /** Raw Git output retains NUL delimiters and arbitrary binary blobs. */
@@ -127,6 +137,7 @@ export async function sourceRepository(directory: string): Promise<SourceReposit
 
 /** NUL-delimited porcelain preserves filenames with spaces, tabs, and embedded newlines. */
 export async function sourceStatus(repository: SourceRepository): Promise<Buffer> {
+  sourceFilePublicationEpoch(repository);
   return (
     await sourceGit(repository.root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"])
   ).stdout;
@@ -134,6 +145,7 @@ export async function sourceStatus(repository: SourceRepository): Promise<Buffer
 
 /** Reject concurrent Git operations before touching the index or worktree. */
 export function assertNoSourceOperation(repository: SourceRepository): void {
+  sourceFilePublicationEpoch(repository);
   for (const name of [
     "MERGE_HEAD",
     "CHERRY_PICK_HEAD",

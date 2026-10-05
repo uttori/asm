@@ -268,6 +268,24 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
+        "command": "asm.asset.export",
+        "title": "Export Asset to File",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.asset.review",
+        "title": "Review Saved Asset",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.asset.apply",
+        "title": "Apply Reviewed Asset",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.source.refresh",
         "title": "Refresh Source Status",
         "category": "Assembly",
@@ -349,6 +367,12 @@
         "command": "asm.source.editAnalysis",
         "title": "Edit Analysis Research",
         "category": "Assembly Source",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.asset.recover",
+        "title": "Recover Interrupted Asset Edit",
+        "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       }
     ],
@@ -1112,7 +1136,7 @@
   "activationEvents": [],
   "engines": {
     "node": ">=26",
-    "vscode": "^1.128.0"
+    "vscode": "^1.140.0"
   },
   "capabilities": {
     "untrustedWorkspaces": {

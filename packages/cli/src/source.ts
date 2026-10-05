@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
+  sourceFilePublicationEpoch,
   RomImage,
   openSourceProject,
   sourceProjectLocalInputs,
@@ -43,6 +44,8 @@ import {
 import { loadProjectEnvironment, fingerprintNodeToolchain } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, {
   buildSnesSource,
+  inspectSnesSource,
+  type SnesSourceInspection,
   prepareSnesGeneration,
   snesGenerationOptionsHash,
   analyzeSnesProject,
@@ -391,7 +394,7 @@ function generationRecipe(project: SourceProject): GenerationRecipe {
       asset.originalBlob !== undefined &&
       (asset.romRange ||
         typeof asset.originalBlob !== "string" ||
-        !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob))
+        !/^(?:[\da-f]{40}|[\da-f]{64})$/.test(asset.originalBlob))
     ) {
       throw new Error("Pristine assets require one immutable original blob or ROM extraction.");
     }
@@ -513,14 +516,34 @@ async function generationInputs(project: SourceProject) {
 async function withSourceBuild<T>(
   project: SourceProject,
   signal: AbortSignal | undefined,
-  run: (options: BuildSnesSourceOptions, layout: SourceLayout) => T,
+  run: (
+    options: BuildSnesSourceOptions,
+    layout: SourceLayout,
+    environmentInputs: ReadonlyMap<string, Uint8Array>,
+  ) => T,
 ): Promise<T> {
+  const publicationEpoch = sourceFilePublicationEpoch(project.repository);
   const root = project.repository.root;
-  const layout = readJson(path.join(root, project.configuration.layout));
+  const environmentInputs = new Map<string, Uint8Array>();
+  const readEnvironment = (file: string): Uint8Array => {
+    const bytes = Uint8Array.from(fs.readFileSync(file));
+    environmentInputs.set(file, bytes);
+    return bytes;
+  };
+  const projectBytes = readEnvironment(path.join(root, ".uttori/project.json"));
+  if (
+    sourceContentHash(canonicalJson(JSON.parse(Buffer.from(projectBytes).toString("utf8")))) !==
+    project.configurationSha256
+  ) {
+    throw new Error("Source project configuration changed before inspection.");
+  }
+  const layout: unknown = JSON.parse(
+    Buffer.from(readEnvironment(path.join(root, project.configuration.layout))).toString("utf8"),
+  );
   assertSourceLayout(layout, project.configuration.romSha256);
   const configFile = path.join(root, project.configuration.buildConfig);
-  const configurationBytes = fs.readFileSync(configFile);
-  const configuration: unknown = JSON.parse(configurationBytes.toString("utf8"));
+  const configurationBytes = readEnvironment(configFile);
+  const configuration: unknown = JSON.parse(Buffer.from(configurationBytes).toString("utf8"));
   const entryPoints =
     isRecord(configuration) && isStringArray(configuration.entryPoints)
       ? configuration.entryPoints
@@ -540,7 +563,11 @@ async function withSourceBuild<T>(
     .split(path.sep)
     .join("/");
   assertSourcePath(entrySource);
-  const raw = readJson(path.join(path.dirname(configFile), "source-raw.json"));
+  const raw: unknown = JSON.parse(
+    Buffer.from(readEnvironment(path.join(path.dirname(configFile), "source-raw.json"))).toString(
+      "utf8",
+    ),
+  );
   if (
     !isRecord(raw) ||
     raw.format !== "uttori-source-raw" ||
@@ -631,8 +658,16 @@ async function withSourceBuild<T>(
         signal,
       },
       layout,
+      environmentInputs,
     );
+    // Consumers use these exact configuration bytes at publication, rather than a later disk read.
+    for (const [file, bytes] of environmentInputs) {
+      if (sourceContentHash(fs.readFileSync(file)) !== sourceContentHash(bytes)) {
+        throw new Error("Source build environment changed during inspection.");
+      }
+    }
     if (
+      sourceFilePublicationEpoch(project.repository) !== publicationEpoch ||
       sourceContentHash(fs.readFileSync(configFile)) !== sourceContentHash(configurationBytes) ||
       canonicalJson(readJson(path.join(root, project.configuration.layout))) !==
         canonicalJson(layout)
@@ -650,6 +685,40 @@ async function withSourceBuild<T>(
 /** Ordinary saved-file build and relocation inspection use identical environment and layout inputs. */
 const buildProject = (project: SourceProject, signal?: AbortSignal) =>
   withSourceBuild(project, signal, buildSnesSource);
+
+/** Unpublished current-source evidence plus the identities used by the normal build environment. */
+export interface SourceProjectInspection extends SnesSourceInspection {
+  readonly root: string;
+  readonly configurationSha256: string;
+  readonly toolchainSha256: string;
+}
+
+/** Inspect current or overlaid source with normal project checks, without publishing build artifacts. */
+export async function inspectSourceProject(
+  directory: string,
+  overlays?: ReadonlyMap<string, Uint8Array>,
+  signal?: AbortSignal,
+): Promise<SourceProjectInspection> {
+  const project = await openSourceProject(directory);
+  return withSourceBuild(project, signal, (options, _layout, environmentInputs) => {
+    const inspected = inspectSnesSource({ ...options, overlays });
+    const snapshots = new Map(inspected.snapshots);
+    for (const [file, bytes] of environmentInputs) {
+      const before = snapshots.get(file);
+      if (before && sourceContentHash(before) !== sourceContentHash(bytes)) {
+        throw new Error("Source build consumed different configuration bytes.");
+      }
+      snapshots.set(file, bytes);
+    }
+    return {
+      ...inspected,
+      snapshots,
+      root: project.repository.root,
+      configurationSha256: options.configurationSha256,
+      toolchainSha256: options.toolchainSha256,
+    };
+  });
+}
 
 /** Execute one explicit operation. Long-running callers use a worker so the editor stays responsive. */
 export async function executeSourceOperation(operation: SourceOperation): Promise<unknown> {

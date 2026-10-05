@@ -55,6 +55,22 @@ export interface AssetEmissionInfo {
     /** Exact half-open input slice for raw incbin; encoded assets use format-specific consumption. */
     readonly inputStart?: number;
     readonly inputEnd?: number;
+    /** Actual evaluated include contract, retained for source hosts; raw incbin has no conversion. */
+    readonly conversion?: AssetEmissionConversion;
+}
+/** Source resource names retain their declared spelling and resolved build identity separately. */
+export interface AssetEmissionConversion {
+    readonly version: string;
+    readonly options: Readonly<Record<string, unknown>>;
+    readonly resources: Readonly<Record<string, string>>;
+    readonly maxSize?: number;
+    /** Ordered transforms and their exact options/resources; imported artwork cannot replace this contract. */
+    readonly transforms: readonly {
+        readonly id: string;
+        readonly version: string;
+        readonly options: Readonly<Record<string, unknown>>;
+        readonly resources: Readonly<Record<string, string>>;
+    }[];
 }
 /** One encoded scalar of a typed record; line identifies the containing initializer's opening line. */
 export interface StructFieldEmissionInfo {

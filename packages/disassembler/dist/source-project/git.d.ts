@@ -1,3 +1,4 @@
+import { type FileLease } from "../internal/durable-files.js";
 export { assertSourcePath } from "../internal/source-inputs.js";
 /** Repository and per-worktree state directories, resolved by Git rather than assuming .git is a directory. */
 export interface SourceRepository {
@@ -5,6 +6,10 @@ export interface SourceRepository {
     readonly gitDirectory: string;
     readonly stateDirectory: string;
 }
+/** Coordinate ordinary source publication with existing native regeneration/merge operations.
+ * The caller owns the lease and must release it in finally; a live process's lease is never stolen.
+ */
+export declare function acquireSourceOperationLease(repository: SourceRepository): FileLease;
 /** Raw Git output retains NUL delimiters and arbitrary binary blobs. */
 export interface SourceGitResult {
     readonly code: number;

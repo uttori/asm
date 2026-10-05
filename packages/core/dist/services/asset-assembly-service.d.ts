@@ -1,3 +1,4 @@
+import type { AssetEmissionConversion } from "../addressToLine.js";
 import type { Assembler } from "../assembler.js";
 import type { ParsedAssetCall } from "../ir/asset-call.js";
 /** One build owns its bytes and conversions across all three passes. */
@@ -14,6 +15,7 @@ export declare class AssetAssemblyService {
         part: string;
         size: number;
         transforms: readonly string[];
+        conversion: AssetEmissionConversion;
     }>;
     constructor(session: Assembler);
     /** Drop all snapshots before the next build; disk changes then become visible. */

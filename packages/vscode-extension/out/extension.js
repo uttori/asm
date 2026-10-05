@@ -49,7 +49,7 @@ var require_is = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
     exports2.string = string4;
-    exports2.number = number;
+    exports2.number = number2;
     exports2.error = error;
     exports2.func = func;
     exports2.array = array2;
@@ -63,7 +63,7 @@ var require_is = __commonJS({
     function string4(value) {
       return typeof value === "string" || value instanceof String;
     }
-    function number(value) {
+    function number2(value) {
       return typeof value === "number" || value instanceof Number;
     }
     function error(value) {
@@ -105,7 +105,7 @@ var require_is2 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
     exports2.string = string4;
-    exports2.number = number;
+    exports2.number = number2;
     exports2.error = error;
     exports2.func = func;
     exports2.array = array2;
@@ -116,7 +116,7 @@ var require_is2 = __commonJS({
     function string4(value) {
       return typeof value === "string" || value instanceof String;
     }
-    function number(value) {
+    function number2(value) {
       return typeof value === "number" || value instanceof Number;
     }
     function error(value) {
@@ -4139,8 +4139,8 @@ var require_main = __commonJS({
       })(LanguageKind2 || (exports3.LanguageKind = LanguageKind2 = {}));
       var TextDocumentItem2;
       (function(TextDocumentItem3) {
-        function create(uri, languageId, version, text) {
-          return { uri, languageId, version, text };
+        function create(uri, languageId, version, text2) {
+          return { uri, languageId, version, text: text2 };
         }
         TextDocumentItem3.create = create;
         function is(value) {
@@ -4562,8 +4562,8 @@ var require_main = __commonJS({
       })(SemanticTokens2 || (exports3.SemanticTokens = SemanticTokens2 = {}));
       var InlineValueText2;
       (function(InlineValueText3) {
-        function create(range, text) {
-          return { range, text };
+        function create(range, text2) {
+          return { range, text: text2 };
         }
         InlineValueText3.create = create;
         function is(value) {
@@ -4678,8 +4678,8 @@ var require_main = __commonJS({
       })(InlineCompletionTriggerKind2 || (exports3.InlineCompletionTriggerKind = InlineCompletionTriggerKind2 = {}));
       var SelectedCompletionInfo2;
       (function(SelectedCompletionInfo3) {
-        function create(range, text) {
-          return { range, text };
+        function create(range, text2) {
+          return { range, text: text2 };
         }
         SelectedCompletionInfo3.create = create;
       })(SelectedCompletionInfo2 || (exports3.SelectedCompletionInfo = SelectedCompletionInfo2 = {}));
@@ -4711,7 +4711,7 @@ var require_main = __commonJS({
         }
         TextDocument3.is = is;
         function applyEdits(document, edits) {
-          var text = document.getText();
+          var text2 = document.getText();
           var sortedEdits = mergeSort(edits, function(a, b) {
             var diff = a.range.start.line - b.range.start.line;
             if (diff === 0) {
@@ -4719,19 +4719,19 @@ var require_main = __commonJS({
             }
             return diff;
           });
-          var lastModifiedOffset = text.length;
+          var lastModifiedOffset = text2.length;
           for (var i = sortedEdits.length - 1; i >= 0; i--) {
             var e = sortedEdits[i];
             var startOffset = document.offsetAt(e.range.start);
             var endOffset = document.offsetAt(e.range.end);
             if (endOffset <= lastModifiedOffset) {
-              text = text.substring(0, startOffset) + e.newText + text.substring(endOffset, text.length);
+              text2 = text2.substring(0, startOffset) + e.newText + text2.substring(endOffset, text2.length);
             } else {
               throw new Error("Overlapping edit");
             }
             lastModifiedOffset = startOffset;
           }
-          return text;
+          return text2;
         }
         TextDocument3.applyEdits = applyEdits;
         function mergeSort(data, compare) {
@@ -4810,21 +4810,21 @@ var require_main = __commonJS({
           FullTextDocument3.prototype.getLineOffsets = function() {
             if (this._lineOffsets === void 0) {
               var lineOffsets = [];
-              var text = this._content;
+              var text2 = this._content;
               var isLineStart = true;
-              for (var i = 0; i < text.length; i++) {
+              for (var i = 0; i < text2.length; i++) {
                 if (isLineStart) {
                   lineOffsets.push(i);
                   isLineStart = false;
                 }
-                var ch = text.charAt(i);
+                var ch = text2.charAt(i);
                 isLineStart = ch === "\r" || ch === "\n";
-                if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
+                if (ch === "\r" && i + 1 < text2.length && text2.charAt(i + 1) === "\n") {
                   i++;
                 }
               }
-              if (isLineStart && text.length > 0) {
-                lineOffsets.push(text.length);
+              if (isLineStart && text2.length > 0) {
+                lineOffsets.push(text2.length);
               }
               this._lineOffsets = lineOffsets;
             }
@@ -4888,10 +4888,10 @@ var require_main = __commonJS({
           return toString.call(value) === "[object String]";
         }
         Is3.string = string4;
-        function number(value) {
+        function number2(value) {
           return toString.call(value) === "[object Number]";
         }
-        Is3.number = number;
+        Is3.number = number2;
         function numberRange(value, min, max) {
           return toString.call(value) === "[object Number]" && min <= value && value <= max;
         }
@@ -5011,7 +5011,7 @@ var require_is3 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
     exports2.string = string4;
-    exports2.number = number;
+    exports2.number = number2;
     exports2.error = error;
     exports2.func = func;
     exports2.array = array2;
@@ -5024,7 +5024,7 @@ var require_is3 = __commonJS({
     function string4(value) {
       return typeof value === "string" || value instanceof String;
     }
-    function number(value) {
+    function number2(value) {
       return typeof value === "number" || value instanceof Number;
     }
     function error(value) {
@@ -7987,25 +7987,25 @@ var require_codeConverter = __commonJS({
       }
       function fillPrimaryInsertText(target, source) {
         let format2 = proto.InsertTextFormat.PlainText;
-        let text = void 0;
+        let text2 = void 0;
         let range = void 0;
         if (source.textEdit) {
-          text = source.textEdit.newText;
+          text2 = source.textEdit.newText;
           range = source.textEdit.range;
         } else if (source.insertText instanceof code.SnippetString) {
           format2 = proto.InsertTextFormat.Snippet;
-          text = source.insertText.value;
+          text2 = source.insertText.value;
         } else {
-          text = source.insertText;
+          text2 = source.insertText;
         }
         if (source.range) {
           range = source.range;
         }
         target.insertTextFormat = format2;
-        if (source.fromEdit && text !== void 0 && range !== void 0) {
-          target.textEdit = asCompletionTextEdit(text, range);
+        if (source.fromEdit && text2 !== void 0 && range !== void 0) {
+          target.textEdit = asCompletionTextEdit(text2, range);
         } else {
-          target.insertText = text;
+          target.insertText = text2;
         }
       }
       function asCompletionTextEdit(newText, range) {
@@ -11327,11 +11327,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path43 = {
+    var path45 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path43.win32.sep : path43.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path45.win32.sep : path45.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -14178,13 +14178,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path43) {
+        function ensurePath(config, path45) {
           let current = config;
-          for (let i = 0; i < path43.length - 1; i++) {
-            let obj = current[path43[i]];
+          for (let i = 0; i < path45.length - 1; i++) {
+            let obj = current[path45[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path43[i]] = obj;
+              current[path45[i]] = obj;
             }
             current = obj;
           }
@@ -14202,8 +14202,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key3);
           }
           if (config) {
-            const path43 = keys[i].split(".");
-            ensurePath(result, path43)[path43[path43.length - 1]] = toJSONObject(config);
+            const path45 = keys[i].split(".");
+            ensurePath(result, path45)[path45[path45.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -14417,7 +14417,7 @@ var require_main2 = __commonJS({
         }
         TextDocument3.update = update;
         function applyEdits(document, edits) {
-          var text = document.getText();
+          var text2 = document.getText();
           var sortedEdits = mergeSort(edits.map(getWellformedEdit), function(a, b) {
             var diff = a.range.start.line - b.range.start.line;
             if (diff === 0) {
@@ -14433,14 +14433,14 @@ var require_main2 = __commonJS({
             if (startOffset < lastModifiedOffset) {
               throw new Error("Overlapping edit");
             } else if (startOffset > lastModifiedOffset) {
-              spans.push(text.substring(lastModifiedOffset, startOffset));
+              spans.push(text2.substring(lastModifiedOffset, startOffset));
             }
             if (e.newText.length) {
               spans.push(e.newText);
             }
             lastModifiedOffset = document.offsetAt(e.range.end);
           }
-          spans.push(text.substr(lastModifiedOffset));
+          spans.push(text2.substr(lastModifiedOffset));
           return spans.join("");
         }
         TextDocument3.applyEdits = applyEdits;
@@ -14473,15 +14473,15 @@ var require_main2 = __commonJS({
         }
         return data;
       }
-      function computeLineOffsets(text, isAtLineStart, textOffset) {
+      function computeLineOffsets(text2, isAtLineStart, textOffset) {
         if (textOffset === void 0) {
           textOffset = 0;
         }
         var result = isAtLineStart ? [textOffset] : [];
-        for (var i = 0; i < text.length; i++) {
-          var ch = text.charCodeAt(i);
+        for (var i = 0; i < text2.length; i++) {
+          var ch = text2.charCodeAt(i);
           if (isEOL2(ch)) {
-            if (ch === 13 && i + 1 < text.length && text.charCodeAt(i + 1) === 10) {
+            if (ch === 13 && i + 1 < text2.length && text2.charCodeAt(i + 1) === 10) {
               i++;
             }
             result.push(textOffset + i + 1);
@@ -15129,16 +15129,16 @@ var require_textSynchronization = __commonJS({
           throw new RangeError(`Illegal value for line: ${line}`);
         }
         const lineRange = this._capturedTextDocument.getLineRange(line);
-        const text = this._capturedTextDocument.getText(lineRange);
-        const firstNonWhitespaceCharacterIndex = text.search(/\S/);
+        const text2 = this._capturedTextDocument.getText(lineRange);
+        const firstNonWhitespaceCharacterIndex = text2.search(/\S/);
         const range = new vscode_1.Range(lineRange.start.line, lineRange.start.character, lineRange.end.line, lineRange.end.character);
         const rangeIncludingLineBreak = line + 1 < this.lineCount ? new vscode_1.Range(range.start.line, range.start.character, line + 1, 0) : range;
         return {
           lineNumber: line,
-          text,
+          text: text2,
           range,
           rangeIncludingLineBreak,
-          firstNonWhitespaceCharacterIndex: firstNonWhitespaceCharacterIndex === -1 ? text.length : firstNonWhitespaceCharacterIndex,
+          firstNonWhitespaceCharacterIndex: firstNonWhitespaceCharacterIndex === -1 ? text2.length : firstNonWhitespaceCharacterIndex,
           isEmptyOrWhitespace: firstNonWhitespaceCharacterIndex === -1
         };
       }
@@ -18219,13 +18219,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path43 = uri.fsPath.replace(/\\/g, "/");
+          const path45 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path43)) {
+              if (filter.matcher.match(path45)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18239,7 +18239,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path43}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path45}/`)) {
                   return true;
                 }
               }
@@ -19078,8 +19078,8 @@ var require_client = __commonJS({
         _VisibleDocumentsImpl.fillVisibleResources(/* @__PURE__ */ new Set(), result);
         return result;
       }
-      static fillVisibleResources(strings, uris) {
-        const seen = strings ?? /* @__PURE__ */ new Set();
+      static fillVisibleResources(strings2, uris) {
+        const seen = strings2 ?? /* @__PURE__ */ new Set();
         for (const group2 of vscode_1.window.tabGroups.all) {
           for (const tab of group2.tabs) {
             const input = tab.input;
@@ -20905,9 +20905,9 @@ var require_main3 = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path43 = __importStar(require("path"));
+    var path45 = __importStar(require("path"));
     var os3 = __importStar(require("os"));
-    var fs26 = __importStar(require("fs"));
+    var fs28 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
     var net_1 = require("net");
     var api_1 = require_api();
@@ -21048,7 +21048,7 @@ var require_main3 = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs26.realpathSync(XDG_RUNTIME_DIR ?? os3.tmpdir());
+      const tmpDir = fs28.realpathSync(XDG_RUNTIME_DIR ?? os3.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -21057,7 +21057,7 @@ var require_main3 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path43.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path45.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -22424,8 +22424,8 @@ var require_main5 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
-    var fs26 = __importStar(require("fs"));
-    var path43 = __importStar(require("path"));
+    var fs28 = __importStar(require("fs"));
+    var path45 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22872,19 +22872,19 @@ var require_main5 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path43.isAbsolute(runtime)) {
+        if (path45.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path43.join(mainRootPath, runtime);
-          if (fs26.existsSync(result)) {
+          const result = path45.join(mainRootPath, runtime);
+          if (fs28.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path43.join(serverWorkingDirectory, runtime);
-          if (fs26.existsSync(result)) {
+          const result = path45.join(serverWorkingDirectory, runtime);
+          if (fs28.existsSync(result)) {
             return result;
           }
         }
@@ -22908,7 +22908,7 @@ var require_main5 = __commonJS({
         }
         if (cwd) {
           return new Promise((s) => {
-            fs26.lstat(cwd, (err, stats) => {
+            fs28.lstat(cwd, (err, stats) => {
               s(!err && stats.isDirectory() ? cwd : void 0);
             });
           });
@@ -24596,7 +24596,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path43 = [...item.path, nodeId];
+        const path45 = [...item.path, nodeId];
         nodes.set(nodeId, {
           id: nodeId,
           address: instruction2.address,
@@ -24612,7 +24612,7 @@ var init_static_analysis = __esm({
           effectiveAddresses: instruction2.effectiveAddresses ?? [],
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          evidencePath: path43
+          evidencePath: path45
         });
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
@@ -24669,7 +24669,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path43,
+            path: path45,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -24684,7 +24684,7 @@ var init_static_analysis = __esm({
                 address: target.address,
                 source: kind === "call" ? "call" : "interrupt",
                 evidence: targetEvidence,
-                evidencePath: path43
+                evidencePath: path45
               });
             }
           }
@@ -24719,7 +24719,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path43,
+              path: path45,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -24731,7 +24731,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path43,
+            path: path45,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -25548,12 +25548,12 @@ async function* traceEntries(file, options) {
   const fail2 = () => {
     throw new Error(`Instruction trace '${file}' is not a valid JSON object with a chunks array.`);
   };
-  const append3 = (text) => {
-    length += text.length;
+  const append3 = (text2) => {
+    length += text2.length;
     if (length > MAX_VALUE_CHARACTERS) {
       throw new Error("Instruction trace chunk or metadata value exceeds the 32 MiB text limit.");
     }
-    parts.push(text);
+    parts.push(text2);
   };
   const decoder = new import_node_string_decoder.StringDecoder("utf8");
   const stream = (0, import_node_fs.createReadStream)(file, { highWaterMark: 64 * 1024 });
@@ -25568,10 +25568,10 @@ async function* traceEntries(file, options) {
       }
       bytesRead += bytes.length;
       checkSize(bytesRead);
-      const text = decoder.write(bytes);
+      const text2 = decoder.write(bytes);
       let tokenStart = mode === "token" ? 0 : -1;
-      for (let index = 0; index < text.length; index++) {
-        const char = text[index];
+      for (let index = 0; index < text2.length; index++) {
+        const char = text2[index];
         if (mode === "token") {
           let done = false;
           let delimiter = false;
@@ -25600,7 +25600,7 @@ async function* traceEntries(file, options) {
           if (!done) {
             continue;
           }
-          append3(text.slice(tokenStart, delimiter ? index : index + 1));
+          append3(text2.slice(tokenStart, delimiter ? index : index + 1));
           const value = JSON.parse(parts.join(""));
           parts = [];
           length = 0;
@@ -25691,7 +25691,7 @@ async function* traceEntries(file, options) {
         primitive = !inString && depth === 0;
       }
       if (tokenStart >= 0) {
-        append3(text.slice(tokenStart));
+        append3(text2.slice(tokenStart));
       }
       options.onProgress?.(bytesRead, before.size);
     }
@@ -26406,14 +26406,14 @@ var init_runtime_bus_trace = __esm({
       if (value.length <= 15) {
         return Number(value);
       }
-      const number = BigInt(value);
-      if (number > 0xffffffffffffffffn) {
+      const number2 = BigInt(value);
+      if (number2 > 0xffffffffffffffffn) {
         throw new Error("Bus trace integer exceeds u64.");
       }
-      if (number <= BigInt(Number.MAX_SAFE_INTEGER)) {
-        return Number(number);
+      if (number2 <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return Number(number2);
       }
-      return number;
+      return number2;
     };
     validateRuntimeBusTraceMetadata = (value) => {
       if (!isMetadataRecord(value)) {
@@ -27682,11 +27682,11 @@ function errorCode(error) {
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function durableReplace(file, bytes) {
+function durableReplace(file, bytes, mode) {
   ensureDurableDirectory(import_node_path4.default.dirname(import_node_path4.default.resolve(file)));
   const temporary = `${file}.${(0, import_node_crypto6.randomUUID)()}.tmp`;
   try {
-    const fd = import_node_fs3.default.openSync(temporary, "wx");
+    const fd = import_node_fs3.default.openSync(temporary, "wx", mode);
     try {
       import_node_fs3.default.writeFileSync(fd, bytes);
       import_node_fs3.default.fsyncSync(fd);
@@ -27890,8 +27890,8 @@ var init_metadata_validation = __esm({
           }
         }
       } else if (shard === "comments") {
-        const text = record4.text;
-        if (typeof text !== "string" || !text.trim() || text.includes("\0") || !("address" in record4) || "kind" in record4) {
+        const text2 = record4.text;
+        if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record4) || "kind" in record4) {
           throw new Error("A standalone comment needs nonempty text.");
         }
       } else if (shard === "annotations") {
@@ -29856,14 +29856,14 @@ var init_sqlite_graph_query = __esm({
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
           const node = requireNode(row.payload);
-          const path43 = node.evidencePath.length ? node.evidencePath : [node.id];
+          const path45 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner2 = node.functionEntry;
-          for (let i = path43.length - 1; i >= 0; i--) {
+          for (let i = path45.length - 1; i >= 0; i--) {
             if (owner2) {
               break;
             }
-            if (entries.has(path43[i])) {
-              owner2 = path43[i];
+            if (entries.has(path45[i])) {
+              owner2 = path45[i];
               break;
             }
           }
@@ -32754,7 +32754,7 @@ PRAGMA user_version=4;
        * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
        * @returns {T} Current projected value.
        */
-      cachedProjection(key3, signature, dependencies, compute, publish2, restore) {
+      cachedProjection(key3, signature, dependencies, compute, publish3, restore) {
         const cached = readQueryCache(this.#database, key3, signature);
         if (cached !== void 0) {
           if (!restore) {
@@ -32770,7 +32770,7 @@ PRAGMA user_version=4;
         const result = this.transaction(compute, false);
         this.transaction(() => {
           if (this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key3)?.signature === pending) {
-            publish2?.();
+            publish3?.();
             writeQueryCache(this.#database, key3, signature, result);
           }
         });
@@ -34484,7 +34484,7 @@ var init_capture_v2 = __esm({
       }
       return value;
     };
-    bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
+    bounded = (text2, max) => typeof text2 === "string" && text2.length > 0 && !text2.includes("\0") && new TextEncoder().encode(text2).length <= max;
     validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
       captureScope(scope);
       let reserve = 71;
@@ -36446,9 +36446,9 @@ var init_node_stdio_transport = __esm({
         return { dispose: () => this.#closeListeners.delete(listener) };
       }
       #captureStderr(data) {
-        const text = data.toString("utf8").replaceAll(this.#session, "[redacted]");
-        this.#onStderr?.(text);
-        const combined = Buffer.concat([this.#stderr, Buffer.from(text, "utf8")]);
+        const text2 = data.toString("utf8").replaceAll(this.#session, "[redacted]");
+        this.#onStderr?.(text2);
+        const combined = Buffer.concat([this.#stderr, Buffer.from(text2, "utf8")]);
         this.#stderr = combined.subarray(Math.max(0, combined.length - this.#maxStderrBytes));
       }
       #handleExit(code, signal) {
@@ -40326,7 +40326,255 @@ var init_source_export = __esm({
   }
 });
 
+// packages/disassembler/src/source-project/file-transaction.ts
+function sourceFile(repository, name) {
+  assertSourcePath(name);
+  let file = repository.root;
+  const parts = name.split("/");
+  for (let i = 0; i < parts.length; i++) {
+    file = import_node_path14.default.join(file, parts[i]);
+    const stat3 = import_node_fs10.default.lstatSync(file);
+    if (stat3.isSymbolicLink() || (i === parts.length - 1 ? !stat3.isFile() : !stat3.isDirectory())) {
+      throw new Error(`Source transaction requires regular in-project paths: ${name}.`);
+    }
+  }
+  return file;
+}
+function journalFile(repository) {
+  storageDirectories(repository);
+  return import_node_path14.default.join(repository.stateDirectory, JOURNAL);
+}
+function stageDirectory(repository, id) {
+  storageDirectories(repository, ["file-transactions", id]);
+  return import_node_path14.default.join(repository.stateDirectory, "file-transactions", id);
+}
+function storageDirectories(repository, suffix = []) {
+  const relative3 = import_node_path14.default.relative(repository.gitDirectory, repository.stateDirectory);
+  if (relative3.startsWith("../") || import_node_path14.default.isAbsolute(relative3)) {
+    throw new Error("Invalid source publication state directory.");
+  }
+  let current = repository.gitDirectory;
+  for (const part of ["", ...relative3.split(import_node_path14.default.sep), ...suffix]) {
+    current = import_node_path14.default.join(current, part);
+    if (!import_node_fs10.default.existsSync(current)) {
+      return;
+    }
+    const stat3 = import_node_fs10.default.lstatSync(current);
+    if (!stat3.isDirectory() || stat3.isSymbolicLink()) {
+      throw new Error("Invalid source publication staging directory.");
+    }
+  }
+}
+function readSourceFileTransaction(repository) {
+  const file = journalFile(repository);
+  if (!import_node_fs10.default.existsSync(file)) {
+    return void 0;
+  }
+  if (import_node_fs10.default.lstatSync(file).isSymbolicLink() || import_node_fs10.default.statSync(file).size > 4 * 1024 * 1024) {
+    throw new Error("Invalid source publication journal.");
+  }
+  const value = JSON.parse(import_node_fs10.default.readFileSync(file, "utf8"));
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid source publication journal.");
+  }
+  if (!("format" in value) || value.format !== "uttori-source-file-transaction" || !("version" in value) || value.version !== 1 || !("id" in value) || typeof value.id !== "string" || !/^[\da-f-]{36}$/.test(value.id) || !("state" in value) || value.state !== "staged" && value.state !== "publishing" && value.state !== "completed" && value.state !== "recovery" || !("direction" in value) || value.direction !== "before" && value.direction !== "after" || !("files" in value) || !Array.isArray(value.files) || value.files.length > 65536) {
+    throw new Error("Unsupported or corrupt source publication journal.");
+  }
+  const files = [], seen = /* @__PURE__ */ new Set();
+  const entries = value.files;
+  for (const item of entries) {
+    if (!item || typeof item !== "object" || !("path" in item) || typeof item.path !== "string" || !("before" in item) || typeof item.before !== "string" || !/^[\da-f]{64}$/.test(item.before) || !("after" in item) || typeof item.after !== "string" || !/^[\da-f]{64}$/.test(item.after) || seen.has(item.path)) {
+      throw new Error("Invalid source publication entry.");
+    }
+    assertSourcePath(item.path);
+    seen.add(item.path);
+    files.push({ path: item.path, before: item.before, after: item.after });
+  }
+  return {
+    format: value.format,
+    version: value.version,
+    id: value.id,
+    state: value.state,
+    direction: value.direction,
+    files
+  };
+}
+function sourceFilePublicationEpoch(repository) {
+  const journal = readSourceFileTransaction(repository);
+  if (journal && journal.state !== "completed") {
+    throw new Error(
+      `Source publication ${journal.id} requires recovery before another source operation.`
+    );
+  }
+  return journal ? sourceContentHash(JSON.stringify(journal)) : "none";
+}
+function save(repository, journal) {
+  const bytes = JSON.stringify(journal);
+  if (Buffer.byteLength(bytes) > 4 * 1024 * 1024 - 64) {
+    throw new Error("Source publication journal exceeds metadata budget.");
+  }
+  durableReplace(journalFile(repository), bytes, 384);
+}
+function currentFiles(repository, journal) {
+  return journal.files.map((item) => {
+    const file = sourceFile(repository, item.path), hash4 = sourceContentHash(import_node_fs10.default.readFileSync(file));
+    if (hash4 !== item.before && hash4 !== item.after) {
+      throw new Error(`Source publication recovery found third-party bytes: ${item.path}.`);
+    }
+    return file;
+  });
+}
+function stagedBytes(repository, journal, index, direction) {
+  const file = import_node_path14.default.join(stageDirectory(repository, journal.id), `${index}-${direction}`), stat3 = import_node_fs10.default.lstatSync(file);
+  if (!stat3.isFile() || stat3.isSymbolicLink() || stat3.size > MAX_BYTES2) {
+    throw new Error("Invalid source publication staging file.");
+  }
+  const bytes = import_node_fs10.default.readFileSync(file);
+  if (sourceContentHash(bytes) !== journal.files[index][direction]) {
+    throw new Error("Source publication staging hash mismatch.");
+  }
+  return bytes;
+}
+function publish2(repository, journal, signal, onStage) {
+  const files = currentFiles(repository, journal);
+  for (let i = 0; i < files.length; i++) {
+    stagedBytes(repository, journal, i, journal.direction);
+  }
+  let current = { ...journal, state: "publishing" };
+  save(repository, current);
+  onStage?.("publishing");
+  try {
+    for (let i = 0; i < files.length; i++) {
+      signal?.throwIfAborted();
+      const item = journal.files[i], file = sourceFile(repository, item.path), hash4 = sourceContentHash(import_node_fs10.default.readFileSync(file));
+      if (hash4 !== item.before && hash4 !== item.after) {
+        throw new Error(`Source changed during publication: ${item.path}.`);
+      }
+      if (hash4 !== item[journal.direction]) {
+        durableReplace(
+          file,
+          stagedBytes(repository, journal, i, journal.direction),
+          import_node_fs10.default.statSync(file).mode & 511
+        );
+      }
+      onStage?.(`published:${i}`);
+    }
+    current = { ...current, state: "completed" };
+    save(repository, current);
+  } catch (cause) {
+    save(repository, { ...current, state: "recovery" });
+    throw new Error(
+      `Source publication ${journal.id} interrupted; recover before reading source.`,
+      { cause }
+    );
+  }
+  onStage?.("completed");
+  return current;
+}
+function applySourceFileTransaction(repository, replacements, options = {}) {
+  options.signal?.throwIfAborted();
+  sourceFilePublicationEpoch(repository);
+  if (replacements.length > 65536) {
+    throw new Error("Too many source replacements.");
+  }
+  const changes = replacements.filter(
+    (item) => sourceContentHash(item.before) !== sourceContentHash(item.after)
+  );
+  if (!changes.length) {
+    options.validate?.();
+    const seen = /* @__PURE__ */ new Set();
+    for (const item of replacements) {
+      if (seen.has(item.path) || sourceContentHash(import_node_fs10.default.readFileSync(sourceFile(repository, item.path))) !== sourceContentHash(item.before)) {
+        throw new Error(`Stale or duplicate source replacement: ${item.path}.`);
+      }
+      seen.add(item.path);
+    }
+    return void 0;
+  }
+  const lease = acquireFileLease(import_node_path14.default.join(repository.stateDirectory, "operation.lock"));
+  const id = (0, import_node_crypto15.randomUUID)(), directory = stageDirectory(repository, id);
+  let visible = false;
+  try {
+    sourceFilePublicationEpoch(repository);
+    options.validate?.();
+    const seen = /* @__PURE__ */ new Set();
+    let bytes = 0;
+    for (const item of replacements) {
+      bytes += item.before.length + item.after.length;
+      if (bytes > MAX_BYTES2 || seen.has(item.path)) {
+        throw new Error("Source transaction payload or identity limit.");
+      }
+      seen.add(item.path);
+      if (sourceContentHash(import_node_fs10.default.readFileSync(sourceFile(repository, item.path))) !== sourceContentHash(item.before)) {
+        throw new Error(`Stale source replacement: ${item.path}.`);
+      }
+    }
+    import_node_fs10.default.mkdirSync(directory, { recursive: true });
+    changes.forEach((item, index) => {
+      options.signal?.throwIfAborted();
+      durableReplace(import_node_path14.default.join(directory, `${index}-before`), item.before, 384);
+      durableReplace(import_node_path14.default.join(directory, `${index}-after`), item.after, 384);
+    });
+    syncDirectory(import_node_path14.default.dirname(directory));
+    options.signal?.throwIfAborted();
+    const journal = {
+      format: "uttori-source-file-transaction",
+      version: 1,
+      id,
+      state: "staged",
+      direction: "after",
+      files: changes.map((item) => ({
+        path: item.path,
+        before: sourceContentHash(item.before),
+        after: sourceContentHash(item.after)
+      }))
+    };
+    save(repository, journal);
+    visible = true;
+    options.onStage?.("staged");
+    return publish2(repository, journal, options.signal, options.onStage);
+  } finally {
+    if (!visible) {
+      import_node_fs10.default.rmSync(directory, { recursive: true, force: true });
+    }
+    lease.release();
+  }
+}
+function recoverSourceFileTransaction(repository, direction, options = {}) {
+  if (direction !== "before" && direction !== "after") {
+    throw new Error("Invalid source recovery direction.");
+  }
+  const lease = acquireFileLease(import_node_path14.default.join(repository.stateDirectory, "operation.lock"));
+  try {
+    const journal = readSourceFileTransaction(repository);
+    if (!journal || journal.state === "completed") {
+      return journal;
+    }
+    options.signal?.throwIfAborted();
+    options.validate?.(journal);
+    return publish2(repository, { ...journal, direction }, options.signal, options.onStage);
+  } finally {
+    lease.release();
+  }
+}
+var import_node_crypto15, import_node_fs10, import_node_path14, JOURNAL, MAX_BYTES2;
+var init_file_transaction = __esm({
+  "packages/disassembler/src/source-project/file-transaction.ts"() {
+    "use strict";
+    import_node_crypto15 = require("node:crypto");
+    import_node_fs10 = __toESM(require("node:fs"), 1);
+    import_node_path14 = __toESM(require("node:path"), 1);
+    init_durable_files();
+    init_source_inputs();
+    JOURNAL = "file-publication.json";
+    MAX_BYTES2 = 512 * 1024 * 1024;
+  }
+});
+
 // packages/disassembler/src/source-project/git.ts
+function acquireSourceOperationLease(repository) {
+  return acquireFileLease(import_node_path15.default.join(repository.stateDirectory, "operation.lock"));
+}
 function sourceGit(root, args, options = {}) {
   const env = { ...process.env, GIT_TERMINAL_PROMPT: "0", GIT_OPTIONAL_LOCKS: "0" };
   for (const key3 of [
@@ -40399,15 +40647,17 @@ async function sourceRepository(directory) {
   const [root, gitDirectory] = results.map(
     (result) => result.stdout.toString("utf8").replace(/\n$/, "")
   );
-  if (!root || !gitDirectory || !import_node_path14.default.isAbsolute(root) || !import_node_path14.default.isAbsolute(gitDirectory)) {
+  if (!root || !gitDirectory || !import_node_path15.default.isAbsolute(root) || !import_node_path15.default.isAbsolute(gitDirectory)) {
     throw new Error("Source editing requires a non-bare Git working tree.");
   }
-  return { root, gitDirectory, stateDirectory: import_node_path14.default.join(gitDirectory, "uttori-source") };
+  return { root, gitDirectory, stateDirectory: import_node_path15.default.join(gitDirectory, "uttori-source") };
 }
 async function sourceStatus(repository) {
+  sourceFilePublicationEpoch(repository);
   return (await sourceGit(repository.root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"])).stdout;
 }
 function assertNoSourceOperation(repository) {
+  sourceFilePublicationEpoch(repository);
   for (const name of [
     "MERGE_HEAD",
     "CHERRY_PICK_HEAD",
@@ -40416,7 +40666,7 @@ function assertNoSourceOperation(repository) {
     "rebase-apply",
     "sequencer"
   ]) {
-    if (import_node_fs10.default.existsSync(import_node_path14.default.join(repository.gitDirectory, name))) {
+    if (import_node_fs11.default.existsSync(import_node_path15.default.join(repository.gitDirectory, name))) {
       throw new Error(`Finish or abort the current Git operation (${name}) before regeneration.`);
     }
   }
@@ -40435,13 +40685,15 @@ function assertSourceObjectId(value) {
     throw new Error("Expected a complete Git object ID.");
   }
 }
-var import_node_child_process2, import_node_fs10, import_node_path14, SourceGitError;
+var import_node_child_process2, import_node_fs11, import_node_path15, SourceGitError;
 var init_git = __esm({
   "packages/disassembler/src/source-project/git.ts"() {
     "use strict";
     import_node_child_process2 = require("node:child_process");
-    import_node_fs10 = __toESM(require("node:fs"), 1);
-    import_node_path14 = __toESM(require("node:path"), 1);
+    import_node_fs11 = __toESM(require("node:fs"), 1);
+    import_node_path15 = __toESM(require("node:path"), 1);
+    init_durable_files();
+    init_file_transaction();
     init_source_inputs();
     SourceGitError = class extends Error {
       constructor(args, result) {
@@ -40462,22 +40714,22 @@ function isRecord22(value) {
 }
 async function registry(repository) {
   const common = (await sourceGit(repository.root, ["rev-parse", "--path-format=absolute", "--git-common-dir"])).stdout.toString().replace(/\n$/, "");
-  return { common, directory: import_node_path15.default.join(common, "uttori-source", "pin-owners") };
+  return { common, directory: import_node_path16.default.join(common, "uttori-source", "pin-owners") };
 }
 async function registerSourcePinOwner(repository) {
   const { directory } = await registry(repository);
   const id = ownerId(repository.gitDirectory);
-  const file = import_node_path15.default.join(directory, `${id}.json`);
+  const file = import_node_path16.default.join(directory, `${id}.json`);
   const expected = JSON.stringify({
     format: "uttori-source-pin-owner-v1",
     gitDirectory: repository.gitDirectory
   });
-  if (import_node_fs11.default.existsSync(file) && import_node_fs11.default.readFileSync(file, "utf8") === expected) {
+  if (import_node_fs12.default.existsSync(file) && import_node_fs12.default.readFileSync(file, "utf8") === expected) {
     return;
   }
-  const lease = acquireFileLease(import_node_path15.default.join(directory, "registry.lock"));
+  const lease = acquireFileLease(import_node_path16.default.join(directory, "registry.lock"));
   try {
-    if (import_node_fs11.default.existsSync(file) && import_node_fs11.default.readFileSync(file, "utf8") !== expected) {
+    if (import_node_fs12.default.existsSync(file) && import_node_fs12.default.readFileSync(file, "utf8") !== expected) {
       throw new Error("Source pin ownership changed unexpectedly.");
     }
     durableReplace(file, expected);
@@ -40486,20 +40738,20 @@ async function registerSourcePinOwner(repository) {
   }
 }
 function retiredOwnerFile(common, directory, id) {
-  const file = import_node_path15.default.join(directory, `${id}.json`);
-  const stat3 = import_node_fs11.default.lstatSync(file);
+  const file = import_node_path16.default.join(directory, `${id}.json`);
+  const stat3 = import_node_fs12.default.lstatSync(file);
   if (!stat3.isFile() || stat3.size > 4096) {
     throw new Error("Unknown owner");
   }
-  const owner2 = JSON.parse(import_node_fs11.default.readFileSync(file, "utf8"));
-  if (!isRecord22(owner2) || owner2.format !== "uttori-source-pin-owner-v1" || typeof owner2.gitDirectory !== "string" || ownerId(owner2.gitDirectory) !== id || import_node_path15.default.dirname(owner2.gitDirectory) !== import_node_path15.default.join(common, "worktrees") || import_node_fs11.default.existsSync(owner2.gitDirectory)) {
+  const owner2 = JSON.parse(import_node_fs12.default.readFileSync(file, "utf8"));
+  if (!isRecord22(owner2) || owner2.format !== "uttori-source-pin-owner-v1" || typeof owner2.gitDirectory !== "string" || ownerId(owner2.gitDirectory) !== id || import_node_path16.default.dirname(owner2.gitDirectory) !== import_node_path16.default.join(common, "worktrees") || import_node_fs12.default.existsSync(owner2.gitDirectory)) {
     throw new Error("Owner still exists or cannot be proven removed");
   }
   return file;
 }
 async function pruneSourcePins(repository) {
   const { common, directory } = await registry(repository);
-  const lease = acquireFileLease(import_node_path15.default.join(directory, "registry.lock"));
+  const lease = acquireFileLease(import_node_path16.default.join(directory, "registry.lock"));
   const result = { removed: [], retained: [] };
   try {
     const listing = (await sourceGit(repository.root, [
@@ -40526,11 +40778,11 @@ async function pruneSourcePins(repository) {
         result.retained.push(ref);
       }
     }
-    for (const name of import_node_fs11.default.readdirSync(directory)) {
+    for (const name of import_node_fs12.default.readdirSync(directory)) {
       const id = /^([\da-f]{24})\.json$/.exec(name)?.[1];
       if (id && !result.retained.some((ref) => ref.includes(id))) {
         try {
-          import_node_fs11.default.unlinkSync(retiredOwnerFile(common, directory, id));
+          import_node_fs12.default.unlinkSync(retiredOwnerFile(common, directory, id));
         } catch {
         }
       }
@@ -40540,16 +40792,16 @@ async function pruneSourcePins(repository) {
     lease.release();
   }
 }
-var import_node_crypto15, import_node_fs11, import_node_path15, ownerId;
+var import_node_crypto16, import_node_fs12, import_node_path16, ownerId;
 var init_pins = __esm({
   "packages/disassembler/src/source-project/pins.ts"() {
     "use strict";
-    import_node_crypto15 = require("node:crypto");
-    import_node_fs11 = __toESM(require("node:fs"), 1);
-    import_node_path15 = __toESM(require("node:path"), 1);
+    import_node_crypto16 = require("node:crypto");
+    import_node_fs12 = __toESM(require("node:fs"), 1);
+    import_node_path16 = __toESM(require("node:path"), 1);
     init_durable_files();
     init_git();
-    ownerId = (gitDirectory) => (0, import_node_crypto15.createHash)("sha256").update(gitDirectory).digest("hex").slice(0, 24);
+    ownerId = (gitDirectory) => (0, import_node_crypto16.createHash)("sha256").update(gitDirectory).digest("hex").slice(0, 24);
   }
 });
 
@@ -40558,44 +40810,44 @@ function isRecord23(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function removeScratch(directory, lease) {
-  for (const entry of import_node_fs12.default.readdirSync(directory)) {
+  for (const entry of import_node_fs13.default.readdirSync(directory)) {
     if (entry !== "owner.json" && entry !== "active.lock") {
-      import_node_fs12.default.rmSync(import_node_path16.default.join(directory, entry), { recursive: true });
+      import_node_fs13.default.rmSync(import_node_path17.default.join(directory, entry), { recursive: true });
     }
   }
   lease.release();
-  import_node_fs12.default.unlinkSync(import_node_path16.default.join(directory, "owner.json"));
-  import_node_fs12.default.rmdirSync(directory);
+  import_node_fs13.default.unlinkSync(import_node_path17.default.join(directory, "owner.json"));
+  import_node_fs13.default.rmdirSync(directory);
 }
 function pruneScratch(directory) {
   const result = { removed: [], retained: [] };
-  if (!import_node_fs12.default.existsSync(directory)) {
+  if (!import_node_fs13.default.existsSync(directory)) {
     return result;
   }
-  if (!import_node_fs12.default.lstatSync(directory).isDirectory()) {
+  if (!import_node_fs13.default.lstatSync(directory).isDirectory()) {
     throw new Error("The source scratch root must be an owned directory, not a symlink.");
   }
-  for (const entry of import_node_fs12.default.readdirSync(directory, { withFileTypes: true })) {
-    const root = import_node_path16.default.join(directory, entry.name);
+  for (const entry of import_node_fs13.default.readdirSync(directory, { withFileTypes: true })) {
+    const root = import_node_path17.default.join(directory, entry.name);
     try {
       if (!entry.isDirectory() || !uuidPattern.test(entry.name)) {
         throw new Error("Unrecognized scratch path");
       }
-      if (import_node_fs12.default.readdirSync(root).length === 0) {
-        import_node_fs12.default.rmdirSync(root);
+      if (import_node_fs13.default.readdirSync(root).length === 0) {
+        import_node_fs13.default.rmdirSync(root);
         result.removed.push(root);
         continue;
       }
-      const marker = import_node_path16.default.join(root, "owner.json");
-      const stat3 = import_node_fs12.default.lstatSync(marker);
+      const marker = import_node_path17.default.join(root, "owner.json");
+      const stat3 = import_node_fs13.default.lstatSync(marker);
       if (!stat3.isFile() || stat3.size > 4096) {
         throw new Error("Unrecognized scratch owner");
       }
-      const owner2 = JSON.parse(import_node_fs12.default.readFileSync(marker, "utf8"));
+      const owner2 = JSON.parse(import_node_fs13.default.readFileSync(marker, "utf8"));
       if (!isRecord23(owner2) || owner2.format !== "uttori-source-scratch-v1" || owner2.id !== entry.name || owner2.purpose !== "generation" && owner2.purpose !== "preview" && owner2.purpose !== "prepare") {
         throw new Error("Unrecognized scratch owner");
       }
-      const lease = acquireFileLease(import_node_path16.default.join(root, "active.lock"));
+      const lease = acquireFileLease(import_node_path17.default.join(root, "active.lock"));
       try {
         removeScratch(root, lease);
         result.removed.push(root);
@@ -40609,39 +40861,39 @@ function pruneScratch(directory) {
   return result;
 }
 function pruneSourceScratch(repository) {
-  const maintenance = acquireFileLease(import_node_path16.default.join(repository.stateDirectory, "scratch.lock"));
+  const maintenance = acquireFileLease(import_node_path17.default.join(repository.stateDirectory, "scratch.lock"));
   try {
-    return pruneScratch(import_node_path16.default.join(repository.stateDirectory, "scratch"));
+    return pruneScratch(import_node_path17.default.join(repository.stateDirectory, "scratch"));
   } finally {
     maintenance.release();
   }
 }
 function createSourceScratch(repository, purpose) {
-  const maintenance = acquireFileLease(import_node_path16.default.join(repository.stateDirectory, "scratch.lock"));
-  const parent = import_node_path16.default.join(repository.stateDirectory, "scratch");
-  const id = (0, import_node_crypto16.randomUUID)();
-  const directory = import_node_path16.default.join(parent, id);
+  const maintenance = acquireFileLease(import_node_path17.default.join(repository.stateDirectory, "scratch.lock"));
+  const parent = import_node_path17.default.join(repository.stateDirectory, "scratch");
+  const id = (0, import_node_crypto17.randomUUID)();
+  const directory = import_node_path17.default.join(parent, id);
   try {
     const cleanup = pruneScratch(parent);
-    import_node_fs12.default.mkdirSync(directory, { recursive: true });
-    const lease = acquireFileLease(import_node_path16.default.join(directory, "active.lock"));
+    import_node_fs13.default.mkdirSync(directory, { recursive: true });
+    const lease = acquireFileLease(import_node_path17.default.join(directory, "active.lock"));
     try {
       durableReplace(
-        import_node_path16.default.join(directory, "owner.json"),
+        import_node_path17.default.join(directory, "owner.json"),
         JSON.stringify({ format: "uttori-source-scratch-v1", id, purpose })
       );
     } catch (error) {
       lease.release();
-      import_node_fs12.default.rmSync(directory, { recursive: true });
+      import_node_fs13.default.rmSync(directory, { recursive: true });
       throw error;
     }
     return {
       directory,
       cleanup,
       dispose() {
-        const disposal = acquireFileLease(import_node_path16.default.join(repository.stateDirectory, "scratch.lock"));
+        const disposal = acquireFileLease(import_node_path17.default.join(repository.stateDirectory, "scratch.lock"));
         try {
-          if (import_node_fs12.default.existsSync(directory)) {
+          if (import_node_fs13.default.existsSync(directory)) {
             removeScratch(directory, lease);
           }
         } finally {
@@ -40657,13 +40909,13 @@ function createSourceScratch(repository, purpose) {
     maintenance.release();
   }
 }
-var import_node_crypto16, import_node_fs12, import_node_path16, uuidPattern;
+var import_node_crypto17, import_node_fs13, import_node_path17, uuidPattern;
 var init_scratch = __esm({
   "packages/disassembler/src/source-project/scratch.ts"() {
     "use strict";
-    import_node_crypto16 = require("node:crypto");
-    import_node_fs12 = __toESM(require("node:fs"), 1);
-    import_node_path16 = __toESM(require("node:path"), 1);
+    import_node_crypto17 = require("node:crypto");
+    import_node_fs13 = __toESM(require("node:fs"), 1);
+    import_node_path17 = __toESM(require("node:path"), 1);
     init_durable_files();
     uuidPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
   }
@@ -40730,8 +40982,8 @@ function sourceCandidateRef(repository, commit) {
 async function pinSourceCandidate(repository, commit, signal) {
   const ref = sourceCandidateRef(repository, commit);
   await registerSourcePinOwner(repository);
-  import_node_fs13.default.mkdirSync(repository.stateDirectory, { recursive: true });
-  const lease = acquireFileLease(import_node_path17.default.join(repository.stateDirectory, "candidate.lock"));
+  import_node_fs14.default.mkdirSync(repository.stateDirectory, { recursive: true });
+  const lease = acquireFileLease(import_node_path18.default.join(repository.stateDirectory, "candidate.lock"));
   try {
     const refs = (await sourceGit(
       repository.root,
@@ -40834,10 +41086,10 @@ async function retainSourceGeneration(repository, options) {
     payloadSha256,
     id: sourceContentHash(canonicalJson({ inputs: options.inputs, payloadSha256 }))
   });
-  import_node_fs13.default.mkdirSync(repository.stateDirectory, { recursive: true });
+  import_node_fs14.default.mkdirSync(repository.stateDirectory, { recursive: true });
   const scratch = createSourceScratch(repository, "generation");
-  const indexFile = import_node_path17.default.join(scratch.directory, "index");
-  const blobsDirectory = import_node_path17.default.join(scratch.directory, "blobs");
+  const indexFile = import_node_path18.default.join(scratch.directory, "index");
+  const blobsDirectory = import_node_path18.default.join(scratch.directory, "blobs");
   const gitOptions = { indexFile, signal: options.signal };
   try {
     if (options.parent && (await generationAt(repository, options.parent)).id === descriptor.id) {
@@ -40854,10 +41106,10 @@ async function retainSourceGeneration(repository, options) {
         executable: false
       }
     ];
-    import_node_fs13.default.mkdirSync(blobsDirectory);
+    import_node_fs14.default.mkdirSync(blobsDirectory);
     for (let index = 0; index < payload.length; index++) {
       options.signal?.throwIfAborted();
-      import_node_fs13.default.writeFileSync(import_node_path17.default.join(blobsDirectory, String(index)), payload[index].bytes);
+      import_node_fs14.default.writeFileSync(import_node_path18.default.join(blobsDirectory, String(index)), payload[index].bytes);
     }
     const blobs = (await sourceGit(
       blobsDirectory,
@@ -40940,12 +41192,12 @@ async function acceptedSourceGeneration(repository, sourceCommit) {
     "The accepted generation is missing from source ancestry. Restore the full merge history before regenerating."
   );
 }
-var import_node_fs13, import_node_path17, SOURCE_GENERATION_FILE;
+var import_node_fs14, import_node_path18, SOURCE_GENERATION_FILE;
 var init_generation = __esm({
   "packages/disassembler/src/source-project/generation.ts"() {
     "use strict";
-    import_node_fs13 = __toESM(require("node:fs"), 1);
-    import_node_path17 = __toESM(require("node:path"), 1);
+    import_node_fs14 = __toESM(require("node:fs"), 1);
+    import_node_path18 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_source_inputs();
     init_source_inputs();
@@ -41027,11 +41279,11 @@ var init_input_snapshot = __esm({
 
 // packages/disassembler/src/source-project/merge.ts
 function readJournal(repository) {
-  const file = journalFile(repository);
-  if (!import_node_fs14.default.existsSync(file)) {
+  const file = journalFile2(repository);
+  if (!import_node_fs15.default.existsSync(file)) {
     return void 0;
   }
-  const value = JSON.parse(import_node_fs14.default.readFileSync(file, "utf8"));
+  const value = JSON.parse(import_node_fs15.default.readFileSync(file, "utf8"));
   if (!isJournalRecord(value)) {
     throw new Error("Invalid regeneration recovery journal. Inspect it before continuing.");
   }
@@ -41069,9 +41321,9 @@ function gitObjectId(value) {
   return value;
 }
 async function snapshotSourceTree(repository, overlays = []) {
-  import_node_fs14.default.mkdirSync(repository.stateDirectory, { recursive: true });
+  import_node_fs15.default.mkdirSync(repository.stateDirectory, { recursive: true });
   const scratch = createSourceScratch(repository, "preview");
-  const indexFile = import_node_path18.default.join(scratch.directory, "index");
+  const indexFile = import_node_path19.default.join(scratch.directory, "index");
   try {
     await sourceGit(repository.root, ["read-tree", "HEAD"], { indexFile });
     await sourceGit(repository.root, ["add", "--all", "--", "."], { indexFile });
@@ -41174,9 +41426,9 @@ async function sourceMergeStatus(repository) {
     return { phase: "idle", head, conflicts };
   }
   const branch = (await sourceGit(repository.root, ["symbolic-ref", "-q", "HEAD"], { acceptedCodes: [0, 1] })).stdout.toString("utf8").trim();
-  const mergeHead = import_node_path18.default.join(repository.gitDirectory, "MERGE_HEAD");
+  const mergeHead = import_node_path19.default.join(repository.gitDirectory, "MERGE_HEAD");
   if (branch !== journal.branch) {
-    if (!import_node_fs14.default.existsSync(mergeHead) && journal.validatedTree && journal.verification) {
+    if (!import_node_fs15.default.existsSync(mergeHead) && journal.validatedTree && journal.verification) {
       for (const revision of [journal.branch, head]) {
         const recordedHead = await sourceGit(
           repository.root,
@@ -41201,8 +41453,8 @@ async function sourceMergeStatus(repository) {
     }
     return { phase: "diverged", head, conflicts, journal };
   }
-  if (import_node_fs14.default.existsSync(mergeHead)) {
-    const pending = import_node_fs14.default.readFileSync(mergeHead, "utf8").trim();
+  if (import_node_fs15.default.existsSync(mergeHead)) {
+    const pending = import_node_fs15.default.readFileSync(mergeHead, "utf8").trim();
     const phase3 = pending === journal.candidate && head === journal.before ? "merging" : "diverged";
     return { phase: phase3, head, conflicts, journal };
   }
@@ -41242,20 +41494,20 @@ async function beginJournal(repository, generation, kind) {
   }
   const journal = {
     format: "uttori-source-merge",
-    id: (0, import_node_crypto17.randomUUID)(),
+    id: (0, import_node_crypto18.randomUUID)(),
     before,
     candidate: generation.commit,
     candidateRef: generation.ref,
     branch,
     kind
   };
-  durableReplace(journalFile(repository), canonicalJson(journal));
+  durableReplace(journalFile2(repository), canonicalJson(journal));
   return journal;
 }
 async function adoptSourceGeneration(repository, generation) {
-  const lease = acquireFileLease(import_node_path18.default.join(repository.stateDirectory, "operation.lock"));
+  const lease = acquireFileLease(import_node_path19.default.join(repository.stateDirectory, "operation.lock"));
   try {
-    if (import_node_fs14.default.existsSync(import_node_path18.default.join(repository.root, SOURCE_GENERATION_FILE))) {
+    if (import_node_fs15.default.existsSync(import_node_path19.default.join(repository.root, SOURCE_GENERATION_FILE))) {
       throw new Error("This source project already has a generation descriptor.");
     }
     const checkpoint = await assertSourceCheckpoint(repository);
@@ -41285,7 +41537,7 @@ async function adoptSourceGeneration(repository, generation) {
       generation.commit
     ]);
     durableReplace(
-      import_node_path18.default.join(repository.root, SOURCE_GENERATION_FILE),
+      import_node_path19.default.join(repository.root, SOURCE_GENERATION_FILE),
       canonicalJson(generation.descriptor)
     );
     await sourceGit(repository.root, ["add", "--", SOURCE_GENERATION_FILE]);
@@ -41295,7 +41547,7 @@ async function adoptSourceGeneration(repository, generation) {
   }
 }
 async function applySourceGeneration(repository, generation, preview) {
-  const lease = acquireFileLease(import_node_path18.default.join(repository.stateDirectory, "operation.lock"));
+  const lease = acquireFileLease(import_node_path19.default.join(repository.stateDirectory, "operation.lock"));
   try {
     const head = await assertSourceCheckpoint(repository);
     const tree = (await sourceGit(repository.root, ["rev-parse", `${head}^{tree}`])).stdout.toString("utf8").trim();
@@ -41316,7 +41568,7 @@ async function applySourceGeneration(repository, generation, preview) {
   }
 }
 async function finishSourceGeneration(repository, options) {
-  const lease = acquireFileLease(import_node_path18.default.join(repository.stateDirectory, "operation.lock"));
+  const lease = acquireFileLease(import_node_path19.default.join(repository.stateDirectory, "operation.lock"));
   try {
     const status = await sourceMergeStatus(repository);
     if (!["merging", "committed"].includes(status.phase) || !status.journal) {
@@ -41356,7 +41608,7 @@ async function finishSourceGeneration(repository, options) {
       );
     }
     durableReplace(
-      journalFile(repository),
+      journalFile2(repository),
       canonicalJson({ ...status.journal, validatedTree: staged, verification })
     );
     if (!alreadyCommitted) {
@@ -41395,11 +41647,11 @@ async function releaseCandidatePin(repository, ref, candidate) {
 async function clearSourcePreview(repository) {
   const ref = `refs/uttori/previews/${sourceContentHash(repository.gitDirectory).slice(0, 24)}`;
   await sourceGit(repository.root, ["update-ref", "--no-deref", "-d", ref]);
-  import_node_fs14.default.rmSync(import_node_path18.default.join(repository.stateDirectory, "preview.json"), { force: true });
+  import_node_fs15.default.rmSync(import_node_path19.default.join(repository.stateDirectory, "preview.json"), { force: true });
 }
 async function discardSourceGeneration(repository, candidate) {
   assertSourceObjectId(candidate);
-  const lease = acquireFileLease(import_node_path18.default.join(repository.stateDirectory, "operation.lock"));
+  const lease = acquireFileLease(import_node_path19.default.join(repository.stateDirectory, "operation.lock"));
   try {
     const status = await sourceMergeStatus(repository);
     if (status.journal?.candidate === candidate && ["merging", "diverged"].includes(status.phase)) {
@@ -41428,7 +41680,7 @@ async function discardSourceGeneration(repository, candidate) {
   }
 }
 async function abortSourceGeneration(repository) {
-  const lease = acquireFileLease(import_node_path18.default.join(repository.stateDirectory, "operation.lock"));
+  const lease = acquireFileLease(import_node_path19.default.join(repository.stateDirectory, "operation.lock"));
   try {
     const status = await sourceMergeStatus(repository);
     if (status.phase !== "merging") {
@@ -41440,20 +41692,20 @@ async function abortSourceGeneration(repository) {
     lease.release();
   }
 }
-var import_node_crypto17, import_node_fs14, import_node_path18, journalFile;
+var import_node_crypto18, import_node_fs15, import_node_path19, journalFile2;
 var init_merge = __esm({
   "packages/disassembler/src/source-project/merge.ts"() {
     "use strict";
-    import_node_crypto17 = require("node:crypto");
-    import_node_fs14 = __toESM(require("node:fs"), 1);
-    import_node_path18 = __toESM(require("node:path"), 1);
+    import_node_crypto18 = require("node:crypto");
+    import_node_fs15 = __toESM(require("node:fs"), 1);
+    import_node_path19 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_durable_files();
     init_generation();
     init_git();
     init_pins();
     init_scratch();
-    journalFile = (repository) => import_node_path18.default.join(repository.stateDirectory, "merge.json");
+    journalFile2 = (repository) => import_node_path19.default.join(repository.stateDirectory, "merge.json");
   }
 });
 
@@ -41510,8 +41762,9 @@ function parseSourceProject(value) {
 }
 async function openSourceProject(directory) {
   const repository = await sourceRepository(directory);
+  sourceFilePublicationEpoch(repository);
   const configuration = parseSourceProject(
-    JSON.parse(import_node_fs15.default.readFileSync(import_node_path19.default.join(repository.root, ".uttori/project.json"), "utf8"))
+    JSON.parse(import_node_fs16.default.readFileSync(import_node_path20.default.join(repository.root, ".uttori/project.json"), "utf8"))
   );
   const research = readResearchInputs(repository.root, configuration.researchRoots, {
     project: configuration.id,
@@ -41536,13 +41789,13 @@ function assertSourceProjectLocalInputs(value) {
 }
 function readSourceProjectLocalInputs(root) {
   const local = JSON.parse(
-    import_node_fs15.default.readFileSync(import_node_path19.default.join(root, ".uttori-local/project.json"), "utf8")
+    import_node_fs16.default.readFileSync(import_node_path20.default.join(root, ".uttori-local/project.json"), "utf8")
   );
   assertSourceProjectLocalInputs(local);
   return {
     ...local,
-    rom: import_node_path19.default.resolve(root, local.rom),
-    evidence: import_node_path19.default.resolve(root, local.evidence)
+    rom: import_node_path20.default.resolve(root, local.rom),
+    evidence: import_node_path20.default.resolve(root, local.evidence)
   };
 }
 function synchronizeSourceResearch(project) {
@@ -41558,15 +41811,16 @@ function synchronizeSourceResearch(project) {
     store.close();
   }
 }
-var import_node_fs15, import_node_path19;
+var import_node_fs16, import_node_path20;
 var init_project = __esm({
   "packages/disassembler/src/source-project/project.ts"() {
     "use strict";
-    import_node_fs15 = __toESM(require("node:fs"), 1);
-    import_node_path19 = __toESM(require("node:path"), 1);
+    import_node_fs16 = __toESM(require("node:fs"), 1);
+    import_node_path20 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_project_store();
     init_inputs();
+    init_file_transaction();
     init_generation();
     init_git();
   }
@@ -41593,11 +41847,11 @@ function validName(value) {
 }
 function catalogPath(root, name) {
   assertSourcePath(name);
-  let current = import_node_path20.default.resolve(root);
+  let current = import_node_path21.default.resolve(root);
   for (const component of name.split("/")) {
-    current = import_node_path20.default.join(current, component);
+    current = import_node_path21.default.join(current, component);
     try {
-      if (import_node_fs16.default.lstatSync(current).isSymbolicLink()) {
+      if (import_node_fs17.default.lstatSync(current).isSymbolicLink()) {
         throw new Error("Capture catalogs cannot follow symlinks.");
       }
     } catch (error) {
@@ -41662,11 +41916,11 @@ function readSourceCaptureCatalog(root, name, romSha256) {
   const file = catalogPath(root, name);
   let bytes;
   try {
-    const stat3 = import_node_fs16.default.lstatSync(file);
+    const stat3 = import_node_fs17.default.lstatSync(file);
     if (!stat3.isFile() || stat3.isSymbolicLink() || stat3.size > 8 * 1024 * 1024) {
       throw new Error("Capture catalog must be a regular file within its 8 MiB budget.");
     }
-    bytes = import_node_fs16.default.readFileSync(file);
+    bytes = import_node_fs17.default.readFileSync(file);
   } catch (error) {
     if (errorCode3(error) !== "ENOENT") {
       throw error;
@@ -41733,7 +41987,7 @@ function writeSourceCaptureCatalog(root, name, catalog, expectedSha256) {
   parseSourceCaptureCatalog(catalog, catalog.romSha256);
   const file = catalogPath(root, name);
   const lock = catalogPath(root, ".uttori-local/capture-catalog.lock");
-  import_node_fs16.default.mkdirSync(import_node_path20.default.dirname(lock), { recursive: true });
+  import_node_fs17.default.mkdirSync(import_node_path21.default.dirname(lock), { recursive: true });
   const lease = acquireFileLease(lock);
   try {
     const current = readSourceCaptureCatalog(root, name, catalog.romSha256);
@@ -41758,16 +42012,16 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
     throw new Error("Capture byte budget must be a positive safe integer.");
   }
-  const before = import_node_fs16.default.lstatSync(file, { bigint: true });
+  const before = import_node_fs17.default.lstatSync(file, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink() || before.size <= 0n) {
     throw new Error("Capture archive must be a nonempty regular file.");
   }
   if (before.size > BigInt(maxBytes)) {
     throw new Error("Capture archive exceeds the project's byte budget.");
   }
-  const hash4 = (0, import_node_crypto18.createHash)("sha256");
+  const hash4 = (0, import_node_crypto19.createHash)("sha256");
   let bytes = 0;
-  for await (const chunk of import_node_fs16.default.createReadStream(file, { signal })) {
+  for await (const chunk of import_node_fs17.default.createReadStream(file, { signal })) {
     if (!Buffer.isBuffer(chunk)) {
       throw new Error("Capture archive read failed.");
     }
@@ -41777,37 +42031,37 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
       throw new Error("Capture archive grew beyond the project's byte budget.");
     }
   }
-  const after = import_node_fs16.default.lstatSync(file, { bigint: true });
+  const after = import_node_fs17.default.lstatSync(file, { bigint: true });
   if (before.dev !== after.dev || before.ino !== after.ino || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs || before.size !== after.size || BigInt(bytes) !== before.size) {
     throw new Error("Capture archive changed while hashing.");
   }
   const manifestFile = `${file}.context/manifest.json`;
   let companionSha256;
   try {
-    const stat3 = import_node_fs16.default.lstatSync(manifestFile);
+    const stat3 = import_node_fs17.default.lstatSync(manifestFile);
     if (!stat3.isFile() || stat3.isSymbolicLink() || stat3.size > 1048576) {
       throw new Error("Invalid capture companion manifest.");
     }
-    companionSha256 = sourceContentHash(import_node_fs16.default.readFileSync(manifestFile));
+    companionSha256 = sourceContentHash(import_node_fs17.default.readFileSync(manifestFile));
   } catch (error) {
     if (errorCode3(error) !== "ENOENT") {
       throw error;
     }
   }
   return {
-    name: import_node_path20.default.basename(file),
+    name: import_node_path21.default.basename(file),
     sha256: hash4.digest("hex"),
     bytes,
     ...companionSha256 ? { companionSha256 } : {}
   };
 }
-var import_node_crypto18, import_node_fs16, import_node_path20, hashPattern, validHash, validCount;
+var import_node_crypto19, import_node_fs17, import_node_path21, hashPattern, validHash, validCount;
 var init_captures = __esm({
   "packages/disassembler/src/source-project/captures.ts"() {
     "use strict";
-    import_node_crypto18 = require("node:crypto");
-    import_node_fs16 = __toESM(require("node:fs"), 1);
-    import_node_path20 = __toESM(require("node:path"), 1);
+    import_node_crypto19 = require("node:crypto");
+    import_node_fs17 = __toESM(require("node:fs"), 1);
+    import_node_path21 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_durable_files();
     init_generation();
@@ -42315,10 +42569,12 @@ __export(src_exports2, {
   abortSourceGeneration: () => abortSourceGeneration,
   acceptedSourceGeneration: () => acceptedSourceGeneration,
   acquireFileLease: () => acquireFileLease,
+  acquireSourceOperationLease: () => acquireSourceOperationLease,
   adoptSourceGeneration: () => adoptSourceGeneration,
   analysisProjectRevision: () => analysisProjectRevision,
   analysisProjectSqlitePath: () => analysisProjectSqlitePath,
   analyzeStaticControlFlow: () => analyzeStaticControlFlow,
+  applySourceFileTransaction: () => applySourceFileTransaction,
   applySourceGeneration: () => applySourceGeneration,
   assertAnalysisProjectRevision: () => assertAnalysisProjectRevision,
   assertNoSourceOperation: () => assertNoSourceOperation,
@@ -42388,9 +42644,11 @@ __export(src_exports2, {
   readRuntimeTraceFileChunks: () => readRuntimeTraceFileChunks,
   readRuntimeTraceFileMetadata: () => readRuntimeTraceFileMetadata,
   readSourceCaptureCatalog: () => readSourceCaptureCatalog,
+  readSourceFileTransaction: () => readSourceFileTransaction,
   readSourceInputSnapshot: () => readSourceInputSnapshot,
   readSourceProjectLocalInputs: () => readSourceProjectLocalInputs,
   reconcileSourceCaptureCatalog: () => reconcileSourceCaptureCatalog,
+  recoverSourceFileTransaction: () => recoverSourceFileTransaction,
   registerRuntimeHistory: () => registerRuntimeHistory,
   registerSourcePinOwner: () => registerSourcePinOwner,
   renameResearchSymbol: () => renameResearchSymbol,
@@ -42401,6 +42659,7 @@ __export(src_exports2, {
   sourceCandidateRef: () => sourceCandidateRef,
   sourceContentHash: () => sourceContentHash,
   sourceExportSha256: () => sourceExportSha256,
+  sourceFilePublicationEpoch: () => sourceFilePublicationEpoch,
   sourceGit: () => sourceGit,
   sourceMergeStatus: () => sourceMergeStatus,
   sourceProjectLocalInputs: () => sourceProjectLocalInputs,
@@ -42455,6 +42714,7 @@ var init_src2 = __esm({
     init_capture_notes();
     init_source_export();
     init_git();
+    init_file_transaction();
     init_generation();
     init_input_snapshot();
     init_merge();
@@ -42480,12 +42740,12 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path42 = __toESM(require("node:path"), 1);
+var path44 = __toESM(require("node:path"), 1);
 var import_vscode24 = require("vscode");
 var import_node = __toESM(require_main5(), 1);
 
 // packages/vscode-extension/src/analysis/annotation-controller.ts
-var path26 = __toESM(require("node:path"), 1);
+var path27 = __toESM(require("node:path"), 1);
 var import_vscode3 = require("vscode");
 
 // packages/vscode-extension/src/editor-info/format.ts
@@ -42503,33 +42763,33 @@ var INFORMATION_FIELDS = {
   execution_count_cpu: "Single CPU execution count"
 };
 var isField = (field) => Object.hasOwn(INFORMATION_FIELDS, field) || /^(project_state|runtime_state)\.[A-Za-z]\w*$/.test(field);
-var compileTemplate = (text) => {
-  if (text.length > 2048) {
+var compileTemplate = (text2) => {
+  if (text2.length > 2048) {
     throw new Error("Editor information templates must be at most 2048 characters.");
   }
   const parts = [];
   let literal = "";
-  for (let index = 0; index < text.length; ) {
-    if (text.startsWith("$${", index)) {
+  for (let index = 0; index < text2.length; ) {
+    if (text2.startsWith("$${", index)) {
       literal += "${";
       index += 3;
-    } else if (text.startsWith("${", index)) {
+    } else if (text2.startsWith("${", index)) {
       if (literal) {
         parts.push({ literal });
       }
       literal = "";
-      const end = text.indexOf("}", index + 2);
+      const end = text2.indexOf("}", index + 2);
       if (end < 0) {
         throw new Error("Unclosed editor information placeholder.");
       }
-      const field = text.slice(index + 2, end);
+      const field = text2.slice(index + 2, end);
       if (!isField(field)) {
         throw new Error(`Unknown editor information field '${field}'.`);
       }
       parts.push({ field });
       index = end + 1;
     } else {
-      literal += text[index++];
+      literal += text2[index++];
     }
   }
   if (literal) {
@@ -42668,19 +42928,19 @@ var informationField = (field, info) => {
   }
 };
 var renderTemplate = (template, info) => {
-  let text = "";
+  let text2 = "";
   for (const part of template) {
     if ("literal" in part) {
-      text += part.literal;
+      text2 += part.literal;
     } else {
       const value = informationField(part.field, info);
       if (value === void 0) {
         return void 0;
       }
-      text += value;
+      text2 += value;
     }
   }
-  return text || void 0;
+  return text2 || void 0;
 };
 var renderInformation = (infos, templates, separator, maximum) => joinInformation(
   infos.flatMap((info) => {
@@ -42735,7 +42995,7 @@ var formatInstructionAnnotationDetails = (annotation) => {
       "Some detail records are omitted from this preview. Execution totals include all observations."
     ] : [],
     ...(annotation.comments ?? []).map(
-      ({ text, evidence }) => `Comment: ${text}
+      ({ text: text2, evidence }) => `Comment: ${text2}
 Evidence: ${evidence.join(", ")}`
     )
   ];
@@ -43460,10 +43720,10 @@ var EditorInformationProvider = class {
 };
 
 // packages/vscode-extension/src/editor-info/layout.ts
-var informationSourceColumns = (text, tabSize) => {
+var informationSourceColumns = (text2, tabSize) => {
   const width = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
   let columns2 = 0;
-  for (const character of text) {
+  for (const character of text2) {
     columns2 += character === "	" ? width - columns2 % width : 1;
   }
   return columns2;
@@ -43650,13 +43910,13 @@ var EditorInformationWorker = class {
 };
 
 // packages/vscode-extension/src/analysis/coverage-tree.ts
-var path23 = __toESM(require("node:path"), 1);
+var path24 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode = require("vscode");
 
 // packages/vscode-extension/src/analysis/worker-client.ts
 var import_node_child_process3 = require("node:child_process");
-var path22 = __toESM(require("node:path"), 1);
+var path23 = __toESM(require("node:path"), 1);
 var interactiveOperations = /* @__PURE__ */ new Set([
   // ROM matching precedes overlays and must not queue behind bulk views.
   "manifest"
@@ -43849,7 +44109,7 @@ ${stderr}` : ""}`
   }
 };
 var client;
-var initializeAnalysisWorker = (extensionRoot, options) => client ??= new AnalysisWorkerClient(path22.join(extensionRoot, "out", "analysis-worker.cjs"), {
+var initializeAnalysisWorker = (extensionRoot, options) => client ??= new AnalysisWorkerClient(path23.join(extensionRoot, "out", "analysis-worker.cjs"), {
   ...options,
   isolateAnnotations: true
 });
@@ -44027,11 +44287,11 @@ var findAnalysisProjectDirectories = async () => {
   const configured = import_vscode.workspace.getConfiguration("asm").get("analysisProject", "").trim();
   if (configured !== "") {
     const folders = import_vscode.workspace.workspaceFolders ?? [];
-    const candidates = path23.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path23.resolve(uri.fsPath, configured));
+    const candidates = path24.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path24.resolve(uri.fsPath, configured));
     return [
       ...new Set(
         candidates.map(
-          (candidate) => path23.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path23.dirname(candidate) : candidate
+          (candidate) => path24.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path24.dirname(candidate) : candidate
         )
       )
     ].toSorted();
@@ -44043,7 +44303,7 @@ var findAnalysisProjectDirectories = async () => {
   );
   return [
     ...new Set(
-      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path23.dirname(fsPath))
+      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path24.dirname(fsPath))
     )
   ].toSorted();
 };
@@ -44140,7 +44400,7 @@ var AnalysisCoverageProvider = class {
     const directories = await findAnalysisProjectDirectories();
     const result = [];
     for (const directory of directories) {
-      const manifestUri = import_vscode.Uri.file(path23.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const manifestUri = import_vscode.Uri.file(path24.join(directory, ANALYSIS_PROJECT_MANIFEST));
       const projectId = `analysis:${directory}`;
       try {
         const manifest = await analysisWorker().request(directory, "manifest");
@@ -44149,7 +44409,7 @@ var AnalysisCoverageProvider = class {
         }
         result.push({
           id: projectId,
-          label: path23.basename(directory),
+          label: path24.basename(directory),
           description: `${manifest.target} \xB7 ${manifest.mapping.mapper} \xB7 ${manifest.rom.contentSha256.slice(0, 12)}`,
           tooltip: `${directory}
 ${formatBytes(manifest.rom.contentSize)} ROM content`,
@@ -44163,7 +44423,7 @@ ${formatBytes(manifest.rom.contentSize)} ROM content`,
         const message = error instanceof Error ? error.message : String(error);
         result.push({
           id: `${projectId}:error`,
-          label: path23.basename(directory),
+          label: path24.basename(directory),
           // Loading can fail because a worker timed out or the database is busy. That is not corruption.
           description: "could not load analysis project",
           tooltip: `${directory}
@@ -44179,30 +44439,30 @@ ${message}`,
 };
 
 // packages/vscode-extension/src/analysis/debug-maps.ts
-var import_node_crypto19 = require("node:crypto");
-var fs19 = __toESM(require("node:fs"), 1);
-var path25 = __toESM(require("node:path"), 1);
+var import_node_crypto20 = require("node:crypto");
+var fs20 = __toESM(require("node:fs"), 1);
+var path26 = __toESM(require("node:path"), 1);
 init_debug_map();
 var import_vscode2 = require("vscode");
 
 // packages/vscode-extension/src/source/project-path.ts
 var import_promises9 = __toESM(require("node:fs/promises"), 1);
-var import_node_path21 = __toESM(require("node:path"), 1);
+var import_node_path22 = __toESM(require("node:path"), 1);
 init_src2();
 async function findSourceRoot(directory) {
-  let current = import_node_path21.default.resolve(directory);
+  let current = import_node_path22.default.resolve(directory);
   for (; ; ) {
     try {
-      await import_promises9.default.access(import_node_path21.default.join(current, ".uttori/project.json"));
+      await import_promises9.default.access(import_node_path22.default.join(current, ".uttori/project.json"));
       return current;
     } catch {
     }
     try {
-      await import_promises9.default.access(import_node_path21.default.join(current, ".git"));
+      await import_promises9.default.access(import_node_path22.default.join(current, ".git"));
       return void 0;
     } catch {
     }
-    const parent = import_node_path21.default.dirname(current);
+    const parent = import_node_path22.default.dirname(current);
     if (parent === current) {
       return void 0;
     }
@@ -44239,24 +44499,24 @@ function isAcceptedDebugMap2(map) {
 function isIdentityList(value) {
   return Array.isArray(value);
 }
-var resolvedConfigurationPath = (value, root) => path25.isAbsolute(value) ? value : path25.resolve(root ?? process.cwd(), value);
-var analysisSourceSha256 = (file) => (0, import_node_crypto19.createHash)("sha256").update(fs19.readFileSync(file)).digest("hex");
+var resolvedConfigurationPath = (value, root) => path26.isAbsolute(value) ? value : path26.resolve(root ?? process.cwd(), value);
+var analysisSourceSha256 = (file) => (0, import_node_crypto20.createHash)("sha256").update(fs20.readFileSync(file)).digest("hex");
 var sourcePaths = (source, candidate) => {
-  if (path25.isAbsolute(source.path)) {
+  if (path26.isAbsolute(source.path)) {
     return [source.path];
   }
   return sortedUnique4([
-    ...candidate.sourceRoots.map((root) => path25.resolve(root, source.path)),
-    path25.resolve(path25.dirname(candidate.file), source.path),
-    ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => path25.resolve(uri.fsPath, source.path))
+    ...candidate.sourceRoots.map((root) => path26.resolve(root, source.path)),
+    path26.resolve(path26.dirname(candidate.file), source.path),
+    ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => path26.resolve(uri.fsPath, source.path))
   ]);
 };
 var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths(source, candidate).find((file) => {
-  if (expectedFile !== void 0 && path25.resolve(file) !== expectedFile) {
+  if (expectedFile !== void 0 && path26.resolve(file) !== expectedFile) {
     return false;
   }
   try {
-    return fs19.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
+    return fs20.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
   } catch {
     return false;
   }
@@ -44266,7 +44526,7 @@ var findAnalysisDebugMapCandidates = async (identity2) => {
   const candidates = [];
   for (const descriptor of await discoverAnalysisDebugMapFiles()) {
     try {
-      const parsed = JSON.parse(fs19.readFileSync(descriptor.file, "utf8"));
+      const parsed = JSON.parse(fs20.readFileSync(descriptor.file, "utf8"));
       if (!isStoredDebugMap2(parsed)) {
         continue;
       }
@@ -44299,16 +44559,16 @@ var discoverAnalysisDebugMapFiles = async () => {
   const selected = [];
   for (const root of sourceRoots) {
     try {
-      const directory = path25.join(root, ".uttori-local/builds");
-      const receiptFile = path25.join(directory, "current.json");
-      if ((await fs19.promises.stat(receiptFile)).size > 1024 * 1024) {
+      const directory = path26.join(root, ".uttori-local/builds");
+      const receiptFile = path26.join(directory, "current.json");
+      if ((await fs20.promises.stat(receiptFile)).size > 1024 * 1024) {
         continue;
       }
-      const receipt = JSON.parse(await fs19.promises.readFile(receiptFile, "utf8"));
+      const receipt = JSON.parse(await fs20.promises.readFile(receiptFile, "utf8"));
       if (!isRecord28(receipt) || typeof receipt.inputSha256 !== "string" || typeof receipt.debugMapFile !== "string" || !/^[\da-f]{64}$/.test(receipt.inputSha256)) {
         continue;
       }
-      const file = path25.join(directory, receipt.inputSha256, "program.sfc.debug.json");
+      const file = path26.join(directory, receipt.inputSha256, "program.sfc.debug.json");
       if (receipt.debugMapFile === file) {
         selected.push(file);
       }
@@ -44319,7 +44579,7 @@ var discoverAnalysisDebugMapFiles = async () => {
     ...configuredMap ? [configuredMap] : [],
     ...selected,
     ...discovered.filter(
-      ({ scheme, fsPath }) => scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path25.sep))
+      ({ scheme, fsPath }) => scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path26.sep))
     ).map(({ fsPath }) => fsPath)
   ]);
   return files.map((file) => {
@@ -44327,7 +44587,7 @@ var discoverAnalysisDebugMapFiles = async () => {
     const ancestors = [];
     if (containingWorkspace) {
       const root = containingWorkspace.uri.fsPath;
-      for (let directory = path25.dirname(file); directory !== root && directory.startsWith(`${root}${path25.sep}`); directory = path25.dirname(directory)) {
+      for (let directory = path26.dirname(file); directory !== root && directory.startsWith(`${root}${path26.sep}`); directory = path26.dirname(directory)) {
         ancestors.push(directory);
       }
     }
@@ -44335,7 +44595,7 @@ var discoverAnalysisDebugMapFiles = async () => {
       file,
       sourceRoots: sortedUnique4([
         ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
-        ...sourceRoots.filter((root) => file.startsWith(root + path25.sep)),
+        ...sourceRoots.filter((root) => file.startsWith(root + path26.sep)),
         ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
         ...ancestors
       ])
@@ -44463,7 +44723,7 @@ var AnalysisAnnotationController = class {
   }
   #dirtyFiles() {
     return new Set(
-      import_vscode3.workspace.textDocuments.filter((document) => document.isDirty && document.uri.scheme === "file").map((document) => path26.resolve(document.uri.fsPath))
+      import_vscode3.workspace.textDocuments.filter((document) => document.isDirty && document.uri.scheme === "file").map((document) => path27.resolve(document.uri.fsPath))
     );
   }
   /**
@@ -44646,8 +44906,8 @@ Click for source information diagnostics.`;
     const tabSize = typeof editor.options.tabSize === "number" ? editor.options.tabSize : 4;
     const color = config.color.startsWith("#") ? config.color : new import_vscode3.ThemeColor(config.color);
     const decorations = rows.flatMap(([line, infos]) => {
-      const text = renderInformation(infos, config.parts, config.separator, config.maximum);
-      if (!text) {
+      const text2 = renderInformation(infos, config.parts, config.separator, config.maximum);
+      if (!text2) {
         return [];
       }
       const source = editor.document.lineAt(line - 1).text;
@@ -44655,7 +44915,7 @@ Click for source information diagnostics.`;
       return [
         {
           range: new import_vscode3.Range(line - 1, source.length, line - 1, source.length),
-          renderOptions: { after: { margin: `0 0 0 ${gap}ch`, contentText: text, color } }
+          renderOptions: { after: { margin: `0 0 0 ${gap}ch`, contentText: text2, color } }
         }
       ];
     });
@@ -44711,13 +44971,13 @@ Click for source information diagnostics.`;
         return void 0;
       }
       const infos = facts.get(position.line + 1) ?? [];
-      const text = renderInformation(infos, config.rows, "\n", 1600);
-      if (!text) {
+      const text2 = renderInformation(infos, config.rows, "\n", 1600);
+      if (!text2) {
         return void 0;
       }
       const markdown = new import_vscode3.MarkdownString();
       markdown.appendMarkdown("**Uttori analysis**\n\n");
-      markdown.appendText(text);
+      markdown.appendText(text2);
       return new import_vscode3.Hover(markdown, document.lineAt(position.line).range);
     } catch {
       return void 0;
@@ -44845,7 +45105,7 @@ ${content.slice(start, start + 120).join("\n")}`
 };
 
 // packages/vscode-extension/src/analysis/evidence-inspector.ts
-var path27 = __toESM(require("node:path"), 1);
+var path28 = __toESM(require("node:path"), 1);
 init_canonical_json();
 var import_vscode4 = require("vscode");
 var EVIDENCE_SHARDS = [
@@ -44944,7 +45204,7 @@ var AnalysisEvidenceInspector = class {
     }
     return (await import_vscode4.window.showQuickPick(
       directories.map((directory) => ({
-        label: path27.basename(directory),
+        label: path28.basename(directory),
         description: directory,
         directory
       })),
@@ -45018,7 +45278,7 @@ var parseAnalysisNavigationTarget = (value) => {
 };
 
 // packages/vscode-extension/src/analysis/navigation.ts
-var path28 = __toESM(require("node:path"), 1);
+var path29 = __toESM(require("node:path"), 1);
 init_src();
 var import_vscode5 = require("vscode");
 function isRecord31(value) {
@@ -45077,7 +45337,7 @@ var openSourceLocation = async (locations) => {
   }
   const selected = locations.length === 1 ? locations[0] : (await import_vscode5.window.showQuickPick(
     locations.map((location) => ({
-      label: `${path28.basename(location.file)}:${location.line}`,
+      label: `${path29.basename(location.file)}:${location.line}`,
       description: `${location.architecture} \xB7 ${location.addressSpace} \xB7 ${location.mapFile}`,
       location
     })),
@@ -45135,9 +45395,9 @@ var openLiveDisassembly = async (target, architectures) => {
     const lines = instructions.map((instruction2) => {
       const address4 = typeof instruction2.address === "string" ? instruction2.address : "?";
       const bytes = typeof instruction2.instructionBytes === "string" ? instruction2.instructionBytes : "";
-      const text = typeof instruction2.instruction === "string" ? instruction2.instruction : "";
+      const text2 = typeof instruction2.instruction === "string" ? instruction2.instruction : "";
       const symbol = typeof instruction2.symbol === "string" ? ` ; ${instruction2.symbol}` : "";
-      return `${address4.padEnd(42)} ${bytes.padEnd(16)} ${text}${symbol}`;
+      return `${address4.padEnd(42)} ${bytes.padEnd(16)} ${text2}${symbol}`;
     });
     const document = await import_vscode5.workspace.openTextDocument({
       language: "uttori-snes",
@@ -45213,7 +45473,7 @@ var navigateToAnalysisLocation = async (target) => {
 };
 
 // packages/vscode-extension/src/analysis/sources-tree.ts
-var path29 = __toESM(require("node:path"), 1);
+var path30 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode6 = require("vscode");
 function isRecord32(value) {
@@ -45305,7 +45565,7 @@ var AnalysisSourcesProvider = class {
           }
           return {
             id: directory,
-            label: path29.basename(directory),
+            label: path30.basename(directory),
             description: `${count(catalog.sources.length)} sources`,
             tooltip: directory,
             icon: "database",
@@ -45314,7 +45574,7 @@ var AnalysisSourcesProvider = class {
         } catch (error) {
           return {
             id: `${directory}:error`,
-            label: path29.basename(directory),
+            label: path30.basename(directory),
             description: "could not read sources",
             icon: "error",
             tooltip: `${directory}
@@ -45419,10 +45679,10 @@ ${String(error)}`
         icon: "note",
         load: () => this.#localPages(
           `${id}:notes`,
-          notes.notes.map((text, index) => ({
+          notes.notes.map((text2, index) => ({
             id: `${id}:note:${index}`,
-            label: text,
-            tooltip: text,
+            label: text2,
+            tooltip: text2,
             icon: "info"
           }))
         )
@@ -45730,8 +45990,8 @@ var BinaryDrafts = class {
 var import_vscode10 = require("vscode");
 
 // packages/vscode-extension/src/webview-template.ts
-var import_node_crypto20 = require("node:crypto");
-var import_node_fs17 = require("node:fs");
+var import_node_crypto21 = require("node:crypto");
+var import_node_fs18 = require("node:fs");
 var import_vscode9 = require("vscode");
 var htmlCache = /* @__PURE__ */ new Map();
 var escapeAttribute = (value) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -45740,7 +46000,7 @@ var readTemplate = (file) => {
   if (cached !== void 0) {
     return cached;
   }
-  const html = (0, import_node_fs17.readFileSync)(file.fsPath, "utf8");
+  const html = (0, import_node_fs18.readFileSync)(file.fsPath, "utf8");
   htmlCache.set(file.fsPath, html);
   return html;
 };
@@ -45748,7 +46008,7 @@ var renderWebviewTemplate = (webview, extensionUri, name) => {
   const asset = (file) => import_vscode9.Uri.joinPath(extensionUri, "media", file);
   const values = {
     cspSource: escapeAttribute(webview.cspSource),
-    nonce: escapeAttribute((0, import_node_crypto20.randomBytes)(18).toString("base64")),
+    nonce: escapeAttribute((0, import_node_crypto21.randomBytes)(18).toString("base64")),
     styleUri: escapeAttribute(webview.asWebviewUri(asset(`${name}.css`)).toString()),
     scriptUri: escapeAttribute(webview.asWebviewUri(asset(`${name}.js`)).toString())
   };
@@ -45798,14 +46058,14 @@ function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
 }
 
 // node_modules/jsonc-parser/lib/esm/impl/scanner.js
-function createScanner(text, ignoreTrivia = false) {
-  const len = text.length;
+function createScanner(text2, ignoreTrivia = false) {
+  const len = text2.length;
   let pos = 0, value = "", tokenOffset = 0, token = 16, lineNumber = 0, lineStartOffset = 0, tokenLineStartOffset = 0, prevTokenLineStartOffset = 0, scanError = 0;
   function scanHexDigits(count3, exact) {
     let digits = 0;
     let value2 = 0;
     while (digits < count3 || !exact) {
-      let ch = text.charCodeAt(pos);
+      let ch = text2.charCodeAt(pos);
       if (ch >= 48 && ch <= 57) {
         value2 = value2 * 16 + ch - 48;
       } else if (ch >= 65 && ch <= 70) {
@@ -45832,35 +46092,35 @@ function createScanner(text, ignoreTrivia = false) {
   }
   function scanNumber() {
     let start = pos;
-    if (text.charCodeAt(pos) === 48) {
+    if (text2.charCodeAt(pos) === 48) {
       pos++;
     } else {
       pos++;
-      while (pos < text.length && isDigit(text.charCodeAt(pos))) {
+      while (pos < text2.length && isDigit(text2.charCodeAt(pos))) {
         pos++;
       }
     }
-    if (pos < text.length && text.charCodeAt(pos) === 46) {
+    if (pos < text2.length && text2.charCodeAt(pos) === 46) {
       pos++;
-      if (pos < text.length && isDigit(text.charCodeAt(pos))) {
+      if (pos < text2.length && isDigit(text2.charCodeAt(pos))) {
         pos++;
-        while (pos < text.length && isDigit(text.charCodeAt(pos))) {
+        while (pos < text2.length && isDigit(text2.charCodeAt(pos))) {
           pos++;
         }
       } else {
         scanError = 3;
-        return text.substring(start, pos);
+        return text2.substring(start, pos);
       }
     }
     let end = pos;
-    if (pos < text.length && (text.charCodeAt(pos) === 69 || text.charCodeAt(pos) === 101)) {
+    if (pos < text2.length && (text2.charCodeAt(pos) === 69 || text2.charCodeAt(pos) === 101)) {
       pos++;
-      if (pos < text.length && text.charCodeAt(pos) === 43 || text.charCodeAt(pos) === 45) {
+      if (pos < text2.length && text2.charCodeAt(pos) === 43 || text2.charCodeAt(pos) === 45) {
         pos++;
       }
-      if (pos < text.length && isDigit(text.charCodeAt(pos))) {
+      if (pos < text2.length && isDigit(text2.charCodeAt(pos))) {
         pos++;
-        while (pos < text.length && isDigit(text.charCodeAt(pos))) {
+        while (pos < text2.length && isDigit(text2.charCodeAt(pos))) {
           pos++;
         }
         end = pos;
@@ -45868,30 +46128,30 @@ function createScanner(text, ignoreTrivia = false) {
         scanError = 3;
       }
     }
-    return text.substring(start, end);
+    return text2.substring(start, end);
   }
   function scanString() {
     let result = "", start = pos;
     while (true) {
       if (pos >= len) {
-        result += text.substring(start, pos);
+        result += text2.substring(start, pos);
         scanError = 2;
         break;
       }
-      const ch = text.charCodeAt(pos);
+      const ch = text2.charCodeAt(pos);
       if (ch === 34) {
-        result += text.substring(start, pos);
+        result += text2.substring(start, pos);
         pos++;
         break;
       }
       if (ch === 92) {
-        result += text.substring(start, pos);
+        result += text2.substring(start, pos);
         pos++;
         if (pos >= len) {
           scanError = 2;
           break;
         }
-        const ch2 = text.charCodeAt(pos++);
+        const ch2 = text2.charCodeAt(pos++);
         switch (ch2) {
           case 34:
             result += '"';
@@ -45933,7 +46193,7 @@ function createScanner(text, ignoreTrivia = false) {
       }
       if (ch >= 0 && ch <= 31) {
         if (isLineBreak(ch)) {
-          result += text.substring(start, pos);
+          result += text2.substring(start, pos);
           scanError = 2;
           break;
         } else {
@@ -45954,19 +46214,19 @@ function createScanner(text, ignoreTrivia = false) {
       tokenOffset = len;
       return token = 17;
     }
-    let code = text.charCodeAt(pos);
+    let code = text2.charCodeAt(pos);
     if (isWhiteSpace(code)) {
       do {
         pos++;
         value += String.fromCharCode(code);
-        code = text.charCodeAt(pos);
+        code = text2.charCodeAt(pos);
       } while (isWhiteSpace(code));
       return token = 15;
     }
     if (isLineBreak(code)) {
       pos++;
       value += String.fromCharCode(code);
-      if (code === 13 && text.charCodeAt(pos) === 10) {
+      if (code === 13 && text2.charCodeAt(pos) === 10) {
         pos++;
         value += "\n";
       }
@@ -46002,31 +46262,31 @@ function createScanner(text, ignoreTrivia = false) {
       // comments
       case 47:
         const start = pos - 1;
-        if (text.charCodeAt(pos + 1) === 47) {
+        if (text2.charCodeAt(pos + 1) === 47) {
           pos += 2;
           while (pos < len) {
-            if (isLineBreak(text.charCodeAt(pos))) {
+            if (isLineBreak(text2.charCodeAt(pos))) {
               break;
             }
             pos++;
           }
-          value = text.substring(start, pos);
+          value = text2.substring(start, pos);
           return token = 12;
         }
-        if (text.charCodeAt(pos + 1) === 42) {
+        if (text2.charCodeAt(pos + 1) === 42) {
           pos += 2;
           const safeLength = len - 1;
           let commentClosed = false;
           while (pos < safeLength) {
-            const ch = text.charCodeAt(pos);
-            if (ch === 42 && text.charCodeAt(pos + 1) === 47) {
+            const ch = text2.charCodeAt(pos);
+            if (ch === 42 && text2.charCodeAt(pos + 1) === 47) {
               pos += 2;
               commentClosed = true;
               break;
             }
             pos++;
             if (isLineBreak(ch)) {
-              if (ch === 13 && text.charCodeAt(pos) === 10) {
+              if (ch === 13 && text2.charCodeAt(pos) === 10) {
                 pos++;
               }
               lineNumber++;
@@ -46037,7 +46297,7 @@ function createScanner(text, ignoreTrivia = false) {
             pos++;
             scanError = 1;
           }
-          value = text.substring(start, pos);
+          value = text2.substring(start, pos);
           return token = 13;
         }
         value += String.fromCharCode(code);
@@ -46047,7 +46307,7 @@ function createScanner(text, ignoreTrivia = false) {
       case 45:
         value += String.fromCharCode(code);
         pos++;
-        if (pos === len || !isDigit(text.charCodeAt(pos))) {
+        if (pos === len || !isDigit(text2.charCodeAt(pos))) {
           return token = 16;
         }
       // found a minus, followed by a number so
@@ -46069,10 +46329,10 @@ function createScanner(text, ignoreTrivia = false) {
       default:
         while (pos < len && isUnknownContentCharacter(code)) {
           pos++;
-          code = text.charCodeAt(pos);
+          code = text2.charCodeAt(pos);
         }
         if (tokenOffset !== pos) {
-          value = text.substring(tokenOffset, pos);
+          value = text2.substring(tokenOffset, pos);
           switch (value) {
             case "true":
               return token = 8;
@@ -46255,7 +46515,7 @@ var ParseOptions;
     allowTrailingComma: false
   };
 })(ParseOptions || (ParseOptions = {}));
-function parseTree(text, errors = [], options = ParseOptions.DEFAULT) {
+function parseTree(text2, errors = [], options = ParseOptions.DEFAULT) {
   let currentParent = { type: "array", offset: -1, length: -1, children: [], parent: void 0 };
   function ensurePropertyComplete(endOffset) {
     if (currentParent.type === "property") {
@@ -46306,19 +46566,19 @@ function parseTree(text, errors = [], options = ParseOptions.DEFAULT) {
       errors.push({ error, offset, length });
     }
   };
-  visit(text, visitor, options);
+  visit(text2, visitor, options);
   const result = currentParent.children[0];
   if (result) {
     delete result.parent;
   }
   return result;
 }
-function findNodeAtLocation(root, path43) {
+function findNodeAtLocation(root, path45) {
   if (!root) {
     return void 0;
   }
   let node = root;
-  for (let segment of path43) {
+  for (let segment of path45) {
     if (typeof segment === "string") {
       if (node.type !== "object" || !Array.isArray(node.children)) {
         return void 0;
@@ -46344,8 +46604,8 @@ function findNodeAtLocation(root, path43) {
   }
   return node;
 }
-function visit(text, visitor, options = ParseOptions.DEFAULT) {
-  const _scanner = createScanner(text, false);
+function visit(text2, visitor, options = ParseOptions.DEFAULT) {
+  const _scanner = createScanner(text2, false);
   const _jsonPath = [];
   let suppressedCallbacks = 0;
   function toNoArgVisit(visitFunction) {
@@ -46749,17 +47009,17 @@ function uniqueKeys(node) {
     uniqueKeys(child);
   }
 }
-function parse2(text) {
-  if (text.length > 1024 * 1024) {
+function parse2(text2) {
+  if (text2.length > 1024 * 1024) {
     throw new Error("Palette catalog exceeds the 1 MiB editor limit.");
   }
   const errors = [];
-  const tree = parseTree2(text, errors, { disallowComments: true, allowTrailingComma: false });
+  const tree = parseTree2(text2, errors, { disallowComments: true, allowTrailingComma: false });
   if (!tree || errors.length) {
     throw new Error("Repair the palette JSON in the text editor before editing colors.");
   }
   uniqueKeys(tree);
-  const catalog = JSON.parse(text);
+  const catalog = JSON.parse(text2);
   if (!isSpritePaletteCatalog2(catalog)) {
     throw new Error("Expected a version 1 ROM palette catalog.");
   }
@@ -46771,8 +47031,8 @@ function parse2(text) {
   }
   return { tree, catalog };
 }
-function paletteView(text) {
-  const { catalog } = parse2(text);
+function paletteView(text2) {
+  const { catalog } = parse2(text2);
   return Object.entries(catalog.palettes).map(([id, record4]) => ({
     id,
     name: "name" in record4 && typeof record4.name === "string" ? record4.name : "",
@@ -46780,8 +47040,8 @@ function paletteView(text) {
     words: record4.words
   }));
 }
-function paletteWordEdit(text, id, index, word) {
-  const { tree, catalog } = parse2(text);
+function paletteWordEdit(text2, id, index, word) {
+  const { tree, catalog } = parse2(text2);
   const record4 = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
   if (!record4 || !Number.isSafeInteger(index) || index < record4.firstIndex || index >= record4.firstIndex + record4.words.length || !/^[\dA-Fa-f]{4}$/.test(word)) {
     throw new Error("Select a stored palette slot and a four-digit BGR555 word.");
@@ -46874,6 +47134,38 @@ function registerPaletteEditor(context) {
   );
 }
 
+// packages/assets/src/validation.ts
+function integer4(value, label, minimum, maximum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+
+// packages/assets/src/limits.ts
+var ASSET_LIMITS = Object.freeze({
+  rasterPixels: 4 * 1024 * 1024,
+  interchangeSide: 4096,
+  pngBytes: 32 * 1024 * 1024,
+  pngInflatedBytes: 20 * 1024 * 1024,
+  asepriteBytes: 16 * 1024 * 1024,
+  decodedBytes: 64 * 1024 * 1024,
+  renderPixels: 64 * 1024 * 1024,
+  frames: 1024,
+  layers: 4096,
+  tilesets: 1024,
+  owners: 4 * 1024 * 1024,
+  references: 4 * 1024 * 1024,
+  chunks: 1024 * 1024,
+  metadataBytes: 16 * 1024 * 1024,
+  baselineMetadataBytes: 64 * 1024 * 1024,
+  metadataNodes: 1024 * 1024,
+  // Baselines include owner and view declarations as well as the file model; pixels stay in binary blobs.
+  baselineMetadataNodes: 4 * 1024 * 1024,
+  thumbnailEdge: 1024
+});
+var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
+
 // packages/vscode-extension/src/assets/png-editor.ts
 var import_vscode12 = require("vscode");
 
@@ -46931,22 +47223,14 @@ var PngCodec = class {
 };
 
 // packages/vscode-extension/src/assets/png-document.ts
-var import_node_crypto22 = require("node:crypto");
+var import_node_crypto23 = require("node:crypto");
 var import_promises11 = __toESM(require("node:fs/promises"), 1);
-var import_node_path22 = __toESM(require("node:path"), 1);
+var import_node_path23 = __toESM(require("node:path"), 1);
 var import_vscode11 = require("vscode");
 
 // packages/vscode-extension/src/assets/png-guidance.ts
-var import_node_crypto21 = require("node:crypto");
+var import_node_crypto22 = require("node:crypto");
 var import_promises10 = __toESM(require("node:fs/promises"), 1);
-
-// packages/assets/src/validation.ts
-function integer4(value, label, minimum, maximum) {
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
-  }
-  return value;
-}
 
 // packages/assets/src/indexed-edit.ts
 function validateOrientation(value) {
@@ -47344,7 +47628,7 @@ function validateFrameLayout(layout, { segmentName, whole = false } = {}) {
 }
 
 // packages/vscode-extension/src/assets/png-guidance.ts
-var hash2 = (bytes) => (0, import_node_crypto21.createHash)("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => (0, import_node_crypto22.createHash)("sha256").update(bytes).digest("hex");
 function errorCode4(error) {
   return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : void 0;
 }
@@ -47431,7 +47715,7 @@ async function assertPngGuidanceCurrent(guidance) {
 }
 
 // packages/vscode-extension/src/assets/png-document.ts
-var hash3 = (bytes) => (0, import_node_crypto22.createHash)("sha256").update(bytes).digest("hex");
+var hash3 = (bytes) => (0, import_node_crypto23.createHash)("sha256").update(bytes).digest("hex");
 function isRecord35(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -47484,7 +47768,7 @@ var PngDocument = class _PngDocument {
     let diskHash;
     let backupGuidance;
     if (backup) {
-      if (backup.length > 26 * 1024 * 1024) {
+      if (backup.length > PNG_EDITOR_BACKUP_BYTES) {
         throw new Error("PNG backup exceeds its size budget.");
       }
       const value = JSON.parse(Buffer.from(backup).toString("utf8"));
@@ -47534,8 +47818,8 @@ var PngDocument = class _PngDocument {
   /** Stat before reading prevents unbounded allocation even for malformed containers or external replacements. */
   static async read(uri) {
     const stat3 = await import_promises11.default.lstat(uri.fsPath);
-    if (!stat3.isFile() || stat3.size > 16 * 1024 * 1024) {
-      throw new Error("PNG editing requires a regular file of at most 16 MiB.");
+    if (!stat3.isFile() || stat3.size > ASSET_LIMITS.pngBytes) {
+      throw new Error("PNG editing requires a regular file of at most 32 MiB.");
     }
     return import_promises11.default.readFile(uri.fsPath);
   }
@@ -47643,7 +47927,7 @@ var PngDocument = class _PngDocument {
           "PNG changed on disk. Revert to review the external version, or use Save As to retain this draft."
         );
       }
-      temporary = import_node_path22.default.join(import_node_path22.default.dirname(file), `.${import_node_path22.default.basename(file)}.${(0, import_node_crypto22.randomUUID)()}.tmp`);
+      temporary = import_node_path23.default.join(import_node_path23.default.dirname(file), `.${import_node_path23.default.basename(file)}.${(0, import_node_crypto23.randomUUID)()}.tmp`);
       const handle = await import_promises11.default.open(temporary, "wx", 384);
       try {
         await handle.writeFile(encoded);
@@ -47784,7 +48068,7 @@ var PngEditor = class {
     let backup;
     if (context.backupId) {
       const location = import_vscode12.Uri.parse(context.backupId);
-      if ((await import_vscode12.workspace.fs.stat(location)).size > 26 * 1024 * 1024) {
+      if ((await import_vscode12.workspace.fs.stat(location)).size > PNG_EDITOR_BACKUP_BYTES) {
         throw new Error("PNG backup exceeds its size budget.");
       }
       backup = await import_vscode12.workspace.fs.readFile(location);
@@ -47908,8 +48192,8 @@ function registerPngEditor(context, drafts) {
 }
 
 // packages/vscode-extension/src/debug/session.ts
-var fs23 = __toESM(require("node:fs"), 1);
-var path35 = __toESM(require("node:path"), 1);
+var fs24 = __toESM(require("node:fs"), 1);
+var path36 = __toESM(require("node:path"), 1);
 init_debug_map();
 init_src();
 
@@ -47998,10 +48282,10 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
 
 // packages/debug-sidecar-ares/src/ares-process-host.ts
 var import_node_child_process4 = require("node:child_process");
-var import_node_crypto23 = require("node:crypto");
-var import_node_fs18 = require("node:fs");
+var import_node_crypto24 = require("node:crypto");
+var import_node_fs19 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
-var import_node_path23 = __toESM(require("node:path"), 1);
+var import_node_path24 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
@@ -48160,7 +48444,7 @@ var checkedRevision = (value, name) => {
   return value.toLowerCase();
 };
 var checkedResourcePath = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path23.default.posix.isAbsolute(value) || import_node_path23.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
+  if (value === "." || value.includes("\\") || import_node_path24.default.posix.isAbsolute(value) || import_node_path24.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
     throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
   }
   return value;
@@ -48206,14 +48490,14 @@ var NodeAresProcessHandle = class {
   }
 };
 var nodeSha256 = async (file) => {
-  const digest = (0, import_node_crypto23.createHash)("sha256");
-  for await (const chunk of (0, import_node_fs18.createReadStream)(file)) {
+  const digest2 = (0, import_node_crypto24.createHash)("sha256");
+  for await (const chunk of (0, import_node_fs19.createReadStream)(file)) {
     if (!Buffer.isBuffer(chunk)) {
       throw new Error(`Expected binary bytes while hashing ${file}.`);
     }
-    digest.update(chunk);
+    digest2.update(chunk);
   }
-  return digest.digest("hex");
+  return digest2.digest("hex");
 };
 var reserveLoopbackPort = async () => {
   const server = import_node_net2.default.createServer();
@@ -48362,7 +48646,7 @@ var parseAresRuntimeManifest = (value) => {
 var import_vscode15 = require("vscode");
 
 // packages/vscode-extension/src/runtime/binding.ts
-var path32 = __toESM(require("node:path"), 1);
+var path33 = __toESM(require("node:path"), 1);
 function isRecord38(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -48381,7 +48665,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
         return void 0;
       }
       const expanded = value.replaceAll("${workspaceFolder}", root);
-      return expanded.includes("${") ? void 0 : path32.resolve(root, expanded);
+      return expanded.includes("${") ? void 0 : path33.resolve(root, expanded);
     };
     const runtimeManifest = resolve9(config.runtimeManifest);
     const emulator = resolve9(config.emulator);
@@ -48741,7 +49025,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
 };
 
 // packages/vscode-extension/src/source/evidence-selection.ts
-var import_node_path24 = __toESM(require("node:path"), 1);
+var import_node_path25 = __toESM(require("node:path"), 1);
 var import_vscode14 = require("vscode");
 function isRecord39(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -48760,7 +49044,7 @@ async function chooseLiveBusProject(romContentSha256) {
       throw new Error("Analysis manifest is unavailable.");
     }
     if (manifest.rom.contentSha256 === romContentSha256) {
-      choices.push({ label: import_node_path24.default.basename(directory), description: directory, directory });
+      choices.push({ label: import_node_path25.default.basename(directory), description: directory, directory });
     }
   }
   if (choices.length === 1) {
@@ -49569,37 +49853,37 @@ var createSnesDebugAddressResolvers = (map, output) => {
 };
 
 // packages/vscode-extension/src/debug/source-root.ts
-var import_node_fs19 = __toESM(require("node:fs"), 1);
-var import_node_path25 = __toESM(require("node:path"), 1);
+var import_node_fs20 = __toESM(require("node:fs"), 1);
+var import_node_path26 = __toESM(require("node:path"), 1);
 var sourceMatches = (root, source) => {
-  if (import_node_path25.default.isAbsolute(source.path)) {
+  if (import_node_path26.default.isAbsolute(source.path)) {
     return false;
   }
-  const resolved = import_node_path25.default.resolve(root, source.path);
-  const relative3 = import_node_path25.default.relative(root, resolved);
-  if (!relative3 || relative3.startsWith(`..${import_node_path25.default.sep}`) || import_node_path25.default.isAbsolute(relative3)) {
+  const resolved = import_node_path26.default.resolve(root, source.path);
+  const relative3 = import_node_path26.default.relative(root, resolved);
+  if (!relative3 || relative3.startsWith(`..${import_node_path26.default.sep}`) || import_node_path26.default.isAbsolute(relative3)) {
     return false;
   }
   try {
-    const stat3 = import_node_fs19.default.statSync(resolved);
+    const stat3 = import_node_fs20.default.statSync(resolved);
     return stat3.isFile() && stat3.size === source.size;
   } catch {
     return false;
   }
 };
 var resolveDebugSourceRoot = (options) => {
-  const configuredRoot = import_node_path25.default.resolve(options.configuredRoot);
+  const configuredRoot = import_node_path26.default.resolve(options.configuredRoot);
   const candidates = [
     configuredRoot,
-    ...options.workspaceRoot ? [import_node_path25.default.resolve(options.workspaceRoot)] : [],
-    import_node_path25.default.dirname(import_node_path25.default.resolve(options.debugMapFile)),
+    ...options.workspaceRoot ? [import_node_path26.default.resolve(options.workspaceRoot)] : [],
+    import_node_path26.default.dirname(import_node_path26.default.resolve(options.debugMapFile)),
     // Generated ROMs/maps commonly live in build/, with mapped sources in its parent.
-    import_node_path25.default.dirname(import_node_path25.default.dirname(import_node_path25.default.resolve(options.debugMapFile))),
-    import_node_path25.default.dirname(import_node_path25.default.resolve(options.programFile)),
-    import_node_path25.default.dirname(import_node_path25.default.dirname(import_node_path25.default.resolve(options.programFile)))
+    import_node_path26.default.dirname(import_node_path26.default.dirname(import_node_path26.default.resolve(options.debugMapFile))),
+    import_node_path26.default.dirname(import_node_path26.default.resolve(options.programFile)),
+    import_node_path26.default.dirname(import_node_path26.default.dirname(import_node_path26.default.resolve(options.programFile)))
   ];
   const unique2 = [...new Set(candidates)];
-  const relativeSources = options.map.sources.filter((source) => !import_node_path25.default.isAbsolute(source.path)).slice(0, 128);
+  const relativeSources = options.map.sources.filter((source) => !import_node_path26.default.isAbsolute(source.path)).slice(0, 128);
   if (relativeSources.length === 0) {
     return configuredRoot;
   }
@@ -49697,7 +49981,7 @@ var configureEmulatorRuntime = async (context, resource) => {
   if (!runtimeDirectory) {
     return void 0;
   }
-  const manifest = JSON.parse(fs23.readFileSync(runtimeManifest, "utf8"));
+  const manifest = JSON.parse(fs24.readFileSync(runtimeManifest, "utf8"));
   parseAresRuntimeManifest(manifest);
   const binding = {
     backend: "ares",
@@ -49729,7 +50013,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
   debugMap: artifacts.debugMapPath,
   ...artifacts.outputSha256 ? { outputSha256: artifacts.outputSha256 } : {},
   ...artifacts.debugMapFingerprint ? { debugMapFingerprint: artifacts.debugMapFingerprint } : {},
-  sourceRoot: folder?.uri.fsPath ?? path35.dirname(artifacts.outputPath),
+  sourceRoot: folder?.uri.fsPath ?? path36.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
@@ -49740,7 +50024,7 @@ var activeTraceRecording;
 var debuggingExtensionRoot = "";
 var liveAnalyses = /* @__PURE__ */ new Set();
 var sessionContexts = /* @__PURE__ */ new Map();
-var resolvedPath = (value, folder) => path35.isAbsolute(value) ? value : path35.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var resolvedPath = (value, folder) => path36.isAbsolute(value) ? value : path36.resolve(folder?.uri.fsPath ?? process.cwd(), value);
 var requiredLivePath = (value, name, folder) => {
   if (!value) {
     throw new Error(`Live Uttori ASM debugging requires '${name}'.`);
@@ -49772,8 +50056,8 @@ function debugConfiguration(session) {
   }
   return configuration;
 }
-function parsedReplayScript(text) {
-  const value = JSON.parse(text);
+function parsedReplayScript(text2) {
+  const value = JSON.parse(text2);
   if (!isReplayScript(value)) {
     throw new Error("Invalid replay script.");
   }
@@ -49822,7 +50106,7 @@ var traceProducer = (session, map) => {
     };
   }
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
-  const parsed = JSON.parse(fs23.readFileSync(manifestFile, "utf8"));
+  const parsed = JSON.parse(fs24.readFileSync(manifestFile, "utf8"));
   const manifest = isRecord41(parsed) ? parsed : {};
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
   const revision = stringField(manifest.forkRevision, "runtimeManifest.forkRevision");
@@ -49855,7 +50139,7 @@ var defaultTraceUri = (session, extension, bus) => {
   }
   const timestamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(":", "-");
   const prefix = bus ? "bus-trace" : "instruction-trace";
-  return import_vscode15.Uri.file(path35.join(root, `${prefix}-${timestamp}.${extension}`));
+  return import_vscode15.Uri.file(path36.join(root, `${prefix}-${timestamp}.${extension}`));
 };
 var startRuntimeTraceWithLease = async () => {
   if (activeTraceRecording) {
@@ -49931,7 +50215,7 @@ var startRuntimeTraceWithLease = async () => {
       status.show();
       try {
         live = new LiveBusAnalysis(
-          path35.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
+          path36.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
           {
             file: destination.fsPath,
             projectDirectory: liveProject,
@@ -50215,7 +50499,7 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
     "runtimeDirectory",
     folder
   );
-  const bundledSidecar = path35.join(extensionRoot, "sidecars", "ares.mjs");
+  const bundledSidecar = path36.join(extensionRoot, "sidecars", "ares.mjs");
   const sidecar = configuration.sidecar ? resolvedPath(configuration.sidecar, folder) : bundledSidecar;
   return new SidecarDebugBackend({
     backend: ARES_RSP_BACKEND_ID,
@@ -50248,7 +50532,7 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
         env: { ELECTRON_RUN_AS_NODE: "1" },
         session,
         shutdownTimeoutMs: 3e3,
-        onStderr: (text) => log(text.trimEnd())
+        onStderr: (text2) => log(text2.trimEnd())
       });
       return new DebugSidecarClient({ transport, session, requestTimeoutMs: 15e3 });
     }
@@ -50259,8 +50543,8 @@ var loadConfiguration = (session, extensionRoot, log) => {
   const folder = session.workspaceFolder;
   const program = resolvedPath(configuration.program, folder);
   const mapFile = resolvedPath(configuration.debugMap, folder);
-  const output = new Uint8Array(fs23.readFileSync(program));
-  const parsedMap = JSON.parse(fs23.readFileSync(mapFile, "utf8"));
+  const output = new Uint8Array(fs24.readFileSync(program));
+  const parsedMap = JSON.parse(fs24.readFileSync(mapFile, "utf8"));
   if (!isStoredDebugMap2(parsedMap)) {
     throw new Error("Invalid debug map.");
   }
@@ -50287,7 +50571,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
         log
       );
     }
-    const script = configuration.replay ? parsedReplayScript(fs23.readFileSync(resolvedPath(configuration.replay, folder), "utf8")) : createDebugMapReplayScript(map, output);
+    const script = configuration.replay ? parsedReplayScript(fs24.readFileSync(resolvedPath(configuration.replay, folder), "utf8")) : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
   const configuredSourceRoot = resolvedPath(configuration.sourceRoot ?? ".", folder);
@@ -50389,7 +50673,7 @@ var UttoriDebugConfigurationProvider = class {
     const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
     const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
     const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
-    const program = configuredProgram ?? path35.join(root, "build", "rebuilt-content.sfc");
+    const program = configuredProgram ?? path36.join(root, "build", "rebuilt-content.sfc");
     return {
       ...configuration,
       type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
@@ -50422,7 +50706,7 @@ var UttoriDebugAdapterFactory = class {
     try {
       if (session.configuration.backend === "ares") {
         const runtimeManifest = typeof session.configuration.runtimeManifest === "string" ? session.configuration.runtimeManifest : void 0;
-        const manifestText = fs23.readFileSync(
+        const manifestText = fs24.readFileSync(
           requiredLivePath(runtimeManifest, "runtimeManifest", session.workspaceFolder),
           "utf8"
         );
@@ -51106,8 +51390,8 @@ var LanguageKind;
 })(LanguageKind || (LanguageKind = {}));
 var TextDocumentItem;
 (function(TextDocumentItem2) {
-  function create(uri, languageId, version, text) {
-    return { uri, languageId, version, text };
+  function create(uri, languageId, version, text2) {
+    return { uri, languageId, version, text: text2 };
   }
   TextDocumentItem2.create = create;
   function is(value) {
@@ -51525,8 +51809,8 @@ var SemanticTokens;
 })(SemanticTokens || (SemanticTokens = {}));
 var InlineValueText;
 (function(InlineValueText2) {
-  function create(range, text) {
-    return { range, text };
+  function create(range, text2) {
+    return { range, text: text2 };
   }
   InlineValueText2.create = create;
   function is(value) {
@@ -51641,8 +51925,8 @@ var InlineCompletionTriggerKind;
 })(InlineCompletionTriggerKind || (InlineCompletionTriggerKind = {}));
 var SelectedCompletionInfo;
 (function(SelectedCompletionInfo2) {
-  function create(range, text) {
-    return { range, text };
+  function create(range, text2) {
+    return { range, text: text2 };
   }
   SelectedCompletionInfo2.create = create;
 })(SelectedCompletionInfo || (SelectedCompletionInfo = {}));
@@ -51673,7 +51957,7 @@ var TextDocument;
   }
   TextDocument2.is = is;
   function applyEdits(document, edits) {
-    let text = document.getText();
+    let text2 = document.getText();
     const sortedEdits = mergeSort(edits, (a, b) => {
       const diff = a.range.start.line - b.range.start.line;
       if (diff === 0) {
@@ -51681,19 +51965,19 @@ var TextDocument;
       }
       return diff;
     });
-    let lastModifiedOffset = text.length;
+    let lastModifiedOffset = text2.length;
     for (let i = sortedEdits.length - 1; i >= 0; i--) {
       const e = sortedEdits[i];
       const startOffset = document.offsetAt(e.range.start);
       const endOffset = document.offsetAt(e.range.end);
       if (endOffset <= lastModifiedOffset) {
-        text = text.substring(0, startOffset) + e.newText + text.substring(endOffset, text.length);
+        text2 = text2.substring(0, startOffset) + e.newText + text2.substring(endOffset, text2.length);
       } else {
         throw new Error("Overlapping edit");
       }
       lastModifiedOffset = startOffset;
     }
-    return text;
+    return text2;
   }
   TextDocument2.applyEdits = applyEdits;
   function mergeSort(data, compare) {
@@ -51758,21 +52042,21 @@ var FullTextDocument = class {
   getLineOffsets() {
     if (this._lineOffsets === void 0) {
       const lineOffsets = [];
-      const text = this._content;
+      const text2 = this._content;
       let isLineStart = true;
-      for (let i = 0; i < text.length; i++) {
+      for (let i = 0; i < text2.length; i++) {
         if (isLineStart) {
           lineOffsets.push(i);
           isLineStart = false;
         }
-        const ch = text.charAt(i);
+        const ch = text2.charAt(i);
         isLineStart = ch === "\r" || ch === "\n";
-        if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
+        if (ch === "\r" && i + 1 < text2.length && text2.charAt(i + 1) === "\n") {
           i++;
         }
       }
-      if (isLineStart && text.length > 0) {
-        lineOffsets.push(text.length);
+      if (isLineStart && text2.length > 0) {
+        lineOffsets.push(text2.length);
       }
       this._lineOffsets = lineOffsets;
     }
@@ -51830,10 +52114,10 @@ var Is;
     return toString.call(value) === "[object String]";
   }
   Is2.string = string4;
-  function number(value) {
+  function number2(value) {
     return toString.call(value) === "[object Number]";
   }
-  Is2.number = number;
+  Is2.number = number2;
   function numberRange(value, min, max) {
     return toString.call(value) === "[object Number]" && min <= value && value <= max;
   }
@@ -52003,7 +52287,7 @@ function iconForSymbolKind(kind) {
 }
 
 // packages/vscode-extension/src/project/panel.ts
-var path36 = __toESM(require("node:path"), 1);
+var path37 = __toESM(require("node:path"), 1);
 var import_vscode18 = require("vscode");
 var ProjectPanelProvider = class {
   constructor(extensionUri, getClient, initConfig2) {
@@ -52107,7 +52391,7 @@ var ProjectPanelProvider = class {
         const { status } = await this.snapshot();
         const root = import_vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (root && status.configFile) {
-          await import_vscode18.window.showTextDocument(import_vscode18.Uri.file(path36.resolve(root, status.configFile)));
+          await import_vscode18.window.showTextDocument(import_vscode18.Uri.file(path37.resolve(root, status.configFile)));
         }
         return;
       }
@@ -52191,7 +52475,7 @@ var ProjectPanelProvider = class {
     const next = [...current];
     for (const uri of picked) {
       const folder = import_vscode18.workspace.workspaceFolders?.[0];
-      const relative3 = folder ? path36.relative(folder.uri.fsPath, uri.fsPath) : void 0;
+      const relative3 = folder ? path37.relative(folder.uri.fsPath, uri.fsPath) : void 0;
       const value = relative3 && !relative3.startsWith("..") ? relative3 : uri.fsPath;
       if (!next.includes(value)) {
         next.push(value);
@@ -52258,16 +52542,166 @@ function asString(value) {
 
 // packages/vscode-extension/src/source/controller.ts
 var import_promises14 = __toESM(require("node:fs/promises"), 1);
-var import_node_path30 = __toESM(require("node:path"), 1);
+var import_node_path32 = __toESM(require("node:path"), 1);
+
+// packages/cli/src/asset-interchange/public-records.ts
+init_src2();
+function isObject2(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function object(value) {
+  if (!isObject2(value)) {
+    throw new Error("Invalid asset record object.");
+  }
+  return value;
+}
+function text(value) {
+  if (typeof value !== "string" || !value.length || value.length > 4096) {
+    throw new Error("Invalid asset record text.");
+  }
+  return value;
+}
+function digest(value) {
+  const result = text(value);
+  if (!/^[\da-f]{64}$/.test(result)) {
+    throw new Error("Invalid asset record hash.");
+  }
+  return result;
+}
+function locator(value) {
+  const result = text(value);
+  if (!/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/.test(result)) {
+    throw new Error("Invalid asset export locator.");
+  }
+  return result;
+}
+function number(value, maximum) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > maximum) {
+    throw new Error("Invalid asset record integer.");
+  }
+  return value;
+}
+function strings(value, maximum = 65536) {
+  if (!Array.isArray(value) || value.length > maximum) {
+    throw new Error("Invalid asset string inventory.");
+  }
+  return value.map(text);
+}
+function readAssetImportReview(value) {
+  const input = object(value);
+  if (input.format !== "uttori-asset-review" || input.version !== 2 || !Array.isArray(input.files) || input.files.length > 65536 || !Array.isArray(input.effects) || input.effects.length > 65536) {
+    throw new Error("Unsupported asset review summary.");
+  }
+  const files = input.files.map((entry) => {
+    const file = object(entry), name = text(file.path);
+    assertSourcePath(name);
+    return { path: name, before: digest(file.before), after: digest(file.after) };
+  }), effects = input.effects.map((entry) => {
+    const effect = object(entry);
+    return {
+      resource: text(effect.resource),
+      offset: number(effect.offset, Number.MAX_SAFE_INTEGER),
+      size: number(effect.size, ASSET_LIMITS.decodedBytes),
+      consumers: strings(effect.consumers, 65536)
+    };
+  });
+  return immutableReview({
+    format: input.format,
+    version: input.version,
+    id: digest(input.id),
+    exportId: locator(input.exportId),
+    documentSha256: digest(input.documentSha256),
+    outputSha256: digest(input.outputSha256),
+    files,
+    effects
+  });
+}
+function immutableReview(value) {
+  return Object.freeze({
+    ...value,
+    files: Object.freeze(value.files.map((item) => Object.freeze({ ...item }))),
+    effects: Object.freeze(
+      value.effects.map(
+        (item) => Object.freeze({ ...item, consumers: Object.freeze([...item.consumers]) })
+      )
+    )
+  });
+}
+
+// packages/cli/src/asset-interchange/operation-records.ts
+function readAssetOperation(value) {
+  const input = object(value), directory = text(input.directory);
+  let drafts;
+  if (input.drafts !== void 0) {
+    if (!Array.isArray(input.drafts) || input.drafts.length > 65536) {
+      throw new Error("Invalid asset draft inventory.");
+    }
+    let pathBytes = 0;
+    drafts = input.drafts.map((value2) => {
+      const draft = object(value2), file = text(draft.path);
+      pathBytes += new TextEncoder().encode(file).length;
+      if (pathBytes > ASSET_LIMITS.metadataBytes || typeof draft.opaque !== "boolean") {
+        throw new Error("Invalid asset draft metadata.");
+      }
+      return {
+        path: file,
+        version: number(draft.version, Number.MAX_SAFE_INTEGER),
+        opaque: draft.opaque
+      };
+    });
+  }
+  if (input.action === "asset-recover") {
+    if (input.direction !== "before" && input.direction !== "after") {
+      throw new Error("Expected before or after recovery direction.");
+    }
+    return { action: input.action, directory, direction: input.direction, drafts };
+  }
+  if (input.action === "asset-cleanup") {
+    return {
+      action: input.action,
+      directory,
+      policy: text(input.policy),
+      review: input.review === void 0 ? void 0 : text(input.review)
+    };
+  }
+  const common = {
+    directory,
+    document: text(input.document),
+    manifest: text(input.manifest),
+    drafts
+  };
+  if (input.action === "asset-review") {
+    return { ...common, action: input.action };
+  }
+  if (input.action === "asset-apply") {
+    return { ...common, action: input.action, review: text(input.review) };
+  }
+  if (input.action === "asset-export") {
+    const presentation = input.presentation;
+    if (presentation !== void 0 && presentation !== "tilemap" && presentation !== "raster" && presentation !== "indexed-png") {
+      throw new Error("Unsupported asset presentation.");
+    }
+    return {
+      ...common,
+      action: input.action,
+      selection: text(input.selection),
+      adapter: text(input.adapter),
+      presentation
+    };
+  }
+  throw new Error("Unsupported asset operation.");
+}
+
+// packages/vscode-extension/src/source/controller.ts
 init_src2();
 var import_vscode23 = require("vscode");
 
 // packages/vscode-extension/src/source/analysis-editor.ts
-var import_node_path27 = __toESM(require("node:path"), 1);
+var import_node_path28 = __toESM(require("node:path"), 1);
 var import_vscode20 = require("vscode");
 
 // packages/vscode-extension/src/source/research-editor.ts
-var import_node_path26 = __toESM(require("node:path"), 1);
+var import_node_path27 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode19 = require("vscode");
 async function editSourceResearch(worker, context, request) {
@@ -52343,12 +52777,12 @@ async function editSourceResearch(worker, context, request) {
         "vscode.executeWorkspaceSymbolProvider",
         symbol.name
       ) ?? []).filter(
-        (item) => item.name === symbol.name && item.location.uri.scheme === "file" && item.location.uri.fsPath.startsWith(initial.root + import_node_path26.default.sep)
+        (item) => item.name === symbol.name && item.location.uri.scheme === "file" && item.location.uri.fsPath.startsWith(initial.root + import_node_path27.default.sep)
       );
       const selected = matches.length === 1 ? matches[0] : (await import_vscode19.window.showQuickPick(
         matches.map((item) => ({
           label: item.name,
-          description: import_node_path26.default.relative(initial.root, item.location.uri.fsPath),
+          description: import_node_path27.default.relative(initial.root, item.location.uri.fsPath),
           item
         })),
         { title: "Source declaration to rename" }
@@ -52388,7 +52822,7 @@ async function editSourceResearch(worker, context, request) {
       return result2;
     }
     if (action.action === "open") {
-      await import_vscode19.window.showTextDocument(import_vscode19.Uri.file(import_node_path26.default.join(initial.root, symbol.path)));
+      await import_vscode19.window.showTextDocument(import_vscode19.Uri.file(import_node_path27.default.join(initial.root, symbol.path)));
       return result2;
     }
     if (action.action === "aliases") {
@@ -52423,7 +52857,7 @@ async function editSourceResearch(worker, context, request) {
   if (result.kind !== "edit") {
     throw new Error("Research service did not produce an edit.");
   }
-  const document = await import_vscode19.workspace.openTextDocument(import_vscode19.Uri.file(import_node_path26.default.join(initial.root, result.path)));
+  const document = await import_vscode19.workspace.openTextDocument(import_vscode19.Uri.file(import_node_path27.default.join(initial.root, result.path)));
   if (context()?.root !== initial.root || sourceContentHash(document.getText()) !== result.beforeSha256) {
     throw new Error("The selected project or research changed. Prepare the edit again.");
   }
@@ -52441,13 +52875,13 @@ async function editSourceResearch(worker, context, request) {
 }
 
 // packages/vscode-extension/src/source/analysis-editor.ts
-function parseResearchAddress(text) {
-  const value = text.trim();
+function parseResearchAddress(text2) {
+  const value = text2.trim();
   if (!/^(?:\$[\da-f]+|0x[\da-f]+|\d+)$/i.test(value)) {
     return void 0;
   }
-  const number = Number(value.replace(/^\$/, "0x"));
-  return Number.isSafeInteger(number) && number >= 0 ? number : void 0;
+  const number2 = Number(value.replace(/^\$/, "0x"));
+  return Number.isSafeInteger(number2) && number2 >= 0 ? number2 : void 0;
 }
 var hex3 = (value) => `$${value.toString(16).toUpperCase()}`;
 var CPU_STATE_FIELDS = [
@@ -52467,7 +52901,7 @@ function isRegisterKey(key3) {
   return key3 === "programBank" || key3 === "dataBank" || key3 === "directPage" || key3 === "stackPointer";
 }
 async function address3(title, initial, maximum) {
-  const text = await import_vscode20.window.showInputBox({
+  const text2 = await import_vscode20.window.showInputBox({
     title,
     value: hex3(initial),
     prompt: "Original address: $hex, 0xhex, or decimal.",
@@ -52476,7 +52910,7 @@ async function address3(title, initial, maximum) {
       return parsed === void 0 || parsed > maximum ? `Enter an address from $0 through ${hex3(maximum)}.` : void 0;
     }
   });
-  return text === void 0 ? void 0 : parseResearchAddress(text);
+  return text2 === void 0 ? void 0 : parseResearchAddress(text2);
 }
 async function editState(record4) {
   const field = await import_vscode20.window.showQuickPick(CPU_STATE_FIELDS, {
@@ -52522,9 +52956,9 @@ async function editState(record4) {
       title: field.label,
       value: state[register2] === void 0 ? "" : hex3(state[register2]),
       prompt: `Value from $0 through ${hex3(maximum)}; empty removes the assumption.`,
-      validateInput: (text) => {
-        const number = parseResearchAddress(text);
-        return text.trim() && (number === void 0 || number > maximum) ? "Enter a value within the register width." : void 0;
+      validateInput: (text2) => {
+        const number2 = parseResearchAddress(text2);
+        return text2.trim() && (number2 === void 0 || number2 > maximum) ? "Enter a value within the register width." : void 0;
       }
     });
     if (value === void 0) {
@@ -52728,7 +53162,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
     action = picked.action;
   }
   if (action === "open") {
-    await import_vscode20.window.showTextDocument(import_vscode20.Uri.file(import_node_path27.default.join(initial.root, selected.path)));
+    await import_vscode20.window.showTextDocument(import_vscode20.Uri.file(import_node_path28.default.join(initial.root, selected.path)));
     return selection;
   }
   if (action === "remove") {
@@ -52794,22 +53228,54 @@ async function editAnalysisResearch(worker, context, change, hint) {
   return editSourceResearch(worker, context, { kind: "analysis", change });
 }
 
+// packages/cli/src/asset-interchange/paths.ts
+var import_node_fs21 = __toESM(require("node:fs"), 1);
+var import_node_path29 = __toESM(require("node:path"), 1);
+function assetPath(file) {
+  const absolute = import_node_path29.default.resolve(file);
+  if (process.platform === "darwin") {
+    for (const alias of ["/var", "/tmp"]) {
+      if (absolute === alias || absolute.startsWith(alias + "/")) {
+        return import_node_path29.default.join(import_node_fs21.default.realpathSync(alias), import_node_path29.default.relative(alias, absolute));
+      }
+    }
+  }
+  return absolute;
+}
+
+// packages/vscode-extension/src/source/asset-drafts.ts
+function assertAssetEditorVersions(before, current, relevant) {
+  const paths = new Set(relevant.map(assetPath)), originals = new Map(before.map((entry) => [assetPath(entry.path), entry]));
+  for (const entry of current) {
+    const file = assetPath(entry.path);
+    if (!paths.has(file)) {
+      continue;
+    }
+    const original = originals.get(file);
+    if (entry.dirty || original && (entry.version !== original.version || entry.opaque !== original.opaque)) {
+      throw new Error(
+        `Asset editor changed: ${entry.path}${entry.opaque ? " (opaque editor draft)" : ""}. Save relevant drafts and review again; drafts are preserved.`
+      );
+    }
+  }
+}
+
 // packages/vscode-extension/src/source/build-inputs.ts
 var import_promises13 = __toESM(require("node:fs/promises"), 1);
-var import_node_path28 = __toESM(require("node:path"), 1);
+var import_node_path30 = __toESM(require("node:path"), 1);
 init_src2();
 async function captureBuildControls(root) {
-  const projectBytes = await import_promises13.default.readFile(import_node_path28.default.join(root, ".uttori/project.json"));
+  const projectBytes = await import_promises13.default.readFile(import_node_path30.default.join(root, ".uttori/project.json"));
   const configuration = parseSourceProject(JSON.parse(projectBytes.toString("utf8")));
   const files = [
     configuration.layout,
     configuration.buildConfig,
-    import_node_path28.default.posix.join(import_node_path28.default.posix.dirname(configuration.buildConfig), "source-raw.json")
+    import_node_path30.default.posix.join(import_node_path30.default.posix.dirname(configuration.buildConfig), "source-raw.json")
   ];
   const controls = await Promise.all(
     files.map(async (file) => ({
       path: file,
-      sha256: sourceContentHash(await import_promises13.default.readFile(import_node_path28.default.resolve(root, file)))
+      sha256: sourceContentHash(await import_promises13.default.readFile(import_node_path30.default.resolve(root, file)))
     }))
   );
   return [{ path: ".uttori/project.json", sha256: sourceContentHash(projectBytes) }, ...controls];
@@ -52820,7 +53286,7 @@ async function changedBuildInputs(root, inputs) {
     const results = await Promise.all(
       inputs.slice(start, start + 8).map(async (input) => {
         try {
-          return sourceContentHash(await import_promises13.default.readFile(import_node_path28.default.resolve(root, input.path))) !== input.sha256;
+          return sourceContentHash(await import_promises13.default.readFile(import_node_path30.default.resolve(root, input.path))) !== input.sha256;
         } catch (error) {
           if (error instanceof Error && "code" in error && error.code === "ENOENT") {
             return true;
@@ -52839,7 +53305,7 @@ async function changedBuildInputs(root, inputs) {
 }
 
 // packages/vscode-extension/src/source/code-actions.ts
-var import_node_path29 = __toESM(require("node:path"), 1);
+var import_node_path31 = __toESM(require("node:path"), 1);
 var import_vscode21 = require("vscode");
 function registerSourceCodeActions(context) {
   return import_vscode21.languages.registerCodeActionsProvider(
@@ -52850,8 +53316,8 @@ function registerSourceCodeActions(context) {
         if (!project) {
           return [];
         }
-        const relative3 = import_node_path29.default.relative(project.root, document.uri.fsPath);
-        if (relative3 === ".." || relative3.startsWith(`..${import_node_path29.default.sep}`) || import_node_path29.default.isAbsolute(relative3)) {
+        const relative3 = import_node_path31.default.relative(project.root, document.uri.fsPath);
+        if (relative3 === ".." || relative3.startsWith(`..${import_node_path31.default.sep}`) || import_node_path31.default.isAbsolute(relative3)) {
           return [];
         }
         const diagnostics = requested.diagnostics.filter((item) => item.source === "Uttori source");
@@ -52889,7 +53355,7 @@ function registerSourceCodeActions(context) {
           "expansion"
         ].some((code) => codes.has(code))) {
           append3("Open layout and reference contracts", "vscode.open", [
-            import_vscode21.Uri.file(import_node_path29.default.join(project.root, project.layout))
+            import_vscode21.Uri.file(import_node_path31.default.join(project.root, project.layout))
           ]);
         }
         append3("Build and check source again", "asm.source.build");
@@ -53014,17 +53480,59 @@ var SourceProcessClient = class {
         stderr = (stderr + bytes.toString()).slice(-8192);
         this.log(bytes.toString());
       });
-      child.on("message", (message) => {
-        if (message.type === "progress" && typeof message.message === "string") {
-          const progress = `[${((Date.now() - started) / 1e3).toFixed(1)}s] ${message.message}`;
-          this.log(progress);
-          options.onProgress?.(progress);
-        } else if (message.type === "result") {
-          response = { value: message.value };
-        } else if (message.type === "error") {
-          response = { error: new Error(message.message ?? "Source operation failed.") };
+      child.on(
+        "message",
+        (message) => {
+          if (message.type === "progress" && typeof message.message === "string") {
+            const progress = `[${((Date.now() - started) / 1e3).toFixed(1)}s] ${message.message}`;
+            this.log(progress);
+            options.onProgress?.(progress);
+          } else if (message.type === "result") {
+            response = { value: message.value };
+          } else if (message.type === "error") {
+            response = { error: new Error(message.message ?? "Source operation failed.") };
+          } else if (message.type === "publish-check") {
+            void Promise.resolve().then(async () => {
+              options.signal?.throwIfAborted();
+              if (!options.onBeforePublish || !Array.isArray(message.paths) || message.paths.length > 65536 || message.paths.some((item) => typeof item !== "string")) {
+                throw new Error("Invalid or uncoordinated asset publication check.");
+              }
+              let bytes = 0;
+              const paths = message.paths.map((item) => {
+                if (typeof item !== "string") {
+                  throw new Error("Invalid asset publication path.");
+                }
+                bytes += Buffer.byteLength(item, "utf8");
+                if (bytes > 16 * 1024 * 1024) {
+                  throw new Error("Asset publication metadata exceeds its byte budget.");
+                }
+                return item;
+              });
+              await options.onBeforePublish(paths);
+              options.signal?.throwIfAborted();
+            }).then(
+              () => {
+                if (child.connected) {
+                  child.send({ type: "publish-confirm" }, () => {
+                  });
+                }
+              },
+              (error) => {
+                if (child.connected) {
+                  child.send(
+                    {
+                      type: "publish-confirm",
+                      error: error instanceof Error ? error.message : String(error)
+                    },
+                    () => {
+                    }
+                  );
+                }
+              }
+            );
+          }
         }
-      });
+      );
       child.on("error", (error) => finish(error));
       child.on("exit", (code, signal) => {
         this.#children.delete(child);
@@ -53267,6 +53775,19 @@ var SourceController = class {
       import_vscode23.commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
       import_vscode23.commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
       import_vscode23.commands.registerCommand(
+        "asm.asset.export",
+        (request) => this.guard(() => this.assetFile("export", request))
+      ),
+      import_vscode23.commands.registerCommand(
+        "asm.asset.review",
+        (request) => this.guard(() => this.assetFile("review", request))
+      ),
+      import_vscode23.commands.registerCommand(
+        "asm.asset.apply",
+        (request) => this.guard(() => this.assetFile("apply", request))
+      ),
+      import_vscode23.commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
+      import_vscode23.commands.registerCommand(
         "asm.source.diff",
         (left, right, title) => import_vscode23.commands.executeCommand("vscode.diff", left, right, title)
       ),
@@ -53302,26 +53823,36 @@ var SourceController = class {
         )
       ),
       import_vscode23.workspace.onDidChangeTextDocument((event) => {
-        if (event.contentChanges.length > 0 && this.authoringFile(event.document.uri.fsPath)) {
+        if (event.document.uri.scheme === "file" && event.contentChanges.length > 0 && this.authoringFile(event.document.uri.fsPath)) {
           this.#epoch++;
+          this.#epochInput = event.document.uri.fsPath;
+          this.#epochEvent = "text";
           this.#buildStale = true;
           this.#preview = void 0;
           this.#changed.fire(void 0);
         }
       }),
       binaryDrafts.onDidChange((uri) => {
-        if (this.authoringFile(uri.fsPath)) {
+        if (uri.scheme === "file" && this.authoringFile(uri.fsPath)) {
           this.#epoch++;
+          this.#epochInput = uri.fsPath;
+          this.#epochEvent = "binary";
           this.#buildStale = true;
           this.#preview = void 0;
           this.#changed.fire(void 0);
         }
       }),
       import_vscode23.window.tabGroups.onDidChangeTabs((event) => {
-        if ([...event.changed, ...event.closed].some(
-          (tab) => tab.isDirty && tab.input instanceof import_vscode23.TabInputCustom && this.authoringFile(tab.input.uri.fsPath)
-        )) {
+        const known = new Set(
+          [...binaryDrafts.documents].map((document) => document.uri.toString())
+        );
+        const dirtyTab = [...event.changed, ...event.closed].find(
+          (tab) => tab.isDirty && tab.input instanceof import_vscode23.TabInputCustom && tab.input.uri.scheme === "file" && !known.has(tab.input.uri.toString()) && this.authoringFile(tab.input.uri.fsPath)
+        );
+        if (dirtyTab && dirtyTab.input instanceof import_vscode23.TabInputCustom) {
           this.#epoch++;
+          this.#epochInput = dirtyTab.input.uri.fsPath;
+          this.#epochEvent = "opaque";
           this.#buildStale = true;
           this.#changed.fire(void 0);
         }
@@ -53396,15 +53927,23 @@ var SourceController = class {
   #buildInputs = [];
   #buildStale = true;
   #busy;
+  /** Watcher changes during coordinated publication are delivered once, including interrupted partial publication. */
+  #assetSavedInputPending = false;
   #refreshTimer;
   #watcher;
   #epoch = 0;
+  /** Last authoring input notification, retained to explain conservative publication invalidation. */
+  #epochInput;
+  /** Notification origin distinguishes actual saved-file events from editor draft changes. */
+  #epochEvent;
+  /** UI review state never owns native bytes; the worker's durable plan remains authoritative. */
+  #assetReview;
   get root() {
     return this.#root;
   }
   /** The selected build contract also identifies Watch when no source editor is open. */
   get buildUri() {
-    return this.#root && this.#configuration ? import_vscode23.Uri.file(import_node_path30.default.join(this.#root, this.#configuration.buildConfig)).toString() : void 0;
+    return this.#root && this.#configuration ? import_vscode23.Uri.file(import_node_path32.default.join(this.#root, this.#configuration.buildConfig)).toString() : void 0;
   }
   /** Route an evidence action only after proving which worktree owns that evidence store. */
   async editEvidence(action, target) {
@@ -53444,7 +53983,7 @@ var SourceController = class {
       ];
     }
     const source = new SourceRow(
-      `Source \xB7 ${this.#branch || import_node_path30.default.basename(this.#root)}`,
+      `Source \xB7 ${this.#branch || import_node_path32.default.basename(this.#root)}`,
       [],
       "workbench.view.scm"
     );
@@ -53523,6 +54062,12 @@ var SourceController = class {
         new SourceRow("Relocate Object", [], "asm.source.relocate"),
         new SourceRow("Expand ROM Capacity", [], "asm.source.expand")
       ]),
+      new SourceRow("Edit Assets in a Saved File", [
+        new SourceRow("Export Asset", [], "asm.asset.export"),
+        new SourceRow("Review Saved Asset", [], "asm.asset.review"),
+        new SourceRow("Apply Reviewed Asset", [], "asm.asset.apply"),
+        new SourceRow("Recover Interrupted Asset Edit", [], "asm.asset.recover")
+      ]),
       new SourceRow(`Capture \xB7 ${capturePhase}`, captureRows)
     ];
   }
@@ -53557,7 +54102,7 @@ var SourceController = class {
       title: "New Git source project folder",
       saveLabel: "Create Project",
       defaultUri: import_vscode23.Uri.file(
-        import_node_path30.default.join(import_node_path30.default.dirname(rom.fsPath), `${import_node_path30.default.parse(rom.fsPath).name}-source`)
+        import_node_path32.default.join(import_node_path32.default.dirname(rom.fsPath), `${import_node_path32.default.parse(rom.fsPath).name}-source`)
       )
     });
     if (!destination) {
@@ -53608,7 +54153,7 @@ var SourceController = class {
     await this.select(destination.fsPath);
     await import_vscode23.commands.executeCommand(
       "revealInExplorer",
-      import_vscode23.Uri.file(import_node_path30.default.join(destination.fsPath, "source/main.asm"))
+      import_vscode23.Uri.file(import_node_path32.default.join(destination.fsPath, "source/main.asm"))
     );
   }
   /** Selected context persists across active-editor changes; multi-root workspaces select explicitly. */
@@ -53626,7 +54171,7 @@ var SourceController = class {
         )
       ];
       const choices = options.map((value) => ({
-        label: import_node_path30.default.basename(value),
+        label: import_node_path32.default.basename(value),
         description: value,
         root: value
       }));
@@ -53655,7 +54200,7 @@ var SourceController = class {
       throw new Error("This folder has no .uttori/project.json source project.");
     }
     const configuration = parseSourceProject(
-      JSON.parse(await import_promises14.default.readFile(import_node_path30.default.join(resolved, ".uttori/project.json"), "utf8"))
+      JSON.parse(await import_promises14.default.readFile(import_node_path32.default.join(resolved, ".uttori/project.json"), "utf8"))
     );
     if (this.#root !== resolved) {
       this.#selected.fire();
@@ -53671,7 +54216,10 @@ var SourceController = class {
     this.#watcher?.dispose();
     const watcher = import_vscode23.workspace.createFileSystemWatcher(new import_vscode23.RelativePattern(resolved, "**/*"));
     const changed2 = (uri) => {
-      const relative3 = import_node_path30.default.relative(resolved, uri.fsPath).split(import_node_path30.default.sep).join("/");
+      if (uri.scheme !== "file") {
+        return;
+      }
+      const relative3 = import_node_path32.default.relative(resolved, uri.fsPath).split(import_node_path32.default.sep).join("/");
       const gitEvent = relative3 === ".git" || relative3.startsWith(".git/");
       const authoring = this.authoringFile(uri.fsPath);
       if (!authoring && !gitEvent) {
@@ -53685,6 +54233,8 @@ var SourceController = class {
       );
       if (authoring && !openDocument && !openBinary) {
         this.#epoch++;
+        this.#epochInput = uri.fsPath;
+        this.#epochEvent = "saved";
         const build = this.#build;
         const inputs = this.#buildInputs.filter((input) => input.path === relative3);
         if (!build) {
@@ -53710,7 +54260,11 @@ var SourceController = class {
         }
       }
       if (authoring) {
-        this.#savedInput.fire();
+        if (this.#busy === "asset-apply" || this.#busy === "asset-recover") {
+          this.#assetSavedInputPending = true;
+        } else {
+          this.#savedInput.fire();
+        }
       }
       const researchRoots = this.#configuration?.researchRoots ?? [];
       if (relative3.startsWith(".uttori/") || relative3.startsWith(".git/") || researchRoots.some(
@@ -53765,7 +54319,7 @@ var SourceController = class {
     }
     const root = this.#root;
     const configuration = parseSourceProject(
-      JSON.parse(await import_promises14.default.readFile(import_node_path30.default.join(root, ".uttori/project.json"), "utf8"))
+      JSON.parse(await import_promises14.default.readFile(import_node_path32.default.join(root, ".uttori/project.json"), "utf8"))
     );
     const status = await this.#worker.run({ directory: root, action: "status", candidate: this.#candidate }, { maxMemoryMiB: 512 });
     if (root !== this.#root) {
@@ -53795,6 +54349,300 @@ var SourceController = class {
       (document) => document.dirty && this.authoringFile(document.uri.fsPath)
     );
   }
+  /** Capture lightweight versions, including interchange documents saved outside the selected source root. */
+  assetEditorVersions() {
+    const binary = [...this.binaryDrafts.documents], known = new Set(binary.map((document) => document.uri.toString()));
+    return [
+      ...import_vscode23.workspace.textDocuments.filter((document) => document.uri.scheme === "file" && !document.isClosed).map((document) => ({
+        path: document.uri.fsPath,
+        version: document.version,
+        dirty: document.isDirty,
+        opaque: false
+      })),
+      ...binary.map((document) => ({
+        path: document.uri.fsPath,
+        version: document.version,
+        dirty: document.dirty,
+        opaque: false
+      })),
+      ...import_vscode23.window.tabGroups.all.flatMap(
+        (group2) => group2.tabs.flatMap((tab) => {
+          if (!(tab.input instanceof import_vscode23.TabInputCustom) || tab.input.uri.scheme !== "file" || known.has(tab.input.uri.toString())) {
+            return [];
+          }
+          return [{ path: tab.input.uri.fsPath, version: 0, dirty: tab.isDirty, opaque: true }];
+        })
+      )
+    ];
+  }
+  /** Saved-source export/review/apply share the existing source worker, busy state and live editor-version checks. */
+  async assetFile(action, request) {
+    if (!import_vscode23.workspace.isTrusted) {
+      throw new Error("Trust this workspace before editing source assets.");
+    }
+    if (this.#busy) {
+      throw new Error(`Source operation already running: ${this.#busy}.`);
+    }
+    if (!this.#root) {
+      await this.select();
+    }
+    const root = this.#root;
+    if (!root) {
+      return void 0;
+    }
+    const choose = async (title, extensions) => (await import_vscode23.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
+    let operation;
+    if (request !== void 0) {
+      const selected = readAssetOperation(request);
+      if (selected.action !== `asset-${action}` || import_node_path32.default.resolve(selected.directory) !== root || selected.action === "asset-cleanup" || selected.action === "asset-recover") {
+        throw new Error(
+          "Asset command request does not match the selected source project and action."
+        );
+      }
+      operation = selected;
+      if (selected.action === "asset-apply" && (!this.#assetReview || selected.review !== this.#assetReview.summary.id || import_node_path32.default.resolve(selected.document) !== import_node_path32.default.resolve(this.#assetReview.document) || import_node_path32.default.resolve(selected.manifest) !== import_node_path32.default.resolve(this.#assetReview.manifest))) {
+        throw new Error("Apply the saved asset review shown in this editor.");
+      }
+    } else if (action === "export") {
+      const adapter = await import_vscode23.window.showQuickPick(
+        [
+          { label: "Secret of Mana sprite", id: "som.sprite.native" },
+          { label: "Secret of Mana room", id: "som.room.native" }
+        ],
+        { title: "Export asset" }
+      );
+      if (!adapter) {
+        return void 0;
+      }
+      const selection = await choose("Select the source asset selection declaration", ["json"]);
+      if (!selection) {
+        return void 0;
+      }
+      const presentation = await import_vscode23.window.showQuickPick(
+        [
+          {
+            label: "Aseprite tilemaps",
+            description: "Shared tile inventory, compositions and known previews",
+            id: "tilemap"
+          },
+          {
+            label: "Raster Aseprite",
+            description: "Fixed native view inventory",
+            id: "raster"
+          },
+          {
+            label: "Indexed PNG",
+            description: "Fixed native view inventory with an explicit sidecar manifest",
+            id: "indexed-png"
+          }
+        ],
+        { title: "Asset presentation" }
+      );
+      if (!presentation) {
+        return void 0;
+      }
+      const filters = presentation.id === "indexed-png" ? { PNG: ["png"] } : { Aseprite: ["aseprite"] };
+      const document = (await import_vscode23.window.showSaveDialog({ title: "Export editable asset", filters }))?.fsPath;
+      if (!document) {
+        return void 0;
+      }
+      operation = {
+        action: "asset-export",
+        directory: root,
+        adapter: adapter.id,
+        selection,
+        document,
+        manifest: document + ".json",
+        presentation: presentation.id
+      };
+    } else if (action === "review") {
+      const manifest = await choose("Select the asset export manifest", ["json"]);
+      if (!manifest) {
+        return void 0;
+      }
+      const document = await choose("Select the saved edited asset", ["aseprite", "ase", "png"]);
+      if (!document) {
+        return void 0;
+      }
+      operation = { action: "asset-review", directory: root, manifest, document };
+    } else {
+      const review = this.#assetReview;
+      if (!review || review.root !== root) {
+        throw new Error("Review a saved asset in the selected project before applying it.");
+      }
+      if (review.epoch !== this.#epoch) {
+        throw new Error("Source changed after asset review. Review again.");
+      }
+      operation = {
+        action: "asset-apply",
+        directory: root,
+        document: review.document,
+        manifest: review.manifest,
+        review: review.summary.id
+      };
+    }
+    if (this.#root !== root || this.#busy) {
+      throw new Error("Selected source project changed. Start the asset operation again.");
+    }
+    if (action === "apply" && this.#assetReview?.epoch !== this.#epoch) {
+      throw new Error("Source changed after asset review. Review again.");
+    }
+    const epoch = this.#epoch, versions = this.assetEditorVersions(), reviewed = this.#assetReview;
+    operation = {
+      ...operation,
+      drafts: versions.filter((entry) => entry.dirty).map(({ path: file, version, opaque }) => ({ path: file, version, opaque }))
+    };
+    this.#busy = operation.action;
+    this.#assetSavedInputPending = false;
+    this.#changed.fire(void 0);
+    let published = false;
+    try {
+      const result = await this.runAssetOperation(operation, epoch, versions, reviewed?.versions);
+      if (action === "review") {
+        if (this.#root !== root || this.#epoch !== epoch) {
+          throw new Error("Source changed during asset review. Review again.");
+        }
+        const summary = readAssetImportReview(result);
+        assertAssetEditorVersions(versions, this.assetEditorVersions(), [
+          ...summary.files.map((file) => import_node_path32.default.resolve(root, file.path)),
+          operation.document
+        ]);
+        this.#assetReview = {
+          root,
+          manifest: operation.manifest,
+          document: operation.document,
+          summary,
+          epoch,
+          versions
+        };
+        const reviewDocument = await import_vscode23.workspace.openTextDocument({
+          language: "json",
+          content: JSON.stringify(summary, null, 2)
+        });
+        await import_vscode23.window.showTextDocument(reviewDocument, { preview: true });
+        void import_vscode23.window.showInformationMessage(
+          `Asset review: ${summary.files.length} source files. Apply Reviewed Asset uses this exact plan.`
+        );
+      } else if (action === "apply") {
+        if (!isRecord42(result) || !isRecord42(result.review)) {
+          throw new Error("Invalid asset publication result.");
+        }
+        readAssetImportReview(result.review);
+        published = typeof result.transaction === "string";
+        this.#assetReview = void 0;
+        void import_vscode23.window.showInformationMessage(
+          published ? "Asset edits applied. Re-export for the next editing round." : "No asset changes; source files are unchanged."
+        );
+      } else {
+        const instruction2 = operation.action === "asset-export" && (operation.presentation ?? "tilemap") === "tilemap" ? "Select the Tiles layer, use Draw Pixels and Manual in Aseprite's toolbar (hold Space and press 1), paint and save." : "Edit pixels or palette colors in the fixed inventory and save.";
+        void import_vscode23.window.showInformationMessage(
+          `Asset exported. ${instruction2} Then Review Saved Asset.`
+        );
+      }
+      return result;
+    } finally {
+      this.#busy = void 0;
+      this.#changed.fire(void 0);
+      if (published || this.#assetSavedInputPending) {
+        this.#buildStale = true;
+        this.#savedInput.fire();
+      }
+      this.#assetSavedInputPending = false;
+      await this.refresh();
+    }
+  }
+  /** All asset workers use the same cancellation and final live-buffer gate, including explicit journal recovery. */
+  async runAssetOperation(operation, epoch, versions, reviewedVersions = versions) {
+    const root = operation.directory;
+    return import_vscode23.window.withProgress(
+      {
+        location: import_vscode23.ProgressLocation.Notification,
+        title: `Asset: ${operation.action.slice(6)}`,
+        cancellable: true
+      },
+      async (reporter, token) => {
+        const abort = new AbortController(), listener = token.onCancellationRequested(() => abort.abort());
+        try {
+          return await this.#worker.run(operation, {
+            signal: abort.signal,
+            maxMemoryMiB: import_vscode23.workspace.getConfiguration("asm", import_vscode23.Uri.file(root)).get("analysis.maxMemoryMiB", 4096),
+            onProgress: (message) => reporter.report({ message }),
+            onBeforePublish: (paths) => {
+              if (this.#root !== root || this.#epoch !== epoch) {
+                const input = this.#epochInput ? ` (${import_node_path32.default.relative(root, this.#epochInput)}; ${this.#epochEvent} event)` : "";
+                throw new Error(
+                  `Source/editor state changed during asset validation${input}. Review again.`
+                );
+              }
+              assertAssetEditorVersions(reviewedVersions, this.assetEditorVersions(), paths);
+            }
+          });
+        } finally {
+          listener.dispose();
+        }
+      }
+    );
+  }
+  /** Recovery is an explicit journal direction; unknown external bytes and relevant drafts remain protected by the worker. */
+  async assetRecovery() {
+    if (!import_vscode23.workspace.isTrusted) {
+      throw new Error("Trust this workspace before recovering asset edits.");
+    }
+    if (this.#busy) {
+      throw new Error(`Source operation already running: ${this.#busy}.`);
+    }
+    if (!this.#root) {
+      await this.select();
+    }
+    const root = this.#root;
+    if (!root) {
+      return;
+    }
+    const direction = await import_vscode23.window.showQuickPick(
+      [
+        { label: "Complete staged asset edit", id: "after" },
+        { label: "Restore bytes from before the asset edit", id: "before" }
+      ],
+      { title: "Recover interrupted asset edit" }
+    );
+    if (!direction) {
+      return;
+    }
+    if (this.#root !== root || this.#busy) {
+      throw new Error("Selected source project changed; start recovery again.");
+    }
+    const epoch = this.#epoch, versions = this.assetEditorVersions();
+    this.#busy = "asset-recover";
+    this.#assetSavedInputPending = false;
+    this.#changed.fire(void 0);
+    let recovered = false;
+    try {
+      const result = await this.runAssetOperation(
+        {
+          action: "asset-recover",
+          directory: root,
+          direction: direction.id,
+          drafts: versions.filter((entry) => entry.dirty).map(({ path: path45, version, opaque }) => ({ path: path45, version, opaque }))
+        },
+        epoch,
+        versions
+      );
+      recovered = isRecord42(result) && result.state === "completed";
+      this.#assetReview = void 0;
+      void import_vscode23.window.showInformationMessage(
+        recovered ? "Asset publication recovered. Re-export before editing again." : "No interrupted asset publication to recover."
+      );
+    } finally {
+      this.#busy = void 0;
+      this.#changed.fire(void 0);
+      if (recovered || this.#assetSavedInputPending) {
+        this.#buildStale = true;
+        this.#savedInput.fire();
+      }
+      this.#assetSavedInputPending = false;
+      await this.refresh();
+    }
+  }
   /** A draft owned by another extension cannot be represented by its older saved file. */
   opaqueBinaryBuffers() {
     const known = new Set(
@@ -53819,7 +54667,7 @@ var SourceController = class {
     return import_vscode23.workspace.textDocuments.filter(
       (document) => document.isDirty && document.uri.scheme === "file" && this.contains(document.uri.fsPath)
     ).flatMap((document) => {
-      const relative3 = import_node_path30.default.relative(this.#root, document.uri.fsPath).split(import_node_path30.default.sep).join("/");
+      const relative3 = import_node_path32.default.relative(this.#root, document.uri.fsPath).split(import_node_path32.default.sep).join("/");
       if (!this.authoringFile(document.uri.fsPath)) {
         return [];
       }
@@ -53862,8 +54710,8 @@ var SourceController = class {
     if (action === "build" && (buffers.length || binaryBuffers.length || opaqueBuffers.length)) {
       const files = [
         ...buffers.map((buffer) => buffer.path),
-        ...binaryBuffers.map((document) => import_node_path30.default.relative(root, document.uri.fsPath)),
-        ...opaqueBuffers.map((file) => import_node_path30.default.relative(root, file))
+        ...binaryBuffers.map((document) => import_node_path32.default.relative(root, document.uri.fsPath)),
+        ...opaqueBuffers.map((file) => import_node_path32.default.relative(root, file))
       ];
       throw this.changedBuildError(files);
     }
@@ -53883,7 +54731,7 @@ var SourceController = class {
     let objectId;
     let expansionSize;
     if (action === "expand") {
-      const layoutText = await import_promises14.default.readFile(import_node_path30.default.join(root, this.#configuration.layout), "utf8");
+      const layoutText = await import_promises14.default.readFile(import_node_path32.default.join(root, this.#configuration.layout), "utf8");
       const layoutValue = JSON.parse(layoutText);
       if (!isRecord42(layoutValue)) {
         throw new Error("Layout contract is missing a numeric ROM size.");
@@ -53909,16 +54757,16 @@ var SourceController = class {
       }
     }
     if (action === "relocate") {
-      const file = import_node_path30.default.join(root, this.#configuration.layout);
+      const file = import_node_path32.default.join(root, this.#configuration.layout);
       if ((await import_promises14.default.stat(file)).size > 8 * 1024 * 1024) {
         throw new Error("Layout contract exceeds its size budget.");
       }
       const layoutText = await import_promises14.default.readFile(file, "utf8");
       const layoutValue = JSON.parse(layoutText);
       const objects = isRecord42(layoutValue) && Array.isArray(layoutValue.objects) ? layoutValue.objects.filter(isLayoutObject) : [];
-      const choices = objects.map((object) => ({
-        label: object.id,
-        description: object.kind
+      const choices = objects.map((object2) => ({
+        label: object2.id,
+        description: object2.kind
       }));
       if (!choices.length) {
         throw new Error(
@@ -53957,7 +54805,7 @@ var SourceController = class {
       if (action === "preview") {
         for (const document of binaryBuffers) {
           overlays.push({
-            path: import_node_path30.default.relative(root, document.uri.fsPath).split(import_node_path30.default.sep).join("/"),
+            path: import_node_path32.default.relative(root, document.uri.fsPath).split(import_node_path32.default.sep).join("/"),
             bytes: Buffer.from(await document.snapshot())
           });
         }
@@ -54020,8 +54868,8 @@ var SourceController = class {
         const changed2 = await changedBuildInputs(root, [...buildControls, ...result.inputs]);
         const unsaved = [
           ...this.buffers().map((buffer) => buffer.path),
-          ...this.binaryBuffers().map((document) => import_node_path30.default.relative(root, document.uri.fsPath)),
-          ...this.opaqueBinaryBuffers().map((file) => import_node_path30.default.relative(root, file))
+          ...this.binaryBuffers().map((document) => import_node_path32.default.relative(root, document.uri.fsPath)),
+          ...this.opaqueBinaryBuffers().map((file) => import_node_path32.default.relative(root, file))
         ];
         if (this.#root !== root) {
           throw new Error(
@@ -54039,7 +54887,7 @@ var SourceController = class {
       } else if (action === "relocate" || action === "expand") {
         const edits = relocationEdits(result);
         const documents = await Promise.all(
-          edits.map((edit2) => import_vscode23.workspace.openTextDocument(import_vscode23.Uri.file(import_node_path30.default.join(root, edit2.path))))
+          edits.map((edit2) => import_vscode23.workspace.openTextDocument(import_vscode23.Uri.file(import_node_path32.default.join(root, edit2.path))))
         );
         if (this.#root !== root || this.#epoch !== epoch || this.buffers().length || this.binaryBuffers().length) {
           throw new Error(
@@ -54117,7 +54965,7 @@ var SourceController = class {
       const changedPrefix = "Source dependency changed during assembly: ";
       if (action === "build" && error instanceof Error && error.message.startsWith(changedPrefix)) {
         const file = error.message.slice(changedPrefix.length);
-        failure = this.changedBuildError([import_node_path30.default.relative(root, file)]);
+        failure = this.changedBuildError([import_node_path32.default.relative(root, file)]);
       }
       if (action === "build" || action === "finish") {
         this.publishDiagnostics(failure);
@@ -54211,7 +55059,7 @@ var SourceController = class {
     const diagnostics = /* @__PURE__ */ new Map();
     for (const line of message.split("\n").slice(0, 30)) {
       const match = /^(.*):(\d+): ([\w-]+): (.*)$/.exec(line);
-      const file = match?.[1] ?? import_node_path30.default.join(this.#root, this.#configuration.buildConfig);
+      const file = match?.[1] ?? import_node_path32.default.join(this.#root, this.#configuration.buildConfig);
       const row = Math.max(0, Number(match?.[2] ?? 1) - 1);
       const diagnostic = new import_vscode23.Diagnostic(
         new import_vscode23.Range(row, 0, row, 1),
@@ -54231,18 +55079,18 @@ var SourceController = class {
     if (!this.#root) {
       return false;
     }
-    const relative3 = import_node_path30.default.relative(this.#root, file);
-    return relative3 === "" || !relative3.startsWith(`..${import_node_path30.default.sep}`) && relative3 !== ".." && !import_node_path30.default.isAbsolute(relative3);
+    const relative3 = import_node_path32.default.relative(this.#root, file);
+    return relative3 === "" || !relative3.startsWith(`..${import_node_path32.default.sep}`) && relative3 !== ".." && !import_node_path32.default.isAbsolute(relative3);
   }
   /** Ignore local evidence, verification reports and caches even when they share the repository root. */
   authoringFile(file) {
     if (!this.#root || !this.#configuration || !this.contains(file)) {
       return false;
     }
-    const relative3 = import_node_path30.default.relative(this.#root, file).split(import_node_path30.default.sep).join("/");
+    const relative3 = import_node_path32.default.relative(this.#root, file).split(import_node_path32.default.sep).join("/");
     if (
       // Finder metadata may change when browsing assets; it never contributes build bytes.
-      import_node_path30.default.basename(relative3) === ".DS_Store" || // These conventional subdirectories hold analysis/capture evidence or golden outputs,
+      import_node_path32.default.basename(relative3) === ".DS_Store" || // These conventional subdirectories hold analysis/capture evidence or golden outputs,
       // not editable source. Consumed files are still checked by the build receipt.
       this.#configuration.sourceRoots.some(
         (root) => ["analysis", "build", "captures"].some(
@@ -54265,7 +55113,7 @@ var SourceController = class {
     }
     await import_vscode23.commands.executeCommand(
       "revealInExplorer",
-      import_vscode23.Uri.file(import_node_path30.default.join(this.#root, this.#configuration.researchRoots[0]))
+      import_vscode23.Uri.file(import_node_path32.default.join(this.#root, this.#configuration.researchRoots[0]))
     );
   }
   async restore() {
@@ -54338,7 +55186,7 @@ function isBuildResult(value) {
   if (!isRecord43(value) || typeof value.ok !== "boolean") {
     return false;
   }
-  const strings = [
+  const strings2 = [
     "outputPath",
     "outputSha256",
     "debugMapPath",
@@ -54349,7 +55197,7 @@ function isBuildResult(value) {
   ];
   const numbers2 = ["bytes", "outputSize"];
   const booleans = ["outputChanged", "debugMapChanged"];
-  return strings.every((key3) => value[key3] === void 0 || typeof value[key3] === "string") && numbers2.every((key3) => value[key3] === void 0 || typeof value[key3] === "number") && booleans.every((key3) => value[key3] === void 0 || typeof value[key3] === "boolean");
+  return strings2.every((key3) => value[key3] === void 0 || typeof value[key3] === "string") && numbers2.every((key3) => value[key3] === void 0 || typeof value[key3] === "number") && booleans.every((key3) => value[key3] === void 0 || typeof value[key3] === "boolean");
 }
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client2;
@@ -54410,7 +55258,7 @@ function activate(context) {
     maxMemoryMiB: (directory) => import_vscode24.workspace.getConfiguration("asm", import_vscode24.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
   });
   context.subscriptions.push(worker);
-  const serverModule = context.asAbsolutePath(path42.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path44.join("server", "server.mjs"));
   const assetPreviewController = new AssetPreviewController(() => client2);
   context.subscriptions.push(assetPreviewController);
   const serverOptions = {
@@ -54680,8 +55528,8 @@ function activate(context) {
     context.subscriptions.push(
       client2.onRequest("asm/researchBuffers", ({ root }) => {
         const buffers = import_vscode24.workspace.textDocuments.filter((document) => {
-          const relative3 = path42.relative(root, document.uri.fsPath);
-          return document.uri.scheme === "file" && document.uri.fsPath.endsWith(".json") && relative3 !== ".." && !relative3.startsWith(`..${path42.sep}`) && !path42.isAbsolute(relative3);
+          const relative3 = path44.relative(root, document.uri.fsPath);
+          return document.uri.scheme === "file" && document.uri.fsPath.endsWith(".json") && relative3 !== ".." && !relative3.startsWith(`..${path44.sep}`) && !path44.isAbsolute(relative3);
         }).map((document) => ({
           uri: document.uri.toString(),
           version: document.version,
@@ -54726,7 +55574,7 @@ function toggleWatch() {
     }
     saveListener = import_vscode24.workspace.onDidSaveTextDocument(onDocumentSaved);
     void import_vscode24.window.showInformationMessage(
-      `Assembly: watching ${path42.basename(import_vscode24.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+      `Assembly: watching ${path44.basename(import_vscode24.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   }
   updateStatusItem();
@@ -54831,7 +55679,7 @@ function resolveBuildEntryUri() {
   const folder = activeUri ? import_vscode24.workspace.getWorkspaceFolder(activeUri) : import_vscode24.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path42.isAbsolute(first) ? import_vscode24.Uri.file(first).toString() : import_vscode24.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path44.isAbsolute(first) ? import_vscode24.Uri.file(first).toString() : import_vscode24.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
       `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode24.Uri.parse(resolved).fsPath}`
     );
@@ -54900,9 +55748,9 @@ async function initConfig() {
   let entryPoints = config.get("entryPoints", []);
   const active = import_vscode24.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative3 = path42.relative(folder.uri.fsPath, active.fileName);
+    const relative3 = path44.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative3 && !relative3.startsWith("..") ? relative3 : path42.basename(active.fileName)
+      relative3 && !relative3.startsWith("..") ? relative3 : path44.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -55006,7 +55854,7 @@ async function runBuild(documentUri, transient = false) {
       if (result.debugMapPath) {
         editorInformationController?.buildCompleted(
           result.debugMapPath,
-          import_vscode24.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path42.dirname(document.fsPath)
+          import_vscode24.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path44.dirname(document.fsPath)
         );
       }
       const changed2 = result.outputChanged === false && result.debugMapChanged === false ? " (unchanged)" : "";
@@ -55034,11 +55882,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path42.isAbsolute(configuredPath)) {
-    return path42.normalize(configuredPath);
+  if (path44.isAbsolute(configuredPath)) {
+    return path44.normalize(configuredPath);
   }
   const folder = import_vscode24.workspace.getWorkspaceFolder(document);
-  return path42.resolve(folder?.uri.fsPath ?? path42.dirname(document.fsPath), configuredPath);
+  return path44.resolve(folder?.uri.fsPath ?? path44.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!watchEnabled) {

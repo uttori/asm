@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 
 import type { AssetInput } from "../registry.js";
+import { composeSomRoom, renderSomRoomComposition } from "./som-room-composition.js";
 
 interface RoomCondition {
   variable: number;
@@ -19,7 +20,8 @@ interface RoomEntity extends RoomCondition {
   interaction: number;
 }
 
-interface RoomPiece extends RoomCondition {
+/** Native conditional placement in 16-pixel metatile units; a layer transition retains its explicit marker. */
+export interface RoomPiece extends RoomCondition {
   marker?: number;
   layer: number;
   layout: number;
@@ -60,6 +62,8 @@ export interface RoomPreview {
   version: number;
   tilesets: Record<string, RoomPreviewTileset>;
   layouts: Record<string, RoomPreviewLayout>;
+  /** Descriptive capture/initial-loader evidence; source write authority is resolved separately. */
+  provenance?: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -267,144 +271,14 @@ export function renderRoomAsset(
   preview: RoomPreview,
   { layer, story }: { layer?: unknown; story?: Readonly<Record<string, number>> } = {},
 ) {
-  assert.equal(preview.format, "som.room.preview");
-  assert.equal(preview.version, 1);
-  assert(layer === undefined || layer === 1 || layer === 2, "Preview layer must be 1 or 2.");
-  const selectedLayer = layer === 1 || layer === 2 ? layer : undefined;
-  const key = `${room.header[0] & 63}:${room.header[2]}:${room.header[1] & 127}`;
-  const assets = preview.tilesets[key];
-  assert(assets, `Preview resources do not contain tileset ${key}.`);
-  const states = { ...room.previewStory, ...story };
-  const pieces = room.pieces.filter((piece) => {
-    const value = states[piece.variable];
-    integer(value, 255, `preview story ${piece.variable}`);
-    return value >= piece.minimum && value <= piece.maximum;
-  });
-  assert(pieces.length, "No active room pieces in this preview state.");
-  let width = 0,
-    height = 0;
-  for (const piece of pieces) {
-    integer(piece.x, 127, "piece x");
-    integer(piece.y, 127, "piece y");
-    assert(piece.layer === 1 || piece.layer === 2, "Piece layer must be 1 or 2.");
-    const layout = Object.hasOwn(preview.layouts, piece.layout)
-      ? preview.layouts[piece.layout]
-      : undefined;
-    if (!layout || layout.tiles.length !== layout.width * layout.height) {
-      assert(false, "Missing or incomplete layout preview.");
-    }
-    integer(layout.width, 128, "layout width");
-    integer(layout.height, 128, "layout height");
-    assert(layout.width && layout.height, "Layout dimensions must be positive.");
-    width = Math.max(width, piece.x + layout.width);
-    height = Math.max(height, piece.y + layout.height);
+  if (layer !== undefined && layer !== 1 && layer !== 2) {
+    throw new Error("Preview layer must be 1 or 2.");
   }
-  assert(width <= 128 && height <= 128, "Room pieces exceed the native 128-tile layer bounds.");
-  const maps = [new Map<number, number>(), new Map<number, number>()];
-  for (const piece of pieces) {
-    const layout = preview.layouts[piece.layout];
-    for (let y = 0; y < layout.height; y++) {
-      for (let x = 0; x < layout.width; x++) {
-        maps[piece.layer - 1].set(
-          (piece.y + y) * width + piece.x + x,
-          layout.tiles[y * layout.width + x],
-        );
-      }
-    }
-  }
-  const pixelWidth = width * 16,
-    pixelHeight = height * 16;
-  const rgba = new Uint8Array(pixelWidth * pixelHeight * 4);
-  for (let i = 0; i < rgba.length; i += 4) {
-    rgba.set([10, 14, 22, 255], i);
-  }
-  assert(
-    assets.graphics.length % 2 === 0 && /^[\da-f]+$/i.test(assets.graphics),
-    "Invalid planar graphics.",
-  );
-  const graphicsPairs = assets.graphics.match(/../g);
-  assert(graphicsPairs, "Invalid planar graphics.");
-  const graphics = Uint8Array.from(graphicsPairs, (byte) => parseInt(byte, 16));
-  assert(
-    typeof assets.graphicsKnown === "string" &&
-      /^(?:00|01)+$/.test(assets.graphicsKnown) &&
-      assets.graphicsKnown.length === assets.graphics.length,
-    "Preview graphics require a matching physical-coverage mask.",
-  );
-  const knownPairs = assets.graphicsKnown.match(/../g);
-  assert(knownPairs, "Preview graphics require a matching physical-coverage mask.");
-  const graphicsKnown = Uint8Array.from(knownPairs, (byte) => parseInt(byte, 16));
-  assert(
-    assets.colors.length === 128 && assets.layerWords.length === 2,
-    "Incomplete palette/metatile preview.",
-  );
-  // Mode-1 background priority order; sprites, BG3, scroll and color math are intentionally absent.
-  const passes = selectedLayer
-    ? [
-        [selectedLayer - 1, 0],
-        [selectedLayer - 1, 1],
-      ]
-    : [
-        [1, 0],
-        [0, 0],
-        [1, 1],
-        [0, 1],
-      ];
-  for (const [plane, priority] of passes) {
-    for (const [position, tile] of maps[plane]) {
-      integer(tile, 191, "static metatile id");
-      const words = assets.layerWords[plane];
-      assert.equal(words.length, 768);
-      const mapX = position % width,
-        mapY = Math.floor(position / width);
-      for (let part = 0; part < 4; part++) {
-        const word = integer(words[tile * 4 + part], 65535, "metatile word");
-        if (((word >>> 13) & 1) !== priority) {
-          continue;
-        }
-        const offset = (word & 1023) * 32;
-        assert(offset + 32 <= graphics.length, "Preview references uncaptured graphics.");
-        assert(
-          graphicsKnown.subarray(offset, offset + 32).every((byte) => byte === 1),
-          "Preview references unknown physical graphics bytes.",
-        );
-        for (let y = 0; y < 8; y++) {
-          for (let x = 0; x < 8; x++) {
-            const sx = word & 0x4000 ? 7 - x : x,
-              sy = word & 0x8000 ? 7 - y : y;
-            let color = 0;
-            for (let bit = 0; bit < 4; bit++) {
-              color |=
-                ((graphics[offset + (bit >>> 1) * 16 + sy * 2 + (bit % 2)] >>> (7 - sx)) & 1) <<
-                bit;
-            }
-            if (!color) {
-              continue;
-            }
-            const bgr = integer(
-              assets.colors[((word >>> 10) & 7) * 16 + color],
-              65535,
-              "palette word",
-            );
-            const at =
-              ((mapY * 16 + (part >>> 1) * 8 + y) * pixelWidth + mapX * 16 + (part % 2) * 8 + x) *
-              4;
-            rgba.set(
-              [0, 5, 10].map((shift) => Math.floor((((bgr >>> shift) & 31) * 255) / 31)),
-              at,
-            );
-          }
-        }
-      }
-    }
-  }
+  const composition = composeSomRoom(room, preview, story);
   return {
-    rgba,
-    width: pixelWidth,
-    height: pixelHeight,
-    tileset: key,
-    activePieces: pieces.map((piece) => piece.layout),
-    limitation:
-      "Background geometry only; omits actors, BG3, camera, mutable clones and color math.",
+    ...renderSomRoomComposition(composition, layer),
+    tileset: composition.tileset,
+    activePieces: composition.activePieces.map((piece) => piece.layout),
+    limitation: composition.limitation,
   };
 }

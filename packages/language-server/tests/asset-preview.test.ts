@@ -49,7 +49,9 @@ test("full previews retain original dimensions beyond thumbnail and 1024-pixel l
   const width = 2048;
   const height = 8;
   const pixels = new Uint8Array(width * height * 4);
-  for (let offset = 3; offset < pixels.length; offset += 4) pixels[offset] = 255;
+  for (let offset = 3; offset < pixels.length; offset += 4) {
+    pixels[offset] = 255;
+  }
   const preview = convertAssetPreview({
     source: { bytes: rgbaNativePng(pixels, width, height), mediaType: "image/png" },
     resources: {},
@@ -217,7 +219,11 @@ test("combined SoM frame previews retain the atlas and all palette users", (t) =
   const woman = preview("npc/potos-old-woman");
   t.is(woman.encodedBytes, 1760);
   t.is(woman.metadata?.paletteId, "C827AC");
-  t.is((woman.metadata?.segments as string[]).length, 7);
+  const womanSegments = woman.metadata?.segments;
+  if (!Array.isArray(womanSegments)) {
+    throw new Error("Missing preview segment inventory.");
+  }
+  t.is(womanSegments.length, 7);
   const cannon = preview("objects/cannon", [
     "cannon-bottom-right-tiles",
     "cannon-top-corner-tiles",
@@ -226,8 +232,22 @@ test("combined SoM frame previews retain the atlas and all palette users", (t) =
     "cannon-bottom-left-tiles",
   ]);
   t.is(cannon.encodedBytes, 1728);
+  const cannonPalettes = cannon.metadata?.palettes;
+  if (!Array.isArray(cannonPalettes)) {
+    throw new Error("Missing preview palette inventory.");
+  }
   t.deepEqual(
-    (cannon.metadata?.palettes as { paletteId: string }[]).map((palette) => palette.paletteId),
+    cannonPalettes.map((palette: unknown) => {
+      if (
+        !palette ||
+        typeof palette !== "object" ||
+        !("paletteId" in palette) ||
+        typeof palette.paletteId !== "string"
+      ) {
+        throw new Error("Invalid preview palette.");
+      }
+      return palette.paletteId;
+    }),
     ["C8296E", "C8298C", "C829E6", "C829C8", "C82A04"],
   );
   t.throws(() => preview("objects/cannon"), { message: /gaps or overlaps/ });

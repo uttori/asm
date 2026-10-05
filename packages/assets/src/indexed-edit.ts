@@ -1,3 +1,4 @@
+import { ASSET_LIMITS, boundedSum, rasterArea } from "./limits.js";
 import { integer } from "./validation.js";
 
 /** Row-major palette indexes, independent of tile size, palette encoding or game. */
@@ -39,14 +40,9 @@ export interface IndexedPlacement {
  * @param {IndexedPixels} image Row-major index buffer whose dimensions must agree exactly.
  */
 export function validateIndexedPixels(image: IndexedPixels): void {
-  integer(image.width, "Indexed width", 1, 1 << 20);
-  integer(image.height, "Indexed height", 1, 1 << 20);
-  if (
-    image.width * image.height > 1 << 20 ||
-    !(image.indexes instanceof Uint8Array) ||
-    image.indexes.length !== image.width * image.height
-  ) {
-    throw new RangeError("Indexed pixels are missing or exceed the one-megapixel limit.");
+  const pixels = rasterArea(image.width, image.height, "Indexed");
+  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
+    throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
   }
 }
 
@@ -56,11 +52,7 @@ export function validateIndexedPixels(image: IndexedPixels): void {
 function validateBounds(bounds: PixelBounds): void {
   integer(bounds.x, "Rectangle x", -(1 << 20), 1 << 20);
   integer(bounds.y, "Rectangle y", -(1 << 20), 1 << 20);
-  integer(bounds.width, "Rectangle width", 1, 1 << 20);
-  integer(bounds.height, "Rectangle height", 1, 1 << 20);
-  if (bounds.width * bounds.height > 1 << 20) {
-    throw new RangeError("Rectangle exceeds pixel limit.");
-  }
+  rasterArea(bounds.width, bounds.height, "Rectangle");
 }
 
 /** Reject truthy non-booleans rather than silently mirroring malformed metadata.
@@ -172,10 +164,12 @@ export function renderIndexedPlacements(
     ) {
       throw new RangeError(`Placement ${placement.id} exceeds the viewport.`);
     }
-    work += source.width * source.height;
-    if (work > 64 * 1024 * 1024) {
-      throw new RangeError("Placement rendering exceeds work limit.");
-    }
+    work = boundedSum(
+      work,
+      source.indexes.length,
+      ASSET_LIMITS.renderPixels,
+      "Placement rendering work",
+    );
   }
   const indexes = background
     ? Uint8Array.from(background)

@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { IndexedImage } from "@uttori/asm-assets/image";
+import { ASSET_LIMITS, PNG_EDITOR_BACKUP_BYTES } from "@uttori/asm-assets/limits";
 import { EventEmitter, type CustomDocument, type CustomDocumentEditEvent, type Uri } from "vscode";
 
 import type { BinaryDrafts } from "./binary-drafts.js";
@@ -81,7 +82,7 @@ export class PngDocument implements CustomDocument {
     let diskHash: string | undefined;
     let backupGuidance: string | null | undefined;
     if (backup) {
-      if (backup.length > 26 * 1024 * 1024) {
+      if (backup.length > PNG_EDITOR_BACKUP_BYTES) {
         throw new Error("PNG backup exceeds its size budget.");
       }
       const value: unknown = JSON.parse(Buffer.from(backup).toString("utf8"));
@@ -151,8 +152,8 @@ export class PngDocument implements CustomDocument {
   /** Stat before reading prevents unbounded allocation even for malformed containers or external replacements. */
   private static async read(uri: Uri): Promise<Uint8Array> {
     const stat = await fs.lstat(uri.fsPath);
-    if (!stat.isFile() || stat.size > 16 * 1024 * 1024) {
-      throw new Error("PNG editing requires a regular file of at most 16 MiB.");
+    if (!stat.isFile() || stat.size > ASSET_LIMITS.pngBytes) {
+      throw new Error("PNG editing requires a regular file of at most 32 MiB.");
     }
     return fs.readFile(uri.fsPath);
   }

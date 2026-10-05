@@ -1,10 +1,11 @@
 import ImagePNG from "@uttori/data-tools/image/data-image-png";
-/** Asset policy is narrower than the general image library: static, at most one megapixel. */
+import { ASSET_LIMITS } from "./limits.js";
+/** Asset policy is narrower than the general image library: static, at most four megapixels. */
 export const ASSET_PNG_OPTIONS = Object.freeze({
-    maxInputBytes: 16 * 1024 * 1024,
-    maxPixels: 1024 * 1024,
-    maxInflatedBytes: 5 * 1024 * 1024,
-    maxOutputBytes: 16 * 1024 * 1024,
+    maxInputBytes: ASSET_LIMITS.pngBytes,
+    maxPixels: ASSET_LIMITS.rasterPixels,
+    maxInflatedBytes: ASSET_LIMITS.pngInflatedBytes,
+    maxOutputBytes: ASSET_LIMITS.pngBytes,
     maxChunks: 16384,
     allow16Bit: false,
     animation: "reject",

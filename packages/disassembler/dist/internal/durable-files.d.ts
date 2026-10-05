@@ -1,8 +1,9 @@
 /** Persist a replacement before exposing it; temporary files always share the destination volume.
  * @param {string} file Destination owned by the caller.
  * @param {string | Uint8Array} bytes Complete replacement bytes.
+ * @param {number} [mode] Optional permission bits for the replacement; ordinary source callers preserve the existing mode.
  */
-export declare function durableReplace(file: string, bytes: string | Uint8Array): void;
+export declare function durableReplace(file: string, bytes: string | Uint8Array, mode?: number): void;
 /** Flush directory entries after rename/unlink on platforms supporting directory fsync.
  * @param {string} directory Directory whose entries changed.
  */

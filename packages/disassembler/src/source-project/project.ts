@@ -5,6 +5,7 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 import { openAnalysisProjectStore } from "../project/project-store.js";
 import { readResearchInputs, type ResearchSnapshot } from "../research-inputs/inputs.js";
+import { sourceFilePublicationEpoch } from "./file-transaction.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath, sourceRepository, type SourceRepository } from "./git.js";
 
@@ -123,6 +124,7 @@ export function parseSourceProject(value: unknown): SourceProjectConfiguration {
 /** Discover only the selected repository's project; nested repositories cannot inherit a parent's identity. */
 export async function openSourceProject(directory: string): Promise<SourceProject> {
   const repository = await sourceRepository(directory);
+  sourceFilePublicationEpoch(repository);
   const configuration = parseSourceProject(
     JSON.parse(fs.readFileSync(path.join(repository.root, ".uttori/project.json"), "utf8")),
   );

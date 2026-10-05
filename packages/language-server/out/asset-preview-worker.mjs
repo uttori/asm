@@ -10724,12 +10724,56 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
+// packages/assets/src/limits.ts
+var ASSET_LIMITS = Object.freeze({
+  rasterPixels: 4 * 1024 * 1024,
+  interchangeSide: 4096,
+  pngBytes: 32 * 1024 * 1024,
+  pngInflatedBytes: 20 * 1024 * 1024,
+  asepriteBytes: 16 * 1024 * 1024,
+  decodedBytes: 64 * 1024 * 1024,
+  renderPixels: 64 * 1024 * 1024,
+  frames: 1024,
+  layers: 4096,
+  tilesets: 1024,
+  owners: 4 * 1024 * 1024,
+  references: 4 * 1024 * 1024,
+  chunks: 1024 * 1024,
+  metadataBytes: 16 * 1024 * 1024,
+  baselineMetadataBytes: 64 * 1024 * 1024,
+  metadataNodes: 1024 * 1024,
+  // Baselines include owner and view declarations as well as the file model; pixels stay in binary blobs.
+  baselineMetadataNodes: 4 * 1024 * 1024,
+  thumbnailEdge: 1024
+});
+function boundedProduct(a, b, maximum, label) {
+  integer(maximum, `${label} limit`, 0, Number.MAX_SAFE_INTEGER);
+  integer(a, label, 0, Number.MAX_SAFE_INTEGER);
+  integer(b, label, 0, Number.MAX_SAFE_INTEGER);
+  if (a !== 0 && b > Math.floor(maximum / a)) {
+    throw new RangeError(`${label} exceeds limit ${maximum}.`);
+  }
+  return a * b;
+}
+function boundedSum(total, next, maximum, label) {
+  integer(maximum, `${label} limit`, 0, Number.MAX_SAFE_INTEGER);
+  integer(total, label, 0, maximum);
+  integer(next, label, 0, maximum - total);
+  return total + next;
+}
+function rasterArea(width, height, label = "Raster", side = ASSET_LIMITS.rasterPixels) {
+  integer(width, `${label} width`, 1, side);
+  integer(height, `${label} height`, 1, side);
+  return boundedProduct(width, height, ASSET_LIMITS.rasterPixels, `${label} pixels`);
+}
+var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
+
 // packages/assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
-  maxInputBytes: 16 * 1024 * 1024,
-  maxPixels: 1024 * 1024,
-  maxInflatedBytes: 5 * 1024 * 1024,
-  maxOutputBytes: 16 * 1024 * 1024,
+  maxInputBytes: ASSET_LIMITS.pngBytes,
+  maxPixels: ASSET_LIMITS.rasterPixels,
+  maxInflatedBytes: ASSET_LIMITS.pngInflatedBytes,
+  maxOutputBytes: ASSET_LIMITS.pngBytes,
   maxChunks: 16384,
   allow16Bit: false,
   animation: "reject",
@@ -10761,20 +10805,15 @@ var pngImporter = Object.freeze({
 
 // packages/assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
-  integer(image.width, "Indexed width", 1, 1 << 20);
-  integer(image.height, "Indexed height", 1, 1 << 20);
-  if (image.width * image.height > 1 << 20 || !(image.indexes instanceof Uint8Array) || image.indexes.length !== image.width * image.height) {
-    throw new RangeError("Indexed pixels are missing or exceed the one-megapixel limit.");
+  const pixels = rasterArea(image.width, image.height, "Indexed");
+  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
+    throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
   }
 }
 function validateBounds(bounds) {
   integer(bounds.x, "Rectangle x", -(1 << 20), 1 << 20);
   integer(bounds.y, "Rectangle y", -(1 << 20), 1 << 20);
-  integer(bounds.width, "Rectangle width", 1, 1 << 20);
-  integer(bounds.height, "Rectangle height", 1, 1 << 20);
-  if (bounds.width * bounds.height > 1 << 20) {
-    throw new RangeError("Rectangle exceeds pixel limit.");
-  }
+  rasterArea(bounds.width, bounds.height, "Rectangle");
 }
 function validateOrientation(value) {
   for (const flag of [value.flipX, value.flipY]) {
@@ -11188,7 +11227,7 @@ function imageModel(document2) {
     throw new Error("Image encoder requires imported PNG pixels.");
   }
   const value = document2.value;
-  if (value.kind !== document2.kind || typeof value.width !== "number" || typeof value.height !== "number" || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || value.width < 1 || value.height < 1 || value.width * value.height > 1024 * 1024) {
+  if (value.kind !== document2.kind || typeof value.width !== "number" || typeof value.height !== "number" || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || value.width < 1 || value.height < 1 || value.width > ASSET_LIMITS.rasterPixels || value.height > Math.floor(ASSET_LIMITS.rasterPixels / value.width)) {
     throw new Error("Image model has invalid dimensions or kind.");
   }
   const pixels = value.width * value.height;
@@ -11387,26 +11426,34 @@ function withImageEncoders(native) {
 
 // packages/assets/src/preview.ts
 function rgbaNativePng(rgba, width, height) {
-  integer(width, "Image width", 1, 4096);
-  integer(height, "Image height", 1, 4096);
-  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+  integer(width, "Image width", 1, ASSET_LIMITS.interchangeSide);
+  integer(height, "Image height", 1, ASSET_LIMITS.interchangeSide);
+  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
     throw new Error("Image pixels are missing or exceed the four-megapixel limit.");
   }
   const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
-  const surface = new RgbaSurface(width, height, bytes, { copy: false, maxPixels: 2048 * 2048 });
-  return data_image_png_default.encodeRGBA(surface, { filter: "none", level: 6, maxPixels: 2048 * 2048 });
+  const surface = new RgbaSurface(width, height, bytes, {
+    copy: false,
+    maxPixels: ASSET_LIMITS.rasterPixels
+  });
+  return data_image_png_default.encodeRGBA(surface, {
+    filter: "none",
+    level: 6,
+    maxPixels: ASSET_LIMITS.rasterPixels,
+    maxOutputBytes: ASSET_LIMITS.pngBytes
+  });
 }
 function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
-  integer(width, "Preview width", 1, 4096);
-  integer(height, "Preview height", 1, 4096);
-  integer(maxEdge, "Preview edge", 1, 1024);
-  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+  integer(width, "Preview width", 1, ASSET_LIMITS.interchangeSide);
+  integer(height, "Preview height", 1, ASSET_LIMITS.interchangeSide);
+  integer(maxEdge, "Preview edge", 1, ASSET_LIMITS.thumbnailEdge);
+  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
     throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
   }
   const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
   const surface = new RgbaSurface(width, height, bytes, {
     copy: false,
-    maxPixels: 2048 * 2048
+    maxPixels: ASSET_LIMITS.rasterPixels
   }).fitNearest(maxEdge);
   return data_image_png_default.encodeRGBA(surface, {
     filter: "none",
@@ -11479,7 +11526,8 @@ function encodeBossGraphics(data) {
     const literals = [];
     for (let bit = 0; bit < 8; bit++) {
       const index = start + bit;
-      if (index < 2 || data[index] !== data[index - 2]) {
+      const previous = index >= 2 ? data[index - 2] : 0;
+      if (data[index] !== previous) {
         mask |= 1 << 7 - bit;
         literals.push(data[index]);
       }
@@ -12087,7 +12135,72 @@ function encodeInspectedFrameSegment(inspected, segmentName) {
     4
   );
 }
+function readFrameAtlasSelection(options) {
+  if (options.segment !== void 0 && options.segments !== void 0) {
+    throw new Error("Specify segment or segments, not both.");
+  }
+  if (options.segment !== void 0) {
+    if (typeof options.segment !== "string") {
+      throw new Error("Frame atlas segment must be a string.");
+    }
+    return options.segment;
+  }
+  if (options.segments !== void 0) {
+    if (!Array.isArray(options.segments) || options.segments.some((name) => typeof name !== "string")) {
+      throw new Error("Frame atlas segments must be an array of strings.");
+    }
+    return options.segments.map((name) => {
+      if (typeof name !== "string") {
+        throw new Error("Invalid frame atlas segment.");
+      }
+      return name;
+    });
+  }
+  return void 0;
+}
+function frameAtlasSegmentOrder(layout2, selection) {
+  const names = selection ?? Object.keys(layout2.segments);
+  if (!names.length || new Set(names).size !== names.length) {
+    throw new Error("Frame atlas selection must contain unique, nonempty segments.");
+  }
+  const spans = names.map((name) => {
+    const segment = Object.hasOwn(layout2.segments, name) ? layout2.segments[name] : void 0;
+    if (!segment || !/^[\da-f]{6}$/i.test(segment.romAddress) || !Array.isArray(segment.tiles) || !segment.tiles.length) {
+      throw new Error(`Invalid native frame atlas span: ${name}.`);
+    }
+    const start = Number.parseInt(segment.romAddress, 16);
+    const end = start + segment.tiles.length * 32;
+    if (end > 16777216) {
+      throw new Error(`Native frame atlas span exceeds the 24-bit address space: ${name}.`);
+    }
+    return { name, start, end };
+  }).sort((a, b) => a.start - b.start);
+  for (let index = 1; index < spans.length; index++) {
+    if (spans[index].start !== spans[index - 1].end) {
+      throw new Error("Selected frame atlas segments must be contiguous without gaps or overlaps.");
+    }
+  }
+  return spans.map((span) => span.name);
+}
+function encodeInspectedFrameSegments(inspected, selection) {
+  const chunks = frameAtlasSegmentOrder(inspected.layout, selection).map(
+    (name) => encodeInspectedFrameSegment(inspected, name)
+  );
+  const bytes = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
 function encodeFrameAtlas(source, layout2, segmentName, catalog) {
+  if (typeof segmentName !== "string") {
+    return encodeInspectedFrameSegments(
+      inspectFrameAtlas(source, layout2, catalog, { whole: true }),
+      segmentName
+    );
+  }
   return encodeInspectedFrameSegment(
     inspectFrameAtlas(source, layout2, catalog, { segmentName }),
     segmentName
@@ -12296,6 +12409,247 @@ function encodeMode(source, mode, unusedHeaderByte) {
 
 // packages/assets/src/secret-of-mana/som-room-assets.ts
 import assert2 from "node:assert/strict";
+
+// packages/assets/src/secret-of-mana/som-room-composition.ts
+var LIMITATION = "Background geometry only; omits actors, BG3, camera, mutable clones and color math.";
+function somRoomPaletteColor(word, transparent) {
+  integer(word, "Room palette word", 0, 65535);
+  if (transparent) {
+    return [0, 0, 0, 0];
+  }
+  return [
+    Math.floor((word & 31) * 255 / 31),
+    Math.floor((word >>> 5 & 31) * 255 / 31),
+    Math.floor((word >>> 10 & 31) * 255 / 31),
+    255
+  ];
+}
+function physicalGraphics(graphics, mask) {
+  if (typeof graphics !== "string" || !graphics.length || graphics.length > 32768 * 2 || graphics.length % 64 || !/^[\da-f]+$/i.test(graphics)) {
+    throw new Error("Invalid or oversized planar room graphics.");
+  }
+  if (typeof mask !== "string" || mask.length !== graphics.length || !/^(?:00|01)+$/.test(mask)) {
+    throw new Error("Preview graphics require a matching physical-coverage mask.");
+  }
+  const bytes = new Uint8Array(graphics.length / 2), known = new Uint8Array(bytes.length);
+  for (let offset = 0; offset < bytes.length; offset++) {
+    bytes[offset] = Number.parseInt(graphics.slice(offset * 2, offset * 2 + 2), 16);
+    known[offset] = mask.charCodeAt(offset * 2 + 1) - 48;
+  }
+  return { bytes, known };
+}
+function composeSomRoom(room, preview, story) {
+  if (room.format !== "som.room" || room.version !== 1 || preview.format !== "som.room.preview" || preview.version !== 1) {
+    throw new Error("Unsupported room composition inputs.");
+  }
+  if (!Array.isArray(room.header) || room.header.length !== 8) {
+    throw new Error("Room header requires eight bytes.");
+  }
+  room.header.forEach((value) => integer(value, "Room header byte", 0, 255));
+  integer(room.pieces.length, "Room piece count", 0, 65536);
+  const key = `${room.header[0] & 63}:${room.header[2]}:${room.header[1] & 127}`;
+  if (!Object.hasOwn(preview.tilesets, key)) {
+    throw new Error(`Preview resources do not contain tileset ${key}.`);
+  }
+  const assets = preview.tilesets[key], states = { ...room.previewStory, ...story }, pieces = [];
+  let columns = 0, rows = 0, placementWork = 0;
+  for (const [sourceIndex, piece] of room.pieces.entries()) {
+    integer(piece.variable, "Story variable", 0, 255);
+    integer(piece.minimum, "Story minimum", 0, 15);
+    integer(piece.maximum, "Story maximum", piece.minimum, 15);
+    const value = integer(states[piece.variable], `Preview story ${piece.variable}`, 0, 255);
+    if (value < piece.minimum || value > piece.maximum) {
+      continue;
+    }
+    integer(piece.x, "Piece x", 0, 127);
+    integer(piece.y, "Piece y", 0, 127);
+    integer(piece.layer, "Piece layer", 1, 2);
+    integer(piece.layout, "Layout id", 1, 1023);
+    const layout2 = Object.hasOwn(preview.layouts, piece.layout) ? preview.layouts[piece.layout] : void 0;
+    if (!layout2) {
+      throw new Error("Missing or incomplete layout preview.");
+    }
+    integer(layout2.width, "Layout width", 1, 128);
+    integer(layout2.height, "Layout height", 1, 128);
+    const area = layout2.width * layout2.height;
+    if (!Array.isArray(layout2.tiles) || layout2.tiles.length !== area) {
+      throw new Error("Missing or incomplete layout preview.");
+    }
+    columns = Math.max(columns, piece.x + layout2.width);
+    rows = Math.max(rows, piece.y + layout2.height);
+    if (columns > 128 || rows > 128) {
+      throw new Error("Room pieces exceed the native 128-tile layer bounds.");
+    }
+    placementWork = boundedSum(
+      placementWork,
+      area * 256,
+      ASSET_LIMITS.renderPixels,
+      "Room placement work"
+    );
+    layout2.tiles.forEach((tile) => integer(tile, "Static metatile id", 0, 191));
+    pieces.push({ ...piece, sourceIndex, width: layout2.width, height: layout2.height });
+  }
+  if (!pieces.length) {
+    throw new Error("No active room pieces in this preview state.");
+  }
+  const width = columns * 16, height = rows * 16;
+  rasterArea(width, height, "Room composition", ASSET_LIMITS.interchangeSide);
+  const maps = [
+    new Int16Array(columns * rows).fill(-1),
+    new Int16Array(columns * rows).fill(-1)
+  ];
+  for (const piece of pieces) {
+    const layout2 = preview.layouts[piece.layout], map = maps[piece.layer - 1];
+    for (let y = 0; y < piece.height; y++) {
+      map.set(
+        layout2.tiles.slice(y * piece.width, (y + 1) * piece.width),
+        (piece.y + y) * columns + piece.x
+      );
+    }
+  }
+  const { bytes: graphics, known: graphicsKnown } = physicalGraphics(
+    assets.graphics,
+    assets.graphicsKnown
+  );
+  if (!Array.isArray(assets.colors) || assets.colors.length !== 128 || !Array.isArray(assets.layerWords) || assets.layerWords.length !== 2) {
+    throw new Error("Incomplete palette/metatile preview.");
+  }
+  const paletteWords = Uint16Array.from(
+    assets.colors,
+    (word) => integer(word, "Palette word", 0, 65535)
+  ), palette = Array.from(
+    paletteWords,
+    (word, index) => somRoomPaletteColor(word, index % 16 === 0)
+  );
+  for (const words of assets.layerWords) {
+    if (!Array.isArray(words) || words.length !== 768) {
+      throw new Error("Incomplete metatile preview.");
+    }
+    words.forEach((word) => integer(word, "Metatile word", 0, 65535));
+  }
+  const tiles = decodePlanarTiles(graphics, 4).map((tile) => Uint8Array.from(tile.flat())), passOrder = [
+    [2, 0],
+    [1, 0],
+    [2, 1],
+    [1, 1]
+  ];
+  const passes = passOrder.map(([layer, priority]) => {
+    const cells = [], map = maps[layer - 1], words = assets.layerWords[layer - 1];
+    for (let position = 0; position < map.length; position++) {
+      const metatile = map[position];
+      if (metatile < 0) {
+        continue;
+      }
+      for (let quadrant = 0; quadrant < 4; quadrant++) {
+        const word = words[metatile * 4 + quadrant];
+        if ((word >>> 13 & 1) !== priority) {
+          continue;
+        }
+        const tile = word & 1023, offset = tile * 32;
+        if (offset + 32 > graphics.length) {
+          throw new Error("Preview references uncaptured graphics.");
+        }
+        if (!graphicsKnown.subarray(offset, offset + 32).every((byte) => byte === 1)) {
+          throw new Error("Preview references unknown physical graphics bytes.");
+        }
+        cells.push({
+          x: position % columns * 16 + quadrant % 2 * 8,
+          y: Math.floor(position / columns) * 16 + (quadrant >>> 1) * 8,
+          metatile,
+          word,
+          tile,
+          palette: word >>> 10 & 7,
+          flipX: !!(word & 16384),
+          flipY: !!(word & 32768)
+        });
+      }
+    }
+    return { layer, priority, cells };
+  });
+  return {
+    width,
+    height,
+    tileset: key,
+    activePieces: pieces,
+    metatiles: maps,
+    passes,
+    graphics,
+    graphicsKnown,
+    tiles,
+    paletteWords,
+    palette,
+    provenance: structuredClone(preview.provenance),
+    limitation: LIMITATION
+  };
+}
+function renderSomRoomComposition(composition, layer) {
+  if (layer !== void 0) {
+    integer(layer, "Room render layer", 1, 2);
+  }
+  const area = rasterArea(
+    composition.width,
+    composition.height,
+    "Room render",
+    ASSET_LIMITS.interchangeSide
+  );
+  let work = 0;
+  integer(composition.passes.length, "Room passes", 1, 4);
+  integer(composition.tiles.length, "Room tiles", 1, 1024);
+  if (composition.palette.length !== 128) {
+    throw new Error("Incomplete room render palette.");
+  }
+  for (const tile of composition.tiles) {
+    if (!(tile instanceof Uint8Array) || tile.length !== 64 || tile.some((slot) => slot > 15)) {
+      throw new Error("Invalid room render tile.");
+    }
+  }
+  for (const pass of composition.passes) {
+    integer(pass.layer, "Room pass layer", 1, 2);
+    integer(pass.priority, "Room pass priority", 0, 1);
+    if (layer !== void 0 && pass.layer !== layer) {
+      continue;
+    }
+    work = boundedSum(
+      work,
+      pass.cells.length * 64,
+      ASSET_LIMITS.renderPixels,
+      "Room rendering work"
+    );
+    for (const cell of pass.cells) {
+      integer(cell.x, "Room cell x", 0, composition.width - 8);
+      integer(cell.y, "Room cell y", 0, composition.height - 8);
+      integer(cell.tile, "Room cell tile", 0, composition.tiles.length - 1);
+      integer(cell.palette, "Room cell palette", 0, 7);
+    }
+  }
+  const rgba = new Uint8Array(
+    boundedProduct(area, 4, ASSET_LIMITS.decodedBytes, "Room RGBA bytes")
+  );
+  for (let pixel = 0; pixel < rgba.length; pixel += 4) {
+    rgba.set([10, 14, 22, 255], pixel);
+  }
+  for (const pass of composition.passes) {
+    if (layer !== void 0 && pass.layer !== layer) {
+      continue;
+    }
+    for (const cell of pass.cells) {
+      const tile = composition.tiles[cell.tile];
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          const sourceX = cell.flipX ? 7 - x : x, sourceY = cell.flipY ? 7 - y : y, slot = tile[sourceY * 8 + sourceX];
+          if (slot === 0) {
+            continue;
+          }
+          const at = ((cell.y + y) * composition.width + cell.x + x) * 4;
+          rgba.set(composition.palette[cell.palette * 16 + slot], at);
+        }
+      }
+    }
+  }
+  return { rgba, width: composition.width, height: composition.height };
+}
+
+// packages/assets/src/secret-of-mana/som-room-assets.ts
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -12433,129 +12787,15 @@ function convertRoomAsset(source, options) {
   return { primaryOutput: selected, outputs };
 }
 function renderRoomAsset(room, preview, { layer, story } = {}) {
-  assert2.equal(preview.format, "som.room.preview");
-  assert2.equal(preview.version, 1);
-  assert2(layer === void 0 || layer === 1 || layer === 2, "Preview layer must be 1 or 2.");
-  const selectedLayer = layer === 1 || layer === 2 ? layer : void 0;
-  const key = `${room.header[0] & 63}:${room.header[2]}:${room.header[1] & 127}`;
-  const assets = preview.tilesets[key];
-  assert2(assets, `Preview resources do not contain tileset ${key}.`);
-  const states = { ...room.previewStory, ...story };
-  const pieces = room.pieces.filter((piece) => {
-    const value = states[piece.variable];
-    integer2(value, 255, `preview story ${piece.variable}`);
-    return value >= piece.minimum && value <= piece.maximum;
-  });
-  assert2(pieces.length, "No active room pieces in this preview state.");
-  let width = 0, height = 0;
-  for (const piece of pieces) {
-    integer2(piece.x, 127, "piece x");
-    integer2(piece.y, 127, "piece y");
-    assert2(piece.layer === 1 || piece.layer === 2, "Piece layer must be 1 or 2.");
-    const layout2 = Object.hasOwn(preview.layouts, piece.layout) ? preview.layouts[piece.layout] : void 0;
-    if (!layout2 || layout2.tiles.length !== layout2.width * layout2.height) {
-      assert2(false, "Missing or incomplete layout preview.");
-    }
-    integer2(layout2.width, 128, "layout width");
-    integer2(layout2.height, 128, "layout height");
-    assert2(layout2.width && layout2.height, "Layout dimensions must be positive.");
-    width = Math.max(width, piece.x + layout2.width);
-    height = Math.max(height, piece.y + layout2.height);
+  if (layer !== void 0 && layer !== 1 && layer !== 2) {
+    throw new Error("Preview layer must be 1 or 2.");
   }
-  assert2(width <= 128 && height <= 128, "Room pieces exceed the native 128-tile layer bounds.");
-  const maps = [/* @__PURE__ */ new Map(), /* @__PURE__ */ new Map()];
-  for (const piece of pieces) {
-    const layout2 = preview.layouts[piece.layout];
-    for (let y = 0; y < layout2.height; y++) {
-      for (let x = 0; x < layout2.width; x++) {
-        maps[piece.layer - 1].set(
-          (piece.y + y) * width + piece.x + x,
-          layout2.tiles[y * layout2.width + x]
-        );
-      }
-    }
-  }
-  const pixelWidth = width * 16, pixelHeight = height * 16;
-  const rgba = new Uint8Array(pixelWidth * pixelHeight * 4);
-  for (let i = 0; i < rgba.length; i += 4) {
-    rgba.set([10, 14, 22, 255], i);
-  }
-  assert2(
-    assets.graphics.length % 2 === 0 && /^[\da-f]+$/i.test(assets.graphics),
-    "Invalid planar graphics."
-  );
-  const graphicsPairs = assets.graphics.match(/../g);
-  assert2(graphicsPairs, "Invalid planar graphics.");
-  const graphics = Uint8Array.from(graphicsPairs, (byte) => parseInt(byte, 16));
-  assert2(
-    typeof assets.graphicsKnown === "string" && /^(?:00|01)+$/.test(assets.graphicsKnown) && assets.graphicsKnown.length === assets.graphics.length,
-    "Preview graphics require a matching physical-coverage mask."
-  );
-  const knownPairs = assets.graphicsKnown.match(/../g);
-  assert2(knownPairs, "Preview graphics require a matching physical-coverage mask.");
-  const graphicsKnown = Uint8Array.from(knownPairs, (byte) => parseInt(byte, 16));
-  assert2(
-    assets.colors.length === 128 && assets.layerWords.length === 2,
-    "Incomplete palette/metatile preview."
-  );
-  const passes = selectedLayer ? [
-    [selectedLayer - 1, 0],
-    [selectedLayer - 1, 1]
-  ] : [
-    [1, 0],
-    [0, 0],
-    [1, 1],
-    [0, 1]
-  ];
-  for (const [plane, priority] of passes) {
-    for (const [position, tile] of maps[plane]) {
-      integer2(tile, 191, "static metatile id");
-      const words = assets.layerWords[plane];
-      assert2.equal(words.length, 768);
-      const mapX = position % width, mapY = Math.floor(position / width);
-      for (let part = 0; part < 4; part++) {
-        const word = integer2(words[tile * 4 + part], 65535, "metatile word");
-        if ((word >>> 13 & 1) !== priority) {
-          continue;
-        }
-        const offset = (word & 1023) * 32;
-        assert2(offset + 32 <= graphics.length, "Preview references uncaptured graphics.");
-        assert2(
-          graphicsKnown.subarray(offset, offset + 32).every((byte) => byte === 1),
-          "Preview references unknown physical graphics bytes."
-        );
-        for (let y = 0; y < 8; y++) {
-          for (let x = 0; x < 8; x++) {
-            const sx = word & 16384 ? 7 - x : x, sy = word & 32768 ? 7 - y : y;
-            let color = 0;
-            for (let bit = 0; bit < 4; bit++) {
-              color |= (graphics[offset + (bit >>> 1) * 16 + sy * 2 + bit % 2] >>> 7 - sx & 1) << bit;
-            }
-            if (!color) {
-              continue;
-            }
-            const bgr = integer2(
-              assets.colors[(word >>> 10 & 7) * 16 + color],
-              65535,
-              "palette word"
-            );
-            const at = ((mapY * 16 + (part >>> 1) * 8 + y) * pixelWidth + mapX * 16 + part % 2 * 8 + x) * 4;
-            rgba.set(
-              [0, 5, 10].map((shift) => Math.floor((bgr >>> shift & 31) * 255 / 31)),
-              at
-            );
-          }
-        }
-      }
-    }
-  }
+  const composition = composeSomRoom(room, preview, story);
   return {
-    rgba,
-    width: pixelWidth,
-    height: pixelHeight,
-    tileset: key,
-    activePieces: pieces.map((piece) => piece.layout),
-    limitation: "Background geometry only; omits actors, BG3, camera, mutable clones and color math."
+    ...renderSomRoomComposition(composition, layer),
+    tileset: composition.tileset,
+    activePieces: composition.activePieces.map((piece) => piece.layout),
+    limitation: composition.limitation
   };
 }
 
@@ -12947,8 +13187,8 @@ var plugin = definePlugin({
           }
         }
         const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
-          wordOffset: options.wordOffset,
-          wordCount: options.wordCount
+          wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : void 0,
+          wordCount: typeof options.wordCount === "number" ? options.wordCount : void 0
         });
         return { primaryOutput: "palette", outputs: { palette: { bytes } } };
       }
@@ -12964,14 +13204,14 @@ var plugin = definePlugin({
     });
     context.registerAssetFormat({
       id: "som.sprite.frames",
-      version: "1.0.0",
+      version: "1.1.0",
       targets: ["snes.sfc"],
       resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
       convert(source, options, resources) {
         const tiles = encodeFrameAtlas(
           source,
           readFrameLayout(options, resources),
-          typeof options.segment === "string" ? options.segment : "",
+          readFrameAtlasSelection(options),
           readSpritePaletteCatalog(options, resources)
         );
         return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
@@ -13102,11 +13342,16 @@ function storagePixels(composed, width, height, indexByCoordinate) {
 function convertSomFramePreview(input) {
   const layout2 = readFrameLayout(input.options, input.resources);
   const catalog = readSpritePaletteCatalog(input.options, input.resources);
-  const segment = input.options.segment;
-  if (typeof segment !== "string") {
+  const selection = readFrameAtlasSelection(input.options);
+  if (input.format === "som.boss.graphics" && typeof selection !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
-  const inspected = inspectFrameAtlas(input.source, layout2, catalog, { segmentName: segment });
+  const named = typeof selection === "string";
+  const inspected = inspectFrameAtlas(input.source, layout2, catalog, {
+    segmentName: named ? selection : void 0,
+    whole: !named
+  });
+  const segments = named ? [selection] : frameAtlasSegmentOrder(layout2, selection);
   let encodedBytes;
   let output;
   if (input.format === "som.boss.graphics") {
@@ -13114,7 +13359,11 @@ function convertSomFramePreview(input) {
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
-    encodedBytes = encodeInspectedFrameSegment(inspected, segment).length;
+    if (named) {
+      encodedBytes = encodeInspectedFrameSegment(inspected, selection).length;
+    } else {
+      encodedBytes = encodeInspectedFrameSegments(inspected, segments).length;
+    }
     output = "tiles";
   }
   if (input.output !== void 0 && input.output !== output) {
@@ -13130,11 +13379,17 @@ function convertSomFramePreview(input) {
     }
     rgba.set(color, pixel * 4);
   }
-  const paletteId = layout2.paletteRefs[layout2.segments[segment].palette];
-  const palette = Object.hasOwn(catalog.palettes, paletteId) ? catalog.palettes[paletteId] : void 0;
-  if (!palette) {
-    throw new Error(`Unknown sprite palette ${paletteId}.`);
-  }
+  const paletteIds = [
+    ...new Set(segments.map((name) => layout2.paletteRefs[layout2.segments[name].palette]))
+  ];
+  const palettes = paletteIds.map((paletteId) => {
+    const palette = Object.hasOwn(catalog.palettes, paletteId) ? catalog.palettes[paletteId] : void 0;
+    if (!palette) {
+      throw new Error(`Unknown sprite palette ${paletteId}.`);
+    }
+    return { paletteId, paletteRomAddress: palette.romAddress, paletteUsers: palette.users };
+  });
+  const primaryPalette = palettes[0];
   return {
     kind: "image",
     sourceBytes: input.source.bytes.length,
@@ -13142,10 +13397,10 @@ function convertSomFramePreview(input) {
     format: input.format,
     output,
     metadata: {
-      segment,
-      paletteId,
-      paletteRomAddress: palette.romAddress,
-      paletteUsers: palette.users
+      segment: named ? selection : void 0,
+      segments,
+      ...primaryPalette,
+      palettes
     },
     thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, image.width, image.height, 192)).toString(
       "base64"

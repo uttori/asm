@@ -18,6 +18,7 @@ export * from "./syntax-profile.js";
 export * from "./diagnostics.js";
 export * from "./directive-groups.js";
 export * from "./source-location.js";
+export * from "./source-field-edits.js";
 export * from "./file-provider.js";
 export * from "./ir/assembly-tree.js";
 export * from "./ir/expression-node.js";

@@ -11873,8 +11873,8 @@ var require_files = __commonJS({
     exports.resolveGlobalYarnPath = resolveGlobalYarnPath;
     exports.resolveModulePath = resolveModulePath;
     var url = __importStar(__require("url"));
-    var path19 = __importStar(__require("path"));
-    var fs9 = __importStar(__require("fs"));
+    var path20 = __importStar(__require("path"));
+    var fs10 = __importStar(__require("fs"));
     var child_process_1 = __require("child_process");
     function uriToFilePath(uri) {
       const parsed = url.parse(uri);
@@ -11892,7 +11892,7 @@ var require_files = __commonJS({
           segments.shift();
         }
       }
-      return path19.normalize(segments.join("/"));
+      return path20.normalize(segments.join("/"));
     }
     function isWindows() {
       return process.platform === "win32";
@@ -11920,9 +11920,9 @@ var require_files = __commonJS({
         const env = process.env;
         const newEnv = /* @__PURE__ */ Object.create(null);
         Object.keys(env).forEach((key) => newEnv[key] = env[key]);
-        if (nodePath2 && fs9.existsSync(nodePath2)) {
+        if (nodePath2 && fs10.existsSync(nodePath2)) {
           if (newEnv[nodePathKey]) {
-            newEnv[nodePathKey] = nodePath2 + path19.delimiter + newEnv[nodePathKey];
+            newEnv[nodePathKey] = nodePath2 + path20.delimiter + newEnv[nodePathKey];
           } else {
             newEnv[nodePathKey] = nodePath2;
           }
@@ -11994,9 +11994,9 @@ var require_files = __commonJS({
         }
         if (prefix.length > 0) {
           if (isWindows()) {
-            return path19.join(prefix, "node_modules");
+            return path20.join(prefix, "node_modules");
           } else {
-            return path19.join(prefix, "lib", "node_modules");
+            return path20.join(prefix, "lib", "node_modules");
           }
         }
         return void 0;
@@ -12035,7 +12035,7 @@ var require_files = __commonJS({
           try {
             const yarn = JSON.parse(line);
             if (yarn.type === "log") {
-              return path19.join(yarn.data, "node_modules");
+              return path20.join(yarn.data, "node_modules");
             }
           } catch (e) {
           }
@@ -12057,24 +12057,24 @@ var require_files = __commonJS({
         if (process.platform === "win32") {
           _isCaseSensitive = false;
         } else {
-          _isCaseSensitive = !fs9.existsSync(__filename.toUpperCase()) || !fs9.existsSync(__filename.toLowerCase());
+          _isCaseSensitive = !fs10.existsSync(__filename.toUpperCase()) || !fs10.existsSync(__filename.toLowerCase());
         }
         return _isCaseSensitive;
       }
       FileSystem2.isCaseSensitive = isCaseSensitive;
       function isParent(parent, child) {
         if (isCaseSensitive()) {
-          return path19.normalize(child).indexOf(path19.normalize(parent)) === 0;
+          return path20.normalize(child).indexOf(path20.normalize(parent)) === 0;
         } else {
-          return path19.normalize(child).toLowerCase().indexOf(path19.normalize(parent).toLowerCase()) === 0;
+          return path20.normalize(child).toLowerCase().indexOf(path20.normalize(parent).toLowerCase()) === 0;
         }
       }
       FileSystem2.isParent = isParent;
     })(FileSystem || (exports.FileSystem = FileSystem = {}));
     function resolveModulePath(workspaceRoot2, moduleName, nodePath2, tracer) {
       if (nodePath2) {
-        if (!path19.isAbsolute(nodePath2)) {
-          nodePath2 = path19.join(workspaceRoot2, nodePath2);
+        if (!path20.isAbsolute(nodePath2)) {
+          nodePath2 = path20.join(workspaceRoot2, nodePath2);
         }
         return resolve(moduleName, nodePath2, nodePath2, tracer).then((value) => {
           if (FileSystem.isParent(nodePath2, value)) {
@@ -12307,9 +12307,9 @@ var require_main2 = __commonJS({
     exports.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path19 = __importStar(__require("path"));
+    var path20 = __importStar(__require("path"));
     var os = __importStar(__require("os"));
-    var fs9 = __importStar(__require("fs"));
+    var fs10 = __importStar(__require("fs"));
     var crypto_1 = __require("crypto");
     var net_1 = __require("net");
     var api_1 = require_api();
@@ -12450,7 +12450,7 @@ var require_main2 = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs9.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
+      const tmpDir = fs10.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -12459,7 +12459,7 @@ var require_main2 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path19.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path20.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -12918,8 +12918,8 @@ ${stack}`);
 init_canonical_json();
 init_debug_map();
 import { createHash as createHash5 } from "node:crypto";
-import fs8 from "node:fs";
-import path18 from "node:path";
+import fs9 from "node:fs";
+import path19 from "node:path";
 import { crc32 as crc322 } from "node:zlib";
 
 // packages/core/src/address-width.ts
@@ -12964,12 +12964,12 @@ var CRC32 = class _CRC32 {
 // packages/core/src/addressToLine.ts
 var sourceIdentity = (filename, supplied) => {
   try {
-    const fs9 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+    const fs10 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
     const crypto = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:crypto");
-    if (!fs9 || !crypto) {
+    if (!fs10 || !crypto) {
       return { crc: 0, size: 0, sha256: "" };
     }
-    const data = supplied ?? fs9.readFileSync(filename);
+    const data = supplied ?? fs10.readFileSync(filename);
     return {
       crc: CRC32.compute(data),
       size: data.length,
@@ -15283,13 +15283,13 @@ var NodeAssemblyFileProvider = class {
    * @returns {string | undefined} First existing file identity, or undefined.
    */
   resolvePath(filename, options = {}) {
-    const fs9 = requireNodeFs();
+    const fs10 = requireNodeFs();
     if (!filename) {
       return void 0;
     }
     const normalized = stripWrappingQuotes(filename);
     if (path2.isAbsolute(normalized)) {
-      return fs9.existsSync(normalized) ? normalized : void 0;
+      return fs10.existsSync(normalized) ? normalized : void 0;
     }
     const candidates = /* @__PURE__ */ new Set();
     const baseDirectories = [
@@ -15302,36 +15302,36 @@ var NodeAssemblyFileProvider = class {
       candidates.add(path2.resolve(baseDirectory, normalized));
     }
     for (const candidate of candidates) {
-      if (fs9.existsSync(candidate)) {
+      if (fs10.existsSync(candidate)) {
         return candidate;
       }
     }
     return void 0;
   }
   stat(filePath) {
-    const fs9 = requireNodeFs();
+    const fs10 = requireNodeFs();
     let st;
     try {
-      st = fs9.statSync(filePath);
+      st = fs10.statSync(filePath);
     } catch {
       return { exists: false, readable: false };
     }
     try {
-      fs9.accessSync(filePath, fs9.constants.R_OK);
+      fs10.accessSync(filePath, fs10.constants.R_OK);
       return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
     } catch {
       return { exists: true, readable: false, mtimeMs: st.mtimeMs };
     }
   }
   readFile(filePath) {
-    const fs9 = requireNodeFs();
+    const fs10 = requireNodeFs();
     this.readFiles.add(filePath);
-    return new Uint8Array(fs9.readFileSync(filePath));
+    return new Uint8Array(fs10.readFileSync(filePath));
   }
   readTextFile(filePath, encoding = "utf8") {
-    const fs9 = requireNodeFs();
+    const fs10 = requireNodeFs();
     this.readFiles.add(filePath);
-    return fs9.readFileSync(filePath, encoding);
+    return fs10.readFileSync(filePath, encoding);
   }
 };
 function stripWrappingQuotes(filename) {
@@ -19462,6 +19462,14 @@ function isNonEmptyString(value) {
 function isNonEmptyStringArray(value) {
   return isUnknownArray(value) && value.every(isNonEmptyString);
 }
+function copyAssetResources(resources) {
+  return Object.fromEntries(
+    Object.entries(resources).map(([name, item]) => [
+      name,
+      { ...item, bytes: Uint8Array.from(item.bytes) }
+    ])
+  );
+}
 var AssetAssemblyService = class _AssetAssemblyService {
   constructor(session) {
     this.session = session;
@@ -19487,8 +19495,8 @@ var AssetAssemblyService = class _AssetAssemblyService {
    * @param {string} path Provider identity.
    * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
    */
-  snapshot(path19) {
-    return this.#files.get(path19)?.slice();
+  snapshot(path20) {
+    return this.#files.get(path20)?.slice();
   }
   /** Resolve a string operand after define expansion.
    * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
@@ -19543,13 +19551,13 @@ var AssetAssemblyService = class _AssetAssemblyService {
    * @param {string} path Source-relative path.
    * @returns {string} Stable provider identity.
    */
-  #resolve(path19) {
+  #resolve(path20) {
     const resolved = this.session.fileProvider.resolvePath(
-      path19,
+      path20,
       this.session.includeSource.resolutionOptions
     );
     if (!resolved) {
-      throw new Error(`includeAsset cannot find '${path19}'.`);
+      throw new Error(`includeAsset cannot find '${path20}'.`);
     }
     return resolved;
   }
@@ -19558,22 +19566,22 @@ var AssetAssemblyService = class _AssetAssemblyService {
    * @param {"binary" | "resource"} kind Dependency role.
    * @returns {Uint8Array} Build-owned bytes.
    */
-  #read(path19, kind) {
-    const cached = this.#files.get(path19);
+  #read(path20, kind) {
+    const cached = this.#files.get(path20);
     if (cached) {
       return cached;
     }
-    const bytes = this.session.fileProvider.readFile(path19).slice();
-    this.#files.set(path19, bytes);
-    this.dependencies.set(path19, kind);
+    const bytes = Uint8Array.from(this.session.fileProvider.readFile(path20));
+    this.#files.set(path20, bytes);
+    this.dependencies.set(path20, kind);
     return bytes;
   }
   /** Media type is inferred only from a declared, supported input extension.
    * @param {string} path Provider identity.
    * @returns {string} Portable media type.
    */
-  #mediaType(path19) {
-    const extension = path19.toLowerCase().split(".").pop();
+  #mediaType(path20) {
+    const extension = path20.toLowerCase().split(".").pop();
     if (extension === "png") {
       return "image/png";
     }
@@ -19665,7 +19673,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
     delete options.compress;
     delete options.compressOptions;
     delete options.maxSize;
-    for (const resourceName of format.resourcePaths?.(options) ?? []) {
+    for (const resourceName of format.resourcePaths?.(structuredClone(options)) ?? []) {
       this.dependencies.set(this.#resolve(resourceName), "resource");
     }
     let transforms = [];
@@ -19689,7 +19697,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
       const transformOptions = isRecord3(suppliedOptions) ? suppliedOptions : {};
       const names = [
         ...this.#validateTransformOptions(transform, transformOptions),
-        ...transform.resourcePaths?.(transformOptions) ?? []
+        ...transform.resourcePaths?.(structuredClone(transformOptions)) ?? []
       ];
       for (const name of new Set(names)) {
         this.dependencies.set(this.#resolve(name), "resource");
@@ -19731,13 +19739,15 @@ var AssetAssemblyService = class _AssetAssemblyService {
       boundedSize = maxSize;
     }
     const resources = {};
+    const resourcePaths = {};
     const resourceIdentities = [];
-    const declaredResources = format.resourcePaths?.(options) ?? [];
+    const declaredResources = format.resourcePaths?.(structuredClone(options)) ?? [];
     if (!isNonEmptyStringArray(declaredResources)) {
       throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
     }
     for (const resourceName of declaredResources) {
       const resourcePath = this.#resolve(resourceName);
+      resourcePaths[resourceName] = resourcePath;
       resources[resourceName] = {
         bytes: this.#read(resourcePath, "resource"),
         mediaType: this.#mediaType(resourcePath)
@@ -19757,16 +19767,10 @@ var AssetAssemblyService = class _AssetAssemblyService {
     ]);
     let converted = this.#conversions.get(conversionKey);
     if (!converted) {
-      const borrowedResources = Object.fromEntries(
-        Object.entries(resources).map(([name, item]) => [
-          name,
-          { ...item, bytes: item.bytes.slice() }
-        ])
-      );
       converted = format.convert(
         { ...source, bytes: source.bytes.slice() },
-        options,
-        borrowedResources
+        structuredClone(options),
+        copyAssetResources(resources)
       );
       if (!converted.primaryOutput || !Object.hasOwn(converted.outputs, converted.primaryOutput)) {
         throw new Error(`Asset format '${format.id}' omitted its primary output.`);
@@ -19776,7 +19780,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
           if (!(part2.bytes instanceof Uint8Array)) {
             throw new Error(`Asset output '${name}' is not bytes.`);
           }
-          return [name, { bytes: part2.bytes.slice() }];
+          return [name, { bytes: Uint8Array.from(part2.bytes) }];
         })
       );
       converted = { primaryOutput: converted.primaryOutput, outputs: owned };
@@ -19816,27 +19820,30 @@ var AssetAssemblyService = class _AssetAssemblyService {
         throw new Error(`includeAsset transform '${id}' options must be an object.`);
       }
       const schemaResources = this.#validateTransformOptions(transform, transformOptions);
-      transform.validateOptions?.(transformOptions);
+      transform.validateOptions?.(structuredClone(transformOptions));
       const transformResources = {};
       const transformResourceIdentities = [];
-      const declared = transform.resourcePaths?.(transformOptions) ?? [];
+      const transformResourcePaths = {};
+      const declared = transform.resourcePaths?.(structuredClone(transformOptions)) ?? [];
       if (!isNonEmptyStringArray(declared)) {
         throw new Error(`Asset transform '${transform.id}' returned invalid resource paths.`);
       }
       const names = [.../* @__PURE__ */ new Set([...schemaResources, ...declared])];
       for (const name of names) {
-        const path19 = this.#resolve(name);
+        const path20 = this.#resolve(name);
+        transformResourcePaths[name] = path20;
         transformResources[name] = {
-          bytes: this.#read(path19, "resource"),
-          mediaType: this.#mediaType(path19)
+          bytes: this.#read(path20, "resource"),
+          mediaType: this.#mediaType(path20)
         };
-        transformResourceIdentities.push(`${name}\0${path19}`);
+        transformResourceIdentities.push(`${name}\0${path20}`);
       }
       transforms.push({
         provider: transform,
         options: transformOptions,
         resources: transformResources,
-        resourceIdentities: transformResourceIdentities
+        resourceIdentities: transformResourceIdentities,
+        resourcePaths: transformResourcePaths
       });
     }
     const emissionKey = this.#stable([
@@ -19861,31 +19868,26 @@ var AssetAssemblyService = class _AssetAssemblyService {
         if (previousBytes.length > _AssetAssemblyService.MAX_STAGE_BYTES) {
           throw new Error(`Asset '${sourcePath}' exceeds the transform stage byte limit.`);
         }
-        const borrowedResources = Object.fromEntries(
-          Object.entries(transformResources).map(([name, item]) => [
-            name,
-            { ...item, bytes: item.bytes.slice() }
-          ])
-        );
         try {
-          const encoded = provider.encode(
+          const supplied = provider.encode(
             previousBytes.slice(),
-            transformOptions,
-            borrowedResources
+            structuredClone(transformOptions),
+            copyAssetResources(transformResources)
           );
-          if (!(encoded instanceof Uint8Array) || encoded.length > _AssetAssemblyService.MAX_STAGE_BYTES) {
+          if (!(supplied instanceof Uint8Array) || supplied.length > _AssetAssemblyService.MAX_STAGE_BYTES) {
             throw new Error("produced invalid or oversized bytes");
           }
+          const encoded = Uint8Array.from(supplied);
           const decoded2 = provider.decode(
             encoded.slice(),
-            transformOptions,
+            structuredClone(transformOptions),
             previousBytes.length,
-            borrowedResources
+            copyAssetResources(transformResources)
           );
           if (!(decoded2 instanceof Uint8Array) || decoded2.length !== previousBytes.length || !decoded2.every((value, index2) => value === previousBytes[index2])) {
             throw new Error("failed exact decode verification");
           }
-          bytes = encoded.slice();
+          bytes = encoded;
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           throw new Error(
@@ -19906,7 +19908,20 @@ var AssetAssemblyService = class _AssetAssemblyService {
       format: format.id,
       part: selected,
       size: bytes.length,
-      transforms: transforms.map((item) => item.provider.id)
+      transforms: transforms.map((item) => item.provider.id),
+      // Capture evaluated source declarations rather than re-parsing grammar or guessing filename conventions.
+      conversion: {
+        version: format.version,
+        options: structuredClone(options),
+        resources: { ...resourcePaths },
+        ...boundedSize === void 0 ? {} : { maxSize: boundedSize },
+        transforms: transforms.map((item) => ({
+          id: item.provider.id,
+          version: item.provider.version,
+          options: structuredClone(item.options),
+          resources: { ...item.resourcePaths }
+        }))
+      }
     };
     return bytes;
   }
@@ -24126,6 +24141,7 @@ var Assembler = class _Assembler {
           part: asset.part,
           size: asset.size,
           transforms: asset.transforms,
+          conversion: asset.conversion,
           address: startAddress,
           ...startOutput >= 0 ? { outputOffset: startOutput } : {}
         });
@@ -49612,12 +49628,36 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
+// packages/assets/src/limits.ts
+var ASSET_LIMITS = Object.freeze({
+  rasterPixels: 4 * 1024 * 1024,
+  interchangeSide: 4096,
+  pngBytes: 32 * 1024 * 1024,
+  pngInflatedBytes: 20 * 1024 * 1024,
+  asepriteBytes: 16 * 1024 * 1024,
+  decodedBytes: 64 * 1024 * 1024,
+  renderPixels: 64 * 1024 * 1024,
+  frames: 1024,
+  layers: 4096,
+  tilesets: 1024,
+  owners: 4 * 1024 * 1024,
+  references: 4 * 1024 * 1024,
+  chunks: 1024 * 1024,
+  metadataBytes: 16 * 1024 * 1024,
+  baselineMetadataBytes: 64 * 1024 * 1024,
+  metadataNodes: 1024 * 1024,
+  // Baselines include owner and view declarations as well as the file model; pixels stay in binary blobs.
+  baselineMetadataNodes: 4 * 1024 * 1024,
+  thumbnailEdge: 1024
+});
+var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
+
 // packages/assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
-  maxInputBytes: 16 * 1024 * 1024,
-  maxPixels: 1024 * 1024,
-  maxInflatedBytes: 5 * 1024 * 1024,
-  maxOutputBytes: 16 * 1024 * 1024,
+  maxInputBytes: ASSET_LIMITS.pngBytes,
+  maxPixels: ASSET_LIMITS.rasterPixels,
+  maxInflatedBytes: ASSET_LIMITS.pngInflatedBytes,
+  maxOutputBytes: ASSET_LIMITS.pngBytes,
   maxChunks: 16384,
   allow16Bit: false,
   animation: "reject",
@@ -49997,7 +50037,7 @@ function imageModel(document2) {
     throw new Error("Image encoder requires imported PNG pixels.");
   }
   const value = document2.value;
-  if (value.kind !== document2.kind || typeof value.width !== "number" || typeof value.height !== "number" || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || value.width < 1 || value.height < 1 || value.width * value.height > 1024 * 1024) {
+  if (value.kind !== document2.kind || typeof value.width !== "number" || typeof value.height !== "number" || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || value.width < 1 || value.height < 1 || value.width > ASSET_LIMITS.rasterPixels || value.height > Math.floor(ASSET_LIMITS.rasterPixels / value.width)) {
     throw new Error("Image model has invalid dimensions or kind.");
   }
   const pixels = value.width * value.height;
@@ -52279,7 +52319,79 @@ function readResearchInputs(root, roots, identity, overlays = /* @__PURE__ */ ne
 
 // packages/disassembler/src/source-project/git.ts
 import { spawn } from "node:child_process";
+import path11 from "node:path";
+
+// packages/disassembler/src/source-project/file-transaction.ts
+import fs3 from "node:fs";
 import path10 from "node:path";
+var JOURNAL = "file-publication.json";
+var MAX_BYTES = 512 * 1024 * 1024;
+function journalFile(repository) {
+  storageDirectories(repository);
+  return path10.join(repository.stateDirectory, JOURNAL);
+}
+function storageDirectories(repository, suffix = []) {
+  const relative2 = path10.relative(repository.gitDirectory, repository.stateDirectory);
+  if (relative2.startsWith("../") || path10.isAbsolute(relative2)) {
+    throw new Error("Invalid source publication state directory.");
+  }
+  let current = repository.gitDirectory;
+  for (const part of ["", ...relative2.split(path10.sep), ...suffix]) {
+    current = path10.join(current, part);
+    if (!fs3.existsSync(current)) {
+      return;
+    }
+    const stat = fs3.lstatSync(current);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw new Error("Invalid source publication staging directory.");
+    }
+  }
+}
+function readSourceFileTransaction(repository) {
+  const file = journalFile(repository);
+  if (!fs3.existsSync(file)) {
+    return void 0;
+  }
+  if (fs3.lstatSync(file).isSymbolicLink() || fs3.statSync(file).size > 4 * 1024 * 1024) {
+    throw new Error("Invalid source publication journal.");
+  }
+  const value = JSON.parse(fs3.readFileSync(file, "utf8"));
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid source publication journal.");
+  }
+  if (!("format" in value) || value.format !== "uttori-source-file-transaction" || !("version" in value) || value.version !== 1 || !("id" in value) || typeof value.id !== "string" || !/^[\da-f-]{36}$/.test(value.id) || !("state" in value) || value.state !== "staged" && value.state !== "publishing" && value.state !== "completed" && value.state !== "recovery" || !("direction" in value) || value.direction !== "before" && value.direction !== "after" || !("files" in value) || !Array.isArray(value.files) || value.files.length > 65536) {
+    throw new Error("Unsupported or corrupt source publication journal.");
+  }
+  const files = [], seen = /* @__PURE__ */ new Set();
+  const entries3 = value.files;
+  for (const item of entries3) {
+    if (!item || typeof item !== "object" || !("path" in item) || typeof item.path !== "string" || !("before" in item) || typeof item.before !== "string" || !/^[\da-f]{64}$/.test(item.before) || !("after" in item) || typeof item.after !== "string" || !/^[\da-f]{64}$/.test(item.after) || seen.has(item.path)) {
+      throw new Error("Invalid source publication entry.");
+    }
+    assertSourcePath(item.path);
+    seen.add(item.path);
+    files.push({ path: item.path, before: item.before, after: item.after });
+  }
+  return {
+    format: value.format,
+    version: value.version,
+    id: value.id,
+    state: value.state,
+    direction: value.direction,
+    files
+  };
+}
+function sourceFilePublicationEpoch(repository) {
+  const journal = readSourceFileTransaction(repository);
+  if (journal && journal.state !== "completed") {
+    throw new Error(
+      `Source publication ${journal.id} requires recovery before another source operation.`
+    );
+  }
+  return journal ? sourceContentHash(JSON.stringify(journal)) : "none";
+}
+
+// packages/disassembler/src/source-project/git.ts
 var SourceGitError = class extends Error {
   constructor(args, result) {
     super(`git ${args[0]} failed (${result.code}): ${result.stderr.toString("utf8").trim()}`);
@@ -52362,16 +52474,16 @@ async function sourceRepository(directory) {
   const [root, gitDirectory] = results.map(
     (result) => result.stdout.toString("utf8").replace(/\n$/, "")
   );
-  if (!root || !gitDirectory || !path10.isAbsolute(root) || !path10.isAbsolute(gitDirectory)) {
+  if (!root || !gitDirectory || !path11.isAbsolute(root) || !path11.isAbsolute(gitDirectory)) {
     throw new Error("Source editing requires a non-bare Git working tree.");
   }
-  return { root, gitDirectory, stateDirectory: path10.join(gitDirectory, "uttori-source") };
+  return { root, gitDirectory, stateDirectory: path11.join(gitDirectory, "uttori-source") };
 }
 
 // packages/disassembler/src/source-project/project.ts
 init_canonical_json();
-import fs3 from "node:fs";
-import path11 from "node:path";
+import fs4 from "node:fs";
+import path12 from "node:path";
 function isUnknownArray4(value) {
   return Array.isArray(value);
 }
@@ -52424,8 +52536,9 @@ function parseSourceProject(value) {
 }
 async function openSourceProject(directory) {
   const repository = await sourceRepository(directory);
+  sourceFilePublicationEpoch(repository);
   const configuration = parseSourceProject(
-    JSON.parse(fs3.readFileSync(path11.join(repository.root, ".uttori/project.json"), "utf8"))
+    JSON.parse(fs4.readFileSync(path12.join(repository.root, ".uttori/project.json"), "utf8"))
   );
   const research = readResearchInputs(repository.root, configuration.researchRoots, {
     project: configuration.id,
@@ -53528,7 +53641,7 @@ var import_node = __toESM(require_main4(), 1);
 
 // packages/language-server/src/asset-preview-service.ts
 import { createHash as createHash4 } from "node:crypto";
-import path13 from "node:path";
+import path14 from "node:path";
 import { Worker } from "node:worker_threads";
 
 // packages/language-server/src/asset-language.ts
@@ -53567,8 +53680,8 @@ function assetLineAt(text2, lineNumber) {
 
 // packages/language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
-import fs4 from "node:fs";
-import path12 from "node:path";
+import fs5 from "node:fs";
+import path13 from "node:path";
 import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
 var semanticTokensLegend = {
   tokenTypes: [
@@ -54144,8 +54257,8 @@ function documentSymbolsFor(index2, file) {
 function projectOutlineFor(index2) {
   const childrenByParent = /* @__PURE__ */ new Map();
   for (const edge of index2.getIncludeEdges()) {
-    const from = path12.resolve(edge.fromFile);
-    const to = path12.resolve(edge.toFile);
+    const from = path13.resolve(edge.fromFile);
+    const to = path13.resolve(edge.toFile);
     const list = childrenByParent.get(from) ?? [];
     if (!list.includes(to)) {
       list.push(to);
@@ -54154,11 +54267,11 @@ function projectOutlineFor(index2) {
   }
   const visited = /* @__PURE__ */ new Set();
   const buildFile = (file) => {
-    const resolved = path12.resolve(file);
+    const resolved = path13.resolve(file);
     if (visited.has(resolved)) {
       return {
         id: `include:${resolved}:${visited.size}`,
-        label: path12.basename(resolved),
+        label: path13.basename(resolved),
         detail: "include",
         kind: "include",
         uri: pathToUri(resolved)
@@ -54167,22 +54280,22 @@ function projectOutlineFor(index2) {
     visited.add(resolved);
     return {
       id: `file:${resolved}`,
-      label: path12.basename(resolved),
+      label: path13.basename(resolved),
       kind: "file",
       uri: pathToUri(resolved),
       children: (childrenByParent.get(resolved) ?? []).map((child) => buildFile(child))
     };
   };
-  const entries3 = index2.resolveRoots().map((root) => path12.resolve(root));
+  const entries3 = index2.resolveRoots().map((root) => path13.resolve(root));
   const roots = entries3.map((entry) => ({
     id: `entry:${entry}`,
-    label: `Entry: ${path12.basename(entry)}`,
+    label: `Entry: ${path13.basename(entry)}`,
     kind: "entry",
     uri: pathToUri(entry),
     children: [buildFile(entry)]
   }));
   const reachable = visited;
-  const analyzed = index2.getAnalyzedFiles().map((file) => path12.resolve(file));
+  const analyzed = index2.getAnalyzedFiles().map((file) => path13.resolve(file));
   const orphans = analyzed.filter((file) => !reachable.has(file));
   if (orphans.length === 0) {
     return roots;
@@ -54195,7 +54308,7 @@ function projectOutlineFor(index2) {
       kind: "orphanGroup",
       children: orphans.map((file) => ({
         id: `orphan:${file}`,
-        label: path12.basename(file),
+        label: path13.basename(file),
         kind: "file",
         uri: pathToUri(file)
       }))
@@ -54299,7 +54412,7 @@ function hoverFor(index2, file, position, text2) {
       }
       let size;
       try {
-        size = fs4.statSync(resolved).size;
+        size = fs5.statSync(resolved).size;
       } catch {
         return markdownHover(
           `Asset \`${displayPath}\` changed or is unreadable. Build Binary will report its diagnostic.`
@@ -54724,21 +54837,21 @@ function definitionToLocation(index2, symbol) {
 function resolveIncludeTarget2(index2, file, target) {
   const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
   const normalizedTarget = trimmed.replace(/\\/g, "/");
-  const base = path12.basename(normalizedTarget);
+  const base = path13.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);
   const match = edges.find(
-    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path12.basename(edge.toFile) === base
+    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path13.basename(edge.toFile) === base
   );
   if (match?.toFile) {
     return match.toFile;
   }
   const searchRoots = [
-    path12.dirname(file),
-    ...index2.includePaths.map((entry) => path12.resolve(path12.dirname(file), entry))
+    path13.dirname(file),
+    ...index2.includePaths.map((entry) => path13.resolve(path13.dirname(file), entry))
   ];
   for (const root of searchRoots) {
-    const candidate = path12.isAbsolute(trimmed) ? trimmed : path12.resolve(root, trimmed);
-    if (fs4.existsSync(candidate)) {
+    const candidate = path13.isAbsolute(trimmed) ? trimmed : path13.resolve(root, trimmed);
+    if (fs5.existsSync(candidate)) {
       return candidate;
     }
   }
@@ -54772,7 +54885,7 @@ function renderSymbolDocs(index2, symbol) {
   if (annotation) {
     lines.push("", annotation.replace(/\n/g, "  \n"));
   }
-  lines.push("", `Defined in \`${path12.basename(symbol.location.file)}\``);
+  lines.push("", `Defined in \`${path13.basename(symbol.location.file)}\``);
   return lines.join("\n");
 }
 function symbolAnnotation(index2, symbol) {
@@ -54984,7 +55097,7 @@ function readInput(provider, declaringFile, includePaths, name) {
   if (bytes.length > MAX_INPUT_BYTES) {
     throw new Error(`Asset '${name}' exceeds the preview input limit.`);
   }
-  const extension = path13.extname(resolved).toLowerCase();
+  const extension = path14.extname(resolved).toLowerCase();
   let mediaType = "application/octet-stream";
   if (extension === ".png") {
     mediaType = "image/png";
@@ -55133,12 +55246,12 @@ var AssetPreviewService = class {
 };
 
 // packages/language-server/src/build.ts
-import fs5 from "node:fs";
-import path14 from "node:path";
+import fs6 from "node:fs";
+import path15 from "node:path";
 var temporaryArtifactSequence = 0;
 var sameFileContent = (file, content) => {
   try {
-    return Buffer.from(content).equals(fs5.readFileSync(file));
+    return Buffer.from(content).equals(fs6.readFileSync(file));
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return false;
@@ -55148,49 +55261,49 @@ var sameFileContent = (file, content) => {
 };
 var stageArtifact = (file, content) => {
   temporaryArtifactSequence += 1;
-  const staged = path14.join(
-    path14.dirname(file),
-    `.${path14.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
+  const staged = path15.join(
+    path15.dirname(file),
+    `.${path15.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
   );
-  fs5.writeFileSync(staged, content, { flag: "wx" });
+  fs6.writeFileSync(staged, content, { flag: "wx" });
   return staged;
 };
 function commitBuildArtifactPair(outputPath, output, debugMapJson) {
-  const resolvedOutput = path14.resolve(outputPath);
+  const resolvedOutput = path15.resolve(outputPath);
   const debugMapPath = `${resolvedOutput}.debug.json`;
   const mapBytes = Buffer.from(debugMapJson, "utf8");
-  fs5.mkdirSync(path14.dirname(resolvedOutput), { recursive: true });
+  fs6.mkdirSync(path15.dirname(resolvedOutput), { recursive: true });
   const outputChanged = !sameFileContent(resolvedOutput, output);
   const debugMapChanged = !sameFileContent(debugMapPath, mapBytes);
   if (!outputChanged && !debugMapChanged) {
     return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
   }
-  const oldOutput = fs5.existsSync(resolvedOutput) ? fs5.readFileSync(resolvedOutput) : void 0;
+  const oldOutput = fs6.existsSync(resolvedOutput) ? fs6.readFileSync(resolvedOutput) : void 0;
   const stagedOutput = stageArtifact(resolvedOutput, output);
   let stagedMap;
   let outputCommitted = false;
   try {
     stagedMap = stageArtifact(debugMapPath, mapBytes);
-    fs5.renameSync(stagedOutput, resolvedOutput);
+    fs6.renameSync(stagedOutput, resolvedOutput);
     outputCommitted = true;
-    fs5.renameSync(stagedMap, debugMapPath);
+    fs6.renameSync(stagedMap, debugMapPath);
     stagedMap = void 0;
   } catch (error) {
     if (outputCommitted) {
       if (oldOutput) {
         const rollback = stageArtifact(resolvedOutput, oldOutput);
-        fs5.renameSync(rollback, resolvedOutput);
-      } else if (fs5.existsSync(resolvedOutput)) {
-        fs5.unlinkSync(resolvedOutput);
+        fs6.renameSync(rollback, resolvedOutput);
+      } else if (fs6.existsSync(resolvedOutput)) {
+        fs6.unlinkSync(resolvedOutput);
       }
     }
     throw error;
   } finally {
-    if (fs5.existsSync(stagedOutput)) {
-      fs5.unlinkSync(stagedOutput);
+    if (fs6.existsSync(stagedOutput)) {
+      fs6.unlinkSync(stagedOutput);
     }
-    if (stagedMap && fs5.existsSync(stagedMap)) {
-      fs5.unlinkSync(stagedMap);
+    if (stagedMap && fs6.existsSync(stagedMap)) {
+      fs6.unlinkSync(stagedMap);
     }
   }
   return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
@@ -55199,12 +55312,12 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   const resolvedEntries = [
     ...new Set(
       entryPoints.map(
-        (entry) => path14.isAbsolute(entry) ? path14.normalize(entry) : path14.resolve(workspaceRoot2, entry)
+        (entry) => path15.isAbsolute(entry) ? path15.normalize(entry) : path15.resolve(workspaceRoot2, entry)
       )
     )
   ];
   if (requestedFile) {
-    const requested = path14.resolve(requestedFile);
+    const requested = path15.resolve(requestedFile);
     if (resolvedEntries.some((entry) => entry === requested)) {
       return {
         file: requested,
@@ -55216,7 +55329,7 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
     if (resolvedEntries.length > 0) {
       return {
         file: resolvedEntries[0],
-        reason: `active file ${path14.basename(requested)} is not a project entry point. Using ${path14.basename(resolvedEntries[0])}`,
+        reason: `active file ${path15.basename(requested)} is not a project entry point. Using ${path15.basename(resolvedEntries[0])}`,
         usedEntryPoint: true,
         requestedFile: requested
       };
@@ -55231,14 +55344,14 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   if (resolvedEntries.length > 0) {
     return {
       file: resolvedEntries[0],
-      reason: `no active editor. Using first project entry point ${path14.basename(resolvedEntries[0])}`,
+      reason: `no active editor. Using first project entry point ${path15.basename(resolvedEntries[0])}`,
       usedEntryPoint: true
     };
   }
   throw new Error("Open a source file or set asm.entryPoints before building.");
 }
 function emptyOutputMessage(file, usedEntryPoint) {
-  const base = path14.basename(file);
+  const base = path15.basename(file);
   if (usedEntryPoint) {
     return `Assembly produced 0 bytes for ${base}. Writes to unmapped addresses are skipped. the root file likely never set a mapper/org, or every store landed outside ROM.`;
   }
@@ -55250,7 +55363,7 @@ function formatElapsed(startedAt) {
 
 // packages/language-server/src/project-environment.ts
 import { existsSync as existsSync3 } from "node:fs";
-import path15 from "node:path";
+import path16 from "node:path";
 function isPluginModuleRequest(value) {
   return typeof value === "object" && value !== null && "module" in value && typeof value.module === "string";
 }
@@ -55301,7 +55414,7 @@ var ProjectEnvironmentController = class {
    * @throws {Error} Configuration, plugin loading, or initial indexing fails.
    */
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
-    const cwd = path15.resolve(settings2.cwd);
+    const cwd = path16.resolve(settings2.cwd);
     const pluginModules = configuredPluginModules(settings2.plugins);
     const configuredPath = discoverProjectConfigurationPath(cwd, settings2.configFile);
     const hasWorkspaceConfiguration = Boolean(settings2.configFile) || Boolean(configuredPath && existsSync3(configuredPath));
@@ -55333,7 +55446,7 @@ var ProjectEnvironmentController = class {
         entryPoints: [...settings2.entryPoints ?? []],
         includePaths: [...loaded.includePaths],
         logger: this.options.logger,
-        cacheDir: path15.join(cwd, ".uttori-asm", "cache")
+        cacheDir: path16.join(cwd, ".uttori-asm", "cache")
       });
       for (const [file, content] of overlays) {
         index2.updateDocument(file, content);
@@ -55393,13 +55506,13 @@ var ProjectEnvironmentController = class {
 };
 
 // packages/language-server/src/research-rename.ts
-import fs7 from "node:fs";
-import path17 from "node:path";
+import fs8 from "node:fs";
+import path18 from "node:path";
 var import_vscode_languageserver2 = __toESM(require_api3(), 1);
 
 // packages/language-server/src/recipe-rename.ts
-import fs6 from "node:fs";
-import path16 from "node:path";
+import fs7 from "node:fs";
+import path17 from "node:path";
 function isRecord17(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -55486,28 +55599,28 @@ function renameRecipeExpression(expression, oldName, newName, containers) {
   return output;
 }
 function readRecipe(root, relative2, buffers) {
-  const file = path16.join(root, relative2);
+  const file = path17.join(root, relative2);
   const buffer = buffers.find((item) => item.uri === pathToUri(file));
-  if (!buffer && !fs6.existsSync(file)) {
+  if (!buffer && !fs7.existsSync(file)) {
     return void 0;
   }
-  if (fs6.existsSync(file)) {
-    const actual = path16.relative(fs6.realpathSync(root), fs6.realpathSync(file));
-    if (!fs6.lstatSync(file).isFile() || actual.startsWith(`..${path16.sep}`) || path16.isAbsolute(actual)) {
+  if (fs7.existsSync(file)) {
+    const actual = path17.relative(fs7.realpathSync(root), fs7.realpathSync(file));
+    if (!fs7.lstatSync(file).isFile() || actual.startsWith(`..${path17.sep}`) || path17.isAbsolute(actual)) {
       throw new Error("Rename requires a regular recipe inside the source project.");
     }
-    if (fs6.statSync(file).size > 8 * 1024 * 1024) {
+    if (fs7.statSync(file).size > 8 * 1024 * 1024) {
       throw new Error("Recipe exceeds its rename budget.");
     }
   }
-  const before = buffer?.text ?? fs6.readFileSync(file, "utf8");
+  const before = buffer?.text ?? fs7.readFileSync(file, "utf8");
   if (Buffer.byteLength(before) > 8 * 1024 * 1024) {
     throw new Error("Recipe exceeds its rename budget.");
   }
   return { path: file, before, version: buffer?.version ?? null };
 }
 function sourceRecipeRename(root, sourceRoot, definition, newName, buffers) {
-  const source = path16.relative(path16.join(root, sourceRoot), definition.location.file);
+  const source = path17.relative(path17.join(root, sourceRoot), definition.location.file);
   if (source === "ram-defines.asm" && definition.kind === "label" && !definition.containerName) {
     const input2 = readRecipe(root, `${sourceRoot}/ram-map.json`, buffers);
     if (!input2) {
@@ -55630,12 +55743,12 @@ function isSymbolCatalog(value) {
   return value.format === "uttori-source-symbols" && value.version === 1 && typeof value.romSha256 === "string" && value.symbols.every(isCatalogSymbol);
 }
 function projectRoot(file) {
-  let directory = path17.dirname(file);
+  let directory = path18.dirname(file);
   while (true) {
-    if (fs7.existsSync(path17.join(directory, ".git"))) {
-      return fs7.existsSync(path17.join(directory, ".uttori/project.json")) ? directory : void 0;
+    if (fs8.existsSync(path18.join(directory, ".git"))) {
+      return fs8.existsSync(path18.join(directory, ".uttori/project.json")) ? directory : void 0;
     }
-    const parent = path17.dirname(directory);
+    const parent = path18.dirname(directory);
     if (parent === directory) {
       return void 0;
     }
@@ -55651,15 +55764,15 @@ function wholeDocument(text2) {
   return import_vscode_languageserver2.Range.create(0, 0, lines.length - 1, lines.at(-1).length);
 }
 function layoutRenameEdit(root, name, romSha256, oldName, newName, buffers, fieldContainers) {
-  const file = path17.join(root, name), uri = pathToUri(file);
+  const file = path18.join(root, name), uri = pathToUri(file);
   const buffer = buffers.find((item) => item.uri === uri);
-  if (!buffer && !fs7.existsSync(file)) {
+  if (!buffer && !fs8.existsSync(file)) {
     return void 0;
   }
-  if (fs7.existsSync(file) && (!fs7.lstatSync(file).isFile() || fs7.statSync(file).size > 8 * 1024 * 1024)) {
+  if (fs8.existsSync(file) && (!fs8.lstatSync(file).isFile() || fs8.statSync(file).size > 8 * 1024 * 1024)) {
     throw new Error("Rename requires a bounded regular layout document.");
   }
-  const before = buffer?.text ?? fs7.readFileSync(file, "utf8");
+  const before = buffer?.text ?? fs8.readFileSync(file, "utf8");
   if (Buffer.byteLength(before) > 8 * 1024 * 1024) {
     throw new Error("Layout rename exceeds its document budget.");
   }
@@ -55717,7 +55830,7 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
     return ordinary;
   }
   const project = await openSourceProject(root);
-  const relativeDefinition = path17.relative(root, definition.location.file).split(path17.sep).join("/");
+  const relativeDefinition = path18.relative(root, definition.location.file).split(path18.sep).join("/");
   const sourceRoot = project.configuration.sourceRoots.find(
     (name) => relativeDefinition.startsWith(`${name}/`)
   );
@@ -55770,20 +55883,20 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
   if (recipe || definition.kind === "struct" || definition.kind === "structMember") {
     return { documentChanges: changes };
   }
-  const catalogPath = path17.join(root, sourceRoot, "source-symbols.json");
-  if (!fs7.existsSync(catalogPath)) {
+  const catalogPath = path18.join(root, sourceRoot, "source-symbols.json");
+  if (!fs8.existsSync(catalogPath)) {
     throw new Error("Generate the project's symbol identities before renaming research symbols.");
   }
-  if (fs7.statSync(catalogPath).size > 8 * 1024 * 1024) {
+  if (fs8.statSync(catalogPath).size > 8 * 1024 * 1024) {
     throw new Error("Symbol identity catalog is too large.");
   }
-  const catalog = JSON.parse(fs7.readFileSync(catalogPath, "utf8"));
+  const catalog = JSON.parse(fs8.readFileSync(catalogPath, "utf8"));
   if (!isSymbolCatalog(catalog) || catalog.romSha256 !== project.configuration.romSha256) {
     throw new Error("Symbol identity catalog does not match this project ROM.");
   }
   const overlays = new Map(
     buffers.filter((buffer) => buffer.uri.startsWith("file:")).map((buffer) => [
-      path17.relative(root, uriToPath(buffer.uri)).split(path17.sep).join("/"),
+      path18.relative(root, uriToPath(buffer.uri)).split(path18.sep).join("/"),
       buffer.text
     ])
   );
@@ -55826,10 +55939,10 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
     index2.getAllSymbols().filter((item) => item.name !== definition.name).map((item) => item.name)
   );
   parseResearchDocument(edit.document);
-  const uri = pathToUri(path17.join(root, edit.path));
+  const uri = pathToUri(path18.join(root, edit.path));
   const existing = buffers.find((buffer) => buffer.uri === uri);
-  const exists = fs7.existsSync(path17.join(root, edit.path));
-  const before = existing?.text ?? (exists ? fs7.readFileSync(path17.join(root, edit.path), "utf8") : "");
+  const exists = fs8.existsSync(path18.join(root, edit.path));
+  const before = existing?.text ?? (exists ? fs8.readFileSync(path18.join(root, edit.path), "utf8") : "");
   if (!exists && !existing) {
     changes.push(import_vscode_languageserver2.CreateFile.create(uri, { overwrite: false, ignoreIfExists: false }));
   }
@@ -55887,14 +56000,14 @@ var configurationDiagnostic;
 var configurationQueue = Promise.resolve();
 var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
 function resolveAgainstWorkspace(value) {
-  return path18.isAbsolute(value) ? path18.normalize(value) : path18.resolve(workspaceRoot(), value);
+  return path19.isAbsolute(value) ? path19.normalize(value) : path19.resolve(workspaceRoot(), value);
 }
 function isProjectConfigFile(file) {
-  const resolved = path18.resolve(file);
+  const resolved = path19.resolve(file);
   if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
     return true;
   }
-  return path18.basename(file) === PROJECT_CONFIG_FILENAME;
+  return path19.basename(file) === PROJECT_CONFIG_FILENAME;
 }
 function stringValue(value) {
   return typeof value === "string" && value.trim() ? value : void 0;
@@ -55928,14 +56041,14 @@ function mergeServerSettings(previous, value) {
 }
 function applyConfigFileDefaults(next) {
   const discovered = discoverProjectConfigurationPath(workspaceRoot(), next.configFile);
-  if (!discovered || !fs8.existsSync(discovered)) {
+  if (!discovered || !fs9.existsSync(discovered)) {
     return next;
   }
-  const relativeConfig = path18.relative(workspaceRoot(), discovered) || path18.basename(discovered);
-  const relativeToConfig = (value) => path18.resolve(path18.dirname(discovered), value);
+  const relativeConfig = path19.relative(workspaceRoot(), discovered) || path19.basename(discovered);
+  const relativeToConfig = (value) => path19.resolve(path19.dirname(discovered), value);
   let extras = {};
   try {
-    extras = validateProjectConfiguration(JSON.parse(fs8.readFileSync(discovered, "utf8")));
+    extras = validateProjectConfiguration(JSON.parse(fs9.readFileSync(discovered, "utf8")));
   } catch {
     return { ...next, configFile: next.configFile ?? relativeConfig };
   }
@@ -56132,10 +56245,10 @@ connection.onDidChangeConfiguration((params) => {
   enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
 });
 function defaultOutputPath(file) {
-  const parsed = path18.parse(file);
+  const parsed = path19.parse(file);
   const { loaded } = environmentController.current;
   const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-  return path18.join(
+  return path19.join(
     parsed.dir,
     `${parsed.name}${extension.startsWith(".") ? extension : `.${extension}`}`
   );
@@ -56144,7 +56257,7 @@ function resolveOptionalBuildPath(configured, file) {
   if (!configured) {
     return void 0;
   }
-  return path18.isAbsolute(configured) ? path18.normalize(configured) : path18.resolve(workspaceRoots[0] ?? path18.dirname(file), configured);
+  return path19.isAbsolute(configured) ? path19.normalize(configured) : path19.resolve(workspaceRoots[0] ?? path19.dirname(file), configured);
 }
 function buildBinary(requestedFile, output, baseImage) {
   const startedAt = Date.now();
@@ -56168,7 +56281,7 @@ function buildBinary(requestedFile, output, baseImage) {
     log.info(`  configFile: ${settings.configFile || "(none)"}`);
     log.info(`  buildOutput setting: ${output ?? settings.buildOutput ?? "(default extension)"}`);
     log.info(`  baseImage setting: ${baseImage ?? settings.baseImage ?? "(none)"}`);
-    if (!fs8.existsSync(file)) {
+    if (!fs9.existsSync(file)) {
       const message = `Entry file does not exist: ${file}`;
       log.error(message);
       return { ok: false, message };
@@ -56177,20 +56290,20 @@ function buildBinary(requestedFile, output, baseImage) {
     const baseImagePath = resolveOptionalBuildPath(baseImage ?? settings.baseImage, file);
     if (baseImagePath) {
       log.info(`  base image path: ${baseImagePath}`);
-      if (!fs8.existsSync(baseImagePath)) {
+      if (!fs9.existsSync(baseImagePath)) {
         const message = `Base image does not exist: ${baseImagePath}`;
         log.error(message);
         return { ok: false, message };
       }
     }
     const assembler = environmentController.createAssembler({
-      ...baseImagePath ? { baseImage: new Uint8Array(fs8.readFileSync(baseImagePath)) } : {},
+      ...baseImagePath ? { baseImage: new Uint8Array(fs9.readFileSync(baseImagePath)) } : {},
       fileProvider: provider,
       collectSourceMetadata: true
     });
     try {
       const includePaths = [
-        .../* @__PURE__ */ new Set([path18.dirname(file), ...environmentController.current.loaded.includePaths])
+        .../* @__PURE__ */ new Set([path19.dirname(file), ...environmentController.current.loaded.includePaths])
       ];
       log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
       assembler.setIncludePaths(includePaths);

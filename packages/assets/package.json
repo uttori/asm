@@ -32,6 +32,11 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
+    "./sprite-editing": {
+      "uttori-source": "./src/sprite-editing.ts",
+      "types": "./dist/sprite-editing.d.ts",
+      "import": "./dist/sprite-editing.js"
+    },
     ".": {
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
@@ -92,6 +97,11 @@
       "types": "./dist/secret-of-mana/som-room-assets.d.ts",
       "import": "./dist/secret-of-mana/som-room-assets.js"
     },
+    "./secret-of-mana/som-room-composition": {
+      "uttori-source": "./src/secret-of-mana/som-room-composition.ts",
+      "types": "./dist/secret-of-mana/som-room-composition.d.ts",
+      "import": "./dist/secret-of-mana/som-room-composition.js"
+    },
     "./secret-of-mana/som-sprite-palettes": {
       "uttori-source": "./src/secret-of-mana/som-sprite-palettes.ts",
       "types": "./dist/secret-of-mana/som-sprite-palettes.d.ts",
@@ -101,6 +111,86 @@
       "uttori-source": "./src/secret-of-mana/som-palette-edit.ts",
       "types": "./dist/secret-of-mana/som-palette-edit.d.ts",
       "import": "./dist/secret-of-mana/som-palette-edit.js"
+    },
+    "./secret-of-mana/som-sprite-editing": {
+      "uttori-source": "./src/secret-of-mana/som-sprite-editing.ts",
+      "types": "./dist/secret-of-mana/som-sprite-editing.d.ts",
+      "import": "./dist/secret-of-mana/som-sprite-editing.js"
+    },
+    "./secret-of-mana/som-body-frame": {
+      "uttori-source": "./src/secret-of-mana/som-body-frame.ts",
+      "types": "./dist/secret-of-mana/som-body-frame.d.ts",
+      "import": "./dist/secret-of-mana/som-body-frame.js"
+    },
+    "./secret-of-mana/som-types": {
+      "uttori-source": "./src/secret-of-mana/som-types.ts",
+      "types": "./dist/secret-of-mana/som-types.d.ts",
+      "import": "./dist/secret-of-mana/som-types.js"
+    },
+    "./atlas-interchange": {
+      "uttori-source": "./src/atlas-interchange.ts",
+      "types": "./dist/atlas-interchange.d.ts",
+      "import": "./dist/atlas-interchange.js"
+    },
+    "./aseprite": {
+      "uttori-source": "./src/aseprite.ts",
+      "types": "./dist/aseprite.d.ts",
+      "import": "./dist/aseprite.js"
+    },
+    "./atlas-png": {
+      "uttori-source": "./src/atlas-png.ts",
+      "types": "./dist/atlas-png.d.ts",
+      "import": "./dist/atlas-png.js"
+    },
+    "./secret-of-mana/som-atlas-interchange": {
+      "uttori-source": "./src/secret-of-mana/som-atlas-interchange.ts",
+      "types": "./dist/secret-of-mana/som-atlas-interchange.d.ts",
+      "import": "./dist/secret-of-mana/som-atlas-interchange.js"
+    },
+    "./limits": {
+      "uttori-source": "./src/limits.ts",
+      "types": "./dist/limits.d.ts",
+      "import": "./dist/limits.js"
+    },
+    "./indexed-ownership": {
+      "uttori-source": "./src/indexed-ownership.ts",
+      "types": "./dist/indexed-ownership.d.ts",
+      "import": "./dist/indexed-ownership.js"
+    },
+    "./interchange": {
+      "uttori-source": "./src/interchange.ts",
+      "types": "./dist/interchange.d.ts",
+      "import": "./dist/interchange.js"
+    },
+    "./animation-evidence": {
+      "uttori-source": "./src/animation-evidence.ts",
+      "types": "./dist/animation-evidence.d.ts",
+      "import": "./dist/animation-evidence.js"
+    },
+    "./secret-of-mana/som-sprite-interchange": {
+      "uttori-source": "./src/secret-of-mana/som-sprite-interchange.ts",
+      "types": "./dist/secret-of-mana/som-sprite-interchange.d.ts",
+      "import": "./dist/secret-of-mana/som-sprite-interchange.js"
+    },
+    "./secret-of-mana/som-room-native": {
+      "uttori-source": "./src/secret-of-mana/som-room-native.ts",
+      "types": "./dist/secret-of-mana/som-room-native.d.ts",
+      "import": "./dist/secret-of-mana/som-room-native.js"
+    },
+    "./secret-of-mana/som-room-interchange": {
+      "uttori-source": "./src/secret-of-mana/som-room-interchange.ts",
+      "types": "./dist/secret-of-mana/som-room-interchange.d.ts",
+      "import": "./dist/secret-of-mana/som-room-interchange.js"
+    },
+    "./secret-of-mana/som-observation-evidence": {
+      "uttori-source": "./src/secret-of-mana/som-observation-evidence.ts",
+      "types": "./dist/secret-of-mana/som-observation-evidence.d.ts",
+      "import": "./dist/secret-of-mana/som-observation-evidence.js"
+    },
+    "./raster-interchange": {
+      "uttori-source": "./src/raster-interchange.ts",
+      "types": "./dist/raster-interchange.d.ts",
+      "import": "./dist/raster-interchange.js"
     }
   },
   "publishConfig": {
@@ -113,7 +203,7 @@
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace assets && npm run make-types"
   },
   "dependencies": {
-    "@uttori/data-tools": "5.0.0"
+    "@uttori/data-tools": "^5"
   },
   "engines": {
     "node": ">=26"

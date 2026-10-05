@@ -43,6 +43,26 @@
       "uttori-source": "./src/source.ts",
       "types": "./dist/source.d.ts",
       "import": "./dist/source.js"
+    },
+    "./asset-interchange": {
+      "uttori-source": "./src/asset-interchange/index.ts",
+      "types": "./dist/asset-interchange/index.d.ts",
+      "import": "./dist/asset-interchange/index.js"
+    },
+    "./asset-interchange/public-records": {
+      "uttori-source": "./src/asset-interchange/public-records.ts",
+      "types": "./dist/asset-interchange/public-records.d.ts",
+      "import": "./dist/asset-interchange/public-records.js"
+    },
+    "./asset-interchange/paths": {
+      "uttori-source": "./src/asset-interchange/paths.ts",
+      "types": "./dist/asset-interchange/paths.d.ts",
+      "import": "./dist/asset-interchange/paths.js"
+    },
+    "./asset-interchange/operation-records": {
+      "uttori-source": "./src/asset-interchange/operation-records.ts",
+      "types": "./dist/asset-interchange/operation-records.d.ts",
+      "import": "./dist/asset-interchange/operation-records.js"
     }
   },
   "publishConfig": {
@@ -62,6 +82,7 @@
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace cli && npm run make-types && npm run build"
   },
   "dependencies": {
+    "@uttori/asm-assets": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
     "@uttori/asm-plugin-loader-node": "1.0.0",

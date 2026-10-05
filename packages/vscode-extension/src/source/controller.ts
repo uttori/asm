@@ -1,6 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import type {
+  AssetFileOperation,
+  AssetImportReview,
+  AssetOperation,
+} from "@uttori/asm-cli/asset-interchange";
+import { readAssetOperation } from "@uttori/asm-cli/asset-interchange/operation-records";
+import { readAssetImportReview } from "@uttori/asm-cli/asset-interchange/public-records";
 import type { SourceAction, SourceResearchRequest } from "@uttori/asm-cli/source";
 import {
   sourceGit,
@@ -46,6 +53,7 @@ import type { AnalysisCoverageEditTarget } from "../analysis/coverage-tree.js";
 import { BinaryDrafts } from "../assets/binary-drafts.js";
 import { onDidChangeRuntimeCapture, runtimeCapturePhase } from "../runtime/capture-state.js";
 import { editAnalysisResearch } from "./analysis-editor.js";
+import { assertAssetEditorVersions, type AssetEditorVersion } from "./asset-drafts.js";
 import { captureBuildControls, changedBuildInputs, type SavedBuildInput } from "./build-inputs.js";
 import { registerSourceCodeActions } from "./code-actions.js";
 import { SourceGitFiles } from "./git-files.js";
@@ -213,9 +221,24 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
   #buildInputs: readonly SavedBuildInput[] = [];
   #buildStale = true;
   #busy?: string;
+  /** Watcher changes during coordinated publication are delivered once, including interrupted partial publication. */
+  #assetSavedInputPending = false;
   #refreshTimer?: NodeJS.Timeout;
   #watcher?: Disposable;
   #epoch = 0;
+  /** Last authoring input notification, retained to explain conservative publication invalidation. */
+  #epochInput?: string;
+  /** Notification origin distinguishes actual saved-file events from editor draft changes. */
+  #epochEvent?: "text" | "binary" | "opaque" | "saved";
+  /** UI review state never owns native bytes; the worker's durable plan remains authoritative. */
+  #assetReview?: {
+    readonly root: string;
+    readonly manifest: string;
+    readonly document: string;
+    readonly summary: AssetImportReview;
+    readonly epoch: number;
+    readonly versions: readonly AssetEditorVersion[];
+  };
 
   constructor(
     readonly context: ExtensionContext,
@@ -259,6 +282,16 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       commands.registerCommand("asm.source.init", () => this.guard(() => this.create())),
       commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
       commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
+      commands.registerCommand("asm.asset.export", (request?: unknown) =>
+        this.guard(() => this.assetFile("export", request)),
+      ),
+      commands.registerCommand("asm.asset.review", (request?: unknown) =>
+        this.guard(() => this.assetFile("review", request)),
+      ),
+      commands.registerCommand("asm.asset.apply", (request?: unknown) =>
+        this.guard(() => this.assetFile("apply", request)),
+      ),
+      commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
       commands.registerCommand("asm.source.diff", (left: Uri, right: Uri, title: string) =>
         commands.executeCommand("vscode.diff", left, right, title),
       ),
@@ -294,16 +327,26 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       workspace.onDidChangeTextDocument((event) => {
         // Save/dirty-state notifications may arrive after a build begins without changing bytes.
         // Only content edits invalidate the captured input; disk reloads carry content changes too.
-        if (event.contentChanges.length > 0 && this.authoringFile(event.document.uri.fsPath)) {
+        // Read-only Git/preview providers may reuse a source-looking fsPath. Their
+        // display refreshes never change the saved source consumed by the worker.
+        if (
+          event.document.uri.scheme === "file" &&
+          event.contentChanges.length > 0 &&
+          this.authoringFile(event.document.uri.fsPath)
+        ) {
           this.#epoch++;
+          this.#epochInput = event.document.uri.fsPath;
+          this.#epochEvent = "text";
           this.#buildStale = true;
           this.#preview = undefined;
           this.#changed.fire(undefined);
         }
       }),
       binaryDrafts.onDidChange((uri) => {
-        if (this.authoringFile(uri.fsPath)) {
+        if (uri.scheme === "file" && this.authoringFile(uri.fsPath)) {
           this.#epoch++;
+          this.#epochInput = uri.fsPath;
+          this.#epochEvent = "binary";
           this.#buildStale = true;
           this.#preview = undefined;
           this.#changed.fire(undefined);
@@ -312,15 +355,23 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       window.tabGroups.onDidChangeTabs((event) => {
         // Other custom editors own opaque drafts. Their native dirty transitions
         // still invalidate build status even though this extension cannot encode them.
-        if (
-          [...event.changed, ...event.closed].some(
-            (tab) =>
-              tab.isDirty &&
-              tab.input instanceof TabInputCustom &&
-              this.authoringFile(tab.input.uri.fsPath),
-          )
-        ) {
+        // Owned PNG versions already invalidate synchronously; delayed tab notifications
+        // must not invalidate a review of the reverted, clean document a second time.
+        const known = new Set(
+          [...binaryDrafts.documents].map((document) => document.uri.toString()),
+        );
+        const dirtyTab = [...event.changed, ...event.closed].find(
+          (tab) =>
+            tab.isDirty &&
+            tab.input instanceof TabInputCustom &&
+            tab.input.uri.scheme === "file" &&
+            !known.has(tab.input.uri.toString()) &&
+            this.authoringFile(tab.input.uri.fsPath),
+        );
+        if (dirtyTab && dirtyTab.input instanceof TabInputCustom) {
           this.#epoch++;
+          this.#epochInput = dirtyTab.input.uri.fsPath;
+          this.#epochEvent = "opaque";
           this.#buildStale = true;
           this.#changed.fire(undefined);
         }
@@ -511,6 +562,12 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         new SourceRow("Relocate Object", [], "asm.source.relocate"),
         new SourceRow("Expand ROM Capacity", [], "asm.source.expand"),
       ]),
+      new SourceRow("Edit Assets in a Saved File", [
+        new SourceRow("Export Asset", [], "asm.asset.export"),
+        new SourceRow("Review Saved Asset", [], "asm.asset.review"),
+        new SourceRow("Apply Reviewed Asset", [], "asm.asset.apply"),
+        new SourceRow("Recover Interrupted Asset Edit", [], "asm.asset.recover"),
+      ]),
       new SourceRow(`Capture · ${capturePhase}`, captureRows),
     ];
   }
@@ -671,6 +728,11 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     this.#watcher?.dispose();
     const watcher = workspace.createFileSystemWatcher(new RelativePattern(resolved, "**/*"));
     const changed = (uri: Uri): void => {
+      // Providers can broadcast virtual original-file refreshes to glob watchers.
+      // Only file-backed changes can alter this saved source checkout.
+      if (uri.scheme !== "file") {
+        return;
+      }
       const relative = path.relative(resolved, uri.fsPath).split(path.sep).join("/");
       const gitEvent = relative === ".git" || relative.startsWith(".git/");
       const authoring = this.authoringFile(uri.fsPath);
@@ -693,6 +755,8 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       );
       if (authoring && !openDocument && !openBinary) {
         this.#epoch++;
+        this.#epochInput = uri.fsPath;
+        this.#epochEvent = "saved";
         const build = this.#build;
         const inputs = this.#buildInputs.filter((input) => input.path === relative);
         if (!build) {
@@ -720,7 +784,11 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         }
       }
       if (authoring) {
-        this.#savedInput.fire();
+        if (this.#busy === "asset-apply" || this.#busy === "asset-recover") {
+          this.#assetSavedInputPending = true;
+        } else {
+          this.#savedInput.fire();
+        }
       }
       const researchRoots = this.#configuration?.researchRoots ?? [];
       if (
@@ -827,6 +895,354 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     return [...this.binaryDrafts.documents].filter(
       (document) => document.dirty && this.authoringFile(document.uri.fsPath),
     );
+  }
+
+  /** Capture lightweight versions, including interchange documents saved outside the selected source root. */
+  private assetEditorVersions(): AssetEditorVersion[] {
+    const binary = [...this.binaryDrafts.documents],
+      known = new Set(binary.map((document) => document.uri.toString()));
+    return [
+      ...workspace.textDocuments
+        .filter((document) => document.uri.scheme === "file" && !document.isClosed)
+        .map((document) => ({
+          path: document.uri.fsPath,
+          version: document.version,
+          dirty: document.isDirty,
+          opaque: false,
+        })),
+      ...binary.map((document) => ({
+        path: document.uri.fsPath,
+        version: document.version,
+        dirty: document.dirty,
+        opaque: false,
+      })),
+      ...window.tabGroups.all.flatMap((group) =>
+        group.tabs.flatMap((tab) => {
+          if (
+            !(tab.input instanceof TabInputCustom) ||
+            tab.input.uri.scheme !== "file" ||
+            known.has(tab.input.uri.toString())
+          ) {
+            return [];
+          }
+          return [{ path: tab.input.uri.fsPath, version: 0, dirty: tab.isDirty, opaque: true }];
+        }),
+      ),
+    ];
+  }
+
+  /** Saved-source export/review/apply share the existing source worker, busy state and live editor-version checks. */
+  private async assetFile(
+    action: "export" | "review" | "apply",
+    request?: unknown,
+  ): Promise<unknown> {
+    if (!workspace.isTrusted) {
+      throw new Error("Trust this workspace before editing source assets.");
+    }
+    if (this.#busy) {
+      throw new Error(`Source operation already running: ${this.#busy}.`);
+    }
+    if (!this.#root) {
+      await this.select();
+    }
+    const root = this.#root;
+    if (!root) {
+      return undefined;
+    }
+    const choose = async (title: string, extensions: string[]): Promise<string | undefined> =>
+      (
+        await window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } })
+      )?.[0]?.fsPath;
+    let operation: AssetFileOperation;
+    if (request !== undefined) {
+      const selected = readAssetOperation(request);
+      if (
+        selected.action !== `asset-${action}` ||
+        path.resolve(selected.directory) !== root ||
+        selected.action === "asset-cleanup" ||
+        selected.action === "asset-recover"
+      ) {
+        throw new Error(
+          "Asset command request does not match the selected source project and action.",
+        );
+      }
+      operation = selected;
+      if (
+        selected.action === "asset-apply" &&
+        (!this.#assetReview ||
+          selected.review !== this.#assetReview.summary.id ||
+          path.resolve(selected.document) !== path.resolve(this.#assetReview.document) ||
+          path.resolve(selected.manifest) !== path.resolve(this.#assetReview.manifest))
+      ) {
+        throw new Error("Apply the saved asset review shown in this editor.");
+      }
+    } else if (action === "export") {
+      const adapter = await window.showQuickPick(
+        [
+          { label: "Secret of Mana sprite", id: "som.sprite.native" },
+          { label: "Secret of Mana room", id: "som.room.native" },
+        ],
+        { title: "Export asset" },
+      );
+      if (!adapter) {
+        return undefined;
+      }
+      const selection = await choose("Select the source asset selection declaration", ["json"]);
+      if (!selection) {
+        return undefined;
+      }
+      const presentation = await window.showQuickPick(
+        [
+          {
+            label: "Aseprite tilemaps",
+            description: "Shared tile inventory, compositions and known previews",
+            id: "tilemap" as const,
+          },
+          {
+            label: "Raster Aseprite",
+            description: "Fixed native view inventory",
+            id: "raster" as const,
+          },
+          {
+            label: "Indexed PNG",
+            description: "Fixed native view inventory with an explicit sidecar manifest",
+            id: "indexed-png" as const,
+          },
+        ],
+        { title: "Asset presentation" },
+      );
+      if (!presentation) {
+        return undefined;
+      }
+      const filters: Record<string, string[]> =
+        presentation.id === "indexed-png" ? { PNG: ["png"] } : { Aseprite: ["aseprite"] };
+      const document = (await window.showSaveDialog({ title: "Export editable asset", filters }))
+        ?.fsPath;
+      if (!document) {
+        return undefined;
+      }
+      operation = {
+        action: "asset-export",
+        directory: root,
+        adapter: adapter.id,
+        selection,
+        document,
+        manifest: document + ".json",
+        presentation: presentation.id,
+      };
+    } else if (action === "review") {
+      const manifest = await choose("Select the asset export manifest", ["json"]);
+      if (!manifest) {
+        return undefined;
+      }
+      const document = await choose("Select the saved edited asset", ["aseprite", "ase", "png"]);
+      if (!document) {
+        return undefined;
+      }
+      operation = { action: "asset-review", directory: root, manifest, document };
+    } else {
+      const review = this.#assetReview;
+      if (!review || review.root !== root) {
+        throw new Error("Review a saved asset in the selected project before applying it.");
+      }
+      if (review.epoch !== this.#epoch) {
+        throw new Error("Source changed after asset review. Review again.");
+      }
+      operation = {
+        action: "asset-apply",
+        directory: root,
+        document: review.document,
+        manifest: review.manifest,
+        review: review.summary.id,
+      };
+    }
+    if (this.#root !== root || this.#busy) {
+      throw new Error("Selected source project changed. Start the asset operation again.");
+    }
+    if (action === "apply" && this.#assetReview?.epoch !== this.#epoch) {
+      throw new Error("Source changed after asset review. Review again.");
+    }
+    const epoch = this.#epoch,
+      versions = this.assetEditorVersions(),
+      reviewed = this.#assetReview;
+    operation = {
+      ...operation,
+      drafts: versions
+        .filter((entry) => entry.dirty)
+        .map(({ path: file, version, opaque }) => ({ path: file, version, opaque })),
+    };
+    this.#busy = operation.action;
+    this.#assetSavedInputPending = false;
+    this.#changed.fire(undefined);
+    let published = false;
+    try {
+      const result = await this.runAssetOperation(operation, epoch, versions, reviewed?.versions);
+      if (action === "review") {
+        if (this.#root !== root || this.#epoch !== epoch) {
+          throw new Error("Source changed during asset review. Review again.");
+        }
+        const summary = readAssetImportReview(result);
+        assertAssetEditorVersions(versions, this.assetEditorVersions(), [
+          ...summary.files.map((file) => path.resolve(root, file.path)),
+          operation.document,
+        ]);
+        this.#assetReview = {
+          root,
+          manifest: operation.manifest,
+          document: operation.document,
+          summary,
+          epoch,
+          versions,
+        };
+        const reviewDocument = await workspace.openTextDocument({
+          language: "json",
+          content: JSON.stringify(summary, null, 2),
+        });
+        await window.showTextDocument(reviewDocument, { preview: true });
+        void window.showInformationMessage(
+          `Asset review: ${summary.files.length} source files. Apply Reviewed Asset uses this exact plan.`,
+        );
+      } else if (action === "apply") {
+        if (!isRecord(result) || !isRecord(result.review)) {
+          throw new Error("Invalid asset publication result.");
+        }
+        readAssetImportReview(result.review);
+        published = typeof result.transaction === "string";
+        this.#assetReview = undefined;
+        void window.showInformationMessage(
+          published
+            ? "Asset edits applied. Re-export for the next editing round."
+            : "No asset changes; source files are unchanged.",
+        );
+      } else {
+        const instruction =
+          operation.action === "asset-export" && (operation.presentation ?? "tilemap") === "tilemap"
+            ? "Select the Tiles layer, use Draw Pixels and Manual in Aseprite's toolbar (hold Space and press 1), paint and save."
+            : "Edit pixels or palette colors in the fixed inventory and save.";
+        void window.showInformationMessage(
+          `Asset exported. ${instruction} Then Review Saved Asset.`,
+        );
+      }
+      return result;
+    } finally {
+      this.#busy = undefined;
+      this.#changed.fire(undefined);
+      if (published || this.#assetSavedInputPending) {
+        this.#buildStale = true;
+        this.#savedInput.fire();
+      }
+      this.#assetSavedInputPending = false;
+      await this.refresh();
+    }
+  }
+
+  /** All asset workers use the same cancellation and final live-buffer gate, including explicit journal recovery. */
+  private async runAssetOperation(
+    operation: AssetOperation,
+    epoch: number,
+    versions: readonly AssetEditorVersion[],
+    reviewedVersions = versions,
+  ): Promise<unknown> {
+    const root = operation.directory;
+    return window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        title: `Asset: ${operation.action.slice(6)}`,
+        cancellable: true,
+      },
+      async (reporter, token) => {
+        const abort = new AbortController(),
+          listener = token.onCancellationRequested(() => abort.abort());
+        try {
+          return await this.#worker.run(operation, {
+            signal: abort.signal,
+            maxMemoryMiB: workspace
+              .getConfiguration("asm", Uri.file(root))
+              .get<number>("analysis.maxMemoryMiB", 4096),
+            onProgress: (message) => reporter.report({ message }),
+            onBeforePublish: (paths) => {
+              if (this.#root !== root || this.#epoch !== epoch) {
+                const input = this.#epochInput
+                  ? ` (${path.relative(root, this.#epochInput)}; ${this.#epochEvent} event)`
+                  : "";
+                throw new Error(
+                  `Source/editor state changed during asset validation${input}. Review again.`,
+                );
+              }
+              assertAssetEditorVersions(reviewedVersions, this.assetEditorVersions(), paths);
+            },
+          });
+        } finally {
+          listener.dispose();
+        }
+      },
+    );
+  }
+
+  /** Recovery is an explicit journal direction; unknown external bytes and relevant drafts remain protected by the worker. */
+  private async assetRecovery(): Promise<void> {
+    if (!workspace.isTrusted) {
+      throw new Error("Trust this workspace before recovering asset edits.");
+    }
+    if (this.#busy) {
+      throw new Error(`Source operation already running: ${this.#busy}.`);
+    }
+    if (!this.#root) {
+      await this.select();
+    }
+    const root = this.#root;
+    if (!root) {
+      return;
+    }
+    const direction = await window.showQuickPick(
+      [
+        { label: "Complete staged asset edit", id: "after" as const },
+        { label: "Restore bytes from before the asset edit", id: "before" as const },
+      ],
+      { title: "Recover interrupted asset edit" },
+    );
+    if (!direction) {
+      return;
+    }
+    if (this.#root !== root || this.#busy) {
+      throw new Error("Selected source project changed; start recovery again.");
+    }
+    const epoch = this.#epoch,
+      versions = this.assetEditorVersions();
+    this.#busy = "asset-recover";
+    this.#assetSavedInputPending = false;
+    this.#changed.fire(undefined);
+    let recovered = false;
+    try {
+      const result = await this.runAssetOperation(
+        {
+          action: "asset-recover",
+          directory: root,
+          direction: direction.id,
+          drafts: versions
+            .filter((entry) => entry.dirty)
+            .map(({ path, version, opaque }) => ({ path, version, opaque })),
+        },
+        epoch,
+        versions,
+      );
+      recovered = isRecord(result) && result.state === "completed";
+      this.#assetReview = undefined;
+      void window.showInformationMessage(
+        recovered
+          ? "Asset publication recovered. Re-export before editing again."
+          : "No interrupted asset publication to recover.",
+      );
+    } finally {
+      this.#busy = undefined;
+      this.#changed.fire(undefined);
+      if (recovered || this.#assetSavedInputPending) {
+        this.#buildStale = true;
+        this.#savedInput.fire();
+      }
+      this.#assetSavedInputPending = false;
+      await this.refresh();
+    }
   }
 
   /** A draft owned by another extension cannot be represented by its older saved file. */

@@ -22,12 +22,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Persist a replacement before exposing it; temporary files always share the destination volume.
  * @param {string} file Destination owned by the caller.
  * @param {string | Uint8Array} bytes Complete replacement bytes.
+ * @param {number} [mode] Optional permission bits for the replacement; ordinary source callers preserve the existing mode.
  */
-export function durableReplace(file: string, bytes: string | Uint8Array): void {
+export function durableReplace(file: string, bytes: string | Uint8Array, mode?: number): void {
   ensureDurableDirectory(path.dirname(path.resolve(file)));
   const temporary = `${file}.${randomUUID()}.tmp`;
   try {
-    const fd = fs.openSync(temporary, "wx");
+    const fd = fs.openSync(temporary, "wx", mode);
     try {
       fs.writeFileSync(fd, bytes);
       fs.fsyncSync(fd);

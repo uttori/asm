@@ -29,7 +29,7 @@ test("asset PNG policy rejects animation, oversized input and oversized edited c
   t.throws(
     () =>
       pngImporter.import({
-        bytes: new Uint8Array(16 * 1024 * 1024 + 1),
+        bytes: new Uint8Array(32 * 1024 * 1024 + 1),
         mediaType: "image/png",
       }),
     { message: /input byte limit/ },
@@ -37,7 +37,7 @@ test("asset PNG policy rejects animation, oversized input and oversized edited c
   t.throws(
     () =>
       rewriteIndexedPng(bytes, {
-        dimensions: { width: 1024, height: 1025 },
+        dimensions: { width: 4096, height: 1025 },
         indexes: new Uint8Array(1),
       }),
     { message: /pixel limit/ },
@@ -45,12 +45,12 @@ test("asset PNG policy rejects animation, oversized input and oversized edited c
   t.throws(
     () =>
       createIndexedPng({
-        width: 1024,
+        width: 4096,
         height: 1025,
         indexes: new Uint8Array(1),
         palette: [[0, 0, 0, 0]],
       }),
-    { message: /one-megapixel/ },
+    { message: /exceeds limit/ },
   );
 });
 

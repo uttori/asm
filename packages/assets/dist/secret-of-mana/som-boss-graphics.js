@@ -47,7 +47,9 @@ export function encodeBossGraphics(data) {
         const literals = [];
         for (let bit = 0; bit < 8; bit++) {
             const index = start + bit;
-            if (index < 2 || data[index] !== data[index - 2]) {
+            // Native history starts at zero, so the first two zero bytes need no literals either.
+            const previous = index >= 2 ? data[index - 2] : 0;
+            if (data[index] !== previous) {
                 mask |= 1 << (7 - bit);
                 literals.push(data[index]);
             }

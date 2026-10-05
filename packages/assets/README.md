@@ -1,6 +1,6 @@
 # @uttori/asm-assets
 
-Portable, synchronous asset conversion primitives. The package accepts supplied bytes and
+Portable asset conversion primitives. The package accepts supplied bytes and
 does not read a ROM, create files, run an assembler, or load SQLite. `./node` is the only
 entry point that reads or writes the filesystem.
 
@@ -163,6 +163,12 @@ disassembler resolves known v1 native IDs only for display; it does not run the 
 codec wrappers or silently migrate persisted project records.
 
 ## Entry points
+
+`./aseprite`, `./interchange`, `./raster-interchange`, `./indexed-ownership`,
+`./animation-evidence` and `./limits` provide bounded indexed file presentation,
+native owner reconciliation and measured previews. Aseprite structure conversion uses
+asynchronous browser compression streams; native algorithms remain synchronous.
+Saved-source host workflows are described in the [asset editing guide](../cli/ASSET_INTERCHANGE.md).
 
 `@uttori/asm-assets` contains registry contracts. `./snes`, `./data`, `./compression`,
 `./preview`, `./image`, and `./audio` are browser-safe. `./node` provides optional file

@@ -15,8 +15,8 @@ import {
   runTests,
 } from "@vscode/test-electron";
 
-/** VS Code release matching the extension's declared minimum API and embedded Node 24 runtime. */
-const VSCODE_TEST_VERSION = "1.128.0";
+/** Resolve the latest stable release for acceptance; explicit versions remain available for reproducible receipts. */
+const VSCODE_TEST_VERSION = "stable";
 
 /** Parsed JSON must be a plain object before its fields are read. */
 function assertRecord(value: unknown, label: string): asserts value is Record<string, unknown> {
@@ -33,6 +33,7 @@ function assertRecord(value: unknown, label: string): asserts value is Record<st
  * @param {string} workspace Temporary synthetic workspace.
  * @param {string} tests Compiled Extension Host assertions.
  * @param {string} executable Editor executable, either cached or explicitly selected.
+ * @param {string} editorVersion Actual runtime version read from the editor package.
  * @param {string} vsix Candidate archive to install without rebuilding it.
  * @returns {Promise<void>} Rejects on installation, assertion, or editor shutdown failure.
  */
@@ -40,6 +41,7 @@ const testInstalledArchive = async (
   workspace: string,
   tests: string,
   executable: string,
+  editorVersion: string,
   vsix: string,
 ): Promise<void> => {
   const isolation = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-vsix-"));
@@ -54,7 +56,7 @@ const testInstalledArchive = async (
         name: "uttori-release-test-driver",
         publisher: "uttori-tests",
         version: "0.0.0",
-        engines: { vscode: "^1.128.0" },
+        engines: { vscode: `^${editorVersion}` },
         main: "index.js",
         activationEvents: ["*"],
         capabilities: { untrustedWorkspaces: { supported: true } },
@@ -213,12 +215,12 @@ const testInstalledArchive = async (
 };
 
 /**
- * Checks the minimum editor's exact API in addition to the pinned development typings.
+ * Checks the selected editor's exact API in addition to the development typings.
  * The temporary config never changes the developer's installed type package.
  * @param {string} executable Downloaded VS Code executable.
- * @returns {void} Throws with compiler diagnostics if a newer editor API is used.
+ * @returns {void} Throws with compiler diagnostics if its shipped API cannot type-check the extension.
  */
-const checkMinimumEditorApi = (executable: string): void => {
+const checkEditorApi = (executable: string): void => {
   const root = process.cwd();
   let resources = path.join(path.dirname(executable), "resources");
   if (process.platform === "darwin") {
@@ -226,7 +228,7 @@ const checkMinimumEditorApi = (executable: string): void => {
   }
   const declarations = path.join(resources, "app/out/vscode-dts/vscode.d.ts");
   if (!fs.existsSync(declarations)) {
-    throw new Error(`Minimum editor API declarations are missing: ${declarations}`);
+    throw new Error(`Selected editor API declarations are missing: ${declarations}`);
   }
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-vscode-api-"));
   try {
@@ -272,29 +274,25 @@ const main = async (): Promise<void> => {
   const vscodeExecutablePath = process.env.UTTORI_VSCODE_TEST_EXECUTABLE
     ? path.resolve(process.env.UTTORI_VSCODE_TEST_EXECUTABLE)
     : await downloadAndUnzipVSCode(version);
-  if (!process.env.UTTORI_VSCODE_TEST_EXECUTABLE || process.env.UTTORI_VSCODE_TEST_VERSION) {
-    // Directory names and downloader markers are not runtime identity; a replaced cache must fail.
-    let resources = path.join(path.dirname(vscodeExecutablePath), "resources");
-    if (process.platform === "darwin") {
-      resources = path.resolve(path.dirname(vscodeExecutablePath), "../Resources");
-    }
-    const editorPackage: unknown = JSON.parse(
-      fs.readFileSync(path.join(resources, "app/package.json"), "utf8"),
-    );
-    assertRecord(editorPackage, "VS Code package.json");
-    if (typeof editorPackage.version !== "string") {
-      throw new Error(
-        `Expected VS Code ${version}, found no version. Replace the stale test cache.`,
-      );
-    }
-    const actual = editorPackage.version;
-    if (actual !== version) {
-      throw new Error(
-        `Expected VS Code ${version}, found ${actual}. Replace the stale test cache.`,
-      );
-    }
+  // Directory names and downloader markers are not runtime identity. A moving
+  // release channel resolves to a concrete version; explicit numeric pins must match.
+  let resources = path.join(path.dirname(vscodeExecutablePath), "resources");
+  if (process.platform === "darwin") {
+    resources = path.resolve(path.dirname(vscodeExecutablePath), "../Resources");
   }
-  checkMinimumEditorApi(vscodeExecutablePath);
+  const editorPackage: unknown = JSON.parse(
+    fs.readFileSync(path.join(resources, "app/package.json"), "utf8"),
+  );
+  assertRecord(editorPackage, "VS Code package.json");
+  if (typeof editorPackage.version !== "string") {
+    throw new Error(`Expected VS Code ${version}, found no version. Replace the stale test cache.`);
+  }
+  const actual = editorPackage.version;
+  if (version !== "stable" && version !== "insiders" && actual !== version) {
+    throw new Error(`Expected VS Code ${version}, found ${actual}. Replace the stale test cache.`);
+  }
+  console.log(`Testing VS Code ${actual} (requested ${version}).`);
+  checkEditorApi(vscodeExecutablePath);
   if (process.env.UTTORI_VSCODE_LIVE_WORKSPACE) {
     // Full-project checks may open and undo real source buffers. Isolate both extension state and
     // hot-exit backups so a verification run cannot reuse or overwrite the user's editor session.
@@ -306,6 +304,7 @@ const main = async (): Promise<void> => {
       const developmentPaths = [extensionDevelopmentPath];
       if (
         process.env.UTTORI_VSCODE_BINARY_PREVIEW === "1" ||
+        process.env.UTTORI_VSCODE_ASSET_INTERCHANGE === "1" ||
         process.env.UTTORI_VSCODE_SOURCE_LAUNCH === "1" ||
         process.env.UTTORI_VSCODE_SOURCE_LIFECYCLE === "1"
       ) {
@@ -344,7 +343,7 @@ const main = async (): Promise<void> => {
             name: "uttori-asset-test-driver",
             publisher: "uttori-tests",
             version: "0.0.0",
-            engines: { vscode: "^1.128.0" },
+            engines: { vscode: `^${actual}` },
             main: process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1" ? "index.js" : undefined,
             activationEvents:
               process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1" ? ["onStartupFinished"] : undefined,
@@ -578,6 +577,7 @@ const main = async (): Promise<void> => {
         workspacePath,
         extensionTestsPath,
         vscodeExecutablePath,
+        actual,
         path.resolve(process.env.UTTORI_VSCODE_TEST_VSIX),
       );
       return;

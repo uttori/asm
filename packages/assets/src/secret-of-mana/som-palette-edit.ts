@@ -117,15 +117,18 @@ function nativeBytes(
   if (!options) {
     return undefined;
   }
+  const layoutName = typeof options.layout === "string" ? options.layout : "layout.json";
+  const paletteName = typeof options.palettes === "string" ? options.palettes : "palettes.json";
   const result = convertBossImage(
     source,
-    { ...options, segment, layout: "layout.json", palettes: "palettes.json" },
+    { ...options, segment, layout: layoutName, palettes: paletteName },
     {
-      "layout.json": {
+      ...atlas.resources,
+      [layoutName]: {
         bytes: new TextEncoder().encode(JSON.stringify(atlas.layout)),
         mediaType: "application/json",
       },
-      "palettes.json": {
+      [paletteName]: {
         bytes: new TextEncoder().encode(JSON.stringify(catalog)),
         mediaType: "application/json",
       },
@@ -161,25 +164,14 @@ export function frameAtlasPreservedChunks(atlas: SpriteAtlasSource, catalog: Spr
   return names;
 }
 
-/**
- * Plan exact RGB8 edits by catalogue slot. All atlases must be supplied so stale users fail.
- * Results are owned values; the host publishes them together. Variant-only users retain
- * their primary PNG palette. Unrepresentable colors fail instead of being quantized.
- * @param {object} catalog Current shared palette catalogue.
- * @param {Array} atlases Identified sources/layouts and optional native compression declarations.
- * @param {Array<{palette: string, index: number, rgb: number[]}>} edits Palette slot edits (index includes firstIndex).
- * @returns {{catalog: SpritePaletteCatalog, images: Map<string, Uint8Array>, palettes: string[]}} Updated catalogue and owned PNG bytes.
+/** Plan physical palette-word changes without requiring or rewriting PNG display colors.
+ * Shared ROM aliases are updated together; native hidden bits and unedited words stay exact.
  */
-export function planSpritePaletteEdits(
+export function planSpritePaletteWords(
   catalog: SpritePaletteCatalog,
-  atlases: readonly SpriteAtlasSource[],
   edits: readonly { palette: string; index: number; rgb: number[] }[],
 ) {
   validateSpritePaletteAliases(catalog);
-  const audit = inspectSpritePaletteUsers(catalog, atlases);
-  if (audit.errors.length) {
-    throw new Error(audit.errors.join("\n"));
-  }
   const next = structuredClone(catalog);
   const changed = new Set<string>();
   const slots = new Set<number>();
@@ -219,7 +211,7 @@ export function planSpritePaletteEdits(
       .padStart(4, "0");
     if (record.words[offset].toUpperCase() !== word) {
       // Several displayed palettes can alias a physical word. Propagate the edit
-      // before updating every affected PNG so their colors cannot disagree with ROM.
+      // so every consumer continues to encode the same native owner.
       for (const [id, alias] of Object.entries(next.palettes)) {
         const index = (address - Number.parseInt(alias.romAddress, 16)) / 2;
         if (Number.isInteger(index) && index >= 0 && index < alias.words.length) {
@@ -229,6 +221,31 @@ export function planSpritePaletteEdits(
       }
     }
   }
+  return { catalog: next, palettes: [...changed] };
+}
+
+/**
+ * Plan exact RGB8 edits by catalogue slot. All atlases must be supplied so stale users fail.
+ * Results are owned values; the host publishes them together. Variant-only users retain
+ * their primary PNG palette. Unrepresentable colors fail instead of being quantized.
+ * @param {object} catalog Current shared palette catalogue.
+ * @param {Array} atlases Identified sources/layouts and optional native compression declarations.
+ * @param {Array<{palette: string, index: number, rgb: number[]}>} edits Palette slot edits (index includes firstIndex).
+ * @returns {{catalog: SpritePaletteCatalog, images: Map<string, Uint8Array>, palettes: string[]}} Updated catalogue and owned PNG bytes.
+ */
+export function planSpritePaletteEdits(
+  catalog: SpritePaletteCatalog,
+  atlases: readonly SpriteAtlasSource[],
+  edits: readonly { palette: string; index: number; rgb: number[] }[],
+) {
+  validateSpritePaletteAliases(catalog);
+  const audit = inspectSpritePaletteUsers(catalog, atlases);
+  if (audit.errors.length) {
+    throw new Error(audit.errors.join("\n"));
+  }
+  const words = planSpritePaletteWords(catalog, edits);
+  const next = words.catalog;
+  const changed = new Set(words.palettes);
   const images = new Map<string, Uint8Array>();
   for (const atlas of atlases) {
     if (!atlas.layout.paletteRefs.some((id) => changed.has(id))) {

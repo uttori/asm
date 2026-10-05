@@ -10,6 +10,13 @@ function isNonEmptyString(value) {
 function isNonEmptyStringArray(value) {
     return isUnknownArray(value) && value.every(isNonEmptyString);
 }
+/** Each provider callback receives owned resource bytes; encoding cannot mutate the decoder's verification inputs. */
+function copyAssetResources(resources) {
+    return Object.fromEntries(Object.entries(resources).map(([name, item]) => [
+        name,
+        { ...item, bytes: Uint8Array.from(item.bytes) },
+    ]));
+}
 /** One build owns its bytes and conversions across all three passes. */
 export class AssetAssemblyService {
     session;
@@ -107,7 +114,7 @@ export class AssetAssemblyService {
         if (cached) {
             return cached;
         }
-        const bytes = this.session.fileProvider.readFile(path).slice();
+        const bytes = Uint8Array.from(this.session.fileProvider.readFile(path));
         this.#files.set(path, bytes);
         this.dependencies.set(path, kind);
         return bytes;
@@ -212,7 +219,7 @@ export class AssetAssemblyService {
         delete options.compress;
         delete options.compressOptions;
         delete options.maxSize;
-        for (const resourceName of format.resourcePaths?.(options) ?? []) {
+        for (const resourceName of format.resourcePaths?.(structuredClone(options)) ?? []) {
             this.dependencies.set(this.#resolve(resourceName), "resource");
         }
         // Compression dictionaries and other schema-declared inputs also invalidate analysis.
@@ -240,7 +247,7 @@ export class AssetAssemblyService {
             const transformOptions = isRecord(suppliedOptions) ? suppliedOptions : {};
             const names = [
                 ...this.#validateTransformOptions(transform, transformOptions),
-                ...(transform.resourcePaths?.(transformOptions) ?? []),
+                ...(transform.resourcePaths?.(structuredClone(transformOptions)) ?? []),
             ];
             for (const name of new Set(names)) {
                 this.dependencies.set(this.#resolve(name), "resource");
@@ -278,13 +285,15 @@ export class AssetAssemblyService {
             boundedSize = maxSize;
         }
         const resources = {};
+        const resourcePaths = {};
         const resourceIdentities = [];
-        const declaredResources = format.resourcePaths?.(options) ?? [];
+        const declaredResources = format.resourcePaths?.(structuredClone(options)) ?? [];
         if (!isNonEmptyStringArray(declaredResources)) {
             throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
         }
         for (const resourceName of declaredResources) {
             const resourcePath = this.#resolve(resourceName);
+            resourcePaths[resourceName] = resourcePath;
             resources[resourceName] = {
                 bytes: this.#read(resourcePath, "resource"),
                 mediaType: this.#mediaType(resourcePath),
@@ -306,11 +315,7 @@ export class AssetAssemblyService {
         if (!converted) {
             // Converter ownership is external. Pass copies so a misbehaving provider
             // cannot change the build snapshot used by a later asset statement.
-            const borrowedResources = Object.fromEntries(Object.entries(resources).map(([name, item]) => [
-                name,
-                { ...item, bytes: item.bytes.slice() },
-            ]));
-            converted = format.convert({ ...source, bytes: source.bytes.slice() }, options, borrowedResources);
+            converted = format.convert({ ...source, bytes: source.bytes.slice() }, structuredClone(options), copyAssetResources(resources));
             if (!converted.primaryOutput || !Object.hasOwn(converted.outputs, converted.primaryOutput)) {
                 throw new Error(`Asset format '${format.id}' omitted its primary output.`);
             }
@@ -318,7 +323,7 @@ export class AssetAssemblyService {
                 if (!(part.bytes instanceof Uint8Array)) {
                     throw new Error(`Asset output '${name}' is not bytes.`);
                 }
-                return [name, { bytes: part.bytes.slice() }];
+                return [name, { bytes: Uint8Array.from(part.bytes) }];
             }));
             converted = { primaryOutput: converted.primaryOutput, outputs: owned };
             this.#conversions.set(conversionKey, converted);
@@ -356,16 +361,18 @@ export class AssetAssemblyService {
                 throw new Error(`includeAsset transform '${id}' options must be an object.`);
             }
             const schemaResources = this.#validateTransformOptions(transform, transformOptions);
-            transform.validateOptions?.(transformOptions);
+            transform.validateOptions?.(structuredClone(transformOptions));
             const transformResources = {};
             const transformResourceIdentities = [];
-            const declared = transform.resourcePaths?.(transformOptions) ?? [];
+            const transformResourcePaths = {};
+            const declared = transform.resourcePaths?.(structuredClone(transformOptions)) ?? [];
             if (!isNonEmptyStringArray(declared)) {
                 throw new Error(`Asset transform '${transform.id}' returned invalid resource paths.`);
             }
             const names = [...new Set([...schemaResources, ...declared])];
             for (const name of names) {
                 const path = this.#resolve(name);
+                transformResourcePaths[name] = path;
                 transformResources[name] = {
                     bytes: this.#read(path, "resource"),
                     mediaType: this.#mediaType(path),
@@ -377,6 +384,7 @@ export class AssetAssemblyService {
                 options: transformOptions,
                 resources: transformResources,
                 resourceIdentities: transformResourceIdentities,
+                resourcePaths: transformResourcePaths,
             });
         }
         const emissionKey = this.#stable([
@@ -397,24 +405,22 @@ export class AssetAssemblyService {
                 if (previousBytes.length > AssetAssemblyService.MAX_STAGE_BYTES) {
                     throw new Error(`Asset '${sourcePath}' exceeds the transform stage byte limit.`);
                 }
-                const borrowedResources = Object.fromEntries(Object.entries(transformResources).map(([name, item]) => [
-                    name,
-                    { ...item, bytes: item.bytes.slice() },
-                ]));
                 try {
-                    const encoded = provider.encode(previousBytes.slice(), transformOptions, borrowedResources);
-                    if (!(encoded instanceof Uint8Array) ||
-                        encoded.length > AssetAssemblyService.MAX_STAGE_BYTES) {
+                    const supplied = provider.encode(previousBytes.slice(), structuredClone(transformOptions), copyAssetResources(transformResources));
+                    if (!(supplied instanceof Uint8Array) ||
+                        supplied.length > AssetAssemblyService.MAX_STAGE_BYTES) {
                         throw new Error("produced invalid or oversized bytes");
                     }
+                    // Buffer.slice() borrows storage. Own the encoder result before passing a separate copy to decode.
+                    const encoded = Uint8Array.from(supplied);
                     // The expected previous length is the decoder's bound, including for BRR.
-                    const decoded = provider.decode(encoded.slice(), transformOptions, previousBytes.length, borrowedResources);
+                    const decoded = provider.decode(encoded.slice(), structuredClone(transformOptions), previousBytes.length, copyAssetResources(transformResources));
                     if (!(decoded instanceof Uint8Array) ||
                         decoded.length !== previousBytes.length ||
                         !decoded.every((value, index) => value === previousBytes[index])) {
                         throw new Error("failed exact decode verification");
                     }
-                    bytes = encoded.slice();
+                    bytes = encoded;
                 }
                 catch (error) {
                     const message = error instanceof Error ? error.message : String(error);
@@ -432,6 +438,19 @@ export class AssetAssemblyService {
             part: selected,
             size: bytes.length,
             transforms: transforms.map((item) => item.provider.id),
+            // Capture evaluated source declarations rather than re-parsing grammar or guessing filename conventions.
+            conversion: {
+                version: format.version,
+                options: structuredClone(options),
+                resources: { ...resourcePaths },
+                ...(boundedSize === undefined ? {} : { maxSize: boundedSize }),
+                transforms: transforms.map((item) => ({
+                    id: item.provider.id,
+                    version: item.provider.version,
+                    options: structuredClone(item.options),
+                    resources: { ...item.resourcePaths },
+                })),
+            },
         };
         return bytes;
     }

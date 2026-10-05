@@ -16,7 +16,7 @@ function isWorkerBytes(value: unknown): value is { bytes: Uint8Array; indexes?: 
 }
 
 // Untrusted containers are decoded away from the extension host under the asset
-// library's one-megapixel/16 MiB limits and the host's worker memory/time budgets.
+// library's four-megapixel/32 MiB limits and the host's worker memory/time budgets.
 try {
   const data: unknown = workerData;
   if (!isWorkerBytes(data)) {

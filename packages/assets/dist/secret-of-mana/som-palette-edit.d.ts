@@ -21,6 +21,17 @@ export declare function inspectSpritePaletteUsers(catalog: SpritePaletteCatalog,
  * @returns {string[]} Private PNG chunk names safe to retain.
  */
 export declare function frameAtlasPreservedChunks(atlas: SpriteAtlasSource, catalog: SpritePaletteCatalog): string[];
+/** Plan physical palette-word changes without requiring or rewriting PNG display colors.
+ * Shared ROM aliases are updated together; native hidden bits and unedited words stay exact.
+ */
+export declare function planSpritePaletteWords(catalog: SpritePaletteCatalog, edits: readonly {
+    palette: string;
+    index: number;
+    rgb: number[];
+}[]): {
+    catalog: SpritePaletteCatalog;
+    palettes: string[];
+};
 /**
  * Plan exact RGB8 edits by catalogue slot. All atlases must be supplied so stale users fail.
  * Results are owned values; the host publishes them together. Variant-only users retain

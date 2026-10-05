@@ -10,6 +10,7 @@ import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
 import { AnalysisSourcesProvider } from "../src/analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
+import { runAssetInterchangeSmoke } from "./asset-interchange.js";
 import { runAssetRecoverySmoke } from "./asset-recovery.js";
 import { runBinaryPreviewSmoke } from "./binary-preview.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
@@ -491,6 +492,9 @@ export async function run(): Promise<void> {
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
   if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
+    if (process.env.UTTORI_VSCODE_ASSET_INTERCHANGE === "1") {
+      return runAssetInterchangeSmoke(folder);
+    }
     if (process.env.UTTORI_VSCODE_SOURCE_LIFECYCLE === "1") {
       return runSourceLifecycleSmoke(folder);
     }

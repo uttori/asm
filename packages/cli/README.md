@@ -1,5 +1,8 @@
 # @uttori/asm-cli
 
+For saved Aseprite/PNG export, review, application and recovery, see the
+[asset editing guide](ASSET_INTERCHANGE.md).
+
 Command-line assembly, ROM analysis, evidence import, and Git source editing for Uttori ASM.
 Includes the SNES plugin. Other targets use installed plugins and project configuration.
 

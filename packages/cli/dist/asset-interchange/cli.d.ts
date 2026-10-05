@@ -1,0 +1,8 @@
+import { type AssetOperation } from "./operations.js";
+/** Saved-document commands are distinct from source capture import; apply requires the exact reviewed plan ID. */
+export declare const assetUsage = "Usage:\n  uttori-asm asset export <project> --adapter <id> --selection <selection.json> --document <file> --manifest <file.json> [--presentation tilemap|raster|indexed-png]\n  uttori-asm asset review <project> --document <saved-file> --manifest <file.json>\n  uttori-asm asset apply <project> --document <saved-file> --manifest <file.json> --review <review-id>\n  uttori-asm asset recover <project> --direction before|after\n  uttori-asm asset cleanup <project> --policy <retire.json> [--review <cleanup-plan-id>]\n\nInstalled adapters: som.sprite.native, som.room.native\nExport never replaces existing output files. Review prints the proposed files, consumers and plan ID.\nSave source/editor drafts first. After apply, re-export current source for the next editing round.\nUse --help for help and -- before project paths beginning with --.";
+/** Parse without reading files. Reject duplicate/inapplicable flags so a typo cannot silently change the selected workflow. */
+export declare function parseAssetCliArguments(argv: readonly string[]): AssetOperation | undefined;
+/** Thin installed command host; both CLI and editor dispatch the same saved-source operation implementation. */
+export declare function runAssetCli(argv: readonly string[]): Promise<number>;
+//# sourceMappingURL=cli.d.ts.map

@@ -1,14 +1,12 @@
+import { ASSET_LIMITS, boundedSum, rasterArea } from "./limits.js";
 import { integer } from "./validation.js";
 /** Validate dimensions before allocating buffers or entering pixel loops.
  * @param {IndexedPixels} image Row-major index buffer whose dimensions must agree exactly.
  */
 export function validateIndexedPixels(image) {
-    integer(image.width, "Indexed width", 1, 1 << 20);
-    integer(image.height, "Indexed height", 1, 1 << 20);
-    if (image.width * image.height > 1 << 20 ||
-        !(image.indexes instanceof Uint8Array) ||
-        image.indexes.length !== image.width * image.height) {
-        throw new RangeError("Indexed pixels are missing or exceed the one-megapixel limit.");
+    const pixels = rasterArea(image.width, image.height, "Indexed");
+    if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
+        throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
     }
 }
 /** Validate a viewport or extraction rectangle without assuming a console grid.
@@ -17,11 +15,7 @@ export function validateIndexedPixels(image) {
 function validateBounds(bounds) {
     integer(bounds.x, "Rectangle x", -(1 << 20), 1 << 20);
     integer(bounds.y, "Rectangle y", -(1 << 20), 1 << 20);
-    integer(bounds.width, "Rectangle width", 1, 1 << 20);
-    integer(bounds.height, "Rectangle height", 1, 1 << 20);
-    if (bounds.width * bounds.height > 1 << 20) {
-        throw new RangeError("Rectangle exceeds pixel limit.");
-    }
+    rasterArea(bounds.width, bounds.height, "Rectangle");
 }
 /** Reject truthy non-booleans rather than silently mirroring malformed metadata.
  * @param {{ readonly flipX?: boolean; readonly flipY?: boolean }} value Optional orientation flags from a region or placement.
@@ -116,10 +110,7 @@ export function renderIndexedPlacements(sources, placements, viewport, backgroun
             placement.y + source.height > viewport.y + viewport.height) {
             throw new RangeError(`Placement ${placement.id} exceeds the viewport.`);
         }
-        work += source.width * source.height;
-        if (work > 64 * 1024 * 1024) {
-            throw new RangeError("Placement rendering exceeds work limit.");
-        }
+        work = boundedSum(work, source.indexes.length, ASSET_LIMITS.renderPixels, "Placement rendering work");
     }
     const indexes = background
         ? Uint8Array.from(background)

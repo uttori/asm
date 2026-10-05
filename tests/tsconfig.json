@@ -2,6 +2,8 @@
   "extends": "../tsconfig.base.json",
   "include": [
     "./ava-helper.ts",
+    "./atlas-file-roundtrip.test.ts",
+    "./sprite-roundtrip.test.ts",
     "integration/disassembler-fuzz.test.ts",
     "integration/large-collections.test.ts",
     "./fuzz-helpers.ts",
@@ -23,7 +25,12 @@
     "../packages/debug-sidecar-ares/tests/gdb-rsp-client.test.ts",
     "../packages/plugin-snes/tests/disassembler/superfx-address-space.test.ts",
     "../packages/plugin-snes/tests/runtime-code.test.ts",
-    "../packages/plugin-snes/tests/fixtures/large-runtime-code.ts"
+    "../packages/plugin-snes/tests/fixtures/large-runtime-code.ts",
+    "./asset-structure-roundtrip.test.ts",
+    "./asset-room-roundtrip.test.ts",
+    "../packages/cli/tests/asset-interchange.test.ts",
+    "../packages/cli/tests/asset-record-store.test.ts",
+    "../packages/cli/tests/asset-full-inventory.test.ts"
   ],
   "compilerOptions": {
     "declaration": false,

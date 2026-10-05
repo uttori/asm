@@ -83,8 +83,10 @@ test("frame selectors distinguish omission from malformed declarations", (t) => 
   t.throws(() => readFrameAtlasSelection({ segment: "earlier", segments: [] }), {
     message: /not both/,
   });
-  for (const value of [false, 7, []])
+  for (const value of [false, 7, []]) {
     t.throws(() => readFrameAtlasSelection({ segment: value }), { message: /string/ });
-  for (const value of ["earlier", [7], null])
+  }
+  for (const value of ["earlier", [7], null]) {
     t.throws(() => readFrameAtlasSelection({ segments: value }), { message: /array of strings/ });
+  }
 });

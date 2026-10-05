@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, } from "@uttori/asm-disassembler";
+import { sourceFilePublicationEpoch, RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, fingerprintNodeToolchain } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, { buildSnesSource, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, snesRomAddressSpace, } from "@uttori/asm-plugin-snes";
+import snesPlugin, { buildSnesSource, inspectSnesSource, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, snesRomAddressSpace, } from "@uttori/asm-plugin-snes";
 import { initializeSnesSourceProject } from "./source-init.js";
 import { prepareSourceResearch } from "./source-research.js";
 /** Built-in SNES support remains available in a packaged CLI/VSIX without development node_modules. */
@@ -213,7 +213,7 @@ function generationRecipe(project) {
         if (asset.originalBlob !== undefined &&
             (asset.romRange ||
                 typeof asset.originalBlob !== "string" ||
-                !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(asset.originalBlob))) {
+                !/^(?:[\da-f]{40}|[\da-f]{64})$/.test(asset.originalBlob))) {
             throw new Error("Pristine assets require one immutable original blob or ROM extraction.");
         }
     }
@@ -314,12 +314,24 @@ async function generationInputs(project) {
 }
 /** Build editable source with a fresh content identity; original-ROM equality belongs to pure generation only. */
 async function withSourceBuild(project, signal, run) {
+    const publicationEpoch = sourceFilePublicationEpoch(project.repository);
     const root = project.repository.root;
-    const layout = readJson(path.join(root, project.configuration.layout));
+    const environmentInputs = new Map();
+    const readEnvironment = (file) => {
+        const bytes = Uint8Array.from(fs.readFileSync(file));
+        environmentInputs.set(file, bytes);
+        return bytes;
+    };
+    const projectBytes = readEnvironment(path.join(root, ".uttori/project.json"));
+    if (sourceContentHash(canonicalJson(JSON.parse(Buffer.from(projectBytes).toString("utf8")))) !==
+        project.configurationSha256) {
+        throw new Error("Source project configuration changed before inspection.");
+    }
+    const layout = JSON.parse(Buffer.from(readEnvironment(path.join(root, project.configuration.layout))).toString("utf8"));
     assertSourceLayout(layout, project.configuration.romSha256);
     const configFile = path.join(root, project.configuration.buildConfig);
-    const configurationBytes = fs.readFileSync(configFile);
-    const configuration = JSON.parse(configurationBytes.toString("utf8"));
+    const configurationBytes = readEnvironment(configFile);
+    const configuration = JSON.parse(Buffer.from(configurationBytes).toString("utf8"));
     const entryPoints = isRecord(configuration) && isStringArray(configuration.entryPoints)
         ? configuration.entryPoints
         : undefined;
@@ -334,7 +346,7 @@ async function withSourceBuild(project, signal, run) {
         .split(path.sep)
         .join("/");
     assertSourcePath(entrySource);
-    const raw = readJson(path.join(path.dirname(configFile), "source-raw.json"));
+    const raw = JSON.parse(Buffer.from(readEnvironment(path.join(path.dirname(configFile), "source-raw.json"))).toString("utf8"));
     if (!isRecord(raw) ||
         raw.format !== "uttori-source-raw" ||
         raw.version !== 1 ||
@@ -408,8 +420,15 @@ async function withSourceBuild(project, signal, run) {
                 placementMapper,
             })),
             signal,
-        }, layout);
-        if (sourceContentHash(fs.readFileSync(configFile)) !== sourceContentHash(configurationBytes) ||
+        }, layout, environmentInputs);
+        // Consumers use these exact configuration bytes at publication, rather than a later disk read.
+        for (const [file, bytes] of environmentInputs) {
+            if (sourceContentHash(fs.readFileSync(file)) !== sourceContentHash(bytes)) {
+                throw new Error("Source build environment changed during inspection.");
+            }
+        }
+        if (sourceFilePublicationEpoch(project.repository) !== publicationEpoch ||
+            sourceContentHash(fs.readFileSync(configFile)) !== sourceContentHash(configurationBytes) ||
             canonicalJson(readJson(path.join(root, project.configuration.layout))) !==
                 canonicalJson(layout)) {
             throw new Error("Build configuration or layout changed during source inspection. Retry with the current files.");
@@ -422,6 +441,28 @@ async function withSourceBuild(project, signal, run) {
 }
 /** Ordinary saved-file build and relocation inspection use identical environment and layout inputs. */
 const buildProject = (project, signal) => withSourceBuild(project, signal, buildSnesSource);
+/** Inspect current or overlaid source with normal project checks, without publishing build artifacts. */
+export async function inspectSourceProject(directory, overlays, signal) {
+    const project = await openSourceProject(directory);
+    return withSourceBuild(project, signal, (options, _layout, environmentInputs) => {
+        const inspected = inspectSnesSource({ ...options, overlays });
+        const snapshots = new Map(inspected.snapshots);
+        for (const [file, bytes] of environmentInputs) {
+            const before = snapshots.get(file);
+            if (before && sourceContentHash(before) !== sourceContentHash(bytes)) {
+                throw new Error("Source build consumed different configuration bytes.");
+            }
+            snapshots.set(file, bytes);
+        }
+        return {
+            ...inspected,
+            snapshots,
+            root: project.repository.root,
+            configurationSha256: options.configurationSha256,
+            toolchainSha256: options.toolchainSha256,
+        };
+    });
+}
 /** Execute one explicit operation. Long-running callers use a worker so the editor stays responsive. */
 export async function executeSourceOperation(operation) {
     operation.signal?.throwIfAborted();

@@ -1,3 +1,4 @@
+import { PNG_EDITOR_BACKUP_BYTES } from "@uttori/asm-assets/limits";
 import {
   EventEmitter,
   RelativePattern,
@@ -57,7 +58,7 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
     let backup: Uint8Array | undefined;
     if (context.backupId) {
       const location = Uri.parse(context.backupId);
-      if ((await workspace.fs.stat(location)).size > 26 * 1024 * 1024) {
+      if ((await workspace.fs.stat(location)).size > PNG_EDITOR_BACKUP_BYTES) {
         throw new Error("PNG backup exceeds its size budget.");
       }
       backup = await workspace.fs.readFile(location);

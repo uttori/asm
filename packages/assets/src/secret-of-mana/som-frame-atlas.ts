@@ -474,8 +474,9 @@ export function readFrameAtlasSelection(
     throw new Error("Specify segment or segments, not both.");
   }
   if (options.segment !== undefined) {
-    if (typeof options.segment !== "string")
+    if (typeof options.segment !== "string") {
       throw new Error("Frame atlas segment must be a string.");
+    }
     return options.segment;
   }
   if (options.segments !== undefined) {
@@ -485,7 +486,12 @@ export function readFrameAtlasSelection(
     ) {
       throw new Error("Frame atlas segments must be an array of strings.");
     }
-    return options.segments;
+    return options.segments.map((name: unknown) => {
+      if (typeof name !== "string") {
+        throw new Error("Invalid frame atlas segment.");
+      }
+      return name;
+    });
   }
   return undefined;
 }
@@ -522,7 +528,7 @@ export function frameAtlasSegmentOrder(
       }
       return { name, start, end };
     })
-    .sort((a, b) => a.start - b.start);
+    .toSorted((a, b) => a.start - b.start);
   for (let index = 1; index < spans.length; index++) {
     // Concatenation cannot insert padding or emit the same ROM bytes twice.
     if (spans[index].start !== spans[index - 1].end) {

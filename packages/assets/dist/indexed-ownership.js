@@ -1,0 +1,225 @@
+import { validateIndexedPixels } from "./indexed-edit.js";
+import { ASSET_LIMITS, boundedSum } from "./limits.js";
+import { integer } from "./validation.js";
+/** Reconstruct persisted authority without trusting a JSON type assertion or imported native mappings. */
+export function readIndexedOwnership(value) {
+    const isObject = (input) => !!input && typeof input === "object" && !Array.isArray(input);
+    const object = (input) => {
+        if (!isObject(input)) {
+            throw new Error("Invalid ownership record.");
+        }
+        return input;
+    };
+    const pixels = (input) => {
+        if (typeof input.id !== "string" ||
+            typeof input.width !== "number" ||
+            typeof input.height !== "number" ||
+            !(input.indexes instanceof Uint8Array)) {
+            throw new Error("Invalid ownership pixels.");
+        }
+        return { id: input.id, width: input.width, height: input.height, indexes: input.indexes };
+    };
+    const input = object(value);
+    const slotMaps = new WeakMap();
+    if (!Array.isArray(input.owners) ||
+        !Array.isArray(input.views) ||
+        input.owners.length > ASSET_LIMITS.owners ||
+        input.views.length > ASSET_LIMITS.owners) {
+        throw new Error("Invalid ownership inventory.");
+    }
+    const owners = input.owners.map((item) => {
+        const entry = object(item);
+        if (!Array.isArray(entry.allowedIndexes) ||
+            entry.allowedIndexes.length > 256 ||
+            (entry.editable !== undefined && typeof entry.editable !== "boolean")) {
+            throw new Error("Invalid allowed slots.");
+        }
+        const allowedIndexes = entry.allowedIndexes.map((slot) => {
+            if (typeof slot !== "number") {
+                throw new Error("Invalid allowed slot.");
+            }
+            return slot;
+        });
+        return { ...pixels(entry), allowedIndexes, editable: entry.editable };
+    });
+    const views = input.views.map((item) => {
+        const entry = object(item);
+        if (typeof entry.owner !== "string" ||
+            !Array.isArray(entry.indexMap) ||
+            entry.indexMap.length > 256 ||
+            (entry.flipX !== undefined && typeof entry.flipX !== "boolean") ||
+            (entry.flipY !== undefined && typeof entry.flipY !== "boolean")) {
+            throw new Error("Invalid ownership view.");
+        }
+        let indexMap = slotMaps.get(entry.indexMap);
+        if (!indexMap) {
+            indexMap = entry.indexMap.map((slot) => {
+                if (slot !== null && typeof slot !== "number") {
+                    throw new Error("Invalid ownership slot map.");
+                }
+                return slot;
+            });
+            // One palette map can serve the full inventory without allocating 256 entries per view.
+            slotMaps.set(entry.indexMap, indexMap);
+        }
+        return {
+            ...pixels(entry),
+            owner: entry.owner,
+            indexMap,
+            flipX: entry.flipX,
+            flipY: entry.flipY,
+        };
+    });
+    const result = { owners, views };
+    validateIndexedOwnership(result);
+    return result;
+}
+/** Stable opaque identities have a bounded UTF-8 representation in file/baseline metadata. */
+function identity(id) {
+    if (typeof id !== "string" || id.length < 1 || new TextEncoder().encode(id).length > 1024) {
+        throw new Error("Invalid indexed ownership identity.");
+    }
+}
+/** Undo native H/V display reflection; display palette mapping is independent of geometry. */
+function nativeOffset(view, offset) {
+    const x = offset % view.width;
+    const y = Math.floor(offset / view.width);
+    const nx = view.flipX ? view.width - 1 - x : x;
+    const ny = view.flipY ? view.height - 1 - y : y;
+    return ny * view.width + nx;
+}
+/** Fail on unmapped/invalid display slots, including slots whose RGB happens to match another. */
+function nativeSlot(view, slot, owner) {
+    const mapped = view.indexMap[slot];
+    if (mapped === undefined || mapped === null || !owner.allowedIndexes.includes(mapped)) {
+        throw new Error(`View ${view.id}: unmapped or forbidden display slot ${slot}.`);
+    }
+    return mapped;
+}
+/** Validate persisted authority as rigorously as imported values, before any candidate reconciliation. */
+export function validateIndexedOwnership(snapshot) {
+    integer(snapshot.owners.length, "Owner count", 1, ASSET_LIMITS.owners);
+    integer(snapshot.views.length, "View count", 1, ASSET_LIMITS.owners);
+    const owners = new Map();
+    let bytes = 0;
+    for (const owner of snapshot.owners) {
+        identity(owner.id);
+        if (owners.has(owner.id)) {
+            throw new Error(`Duplicate owner ${owner.id}.`);
+        }
+        validateIndexedPixels(owner);
+        if (owner.editable !== undefined && typeof owner.editable !== "boolean") {
+            throw new Error(`Owner ${owner.id}: invalid edit authority.`);
+        }
+        bytes = boundedSum(bytes, owner.indexes.length, ASSET_LIMITS.decodedBytes, "Ownership payload");
+        integer(owner.allowedIndexes.length, "Allowed slot count", 1, 256);
+        const allowed = new Set(owner.allowedIndexes);
+        if (allowed.size !== owner.allowedIndexes.length) {
+            throw new Error(`Owner ${owner.id}: duplicate allowed slot.`);
+        }
+        for (const slot of allowed) {
+            integer(slot, "Native slot", 0, 255);
+        }
+        if (owner.indexes.some((slot) => !allowed.has(slot))) {
+            throw new Error(`Owner ${owner.id}: forbidden baseline slot.`);
+        }
+        owners.set(owner.id, owner);
+    }
+    const ids = new Set();
+    for (const view of snapshot.views) {
+        identity(view.id);
+        if (ids.has(view.id)) {
+            throw new Error(`Duplicate view ${view.id}.`);
+        }
+        ids.add(view.id);
+        const owner = owners.get(view.owner);
+        validateIndexedPixels(view);
+        bytes = boundedSum(bytes, view.indexes.length, ASSET_LIMITS.decodedBytes, "Ownership payload");
+        if (!owner || owner.width !== view.width || owner.height !== view.height) {
+            throw new Error(`View ${view.id}: missing owner or incompatible dimensions.`);
+        }
+        for (const flag of [view.flipX, view.flipY]) {
+            if (flag !== undefined && typeof flag !== "boolean") {
+                throw new Error(`View ${view.id}: invalid reflection.`);
+            }
+        }
+        integer(view.indexMap.length, "Display slot map", 1, 256);
+        for (const slot of view.indexMap) {
+            if (slot !== null) {
+                integer(slot, "Mapped native slot", 0, 255);
+            }
+        }
+        for (let i = 0; i < view.indexes.length; i++) {
+            if (nativeSlot(view, view.indexes[i], owner) !== owner.indexes[nativeOffset(view, i)]) {
+                throw new Error(`View ${view.id}: inconsistent private baseline.`);
+            }
+        }
+    }
+}
+/**
+ * Reconcile only changed pixels relative to each view's own baseline. Unchanged aliases
+ * contribute no proposal; equal/disjoint proposals coalesce and contradictions reject
+ * the whole result with both view IDs. Duplicate-looking native owners stay independent.
+ */
+export function reconcileIndexedViews(snapshot, candidates) {
+    validateIndexedOwnership(snapshot);
+    if (candidates.length !== snapshot.views.length) {
+        throw new Error("Indexed view inventory changed.");
+    }
+    const views = new Map(snapshot.views.map((view) => [view.id, view]));
+    const owners = new Map(snapshot.owners.map((owner) => [owner.id, owner]));
+    const seen = new Set();
+    const changes = new Map();
+    let candidateBytes = 0;
+    let proposalBytes = 0;
+    candidates.forEach((candidate, viewIndex) => {
+        const view = views.get(candidate.id);
+        if (!view || seen.has(candidate.id)) {
+            throw new Error(`Missing, unknown or duplicate view ${candidate.id}.`);
+        }
+        seen.add(candidate.id);
+        validateIndexedPixels(candidate);
+        candidateBytes = boundedSum(candidateBytes, candidate.indexes.length, ASSET_LIMITS.decodedBytes, "Candidate payload");
+        if (candidate.width !== view.width || candidate.height !== view.height) {
+            throw new Error(`View ${view.id}: dimensions changed.`);
+        }
+        const owner = owners.get(view.owner);
+        for (let offset = 0; offset < candidate.indexes.length; offset++) {
+            const slot = candidate.indexes[offset];
+            const proposed = nativeSlot(view, slot, owner);
+            if (slot === view.indexes[offset]) {
+                continue;
+            }
+            // Known display pixels remain useful even when a capture or overlapping emission has no proven source inverse.
+            if (owner.editable === false) {
+                throw new Error(`Owner ${owner.id}: artwork is read-only.`);
+            }
+            const native = nativeOffset(view, offset);
+            // Display aliases cannot turn changed saved artwork into a silently discarded no-op.
+            if (proposed === owner.indexes[native]) {
+                throw new Error(`View ${view.id}: changed slot aliases the unchanged native pixel ${native}.`);
+            }
+            let change = changes.get(owner.id);
+            if (!change) {
+                proposalBytes = boundedSum(proposalBytes, owner.indexes.length * 5, ASSET_LIMITS.decodedBytes, "Native proposal payload");
+                change = {
+                    indexes: owner.indexes.slice(),
+                    contributors: new Uint32Array(owner.indexes.length),
+                };
+                changes.set(owner.id, change);
+            }
+            const contributor = change.contributors[native];
+            if (contributor && change.indexes[native] !== proposed) {
+                throw new Error(`Owner ${owner.id} pixel ${native}: conflicting views ${candidates[contributor - 1].id} and ${view.id}.`);
+            }
+            change.indexes[native] = proposed;
+            change.contributors[native] = viewIndex + 1;
+        }
+    });
+    // Native inventory order makes output deterministic even when saved storage order changes.
+    return snapshot.owners.flatMap((owner) => {
+        const change = changes.get(owner.id);
+        return change ? [{ owner: owner.id, indexes: change.indexes }] : [];
+    });
+}
+//# sourceMappingURL=indexed-ownership.js.map

@@ -297,6 +297,122 @@ test("third-party lossless transforms install on the standard SNES target", asyn
   await manager.dispose();
 });
 
+test("emission descriptors retain evaluated declarations and isolate mutating format/transform providers", async (t) => {
+  const manager = new PluginManager();
+  t.teardown(() => manager.dispose());
+  let retainedFormat = Buffer.alloc(0);
+  const custom = definePlugin({
+    manifest: {
+      id: "example.owned-assets",
+      name: "Owned assets",
+      version: "1.0.0",
+      apiVersion: PLUGIN_API_VERSION,
+    },
+    activate(context) {
+      context.registerAssetFormat({
+        id: "example.owned",
+        version: "4.2.0",
+        targets: ["snes.sfc"],
+        resourcePaths(options) {
+          // Deliberate provider misbehavior must not rewrite the evaluated source declaration.
+          const layout = options.layout;
+          if (!layout || typeof layout !== "object" || !("stride" in layout)) {
+            throw new Error("Missing declared layout.");
+          }
+          layout.stride = 99;
+          return ["palette.bin"];
+        },
+        convert(source, options, resources) {
+          const layout = options.layout;
+          if (!layout || typeof layout !== "object" || !("stride" in layout)) {
+            throw new Error("Missing declared layout.");
+          }
+          t.is(layout.stride, 3);
+          t.is(resources?.["palette.bin"].bytes[0], 9);
+          retainedFormat = Buffer.from(source.bytes);
+          source.bytes.fill(0);
+          resources!["palette.bin"].bytes.fill(0);
+          layout.stride = 88;
+          return { primaryOutput: "data", outputs: { data: { bytes: retainedFormat } } };
+        },
+      });
+      context.registerAssetTransform({
+        id: "example.owned-xor",
+        version: "2.1.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          dictionary: { type: "string", resource: true },
+          repeat: { type: "integer" },
+        },
+        validateOptions(options) {
+          (options as Record<string, unknown>).repeat = 99;
+        },
+        resourcePaths(options) {
+          (options as Record<string, unknown>).repeat = 98;
+          return ["dictionary.bin"];
+        },
+        encode(bytes, options, resources) {
+          t.is(options.repeat, 7);
+          t.is(resources?.["dictionary.bin"].bytes[0], 10);
+          const output = Buffer.from(bytes).map((byte) => byte ^ 0xff);
+          bytes.fill(0);
+          resources!["dictionary.bin"].bytes.fill(0);
+          retainedFormat.fill(0);
+          (options as Record<string, unknown>).repeat = 97;
+          return output;
+        },
+        decode(bytes, options, _limit, resources) {
+          t.is(options.repeat, 7);
+          t.is(resources?.["dictionary.bin"].bytes[0], 10);
+          const output = bytes.map((byte) => byte ^ 0xff);
+          bytes.fill(0);
+          return output;
+        },
+      });
+    },
+  });
+  await manager.activatePlugins([{ plugin: snesPlugin }, { plugin: custom }]);
+  const provider = new MemoryAssemblyFileProvider({
+      "input.bin": Buffer.from([7, 8]),
+      "palette.bin": Buffer.from([9]),
+      "dictionary.bin": Buffer.from([10]),
+    }),
+    assembler = new (await import("@uttori/asm-core")).Assembler({
+      environment: manager.freeze(),
+      target: "snes.sfc",
+      fileProvider: provider,
+    });
+  assembler.assembleSource(
+    `org $808000
+!STRIDE = 1 + 2
+includeAsset("input.bin", "example.owned", layout: { stride: !STRIDE }, maxSize: 2, compress: [{ id: "example.owned-xor", options: { dictionary: "dictionary.bin", repeat: 7 } }, { id: "example.owned-xor", options: { dictionary: "dictionary.bin", repeat: 7 } }])
+includeAsset("input.bin", "example.owned", layout: { stride: !STRIDE })`,
+    "main.asm",
+  );
+  t.deepEqual(assembler.getBinaryOutput().subarray(0, 4), Uint8Array.of(7, 8, 7, 8));
+  const conversion = assembler.addressToLineMapping.assets[0].conversion;
+  t.deepEqual(conversion, {
+    version: "4.2.0",
+    options: { layout: { stride: 3 } },
+    resources: { "palette.bin": "palette.bin" },
+    maxSize: 2,
+    transforms: Array.from({ length: 2 }, () => ({
+      id: "example.owned-xor",
+      version: "2.1.0",
+      options: { dictionary: "dictionary.bin", repeat: 7 },
+      resources: { "dictionary.bin": "dictionary.bin" },
+    })),
+  });
+  for (const [name, expected] of [
+    ["input.bin", [7, 8]],
+    ["palette.bin", [9]],
+    ["dictionary.bin", [10]],
+  ] as const) {
+    t.deepEqual(assembler.assetAssembly.snapshot(name), Uint8Array.from(expected));
+    t.deepEqual(Uint8Array.from(provider.files.get(name)!), Uint8Array.from(expected));
+  }
+});
+
 test("asset aliases are scoped and ambiguous short names fail at environment construction", async (t) => {
   const manager = new PluginManager();
   const conflicting = definePlugin({

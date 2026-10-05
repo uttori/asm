@@ -1,4 +1,5 @@
 import type { IndexedImage, RgbaImage } from "./image.js";
+import { ASSET_LIMITS } from "./limits.js";
 import type { AssetDocument, AssetEncoder, AssetInput, AssetOutput } from "./registry.js";
 import {
   decodeBgMap,
@@ -566,7 +567,8 @@ function imageModel(document: AssetDocument): ImageModel {
     !Number.isSafeInteger(value.height) ||
     value.width < 1 ||
     value.height < 1 ||
-    value.width * value.height > 1024 * 1024
+    value.width > ASSET_LIMITS.rasterPixels ||
+    value.height > Math.floor(ASSET_LIMITS.rasterPixels / value.width)
   ) {
     throw new Error("Image model has invalid dimensions or kind.");
   }

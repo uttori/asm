@@ -30,6 +30,7 @@ import snesPlugin, {
   type SnesMapper,
 } from "@uttori/asm-plugin-snes";
 
+import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
 export { executeSourceOperation, type SourceAction, type SourceOperation } from "./source.js";
@@ -823,6 +824,9 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
  * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv: readonly string[] = process.argv.slice(2)): Promise<number> => {
+  if (argv[0] === "asset") {
+    return runAssetCli(argv.slice(1));
+  }
   if (argv[0] === "source") {
     return runSourceCli(argv.slice(1));
   }
@@ -834,7 +838,7 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
     return 1;
   }
   if (parsed.help) {
-    console.log(`${usage}\n\n${sourceUsage}`);
+    console.log(`${usage}\n\n${sourceUsage}\n\n${assetUsage}`);
     return 0;
   }
   if (!parsed.input) {

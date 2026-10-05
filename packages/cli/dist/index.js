@@ -5,6 +5,7 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { ANALYSIS_PROJECT_MANIFEST, RomImage, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, } from "@uttori/asm-plugin-snes";
+import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
 export { executeSourceOperation } from "./source.js";
@@ -711,6 +712,9 @@ const assemble = async (parsed, cwd) => {
  * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv = process.argv.slice(2)) => {
+    if (argv[0] === "asset") {
+        return runAssetCli(argv.slice(1));
+    }
     if (argv[0] === "source") {
         return runSourceCli(argv.slice(1));
     }
@@ -723,7 +727,7 @@ export const runCli = async (argv = process.argv.slice(2)) => {
         return 1;
     }
     if (parsed.help) {
-        console.log(`${usage}\n\n${sourceUsage}`);
+        console.log(`${usage}\n\n${sourceUsage}\n\n${assetUsage}`);
         return 0;
     }
     if (!parsed.input) {

@@ -1,10 +1,16 @@
 # Uttori Assembly
 
+The [asset editing guide](../cli/ASSET_INTERCHANGE.md) covers saved Aseprite/PNG
+export, review, application and interrupted-edit recovery.
+
 Multiple target assembly, disassembly, ROM analysis, and debugging in VS Code. Currently supports SNES and 65xx (NES, 6502-likes).
 
 ## Requirements & Installation
 
-Requires VS Code 1.128.0 or newer. The extension uses VS Code's bundled runtime. No separate Node.js installation is required. Live debugging needs a separately installed, manifest-matched emulator.
+Use the latest stable VS Code release. The current extension API floor is 1.140.0;
+acceptance targets latest stable as it advances. The extension uses VS Code's bundled
+runtime. No separate Node.js installation is required. Live debugging needs a separately
+installed, manifest-matched emulator.
 
 Install **Uttori Assembly** (`matthewcallis.uttori-asm-vscode`) from Extensions, or use **Extensions: Install from VSIX** with the release VSIX.
 

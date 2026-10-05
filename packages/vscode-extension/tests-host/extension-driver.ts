@@ -17,12 +17,26 @@ const observed = new WeakSet<SourceController>();
 const sources = new Set<SourceController>();
 /** One-shot saved-input mutation after worker completion, before controller acceptance. */
 let buildMutation: { path: string; append: string } | undefined;
+/** One-shot editor event at the production worker's final publication gate. */
+let assetPublicationEvent: (() => Promise<void>) | undefined;
 const run = SourceProcessClient.prototype.run;
 SourceProcessClient.prototype.run = async function <T>(
   operation: SourceProcessOperation,
   options: Parameters<SourceProcessClient["run"]>[1],
 ): Promise<T> {
   const execute = run.bind(this);
+  if (operation.action === "asset-apply" && assetPublicationEvent) {
+    const event = assetPublicationEvent;
+    assetPublicationEvent = undefined;
+    const beforePublish = options?.onBeforePublish;
+    options = {
+      ...options,
+      onBeforePublish: async (paths) => {
+        await event();
+        await beforePublish?.(paths);
+      },
+    };
+  }
   const result = await execute<T>(operation, options);
   if (operation.action === "build" && buildMutation) {
     const mutation = buildMutation;
@@ -99,6 +113,9 @@ export function activate(context: ExtensionContext): void {
       context.workspaceState.update(`source.candidate:${root}`, candidate),
     ),
     commands.registerCommand("uttori.tests.builds", () => [...builds]),
+    commands.registerCommand("uttori.tests.assetPublicationEvent", (event: () => Promise<void>) => {
+      assetPublicationEvent = event;
+    }),
     commands.registerCommand("uttori.tests.buildMutation", (file: string, append = "") => {
       buildMutation = { path: file, append };
     }),
@@ -107,18 +124,25 @@ export function activate(context: ExtensionContext): void {
       (folder: string, binding: EmulatorRuntimeBinding) =>
         context.globalState.update("uttoriAsm.emulatorRuntimeBindings.v1", { [folder]: binding }),
     ),
-    commands.registerCommand("uttori.tests.png", async (file: string, paint?: number) => {
-      const document = documents.get(file);
-      if (!document) {
-        return undefined;
-      }
-      if (paint !== undefined) {
-        const region = document.guidance?.regions[0];
-        const pixel = region ? region.y * document.image.width + region.x : 0;
-        document.paint({ version: document.version, index: paint, pixels: [pixel] });
-      }
-      return { dirty: document.dirty, bytes: await document.snapshot() };
-    }),
+    commands.registerCommand(
+      "uttori.tests.png",
+      async (file: string, paint?: number, includeBytes = true) => {
+        const document = documents.get(file);
+        if (!document) {
+          return undefined;
+        }
+        if (paint !== undefined) {
+          const region = document.guidance?.regions[0];
+          const pixel = region ? region.y * document.image.width + region.x : 0;
+          document.paint({ version: document.version, index: paint, pixels: [pixel] });
+        }
+        // State polling during native Revert must not start an encode of the version being replaced.
+        return {
+          dirty: document.dirty,
+          bytes: includeBytes ? await document.snapshot() : undefined,
+        };
+      },
+    ),
   );
   activateExtension(context);
 }

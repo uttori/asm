@@ -1,6 +1,6 @@
 import ImagePNG from "@uttori/data-tools/image/data-image-png";
 import type { AssetImporter } from "./registry.js";
-/** Asset policy is narrower than the general image library: static, at most one megapixel. */
+/** Asset policy is narrower than the general image library: static, at most four megapixels. */
 export declare const ASSET_PNG_OPTIONS: Readonly<{
     maxInputBytes: number;
     maxPixels: number;

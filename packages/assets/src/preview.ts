@@ -1,6 +1,7 @@
 import ImagePNG from "@uttori/data-tools/image/data-image-png";
 import { RgbaSurface } from "@uttori/data-tools/image/rgba-surface";
 
+import { ASSET_LIMITS } from "./limits.js";
 import type { Tile } from "./snes.js";
 import { integer } from "./validation.js";
 
@@ -10,15 +11,23 @@ export function rgbaNativePng(
   width: number,
   height: number,
 ): Uint8Array {
-  integer(width, "Image width", 1, 4096);
-  integer(height, "Image height", 1, 4096);
-  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+  integer(width, "Image width", 1, ASSET_LIMITS.interchangeSide);
+  integer(height, "Image height", 1, ASSET_LIMITS.interchangeSide);
+  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
     throw new Error("Image pixels are missing or exceed the four-megapixel limit.");
   }
   // Preserve a Canvas buffer's byte offset and avoid copying an already bounded pixel surface.
   const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
-  const surface = new RgbaSurface(width, height, bytes, { copy: false, maxPixels: 2048 * 2048 });
-  return ImagePNG.encodeRGBA(surface, { filter: "none", level: 6, maxPixels: 2048 * 2048 });
+  const surface = new RgbaSurface(width, height, bytes, {
+    copy: false,
+    maxPixels: ASSET_LIMITS.rasterPixels,
+  });
+  return ImagePNG.encodeRGBA(surface, {
+    filter: "none",
+    level: 6,
+    maxPixels: ASSET_LIMITS.rasterPixels,
+    maxOutputBytes: ASSET_LIMITS.pngBytes,
+  });
 }
 
 /** Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
@@ -34,12 +43,12 @@ export function rgbaPreviewPng(
   height: number,
   maxEdge = 256,
 ): Uint8Array {
-  integer(width, "Preview width", 1, 4096);
-  integer(height, "Preview height", 1, 4096);
-  integer(maxEdge, "Preview edge", 1, 1024);
+  integer(width, "Preview width", 1, ASSET_LIMITS.interchangeSide);
+  integer(height, "Preview height", 1, ASSET_LIMITS.interchangeSide);
+  integer(maxEdge, "Preview edge", 1, ASSET_LIMITS.thumbnailEdge);
   // A native SoM room can fill 128 × 128 sixteen-pixel cells. Bound the input
   // separately from the 1024-pixel display edge so complete maps can be downscaled.
-  if (width * height > 2048 * 2048 || rgba.length !== width * height * 4) {
+  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
     throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
   }
   // Aspect fitting uses a shared scale on both axes; independent-axis resizing
@@ -49,7 +58,7 @@ export function rgbaPreviewPng(
   const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
   const surface = new RgbaSurface(width, height, bytes, {
     copy: false,
-    maxPixels: 2048 * 2048,
+    maxPixels: ASSET_LIMITS.rasterPixels,
   }).fitNearest(maxEdge);
   return ImagePNG.encodeRGBA(surface, {
     filter: "none",

@@ -1178,6 +1178,7 @@ export class Assembler {
           part: asset.part,
           size: asset.size,
           transforms: asset.transforms,
+          conversion: asset.conversion,
           address: startAddress,
           ...(startOutput >= 0 ? { outputOffset: startOutput } : {}),
         });

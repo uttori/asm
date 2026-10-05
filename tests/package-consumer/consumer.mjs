@@ -20,11 +20,18 @@ import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plug
 // must stay inside that installation, with no TypeScript hook or workspace symlink available.
 const { imports, commonJsImports } = JSON.parse(fs.readFileSync("exports.json", "utf8"));
 const installedRoot = path.join(process.cwd(), "node_modules") + path.sep;
+// This declared contract contains interfaces only; its empty runtime module is intentional.
+const typeOnlyImports = new Set(["@uttori/asm-assets/secret-of-mana/som-types"]);
 for (const specifier of imports) {
   const resolved = fileURLToPath(import.meta.resolve(specifier));
   assert.ok(resolved.startsWith(installedRoot), `${specifier} escaped the consumer installation`);
   assert.equal(path.extname(resolved), ".js");
-  assert.ok(Object.keys(await import(specifier)).length > 0, `${specifier} has no runtime exports`);
+  const exports = Object.keys(await import(specifier));
+  if (typeOnlyImports.has(specifier)) {
+    assert.equal(exports.length, 0);
+  } else {
+    assert.ok(exports.length > 0, `${specifier} has no runtime exports`);
+  }
 }
 const require = createRequire(import.meta.url);
 for (const specifier of commonJsImports) {

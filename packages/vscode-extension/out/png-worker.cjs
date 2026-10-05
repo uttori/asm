@@ -7081,12 +7081,58 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
+// packages/assets/src/validation.ts
+function integer(value, label, minimum, maximum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+
+// packages/assets/src/limits.ts
+var ASSET_LIMITS = Object.freeze({
+  rasterPixels: 4 * 1024 * 1024,
+  interchangeSide: 4096,
+  pngBytes: 32 * 1024 * 1024,
+  pngInflatedBytes: 20 * 1024 * 1024,
+  asepriteBytes: 16 * 1024 * 1024,
+  decodedBytes: 64 * 1024 * 1024,
+  renderPixels: 64 * 1024 * 1024,
+  frames: 1024,
+  layers: 4096,
+  tilesets: 1024,
+  owners: 4 * 1024 * 1024,
+  references: 4 * 1024 * 1024,
+  chunks: 1024 * 1024,
+  metadataBytes: 16 * 1024 * 1024,
+  baselineMetadataBytes: 64 * 1024 * 1024,
+  metadataNodes: 1024 * 1024,
+  // Baselines include owner and view declarations as well as the file model; pixels stay in binary blobs.
+  baselineMetadataNodes: 4 * 1024 * 1024,
+  thumbnailEdge: 1024
+});
+function boundedProduct(a, b, maximum, label) {
+  integer(maximum, `${label} limit`, 0, Number.MAX_SAFE_INTEGER);
+  integer(a, label, 0, Number.MAX_SAFE_INTEGER);
+  integer(b, label, 0, Number.MAX_SAFE_INTEGER);
+  if (a !== 0 && b > Math.floor(maximum / a)) {
+    throw new RangeError(`${label} exceeds limit ${maximum}.`);
+  }
+  return a * b;
+}
+function rasterArea(width, height, label = "Raster", side = ASSET_LIMITS.rasterPixels) {
+  integer(width, `${label} width`, 1, side);
+  integer(height, `${label} height`, 1, side);
+  return boundedProduct(width, height, ASSET_LIMITS.rasterPixels, `${label} pixels`);
+}
+var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
+
 // packages/assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
-  maxInputBytes: 16 * 1024 * 1024,
-  maxPixels: 1024 * 1024,
-  maxInflatedBytes: 5 * 1024 * 1024,
-  maxOutputBytes: 16 * 1024 * 1024,
+  maxInputBytes: ASSET_LIMITS.pngBytes,
+  maxPixels: ASSET_LIMITS.rasterPixels,
+  maxInflatedBytes: ASSET_LIMITS.pngInflatedBytes,
+  maxOutputBytes: ASSET_LIMITS.pngBytes,
   maxChunks: 16384,
   allow16Bit: false,
   animation: "reject",
@@ -7116,20 +7162,11 @@ var pngImporter = Object.freeze({
   }
 });
 
-// packages/assets/src/validation.ts
-function integer(value, label, minimum, maximum) {
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
-  }
-  return value;
-}
-
 // packages/assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
-  integer(image.width, "Indexed width", 1, 1 << 20);
-  integer(image.height, "Indexed height", 1, 1 << 20);
-  if (image.width * image.height > 1 << 20 || !(image.indexes instanceof Uint8Array) || image.indexes.length !== image.width * image.height) {
-    throw new RangeError("Indexed pixels are missing or exceed the one-megapixel limit.");
+  const pixels = rasterArea(image.width, image.height, "Indexed");
+  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
+    throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
   }
 }
 

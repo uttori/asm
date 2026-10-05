@@ -130,8 +130,11 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
-    if (named) encodedBytes = encodeInspectedFrameSegment(inspected, selection).length;
-    else encodedBytes = encodeInspectedFrameSegments(inspected, segments).length;
+    if (named) {
+      encodedBytes = encodeInspectedFrameSegment(inspected, selection).length;
+    } else {
+      encodedBytes = encodeInspectedFrameSegments(inspected, segments).length;
+    }
     output = "tiles";
   }
   if (input.output !== undefined && input.output !== output) {
@@ -155,7 +158,9 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
     const palette: SpritePaletteRecord | undefined = Object.hasOwn(catalog.palettes, paletteId)
       ? catalog.palettes[paletteId]
       : undefined;
-    if (!palette) throw new Error(`Unknown sprite palette ${paletteId}.`);
+    if (!palette) {
+      throw new Error(`Unknown sprite palette ${paletteId}.`);
+    }
     return { paletteId, paletteRomAddress: palette.romAddress, paletteUsers: palette.users };
   });
   // Preserve the single-palette metadata contract; combined spans also expose every palette user.

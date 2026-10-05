@@ -27,8 +27,14 @@ test("palette slices bound physical ownership and overlapping views must agree",
     new Uint8Array([1, 0, 2, 0]),
   );
   t.deepEqual(spritePaletteBytes(catalog, "C08000", { wordOffset: 2 }), new Uint8Array([3, 0]));
-  for (const range of [{ wordOffset: -1 }, { wordCount: 0 }, { wordCount: 4 }, { wordOffset: 0.5 }])
+  for (const range of [
+    { wordOffset: -1 },
+    { wordCount: 0 },
+    { wordCount: 4 },
+    { wordOffset: 0.5 },
+  ]) {
     t.throws(() => spritePaletteBytes(catalog, "C08000", range), { message: /word slice/ });
+  }
   t.deepEqual(parseSpritePaletteCatalog(Buffer.from(JSON.stringify(catalog))), catalog);
   const edited = planSpritePaletteEdits(
     catalog,

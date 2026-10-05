@@ -248,8 +248,9 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       !Array.isArray(conflicts.segments) ||
       !isRecord(laterConflicts) ||
       !Array.isArray(laterConflicts.segments)
-    )
+    ) {
       throw new Error("expected conflict pages");
+    }
     t.is(conflicts.count, 300);
     t.is(conflicts.segments.length, 200);
     t.is(laterConflicts.segments.length, 100);
@@ -260,7 +261,9 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
         { architecture: "fixture", addressSpace: "cpu", start: 0, end: 2, sourceId: 0, line: 1 },
       ],
     });
-    if (!isAnnotationRows(annotationRows)) throw new Error("expected annotations");
+    if (!isAnnotationRows(annotationRows)) {
+      throw new Error("expected annotations");
+    }
     t.is(annotationRows.length, 2);
     t.deepEqual(annotationRows[0].annotation.stateObservations[0].state, { m: true });
     t.deepEqual(annotationRows[0].annotation.stateObservations[0].evidence, ["test"]);
@@ -284,7 +287,9 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     });
     client.invalidate();
     const revisedCoverage = await client.request(projectDirectory, "coverage");
-    if (!isCoverage(revisedCoverage)) throw new Error("expected revised coverage");
+    if (!isCoverage(revisedCoverage)) {
+      throw new Error("expected revised coverage");
+    }
     t.is(revisedCoverage.summary.classifiedBytes, 0);
     client.dispose();
     const restarted = await client.request(projectDirectory, "coverage");

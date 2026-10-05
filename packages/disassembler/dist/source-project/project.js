@@ -3,6 +3,7 @@ import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore } from "../project/project-store.js";
 import { readResearchInputs } from "../research-inputs/inputs.js";
+import { sourceFilePublicationEpoch } from "./file-transaction.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath, sourceRepository } from "./git.js";
 /** Check runtime shape without widening typed readonly arrays to any[]. */
@@ -70,6 +71,7 @@ export function parseSourceProject(value) {
 /** Discover only the selected repository's project; nested repositories cannot inherit a parent's identity. */
 export async function openSourceProject(directory) {
     const repository = await sourceRepository(directory);
+    sourceFilePublicationEpoch(repository);
     const configuration = parseSourceProject(JSON.parse(fs.readFileSync(path.join(repository.root, ".uttori/project.json"), "utf8")));
     const research = readResearchInputs(repository.root, configuration.researchRoots, {
         project: configuration.id,

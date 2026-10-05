@@ -70,6 +70,11 @@ export function fingerprintNodeToolchain(moduleFiles, bundles = []) {
             for (const entry of fs
                 .readdirSync(directory, { withFileTypes: true })
                 .toSorted((a, b) => Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)))) {
+                // File browsers update these display caches independently of executable package contents.
+                // Including them makes an unchanged build/session appear stale merely by opening a folder.
+                if ([".DS_Store", "Thumbs.db", "desktop.ini"].includes(entry.name)) {
+                    continue;
+                }
                 if ([
                     "node_modules",
                     ".git",

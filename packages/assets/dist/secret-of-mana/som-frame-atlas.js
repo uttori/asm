@@ -376,8 +376,9 @@ export function readFrameAtlasSelection(options) {
         throw new Error("Specify segment or segments, not both.");
     }
     if (options.segment !== undefined) {
-        if (typeof options.segment !== "string")
+        if (typeof options.segment !== "string") {
             throw new Error("Frame atlas segment must be a string.");
+        }
         return options.segment;
     }
     if (options.segments !== undefined) {
@@ -385,7 +386,12 @@ export function readFrameAtlasSelection(options) {
             options.segments.some((name) => typeof name !== "string")) {
             throw new Error("Frame atlas segments must be an array of strings.");
         }
-        return options.segments;
+        return options.segments.map((name) => {
+            if (typeof name !== "string") {
+                throw new Error("Invalid frame atlas segment.");
+            }
+            return name;
+        });
     }
     return undefined;
 }
