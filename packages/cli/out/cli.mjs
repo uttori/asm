@@ -58187,6 +58187,7 @@ var applyAssetIncludes = (planned, map, metadata, bankSize) => {
       );
     }
     let end = entry.start;
+    const entryComments2 = [];
     while (index < spans.length && end < entry.end) {
       splitRawAt(entry.end);
       const span = spans[index];
@@ -58195,13 +58196,24 @@ var applyAssetIncludes = (planned, map, metadata, bankSize) => {
           `Asset include at ROM offset ${hex9(entry.start)} conflicts with exported data or metadata.`
         );
       }
+      const record5 = span.structRecord ?? span.structField?.record;
+      const comment2 = record5?.binding.entryComments?.[record5.index];
+      if (record5?.start === span.start && comment2) {
+        entryComments2.push(`${record5.binding.name}[${record5.index}]: ${comment2}`);
+      }
       end = span.end;
       index++;
     }
     if (end !== entry.end) {
       throw new Error(`Asset include at ROM offset ${hex9(entry.start)} has no exact end boundary.`);
     }
-    result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
+    result.push({
+      start: entry.start,
+      end: entry.end,
+      role: "raw",
+      assetInclude: entry.directive,
+      ...entryComments2.length ? { assetEntryComments: entryComments2 } : {}
+    });
   }
   while (index < spans.length) {
     result.push(spans[index++]);
@@ -59200,6 +59212,9 @@ var exportSnes65816Source = (project, rom, directory, options) => {
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
         });
       } else if (span.assetInclude) {
+        for (const comment2 of span.assetEntryComments ?? []) {
+          lines.push(`  ; ${comment2}`);
+        }
         lines.push(`  ${span.assetInclude}`);
         spans.push({
           id: `asset:${span.start.toString(16).padStart(6, "0")}`,

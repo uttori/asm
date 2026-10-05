@@ -126,6 +126,30 @@ test("edited build configuration regenerates without force and verifies the exac
   );
 });
 
+test("asset includes retain displaced record identities and their logical indexes", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-entry-comments-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture();
+  fs.writeFileSync(path.join(directory, "struct-map.json"), JSON.stringify({
+    format: "uttori-asm-snes-struct-map", schemaVersion: 1,
+    structures: [{ id: "ActorMarker", size: 2, fields: [{ name: "id", offset: 0, size: 2 }] }],
+    bindings: [{ name: "RoomActors", structure: "ActorMarker", address: 0x808020,
+      fileOffset: 0x20, count: 3, firstIndex: 7,
+      entryComments: { 7: "Elinee", 8: "Polter Chair", 9: "Reward chest" } }],
+  }));
+  const directive = 'includeAsset("../assets/actors.json", "raw")';
+  fs.writeFileSync(path.join(directory, "asset-includes.json"), JSON.stringify({
+    version: 1, entries: [{ start: 0x20, end: 0x24, directive }],
+  }));
+  renderSourceFixture(project, rom, directory, options);
+  const bank = fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8");
+  t.true(bank.includes(`  ; RoomActors[7]: Elinee\n  ; RoomActors[8]: Polter Chair\n  ${directive}`));
+  // The following record remains outside the asset and keeps its own directive/comment.
+  t.true(bank.includes("; Reward chest\ndataStruct RoomActors[9],"));
+  t.is(bank.match(/Polter Chair/g)?.length, 1);
+  t.false(bank.includes("RoomActors[9]: Reward chest"));
+});
+
 test("project asset includes survive export and split native raw spans at exact bounds", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-includes-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));

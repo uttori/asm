@@ -203,6 +203,8 @@ interface PlannedSpan {
   readonly structRecord?: SnesStructRomRecord;
   /** Project-owned include that replaces a bounded non-code ROM span. */
   readonly assetInclude?: string;
+  /** Entry identities displaced by an asset include, in original ROM record order. */
+  readonly assetEntryComments?: readonly string[];
 }
 
 interface AssetIncludeMap {
@@ -329,6 +331,7 @@ const applyAssetIncludes = (
       );
     }
     let end = entry.start;
+    const entryComments: string[] = [];
     while (index < spans.length && end < entry.end) {
       splitRawAt(entry.end);
       const span = spans[index];
@@ -343,13 +346,26 @@ const applyAssetIncludes = (
           `Asset include at ROM offset ${hex(entry.start)} conflicts with exported data or metadata.`,
         );
       }
+      // An editable asset replaces the record directive, but its researched identity still
+      // belongs beside the bytes. Capture it once at the record start before dropping spans.
+      const record = span.structRecord ?? span.structField?.record;
+      const comment = record?.binding.entryComments?.[record.index];
+      if (record?.start === span.start && comment) {
+        entryComments.push(`${record.binding.name}[${record.index}]: ${comment}`);
+      }
       end = span.end;
       index++;
     }
     if (end !== entry.end) {
       throw new Error(`Asset include at ROM offset ${hex(entry.start)} has no exact end boundary.`);
     }
-    result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
+    result.push({
+      start: entry.start,
+      end: entry.end,
+      role: "raw",
+      assetInclude: entry.directive,
+      ...(entryComments.length ? { assetEntryComments: entryComments } : {}),
+    });
   }
   while (index < spans.length) {
     result.push(spans[index++]);
@@ -1839,6 +1855,9 @@ export const exportSnes65816Source = (
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
         });
       } else if (span.assetInclude) {
+        for (const comment of span.assetEntryComments ?? []) {
+          lines.push(`  ; ${comment}`);
+        }
         lines.push(`  ${span.assetInclude}`);
         spans.push({
           id: `asset:${span.start.toString(16).padStart(6, "0")}`,
