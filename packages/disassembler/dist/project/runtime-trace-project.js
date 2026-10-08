@@ -46,6 +46,10 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         let retainedReport;
         const manifest = store.transaction(() => store.manifest(), false);
         const expected = analysisProjectRevision(manifest);
+        // NES payload hashes omit the header that determines the mapper and trainer layout.
+        if (manifest.target === "65xx.nes" && source.metadata.romFileSha256 !== manifest.rom.sha256) {
+            throw new Error("NES capture full-file identity does not match the original cartridge header and payload.");
+        }
         if (manifest.rom.contentSha256 !== context.projectRomContentSha256) {
             throw new Error("ROM/project mismatch: destination project does not match the trace import context.");
         }

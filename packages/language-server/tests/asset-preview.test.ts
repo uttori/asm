@@ -3,8 +3,14 @@ import path from "node:path";
 
 import { waveImporter, writePcmWave, type PcmAudio } from "@uttori/asm-assets/audio";
 import { rgbaNativePng } from "@uttori/asm-assets/preview";
+import { normalizeSomSource } from "@uttori/asm-assets/secret-of-mana/som-source";
+import { createSomSpriteInterchange } from "@uttori/asm-assets/secret-of-mana/som-sprite-interchange";
+import { bindingResourceKey } from "@uttori/asm-assets/source-binding";
+import { indexedSourceCodecs } from "@uttori/asm-assets/source-codecs";
 
 import { test } from "../../../tests/ava-helper.js";
+import { spriteFixture } from "../../../tests/fixtures/sprite-source.js";
+import { assetCallContainingLine } from "../src/asset-language.js";
 import { convertAssetPreview } from "../src/asset-preview-conversion.js";
 import { supportsPortableAssetPreview } from "../src/asset-preview-service.js";
 
@@ -23,6 +29,110 @@ function isPcmAudio(value: unknown): value is PcmAudio {
 
 const fixture = (name: string): Uint8Array =>
   fs.readFileSync(path.resolve("packages/assets/tests/fixtures", name));
+const json = (value: unknown) => ({
+  bytes: new TextEncoder().encode(JSON.stringify(value)),
+  mediaType: "application/json",
+});
+
+test("explicit preview resolves multiline calls through assembly normalization", (t) => {
+  const source =
+    'org $808000\nincludeAsset(\n  "art.png", ; keep delimiters in quoted paths\n\n  "4bpp",\n  layout: { tileOrder: "row-major" }\n)\ndb $42';
+  for (const line of [1, 2, 3, 4, 5, 6]) {
+    t.is(assetCallContainingLine(source, line)?.path.value, "art.png");
+  }
+  t.is(assetCallContainingLine(source, 0), undefined);
+  t.is(assetCallContainingLine(source, 7), undefined);
+});
+
+test("Aseprite raster preview encodes the same native bytes as its indexed PNG", async (t) => {
+  const codecs = indexedSourceCodecs();
+  const png = fixture("colored-4bpp.png");
+  const bytes = await codecs.get("aseprite").encode(codecs.get("indexed-png").decode(png));
+  const aseprite = convertAssetPreview({
+    source: { bytes, mediaType: "image/x-aseprite" },
+    resources: {},
+    format: "snes.tile.4bpp",
+    options: {},
+  });
+  const before = convertAssetPreview({
+    source: { bytes: png, mediaType: "image/png" },
+    resources: {},
+    format: "snes.tile.4bpp",
+    options: {},
+  });
+  t.is(aseprite.encodedBytes, before.encodedBytes);
+  t.is(aseprite.storagePngBase64, before.storagePngBase64);
+});
+
+test("portable Aseprite source previews use the same normalized owners and palette as normal assembly", async (t) => {
+  const { catalog, layout, png } = spriteFixture();
+  const id = "a0000000-0000-0000-0000-000000000000";
+  const source = { bytes: png, mediaType: "image/png" };
+  const presentation = createSomSpriteInterchange({ id, source, layout }, catalog, id);
+  const document = presentation.baseline.document;
+  const palette = document.palette.map((color): [number, number, number, number] => [...color]);
+  palette[1] = [16, 0, 0, 255];
+  const authored = {
+    bytes: await indexedSourceCodecs()
+      .get("aseprite")
+      .encode({ ...document, palette }),
+    mediaType: "image/x-aseprite",
+  };
+  const resources = {
+    "layout.json": json(layout),
+    "palettes.json": json(catalog),
+    "binding.json": json({
+      format: "uttori-asset-source",
+      version: 1,
+      id,
+      adapter: "som.sprite.native",
+      source: { path: "sprite.aseprite", representation: "aseprite" },
+      resources: { reference: "reference.png", layout: "layout.json", palettes: "palettes.json" },
+      native: [{ format: "som.sprite.frames", options: {} }],
+    }),
+    [bindingResourceKey("binding.json", "reference")]: source,
+    [bindingResourceKey("binding.json", "layout")]: json(layout),
+    [bindingResourceKey("binding.json", "palettes")]: json(catalog),
+    [bindingResourceKey("binding.json", "source")]: authored,
+  };
+  const options = {
+    layout: "layout.json",
+    palettes: "palettes.json",
+    sourceBinding: "binding.json",
+    segment: "tiles",
+  };
+  const normalized = normalizeSomSource(authored, options, resources, catalog);
+  const direct = convertAssetPreview({
+    source: authored,
+    resources,
+    format: "som.sprite.frames",
+    options,
+  });
+  const expected = convertAssetPreview({
+    source: normalized.source,
+    resources: {
+      "layout.json": json(normalized.layout),
+      "palettes.json": json(normalized.catalog),
+    },
+    format: "som.sprite.frames",
+    options: { layout: "layout.json", palettes: "palettes.json", segment: "tiles" },
+  });
+  t.is(direct.encodedBytes, expected.encodedBytes);
+  t.is(direct.composedPngBase64, expected.composedPngBase64);
+  const colors = convertAssetPreview({
+    source: json(catalog),
+    resources,
+    format: "som.palette.bgr555",
+    options: { palette: "C00100", paletteSources: ["binding.json"] },
+  });
+  const expectedColors = convertAssetPreview({
+    source: json(normalized.catalog),
+    resources: {},
+    format: "som.palette.bgr555",
+    options: { palette: "C00100" },
+  });
+  t.is(colors.composedPngBase64, expectedColors.composedPngBase64);
+});
 
 test("editor image preview renders composed and native storage PNGs from direct conversion", (t) => {
   const converted = convertAssetPreview({

@@ -374,6 +374,31 @@ const main = async (): Promise<void> => {
         developmentPaths.push(driver);
       }
       const phases = process.env.UTTORI_VSCODE_ASSET_RECOVERY === "1" ? ["draft", "recover"] : [""];
+      if (process.env.UTTORI_VSCODE_TEST_VSIX) {
+        // A focused live fixture can exercise the actual installed archive with only an empty test
+        // driver in development mode. Never substitute the repository extension for the shipped package.
+        const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath, {
+          reuseMachineInstall: true,
+        });
+        execFileSync(
+          cli,
+          [
+            ...cliArgs,
+            "--user-data-dir",
+            path.join(isolation, "profile"),
+            "--extensions-dir",
+            path.join(isolation, "extensions"),
+            "--install-extension",
+            path.resolve(process.env.UTTORI_VSCODE_TEST_VSIX),
+            "--force",
+          ],
+          { stdio: "inherit", timeout: 120000, shell: process.platform === "win32" },
+        );
+        developmentPaths.shift();
+        if (!developmentPaths.length) {
+          throw new Error("Installed live acceptance requires the disposable Git-source driver.");
+        }
+      }
       if (phases.length > 1) {
         fs.mkdirSync(path.join(isolation, "profile/User"), { recursive: true });
         fs.writeFileSync(
@@ -421,7 +446,9 @@ const main = async (): Promise<void> => {
             vscodeExecutablePath,
             extensionDevelopmentPath: developmentPaths,
             extensionTestsPath,
-            launchArgs,
+            launchArgs: process.env.UTTORI_VSCODE_TEST_VSIX
+              ? launchArgs.filter((item) => item !== "--disable-extensions")
+              : launchArgs,
           });
           continue;
         }

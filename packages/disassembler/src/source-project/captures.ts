@@ -216,7 +216,11 @@ export function reconcileSourceCaptureCatalog(
 ): SourceCaptureCatalog {
   const captures = new Map(catalog.captures.map((capture) => [capture.sha256, capture]));
   for (const report of reports) {
-    if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format)) {
+    if (
+      !["uttori-asm-instruction-trace", "uttori-asm-bus-trace", "uttori-nes-ppu-evidence"].includes(
+        report.format,
+      )
+    ) {
       continue;
     }
     // Reports can retain a historical absolute source name. Only its portable basename is published.
@@ -226,6 +230,7 @@ export function reconcileSourceCaptureCatalog(
       sourceName,
       profile: report.indexProfile ?? "full",
       observedEvents:
+        observedCount(report.imported, "graphicsEvents") ??
         observedCount(report.imported, "busEvents") ??
         observedCount(report.imported, "executionEvents") ??
         0,

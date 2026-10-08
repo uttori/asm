@@ -1,10 +1,12 @@
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { matchesResearchMapping } from "../model/research-mapping.js";
 /** Default work-item budget when `analyzeStaticControlFlow` omits `maxWorkItems`. */
 export const DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1_000_000;
 /** Default call-context depth when `analyzeStaticControlFlow` omits `maxCallDepth`. */
 export const DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
 const hexAddress = (address) => address.toString(16).padStart(6, "0");
 const contextKey = (context) => context
-    .map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`)
+    .map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}${frame.executionContext ?? ""}`)
     .join("/");
 const nodeIdFor = (address, context) => `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
 const sortedUnique = (values) => [...new Set(values)].toSorted();
@@ -132,12 +134,18 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     if (!Number.isSafeInteger(maxCallDepth) || maxCallDepth < 0) {
         throw new Error("maxCallDepth must be a non-negative safe integer.");
     }
+    // The default preserves existing targets; banked adapters partition execution before state joins.
+    const executionSuffix = (address, state) => {
+        const key = adapter.executionContextKey?.(address, state);
+        return key === undefined ? "" : `:mapping:${encodeURIComponent(key)}`;
+    };
     const overrides = new Map();
     for (const override of [...(options.targetOverrides ?? [])].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id))) {
-        if (overrides.has(override.address)) {
+        const previous = overrides.get(override.address) ?? [];
+        if (previous.some((item) => canonicalJson(item.mapping ?? null) === canonicalJson(override.mapping ?? null))) {
             throw new Error(`More than one target override exists at $${hexAddress(override.address)}.`);
         }
-        overrides.set(override.address, override);
+        overrides.set(override.address, [...previous, override]);
     }
     // Sort seeds once to retain the historical entry-point order. Every later insertion is ordered
     // incrementally by StaticWorkQueue instead of repeatedly sorting the complete pending worklist.
@@ -178,8 +186,9 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         if (seed.kind === "observation") {
             continue;
         }
-        functions.set(`function:${hexAddress(seed.address)}`, {
-            id: `function:${hexAddress(seed.address)}`,
+        const functionId = `function:${hexAddress(seed.address)}${executionSuffix(seed.address, seed.state)}`;
+        functions.set(functionId, {
+            id: functionId,
             address: seed.address,
             source: seed.kind === "vector" ? "interrupt" : "entry",
             evidence: sortedUnique(seed.evidence),
@@ -208,12 +217,13 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             });
         }
         const enteredState = adapter.enterAddress?.(item.state, item.address) ?? item.state;
-        const nodeId = nodeIdFor(item.address, item.context);
+        const suffix = executionSuffix(item.address, enteredState);
+        const nodeId = nodeIdFor(item.address, item.context) + suffix;
         const previousState = states.get(nodeId);
         const incomingState = previousState ? adapter.join(previousState, enteredState) : enteredState;
         if (previousState && adapter.stateKey(previousState) === adapter.stateKey(incomingState)) {
             if (item.predecessor && item.edgeKind) {
-                const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
+                const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override) + suffix;
                 edges.set(edgeId, {
                     id: edgeId,
                     from: item.predecessor,
@@ -258,7 +268,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
                 evidence,
             });
             if (item.predecessor && item.edgeKind) {
-                const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
+                const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override) + suffix;
                 edges.set(edgeId, {
                     id: edgeId,
                     from: item.predecessor,
@@ -323,7 +333,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             evidencePath: path,
         });
         if (item.predecessor && item.edgeKind) {
-            const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
+            const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override) + suffix;
             edges.set(edgeId, {
                 id: edgeId,
                 from: item.predecessor,
@@ -338,7 +348,15 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             });
         }
         const fallthroughAddress = (instruction.address & 0xff0000) | ((instruction.address + instruction.size) & 0xffff);
-        const override = overrides.get(instruction.address);
+        const matchingOverrides = (overrides.get(instruction.address) ?? []).filter((entry) => matchesResearchMapping(entry.mapping, {
+            fileOffset: instruction.fileOffset,
+            state: adapter.mappingState?.(incomingState),
+        }));
+        // Overlapping selectors are an authoring conflict; ordering must never choose a bank silently.
+        if (matchingOverrides.length > 1) {
+            throw new Error(`Multiple target overrides match $${hexAddress(instruction.address)} in this mapping.`);
+        }
+        const override = matchingOverrides.at(0);
         const controlTargets = override
             ? override.targets.map((address) => ({
                 kind: overriddenTargetKind(instruction.flow.kind),
@@ -361,7 +379,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
                     evidence: sortedUnique([...nodeEvidence, ...(override?.evidence ?? [])]),
                     ...(target.explanation ? { explanation: target.explanation } : {}),
                 });
-                const unresolvedId = `unresolved:${hexAddress(instruction.address)}:${target.kind}`;
+                const unresolvedId = `unresolved:${hexAddress(instruction.address)}:${target.kind}${suffix}`;
                 unresolved.set(unresolvedId, {
                     id: unresolvedId,
                     address: instruction.address,
@@ -387,7 +405,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
                 explanation: target.explanation,
             });
             if (kind === "call" || kind === "interrupt") {
-                const functionId = `function:${hexAddress(target.address)}`;
+                const functionId = `function:${hexAddress(target.address)}${executionSuffix(target.address, outgoingState)}`;
                 if (!functions.has(functionId)) {
                     functions.set(functionId, {
                         id: functionId,
@@ -403,7 +421,11 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             if (target.kind === "call") {
                 const nextContext = [
                     ...item.context,
-                    { callSite: instruction.address, returnAddress: fallthroughAddress },
+                    {
+                        callSite: instruction.address,
+                        returnAddress: fallthroughAddress,
+                        executionContext: executionSuffix(instruction.address, incomingState),
+                    },
                 ];
                 if (nextContext.length > maxCallDepth) {
                     addIncomplete({

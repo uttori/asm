@@ -6,6 +6,7 @@ import { type ResearchSnapshot } from "../research-inputs/inputs.js";
 import { type RuntimeEvidenceBatch, type RuntimeEvidenceConflict } from "../runtime/runtime-evidence.js";
 import type { RuntimeTraceFactIndex } from "../runtime/runtime-trace.js";
 import { type InstructionExecutionSummaryRow, type AnnotationQueryRange, type SqliteAnnotationView, type InstructionExportRecord } from "./sqlite-annotation-query.js";
+import { type GraphicsEvidenceQuery } from "./sqlite-graphics-query.js";
 import { type RuntimeTracePublicationSink } from "./sqlite-runtime-batch.js";
 import { type AnalysisStoragePolicy } from "./sqlite-storage-policy.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
@@ -437,9 +438,9 @@ export declare class SqliteAnalysisStore {
      * @returns {object | undefined} Retained import identity and counts.
      */
     captureReceipt(sha256: string): Record<string, import("node:sqlite").SQLOutputValue> | undefined;
-    /** Catalog rows contain small import provenance metadata, never capture contents.
-     * @returns {object[]} Small capture metadata rows in import order.
-     */
+    /** Bounded physical-code joins; graphics never imply that a CPU instruction executed. */
+    graphicsEvidence(query: GraphicsEvidenceQuery): readonly import("./sqlite-graphics-query.js").GraphicsEvidenceRow[];
+    /** Small durable import receipts in import order. */
     captureCatalog(): Record<string, import("node:sqlite").SQLOutputValue>[];
     /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
      * @param {ImportReport} report Successfully validated native trace import.

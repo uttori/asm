@@ -51,4 +51,10 @@ export * from "./internal/durable-files.js";
 export * from "./runtime/capture-instruction-source.js";
 export * from "./runtime/capture-bus-source.js";
 export * from "./runtime/capture-source.js";
+export { lostCodeRanges } from "./source-project/code-preservation.js";
+export { checkRawBlockConsumption, type RawBlockInput } from "./source-project/raw-consumption.js";
+export { verifyRuntimeCaptureCompanion } from "./runtime/capture-companion.js";
+export * from "./model/research-mapping.js";
+export * from "./model/runtime-graphics-fact.js";
+export type { GraphicsEvidenceQuery, GraphicsEvidenceRow, } from "./storage/sqlite-graphics-query.js";
 //# sourceMappingURL=index.d.ts.map

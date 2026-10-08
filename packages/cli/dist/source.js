@@ -2,16 +2,24 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { sourceFilePublicationEpoch, RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, } from "@uttori/asm-disassembler";
+import { sourceFilePublicationEpoch, RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, prepareSourceGeneration, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, } from "@uttori/asm-disassembler";
+import plugin65xx from "@uttori/asm-plugin-65xx";
+import { loadNesRom, buildNesSource, inspectNesSource, prepareNesGeneration, analyzeNesProject, importNesPPUCapture, } from "@uttori/asm-plugin-65xx/disassembler";
 import { loadProjectEnvironment, fingerprintNodeToolchain } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { buildSnesSource, inspectSnesSource, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, snesRomAddressSpace, } from "@uttori/asm-plugin-snes";
+import { importSourceCaptures } from "./source-capture-imports.js";
+import { initializeNesSourceProject } from "./source-init-nes.js";
 import { initializeSnesSourceProject } from "./source-init.js";
+import { createSourceMergeProgress } from "./source-progress.js";
 import { prepareSourceResearch } from "./source-research.js";
 /** Built-in SNES support remains available in a packaged CLI/VSIX without development node_modules. */
 const loadSourceEnvironment = (configFile) => loadProjectEnvironment({
     cwd: path.dirname(configFile),
     configFile,
-    bundledPlugins: new Map([["@uttori/asm-plugin-snes", snesPlugin]]),
+    bundledPlugins: new Map([
+        ["@uttori/asm-plugin-snes", snesPlugin],
+        ["@uttori/asm-plugin-65xx", plugin65xx],
+    ]),
 });
 function sourceToolchain(plugins) {
     if (typeof UTTORI_SOURCE_BUNDLED !== "undefined" && UTTORI_SOURCE_BUNDLED) {
@@ -56,7 +64,7 @@ function assertSourceLayout(value, romSha256) {
     if (typeof value !== "object" ||
         value === null ||
         !("format" in value) ||
-        value.format !== "uttori-snes-layout" ||
+        (value.format !== "uttori-snes-layout" && value.format !== "uttori-nes-layout") ||
         !("version" in value) ||
         value.version !== 1 ||
         !("romSha256" in value) ||
@@ -166,7 +174,8 @@ function assertGenerationRecipe(value) {
     if (typeof value !== "object" ||
         value === null ||
         !("format" in value) ||
-        value.format !== "uttori-snes-generation-inputs" ||
+        (value.format !== "uttori-snes-generation-inputs" &&
+            value.format !== "uttori-nes-generation-inputs") ||
         !("version" in value) ||
         value.version !== 1 ||
         !("sourceRoot" in value) ||
@@ -354,9 +363,24 @@ async function withSourceBuild(project, signal, run) {
         raw.romSha256 !== project.configuration.romSha256) {
         throw new Error("Regenerate the project's stable raw-block contract before building.");
     }
-    const original = RomImage.load(sourceProjectLocalInputs(project).rom);
+    const originalFile = sourceProjectLocalInputs(project).rom;
+    const original = project.configuration.target === "65xx.nes"
+        ? loadNesRom(originalFile).rom
+        : RomImage.load(originalFile);
     if (original.identity.contentSha256 !== project.configuration.romSha256) {
         throw new Error("The local original ROM does not match this source project.");
+    }
+    if (project.configuration.target === "65xx.nes") {
+        const evidence = openAnalysisProjectStore(sourceProjectLocalInputs(project).evidence);
+        try {
+            // Header bytes select the mapper; a matching payload alone cannot authenticate the original.
+            if (evidence.manifest().rom.sha256 !== original.identity.sha256) {
+                throw new Error("The local original NES cartridge header or payload changed.");
+            }
+        }
+        finally {
+            evidence.close();
+        }
     }
     let placementMapper;
     if (layout.objects !== undefined ||
@@ -402,6 +426,9 @@ async function withSourceBuild(project, signal, run) {
             includePaths: loaded.includePaths,
             targetOptions: loaded.targetOptions,
             expectedSize: layout.size,
+            ...(project.configuration.target === "65xx.nes"
+                ? { expectedHeader: original.fileBytes().subarray(0, 16) }
+                : {}),
             expansion: layout.expansion,
             rawBlocks: {
                 directory: path.join(path.dirname(project.configuration.buildConfig), "assets/raw"),
@@ -440,12 +467,13 @@ async function withSourceBuild(project, signal, run) {
     }
 }
 /** Ordinary saved-file build and relocation inspection use identical environment and layout inputs. */
-const buildProject = (project, signal) => withSourceBuild(project, signal, buildSnesSource);
+const buildProject = (project, signal) => withSourceBuild(project, signal, project.configuration.target === "65xx.nes" ? buildNesSource : buildSnesSource);
 /** Inspect current or overlaid source with normal project checks, without publishing build artifacts. */
 export async function inspectSourceProject(directory, overlays, signal) {
     const project = await openSourceProject(directory);
     return withSourceBuild(project, signal, (options, _layout, environmentInputs) => {
-        const inspected = inspectSnesSource({ ...options, overlays });
+        const inspect = project.configuration.target === "65xx.nes" ? inspectNesSource : inspectSnesSource;
+        const inspected = inspect({ ...options, overlays });
         const snapshots = new Map(inspected.snapshots);
         for (const [file, bytes] of environmentInputs) {
             const before = snapshots.get(file);
@@ -466,6 +494,12 @@ export async function inspectSourceProject(directory, overlays, signal) {
 /** Execute one explicit operation. Long-running callers use a worker so the editor stays responsive. */
 export async function executeSourceOperation(operation) {
     operation.signal?.throwIfAborted();
+    if (operation.captures !== undefined) {
+        if (operation.action !== "import" || operation.capture !== undefined) {
+            throw new Error("A capture queue is only valid for import and cannot be combined with capture.");
+        }
+        return importSourceCaptures(operation.captures, (capture, onProgress) => executeSourceOperation({ ...operation, captures: undefined, capture, onProgress }), operation);
+    }
     if (operation.action === "init") {
         if (!operation.rom) {
             throw new Error("Initialization requires an original ROM path.");
@@ -473,7 +507,11 @@ export async function executeSourceOperation(operation) {
         if (operation.mapper !== undefined && !SNES_MAPPERS.includes(operation.mapper)) {
             throw new Error("Unsupported SNES mapper.");
         }
-        return initializeSnesSourceProject({
+        const magic = fs.readFileSync(operation.rom).subarray(0, 4);
+        const initialize = magic.equals(Buffer.from([0x4e, 0x45, 0x53, 0x1a]))
+            ? initializeNesSourceProject
+            : initializeSnesSourceProject;
+        return initialize({
             directory: operation.directory,
             rom: operation.rom,
             dizRawFile: operation.dizRawFile,
@@ -486,8 +524,12 @@ export async function executeSourceOperation(operation) {
     }
     operation.onProgress?.("Reading selected source project.");
     const project = await openSourceProject(operation.directory);
-    if (project.configuration.target !== "snes.sfc") {
-        throw new Error("This source workflow currently supports the SNES target.");
+    if (project.configuration.target !== "snes.sfc" && project.configuration.target !== "65xx.nes") {
+        throw new Error("This source workflow supports SNES and NES targets.");
+    }
+    if (project.configuration.target === "65xx.nes" &&
+        ["expand", "relocate"].includes(operation.action)) {
+        throw new Error("NES projects currently require a fixed cartridge layout; expansion and relocation are unavailable.");
     }
     const repository = project.repository;
     if (operation.action === "clean") {
@@ -689,6 +731,36 @@ export async function executeSourceOperation(operation) {
             return { ...result, edits };
         });
     }
+    if (operation.action === "graphics") {
+        if (project.configuration.target !== "65xx.nes") {
+            throw new Error("Graphics selection currently supports NES source projects.");
+        }
+        const catalog = readSourceCaptureCatalog(repository.root, project.configuration.captures, project.configuration.romSha256).catalog;
+        const captures = catalog.captures.filter((entry) => entry.profile === "nes-graphics-v1");
+        if (!operation.graphicsQuery) {
+            return { captures };
+        }
+        if (!captures.some((entry) => entry.sha256 === operation.graphicsQuery.captureSha256)) {
+            throw new Error("Select a graphics identity from the portable capture catalog.");
+        }
+        const store = openAnalysisProjectStore(sourceProjectLocalInputs(project).evidence);
+        try {
+            const rows = store.graphicsEvidence({
+                ...operation.graphicsQuery,
+                architecture: "65xx.2a03",
+                addressSpace: "nes.cpu",
+            });
+            return {
+                capture: captures.find((entry) => entry.sha256 === operation.graphicsQuery.captureSha256),
+                rows,
+                limit: operation.graphicsQuery.limit ?? 500,
+                relation: "Same physical PRG code observed in CPU evidence; counts are independent, not temporal event matches.",
+            };
+        }
+        finally {
+            store.close();
+        }
+    }
     if (operation.action === "catalog") {
         const snapshot = readSourceCaptureCatalog(repository.root, project.configuration.captures, project.configuration.romSha256);
         const store = openAnalysisProjectStore(sourceProjectLocalInputs(project).evidence);
@@ -721,7 +793,8 @@ export async function executeSourceOperation(operation) {
     if (operation.action === "analyze") {
         const local = sourceProjectLocalInputs(project);
         const pendingNotes = pendingCaptureImportNotes(local.evidence);
-        const result = analyzeSnesProject({
+        const analyze = project.configuration.target === "65xx.nes" ? analyzeNesProject : analyzeSnesProject;
+        const result = analyze({
             projectDirectory: local.evidence,
             romFile: local.rom,
             signal: operation.signal,
@@ -738,61 +811,152 @@ export async function executeSourceOperation(operation) {
             throw new Error("Import requires a capture archive path.");
         }
         const capture = path.resolve(operation.capture);
-        const local = sourceProjectLocalInputs(project);
-        const catalogSnapshot = readSourceCaptureCatalog(repository.root, project.configuration.captures, project.configuration.romSha256);
-        operation.onProgress?.("Fingerprinting the private capture archive.");
-        const archive = await fingerprintSourceCapture(capture, operation.signal, project.configuration.limits?.captureBytes);
-        const selected = await openRuntimeCaptureSource(capture, {
-            signal: operation.signal,
-            maxBytes: project.configuration.limits?.captureBytes,
-        });
-        const context = {
-            projectRomContentSha256: project.configuration.romSha256,
-            sourceName: path.basename(capture),
-        };
-        const options = { signal: operation.signal, onStage: operation.onProgress, ...researchOptions };
-        let result;
-        if (selected.kind === "instructions") {
-            result = await importRuntimeTraceSourceIntoProject(selected.source, local.evidence, { ...context, indexMode: "full" }, options);
-        }
-        else {
-            result = await importRuntimeBusTraceSourceIntoProject(selected.source, local.evidence, context, options);
-        }
-        // Evidence is already committed. A failed Git-file update must report that durable outcome;
-        // retrying the import is idempotent and can complete the missing portable archive binding.
+        // Keep the source identity in every phase, including single-file imports from runtime capture.
+        const onProgress = (message) => operation.onProgress?.(`Import ${capture}: ${message}`);
         try {
-            operation.onProgress?.("Recording verified archive identity in the Git capture catalog.");
-            if (canonicalJson(await fingerprintSourceCapture(capture, operation.signal, project.configuration.limits?.captureBytes)) !== canonicalJson(archive)) {
-                throw new Error("Capture archive or companion changed during import.");
-            }
-            const store = openAnalysisProjectStore(local.evidence);
-            try {
-                const reports = store.loadTable("imports");
-                const report = reports.find((entry) => entry.sourceSha256 === result.sourceSha256);
-                if (report) {
-                    writeCaptureImportNotes(local.evidence, report);
+            onProgress("Starting capture import.");
+            const local = sourceProjectLocalInputs(project);
+            const catalogSnapshot = readSourceCaptureCatalog(repository.root, project.configuration.captures, project.configuration.romSha256);
+            const archive = await fingerprintSourceCapture(capture, operation.signal, project.configuration.limits?.captureBytes);
+            let graphicsResult;
+            const graphicsBindings = [];
+            if (project.configuration.target === "65xx.nes") {
+                const { rom } = loadNesRom(local.rom);
+                if (rom.identity.contentSha256 !== project.configuration.romSha256) {
+                    throw new Error("Original NES evidence changed.");
                 }
-                const catalog = reconcileSourceCaptureCatalog(catalogSnapshot.catalog, reports, {
-                    sourceSha256: result.sourceSha256,
-                    archive,
+                const identityStore = openAnalysisProjectStore(local.evidence);
+                try {
+                    if (identityStore.manifest().rom.sha256 !== rom.identity.sha256) {
+                        throw new Error("Original NES cartridge identity changed.");
+                    }
+                }
+                finally {
+                    identityStore.close();
+                }
+                const graphics = await importNesPPUCapture({
+                    file: capture,
+                    evidenceDirectory: local.evidence,
+                    ...researchOptions,
+                    directory: path.join(repository.root, ".uttori-local", "graphics", "reports"),
+                    romFileSha256: rom.identity.sha256,
+                    romContentSha256: rom.identity.contentSha256,
+                    signal: operation.signal,
+                    maxBytes: project.configuration.limits?.captureBytes,
                 });
-                writeSourceCaptureCatalog(repository.root, project.configuration.captures, catalog, catalogSnapshot.fileSha256);
+                if (graphics) {
+                    onProgress(`Verified PPU evidence saved to ${graphics.report}`);
+                    graphicsResult = graphics;
+                }
             }
-            finally {
-                store.close();
+            onProgress(`Archive fingerprinted: ${archive.bytes.toLocaleString("en-US")} bytes; SHA-256 ${archive.sha256}.`);
+            const selected = graphicsResult
+                ? undefined
+                : await openRuntimeCaptureSource(capture, {
+                    signal: operation.signal,
+                    maxBytes: project.configuration.limits?.captureBytes,
+                });
+            onProgress(`Selected ${selected?.kind ?? "NES graphics"} importer.`);
+            const context = {
+                projectRomContentSha256: project.configuration.romSha256,
+                sourceName: path.basename(capture),
+            };
+            const options = {
+                signal: operation.signal,
+                onStage: onProgress,
+                onMergeProgress: createSourceMergeProgress(onProgress),
+                ...researchOptions,
+            };
+            let result;
+            if (graphicsResult) {
+                result = graphicsResult;
             }
+            else if (selected?.kind === "instructions") {
+                result = await importRuntimeTraceSourceIntoProject(selected.source, local.evidence, { ...context, indexMode: "full" }, options);
+            }
+            else {
+                result = await importRuntimeBusTraceSourceIntoProject(selected.source, local.evidence, context, options);
+            }
+            if (project.configuration.target === "65xx.nes" &&
+                selected?.kind === "instructions" &&
+                fs.existsSync(`${capture}.context/manifest.json`)) {
+                // The instruction importer has verified this companion's hashes and boundary.
+                // Publish its independent graphics evidence as well; retry remains idempotent.
+                const { rom } = loadNesRom(local.rom);
+                try {
+                    const graphics = await importNesPPUCapture({
+                        file: path.join(`${capture}.context`, "graphics.act2"),
+                        evidenceDirectory: local.evidence,
+                        ...researchOptions,
+                        directory: path.join(repository.root, ".uttori-local", "graphics", "reports"),
+                        romFileSha256: rom.identity.sha256,
+                        romContentSha256: rom.identity.contentSha256,
+                        signal: operation.signal,
+                        maxBytes: project.configuration.limits?.captureBytes,
+                    });
+                    if (!graphics) {
+                        throw new Error("NES instruction context requires NES graphics evidence.");
+                    }
+                    const graphicsArchive = await fingerprintSourceCapture(path.join(`${capture}.context`, "graphics.act2"), operation.signal, project.configuration.limits?.captureBytes);
+                    if (graphicsArchive.sha256 !== graphics.sourceSha256) {
+                        throw new Error("Graphics companion changed during import.");
+                    }
+                    graphicsBindings.push({ sourceSha256: graphics.sourceSha256, archive: graphicsArchive });
+                    onProgress(`Verified companion PPU evidence saved to ${graphics.report}`);
+                }
+                catch (error) {
+                    throw new Error(`CPU evidence import committed; graphics companion import failed. Retry this import: ${String(error)}`, { cause: error });
+                }
+            }
+            // Evidence is already committed. A failed Git-file update must report that durable outcome;
+            // retrying the import is idempotent and can complete the missing portable archive binding.
+            try {
+                onProgress("Recording verified archive identity in the Git capture catalog.");
+                if (canonicalJson(await fingerprintSourceCapture(capture, operation.signal, project.configuration.limits?.captureBytes)) !== canonicalJson(archive)) {
+                    throw new Error("Capture archive or companion changed during import.");
+                }
+                const store = openAnalysisProjectStore(local.evidence);
+                try {
+                    const reports = store.loadTable("imports");
+                    const report = reports.find((entry) => entry.sourceSha256 === result.sourceSha256);
+                    if (report) {
+                        writeCaptureImportNotes(local.evidence, report);
+                    }
+                    let catalog = reconcileSourceCaptureCatalog(catalogSnapshot.catalog, reports, {
+                        sourceSha256: result.sourceSha256,
+                        archive,
+                    });
+                    for (const binding of graphicsBindings) {
+                        catalog = reconcileSourceCaptureCatalog(catalog, reports, binding);
+                    }
+                    writeSourceCaptureCatalog(repository.root, project.configuration.captures, catalog, catalogSnapshot.fileSha256);
+                }
+                finally {
+                    store.close();
+                }
+            }
+            catch (error) {
+                throw new Error(`Evidence import committed; portable catalog update failed. Retry this import to finish recording its archive: ${String(error)}`, { cause: error });
+            }
+            onProgress(`Import completed; ${result.observedEvents.toLocaleString("en-US")} observed events, ${result.droppedEvents.toLocaleString("en-US")} dropped events; added ${result.added.runtime.toLocaleString("en-US")} runtime records and ${result.added.evidence.toLocaleString("en-US")} evidence records. Source SHA-256 ${result.sourceSha256}.`);
+            for (const warning of result.warnings) {
+                onProgress(`Warning: ${warning}`);
+            }
+            return result;
         }
         catch (error) {
-            throw new Error(`Evidence import committed; portable catalog update failed. Retry this import to finish recording its archive: ${String(error)}`, { cause: error });
+            const detail = error instanceof Error ? error.message : String(error);
+            throw new Error(`Import ${capture} failed: ${detail}`, { cause: error });
         }
-        return result;
     }
     if (operation.action === "prepare") {
         operation.onProgress?.("Capturing inputs and verifying a pure generation against the original ROM.");
-        return prepareSnesGeneration({
+        return prepareSourceGeneration(repository, async () => (project.configuration.target === "65xx.nes"
+            ? prepareNesGeneration
+            : prepareSnesGeneration)({
             ...(await generationInputs(project)),
             signal: operation.signal,
-        });
+        }), operation.signal);
     }
     if (operation.action === "apply") {
         if (!operation.candidate) {
@@ -840,12 +1004,17 @@ uttori-asm source init <new-folder> <original-rom> [--mapper <mapper>] [--dizraw
 uttori-asm source <preview|apply|discard> <project> <generation-commit>
 uttori-asm source expand <project> <capacity-bytes>
 uttori-asm source relocate <project> <object-id>
-uttori-asm source import <project> <capture.act2-or-json>
+uttori-asm source import <project> <capture.act2-or-json> [more-captures...]
 uttori-asm source research <project> [<symbol-id> <aliases|suppress|restore|entry|no-entry> [aliases...]]
 uttori-asm source research <project> --analysis [<change.json>]
+uttori-asm source graphics <project> [<capture-sha256> [<cpu-pc> [<prg-offset>]]]
 
 Prepare and preview preserve source, staging and Git history. Commit your edits before apply.
 Resolve conflicts with Git, stage the result, then finish to validate and commit the merge.`;
+/** Assembly hex is accepted without guessing the radix of bare decimal addresses. */
+function sourceNumericArgument(value) {
+    return value === undefined ? undefined : Number(value.replace(/^\$/, "0x"));
+}
 /** Strict positional CLI adapter; structured service calls carry editor cancellation and buffers. */
 export async function runSourceCli(argv) {
     if (argv.length === 0 || argv.includes("--help")) {
@@ -853,6 +1022,23 @@ export async function runSourceCli(argv) {
         return 0;
     }
     const [action, directory, candidate] = argv;
+    if (action === "graphics" && directory && argv.length <= 5) {
+        try {
+            const graphicsQuery = candidate
+                ? {
+                    captureSha256: candidate,
+                    pc: sourceNumericArgument(argv[3]),
+                    physicalOffset: sourceNumericArgument(argv[4]),
+                }
+                : undefined;
+            console.log(JSON.stringify(await executeSourceOperation({ action, directory, graphicsQuery }), null, 2));
+            return 0;
+        }
+        catch (error) {
+            console.error(error instanceof Error ? error.message : String(error));
+            return 1;
+        }
+    }
     if (action === "research" && directory) {
         try {
             let research;
@@ -920,20 +1106,24 @@ export async function runSourceCli(argv) {
             return 1;
         }
     }
-    if (!action ||
-        !directory ||
-        !isDirectSourceAction(action) ||
-        argv.length !==
-            (["preview", "apply", "discard", "import", "relocate", "expand"].includes(action) ? 3 : 2)) {
+    let validArity = argv.length ===
+        (["preview", "apply", "discard", "relocate", "expand"].includes(action) ? 3 : 2);
+    if (action === "import") {
+        validArity = argv.length >= 3;
+    }
+    if (!action || !directory || !isDirectSourceAction(action) || !validArity) {
         console.error(sourceUsage);
         return 1;
     }
     try {
+        const started = performance.now();
         const result = await executeSourceOperation({
             action,
             directory,
             candidate,
-            capture: action === "import" ? candidate : undefined,
+            capture: action === "import" && argv.length === 3 ? candidate : undefined,
+            captures: action === "import" && argv.length > 3 ? argv.slice(2) : undefined,
+            onProgress: (message) => console.error(`[${((performance.now() - started) / 1000).toFixed(1)}s] ${message}`),
             objectId: action === "relocate" ? candidate : undefined,
             expansionSize: action === "expand" ? Number(candidate) : undefined,
         });

@@ -82,4 +82,45 @@ export const ARES_RSP_CAPABILITIES = Object.freeze({
         }),
     ]),
 });
+/** Famicom exposes only features its native hooks implement; PPU capture is negotiated independently and replay remains unsupported. */
+export const ARES_NES_CAPABILITIES = Object.freeze({
+    ...ARES_RSP_CAPABILITIES,
+    architectures: [
+        {
+            architecture: "65xx.2a03",
+            addressSpaces: [
+                "nes.cpu",
+                "nes.ram",
+                "nes.prg-rom",
+                "nes.chr-rom",
+                "nes.prg-ram",
+                "nes.ppu-snapshot",
+                "nes.chr-ram",
+            ],
+            memorySpaces: [
+                "nes.ram",
+                "nes.prg-rom",
+                "nes.chr-rom",
+                "nes.prg-ram",
+                "nes.ppu-snapshot",
+                "nes.chr-ram",
+                "nes.cpu",
+            ].map((addressSpace) => ({ addressSpace, sideEffectFree: true })),
+            trace: {
+                addressSpaces: ["nes.cpu"],
+                maxBufferedEvents: ARES_TRACE_BUFFER_EVENTS,
+                maxBatchEvents: ARES_TRACE_BATCH_EVENTS,
+                instructionDetails: true,
+            },
+            pause: true,
+            step: true,
+            stepKinds: ARES_STEP_KINDS,
+            registers: true,
+            memory: true,
+            stackFrames: true,
+            breakpoints: true,
+            disassemble: true,
+        },
+    ],
+});
 //# sourceMappingURL=profile.js.map

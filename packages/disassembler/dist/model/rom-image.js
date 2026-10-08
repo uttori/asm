@@ -37,11 +37,17 @@ export class RomImage {
      */
     constructor(bytes, options = {}) {
         this.#fileBytes = Uint8Array.from(bytes);
-        const headerSize = options.headerSize ?? detectCopierHeaderSize(this.#fileBytes.length);
-        if (headerSize > this.#fileBytes.length) {
-            throw new Error(`Header size ${headerSize} exceeds ROM size ${this.#fileBytes.length}.`);
+        const container = options.container;
+        if (container &&
+            (!container.format || !Number.isSafeInteger(container.headerSize) || container.headerSize < 0)) {
+            throw new Error("Invalid target container header.");
         }
-        this.#contentBytes = this.#fileBytes.slice(headerSize);
+        const headerSize = options.headerSize ?? (container ? 0 : detectCopierHeaderSize(this.#fileBytes.length));
+        const contentStart = headerSize + (container?.headerSize ?? 0);
+        if (contentStart > this.#fileBytes.length) {
+            throw new Error(`Header size ${contentStart} exceeds ROM size ${this.#fileBytes.length}.`);
+        }
+        this.#contentBytes = this.#fileBytes.slice(contentStart);
         this.sourcePath = options.sourcePath;
         this.identity = Object.freeze({
             sha256: sha256(this.#fileBytes),
@@ -49,6 +55,7 @@ export class RomImage {
             fileSize: this.#fileBytes.length,
             contentSize: this.#contentBytes.length,
             headerSize,
+            ...(container ? { container: Object.freeze({ ...container }) } : {}),
         });
     }
     /**

@@ -30,4 +30,6 @@ export declare class Fields {
 export declare function rasterZlib(bytes: Uint8Array, expected: number, signal?: AbortSignal): Promise<Uint8Array>;
 /** Emit one supported chunk; lengths include the six-byte chunk header. */
 export declare function chunk(type: number, data: Uint8Array): Uint8Array;
+/** Inflate into a fixed buffer. Streaming callbacks stop expansion before an oversized payload can accumulate. */
+export declare function rasterZlibSync(bytes: Uint8Array, expected: number): Uint8Array;
 //# sourceMappingURL=aseprite-binary.d.ts.map

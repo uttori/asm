@@ -1,11 +1,15 @@
 import { crc32cBytes } from "@uttori/data-tools/data-hash-crc32";
 
+import { decodeNesBusRecords, type CaptureNesBusAccessV2 } from "./capture-nes-ppu.js";
+import type { CaptureNesTimelineV2 } from "./capture-nes-timeline.js";
 import type { DebugTraceInstructionDetail } from "./contracts.js";
 
 /** Exact counters crossing JavaScript/JSON boundaries. */
 export type CaptureU64 = string;
 /** Mutually exclusive streams. Bus scope does not contain fetched instruction bytes or registers. */
 export type CaptureScopeV2 =
+  | "nes.cpu-bus-ppu"
+  | "nes.2a03.instructions"
   | "snes.65816.instructions"
   | "snes.cpu-bus"
   | "snes.cpu-bus-transfers"
@@ -16,7 +20,7 @@ export interface CaptureCapabilitiesV2 {
   readonly mode: "lossless";
   readonly ownership: "durable-prefix";
   readonly maxChunkBytes: 262144;
-  readonly requiredReserveBytes: 71 | 64 | 80 | 88;
+  readonly requiredReserveBytes: 71 | 64 | 80 | 88 | 91 | 128;
   readonly overheadBytes: 4194304;
   readonly resumeSession: false;
   /** Explicit native file capability. Omitted by streamed-only producers. */
@@ -56,6 +60,8 @@ export type CaptureContextRequest =
       readonly operation: "context";
       readonly action: "prepare" | "replay" | "restore";
       readonly directory: string;
+      /** Full iNES image identity, required for NES contexts. */
+      readonly romFileSha256?: string;
       readonly romContentSha256: string;
       readonly producer: { readonly id: string; readonly revision: string };
     }
@@ -78,6 +84,8 @@ export type CaptureRequestV2 =
       readonly bufferBytes: number;
       /** Absolute path on the verified local runtime host. No remote path translation. */
       readonly file: string;
+      /** Full iNES identity; independent from the payload digest. */
+      readonly romFileSha256?: string;
       readonly romContentSha256: string;
       readonly producer: { readonly id: string; readonly revision: string };
     }
@@ -110,6 +118,8 @@ const maxU64 = (1n << 64n) - 1n;
  */
 export const captureScope = (value: unknown): CaptureScopeV2 => {
   if (
+    value !== "nes.cpu-bus-ppu" &&
+    value !== "nes.2a03.instructions" &&
     value !== "snes.65816.instructions" &&
     value !== "snes.cpu-bus" &&
     value !== "snes.cpu-bus-transfers" &&
@@ -150,11 +160,12 @@ export function validateCaptureRequest(value: unknown): asserts value is Capture
     let fields = ["operation", "action"];
     const action = value.action;
     if (action === "prepare" || action === "replay" || action === "restore") {
-      fields.push("directory", "romContentSha256", "producer");
+      fields.push("directory", "romContentSha256", "romFileSha256", "producer");
       // Reuse the same bounded local path and immutable identity contract as ACT2.
       validateCaptureRequest({
         operation: "file-start",
         file: value.directory,
+        romFileSha256: value.romFileSha256,
         romContentSha256: value.romContentSha256,
         producer: value.producer,
         bufferBytes: 8388608,
@@ -202,6 +213,7 @@ export function validateCaptureRequest(value: unknown): asserts value is Capture
             "bufferBytes",
             "file",
             "romContentSha256",
+            "romFileSha256",
             "producer",
             "measureStages",
           ].includes(key),
@@ -224,6 +236,8 @@ export function validateCaptureRequest(value: unknown): asserts value is Capture
       !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) ||
       typeof value.romContentSha256 !== "string" ||
       !/^[\da-f]{64}$/.test(value.romContentSha256) ||
+      (value.romFileSha256 !== undefined &&
+        (typeof value.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romFileSha256))) ||
       !isFieldRecord(producer) ||
       !bounded(producer.id, 256) ||
       !bounded(producer.revision, 1024) ||
@@ -308,7 +322,10 @@ export const validateCaptureCapabilities = (
   scope: CaptureScopeV2 = "snes.65816.instructions",
 ): CaptureCapabilitiesV2 => {
   captureScope(scope);
-  let reserve: 71 | 64 | 80 | 88 = 71;
+  let reserve: 71 | 64 | 80 | 88 | 91 | 128 = scope === "nes.2a03.instructions" ? 91 : 71;
+  if (scope === "nes.cpu-bus-ppu") {
+    reserve = 128;
+  }
   if (scope === "snes.cpu-bus") {
     reserve = 64;
   }
@@ -553,6 +570,10 @@ export interface CaptureTransferV2 {
     readonly flags: number;
   };
 }
+export interface CaptureNesBusChunkV2 extends CaptureChunkBaseV2 {
+  readonly scope: "nes.cpu-bus-ppu";
+  readonly events: readonly (CaptureNesBusAccessV2 | CaptureNesTimelineV2)[];
+}
 export interface CaptureTransferChunkV2 extends CaptureChunkBaseV2 {
   readonly scope: "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
   readonly events: readonly (CaptureBusAccessV2 | CaptureTransferV2)[];
@@ -564,7 +585,7 @@ interface CaptureChunkBaseV2 {
   readonly through: CaptureU64;
 }
 export interface CaptureInstructionChunkV2 extends CaptureChunkBaseV2 {
-  readonly scope: "snes.65816.instructions";
+  readonly scope: "snes.65816.instructions" | "nes.2a03.instructions";
   readonly instructions: readonly CaptureInstructionV2[];
 }
 export interface CaptureBusChunkV2 extends CaptureChunkBaseV2 {
@@ -572,17 +593,27 @@ export interface CaptureBusChunkV2 extends CaptureChunkBaseV2 {
   readonly accesses: readonly CaptureBusAccessV2[];
 }
 /** Scope discrimination prevents bus-only evidence from entering the instruction importer. */
-export type CaptureChunkV2 = CaptureInstructionChunkV2 | CaptureBusChunkV2 | CaptureTransferChunkV2;
+export type CaptureChunkV2 =
+  | CaptureInstructionChunkV2
+  | CaptureBusChunkV2
+  | CaptureTransferChunkV2
+  | CaptureNesBusChunkV2;
 
 /**
  * Common ordering fields without converting bus accesses into instruction records.
  * @param {CaptureChunkV2} chunk Validated nonempty chunk.
- * @returns {readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2)[]} Original ordered record array.
+ * @returns {readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2 | CaptureNesBusAccessV2)[]} Original ordered record array.
  */
 export const captureChunkRecords = (
   chunk: CaptureChunkV2,
-): readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2)[] => {
-  if (chunk.scope === "snes.65816.instructions") {
+): readonly (
+  | CaptureInstructionV2
+  | CaptureBusAccessV2
+  | CaptureTransferV2
+  | CaptureNesBusAccessV2
+  | CaptureNesTimelineV2
+)[] => {
+  if ("instructions" in chunk) {
     return chunk.instructions;
   }
   if (chunk.scope === "snes.cpu-bus") {
@@ -601,7 +632,7 @@ export const captureChunkRecords = (
 export function decodeCaptureChunk(
   bytes: Uint8Array,
   session: string,
-  scope?: "snes.65816.instructions",
+  scope?: "snes.65816.instructions" | "nes.2a03.instructions",
 ): CaptureInstructionChunkV2;
 export function decodeCaptureChunk(
   bytes: Uint8Array,
@@ -613,6 +644,11 @@ export function decodeCaptureChunk(
   session: string,
   scope: "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu",
 ): CaptureTransferChunkV2;
+export function decodeCaptureChunk(
+  bytes: Uint8Array,
+  session: string,
+  scope: "nes.cpu-bus-ppu",
+): CaptureNesBusChunkV2;
 export function decodeCaptureChunk(
   bytes: Uint8Array,
   session: string,
@@ -682,6 +718,10 @@ export function decodeCaptureChunk(
       events: decodeBusAccesses(b, first, count, true, scope === "snes.cpu-bus-ppu"),
     };
   }
+  if (scope === "nes.cpu-bus-ppu") {
+    return { ...identity, scope, events: decodeNesBusRecords(b, first, count) };
+  }
+  const nes = scope === "nes.2a03.instructions";
   const instructions: CaptureInstructionV2[] = [];
   let offset = 64;
   for (let i = 0; i < count; i++) {
@@ -696,38 +736,78 @@ export function decodeCaptureChunk(
     if (
       b.readUInt16LE(offset) !== 1 ||
       b.readUInt16LE(offset + 2) !== 1 ||
-      b.readUInt32LE(offset + 16) !== 0 ||
-      b.readUInt32LE(offset + 20) !== 0
+      b.readUInt32LE(offset + 16) !== (nes ? 1 : 0) ||
+      b.readUInt32LE(offset + 20) !== (nes ? 1 : 0)
     ) {
       throw new Error("Unsupported required capture record.");
     }
     if (
       n < 1 ||
-      n > 4 ||
-      length !== 67 + n ||
+      n > (nes ? 3 : 4) ||
+      length !== (nes ? 88 : 67) + n ||
       offset + length > b.length ||
-      b.readUInt16LE(offset + 49) !== 16
+      b.readUInt16LE(offset + 49) !== (nes ? 37 : 16)
     ) {
       throw new Error("Invalid instruction record length.");
     }
-    if (b.readBigUInt64LE(offset + 8) !== event || ordinal !== event || address > 0xffffffn) {
+    if (
+      b.readBigUInt64LE(offset + 8) !== event ||
+      ordinal !== event ||
+      address > (nes ? 0xffffn : 0xffffffn)
+    ) {
       throw new Error("Instruction identity disagrees with capture scope.");
     }
     const r = offset + 51 + n;
-    const state = {
-      a: b.readUInt16LE(r),
-      x: b.readUInt16LE(r + 2),
-      y: b.readUInt16LE(r + 4),
-      s: b.readUInt16LE(r + 6),
-      d: b.readUInt16LE(r + 8),
-      db: b[r + 10],
-      pb: b[r + 11],
-      pc: b.readUInt16LE(r + 12),
-      p: b[r + 14],
-      e: b[r + 15],
-    };
-    if (state.e > 1 || ((state.pb << 16) | state.pc) !== Number(address)) {
-      throw new Error("Captured PC/state mismatch.");
+    let state: Record<string, number>;
+    if (nes) {
+      state = {
+        a: b[r],
+        x: b[r + 1],
+        y: b[r + 2],
+        s: b[r + 3],
+        p: b[r + 4],
+        pc: b.readUInt16LE(r + 5),
+        mapper: b.readUInt16LE(r + 7),
+        select: b[r + 9],
+        prgMode: b[r + 10],
+        chrMode: b[r + 11],
+        ramEnabled: b[r + 20],
+        ramWritable: b[r + 21],
+        mirroring: b[r + 22],
+        irqLatch: b[r + 23],
+        irqEnabled: b[r + 24],
+      };
+      for (let bank = 0; bank < 8; bank++) {
+        state[`r${bank}`] = b[r + 12 + bank];
+      }
+      for (let byte = 0; byte < n; byte++) {
+        state[`prg${byte}`] = b.readUInt32LE(r + 25 + byte * 4);
+      }
+      if (
+        state.pc !== Number(address) ||
+        ![0, 4].includes(state.mapper) ||
+        state.select > 7 ||
+        state.prgMode > 1 ||
+        state.chrMode > 1
+      ) {
+        throw new Error("Captured NES PC/mapper state is invalid.");
+      }
+    } else {
+      state = {
+        a: b.readUInt16LE(r),
+        x: b.readUInt16LE(r + 2),
+        y: b.readUInt16LE(r + 4),
+        s: b.readUInt16LE(r + 6),
+        d: b.readUInt16LE(r + 8),
+        db: b[r + 10],
+        pb: b[r + 11],
+        pc: b.readUInt16LE(r + 12),
+        p: b[r + 14],
+        e: b[r + 15],
+      };
+      if (state.e > 1 || ((state.pb << 16) | state.pc) !== Number(address)) {
+        throw new Error("Captured PC/state mismatch.");
+      }
     }
     const cycle = b.readBigUInt64LE(offset + 24);
     if (i && cycle < BigInt(instructions[i - 1].cycle)) {

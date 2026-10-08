@@ -1,15 +1,17 @@
+import { type CaptureNesBusAccessV2 } from "./capture-nes-ppu.js";
+import type { CaptureNesTimelineV2 } from "./capture-nes-timeline.js";
 import type { DebugTraceInstructionDetail } from "./contracts.js";
 /** Exact counters crossing JavaScript/JSON boundaries. */
 export type CaptureU64 = string;
 /** Mutually exclusive streams. Bus scope does not contain fetched instruction bytes or registers. */
-export type CaptureScopeV2 = "snes.65816.instructions" | "snes.cpu-bus" | "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
+export type CaptureScopeV2 = "nes.cpu-bus-ppu" | "nes.2a03.instructions" | "snes.65816.instructions" | "snes.cpu-bus" | "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
 export interface CaptureCapabilitiesV2 {
     readonly version: 2;
     readonly scope: CaptureScopeV2;
     readonly mode: "lossless";
     readonly ownership: "durable-prefix";
     readonly maxChunkBytes: 262144;
-    readonly requiredReserveBytes: 71 | 64 | 80 | 88;
+    readonly requiredReserveBytes: 71 | 64 | 80 | 88 | 91 | 128;
     readonly overheadBytes: 4194304;
     readonly resumeSession: false;
     /** Explicit native file capability. Omitted by streamed-only producers. */
@@ -41,6 +43,8 @@ export type CaptureContextRequest = {
     readonly operation: "context";
     readonly action: "prepare" | "replay" | "restore";
     readonly directory: string;
+    /** Full iNES image identity, required for NES contexts. */
+    readonly romFileSha256?: string;
     readonly romContentSha256: string;
     readonly producer: {
         readonly id: string;
@@ -70,6 +74,8 @@ export type CaptureRequestV2 = CaptureContextRequest | {
     readonly bufferBytes: number;
     /** Absolute path on the verified local runtime host. No remote path translation. */
     readonly file: string;
+    /** Full iNES identity; independent from the payload digest. */
+    readonly romFileSha256?: string;
     readonly romContentSha256: string;
     readonly producer: {
         readonly id: string;
@@ -219,6 +225,10 @@ export interface CaptureTransferV2 {
         readonly flags: number;
     };
 }
+export interface CaptureNesBusChunkV2 extends CaptureChunkBaseV2 {
+    readonly scope: "nes.cpu-bus-ppu";
+    readonly events: readonly (CaptureNesBusAccessV2 | CaptureNesTimelineV2)[];
+}
 export interface CaptureTransferChunkV2 extends CaptureChunkBaseV2 {
     readonly scope: "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
     readonly events: readonly (CaptureBusAccessV2 | CaptureTransferV2)[];
@@ -230,7 +240,7 @@ interface CaptureChunkBaseV2 {
     readonly through: CaptureU64;
 }
 export interface CaptureInstructionChunkV2 extends CaptureChunkBaseV2 {
-    readonly scope: "snes.65816.instructions";
+    readonly scope: "snes.65816.instructions" | "nes.2a03.instructions";
     readonly instructions: readonly CaptureInstructionV2[];
 }
 export interface CaptureBusChunkV2 extends CaptureChunkBaseV2 {
@@ -238,13 +248,13 @@ export interface CaptureBusChunkV2 extends CaptureChunkBaseV2 {
     readonly accesses: readonly CaptureBusAccessV2[];
 }
 /** Scope discrimination prevents bus-only evidence from entering the instruction importer. */
-export type CaptureChunkV2 = CaptureInstructionChunkV2 | CaptureBusChunkV2 | CaptureTransferChunkV2;
+export type CaptureChunkV2 = CaptureInstructionChunkV2 | CaptureBusChunkV2 | CaptureTransferChunkV2 | CaptureNesBusChunkV2;
 /**
  * Common ordering fields without converting bus accesses into instruction records.
  * @param {CaptureChunkV2} chunk Validated nonempty chunk.
- * @returns {readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2)[]} Original ordered record array.
+ * @returns {readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2 | CaptureNesBusAccessV2)[]} Original ordered record array.
  */
-export declare const captureChunkRecords: (chunk: CaptureChunkV2) => readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2)[];
+export declare const captureChunkRecords: (chunk: CaptureChunkV2) => readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2 | CaptureNesBusAccessV2 | CaptureNesTimelineV2)[];
 /**
  * Validate the entire envelope and every record before accepting any event.
  * @param {Uint8Array} bytes Bounded encoded chunk.
@@ -252,9 +262,10 @@ export declare const captureChunkRecords: (chunk: CaptureChunkV2) => readonly (C
  * @param {CaptureScopeV2} scope Negotiated stream. Omission preserves instruction-only callers.
  * @returns {CaptureChunkV2} Fully validated ordered records in exactly the requested scope.
  */
-export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope?: "snes.65816.instructions"): CaptureInstructionChunkV2;
+export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope?: "snes.65816.instructions" | "nes.2a03.instructions"): CaptureInstructionChunkV2;
 export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: "snes.cpu-bus"): CaptureBusChunkV2;
 export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu"): CaptureTransferChunkV2;
+export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: "nes.cpu-bus-ppu"): CaptureNesBusChunkV2;
 export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: CaptureScopeV2): CaptureChunkV2;
 export {};
 //# sourceMappingURL=capture-v2.d.ts.map

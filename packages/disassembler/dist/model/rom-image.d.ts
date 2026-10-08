@@ -10,13 +10,23 @@ export interface RomIdentity {
     readonly fileSize: number;
     /** Byte length after stripping the copier header. */
     readonly contentSize: number;
-    /** `0` or `512`. Matches `fileSize - contentSize`. */
+    /** Copier prefix only. A target container may have an additional explicit header. */
     readonly headerSize: CopierHeaderSize;
+    /** Target-owned container prefix, distinct from an optional copier header. */
+    readonly container?: {
+        readonly format: string;
+        readonly headerSize: number;
+    };
 }
 /** Options for constructing a `RomImage`. Omitted `headerSize` is auto-detected. */
 export interface RomLoadOptions {
     /** Explicit copier-header size. Required when the file size is not 32 KiB aligned. */
     readonly headerSize?: CopierHeaderSize;
+    /** Explicit target container; disables SNES copier-header auto-detection. The target validates its contents. */
+    readonly container?: {
+        readonly format: string;
+        readonly headerSize: number;
+    };
 }
 /**
  * Infers a 0- or 512-byte copier header from file size (`size % 0x8000`).

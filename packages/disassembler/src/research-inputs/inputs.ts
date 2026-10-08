@@ -8,6 +8,7 @@ import { sourceContentHash, assertSourcePath } from "../internal/source-inputs.j
 import { validateEditableMetadataRecord } from "../model/metadata-validation.js";
 import { validateSourceLabelName } from "../model/project-labels.js";
 import type { AnalysisProjectShards, EvidenceRecord } from "../model/project-types.js";
+import { isResearchMapping } from "../model/research-mapping.js";
 
 /** Check runtime shape without widening typed readonly arrays to any[]. */
 const isArray = (value: unknown): boolean => Array.isArray(value);
@@ -149,6 +150,9 @@ export function validateResearchDecision(decision: unknown): asserts decision is
   const evidence = record.evidence;
   if (!isUnknownArray(evidence) || evidence.some((entry) => typeof entry !== "string")) {
     throw new Error(`Research record ${id} needs an evidence list.`);
+  }
+  if (record.mapping !== undefined && !isResearchMapping(record.mapping)) {
+    throw new Error("Invalid research mapping selector.");
   }
   if (collection === "regions") {
     const name = record.name;

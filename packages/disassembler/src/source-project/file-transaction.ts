@@ -13,17 +13,31 @@ export interface SourceFileReplacement {
   readonly after: Uint8Array;
 }
 
+/** Null denotes absence, allowing guarded create/remove operations alongside existing replacements. */
+export type SourceFileChange =
+  | SourceFileReplacement
+  | {
+      readonly path: string;
+      readonly before: Uint8Array | null;
+      readonly after: Uint8Array | null;
+    };
+
+/** Hashing absence separately from an empty file prevents accidental adoption of an unrelated destination. */
+function stateHash(bytes: Uint8Array | null): string | null {
+  return bytes === null ? null : sourceContentHash(bytes);
+}
+
 /** Durable states survive termination between individual file renames; external readers are not globally atomic. */
 export interface SourceFileTransaction {
   readonly format: "uttori-source-file-transaction";
-  readonly version: 1;
+  readonly version: 1 | 2;
   readonly id: string;
   readonly state: "staged" | "publishing" | "completed" | "recovery";
   readonly direction: "after" | "before";
   readonly files: readonly {
     readonly path: string;
-    readonly before: string;
-    readonly after: string;
+    readonly before: string | null;
+    readonly after: string | null;
   }[];
 }
 
@@ -37,6 +51,18 @@ function sourceFile(repository: SourceRepository, name: string): string {
   const parts = name.split("/");
   for (let i = 0; i < parts.length; i++) {
     file = path.join(file, parts[i]);
+    if (i === parts.length - 1 && !fs.existsSync(file)) {
+      // Missing leaf files are valid transaction states; parent directories must still be real directories.
+      try {
+        fs.lstatSync(file);
+        throw new Error(`Source transaction leaf is a dangling symlink: ${name}.`);
+      } catch (error) {
+        if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
+          throw error;
+        }
+      }
+      return file;
+    }
     const stat = fs.lstatSync(file);
     if (stat.isSymbolicLink() || (i === parts.length - 1 ? !stat.isFile() : !stat.isDirectory())) {
       throw new Error(`Source transaction requires regular in-project paths: ${name}.`);
@@ -93,7 +119,7 @@ export function readSourceFileTransaction(
     !("format" in value) ||
     value.format !== "uttori-source-file-transaction" ||
     !("version" in value) ||
-    value.version !== 1 ||
+    (value.version !== 1 && value.version !== 2) ||
     !("id" in value) ||
     typeof value.id !== "string" ||
     !/^[\da-f-]{36}$/.test(value.id) ||
@@ -120,11 +146,13 @@ export function readSourceFileTransaction(
       !("path" in item) ||
       typeof item.path !== "string" ||
       !("before" in item) ||
-      typeof item.before !== "string" ||
-      !/^[\da-f]{64}$/.test(item.before) ||
+      (item.before !== null &&
+        (typeof item.before !== "string" || !/^[\da-f]{64}$/.test(item.before))) ||
       !("after" in item) ||
-      typeof item.after !== "string" ||
-      !/^[\da-f]{64}$/.test(item.after) ||
+      (item.after !== null &&
+        (typeof item.after !== "string" || !/^[\da-f]{64}$/.test(item.after))) ||
+      (item.before === null && item.after === null) ||
+      (value.version === 1 && (item.before === null || item.after === null)) ||
       seen.has(item.path)
     ) {
       throw new Error("Invalid source publication entry.");
@@ -163,11 +191,19 @@ function save(repository: SourceRepository, journal: SourceFileTransaction): voi
   durableReplace(journalFile(repository), bytes, 0o600);
 }
 
+/** A missing file is a distinct journal state; unreadable/non-regular files remain errors. */
+function currentHash(file: string): string | null {
+  if (!fs.existsSync(file)) {
+    return null;
+  }
+  return sourceContentHash(fs.readFileSync(file));
+}
+
 /** Preflight every target before a recovery writes anything; a third party's new bytes always win. */
 function currentFiles(repository: SourceRepository, journal: SourceFileTransaction): string[] {
   return journal.files.map((item) => {
     const file = sourceFile(repository, item.path),
-      hash = sourceContentHash(fs.readFileSync(file));
+      hash = currentHash(file);
     if (hash !== item.before && hash !== item.after) {
       throw new Error(`Source publication recovery found third-party bytes: ${item.path}.`);
     }
@@ -181,7 +217,10 @@ function stagedBytes(
   journal: SourceFileTransaction,
   index: number,
   direction: "before" | "after",
-): Uint8Array {
+): Uint8Array | null {
+  if (journal.files[index][direction] === null) {
+    return null;
+  }
   const file = path.join(stageDirectory(repository, journal.id), `${index}-${direction}`),
     stat = fs.lstatSync(file);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_BYTES) {
@@ -214,18 +253,31 @@ function publish(
       signal?.throwIfAborted();
       const item = journal.files[i],
         file = sourceFile(repository, item.path),
-        hash = sourceContentHash(fs.readFileSync(file));
+        hash = currentHash(file);
       if (hash !== item.before && hash !== item.after) {
         throw new Error(`Source changed during publication: ${item.path}.`);
       }
       // Public ROM/source hashes establish integrity, not secret credentials; constant-time comparison adds no protection.
       // oxlint-disable-next-line security/detect-possible-timing-attacks
       if (hash !== item[journal.direction]) {
-        durableReplace(
-          file,
-          stagedBytes(repository, journal, i, journal.direction),
-          fs.statSync(file).mode & 0o777,
-        );
+        const bytes = stagedBytes(repository, journal, i, journal.direction);
+        if (bytes === null) {
+          fs.unlinkSync(file);
+          syncDirectory(path.dirname(file));
+        } else if (hash === null) {
+          // Exclusive creation preserves the absence guard if another process races the final publication step.
+          const temporary = path.join(path.dirname(file), `.source-create-${randomUUID()}`);
+          try {
+            durableReplace(temporary, bytes, 0o644);
+            // Linking a complete flushed file publishes it exclusively, without a partially written destination.
+            fs.linkSync(temporary, file);
+            syncDirectory(path.dirname(file));
+          } finally {
+            fs.rmSync(temporary, { force: true });
+          }
+        } else {
+          durableReplace(file, bytes, fs.statSync(file).mode & 0o777);
+        }
       }
       onStage?.(`published:${i}`);
     }
@@ -250,12 +302,14 @@ function publish(
  */
 export function applySourceFileTransaction(
   repository: SourceRepository,
-  replacements: readonly SourceFileReplacement[],
+  replacements: readonly SourceFileChange[],
   options: {
     readonly signal?: AbortSignal;
     readonly onStage?: (stage: string) => void;
     /** Recheck dependencies and editor versions while holding the project operation lease. */
     readonly validate?: () => void;
+    /** Editor hosts stage recovery first, then publish through one native workspace edit with undo/redo. */
+    readonly stageOnly?: boolean;
   } = {},
 ): SourceFileTransaction | undefined {
   options.signal?.throwIfAborted();
@@ -263,9 +317,10 @@ export function applySourceFileTransaction(
   if (replacements.length > 65536) {
     throw new Error("Too many source replacements.");
   }
-  const changes = replacements.filter(
-    (item) => sourceContentHash(item.before) !== sourceContentHash(item.after),
-  );
+  if (replacements.some((item) => item.before === null && item.after === null)) {
+    throw new Error("Source change cannot have absent before and after states.");
+  }
+  const changes = replacements.filter((item) => stateHash(item.before) !== stateHash(item.after));
   // A no-op still checks freshness, but must not create a lease directory or alter source mtimes.
   if (!changes.length) {
     options.validate?.();
@@ -273,8 +328,7 @@ export function applySourceFileTransaction(
     for (const item of replacements) {
       if (
         seen.has(item.path) ||
-        sourceContentHash(fs.readFileSync(sourceFile(repository, item.path))) !==
-          sourceContentHash(item.before)
+        currentHash(sourceFile(repository, item.path)) !== stateHash(item.before)
       ) {
         throw new Error(`Stale or duplicate source replacement: ${item.path}.`);
       }
@@ -292,41 +346,45 @@ export function applySourceFileTransaction(
     const seen = new Set<string>();
     let bytes = 0;
     for (const item of replacements) {
-      bytes += item.before.length + item.after.length;
+      bytes += (item.before?.length ?? 0) + (item.after?.length ?? 0);
       if (bytes > MAX_BYTES || seen.has(item.path)) {
         throw new Error("Source transaction payload or identity limit.");
       }
       seen.add(item.path);
-      if (
-        sourceContentHash(fs.readFileSync(sourceFile(repository, item.path))) !==
-        sourceContentHash(item.before)
-      ) {
+      if (currentHash(sourceFile(repository, item.path)) !== stateHash(item.before)) {
         throw new Error(`Stale source replacement: ${item.path}.`);
       }
     }
     fs.mkdirSync(directory, { recursive: true });
     changes.forEach((item, index) => {
       options.signal?.throwIfAborted();
-      durableReplace(path.join(directory, `${index}-before`), item.before, 0o600);
-      durableReplace(path.join(directory, `${index}-after`), item.after, 0o600);
+      if (item.before !== null) {
+        durableReplace(path.join(directory, `${index}-before`), item.before, 0o600);
+      }
+      if (item.after !== null) {
+        durableReplace(path.join(directory, `${index}-after`), item.after, 0o600);
+      }
     });
     syncDirectory(path.dirname(directory));
     options.signal?.throwIfAborted();
     const journal: SourceFileTransaction = {
       format: "uttori-source-file-transaction",
-      version: 1,
+      version: changes.some((item) => item.before === null || item.after === null) ? 2 : 1,
       id,
       state: "staged",
       direction: "after",
       files: changes.map((item) => ({
         path: item.path,
-        before: sourceContentHash(item.before),
-        after: sourceContentHash(item.after),
+        before: stateHash(item.before),
+        after: stateHash(item.after),
       })),
     };
     save(repository, journal);
     visible = true;
     options.onStage?.("staged");
+    if (options.stageOnly) {
+      return journal;
+    }
     return publish(repository, journal, options.signal, options.onStage);
   } finally {
     if (!visible) {

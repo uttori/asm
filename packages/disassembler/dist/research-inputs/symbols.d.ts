@@ -1,7 +1,9 @@
 import type { ProjectLabel } from "../model/project-types.js";
+import type { ResearchMapping } from "../model/research-mapping.js";
 import { type ResearchDocument, type ResearchSnapshot } from "./inputs.js";
 /** Original address is stable through source relocation; ordinary spelling changes never replace the ID. */
 export interface ResearchSymbolIdentity {
+    readonly mapping?: ResearchMapping;
     readonly id: string;
     readonly addressSpace: string;
     readonly address: number;

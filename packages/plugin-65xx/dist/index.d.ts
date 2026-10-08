@@ -34,7 +34,7 @@ export declare function createRaw65xxTargetOptions(configured: unknown): Raw65xx
  * @param {PluginActivationContext} context Plugin activation context.
  */
 export declare function register65xxContributions(context: PluginActivationContext): void;
-declare const plugin: AssemblerPlugin<Raw65xxTargetOptions>;
+declare const plugin: AssemblerPlugin<Readonly<Record<string, unknown>>>;
 /**
  * Activates this plugin and freezes a reusable host environment.
  *
@@ -43,6 +43,10 @@ declare const plugin: AssemblerPlugin<Raw65xxTargetOptions>;
  */
 export declare function create65xxAssemblerEnvironment(options?: unknown): Promise<import("@uttori/asm-core").AssemblerEnvironment>;
 export default plugin;
+export { Cpu6502Decoder, cpu6502Specifications, formatCpu6502Instruction } from "./decoder.js";
+export * from "./nes/cartridge.js";
+export * from "./nes/mapper.js";
+export { ricoh2a03Cpu } from "./instructions/opcodes.js";
 export { Arch65xx, materializeOpcodeForm } from "./architecture.js";
 export { buildInstructionCatalog } from "./instructions/catalog.js";
 export { getCpuAssemblyForms, getOpcodeForm, getCpuDecodeTable, nmos6502Cpu, nmos6502DecodeTable, nmos6502Forms, nmos6502xCpu, nmos6502xForms, } from "./instructions/opcodes.js";

@@ -30,6 +30,10 @@ import {
   renderRoomAsset,
 } from "@uttori/asm-assets/secret-of-mana/som-room-assets";
 import {
+  effectiveSomSourcePalette,
+  normalizeSomSource,
+} from "@uttori/asm-assets/secret-of-mana/som-source";
+import {
   parseSpritePaletteCatalog,
   readSpritePaletteCatalog,
   spritePaletteBytes,
@@ -37,6 +41,7 @@ import {
   type SpritePaletteRecord,
 } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
+import { asepriteRasterImporter } from "@uttori/asm-assets/source-codecs";
 
 /** Inputs are already resolved and size checked in the language server. */
 export interface AssetPreviewInput {
@@ -67,6 +72,7 @@ const registry = new AssetRegistry()
   .registerImporter(rawImporter)
   .registerImporter(jsonImporter)
   .registerImporter(pngImporter)
+  .registerImporter(asepriteRasterImporter)
   .registerImporter(waveImporter);
 for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
   registry.registerEncoder(encoder);
@@ -109,14 +115,21 @@ function storagePixels(
  * @returns {AssetPreviewResult} Display PNG and the validated native byte count.
  */
 function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
-  const layout = readFrameLayout(input.options, input.resources);
-  const catalog = readSpritePaletteCatalog(input.options, input.resources);
+  let layout = readFrameLayout(input.options, input.resources);
+  let catalog = readSpritePaletteCatalog(input.options, input.resources);
+  let source = input.source;
+  if (input.options.sourceBinding !== undefined || input.options.paletteSources !== undefined) {
+    const normalized = normalizeSomSource(source, input.options, input.resources, catalog);
+    source = normalized.source;
+    layout = normalized.layout;
+    catalog = normalized.catalog;
+  }
   const selection = readFrameAtlasSelection(input.options);
   if (input.format === "som.boss.graphics" && typeof selection !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
   const named = typeof selection === "string";
-  const inspected = inspectFrameAtlas(input.source, layout, catalog, {
+  const inspected = inspectFrameAtlas(source, layout, catalog, {
     segmentName: named ? selection : undefined,
     whole: !named,
   });
@@ -181,7 +194,7 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
       "base64",
     ),
     // The source PNG already carries the grid, frame labels and full native tile strip.
-    composedPngBase64: Buffer.from(input.source.bytes).toString("base64"),
+    composedPngBase64: Buffer.from(source.bytes).toString("base64"),
   };
 }
 
@@ -197,7 +210,11 @@ function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult 
   if (input.output !== undefined && input.output !== "palette") {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const catalog = parseSpritePaletteCatalog(input.source.bytes);
+  const catalog = effectiveSomSourcePalette(
+    parseSpritePaletteCatalog(input.source.bytes),
+    input.options,
+    input.resources,
+  );
   const bytes = spritePaletteBytes(catalog, id);
   const preview = spritePalettePreview(catalog, id);
   const png = Buffer.from(rgbaPreviewPng(preview.rgba, preview.width, preview.height));

@@ -257,9 +257,11 @@ test("all canonical NMOS forms match the pinned ca65 V2.19 byte fixture", (t) =>
 });
 
 test("NMOS encoding-equivalent chip names resolve as architecture aliases", (t) => {
-  for (const alias of ["6502", "6510", "8502", "2A03", "2A07", "6507"]) {
+  for (const alias of ["6502", "6510", "8502", "6507"]) {
     t.is(environment.resolveArchitectureId(RAW_65XX_TARGET_ID, alias), "65xx.6502", alias);
   }
+  for (const alias of ["2A03", "2A07"])
+    t.is(environment.resolveArchitectureId(RAW_65XX_TARGET_ID, alias), "65xx.2a03");
   const catalog = environment.getToolingCatalog(RAW_65XX_TARGET_ID).getInstructions("6502x");
   t.true(catalog.some((instruction) => instruction.mnemonic === "SLO"));
   t.true(catalog.some((instruction) => instruction.mnemonic === "LDA"));
@@ -391,7 +393,8 @@ test("every CMOS and vendor-extension form matches the pinned ca65 byte fixture"
         actual = [...assemble(fixture.source, { architecture: variant.cpu })];
       } catch (error) {
         throw new Error(
-          `${variant.cpu} ${fixture.mnemonic} ${fixture.mode} (${JSON.stringify(fixture.source)}): ${error instanceof Error ? error.message : String(error)}`, { cause: error },
+          `${variant.cpu} ${fixture.mnemonic} ${fixture.mode} (${JSON.stringify(fixture.source)}): ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
         );
       }
       t.deepEqual(actual, fixture.bytes, `${variant.cpu} ${fixture.mnemonic} ${fixture.mode}`);

@@ -238,7 +238,12 @@ resolves frame tile offsets to source segments and writes the PNG/sidecar pair.
 It requires Python 3 and Pillow. A new boss
 graphics mode belongs in this plugin, beside its bounded decoder, encoder and tests.
 
-To edit an existing sprite, open the `*-frames.png` indexed image in a pixel editor.
+For a complete saved-file Aseprite example, use the
+[Spikey Tiger demo](../../../../secret-of-mana/demos/aseprite-spikey-tiger/README.md).
+It starts at the existing `bank-01b.asm` include and provides VS Code and CLI guides,
+complete selection declarations, and optional measured intro playback.
+
+To edit an existing sprite directly, open the `*-frames.png` indexed image in a pixel editor.
 Draw in the authoritative frame occurrence or source-only bottom tile indicated by
 the sidecar's `tiles[]`; keep the palette indexes and dimensions intact. The bottom
 tile atlas is a reference for frame-backed tiles; changing only that reference does
@@ -372,7 +377,7 @@ and audits indexed PNG palettes, source extraction and catalogue users. `--sourc
 allows intentional edits without comparing them to the original ROM; it is not an
 assembly check. Without it, the default ROM is `<export>/build/rebuilt-content.sfc`;
 `--rom` or the legacy positional ROM argument selects another file. Original-ROM
-identity is a separate CLI `verify-roundtrip` check. Game compression, BGR555 catalogue
+identity is checked on pure generations before Git integration; working source builds may intentionally differ. Game compression, BGR555 catalogue
 shape and the HiROM address mapping remain explicit SoM adapter policy.
 
 Run both conversion and authoring regressions with:
@@ -432,7 +437,16 @@ A change to an uncaptured tileset or layout needs new preview resources.
 Shared compressed layouts, graphics and palettes are **references**, not
 additional ROM ownership of the room source. Editing a preview dependency alone
 does not change those ROM resources. `som-map-piece.ts` is the bounded native
-layout decoder; unchanged compressed streams are preserved. The seven initial
+layout decoder; unchanged compressed streams are preserved. Deferred motifs decode
+in insertion order against the completed parent and earlier motifs. Native pattern
+commands use an eight-bit column and physical 128-cell row stride; a narrow motif
+can read beyond its parent allocation. `decodeMapPiece(bytes, { history, origin })`
+accepts a read-only map of known bank-7F byte offsets and the parent's physical
+origin. Missing external cells fail explicitly rather than becoming zero. Use
+`motifInstances` for each placement's decoded geometry; `motifs` retains the first
+instance for compatibility. Context-free room previews cannot resolve such layouts
+without independently retained history. The Water Palace layout 0025 is the
+captured regression example. The seven initial
 room assets are seeded by `secret-of-mana/tools/build-haunted-room-assets.mjs`,
 which refuses to overwrite an edited source. Its `--check` mode verifies the
 no-edit ROM conversion and saved preview PNGs.
@@ -441,3 +455,78 @@ no-edit ROM conversion and saved preview PNGs.
 node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-room-assets.test.mjs
 node --conditions=uttori-source --import tsx secret-of-mana/tools/build-haunted-room-assets.mjs --check
 ```
+
+## Editable dialogue (`som.dialogue.script`)
+
+The USA-ROM text parser supports literal glyphs and 61 dual-tile pairs. The
+`som-dialogue` module exports reversible ASCII conversion and exact-size packing.
+An unchanged text span retains its original native encoding, including DTE aliases.
+An edited span uses dynamic programming to find an encoding of its exact byte budget;
+this can deliberately leave some pairs literal. An edit that cannot fit fails.
+
+```asm
+includeAsset("../assets/text/water-palace/luka-undine.txt", "som.dialogue.script", layout: "../assets/text/water-palace/luka-undine.layout.json")
+```
+
+The `.txt` contains visible ASCII, native line breaks, and numbered `{raw:0}`
+markers. The version-1 `som-dialogue-script` sidecar stores the 122 dictionary bytes
+in `dictionaryHex` and alternating `raw`/`text` segments in `segments[].nativeHex`.
+Raw command bytes and every segment's original byte length are retained. Markers
+must keep their order; commands cannot be introduced through text. CRLF is accepted
+as LF. Only the LF following a final raw marker is cosmetic. Use `\xHH` for an
+unresolved native glyph; typographic quote bytes C3/C4 remain distinct escapes.
+Unsupported Unicode fails until a verified font extension is available.
+
+Raw segments can optionally expose reviewed `commands` with a byte `offset` and
+an original `token`. The token must compile exactly to the native bytes at that
+offset. For example, `{ "offset": 0, "token": "${girl}" }` admits bytes `57 01`.
+This yields readable, editable commands in the ASCII source:
+
+```text
+${openDialogue}${girl}:Okay!
+ You can call me ${girl}!${wait}${closeDialogue}
+```
+
+`${boy}`, `${girl}` and `${sprite}` insert the current twelve-byte name records
+from `7ECC00`, `7ECC0C` and `7ECC18` at runtime. The offline encoder retains the substitution
+command, rather than baking a particular name into the translation. `${wait}`
+encodes `28 00` and waits for fresh input from the talking actor's controller;
+`${wait:N}` uses an unsigned decimal byte `0..255`, with nonzero values counting
+event-interpreter updates. `${openDialogue}`, `${closeDialogue}` and
+`${clearDialogue}` expose one-byte window controls `50`, `51` and `52`.
+
+Edits must retain the admitted family and width. A party-name slot can change
+from `${boy}` to `${girl}`, and a wait can change from `${wait:3}` to `${wait:6}`.
+They cannot replace each other merely because both occupy two bytes. A slot can
+set `editable: false` to expose its name without allowing byte changes. Unknown
+raw subspans retain markers such as `{raw:0:0}`; the original whole-block
+`{raw:0}` remains accepted as a request to preserve that block unchanged.
+Tokens cannot be inserted into an unadmitted text span or move command offsets;
+variable-length script layouts still require relocation/ownership work.
+
+The authoring encoder uses E0 instead of its short 7D alias, because 7D has an
+additional meaning at a window entry. It rejects 5F as a text token. The native
+parser subtracts `60` from that byte and underflows; the Thingy table's placeholder
+must not be used as an authoring character. Digit glyphs B5..BE are supported even
+though the supplied Data Crystal table omits them.
+
+This format preserves fixed addresses. Script relocation, pointer-table patches,
+and new font glyphs require separate ownership proofs. The five Water Palace
+recordings use literal text; DTE behavior is verified from native code and tests.
+A byte-identical no-edit build remains the baseline proof.
+
+When the runtime geometry is known, a text segment can specify `lineColumns`
+(1..32) and `initialColumn` (default 0, smaller than the capacity). Edited spans
+then avoid DTE pairs whose first glyph fills the line: the native append helper
+unwinds its caller at capacity, losing that pair's second glyph. Unchanged native
+bytes remain preserved, even if a preview exposes that historical loss. Raw
+segments cannot declare geometry. A byte budget alone does not establish visible
+width, and dynamic name substitutions require the actual prefix column.
+
+`previewSomDialogue(bytes, dictionary, { lineColumns, initialColumn })` returns
+native glyph codes grouped by LF or hard capacity, with discarded DTE glyphs
+identified by byte offset. Its pixel width is columns × 8 and glyph height is 12.
+It previews literal/DTE fields; event commands, dynamic substitutions, choices,
+window outlines and headings retain their own contracts. The research tools
+`preview-dialogue-asset.mjs` and `render-som-dialogue-font.py` produce an explicit
+field preview using the verified ROM font rather than a host font.

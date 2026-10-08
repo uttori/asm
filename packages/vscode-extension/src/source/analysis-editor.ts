@@ -1,10 +1,12 @@
 import path from "node:path";
 
 import type { SourceResearchResult } from "@uttori/asm-cli/source";
-import type {
-  IntervalAnnotation,
-  ResearchAnalysisChange,
-  ResearchAnalysisRecord,
+import {
+  isResearchMapping,
+  type ResearchMapping,
+  type IntervalAnnotation,
+  type ResearchAnalysisChange,
+  type ResearchAnalysisRecord,
 } from "@uttori/asm-disassembler";
 import { Uri, window, workspace } from "vscode";
 
@@ -171,6 +173,33 @@ async function classification(record: IntervalAnnotation): Promise<IntervalAnnot
   return selected ? { ...record, classification: selected.label } : undefined;
 }
 
+/** NES bank selection is explicit JSON so omitted mapper registers remain unknown. */
+async function mappingSelection(initial?: ResearchMapping): Promise<ResearchMapping | undefined> {
+  const text = await window.showInputBox({
+    title: "Original NES mapper selection",
+    value: initial ? JSON.stringify(initial) : "",
+    prompt:
+      'Use mapper state, for example {"state":{"prgMode":0,"r6":2,"r7":3}}. Optional fileOffset is headerless.',
+    validateInput: (value) => {
+      try {
+        return isResearchMapping(JSON.parse(value))
+          ? undefined
+          : "Enter a nonempty mapping selector.";
+      } catch {
+        return "Enter a mapping selector as JSON.";
+      }
+    },
+  });
+  if (text === undefined) {
+    return undefined;
+  }
+  const mapping: unknown = JSON.parse(text);
+  if (!isResearchMapping(mapping)) {
+    throw new Error("Invalid mapping selector.");
+  }
+  return mapping;
+}
+
 /** New records use an explicit address space and existing subject document, so ownership is visible. */
 async function newRecord(
   selection: AnalysisSelection,
@@ -203,11 +232,20 @@ async function newRecord(
   if (start === undefined) {
     return undefined;
   }
+  let mapping: ResearchMapping | undefined;
+  if (space.item.id === "nes.cpu") {
+    mapping = await mappingSelection();
+    if (!mapping) {
+      return undefined;
+    }
+  }
+  const identitySuffix = mapping ? `.${Buffer.from(JSON.stringify(mapping)).toString("hex")}` : "";
   if (kind === "targets") {
     return {
       path: document,
       value: {
-        id: `manual.targets.${space.item.id}.${start.toString(16)}`,
+        id: `manual.targets.${space.item.id}.${start.toString(16)}${identitySuffix}`,
+        ...(mapping ? { mapping } : {}),
         kind: "target-override",
         addressSpace: space.item.id,
         address: start,
@@ -222,7 +260,7 @@ async function newRecord(
   }
   const architecture = await window.showInputBox({
     title: "Architecture",
-    value: "snes.65816",
+    value: space.item.id.startsWith("nes.") ? "65xx.2a03" : "snes.65816",
     prompt: "Architecture identifier used by this range.",
     validateInput: (value) => (value.trim() ? undefined : "Enter an architecture identifier."),
   });
@@ -232,7 +270,8 @@ async function newRecord(
   return {
     path: document,
     value: {
-      id: `manual.range.${space.item.id}.${start.toString(16)}.${end.toString(16)}`,
+      id: `manual.range.${space.item.id}.${start.toString(16)}.${end.toString(16)}${identitySuffix}`,
+      ...(mapping ? { mapping } : {}),
       addressSpace: space.item.id,
       architecture: architecture.trim(),
       start,
@@ -283,7 +322,9 @@ export async function editAnalysisResearch(
     readonly create: "range" | "targets" | undefined;
   }[] = relevant.map((record) => ({
     label: record.value.id,
-    description: record.value.addressSpace,
+    description:
+      record.value.addressSpace +
+      (record.value.mapping ? ` · ${JSON.stringify(record.value.mapping)}` : ""),
     detail: record.path,
     record,
     create: undefined,
@@ -337,6 +378,15 @@ export async function editAnalysisResearch(
   }
   if (!choice.create && !hint) {
     const edits = "classification" in record ? ["classification", "state"] : ["targets"];
+    if (record.addressSpace.startsWith("nes.")) {
+      const state = edits.indexOf("state");
+      if (state !== -1) {
+        edits.splice(state, 1);
+      }
+      if (record.addressSpace === "nes.cpu") {
+        edits.push("mapping");
+      }
+    }
     const picked = await window.showQuickPick(
       [
         ...edits.map((item) => ({
@@ -369,7 +419,13 @@ export async function editAnalysisResearch(
       id: record.id,
     };
   } else {
-    if ("classification" in record) {
+    if (action === "mapping" || (action === "state" && record.addressSpace === "nes.cpu")) {
+      const mapping = await mappingSelection(record.mapping);
+      if (!mapping) {
+        return undefined;
+      }
+      record = { ...record, mapping };
+    } else if ("classification" in record) {
       const edited = action === "state" ? await editState(record) : await classification(record);
       if (!edited) {
         return undefined;

@@ -20,10 +20,13 @@ export interface AresRspBackendOptions {
     readonly createClient: (options: DebugBackendConnectOptions) => AresGdbRspClient | GdbRspClient | Promise<AresGdbRspClient | GdbRspClient>;
     readonly terminate?: () => Promise<void>;
     readonly stopTimeoutMs?: number;
+    /** Full-file start of PRG, including the iNES header and optional trainer; defaults to 16. */
+    readonly nesPrgFileOffset?: number;
     /** Set only by the manifest-verified local process host. Binds file provenance
      * and prevents native paths from being sent to an arbitrary remote RSP server. */
     readonly nativeFileIdentity?: {
         readonly romSha256: string;
+        readonly romFileSha256?: string;
         readonly executableSha256: string;
         readonly producerRevision?: string;
     };

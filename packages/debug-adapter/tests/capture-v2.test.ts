@@ -272,7 +272,7 @@ test("durable writer checkpoints before ack, drains on stop, and exports both RA
       "ack is sent only after validated checkpoints exist on disk",
     );
     const json = JSON.parse(await readFile(file, "utf8"));
-    t.true(json.chunks.every((c: { active: boolean }) => ! c.active));
+    t.true(json.chunks.every((c: { active: boolean }) => !c.active));
     t.deepEqual(
       json.chunks.map((c: { details: { bytes: number[] }[] }) => c.details[0]!.bytes),
       [[0xe8], [0xca]],
@@ -416,4 +416,51 @@ test("native recorder fails closed on writer error and rejects silent sink fallb
   });
   await t.throwsAsync(recorder.completion, { message: /Native capture incomplete/ });
   t.true(operations.includes("file-abort"));
+});
+
+/** One native-layout Ricoh record, including all mapper registers and each fetched byte's PRG offset. */
+function nesChunk(): Buffer {
+  const b = Buffer.alloc(155);
+  chunk().copy(b, 0, 0, 115);
+  b.writeUInt32LE(91, 48);
+  b.writeUInt32LE(91, 52);
+  b.writeUInt32LE(91, 68);
+  b.writeUInt32LE(1, 80);
+  b.writeUInt32LE(1, 84);
+  b.writeBigUInt64LE(0x8000n, 104);
+  b[112] = 3;
+  b.writeUInt16LE(37, 113);
+  b.set([0x4c, 0, 0x80], 115);
+  b[118] = 9;
+  b[121] = 0xfd;
+  b[122] = 0x24;
+  b.writeUInt16LE(0x8000, 123);
+  b.writeUInt16LE(4, 125);
+  b[127] = 6;
+  b[136] = 5;
+  for (let i = 0; i < 3; i++) b.writeUInt32LE(0xa000 + i, 143 + i * 4);
+  b.writeUInt32LE(captureCrc32c(b, true), 56);
+  return b;
+}
+
+test("ACT2 Ricoh scope preserves mapper and per-fetch provenance without accepting SNES records", (t) => {
+  const b = nesChunk();
+  const decoded = decodeCaptureChunk(b, session, "nes.2a03.instructions");
+  t.deepEqual(decoded.instructions[0].detail.bytes, [0x4c, 0, 0x80]);
+  t.like(decoded.instructions[0].detail.state, {
+    pc: 0x8000,
+    a: 9,
+    mapper: 4,
+    r6: 5,
+    prg0: 0xa000,
+    prg1: 0xa001,
+    prg2: 0xa002,
+  });
+  t.throws(() => decodeCaptureChunk(b, session));
+  t.throws(() => decodeCaptureChunk(chunk(), session, "nes.2a03.instructions"));
+  b[123] = 1;
+  b.writeUInt32LE(captureCrc32c(b, true), 56);
+  t.throws(() => decodeCaptureChunk(b, session, "nes.2a03.instructions"), {
+    message: /PC|address/i,
+  });
 });

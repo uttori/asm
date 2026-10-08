@@ -77,7 +77,7 @@ export function sourceCandidateRef(repository, commit) {
     assertSourceObjectId(commit);
     return `refs/uttori/candidates/${sourceContentHash(repository.gitDirectory).slice(0, 24)}-${commit}`;
 }
-/** Bound candidate pins atomically per worktree; reuse and direct CLI selection obey the same limit. */
+/** Retain an immutable generation per worktree until preparation supersedes it or a merge accepts it. */
 export async function pinSourceCandidate(repository, commit, signal) {
     const ref = sourceCandidateRef(repository, commit);
     await registerSourcePinOwner(repository);
@@ -95,10 +95,6 @@ export async function pinSourceCandidate(repository, commit, signal) {
                 throw new Error("Candidate ref changed outside the source workflow.");
             }
             return ref;
-        }
-        const prefix = ref.slice(0, -commit.length);
-        if (refs.filter((name) => name.startsWith(prefix)).length >= 16) {
-            throw new Error("Sixteen generated candidates are retained in this worktree. Discard an unneeded candidate before preparing more; accepted generations remain in source history.");
         }
         await sourceGit(repository.root, ["update-ref", "--no-deref", ref, commit, "0".repeat(commit.length)], {
             signal,

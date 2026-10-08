@@ -119,7 +119,7 @@ export interface AssetSourceHost {
   ): Promise<{ readonly repository: SourceRepository; readonly project: string }>;
   inspect(
     directory: string,
-    overlays?: ReadonlyMap<string, Uint8Array>,
+    overlays?: ReadonlyMap<string, Uint8Array | null>,
     signal?: AbortSignal,
   ): Promise<SourceProjectInspection>;
   drafts?(): readonly AssetSourceDraft[];

@@ -814,9 +814,22 @@ function unitCount(bytes, size, label) {
   }
   return bytes.length / size;
 }
-function isNamespacedId(id) {
-  const parts = id.split(".");
+function isNamespacedId(id2) {
+  const parts = id2.split(".");
   return parts.length > 1 && /^[a-z][\da-z-]*$/.test(parts[0]) && parts.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part));
+}
+function invariant(value, message = "Invalid asset value.") {
+  if (!value) {
+    throw new Error(message);
+  }
+}
+function equal(actual, expected, message = `Expected ${String(expected)}, received ${String(actual)}.`) {
+  if (!Object.is(actual, expected)) {
+    throw new Error(message);
+  }
+}
+function fail(message) {
+  throw new Error(message);
 }
 
 // packages/assets/src/registry.ts
@@ -851,22 +864,22 @@ var AssetRegistry = class {
     }
     return importer;
   }
-  encoderFor(id) {
-    const encoder = this.#encoders.get(id);
+  encoderFor(id2) {
+    const encoder = this.#encoders.get(id2);
     if (!encoder) {
-      throw new Error(`No asset encoder '${id}'.`);
+      throw new Error(`No asset encoder '${id2}'.`);
     }
     return encoder;
   }
 };
-function convertAsset(registry3, request) {
-  const importer = registry3.importerFor(request.source.mediaType);
-  const encoder = registry3.encoderFor(request.format);
+function convertAsset(registry4, request) {
+  const importer = registry4.importerFor(request.source.mediaType);
+  const encoder = registry4.encoderFor(request.format);
   const source = { ...request.source, bytes: request.source.bytes.slice() };
   const resources = Object.fromEntries(
-    Object.entries(request.resources ?? {}).map(([name, input]) => [
+    Object.entries(request.resources ?? {}).map(([name, input2]) => [
       name,
-      { ...input, bytes: input.bytes.slice() }
+      { ...input2, bytes: input2.bytes.slice() }
     ])
   );
   const document2 = importer.import(source);
@@ -2414,7 +2427,7 @@ var deflateSetDictionary = (strm, dictionary) => {
   }
   const avail = strm.avail_in;
   const next = strm.next_in;
-  const input = strm.input;
+  const input2 = strm.input;
   strm.avail_in = dictLength;
   strm.next_in = 0;
   strm.input = dictionary;
@@ -2437,7 +2450,7 @@ var deflateSetDictionary = (strm, dictionary) => {
   s.match_length = s.prev_length = MIN_MATCH - 1;
   s.match_available = 0;
   strm.next_in = next;
-  strm.input = input;
+  strm.input = input2;
   strm.avail_in = avail;
   s.wrap = wrap;
   return 0;
@@ -2467,10 +2480,10 @@ function inflate_fast(strm, start) {
   let dist;
   let from;
   let from_source;
-  let input, output;
+  let input2, output;
   const state = strm.state;
   _in = strm.next_in;
-  input = strm.input;
+  input2 = strm.input;
   last = _in + (strm.avail_in - 5);
   _out = strm.next_out;
   output = strm.output;
@@ -2489,9 +2502,9 @@ function inflate_fast(strm, start) {
   dmask = (1 << state.distbits) - 1;
   top: do {
     if (bits < 15) {
-      hold += input[_in++] << bits;
+      hold += input2[_in++] << bits;
       bits += 8;
-      hold += input[_in++] << bits;
+      hold += input2[_in++] << bits;
       bits += 8;
     }
     here = lcode[hold & lmask];
@@ -2506,7 +2519,7 @@ function inflate_fast(strm, start) {
         op &= 15;
         if (op) {
           if (bits < op) {
-            hold += input[_in++] << bits;
+            hold += input2[_in++] << bits;
             bits += 8;
           }
           len += hold & (1 << op) - 1;
@@ -2514,9 +2527,9 @@ function inflate_fast(strm, start) {
           bits -= op;
         }
         if (bits < 15) {
-          hold += input[_in++] << bits;
+          hold += input2[_in++] << bits;
           bits += 8;
-          hold += input[_in++] << bits;
+          hold += input2[_in++] << bits;
           bits += 8;
         }
         here = dcode[hold & dmask];
@@ -2529,10 +2542,10 @@ function inflate_fast(strm, start) {
             dist = here & 65535;
             op &= 15;
             if (bits < op) {
-              hold += input[_in++] << bits;
+              hold += input2[_in++] << bits;
               bits += 8;
               if (bits < op) {
-                hold += input[_in++] << bits;
+                hold += input2[_in++] << bits;
                 bits += 8;
               }
             }
@@ -3109,7 +3122,7 @@ var updatewindow = (strm, src, end, copy) => {
 };
 var inflate$1 = (strm, flush) => {
   let state;
-  let input, output;
+  let input2, output;
   let next;
   let put;
   let have, left;
@@ -3155,7 +3168,7 @@ var inflate$1 = (strm, flush) => {
   output = strm.output;
   left = strm.avail_out;
   next = strm.next_in;
-  input = strm.input;
+  input2 = strm.input;
   have = strm.avail_in;
   hold = state.hold;
   bits = state.bits;
@@ -3171,7 +3184,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 16) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       if (state.wrap & 2 && hold === 35615) {
@@ -3216,7 +3229,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 16) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       state.flags = hold;
@@ -3243,7 +3256,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 32) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       if (state.head) state.head.time = hold >>> 0;
@@ -3261,7 +3274,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 16) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       if (state.head) {
@@ -3281,7 +3294,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < 16) {
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         state.length = hold;
@@ -3303,9 +3316,9 @@ var inflate$1 = (strm, flush) => {
           if (state.head) {
             len = state.head.extra_len - state.length;
             if (!state.head.extra) state.head.extra = new Uint8Array(state.head.extra_len);
-            state.head.extra.set(input.subarray(next, next + copy), len);
+            state.head.extra.set(input2.subarray(next, next + copy), len);
           }
-          if (state.flags & 512 && state.wrap & 4) state.check = crc32(state.check, input, copy, next);
+          if (state.flags & 512 && state.wrap & 4) state.check = crc32(state.check, input2, copy, next);
           have -= copy;
           next += copy;
           state.length -= copy;
@@ -3319,10 +3332,10 @@ var inflate$1 = (strm, flush) => {
         if (have === 0) break inf_leave;
         copy = 0;
         do {
-          len = input[next + copy++];
+          len = input2[next + copy++];
           if (state.head && len && state.length < 65536) state.head.name += String.fromCharCode(len);
         } while (len && copy < have);
-        if (state.flags & 512 && state.wrap & 4) state.check = crc32(state.check, input, copy, next);
+        if (state.flags & 512 && state.wrap & 4) state.check = crc32(state.check, input2, copy, next);
         have -= copy;
         next += copy;
         if (len) break inf_leave;
@@ -3334,10 +3347,10 @@ var inflate$1 = (strm, flush) => {
         if (have === 0) break inf_leave;
         copy = 0;
         do {
-          len = input[next + copy++];
+          len = input2[next + copy++];
           if (state.head && len && state.length < 65536) state.head.comment += String.fromCharCode(len);
         } while (len && copy < have);
-        if (state.flags & 512 && state.wrap & 4) state.check = crc32(state.check, input, copy, next);
+        if (state.flags & 512 && state.wrap & 4) state.check = crc32(state.check, input2, copy, next);
         have -= copy;
         next += copy;
         if (len) break inf_leave;
@@ -3348,7 +3361,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < 16) {
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         if (state.wrap & 4 && hold !== (state.check & 65535)) {
@@ -3370,7 +3383,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 32) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       strm.adler = state.check = zswap32(hold);
@@ -3401,7 +3414,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 3) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       state.last = hold & 1;
@@ -3436,7 +3449,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 32) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       if ((hold & 65535) !== (hold >>> 16 ^ 65535)) {
@@ -3457,7 +3470,7 @@ var inflate$1 = (strm, flush) => {
         if (copy > have) copy = have;
         if (copy > left) copy = left;
         if (copy === 0) break inf_leave;
-        output.set(input.subarray(next, next + copy), put);
+        output.set(input2.subarray(next, next + copy), put);
         have -= copy;
         next += copy;
         left -= copy;
@@ -3471,7 +3484,7 @@ var inflate$1 = (strm, flush) => {
       while (bits < 14) {
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       state.nlen = (hold & 31) + 257;
@@ -3495,7 +3508,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < 3) {
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         state.lens[order[state.have++]] = hold & 7;
@@ -3525,7 +3538,7 @@ var inflate$1 = (strm, flush) => {
           if (here_bits <= bits) break;
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         if (here_val < 16) {
@@ -3538,7 +3551,7 @@ var inflate$1 = (strm, flush) => {
             while (bits < n) {
               if (have === 0) break inf_leave;
               have--;
-              hold += input[next++] << bits;
+              hold += input2[next++] << bits;
               bits += 8;
             }
             hold >>>= here_bits;
@@ -3557,7 +3570,7 @@ var inflate$1 = (strm, flush) => {
             while (bits < n) {
               if (have === 0) break inf_leave;
               have--;
-              hold += input[next++] << bits;
+              hold += input2[next++] << bits;
               bits += 8;
             }
             hold >>>= here_bits;
@@ -3571,7 +3584,7 @@ var inflate$1 = (strm, flush) => {
             while (bits < n) {
               if (have === 0) break inf_leave;
               have--;
-              hold += input[next++] << bits;
+              hold += input2[next++] << bits;
               bits += 8;
             }
             hold >>>= here_bits;
@@ -3631,7 +3644,7 @@ var inflate$1 = (strm, flush) => {
         output = strm.output;
         left = strm.avail_out;
         next = strm.next_in;
-        input = strm.input;
+        input2 = strm.input;
         have = strm.avail_in;
         hold = state.hold;
         bits = state.bits;
@@ -3647,7 +3660,7 @@ var inflate$1 = (strm, flush) => {
         if (here_bits <= bits) break;
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       if (here_op && (here_op & 240) === 0) {
@@ -3662,7 +3675,7 @@ var inflate$1 = (strm, flush) => {
           if (last_bits + here_bits <= bits) break;
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         hold >>>= last_bits;
@@ -3695,7 +3708,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < n) {
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         state.length += hold & (1 << state.extra) - 1;
@@ -3714,7 +3727,7 @@ var inflate$1 = (strm, flush) => {
         if (here_bits <= bits) break;
         if (have === 0) break inf_leave;
         have--;
-        hold += input[next++] << bits;
+        hold += input2[next++] << bits;
         bits += 8;
       }
       if ((here_op & 240) === 0) {
@@ -3729,7 +3742,7 @@ var inflate$1 = (strm, flush) => {
           if (last_bits + here_bits <= bits) break;
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         hold >>>= last_bits;
@@ -3753,7 +3766,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < n) {
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         state.offset += hold & (1 << state.extra) - 1;
@@ -3809,7 +3822,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < 32) {
           if (have === 0) break inf_leave;
           have--;
-          hold |= input[next++] << bits;
+          hold |= input2[next++] << bits;
           bits += 8;
         }
         _out -= left;
@@ -3831,7 +3844,7 @@ var inflate$1 = (strm, flush) => {
         while (bits < 32) {
           if (have === 0) break inf_leave;
           have--;
-          hold += input[next++] << bits;
+          hold += input2[next++] << bits;
           bits += 8;
         }
         if (state.wrap & 4 && hold !== (state.total & 4294967295)) {
@@ -3922,11 +3935,11 @@ var ZStream = class {
   }
 };
 var flattenChunks = (chunks) => {
-  const result = new Uint8Array(chunks.reduce((len, chunk) => len + chunk.length, 0));
+  const result = new Uint8Array(chunks.reduce((len, chunk2) => len + chunk2.length, 0));
   let pos = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, pos);
-    pos += chunk.length;
+  for (const chunk2 of chunks) {
+    result.set(chunk2, pos);
+    pos += chunk2.length;
   }
   return result;
 };
@@ -4092,8 +4105,8 @@ var Deflate = class {
   * By default, stores data blocks in the {@link Deflate.chunks} property and glues
   * them in {@link Deflate.onEnd}. Override this handler if you need another behaviour.
   */
-  onData(chunk) {
-    this.chunks.push(chunk);
+  onData(chunk2) {
+    this.chunks.push(chunk2);
   }
   /**
   * Called once after you tell deflate that the input stream is
@@ -4107,9 +4120,9 @@ var Deflate = class {
     this.chunks = [];
   }
 };
-function deflate(input, options = {}) {
+function deflate(input2, options = {}) {
   const deflator = new Deflate(options);
-  deflator.push(input, true);
+  deflator.push(input2, true);
   if (deflator.err) throw new Error(deflator.msg);
   return deflator.result;
 }
@@ -4322,8 +4335,8 @@ var Inflate = class {
   *
   * @param chunk output data.
   */
-  onData(chunk) {
-    this.chunks.push(chunk);
+  onData(chunk2) {
+    this.chunks.push(chunk2);
   }
   /**
   * Called after you tell inflate that the input stream is
@@ -4521,45 +4534,45 @@ var DataBuffer = class _DataBuffer {
    * @throws {RangeError} The requested numeric length is not a nonnegative safe integer.
    * @throws {TypeError} Unknown type of input for DataBuffer: ${typeof input}
    */
-  constructor(input) {
+  constructor(input2) {
     this.writing = false;
-    if (typeof Buffer !== "undefined" && Buffer.isBuffer(input)) {
+    if (typeof Buffer !== "undefined" && Buffer.isBuffer(input2)) {
       debug("constructor: from Buffer");
-      this.data = Buffer.from(input);
-    } else if (typeof input === "string") {
+      this.data = Buffer.from(input2);
+    } else if (typeof input2 === "string") {
       debug("constructor: from string");
-      this.data = new TextEncoder().encode(input);
-    } else if (input instanceof Uint8Array) {
+      this.data = new TextEncoder().encode(input2);
+    } else if (input2 instanceof Uint8Array) {
       debug("constructor: from Uint8Array");
-      if (input.buffer instanceof ArrayBuffer) {
-        this.data = input;
+      if (input2.buffer instanceof ArrayBuffer) {
+        this.data = input2;
       } else {
-        this.data = new Uint8Array(input);
+        this.data = new Uint8Array(input2);
       }
-    } else if (input instanceof ArrayBuffer) {
+    } else if (input2 instanceof ArrayBuffer) {
       debug("constructor: from ArrayBuffer");
-      this.data = new Uint8Array(input);
-    } else if (Array.isArray(input)) {
+      this.data = new Uint8Array(input2);
+    } else if (Array.isArray(input2)) {
       debug("constructor: Normal Array");
-      this.data = new Uint8Array(input);
-    } else if (typeof input === "number") {
+      this.data = new Uint8Array(input2);
+    } else if (typeof input2 === "number") {
       debug("constructor: Number (i.e. length)");
-      if (!Number.isSafeInteger(input) || input < 0) {
-        throw new RangeError(`Invalid buffer length: ${input}`);
+      if (!Number.isSafeInteger(input2) || input2 < 0) {
+        throw new RangeError(`Invalid buffer length: ${input2}`);
       }
-      this.data = new Uint8Array(input);
-    } else if (input instanceof _DataBuffer) {
+      this.data = new Uint8Array(input2);
+    } else if (input2 instanceof _DataBuffer) {
       debug("constructor: from DataBuffer, a shallow copy");
-      this.data = input.data;
-    } else if (ArrayBuffer.isView(input) && "BYTES_PER_ELEMENT" in input && input.buffer instanceof ArrayBuffer) {
+      this.data = input2.data;
+    } else if (ArrayBuffer.isView(input2) && "BYTES_PER_ELEMENT" in input2 && input2.buffer instanceof ArrayBuffer) {
       debug("constructor: from typed arrays other than Uint8Array");
-      this.data = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-    } else if (typeof input === "undefined") {
+      this.data = new Uint8Array(input2.buffer, input2.byteOffset, input2.byteLength);
+    } else if (typeof input2 === "undefined") {
       debug("constructor: empty, creating a new file from scratch");
       this.writing = true;
       this.data = new Uint8Array();
     } else {
-      const error = `Unknown type of input for DataBuffer: ${typeof input}`;
+      const error = `Unknown type of input for DataBuffer: ${typeof input2}`;
       debug(error);
       throw new TypeError(error);
     }
@@ -4603,14 +4616,14 @@ var DataBuffer = class _DataBuffer {
    * @param {number} [offset] The offset in the current DataBuffer to start comparing, default is 0.
    * @returns {boolean} Returns true when all input bytes match the region at offset, false if there is any difference, the input is empty, or the region is out of bounds.
    */
-  compare(input, offset = 0) {
+  compare(input2, offset = 0) {
     let data;
-    if (input instanceof _DataBuffer) {
-      data = input.data;
-    } else if (input instanceof Uint8Array) {
-      data = input;
+    if (input2 instanceof _DataBuffer) {
+      data = input2.data;
+    } else if (input2 instanceof Uint8Array) {
+      data = input2;
     } else {
-      data = new _DataBuffer(input).data;
+      data = new _DataBuffer(input2).data;
     }
     const { length } = data;
     if (!length) {
@@ -4638,21 +4651,21 @@ var DataBuffer = class _DataBuffer {
    * @param {number[] | Buffer | Uint8Array} input The data to check for in upcoming bytes.
    * @returns {boolean} `true` if the data is the upcoming data, `false` if it is not or there is not enough buffer remaining.
    */
-  isNextBytes(input) {
-    debug("isNextBytes:", input);
-    if (!input || typeof input.length !== "number" || input.length === 0) {
+  isNextBytes(input2) {
+    debug("isNextBytes:", input2);
+    if (!input2 || typeof input2.length !== "number" || input2.length === 0) {
       debug("isNextBytes: no input provided");
       return false;
     }
-    if (!this.available(input.length, false)) {
-      debug(`isNextBytes: Insufficient Bytes: ${input.length} <= ${this.remainingBytes()}`);
+    if (!this.available(input2.length, false)) {
+      debug(`isNextBytes: Insufficient Bytes: ${input2.length} <= ${this.remainingBytes()}`);
       return false;
     }
     debug("isNextBytes: this.offset =", this.offset);
     const off = this.offset;
-    for (let i = 0; i < input.length; i++) {
-      if (input[i] !== this.data[off + i]) {
-        debug("isNextBytes: first failed match at", i, ", where:", input[i], "!==", this.data[off + i]);
+    for (let i = 0; i < input2.length; i++) {
+      if (input2[i] !== this.data[off + i]) {
+        debug("isNextBytes: first failed match at", i, ", where:", input2[i], "!==", this.data[off + i]);
         return false;
       }
     }
@@ -5165,9 +5178,9 @@ var DataBuffer = class _DataBuffer {
     if (!this.available(length, false)) {
       throw new underflow_error_default(`Insufficient Bytes: ${length}`);
     }
-    const chunk = new _DataBuffer(new Uint8Array(this.data.subarray(this.offset, this.offset + length)));
+    const chunk2 = new _DataBuffer(new Uint8Array(this.data.subarray(this.offset, this.offset + length)));
     this.offset += length;
-    return chunk;
+    return chunk2;
   }
   /**
    * Read from the specified offset and return the value as a DataBuffer.
@@ -6011,8 +6024,8 @@ var AudioWAV = class extends data_buffer_default {
     return value;
   }
   /** Restrict a standalone decoder to its declared payload, excluding padding and later chunks. */
-  static #chunkBuffer(chunk, minimumSize, littleEndian2 = true) {
-    const buffer = new data_buffer_default(typeof Buffer !== "undefined" && Buffer.isBuffer(chunk) ? new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength) : chunk);
+  static #chunkBuffer(chunk2, minimumSize, littleEndian2 = true) {
+    const buffer = new data_buffer_default(typeof Buffer !== "undefined" && Buffer.isBuffer(chunk2) ? new Uint8Array(chunk2.buffer, chunk2.byteOffset, chunk2.byteLength) : chunk2);
     if (buffer.length < 8) {
       throw new RangeError("Truncated chunk header: expected 8 bytes");
     }
@@ -6110,8 +6123,8 @@ var AudioWAV = class extends data_buffer_default {
    * @param opts Options for this AudioWAV instance.
    * @class
    */
-  constructor(input, opts = {}) {
-    super(input);
+  constructor(input2, opts = {}) {
+    super(input2);
     this.container = "";
     this.type = "";
     this.chunks = [];
@@ -6171,8 +6184,8 @@ var AudioWAV = class extends data_buffer_default {
     if (this.remainingBytes() < 12) {
       throw new RangeError("Truncated file header: expected 12 bytes");
     }
-    const chunk = this.read(12, false);
-    const value = _a.decodeHeader(chunk);
+    const chunk2 = this.read(12, false);
+    const value = _a.decodeHeader(chunk2);
     this.chunks.push({ type: "header", value });
     this.type = value.type;
     this.container = value.type;
@@ -6219,9 +6232,9 @@ var AudioWAV = class extends data_buffer_default {
    * @throws {Error} Invalid WAV header
    * @static
    */
-  static decodeHeader(chunk) {
+  static decodeHeader(chunk2) {
     debug2("decodeHeader");
-    const header = new data_buffer_default(chunk);
+    const header = new data_buffer_default(chunk2);
     if (header.length < 12) {
       throw new RangeError("Truncated file header: expected 12 bytes");
     }
@@ -6348,43 +6361,43 @@ var AudioWAV = class extends data_buffer_default {
       padding = 0;
     }
     this.rewind(8);
-    const chunk = this.read(8 + size + padding, false);
-    let decodeBytes = chunk;
+    const chunk2 = this.read(8 + size + padding, false);
+    let decodeBytes = chunk2;
     if (extended && declaredSize === 4294967295 && size < 4294967295) {
-      decodeBytes = Uint8Array.from(chunk);
+      decodeBytes = Uint8Array.from(chunk2);
       new DataView(decodeBytes.buffer, decodeBytes.byteOffset, decodeBytes.byteLength).setUint32(4, size, true);
     }
     switch (type) {
       case "fmt ": {
         const value = _a.decodeFMT(decodeBytes);
         this.#format ??= value;
-        this.chunks.push({ type: "format", value, chunk });
+        this.chunks.push({ type: "format", value, chunk: chunk2 });
         break;
       }
       case "fact": {
         const value = _a.decodeFACT(decodeBytes);
         this.#fact ??= value;
-        this.chunks.push({ type: "fact", value, chunk });
+        this.chunks.push({ type: "fact", value, chunk: chunk2 });
         break;
       }
       case "inst": {
         const value = _a.decodeINST(decodeBytes);
-        this.chunks.push({ type: "instrument", value, chunk });
+        this.chunks.push({ type: "instrument", value, chunk: chunk2 });
         break;
       }
       case "DISP": {
         const value = _a.decodeDISP(decodeBytes);
-        this.chunks.push({ type: "display", value, chunk });
+        this.chunks.push({ type: "display", value, chunk: chunk2 });
         break;
       }
       case "smpl": {
         const value = _a.decodeSMPL(decodeBytes);
-        this.chunks.push({ type: "sample", value, chunk });
+        this.chunks.push({ type: "sample", value, chunk: chunk2 });
         break;
       }
       case "tlst": {
         const value = _a.decodeTLST(decodeBytes);
-        this.chunks.push({ type: "trigger_list", value, chunk });
+        this.chunks.push({ type: "trigger_list", value, chunk: chunk2 });
         break;
       }
       case "data": {
@@ -6399,52 +6412,52 @@ var AudioWAV = class extends data_buffer_default {
         }
         const value = { duration };
         this.#dataChunks.push({ value, size, complete });
-        this.chunks.push({ type: "data", chunk, value });
+        this.chunks.push({ type: "data", chunk: chunk2, value });
         break;
       }
       case "LIST": {
         const value = _a.decodeLIST(decodeBytes, this.options);
-        this.chunks.push({ type: "list", value, chunk });
+        this.chunks.push({ type: "list", value, chunk: chunk2 });
         break;
       }
       case "RLND": {
         const value = _a.decodeRLND(decodeBytes);
-        this.chunks.push({ type: "roland", value, chunk });
+        this.chunks.push({ type: "roland", value, chunk: chunk2 });
         break;
       }
       case "JUNK": {
         _a.decodeJUNK(decodeBytes, this.options);
-        this.chunks.push({ type: "junk", chunk });
+        this.chunks.push({ type: "junk", chunk: chunk2 });
         break;
       }
       case "PAD ": {
         _a.decodePAD(decodeBytes);
-        this.chunks.push({ type: "padding", chunk });
+        this.chunks.push({ type: "padding", chunk: chunk2 });
         break;
       }
       case "PEAK": {
         const value = _a.decodePEAK(decodeBytes, this.type !== "AIFF");
-        this.chunks.push({ type: "peak", value, chunk });
+        this.chunks.push({ type: "peak", value, chunk: chunk2 });
         break;
       }
       case "acid": {
         const value = _a.decodeACID(decodeBytes);
-        this.chunks.push({ type: "acid", value, chunk });
+        this.chunks.push({ type: "acid", value, chunk: chunk2 });
         break;
       }
       case "strc": {
         const value = _a.decodeSTRC(decodeBytes);
-        this.chunks.push({ type: "strc", value, chunk });
+        this.chunks.push({ type: "strc", value, chunk: chunk2 });
         break;
       }
       case "cue ": {
         const value = _a.decodeCue(decodeBytes);
-        this.chunks.push({ type: "cue_points", value, chunk });
+        this.chunks.push({ type: "cue_points", value, chunk: chunk2 });
         break;
       }
       case "bext": {
         const value = _a.decodeBEXT(decodeBytes, this.options);
-        this.chunks.push({ type: "broadcast_extension", value, chunk });
+        this.chunks.push({ type: "broadcast_extension", value, chunk: chunk2 });
         break;
       }
       case "ResU": {
@@ -6452,12 +6465,12 @@ var AudioWAV = class extends data_buffer_default {
         if (value.error) {
           this.#issue(value.error, offset);
         }
-        this.chunks.push({ type: "logic_resu", value, chunk });
+        this.chunks.push({ type: "logic_resu", value, chunk: chunk2 });
         break;
       }
       case "ds64": {
         const value = _a.decodeDS64(decodeBytes);
-        this.chunks.push({ type: "data_size_64", value, chunk });
+        this.chunks.push({ type: "data_size_64", value, chunk: chunk2 });
         if (extended) {
           if (this.#ds64) {
             this.#issue("Duplicate ds64 chunk", offset);
@@ -6482,13 +6495,13 @@ var AudioWAV = class extends data_buffer_default {
         break;
       }
       case "cart": {
-        this.chunks.push({ type: "cart", chunk, unknown: true });
+        this.chunks.push({ type: "cart", chunk: chunk2, unknown: true });
         break;
       }
       case "AFAn":
       case "AFmd": {
         debug2(`macOS Special Binary Chunk: '${type}' with ${size} bytes`);
-        this.chunks.push({ type, chunk, description: "macOS Special Binary Chunk" });
+        this.chunks.push({ type, chunk: chunk2, description: "macOS Special Binary Chunk" });
         break;
       }
       case "minf":
@@ -6497,24 +6510,24 @@ var AudioWAV = class extends data_buffer_default {
       case "ovwf":
       case "umid": {
         debug2(`ProTools Special Chunk: '${type}' with ${size} bytes`);
-        this.chunks.push({ type, chunk, description: "ProTools Special Chunk" });
+        this.chunks.push({ type, chunk: chunk2, description: "ProTools Special Chunk" });
         break;
       }
       case "COMM": {
         const value = _a.decodeCOMM(decodeBytes);
         this.#common ??= value;
-        this.chunks.push({ type: "common", value, chunk });
+        this.chunks.push({ type: "common", value, chunk: chunk2 });
         break;
       }
       case "SSND": {
         const value = _a.decodeSSND(decodeBytes);
         this.#soundChunks.push({ value, offset });
-        this.chunks.push({ type: "sound_data", value, chunk });
+        this.chunks.push({ type: "sound_data", value, chunk: chunk2 });
         break;
       }
       case "FVER": {
         const value = _a.decodeFVER(decodeBytes);
-        this.chunks.push({ type: "format_version", value, chunk });
+        this.chunks.push({ type: "format_version", value, chunk: chunk2 });
         break;
       }
       case "ANNO":
@@ -6526,12 +6539,12 @@ var AudioWAV = class extends data_buffer_default {
         const name = nameSize ? stream.readString(nameSize) : "";
         const value = { chunkID, size: nameSize, name };
         debug2("decodeGenericText =", value);
-        this.chunks.push({ type: chunkID.toLowerCase(), value, chunk });
+        this.chunks.push({ type: chunkID.toLowerCase(), value, chunk: chunk2 });
         break;
       }
       default: {
         debug2(`Unsupported Chunk: '${type}' with ${size} bytes`);
-        this.chunks.push({ type, chunk, unknown: true });
+        this.chunks.push({ type, chunk: chunk2, unknown: true });
         break;
       }
     }
@@ -6553,9 +6566,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeFMT(chunk) {
+  static decodeFMT(chunk2) {
     debug2("decodeFMT");
-    const format = _a.#chunkBuffer(chunk, 16);
+    const format = _a.#chunkBuffer(chunk2, 16);
     const chunkID = format.readString(4);
     const size = format.readUInt32(true);
     const audioFormatValue = format.readUInt16(true);
@@ -6693,9 +6706,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeLIST(chunk, options = {}) {
+  static decodeLIST(chunk2, options = {}) {
     debug2("decodeLIST");
-    const list = _a.#chunkBuffer(chunk, 4);
+    const list = _a.#chunkBuffer(chunk2, 4);
     const chunkID = list.readString(4);
     const size = list.readUInt32(true);
     const type = list.readString(4);
@@ -6823,8 +6836,8 @@ var AudioWAV = class extends data_buffer_default {
    * @param chunk Data Blob
    * @static
    */
-  static decodeDATA(chunk) {
-    debug2(`decodeDATA: ${chunk.length} data bytes`);
+  static decodeDATA(chunk2) {
+    debug2(`decodeDATA: ${chunk2.length} data bytes`);
   }
   /**
    * Decode the `tlst` (Trigger List) chunk.
@@ -6838,9 +6851,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeTLST(chunk) {
+  static decodeTLST(chunk2) {
     debug2("decodeTLST");
-    const tlst = _a.#chunkBuffer(chunk, 24);
+    const tlst = _a.#chunkBuffer(chunk2, 24);
     const _chunkID = tlst.readString(4);
     const size = tlst.readUInt32(true);
     debug2("decodeTLST size", size);
@@ -6895,9 +6908,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.recordingblogs.com/wiki/fact-chunk-of-a-wave-file | Fact chunk (of a Wave file)}
    * @see {@link http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html | Audio File Format Specifications}
    */
-  static decodeFACT(chunk) {
+  static decodeFACT(chunk2) {
     debug2("decodeFACT");
-    const fact = _a.#chunkBuffer(chunk, 4);
+    const fact = _a.#chunkBuffer(chunk2, 4);
     const _chunkID = fact.readString(4);
     const size = fact.readUInt32(true);
     debug2("decodeFACT size", size);
@@ -6915,9 +6928,9 @@ var AudioWAV = class extends data_buffer_default {
    * @static
    * @see {@link https://code.google.com/archive/p/awesome-wav/wikis/WAVFormat.wiki|awesome-wav - WAVFormat.wiki}
    */
-  static decodePEAK(chunk, littleEndian2 = true) {
+  static decodePEAK(chunk2, littleEndian2 = true) {
     debug2("decodePEAK");
-    const peak = _a.#chunkBuffer(chunk, 8, littleEndian2);
+    const peak = _a.#chunkBuffer(chunk2, 8, littleEndian2);
     const _chunkID = peak.readString(4);
     const size = peak.readUInt32(littleEndian2);
     debug2("decodePEAK size", size);
@@ -6968,9 +6981,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link http://netghost.narod.ru/gff/vendspec/micriff/ms_riff.txt|New Multimedia Data Types and Data Techniques}
    * @see {@link https://docs.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats|Standard Clipboard Formats}
    */
-  static decodeDISP(chunk) {
+  static decodeDISP(chunk2) {
     debug2("decodeDISP");
-    const disp = _a.#chunkBuffer(chunk, 4);
+    const disp = _a.#chunkBuffer(chunk2, 4);
     const _chunkID = disp.readString(4);
     const size = disp.readUInt32(true);
     debug2("decodeDISP size", size);
@@ -6999,9 +7012,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @memberof AudioWAV
    */
-  static decodeACID(chunk) {
+  static decodeACID(chunk2) {
     debug2("decodeACID");
-    const acid = _a.#chunkBuffer(chunk, 24);
+    const acid = _a.#chunkBuffer(chunk2, 24);
     const _chunkID = acid.readString(4);
     const size = acid.readUInt32(true);
     debug2("decodeACID size", size);
@@ -7035,9 +7048,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeINST(chunk) {
+  static decodeINST(chunk2) {
     debug2("decodeINST");
-    const inst = _a.#chunkBuffer(chunk, 7);
+    const inst = _a.#chunkBuffer(chunk2, 7);
     const _chunkID = inst.readString(4);
     const size = inst.readUInt32(true);
     debug2("decodeINST size", size);
@@ -7068,9 +7081,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeSMPL(chunk) {
+  static decodeSMPL(chunk2) {
     debug2("decodeSMPL");
-    const smpl = _a.#chunkBuffer(chunk, 36);
+    const smpl = _a.#chunkBuffer(chunk2, 36);
     const _chunkID = smpl.readString(4);
     const size = smpl.readUInt32(true);
     debug2("decodeSMPL size", size);
@@ -7150,9 +7163,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeRLND(chunk) {
+  static decodeRLND(chunk2) {
     debug2("decodeRLND");
-    const roland = _a.#chunkBuffer(chunk, 13);
+    const roland = _a.#chunkBuffer(chunk2, 13);
     const chunkID = roland.readString(4);
     const size = roland.readUInt32(true);
     const device = roland.readString(8);
@@ -7252,25 +7265,25 @@ var AudioWAV = class extends data_buffer_default {
    * @param options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
    * @static
    */
-  static decodeJUNK(chunk, options = {}) {
-    const junk = new data_buffer_default(chunk);
+  static decodeJUNK(chunk2, options = {}) {
+    const junk = new data_buffer_default(chunk2);
     const chunkID = junk.readString(4);
     let size = junk.readUInt32(true);
     if (options.roundOddChunks && size % 2 !== 0) {
       size += 1;
     }
-    debug2(`decodeJUNK: ${chunk.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
+    debug2(`decodeJUNK: ${chunk2.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
   }
   /**
    * Decode the `PAD ` (Padding) chunk.
    * @param chunk Data Blob
    * @static
    */
-  static decodePAD(chunk) {
-    const pad = new data_buffer_default(chunk);
+  static decodePAD(chunk2) {
+    const pad = new data_buffer_default(chunk2);
     const chunkID = pad.readString(4);
     const size = pad.readUInt32(true);
-    debug2(`decodePAD: ${chunk.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
+    debug2(`decodePAD: ${chunk2.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
   }
   /**
    * Decode the bext (Broadcast Wave Format (BWF) Broadcast Extension) chunk.
@@ -7282,9 +7295,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
    * @see {@link https://tech.ebu.ch/docs/tech/tech3285.pdf|Spec}
    */
-  static decodeBEXT(chunk, options = {}) {
+  static decodeBEXT(chunk2, options = {}) {
     debug2("decodeBEXT");
-    const bext = _a.#chunkBuffer(chunk, 602);
+    const bext = _a.#chunkBuffer(chunk2, 602);
     const chunkID = bext.readString(4);
     const size = bext.readUInt32(true);
     debug2("decodeBEXT roundOddChunks:", options.roundOddChunks);
@@ -7359,9 +7372,9 @@ var AudioWAV = class extends data_buffer_default {
    * @static
    * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
    */
-  static decodeCue(chunk) {
+  static decodeCue(chunk2) {
     debug2("decodeCue");
-    const cue = _a.#chunkBuffer(chunk, 4);
+    const cue = _a.#chunkBuffer(chunk2, 4);
     const chunkID = cue.readString(4);
     const size = cue.readUInt32(true);
     debug2("decodeCue size", size);
@@ -7405,9 +7418,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeResU(chunk, options = {}) {
+  static decodeResU(chunk2, options = {}) {
     debug2("decodeResU");
-    const resu = _a.#chunkBuffer(chunk, 0);
+    const resu = _a.#chunkBuffer(chunk2, 0);
     const chunkID = resu.readString(4);
     const size = resu.readUInt32(true);
     const data = size ? resu.read(size, false) : new Uint8Array();
@@ -7419,20 +7432,20 @@ var AudioWAV = class extends data_buffer_default {
     try {
       let bytes = 0;
       const text = [];
-      const decoder = new TextDecoder();
+      const decoder2 = new TextDecoder();
       const inflator = new Inflate({ chunkSize: 16384 });
       inflator.onData = (output) => {
         bytes += output.length;
         if (bytes > limit) {
           throw new RangeError(`ResU exceeds maxResUSize (${limit} bytes)`);
         }
-        text.push(decoder.decode(output, { stream: true }));
+        text.push(decoder2.decode(output, { stream: true }));
       };
       inflator.push(data, false);
       if (inflator.err || !inflator.ended) {
         throw new Error(inflator.msg || "Incomplete ResU compressed stream");
       }
-      text.push(decoder.decode());
+      text.push(decoder2.decode());
       const decompressed = text.join("");
       debug2("Inflated Size:", bytes);
       value.data = JSON.parse(decompressed);
@@ -7450,8 +7463,8 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://tech.ebu.ch/docs/tech/tech3306v1_0.pdf|RF64: An extended File Format for Audio}
    * @static
    */
-  static decodeDS64(chunk) {
-    const ds64 = _a.#chunkBuffer(chunk, 28);
+  static decodeDS64(chunk2) {
+    const ds64 = _a.#chunkBuffer(chunk2, 28);
     const chunkID = ds64.readString(4);
     const size = ds64.readUInt32(true);
     const riffSizeLow = ds64.readUInt32(true);
@@ -7496,9 +7509,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeSTRC(chunk) {
+  static decodeSTRC(chunk2) {
     debug2("decodeSTRC");
-    const strc = _a.#chunkBuffer(chunk, 28);
+    const strc = _a.#chunkBuffer(chunk2, 28);
     const _chunkID = strc.readString(4);
     const size = strc.readUInt32(true);
     debug2("decodeSTRC size:", size);
@@ -7557,9 +7570,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
    * @static
    */
-  static decodeCOMM(chunk) {
+  static decodeCOMM(chunk2) {
     debug2("decodeCOMM");
-    const commonChunk = _a.#chunkBuffer(chunk, 18, false);
+    const commonChunk = _a.#chunkBuffer(chunk2, 18, false);
     const chunkID = commonChunk.readString(4);
     const size = commonChunk.readUInt32();
     const channels = commonChunk.readUInt16();
@@ -7610,9 +7623,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
    * @static
    */
-  static decodeSSND(chunk) {
+  static decodeSSND(chunk2) {
     debug2("decodeSSND");
-    const ssndChunk = _a.#chunkBuffer(chunk, 8, false);
+    const ssndChunk = _a.#chunkBuffer(chunk2, 8, false);
     const chunkID = ssndChunk.readString(4);
     const size = ssndChunk.readUInt32();
     const offset = ssndChunk.readUInt32();
@@ -7643,9 +7656,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
    * @static
    */
-  static decodeFVER(chunk) {
+  static decodeFVER(chunk2) {
     debug2("decodeFVER");
-    const formatVersionChunk = _a.#chunkBuffer(chunk, 4, false);
+    const formatVersionChunk = _a.#chunkBuffer(chunk2, 4, false);
     const chunkID = formatVersionChunk.readString(4);
     const size = formatVersionChunk.readUInt32();
     const timestamp = formatVersionChunk.readUInt32();
@@ -7918,22 +7931,22 @@ var readBlocks = (value) => {
     };
   });
 };
-var nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
-  id,
+var nativeEncoder = (id2, kind, output, modelField, encode, decode) => Object.freeze({
+  id: id2,
   version: "1.0.0",
   inputKinds: [kind],
   primaryOutput: output,
   encode: (document2, options) => {
     if (Object.keys(options).length !== 0) {
-      throw new Error(`Native encoder '${id}' accepts no options.`);
+      throw new Error(`Native encoder '${id2}' accepts no options.`);
     }
     if (!isRecord(document2.value)) {
-      throw new Error(`Native encoder '${id}' requires an object model.`);
+      throw new Error(`Native encoder '${id2}' requires an object model.`);
     }
     const value = document2.value;
     const bytes = encode(value);
     if (!sameModelValue(decode(bytes), value[modelField])) {
-      throw new Error(`Native encoder '${id}' did not preserve '${modelField}'.`);
+      throw new Error(`Native encoder '${id2}' did not preserve '${modelField}'.`);
     }
     return {
       outputs: { [output]: { bytes, mediaType: "application/octet-stream" } },
@@ -8174,8 +8187,8 @@ var waveImporter = Object.freeze({
   id: "uttori.import.wave",
   version: "1.0.0",
   mediaTypes: ["audio/wav", "audio/wave", "audio/x-wav"],
-  import: (input) => {
-    const chunks = scanWave(input.bytes);
+  import: (input2) => {
+    const chunks = scanWave(input2.bytes);
     const formatChunk = chunks.get("fmt ");
     const dataChunk = chunks.get("data");
     if (formatChunk.size !== 16 && !(formatChunk.size === 18 && u16le(formatChunk.bytes, 24) === 0)) {
@@ -8399,9 +8412,9 @@ var rawImporter = Object.freeze({
   id: "uttori.import.raw",
   version: "1.0.0",
   mediaTypes: ["application/octet-stream"],
-  import: (input) => ({
+  import: (input2) => ({
     kind: "raw",
-    value: input.bytes.slice()
+    value: input2.bytes.slice()
   })
 });
 var rawEncoder = Object.freeze({
@@ -8427,9 +8440,9 @@ var jsonImporter = Object.freeze({
   id: "uttori.import.json",
   version: "1.0.0",
   mediaTypes: ["application/json"],
-  import: (input) => {
+  import: (input2) => {
     const value = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(input.bytes)
+      new TextDecoder("utf-8", { fatal: true }).decode(input2.bytes)
     );
     if (value === null || typeof value !== "object" || Array.isArray(value) || !("kind" in value) || typeof value.kind !== "string") {
       throw new Error("Asset JSON requires an object with a kind string.");
@@ -8865,11 +8878,11 @@ var RgbaSurface = class _RgbaSurface {
     }
     for (let row = 0; row < rows; row++) {
       let destination = ((y + top + row) * this.width + x + left) * 4;
-      const input = start + row * stride;
+      const input2 = start + row * stride;
       if (mode === "copy") {
-        this.rgba.set(bytes.subarray(input, input + rowLength), destination);
+        this.rgba.set(bytes.subarray(input2, input2 + rowLength), destination);
       } else {
-        for (let i = input; i < input + rowLength; i += 4, destination += 4) {
+        for (let i = input2; i < input2 + rowLength; i += 4, destination += 4) {
           blend(this.rgba, destination, bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]);
         }
       }
@@ -8916,12 +8929,12 @@ var RgbaSurface = class _RgbaSurface {
         result.rgba.set(this.rgba.subarray(sy * this.width * 4, (sy + 1) * this.width * 4), y * this.width * 4);
       } else {
         for (let x = 0; x < this.width; x++) {
-          const input = sy * this.width + this.width - x - 1, output = y * this.width + x;
+          const input2 = sy * this.width + this.width - x - 1, output = y * this.width + x;
           if (inputWords && outputWords) {
-            outputWords[output] = inputWords[input];
+            outputWords[output] = inputWords[input2];
           } else {
             for (let c = 0; c < 4; c++) {
-              result.rgba[output * 4 + c] = this.rgba[input * 4 + c];
+              result.rgba[output * 4 + c] = this.rgba[input2 * 4 + c];
             }
           }
         }
@@ -8979,11 +8992,11 @@ var RgbaSurface = class _RgbaSurface {
         }
       } else {
         for (let x = 0; x < width; x++) {
-          const input = (sourceRow + offsets[x]) * 4, output = (destinationRow + x) * 4;
-          result.rgba[output] = this.rgba[input];
-          result.rgba[output + 1] = this.rgba[input + 1];
-          result.rgba[output + 2] = this.rgba[input + 2];
-          result.rgba[output + 3] = this.rgba[input + 3];
+          const input2 = (sourceRow + offsets[x]) * 4, output = (destinationRow + x) * 4;
+          result.rgba[output] = this.rgba[input2];
+          result.rgba[output + 1] = this.rgba[input2 + 1];
+          result.rgba[output + 2] = this.rgba[input2 + 2];
+          result.rgba[output + 3] = this.rgba[input2 + 3];
         }
       }
     }
@@ -9135,7 +9148,7 @@ function resolveLimits(options = {}) {
   }
   return result;
 }
-function prepareInput(input, options, maxInputBytes) {
+function prepareInput(input2, options, maxInputBytes) {
   if (options.copyInput !== void 0 && typeof options.copyInput !== "boolean") {
     throw new TypeError("copyInput must be a boolean.");
   }
@@ -9145,22 +9158,22 @@ function prepareInput(input, options, maxInputBytes) {
   if (options.animation !== void 0 && options.animation !== "reject" && options.animation !== "default-image") {
     throw new Error("animation must be reject or default-image.");
   }
-  if (input instanceof data_buffer_default) {
-    input = input.data;
+  if (input2 instanceof data_buffer_default) {
+    input2 = input2.data;
   }
-  if (typeof input === "number") {
+  if (typeof input2 === "number") {
     throw new TypeError("ImagePNG requires PNG data, not an allocation length.");
   }
   let bytes;
-  if (input instanceof ArrayBuffer) {
-    bytes = new Uint8Array(input);
-  } else if (ArrayBuffer.isView(input)) {
-    bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-  } else if (Array.isArray(input) || typeof input === "string") {
-    if (input.length > maxInputBytes) {
+  if (input2 instanceof ArrayBuffer) {
+    bytes = new Uint8Array(input2);
+  } else if (ArrayBuffer.isView(input2)) {
+    bytes = new Uint8Array(input2.buffer, input2.byteOffset, input2.byteLength);
+  } else if (Array.isArray(input2) || typeof input2 === "string") {
+    if (input2.length > maxInputBytes) {
       throw new RangeError("PNG exceeds the input byte limit.");
     }
-    bytes = new data_buffer_default(input).data;
+    bytes = new data_buffer_default(input2).data;
   } else {
     throw new TypeError("ImagePNG requires PNG bytes or a DataBuffer.");
   }
@@ -9407,9 +9420,9 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param options Ownership, allocation limits, and format policies.
    * @throws {Error} Signature, framing, CRC, ordering, or metadata are invalid.
    */
-  constructor(input, options = {}) {
+  constructor(input2, options = {}) {
     const limits = resolveLimits(options);
-    super(prepareInput(input, options, limits.maxInputBytes));
+    super(prepareInput(input2, options, limits.maxInputBytes));
     this.width = 0;
     this.height = 0;
     this.bitDepth = 0;
@@ -9704,7 +9717,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (!this._seenChunks.has("IHDR") && type !== "IHDR") {
       throw new Error("PNG IHDR must be first.");
     }
-    const chunk = this.data.subarray(offset + 8, end - 4);
+    const chunk2 = this.data.subarray(offset + 8, end - 4);
     const critical = (this.peekUInt8(offset + 4) & 32) === 0;
     const dataSeen = this.dataChunks.length !== 0;
     debug3("decodeChunk:", type, "length:", length);
@@ -9713,37 +9726,37 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
         if (this._seenChunks.has(type)) {
           throw new Error("PNG requires exactly one IHDR.");
         }
-        this.decodeIHDR(chunk);
+        this.decodeIHDR(chunk2);
         break;
       case "PLTE":
         if (this._seenChunks.has(type) || dataSeen || this._seenChunks.has("tRNS") || this.colorType === 0 || this.colorType === 4) {
           throw new Error("Invalid PNG PLTE placement.");
         }
-        this.decodePLTE(chunk);
+        this.decodePLTE(chunk2);
         break;
       case "tRNS":
         if (this._seenChunks.has(type) || dataSeen) {
           throw new Error("Invalid PNG tRNS placement.");
         }
-        this.decodeTRNS(chunk);
+        this.decodeTRNS(chunk2);
         break;
       case "pHYs":
         if (this._seenChunks.has(type) || dataSeen) {
           throw new Error("Invalid PNG pHYs placement.");
         }
-        this.decodePHYS(chunk);
+        this.decodePHYS(chunk2);
         break;
       case "IDAT":
         if (this._dataEnded || this.colorType === 3 && !this._seenChunks.has("PLTE")) {
           throw new Error("PNG IDAT chunks must be contiguous and follow PLTE.");
         }
-        this.decodeIDAT(chunk);
+        this.decodeIDAT(chunk2);
         break;
       case "IEND":
         if (!dataSeen || end !== this.data.length) {
           throw new Error("Invalid PNG IEND chunk or trailing file bytes.");
         }
-        this.decodeIEND(chunk);
+        this.decodeIEND(chunk2);
         break;
       // case 'cHRM': decodeCHRM(chunk); break;
       // case 'gAMA': decodeGAMA(chunk); break;
@@ -9770,7 +9783,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
       offset,
       end,
       length,
-      data: chunk,
+      data: chunk2,
       raw: this.data.subarray(offset, end),
       critical,
       safeToCopy: (this.peekUInt8(offset + 7) & 32) !== 0
@@ -9798,11 +9811,11 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IHDR|Image Header}
    * @see {@link http://www.libpng.org/pub/png/spec/1.2/png-1.2-pdg.html#C.IHDR|Image Header}
    */
-  decodeIHDR(chunk) {
-    if (chunk.length !== 13) {
+  decodeIHDR(chunk2) {
+    if (chunk2.length !== 13) {
       throw new Error("PNG requires a 13-byte IHDR.");
     }
-    const header = new data_buffer_default(chunk);
+    const header = new data_buffer_default(chunk2);
     const width = header.readUInt32();
     const height = header.readUInt32();
     const bitDepth = header.readUInt8();
@@ -9839,8 +9852,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param chunk Data Blob
    * @see {@link http://www.w3.org/TR/PNG/#11PLTE|Palette}
    */
-  decodePLTE(chunk) {
-    this.setPalette(chunk);
+  decodePLTE(chunk2) {
+    this.setPalette(chunk2);
   }
   /**
    * Decode the IDAT (Image Data) chunk.
@@ -9851,8 +9864,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param chunk Data Blob
    * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IDAT|Image Data}
    */
-  decodeIDAT(chunk) {
-    this.dataChunks.push(chunk);
+  decodeIDAT(chunk2) {
+    this.dataChunks.push(chunk2);
     this.invalidatePixels();
   }
   /**
@@ -9862,20 +9875,20 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @throws {Error} Transparency is incompatible with the color type or sample depth.
    * @see {@link https://www.w3.org/TR/PNG/#11tRNS|Transparency}
    */
-  decodeTRNS(chunk) {
+  decodeTRNS(chunk2) {
     switch (this.colorType) {
       case 3:
-        if (this.palette.length === 0 || chunk.length === 0 || chunk.length > this.palette.length / 3) {
+        if (this.palette.length === 0 || chunk2.length === 0 || chunk2.length > this.palette.length / 3) {
           throw new Error("Invalid indexed PNG tRNS chunk.");
         }
         break;
       case 0:
-        if (chunk.length !== 2) {
+        if (chunk2.length !== 2) {
           throw new Error("Grayscale PNG tRNS requires two bytes.");
         }
         break;
       case 2:
-        if (chunk.length !== 6) {
+        if (chunk2.length !== 6) {
           throw new Error("RGB PNG tRNS requires six bytes.");
         }
         break;
@@ -9884,14 +9897,14 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     }
     if (this.colorType !== 3) {
       const maximum = 2 ** this.bitDepth - 1;
-      const buffer = new data_buffer_default(chunk);
+      const buffer = new data_buffer_default(chunk2);
       while (buffer.remainingBytes() > 0) {
         if (buffer.readUInt16() > maximum) {
           throw new Error("PNG tRNS sample exceeds bit depth.");
         }
       }
     }
-    this.transparency = Uint8Array.from(chunk);
+    this.transparency = Uint8Array.from(chunk2);
   }
   /**
    * Decode the pHYs (Pixel Dimensions) chunk.
@@ -9912,11 +9925,11 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @throws {Error} The length or unit specifier is invalid.
    * @see {@link https://www.w3.org/TR/PNG/#11pHYs|Pixel Dimensions}
    */
-  decodePHYS(chunk) {
-    if (chunk.length !== 9) {
+  decodePHYS(chunk2) {
+    if (chunk2.length !== 9) {
       throw new Error("Invalid PNG pHYs chunk.");
     }
-    const buffer = new data_buffer_default(chunk);
+    const buffer = new data_buffer_default(chunk2);
     const width = buffer.readUInt32();
     const height = buffer.readUInt32();
     const unit = buffer.readUInt8();
@@ -9932,8 +9945,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @throws {Error} IEND contains data.
    * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IEND|Image Trailer}
    */
-  decodeIEND(chunk) {
-    if (chunk.length !== 0) {
+  decodeIEND(chunk2) {
+    if (chunk2.length !== 0) {
       throw new Error("IEND must be empty.");
     }
   }
@@ -10013,29 +10026,29 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     let compressedLength = 0;
     let ended = false;
     let errorCode = 0;
-    inflator.onData = (chunk) => {
-      if (written + chunk.length > expected) {
+    inflator.onData = (chunk2) => {
+      if (written + chunk2.length > expected) {
         throw new Error("PNG inflated data exceeds declared dimensions.");
       }
-      output.set(chunk, written);
-      written += chunk.length;
+      output.set(chunk2, written);
+      written += chunk2.length;
     };
     inflator.onEnd = (status) => {
       ended = true;
       errorCode = status;
     };
-    for (const chunk of this.dataChunks) {
-      if (chunk.length === 0) {
+    for (const chunk2 of this.dataChunks) {
+      if (chunk2.length === 0) {
         continue;
       }
       if (ended) {
         throw new Error("PNG has compressed data after the zlib stream.");
       }
-      compressedLength += chunk.length;
+      compressedLength += chunk2.length;
       if (compressedLength > this._limits.maxInputBytes) {
         throw new RangeError("PNG exceeds the input byte limit.");
       }
-      if (!inflator.push(chunk, false) || errorCode !== 0) {
+      if (!inflator.push(chunk2, false) || errorCode !== 0) {
         throw new Error(`Invalid PNG image data: ${zlib.msg || "inflate failure"}.`);
       }
       if (zlib.avail_in !== 0) {
@@ -10497,8 +10510,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     }
     const parts = [PNG_SIGNATURE];
     let wrotePixels = false;
-    for (const chunk of image.chunks) {
-      const { type } = chunk;
+    for (const chunk2 of image.chunks) {
+      const { type } = chunk2;
       if (type === "IHDR" && pixelsChanged) {
         parts.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
       } else if (type === "PLTE" && paletteChanged) {
@@ -10510,8 +10523,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
           parts.push(makeChunk(type, compressed));
           wrotePixels = true;
         }
-      } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk.safeToCopy || retained.has(type)) {
-        parts.push(chunk.raw);
+      } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk2.safeToCopy || retained.has(type)) {
+        parts.push(chunk2.raw);
       }
     }
     return joinChunks(parts, image._limits.maxOutputBytes);
@@ -10785,8 +10798,8 @@ var pngImporter = Object.freeze({
   id: "uttori.import.png",
   version: "2.0.0",
   mediaTypes: ["image/png"],
-  import: (input) => {
-    const image = readAssetPng(input.bytes);
+  import: (input2) => {
+    const image = readAssetPng(input2.bytes);
     if (image.colorType === 3) {
       const value2 = image.toIndexed({ copy: false });
       return { kind: value2.kind, value: value2 };
@@ -10851,6 +10864,61 @@ function extractIndexedRegion(image, region) {
   }
   return { width: region.width, height: region.height, indexes };
 }
+function renderIndexedPlacements(sources, placements, viewport, background) {
+  validateBounds(viewport);
+  if (background && background.length !== viewport.width * viewport.height) {
+    throw new RangeError("Background dimensions do not match the viewport.");
+  }
+  if (placements.length > 65536) {
+    throw new RangeError("Too many indexed placements.");
+  }
+  const ids = /* @__PURE__ */ new Set();
+  let work = 0;
+  for (const placement of placements) {
+    if (!placement.id || ids.has(placement.id)) {
+      throw new Error(`Duplicate/empty placement ${placement.id}.`);
+    }
+    ids.add(placement.id);
+    const source = sources.get(placement.source);
+    if (!source) {
+      throw new Error(`Placement ${placement.id}: missing source ${placement.source}.`);
+    }
+    validateIndexedPixels(source);
+    validateOrientation(placement);
+    integer(placement.x, "Placement x", -(1 << 20), 1 << 20);
+    integer(placement.y, "Placement y", -(1 << 20), 1 << 20);
+    if (placement.transparentIndex !== void 0 && placement.transparentIndex !== null) {
+      integer(placement.transparentIndex, "Transparent index", 0, 255);
+    }
+    if (placement.x < viewport.x || placement.y < viewport.y || placement.x + source.width > viewport.x + viewport.width || placement.y + source.height > viewport.y + viewport.height) {
+      throw new RangeError(`Placement ${placement.id} exceeds the viewport.`);
+    }
+    work = boundedSum(
+      work,
+      source.indexes.length,
+      ASSET_LIMITS.renderPixels,
+      "Placement rendering work"
+    );
+  }
+  const indexes = background ? Uint8Array.from(background) : new Uint8Array(viewport.width * viewport.height);
+  for (const placement of placements) {
+    const source = sources.get(placement.source);
+    const transparent = placement.transparentIndex === void 0 ? 0 : placement.transparentIndex;
+    for (let y = 0; y < source.height; y++) {
+      for (let x = 0; x < source.width; x++) {
+        const sx = placement.flipX ? source.width - x - 1 : x;
+        const sy = placement.flipY ? source.height - y - 1 : y;
+        const index = source.indexes[sy * source.width + sx];
+        if (index === transparent) {
+          continue;
+        }
+        const target = (placement.y - viewport.y + y) * viewport.width + placement.x - viewport.x + x;
+        indexes[target] = mappedIndex(index, placement.indexMap);
+      }
+    }
+  }
+  return { width: viewport.width, height: viewport.height, indexes };
+}
 function expandIndexedGrid(block) {
   integer(block.columns, "Grid columns", 1, 65536);
   integer(block.cellWidth, "Grid cell width", 1, 1 << 20);
@@ -10873,6 +10941,74 @@ function expandIndexedGrid(block) {
       flipX: block.flipX ?? false,
       flipY: block.flipY ?? false
     };
+  });
+}
+
+// packages/assets/src/indexed-values.ts
+function indexedPalette(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 256) {
+    throw new Error("Indexed palette requires 1..256 slots.");
+  }
+  return value.map((slot) => {
+    if (!Array.isArray(slot) || slot.length !== 4) {
+      throw new Error("Palette slots require four RGBA8 channels.");
+    }
+    const channels = slot;
+    const result = [0, 0, 0, 0];
+    for (let channel = 0; channel < 4; channel++) {
+      const channelValue = channels[channel];
+      if (typeof channelValue !== "number") {
+        throw new TypeError("Palette channel must be a number.");
+      }
+      result[channel] = integer(channelValue, "Palette channel", 0, 255);
+    }
+    return result;
+  });
+}
+function indexedPaletteChanges(before, after, editableSlots) {
+  indexedPalette(before);
+  indexedPalette(after);
+  if (before.length !== after.length) {
+    throw new Error("Palette inventory changed.");
+  }
+  const editable = new Set(editableSlots);
+  if (editable.size !== editableSlots.length) {
+    throw new Error("Duplicate editable palette slot.");
+  }
+  for (const slot of editable) {
+    integer(slot, "Editable palette slot", 0, before.length - 1);
+  }
+  const changes = [];
+  after.forEach((color, index) => {
+    if (color[3] !== before[index][3]) {
+      throw new Error("Palette alpha changes are unsupported.");
+    }
+    if (color.some((channel, i) => channel !== before[index][i])) {
+      if (!editable.has(index)) {
+        throw new Error(`Read-only palette slot changed: ${index}.`);
+      }
+      changes.push({ index, color: [...color] });
+    }
+  });
+  return changes;
+}
+
+// packages/assets/src/png-edit.ts
+function rewriteIndexedPng(source, edit) {
+  return data_image_png_default.rewriteIndexed(source, edit, {
+    ...ASSET_PNG_OPTIONS,
+    filter: "none",
+    level: 6,
+    validateIndexed: validateIndexedPixels
+  });
+}
+function createIndexedPng(image) {
+  validateIndexedPixels(image);
+  return data_image_png_default.encodeIndexed(image, {
+    ...ASSET_PNG_OPTIONS,
+    bitDepth: 8,
+    filter: "none",
+    level: 6
   });
 }
 
@@ -11005,14 +11141,14 @@ var readOptions = (raw, indexed) => {
     }
   };
 };
-var externalPalette = (input) => {
-  if (input.mediaType !== "application/json") {
+var externalPalette = (input2) => {
+  if (input2.mediaType !== "application/json") {
     throw new Error("External palette resource must be application/json.");
   }
-  if (input.bytes.length > 64 * 1024) {
+  if (input2.bytes.length > 64 * 1024) {
     throw new Error("External palette JSON exceeds 64 KiB.");
   }
-  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.bytes));
+  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input2.bytes));
   if (!isRecord3(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
     throw new Error("External palette requires version 1 and 1\u2013256 RGB8 colors.");
   }
@@ -11485,8 +11621,8 @@ function waveformPreviewPng(samples) {
 
 // packages/core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 1;
-function definePlugin(plugin2) {
-  return plugin2;
+function definePlugin(plugin) {
+  return plugin;
 }
 
 // packages/assets/src/secret-of-mana/som-boss-graphics.ts
@@ -11543,11 +11679,11 @@ function encodeBossGraphics(data) {
 
 // packages/assets/src/secret-of-mana/som-body-frame.ts
 var signed7 = (byte) => (byte & 63) - (byte & 64);
-function decodeBodyFrame(input) {
-  if (!Array.isArray(input) && !(input instanceof Uint8Array) || input.length < 2 || input.length > 157 || [...input].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
+function decodeBodyFrame(input2) {
+  if (!Array.isArray(input2) && !(input2 instanceof Uint8Array) || input2.length < 2 || input2.length > 157 || [...input2].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
     throw new Error("Invalid bounded body frame bytes.");
   }
-  const bytes = Uint8Array.from(input);
+  const bytes = Uint8Array.from(input2);
   const groups = bytes[0] & 15 || 1;
   const tileOffsets = [];
   let offset = 1;
@@ -11759,20 +11895,20 @@ function isSpritePaletteCatalog(value) {
   const palettes = value.palettes;
   return value.version === 1 && typeof palettes === "object" && palettes !== null;
 }
-function paletteRecord(catalog, id) {
-  if (!isSpritePaletteCatalog(catalog) || typeof id !== "string") {
+function paletteRecord(catalog, id2) {
+  if (!isSpritePaletteCatalog(catalog) || typeof id2 !== "string") {
     throw new Error("Palette catalogue requires version 1 palette records.");
   }
-  const palette = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
-  if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) || !Array.isArray(palette.words) || palette.words.length < 1 || palette.words.length > 256 || palette.words.some((word) => typeof word !== "string" || !/^[\dA-Fa-f]{4}$/.test(word))) {
-    throw new Error(`Unknown or invalid ROM palette ${id}.`);
+  const palette = Object.hasOwn(catalog.palettes, id2) ? catalog.palettes[id2] : void 0;
+  if (!palette || palette.romAddress !== id2 || ![0, 1].includes(palette.firstIndex) || !Array.isArray(palette.words) || palette.words.length < 1 || palette.words.length > 256 || palette.words.some((word) => typeof word !== "string" || !/^[\dA-Fa-f]{4}$/.test(word))) {
+    throw new Error(`Unknown or invalid ROM palette ${id2}.`);
   }
   return palette;
 }
-function spritePaletteColors(catalog, id) {
-  const palette = paletteRecord(catalog, id);
+function spritePaletteColors(catalog, id2) {
+  const palette = paletteRecord(catalog, id2);
   if (palette.words.length !== 16 - palette.firstIndex) {
-    throw new Error(`Frame sprite palette ${id} needs sixteen display slots.`);
+    throw new Error(`Frame sprite palette ${id2} needs sixteen display slots.`);
   }
   const colors = [[0, 0, 0, 0]];
   for (let index = 1; index < 16; index++) {
@@ -11787,11 +11923,11 @@ function spritePaletteColors(catalog, id) {
   }
   return colors;
 }
-function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
-  const record = paletteRecord(catalog, id);
+function spritePaletteBytes(catalog, id2, { wordOffset = 0, wordCount } = {}) {
+  const record = paletteRecord(catalog, id2);
   const count = wordCount ?? record.words.length - wordOffset;
   if (!Number.isSafeInteger(wordOffset) || !Number.isSafeInteger(count) || wordOffset < 0 || count < 1 || wordOffset + count > record.words.length) {
-    throw new Error(`Invalid ROM palette word slice ${id}.`);
+    throw new Error(`Invalid ROM palette word slice ${id2}.`);
   }
   const words = record.words.slice(wordOffset, wordOffset + count);
   const bytes = new Uint8Array(words.length * 2);
@@ -11804,8 +11940,8 @@ function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
 }
 function validateSpritePaletteAliases(catalog) {
   const words = /* @__PURE__ */ new Map();
-  for (const id of Object.keys(catalog.palettes)) {
-    const record = paletteRecord(catalog, id), start = Number.parseInt(id, 16);
+  for (const id2 of Object.keys(catalog.palettes)) {
+    const record = paletteRecord(catalog, id2), start = Number.parseInt(id2, 16);
     for (const [index, raw] of record.words.entries()) {
       const address = start + index * 2, word = raw.toUpperCase();
       if (words.has(address) && words.get(address) !== word) {
@@ -11817,8 +11953,8 @@ function validateSpritePaletteAliases(catalog) {
     }
   }
 }
-function spritePalettePreview(catalog, id) {
-  const palette = paletteRecord(catalog, id);
+function spritePalettePreview(catalog, id2) {
+  const palette = paletteRecord(catalog, id2);
   const colors = palette.words.map((raw) => {
     const word = Number.parseInt(raw, 16);
     return [
@@ -11833,7 +11969,7 @@ function spritePalettePreview(catalog, id) {
   }
   const columns = palette.previewColumns ?? Math.min(4, colors.length);
   if (!Number.isSafeInteger(columns) || columns < 1 || columns > 16) {
-    throw new Error(`ROM palette ${id} has invalid preview columns.`);
+    throw new Error(`ROM palette ${id2} has invalid preview columns.`);
   }
   const rows = Math.ceil(colors.length / columns);
   const width = columns * 9 + 1;
@@ -12073,13 +12209,23 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   return layout2;
 }
+function bindFrameAtlasPalette(source, layout2, catalog) {
+  inspectFrameAtlas(source, layout2, catalog, { whole: true });
+  if (layout2.indexPalette) {
+    return { ...layout2, indexPalette: layout2.indexPalette.map((color) => [...color]) };
+  }
+  return {
+    ...layout2,
+    indexPalette: layout2.paletteRefs.flatMap((id2) => spritePaletteColors(catalog, id2))
+  };
+}
 function inspectFrameAtlas(source, layout2, catalog, options = {}) {
   validateFrameLayout(layout2, options);
   let image = readIndexedImage(pngImporter.import(source).value);
   if (image.width !== layout2.width || image.height !== layout2.height) {
     throw new Error("Frame atlas must be an indexed PNG with the layout's exact dimensions.");
   }
-  const colors = layout2.paletteRefs.flatMap((id) => spritePaletteColors(catalog, id));
+  const colors = layout2.paletteRefs.flatMap((id2) => spritePaletteColors(catalog, id2));
   if (!image.palette[layout2.guideIndex]) {
     throw new Error("Frame atlas is missing its guide index.");
   }
@@ -12185,11 +12331,11 @@ function encodeInspectedFrameSegments(inspected, selection) {
   const chunks = frameAtlasSegmentOrder(inspected.layout, selection).map(
     (name) => encodeInspectedFrameSegment(inspected, name)
   );
-  const bytes = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0));
+  const bytes = new Uint8Array(chunks.reduce((size, chunk2) => size + chunk2.length, 0));
   let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
+  for (const chunk2 of chunks) {
+    bytes.set(chunk2, offset);
+    offset += chunk2.length;
   }
   return bytes;
 }
@@ -12226,7 +12372,6 @@ function readFrameLayout(options, resources) {
 }
 
 // packages/assets/src/secret-of-mana/som-lz.ts
-import assert from "node:assert/strict";
 var LZ_HEADER_BYTES = 4;
 var LZ_COPY_FLAG = 128;
 var LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
@@ -12237,39 +12382,39 @@ var LZ_MAX_OUTPUT_BYTES = 65535;
 var MATCH_CANDIDATE_LIMIT = 128;
 var DISTANCE_MASKS = [31, 15, 7, 3, 1, 0];
 function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTES) {
-  assert(source instanceof Uint8Array, "Expected byte input.");
-  assert(
+  invariant(source instanceof Uint8Array, "Expected byte input.");
+  invariant(
     Number.isSafeInteger(offset) && offset >= 0 && offset + LZ_HEADER_BYTES <= source.length,
     "Truncated LZ header."
   );
-  assert(Number.isSafeInteger(maxOutputBytes) && maxOutputBytes >= 0, "Invalid LZ output limit.");
+  invariant(Number.isSafeInteger(maxOutputBytes) && maxOutputBytes >= 0, "Invalid LZ output limit.");
   const mode = source[offset];
-  assert(mode < DISTANCE_MASKS.length, "Invalid LZ mode.");
+  invariant(mode < DISTANCE_MASKS.length, "Invalid LZ mode.");
   const mask = DISTANCE_MASKS[mode];
   const size = source[offset + 2] << 8 | source[offset + 3];
-  assert(size <= maxOutputBytes, "LZ decoded size exceeds output limit.");
+  invariant(size <= maxOutputBytes, "LZ decoded size exceeds output limit.");
   const data = new Uint8Array(size);
   let cursor = offset + LZ_HEADER_BYTES;
   let written = 0;
   let literalRuns = 0;
   let copyRuns = 0;
   while (written < size) {
-    assert(cursor < source.length, "Truncated LZ token.");
+    invariant(cursor < source.length, "Truncated LZ token.");
     const token = source[cursor++];
     if (token < LZ_COPY_FLAG) {
       const length = token + 1;
-      assert(cursor + length <= source.length, "Truncated LZ literal.");
-      assert(written + length <= size, "LZ literal exceeds declared output size.");
+      invariant(cursor + length <= source.length, "Truncated LZ literal.");
+      invariant(written + length <= size, "LZ literal exceeds declared output size.");
       data.set(source.subarray(cursor, cursor + length), written);
       cursor += length;
       written += length;
       literalRuns++;
     } else {
-      assert(cursor < source.length, "Truncated LZ distance.");
+      invariant(cursor < source.length, "Truncated LZ distance.");
       const distance = ((token & mask) << 8) + source[cursor++] + 1;
       const length = Math.floor((token & LZ_TOKEN_PAYLOAD_MASK) / (mask + 1)) + LZ_MIN_COPY_BYTES;
-      assert(distance <= written, "LZ reference precedes output.");
-      assert(written + length <= size, "LZ copy exceeds declared output size.");
+      invariant(distance <= written, "LZ reference precedes output.");
+      invariant(written + length <= size, "LZ copy exceeds declared output size.");
       for (let i = 0; i < length; i++) {
         data[written] = data[written - distance];
         written++;
@@ -12288,23 +12433,23 @@ function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTE
   };
 }
 function assertLzOptions(options) {
-  assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
+  invariant(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
 }
 function compressSomLz(source, options = {}) {
-  assert(source instanceof Uint8Array, "Expected byte input.");
-  assert(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
+  invariant(source instanceof Uint8Array, "Expected byte input.");
+  invariant(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
   assertLzOptions(options);
-  assert(
+  invariant(
     Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)),
     "Unknown LZ option."
   );
   const selected = options.mode ?? "auto";
   const header = options.unusedHeaderByte ?? 0;
   if (selected !== "auto" && !(typeof selected === "number" && Number.isInteger(selected) && selected >= 0 && selected < DISTANCE_MASKS.length)) {
-    assert(false, "Invalid LZ mode.");
+    invariant(false, "Invalid LZ mode.");
   }
   if (typeof header !== "number" || !Number.isInteger(header) || header < 0 || header > 255) {
-    assert(false, "Invalid unused LZ header byte.");
+    invariant(false, "Invalid unused LZ header byte.");
   }
   const mode = selected === "auto" ? "auto" : selected;
   const unusedHeaderByte = header;
@@ -12316,7 +12461,7 @@ function compressSomLz(source, options = {}) {
       best = encoded;
     }
   }
-  assert(best, "LZ encoder produced no candidate.");
+  invariant(best, "LZ encoder produced no candidate.");
   return best;
 }
 function encodeMode(source, mode, unusedHeaderByte) {
@@ -12406,8 +12551,4188 @@ function encodeMode(source, mode, unusedHeaderByte) {
   return Uint8Array.from(output);
 }
 
-// packages/assets/src/secret-of-mana/som-room-assets.ts
-import assert2 from "node:assert/strict";
+// packages/assets/src/secret-of-mana/som-boss-image.ts
+var registry = new AssetRegistry().registerImporter(pngImporter);
+for (const encoder of withImageEncoders(snesNativeEncoders)) {
+  registry.registerEncoder(encoder);
+}
+function nativeBossChunk(png, wanted = "soMz") {
+  const image = readAssetPng(png);
+  let native;
+  for (const { type, data } of image.chunks) {
+    if (type === wanted) {
+      if (native) {
+        throw new Error("Duplicate native boss graphics PNG chunk.");
+      }
+      native = Uint8Array.from(data);
+    }
+  }
+  return native;
+}
+function decodeBossStream(native, storage, size) {
+  let intermediate = native;
+  let mode;
+  let unusedHeaderByte;
+  if (storage === "lz-rle") {
+    const decoded = decompressSomLz(native);
+    if (decoded.compressedBytes !== native.length) {
+      throw new Error("Boss LZ stream has trailing bytes.");
+    }
+    intermediate = decoded.data;
+    mode = decoded.mode;
+    unusedHeaderByte = decoded.unusedHeaderByte;
+  }
+  const expanded = expandBossGraphics(intermediate, size);
+  if (expanded.consumed !== intermediate.length) {
+    throw new Error("Boss mask stream has trailing bytes.");
+  }
+  return { bytes: expanded.data, mode, unusedHeaderByte };
+}
+function convertBossImage(source, options, resources = {}, normalized) {
+  const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
+  if (storage !== "lz-rle" && storage !== "rle") {
+    throw new Error("Boss storage must be lz-rle or rle.");
+  }
+  if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
+    throw new Error("Boss byteLength must be a positive integer.");
+  }
+  if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
+    throw new Error("Boss sizePolicy must be fixed or encoded.");
+  }
+  const layout2 = normalized?.layout ?? (options.layout ? readFrameLayout(options, resources) : void 0);
+  const catalog = normalized?.catalog ?? (options.layout ? readSpritePaletteCatalog(options, resources) : void 0);
+  let pixels;
+  let segmentName;
+  if (layout2) {
+    if (typeof options.segment !== "string") {
+      throw new Error("Frame atlas segment is required.");
+    }
+    segmentName = options.segment;
+    pixels = encodeFrameAtlas(source, layout2, segmentName, catalog);
+  } else {
+    pixels = convertAsset(registry, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
+  }
+  const segmentIndex = segmentName ? Object.keys(layout2?.segments ?? {}).indexOf(segmentName) : -1;
+  if (segmentIndex > 25) {
+    throw new Error("Boss atlas supports at most 26 native segments.");
+  }
+  const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
+  let original;
+  if (options.native !== void 0) {
+    if (typeof options.native !== "string" || !options.native) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    const nativeResource = Object.hasOwn(resources, options.native) ? resources[options.native] : void 0;
+    if (!nativeResource) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    original = nativeResource.bytes;
+  } else {
+    original = nativeBossChunk(source.bytes, chunkName);
+  }
+  if (original) {
+    if (original.length !== byteLength) {
+      throw new Error("Boss native data has the wrong byte length.");
+    }
+    const decoded = decodeBossStream(original, storage, pixels.length);
+    if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
+      return { primaryOutput: "graphics", outputs: { graphics: { bytes: original } } };
+    }
+  }
+  const intermediate = encodeBossGraphics(pixels);
+  let encoded = intermediate;
+  if (storage === "lz-rle") {
+    const selectedMode = original ? original[0] : mode;
+    const selectedHeaderByte = original ? original[1] : unusedHeaderByte;
+    encoded = compressSomLz(intermediate, {
+      mode: selectedMode,
+      unusedHeaderByte: selectedHeaderByte
+    });
+  }
+  if (sizePolicy === "fixed" && encoded.length > byteLength) {
+    throw new Error(
+      "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
+    );
+  }
+  const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
+  if (verified.some((byte, index) => byte !== pixels[index])) {
+    throw new Error("Boss graphics inverse failed.");
+  }
+  if (sizePolicy === "encoded") {
+    return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
+  }
+  const padded = new Uint8Array(byteLength);
+  padded.set(encoded);
+  if (original) {
+    padded.set(original.subarray(encoded.length), encoded.length);
+  }
+  return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
+}
+
+// packages/assets/node_modules/pako/dist/pako.mjs
+var Z_FIXED2 = 4;
+var Z_BINARY2 = 0;
+var Z_TEXT2 = 1;
+var Z_UNKNOWN2 = 2;
+function zero$12(buf) {
+  let len = buf.length;
+  while (--len >= 0) buf[len] = 0;
+}
+var STORED_BLOCK2 = 0;
+var STATIC_TREES2 = 1;
+var DYN_TREES2 = 2;
+var LENGTH_CODES2 = 29;
+var LITERALS2 = 256;
+var L_CODES2 = 286;
+var D_CODES2 = 30;
+var BL_CODES2 = 19;
+var HEAP_SIZE$12 = 573;
+var MAX_BITS2 = 15;
+var Buf_size2 = 16;
+var END_BLOCK2 = 256;
+var REP_3_62 = 16;
+var REPZ_3_102 = 17;
+var REPZ_11_1382 = 18;
+var extra_lbits2 = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  2,
+  2,
+  3,
+  3,
+  3,
+  3,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  5,
+  0
+]);
+var extra_dbits2 = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  2,
+  2,
+  3,
+  3,
+  4,
+  4,
+  5,
+  5,
+  6,
+  6,
+  7,
+  7,
+  8,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  11,
+  12,
+  12,
+  13,
+  13
+]);
+var extra_blbits2 = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  2,
+  3,
+  7
+]);
+var bl_order2 = new Uint8Array([
+  16,
+  17,
+  18,
+  0,
+  8,
+  7,
+  9,
+  6,
+  10,
+  5,
+  11,
+  4,
+  12,
+  3,
+  13,
+  2,
+  14,
+  1,
+  15
+]);
+var DIST_CODE_LEN2 = 512;
+var static_ltree2 = new Array(288 * 2);
+zero$12(static_ltree2);
+var static_dtree2 = new Array(D_CODES2 * 2);
+zero$12(static_dtree2);
+var _dist_code2 = new Array(DIST_CODE_LEN2);
+zero$12(_dist_code2);
+var _length_code2 = new Array(256);
+zero$12(_length_code2);
+var base_length2 = new Array(LENGTH_CODES2);
+zero$12(base_length2);
+var base_dist2 = new Array(D_CODES2);
+zero$12(base_dist2);
+var d_code2 = (dist) => {
+  return dist < 256 ? _dist_code2[dist] : _dist_code2[256 + (dist >>> 7)];
+};
+var put_short2 = (s, w) => {
+  s.pending_buf[s.pending++] = w & 255;
+  s.pending_buf[s.pending++] = w >>> 8 & 255;
+};
+var send_bits2 = (s, value, length) => {
+  if (s.bi_valid > Buf_size2 - length) {
+    s.bi_buf |= value << s.bi_valid & 65535;
+    put_short2(s, s.bi_buf);
+    s.bi_buf = value >> Buf_size2 - s.bi_valid;
+    s.bi_valid += length - Buf_size2;
+  } else {
+    s.bi_buf |= value << s.bi_valid & 65535;
+    s.bi_valid += length;
+  }
+};
+var send_code2 = (s, c, tree) => {
+  send_bits2(s, tree[c * 2], tree[c * 2 + 1]);
+};
+var bi_reverse2 = (code, len) => {
+  let res = 0;
+  do {
+    res |= code & 1;
+    code >>>= 1;
+    res <<= 1;
+  } while (--len > 0);
+  return res >>> 1;
+};
+var gen_bitlen2 = (s, desc) => {
+  const tree = desc.dyn_tree;
+  const max_code = desc.max_code;
+  const stree = desc.stat_desc.static_tree;
+  const has_stree = desc.stat_desc.has_stree;
+  const extra = desc.stat_desc.extra_bits;
+  const base = desc.stat_desc.extra_base;
+  const max_length = desc.stat_desc.max_length;
+  let h;
+  let n, m;
+  let bits;
+  let xbits;
+  let f;
+  let overflow = 0;
+  for (bits = 0; bits <= MAX_BITS2; bits++) s.bl_count[bits] = 0;
+  tree[s.heap[s.heap_max] * 2 + 1] = 0;
+  for (h = s.heap_max + 1; h < HEAP_SIZE$12; h++) {
+    n = s.heap[h];
+    bits = tree[tree[n * 2 + 1] * 2 + 1] + 1;
+    if (bits > max_length) {
+      bits = max_length;
+      overflow++;
+    }
+    tree[n * 2 + 1] = bits;
+    if (n > max_code) continue;
+    s.bl_count[bits]++;
+    xbits = 0;
+    if (n >= base) xbits = extra[n - base];
+    f = tree[n * 2];
+    s.opt_len += f * (bits + xbits);
+    if (has_stree) s.static_len += f * (stree[n * 2 + 1] + xbits);
+  }
+  if (overflow === 0) return;
+  do {
+    bits = max_length - 1;
+    while (s.bl_count[bits] === 0) bits--;
+    s.bl_count[bits]--;
+    s.bl_count[bits + 1] += 2;
+    s.bl_count[max_length]--;
+    overflow -= 2;
+  } while (overflow > 0);
+  for (bits = max_length; bits !== 0; bits--) {
+    n = s.bl_count[bits];
+    while (n !== 0) {
+      m = s.heap[--h];
+      if (m > max_code) continue;
+      if (tree[m * 2 + 1] !== bits) {
+        s.opt_len += (bits - tree[m * 2 + 1]) * tree[m * 2];
+        tree[m * 2 + 1] = bits;
+      }
+      n--;
+    }
+  }
+};
+var gen_codes2 = (tree, max_code, bl_count) => {
+  const next_code = new Array(16);
+  let code = 0;
+  let bits;
+  let n;
+  for (bits = 1; bits <= MAX_BITS2; bits++) {
+    code = code + bl_count[bits - 1] << 1;
+    next_code[bits] = code;
+  }
+  for (n = 0; n <= max_code; n++) {
+    let len = tree[n * 2 + 1];
+    if (len === 0) continue;
+    tree[n * 2] = bi_reverse2(next_code[len]++, len);
+  }
+};
+var init_block2 = (s) => {
+  let n;
+  for (n = 0; n < L_CODES2; n++) s.dyn_ltree[n * 2] = 0;
+  for (n = 0; n < D_CODES2; n++) s.dyn_dtree[n * 2] = 0;
+  for (n = 0; n < BL_CODES2; n++) s.bl_tree[n * 2] = 0;
+  s.dyn_ltree[END_BLOCK2 * 2] = 1;
+  s.opt_len = s.static_len = 0;
+  s.sym_next = s.matches = 0;
+};
+var bi_windup2 = (s) => {
+  if (s.bi_valid > 8) put_short2(s, s.bi_buf);
+  else if (s.bi_valid > 0) s.pending_buf[s.pending++] = s.bi_buf;
+  s.bi_buf = 0;
+  s.bi_valid = 0;
+};
+var smaller2 = (tree, n, m, depth) => {
+  const _n2 = n * 2;
+  const _m2 = m * 2;
+  return tree[_n2] < tree[_m2] || tree[_n2] === tree[_m2] && depth[n] <= depth[m];
+};
+var pqdownheap2 = (s, tree, k) => {
+  const v = s.heap[k];
+  let j = k << 1;
+  while (j <= s.heap_len) {
+    if (j < s.heap_len && smaller2(tree, s.heap[j + 1], s.heap[j], s.depth)) j++;
+    if (smaller2(tree, v, s.heap[j], s.depth)) break;
+    s.heap[k] = s.heap[j];
+    k = j;
+    j <<= 1;
+  }
+  s.heap[k] = v;
+};
+var compress_block2 = (s, ltree, dtree) => {
+  let dist;
+  let lc;
+  let sx = 0;
+  let code;
+  let extra;
+  if (s.sym_next !== 0) do {
+    dist = s.pending_buf[s.sym_buf + sx++] & 255;
+    dist += (s.pending_buf[s.sym_buf + sx++] & 255) << 8;
+    lc = s.pending_buf[s.sym_buf + sx++];
+    if (dist === 0) send_code2(s, lc, ltree);
+    else {
+      code = _length_code2[lc];
+      send_code2(s, code + LITERALS2 + 1, ltree);
+      extra = extra_lbits2[code];
+      if (extra !== 0) {
+        lc -= base_length2[code];
+        send_bits2(s, lc, extra);
+      }
+      dist--;
+      code = d_code2(dist);
+      send_code2(s, code, dtree);
+      extra = extra_dbits2[code];
+      if (extra !== 0) {
+        dist -= base_dist2[code];
+        send_bits2(s, dist, extra);
+      }
+    }
+  } while (sx < s.sym_next);
+  send_code2(s, END_BLOCK2, ltree);
+};
+var build_tree2 = (s, desc) => {
+  const tree = desc.dyn_tree;
+  const stree = desc.stat_desc.static_tree;
+  const has_stree = desc.stat_desc.has_stree;
+  const elems = desc.stat_desc.elems;
+  let n, m;
+  let max_code = -1;
+  let node;
+  s.heap_len = 0;
+  s.heap_max = HEAP_SIZE$12;
+  for (n = 0; n < elems; n++) if (tree[n * 2] !== 0) {
+    s.heap[++s.heap_len] = max_code = n;
+    s.depth[n] = 0;
+  } else tree[n * 2 + 1] = 0;
+  while (s.heap_len < 2) {
+    node = s.heap[++s.heap_len] = max_code < 2 ? ++max_code : 0;
+    tree[node * 2] = 1;
+    s.depth[node] = 0;
+    s.opt_len--;
+    if (has_stree) s.static_len -= stree[node * 2 + 1];
+  }
+  desc.max_code = max_code;
+  for (n = s.heap_len >> 1; n >= 1; n--) pqdownheap2(s, tree, n);
+  node = elems;
+  do {
+    n = s.heap[1];
+    s.heap[1] = s.heap[s.heap_len--];
+    pqdownheap2(s, tree, 1);
+    m = s.heap[1];
+    s.heap[--s.heap_max] = n;
+    s.heap[--s.heap_max] = m;
+    tree[node * 2] = tree[n * 2] + tree[m * 2];
+    s.depth[node] = (s.depth[n] >= s.depth[m] ? s.depth[n] : s.depth[m]) + 1;
+    tree[n * 2 + 1] = tree[m * 2 + 1] = node;
+    s.heap[1] = node++;
+    pqdownheap2(s, tree, 1);
+  } while (s.heap_len >= 2);
+  s.heap[--s.heap_max] = s.heap[1];
+  gen_bitlen2(s, desc);
+  gen_codes2(tree, max_code, s.bl_count);
+};
+var scan_tree2 = (s, tree, max_code) => {
+  let n;
+  let prevlen = -1;
+  let curlen;
+  let nextlen = tree[1];
+  let count = 0;
+  let max_count = 7;
+  let min_count = 4;
+  if (nextlen === 0) {
+    max_count = 138;
+    min_count = 3;
+  }
+  tree[(max_code + 1) * 2 + 1] = 65535;
+  for (n = 0; n <= max_code; n++) {
+    curlen = nextlen;
+    nextlen = tree[(n + 1) * 2 + 1];
+    if (++count < max_count && curlen === nextlen) continue;
+    else if (count < min_count) s.bl_tree[curlen * 2] += count;
+    else if (curlen !== 0) {
+      if (curlen !== prevlen) s.bl_tree[curlen * 2]++;
+      s.bl_tree[REP_3_62 * 2]++;
+    } else if (count <= 10) s.bl_tree[REPZ_3_102 * 2]++;
+    else s.bl_tree[REPZ_11_1382 * 2]++;
+    count = 0;
+    prevlen = curlen;
+    if (nextlen === 0) {
+      max_count = 138;
+      min_count = 3;
+    } else if (curlen === nextlen) {
+      max_count = 6;
+      min_count = 3;
+    } else {
+      max_count = 7;
+      min_count = 4;
+    }
+  }
+};
+var send_tree2 = (s, tree, max_code) => {
+  let n;
+  let prevlen = -1;
+  let curlen;
+  let nextlen = tree[1];
+  let count = 0;
+  let max_count = 7;
+  let min_count = 4;
+  if (nextlen === 0) {
+    max_count = 138;
+    min_count = 3;
+  }
+  for (n = 0; n <= max_code; n++) {
+    curlen = nextlen;
+    nextlen = tree[(n + 1) * 2 + 1];
+    if (++count < max_count && curlen === nextlen) continue;
+    else if (count < min_count) do
+      send_code2(s, curlen, s.bl_tree);
+    while (--count !== 0);
+    else if (curlen !== 0) {
+      if (curlen !== prevlen) {
+        send_code2(s, curlen, s.bl_tree);
+        count--;
+      }
+      send_code2(s, REP_3_62, s.bl_tree);
+      send_bits2(s, count - 3, 2);
+    } else if (count <= 10) {
+      send_code2(s, REPZ_3_102, s.bl_tree);
+      send_bits2(s, count - 3, 3);
+    } else {
+      send_code2(s, REPZ_11_1382, s.bl_tree);
+      send_bits2(s, count - 11, 7);
+    }
+    count = 0;
+    prevlen = curlen;
+    if (nextlen === 0) {
+      max_count = 138;
+      min_count = 3;
+    } else if (curlen === nextlen) {
+      max_count = 6;
+      min_count = 3;
+    } else {
+      max_count = 7;
+      min_count = 4;
+    }
+  }
+};
+var build_bl_tree2 = (s) => {
+  let max_blindex;
+  scan_tree2(s, s.dyn_ltree, s.l_desc.max_code);
+  scan_tree2(s, s.dyn_dtree, s.d_desc.max_code);
+  build_tree2(s, s.bl_desc);
+  for (max_blindex = BL_CODES2 - 1; max_blindex >= 3; max_blindex--) if (s.bl_tree[bl_order2[max_blindex] * 2 + 1] !== 0) break;
+  s.opt_len += 3 * (max_blindex + 1) + 5 + 5 + 4;
+  return max_blindex;
+};
+var send_all_trees2 = (s, lcodes, dcodes, blcodes) => {
+  let rank2;
+  send_bits2(s, lcodes - 257, 5);
+  send_bits2(s, dcodes - 1, 5);
+  send_bits2(s, blcodes - 4, 4);
+  for (rank2 = 0; rank2 < blcodes; rank2++) send_bits2(s, s.bl_tree[bl_order2[rank2] * 2 + 1], 3);
+  send_tree2(s, s.dyn_ltree, lcodes - 1);
+  send_tree2(s, s.dyn_dtree, dcodes - 1);
+};
+var detect_data_type2 = (s) => {
+  let block_mask = 4093624447;
+  let n;
+  for (n = 0; n <= 31; n++, block_mask >>>= 1) if (block_mask & 1 && s.dyn_ltree[n * 2] !== 0) return Z_BINARY2;
+  if (s.dyn_ltree[18] !== 0 || s.dyn_ltree[20] !== 0 || s.dyn_ltree[26] !== 0) return Z_TEXT2;
+  for (n = 32; n < LITERALS2; n++) if (s.dyn_ltree[n * 2] !== 0) return Z_TEXT2;
+  return Z_BINARY2;
+};
+var _tr_stored_block2 = (s, buf, stored_len, last) => {
+  send_bits2(s, (STORED_BLOCK2 << 1) + (last ? 1 : 0), 3);
+  bi_windup2(s);
+  put_short2(s, stored_len);
+  put_short2(s, ~stored_len);
+  if (stored_len) s.pending_buf.set(s.window.subarray(buf, buf + stored_len), s.pending);
+  s.pending += stored_len;
+};
+var _tr_flush_block2 = (s, buf, stored_len, last) => {
+  let opt_lenb, static_lenb;
+  let max_blindex = 0;
+  if (s.level > 0) {
+    if (s.strm.data_type === Z_UNKNOWN2) s.strm.data_type = detect_data_type2(s);
+    build_tree2(s, s.l_desc);
+    build_tree2(s, s.d_desc);
+    max_blindex = build_bl_tree2(s);
+    opt_lenb = s.opt_len + 3 + 7 >>> 3;
+    static_lenb = s.static_len + 3 + 7 >>> 3;
+    if (static_lenb <= opt_lenb || s.strategy === Z_FIXED2) opt_lenb = static_lenb;
+  } else opt_lenb = static_lenb = stored_len + 5;
+  if (stored_len + 4 <= opt_lenb && buf !== -1) _tr_stored_block2(s, buf, stored_len, last);
+  else if (s.strategy === Z_FIXED2 || static_lenb === opt_lenb) {
+    send_bits2(s, (STATIC_TREES2 << 1) + (last ? 1 : 0), 3);
+    compress_block2(s, static_ltree2, static_dtree2);
+  } else {
+    send_bits2(s, (DYN_TREES2 << 1) + (last ? 1 : 0), 3);
+    send_all_trees2(s, s.l_desc.max_code + 1, s.d_desc.max_code + 1, max_blindex + 1);
+    compress_block2(s, s.dyn_ltree, s.dyn_dtree);
+  }
+  init_block2(s);
+  if (last) bi_windup2(s);
+};
+var _tr_tally2 = (s, dist, lc) => {
+  s.pending_buf[s.sym_buf + s.sym_next++] = dist;
+  s.pending_buf[s.sym_buf + s.sym_next++] = dist >> 8;
+  s.pending_buf[s.sym_buf + s.sym_next++] = lc;
+  if (dist === 0) s.dyn_ltree[lc * 2]++;
+  else {
+    s.matches++;
+    dist--;
+    s.dyn_ltree[(_length_code2[lc] + LITERALS2 + 1) * 2]++;
+    s.dyn_dtree[d_code2(dist) * 2]++;
+  }
+  return s.sym_next === s.sym_end;
+};
+var adler322 = (adler, buf, len, pos) => {
+  let s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
+  while (len !== 0) {
+    n = len > 2e3 ? 2e3 : len;
+    len -= n;
+    do {
+      s1 = s1 + buf[pos++] | 0;
+      s2 = s2 + s1 | 0;
+    } while (--n);
+    s1 %= 65521;
+    s2 %= 65521;
+  }
+  return s1 | s2 << 16 | 0;
+};
+var makeTable2 = () => {
+  let c, table = [];
+  for (var n = 0; n < 256; n++) {
+    c = n;
+    for (var k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+    table[n] = c;
+  }
+  return table;
+};
+var crcTable2 = new Uint32Array(makeTable2());
+var crc322 = (crc, buf, len, pos) => {
+  const t = crcTable2;
+  const end = pos + len;
+  crc ^= -1;
+  for (let i = pos; i < end; i++) crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
+  return crc ^ -1;
+};
+var messages_default2 = {
+  2: "need dictionary",
+  1: "stream end",
+  0: "",
+  "-1": "file error",
+  "-2": "stream error",
+  "-3": "data error",
+  "-4": "insufficient memory",
+  "-5": "buffer error",
+  "-6": "incompatible version"
+};
+var MIN_MATCH2 = 3;
+var MAX_MATCH2 = 258;
+var MIN_LOOKAHEAD2 = 262;
+var BS_NEED_MORE2 = 1;
+var BS_BLOCK_DONE2 = 2;
+var BS_FINISH_STARTED2 = 3;
+var BS_FINISH_DONE2 = 4;
+var slide_hash2 = (s) => {
+  let n, m;
+  let p;
+  let wsize = s.w_size;
+  n = s.hash_size;
+  p = n;
+  do {
+    m = s.head[--p];
+    s.head[p] = m >= wsize ? m - wsize : 0;
+  } while (--n);
+  n = wsize;
+  p = n;
+  do {
+    m = s.prev[--p];
+    s.prev[p] = m >= wsize ? m - wsize : 0;
+  } while (--n);
+};
+var HASH2 = (s, prev, data) => (prev << s.hash_shift ^ data) & s.hash_mask;
+var INSERT_STRING2 = (s, str) => {
+  let h;
+  if (s.legacy_hash) h = s.ins_h = HASH2(s, s.ins_h, s.window[str + MIN_MATCH2 - 1]);
+  else {
+    const w = s.window;
+    const value = w[str] | w[str + 1] << 8 | w[str + 2] << 16 | w[str + 3] << 24;
+    h = s.ins_h = Math.imul(value, 66521) + 66521 >>> 16 & s.hash_mask;
+  }
+  const hash_head = s.prev[str & s.w_mask] = s.head[h];
+  s.head[h] = str;
+  return hash_head;
+};
+var flush_pending2 = (strm) => {
+  const s = strm.state;
+  let len = s.pending;
+  if (len > strm.avail_out) len = strm.avail_out;
+  if (len === 0) return;
+  strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len), strm.next_out);
+  strm.next_out += len;
+  s.pending_out += len;
+  strm.total_out += len;
+  strm.avail_out -= len;
+  s.pending -= len;
+  if (s.pending === 0) s.pending_out = 0;
+};
+var flush_block_only2 = (s, last) => {
+  _tr_flush_block2(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
+  s.block_start = s.strstart;
+  flush_pending2(s.strm);
+};
+var read_buf2 = (strm, buf, start, size) => {
+  let len = strm.avail_in;
+  if (len > size) len = size;
+  if (len === 0) return 0;
+  strm.avail_in -= len;
+  buf.set(strm.input.subarray(strm.next_in, strm.next_in + len), start);
+  if (strm.state.wrap === 1) strm.adler = adler322(strm.adler, buf, len, start);
+  else if (strm.state.wrap === 2) strm.adler = crc322(strm.adler, buf, len, start);
+  strm.next_in += len;
+  strm.total_in += len;
+  return len;
+};
+var longest_match2 = (s, cur_match) => {
+  let chain_length = s.max_chain_length;
+  let scan = s.strstart;
+  let match;
+  let len;
+  let best_len = s.prev_length;
+  let nice_match = s.nice_match;
+  const limit = s.strstart > s.w_size - MIN_LOOKAHEAD2 ? s.strstart - (s.w_size - MIN_LOOKAHEAD2) : 0;
+  const _win = s.window;
+  const wmask = s.w_mask;
+  const prev = s.prev;
+  const strend = s.strstart + MAX_MATCH2;
+  let scan_end1 = _win[scan + best_len - 1];
+  let scan_end = _win[scan + best_len];
+  if (s.prev_length >= s.good_match) chain_length >>= 2;
+  if (nice_match > s.lookahead) nice_match = s.lookahead;
+  do {
+    match = cur_match;
+    if (_win[match + best_len] !== scan_end || _win[match + best_len - 1] !== scan_end1 || _win[match] !== _win[scan] || _win[++match] !== _win[scan + 1]) continue;
+    scan += 2;
+    match++;
+    do
+      ;
+    while (_win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && scan < strend);
+    len = MAX_MATCH2 - (strend - scan);
+    scan = strend - MAX_MATCH2;
+    if (len > best_len) {
+      s.match_start = cur_match;
+      best_len = len;
+      if (len >= nice_match) break;
+      scan_end1 = _win[scan + best_len - 1];
+      scan_end = _win[scan + best_len];
+    }
+  } while ((cur_match = prev[cur_match & wmask]) > limit && --chain_length !== 0);
+  if (best_len <= s.lookahead) return best_len;
+  return s.lookahead;
+};
+var fill_window2 = (s) => {
+  const _w_size = s.w_size;
+  let n, more, str;
+  do {
+    more = s.window_size - s.lookahead - s.strstart;
+    if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD2)) {
+      s.window.set(s.window.subarray(_w_size, _w_size + _w_size - more), 0);
+      s.match_start -= _w_size;
+      s.strstart -= _w_size;
+      s.block_start -= _w_size;
+      if (s.insert > s.strstart) s.insert = s.strstart;
+      slide_hash2(s);
+      more += _w_size;
+    }
+    if (s.strm.avail_in === 0) break;
+    n = read_buf2(s.strm, s.window, s.strstart + s.lookahead, more);
+    s.lookahead += n;
+    if (!s.legacy_hash) {
+      if (s.lookahead + s.insert > MIN_MATCH2) {
+        str = s.strstart - s.insert;
+        while (s.insert) {
+          INSERT_STRING2(s, str);
+          str++;
+          s.insert--;
+          if (s.lookahead + s.insert <= MIN_MATCH2) break;
+        }
+      }
+    } else if (s.lookahead + s.insert >= MIN_MATCH2) {
+      str = s.strstart - s.insert;
+      s.ins_h = s.window[str];
+      s.ins_h = HASH2(s, s.ins_h, s.window[str + 1]);
+      while (s.insert) {
+        INSERT_STRING2(s, str);
+        str++;
+        s.insert--;
+        if (s.lookahead + s.insert < MIN_MATCH2) break;
+      }
+    }
+  } while (s.lookahead < MIN_LOOKAHEAD2 && s.strm.avail_in !== 0);
+};
+var deflate_stored2 = (s, flush) => {
+  let min_block = s.pending_buf_size - 5 > s.w_size ? s.w_size : s.pending_buf_size - 5;
+  let len, left, have, last = 0;
+  let used = s.strm.avail_in;
+  do {
+    len = 65535;
+    have = s.bi_valid + 42 >> 3;
+    if (s.strm.avail_out < have) break;
+    have = s.strm.avail_out - have;
+    left = s.strstart - s.block_start;
+    if (len > left + s.strm.avail_in) len = left + s.strm.avail_in;
+    if (len > have) len = have;
+    if (len < min_block && (len === 0 && flush !== 4 || flush === 0 || len !== left + s.strm.avail_in)) break;
+    last = flush === 4 && len === left + s.strm.avail_in ? 1 : 0;
+    _tr_stored_block2(s, 0, 0, last);
+    s.pending_buf[s.pending - 4] = len;
+    s.pending_buf[s.pending - 3] = len >> 8;
+    s.pending_buf[s.pending - 2] = ~len;
+    s.pending_buf[s.pending - 1] = ~len >> 8;
+    flush_pending2(s.strm);
+    if (left) {
+      if (left > len) left = len;
+      s.strm.output.set(s.window.subarray(s.block_start, s.block_start + left), s.strm.next_out);
+      s.strm.next_out += left;
+      s.strm.avail_out -= left;
+      s.strm.total_out += left;
+      s.block_start += left;
+      len -= left;
+    }
+    if (len) {
+      read_buf2(s.strm, s.strm.output, s.strm.next_out, len);
+      s.strm.next_out += len;
+      s.strm.avail_out -= len;
+      s.strm.total_out += len;
+    }
+  } while (last === 0);
+  used -= s.strm.avail_in;
+  if (used) {
+    if (used >= s.w_size) {
+      s.matches = 2;
+      s.window.set(s.strm.input.subarray(s.strm.next_in - s.w_size, s.strm.next_in), 0);
+      s.strstart = s.w_size;
+      s.insert = s.strstart;
+    } else {
+      if (s.window_size - s.strstart <= used) {
+        s.strstart -= s.w_size;
+        s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+        if (s.matches < 2) s.matches++;
+        if (s.insert > s.strstart) s.insert = s.strstart;
+      }
+      s.window.set(s.strm.input.subarray(s.strm.next_in - used, s.strm.next_in), s.strstart);
+      s.strstart += used;
+      s.insert += used > s.w_size - s.insert ? s.w_size - s.insert : used;
+    }
+    s.block_start = s.strstart;
+  }
+  if (s.high_water < s.strstart) s.high_water = s.strstart;
+  if (last) return BS_FINISH_DONE2;
+  if (flush !== 0 && flush !== 4 && s.strm.avail_in === 0 && s.strstart === s.block_start) return BS_BLOCK_DONE2;
+  have = s.window_size - s.strstart;
+  if (s.strm.avail_in > have && s.block_start >= s.w_size) {
+    s.block_start -= s.w_size;
+    s.strstart -= s.w_size;
+    s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+    if (s.matches < 2) s.matches++;
+    have += s.w_size;
+    if (s.insert > s.strstart) s.insert = s.strstart;
+  }
+  if (have > s.strm.avail_in) have = s.strm.avail_in;
+  if (have) {
+    read_buf2(s.strm, s.window, s.strstart, have);
+    s.strstart += have;
+    s.insert += have > s.w_size - s.insert ? s.w_size - s.insert : have;
+  }
+  if (s.high_water < s.strstart) s.high_water = s.strstart;
+  have = s.bi_valid + 42 >> 3;
+  have = s.pending_buf_size - have > 65535 ? 65535 : s.pending_buf_size - have;
+  min_block = have > s.w_size ? s.w_size : have;
+  left = s.strstart - s.block_start;
+  if (left >= min_block || (left || flush === 4) && flush !== 0 && s.strm.avail_in === 0 && left <= have) {
+    len = left > have ? have : left;
+    last = flush === 4 && s.strm.avail_in === 0 && len === left ? 1 : 0;
+    _tr_stored_block2(s, s.block_start, len, last);
+    s.block_start += len;
+    flush_pending2(s.strm);
+  }
+  return last ? BS_FINISH_STARTED2 : BS_NEED_MORE2;
+};
+var deflate_fast2 = (s, flush) => {
+  let hash_head;
+  let bflush;
+  for (; ; ) {
+    if (s.lookahead < MIN_LOOKAHEAD2) {
+      fill_window2(s);
+      if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
+      if (s.lookahead === 0) break;
+    }
+    hash_head = 0;
+    if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
+    if (hash_head !== 0 && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) s.match_length = longest_match2(s, hash_head);
+    if (s.match_length >= MIN_MATCH2) {
+      bflush = _tr_tally2(s, s.strstart - s.match_start, s.match_length - MIN_MATCH2);
+      s.lookahead -= s.match_length;
+      if (s.match_length <= s.max_lazy_match && s.lookahead >= MIN_MATCH2) {
+        s.match_length--;
+        do {
+          s.strstart++;
+          hash_head = INSERT_STRING2(s, s.strstart);
+        } while (--s.match_length !== 0);
+        s.strstart++;
+      } else {
+        s.strstart += s.match_length;
+        s.match_length = 0;
+        if (s.legacy_hash) {
+          s.ins_h = s.window[s.strstart];
+          s.ins_h = HASH2(s, s.ins_h, s.window[s.strstart + 1]);
+        }
+      }
+    } else {
+      bflush = _tr_tally2(s, 0, s.window[s.strstart]);
+      s.lookahead--;
+      s.strstart++;
+    }
+    if (bflush) {
+      flush_block_only2(s, false);
+      if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+    }
+  }
+  s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
+  if (flush === 4) {
+    flush_block_only2(s, true);
+    if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
+    return BS_FINISH_DONE2;
+  }
+  if (s.sym_next) {
+    flush_block_only2(s, false);
+    if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+  }
+  return BS_BLOCK_DONE2;
+};
+var deflate_slow2 = (s, flush) => {
+  let hash_head;
+  let bflush;
+  let max_insert;
+  for (; ; ) {
+    if (s.lookahead < MIN_LOOKAHEAD2) {
+      fill_window2(s);
+      if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
+      if (s.lookahead === 0) break;
+    }
+    hash_head = 0;
+    if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
+    s.prev_length = s.match_length;
+    s.prev_match = s.match_start;
+    s.match_length = MIN_MATCH2 - 1;
+    if (hash_head !== 0 && s.prev_length < s.max_lazy_match && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) {
+      s.match_length = longest_match2(s, hash_head);
+      if (s.match_length <= 5 && (s.strategy === 1 || s.match_length === MIN_MATCH2 && s.strstart - s.match_start > 4096)) s.match_length = MIN_MATCH2 - 1;
+    }
+    if (s.prev_length >= MIN_MATCH2 && s.match_length <= s.prev_length) {
+      max_insert = s.strstart + s.lookahead - MIN_MATCH2;
+      bflush = _tr_tally2(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH2);
+      s.lookahead -= s.prev_length - 1;
+      s.prev_length -= 2;
+      do
+        if (++s.strstart <= max_insert) hash_head = INSERT_STRING2(s, s.strstart);
+      while (--s.prev_length !== 0);
+      s.match_available = 0;
+      s.match_length = MIN_MATCH2 - 1;
+      s.strstart++;
+      if (bflush) {
+        flush_block_only2(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+      }
+    } else if (s.match_available) {
+      bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
+      if (bflush)
+        flush_block_only2(s, false);
+      s.strstart++;
+      s.lookahead--;
+      if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+    } else {
+      s.match_available = 1;
+      s.strstart++;
+      s.lookahead--;
+    }
+  }
+  if (s.match_available) {
+    bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
+    s.match_available = 0;
+  }
+  s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
+  if (flush === 4) {
+    flush_block_only2(s, true);
+    if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
+    return BS_FINISH_DONE2;
+  }
+  if (s.sym_next) {
+    flush_block_only2(s, false);
+    if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+  }
+  return BS_BLOCK_DONE2;
+};
+var Config2 = class {
+  constructor(good_length, max_lazy, nice_length, max_chain, func) {
+    this.good_length = good_length;
+    this.max_lazy = max_lazy;
+    this.nice_length = nice_length;
+    this.max_chain = max_chain;
+    this.func = func;
+  }
+};
+var configuration_table2 = [
+  new Config2(0, 0, 0, 0, deflate_stored2),
+  new Config2(4, 4, 8, 4, deflate_fast2),
+  new Config2(4, 5, 16, 8, deflate_fast2),
+  new Config2(4, 6, 32, 32, deflate_fast2),
+  new Config2(4, 4, 16, 16, deflate_slow2),
+  new Config2(8, 16, 32, 32, deflate_slow2),
+  new Config2(8, 16, 128, 128, deflate_slow2),
+  new Config2(8, 32, 128, 256, deflate_slow2),
+  new Config2(32, 128, 258, 1024, deflate_slow2),
+  new Config2(32, 258, 258, 4096, deflate_slow2)
+];
+var BAD$12 = 16209;
+var TYPE$12 = 16191;
+function inflate_fast2(strm, start) {
+  let _in;
+  let last;
+  let _out;
+  let beg;
+  let end;
+  let dmax;
+  let wsize;
+  let whave;
+  let wnext;
+  let s_window;
+  let hold;
+  let bits;
+  let lcode;
+  let dcode;
+  let lmask;
+  let dmask;
+  let here;
+  let op;
+  let len;
+  let dist;
+  let from;
+  let from_source;
+  let input2, output;
+  const state = strm.state;
+  _in = strm.next_in;
+  input2 = strm.input;
+  last = _in + (strm.avail_in - 5);
+  _out = strm.next_out;
+  output = strm.output;
+  beg = _out - (start - strm.avail_out);
+  end = _out + (strm.avail_out - 257);
+  dmax = state.dmax;
+  wsize = state.wsize;
+  whave = state.whave;
+  wnext = state.wnext;
+  s_window = state.window;
+  hold = state.hold;
+  bits = state.bits;
+  lcode = state.lencode;
+  dcode = state.distcode;
+  lmask = (1 << state.lenbits) - 1;
+  dmask = (1 << state.distbits) - 1;
+  top: do {
+    if (bits < 15) {
+      hold += input2[_in++] << bits;
+      bits += 8;
+      hold += input2[_in++] << bits;
+      bits += 8;
+    }
+    here = lcode[hold & lmask];
+    dolen: for (; ; ) {
+      op = here >>> 24;
+      hold >>>= op;
+      bits -= op;
+      op = here >>> 16 & 255;
+      if (op === 0) output[_out++] = here & 65535;
+      else if (op & 16) {
+        len = here & 65535;
+        op &= 15;
+        if (op) {
+          if (bits < op) {
+            hold += input2[_in++] << bits;
+            bits += 8;
+          }
+          len += hold & (1 << op) - 1;
+          hold >>>= op;
+          bits -= op;
+        }
+        if (bits < 15) {
+          hold += input2[_in++] << bits;
+          bits += 8;
+          hold += input2[_in++] << bits;
+          bits += 8;
+        }
+        here = dcode[hold & dmask];
+        dodist: for (; ; ) {
+          op = here >>> 24;
+          hold >>>= op;
+          bits -= op;
+          op = here >>> 16 & 255;
+          if (op & 16) {
+            dist = here & 65535;
+            op &= 15;
+            if (bits < op) {
+              hold += input2[_in++] << bits;
+              bits += 8;
+              if (bits < op) {
+                hold += input2[_in++] << bits;
+                bits += 8;
+              }
+            }
+            dist += hold & (1 << op) - 1;
+            if (dist > dmax) {
+              strm.msg = "invalid distance too far back";
+              state.mode = BAD$12;
+              break top;
+            }
+            hold >>>= op;
+            bits -= op;
+            op = _out - beg;
+            if (dist > op) {
+              op = dist - op;
+              if (op > whave) {
+                if (state.sane) {
+                  strm.msg = "invalid distance too far back";
+                  state.mode = BAD$12;
+                  break top;
+                }
+              }
+              from = 0;
+              from_source = s_window;
+              if (wnext === 0) {
+                from += wsize - op;
+                if (op < len) {
+                  len -= op;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              } else if (wnext < op) {
+                from += wsize + wnext - op;
+                op -= wnext;
+                if (op < len) {
+                  len -= op;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op);
+                  from = 0;
+                  if (wnext < len) {
+                    op = wnext;
+                    len -= op;
+                    do
+                      output[_out++] = s_window[from++];
+                    while (--op);
+                    from = _out - dist;
+                    from_source = output;
+                  }
+                }
+              } else {
+                from += wnext - op;
+                if (op < len) {
+                  len -= op;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              }
+              while (len > 2) {
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                len -= 3;
+              }
+              if (len) {
+                output[_out++] = from_source[from++];
+                if (len > 1) output[_out++] = from_source[from++];
+              }
+            } else {
+              from = _out - dist;
+              do {
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                len -= 3;
+              } while (len > 2);
+              if (len) {
+                output[_out++] = output[from++];
+                if (len > 1) output[_out++] = output[from++];
+              }
+            }
+          } else if ((op & 64) === 0) {
+            here = dcode[(here & 65535) + (hold & (1 << op) - 1)];
+            continue dodist;
+          } else {
+            strm.msg = "invalid distance code";
+            state.mode = BAD$12;
+            break top;
+          }
+          break;
+        }
+      } else if ((op & 64) === 0) {
+        here = lcode[(here & 65535) + (hold & (1 << op) - 1)];
+        continue dolen;
+      } else if (op & 32) {
+        state.mode = TYPE$12;
+        break top;
+      } else {
+        strm.msg = "invalid literal/length code";
+        state.mode = BAD$12;
+        break top;
+      }
+      break;
+    }
+  } while (_in < last && _out < end);
+  len = bits >> 3;
+  _in -= len;
+  bits -= len << 3;
+  hold &= (1 << bits) - 1;
+  strm.next_in = _in;
+  strm.next_out = _out;
+  strm.avail_in = _in < last ? 5 + (last - _in) : 5 - (_in - last);
+  strm.avail_out = _out < end ? 257 + (end - _out) : 257 - (_out - end);
+  state.hold = hold;
+  state.bits = bits;
+}
+var MAXBITS2 = 15;
+var ENOUGH_LENS$12 = 852;
+var ENOUGH_DISTS$12 = 592;
+var CODES$12 = 0;
+var LENS$12 = 1;
+var DISTS$12 = 2;
+var lbase2 = new Uint16Array([
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  13,
+  15,
+  17,
+  19,
+  23,
+  27,
+  31,
+  35,
+  43,
+  51,
+  59,
+  67,
+  83,
+  99,
+  115,
+  131,
+  163,
+  195,
+  227,
+  258,
+  0,
+  0
+]);
+var lext2 = new Uint8Array([
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  17,
+  17,
+  17,
+  17,
+  18,
+  18,
+  18,
+  18,
+  19,
+  19,
+  19,
+  19,
+  20,
+  20,
+  20,
+  20,
+  21,
+  21,
+  21,
+  21,
+  16,
+  199,
+  75
+]);
+var dbase2 = new Uint16Array([
+  1,
+  2,
+  3,
+  4,
+  5,
+  7,
+  9,
+  13,
+  17,
+  25,
+  33,
+  49,
+  65,
+  97,
+  129,
+  193,
+  257,
+  385,
+  513,
+  769,
+  1025,
+  1537,
+  2049,
+  3073,
+  4097,
+  6145,
+  8193,
+  12289,
+  16385,
+  24577,
+  0,
+  0
+]);
+var dext2 = new Uint8Array([
+  16,
+  16,
+  16,
+  16,
+  17,
+  17,
+  18,
+  18,
+  19,
+  19,
+  20,
+  20,
+  21,
+  21,
+  22,
+  22,
+  23,
+  23,
+  24,
+  24,
+  25,
+  25,
+  26,
+  26,
+  27,
+  27,
+  28,
+  28,
+  29,
+  29,
+  64,
+  64
+]);
+var inflate_table2 = (type, lens, lens_index, codes, table, table_index, work, opts) => {
+  const bits = opts.bits;
+  let len = 0;
+  let sym = 0;
+  let min = 0, max = 0;
+  let root = 0;
+  let curr = 0;
+  let drop = 0;
+  let left = 0;
+  let used = 0;
+  let huff = 0;
+  let incr;
+  let fill;
+  let low;
+  let mask;
+  let next;
+  let base = null;
+  let match;
+  const count = /* @__PURE__ */ new Uint16Array(16);
+  const offs = /* @__PURE__ */ new Uint16Array(16);
+  let extra = null;
+  let here_bits, here_op, here_val;
+  for (len = 0; len <= MAXBITS2; len++) count[len] = 0;
+  for (sym = 0; sym < codes; sym++) count[lens[lens_index + sym]]++;
+  root = bits;
+  for (max = MAXBITS2; max >= 1; max--) if (count[max] !== 0) break;
+  if (root > max) root = max;
+  if (max === 0) {
+    table[table_index++] = 20971520;
+    table[table_index++] = 20971520;
+    opts.bits = 1;
+    return 0;
+  }
+  for (min = 1; min < max; min++) if (count[min] !== 0) break;
+  if (root < min) root = min;
+  left = 1;
+  for (len = 1; len <= MAXBITS2; len++) {
+    left <<= 1;
+    left -= count[len];
+    if (left < 0) return -1;
+  }
+  if (left > 0 && (type === CODES$12 || max !== 1)) return -1;
+  offs[1] = 0;
+  for (len = 1; len < MAXBITS2; len++) offs[len + 1] = offs[len] + count[len];
+  for (sym = 0; sym < codes; sym++) if (lens[lens_index + sym] !== 0) work[offs[lens[lens_index + sym]]++] = sym;
+  if (type === CODES$12) {
+    base = extra = work;
+    match = 20;
+  } else if (type === LENS$12) {
+    base = lbase2;
+    extra = lext2;
+    match = 257;
+  } else {
+    base = dbase2;
+    extra = dext2;
+    match = 0;
+  }
+  huff = 0;
+  sym = 0;
+  len = min;
+  next = table_index;
+  curr = root;
+  drop = 0;
+  low = -1;
+  used = 1 << root;
+  mask = used - 1;
+  if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
+  for (; ; ) {
+    here_bits = len - drop;
+    if (work[sym] + 1 < match) {
+      here_op = 0;
+      here_val = work[sym];
+    } else if (work[sym] >= match) {
+      here_op = extra[work[sym] - match];
+      here_val = base[work[sym] - match];
+    } else {
+      here_op = 96;
+      here_val = 0;
+    }
+    incr = 1 << len - drop;
+    fill = 1 << curr;
+    min = fill;
+    do {
+      fill -= incr;
+      table[next + (huff >> drop) + fill] = here_bits << 24 | here_op << 16 | here_val | 0;
+    } while (fill !== 0);
+    incr = 1 << len - 1;
+    while (huff & incr) incr >>= 1;
+    if (incr !== 0) {
+      huff &= incr - 1;
+      huff += incr;
+    } else huff = 0;
+    sym++;
+    if (--count[len] === 0) {
+      if (len === max) break;
+      len = lens[lens_index + work[sym]];
+    }
+    if (len > root && (huff & mask) !== low) {
+      if (drop === 0) drop = root;
+      next += min;
+      curr = len - drop;
+      left = 1 << curr;
+      while (curr + drop < max) {
+        left -= count[curr + drop];
+        if (left <= 0) break;
+        curr++;
+        left <<= 1;
+      }
+      used += 1 << curr;
+      if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
+      low = huff & mask;
+      table[low] = root << 24 | curr << 16 | next - table_index | 0;
+    }
+  }
+  if (huff !== 0) table[next + huff] = len - drop << 24 | 4194304;
+  opts.bits = root;
+  return 0;
+};
+var CODES2 = 0;
+var LENS2 = 1;
+var DISTS2 = 2;
+var HEAD2 = 16180;
+var FLAGS2 = 16181;
+var TIME2 = 16182;
+var OS2 = 16183;
+var EXLEN2 = 16184;
+var EXTRA2 = 16185;
+var NAME2 = 16186;
+var COMMENT2 = 16187;
+var HCRC2 = 16188;
+var DICTID2 = 16189;
+var DICT2 = 16190;
+var TYPE2 = 16191;
+var TYPEDO2 = 16192;
+var STORED2 = 16193;
+var COPY_2 = 16194;
+var COPY2 = 16195;
+var TABLE2 = 16196;
+var LENLENS2 = 16197;
+var CODELENS2 = 16198;
+var LEN_2 = 16199;
+var LEN2 = 16200;
+var LENEXT2 = 16201;
+var DIST2 = 16202;
+var DISTEXT2 = 16203;
+var MATCH2 = 16204;
+var LIT2 = 16205;
+var CHECK2 = 16206;
+var LENGTH2 = 16207;
+var DONE2 = 16208;
+var BAD2 = 16209;
+var MEM2 = 16210;
+var SYNC2 = 16211;
+var ENOUGH_LENS2 = 852;
+var ENOUGH_DISTS2 = 592;
+var zswap322 = (q) => {
+  return (q >>> 24 & 255) + (q >>> 8 & 65280) + ((q & 65280) << 8) + ((q & 255) << 24);
+};
+var InflateState2 = class {
+  constructor() {
+    this.strm = null;
+    this.mode = 0;
+    this.last = false;
+    this.wrap = 0;
+    this.havedict = false;
+    this.flags = 0;
+    this.dmax = 0;
+    this.check = 0;
+    this.total = 0;
+    this.head = null;
+    this.wbits = 0;
+    this.wsize = 0;
+    this.whave = 0;
+    this.wnext = 0;
+    this.window = null;
+    this.hold = 0;
+    this.bits = 0;
+    this.length = 0;
+    this.offset = 0;
+    this.extra = 0;
+    this.lencode = null;
+    this.distcode = null;
+    this.lenbits = 0;
+    this.distbits = 0;
+    this.ncode = 0;
+    this.nlen = 0;
+    this.ndist = 0;
+    this.have = 0;
+    this.next = null;
+    this.lens = /* @__PURE__ */ new Uint16Array(320);
+    this.work = /* @__PURE__ */ new Uint16Array(288);
+    this.lendyn = null;
+    this.distdyn = null;
+    this.sane = 0;
+    this.back = 0;
+    this.was = 0;
+  }
+};
+var inflateStateCheck2 = (strm) => {
+  if (!strm) return 1;
+  const state = strm.state;
+  if (!state || state.strm !== strm || state.mode < HEAD2 || state.mode > SYNC2) return 1;
+  return 0;
+};
+var inflateResetKeep2 = (strm) => {
+  if (inflateStateCheck2(strm)) return -2;
+  const state = strm.state;
+  strm.total_in = strm.total_out = state.total = 0;
+  strm.msg = "";
+  if (state.wrap) strm.adler = state.wrap & 1;
+  state.mode = HEAD2;
+  state.last = 0;
+  state.havedict = 0;
+  state.flags = -1;
+  state.dmax = 32768;
+  state.head = null;
+  state.hold = 0;
+  state.bits = 0;
+  state.lencode = state.lendyn = new Int32Array(ENOUGH_LENS2);
+  state.distcode = state.distdyn = new Int32Array(ENOUGH_DISTS2);
+  state.sane = 1;
+  state.back = -1;
+  return 0;
+};
+var inflateReset3 = (strm) => {
+  if (inflateStateCheck2(strm)) return -2;
+  const state = strm.state;
+  state.wsize = 0;
+  state.whave = 0;
+  state.wnext = 0;
+  return inflateResetKeep2(strm);
+};
+var inflateReset22 = (strm, windowBits) => {
+  let wrap;
+  if (inflateStateCheck2(strm)) return -2;
+  const state = strm.state;
+  if (windowBits < 0) {
+    wrap = 0;
+    windowBits = -windowBits;
+  } else {
+    wrap = (windowBits >> 4) + 5;
+    if (windowBits < 48) windowBits &= 15;
+  }
+  if (windowBits && (windowBits < 8 || windowBits > 15)) return -2;
+  if (state.window !== null && state.wbits !== windowBits) state.window = null;
+  state.wrap = wrap;
+  state.wbits = windowBits;
+  return inflateReset3(strm);
+};
+var inflateInit22 = (strm, windowBits) => {
+  if (!strm) return -2;
+  const state = new InflateState2();
+  strm.state = state;
+  state.strm = strm;
+  state.window = null;
+  state.mode = HEAD2;
+  const ret = inflateReset22(strm, windowBits);
+  if (ret !== 0) strm.state = null;
+  return ret;
+};
+var virgin2 = true;
+var lenfix2;
+var distfix2;
+var fixedtables2 = (state) => {
+  if (virgin2) {
+    lenfix2 = /* @__PURE__ */ new Int32Array(512);
+    distfix2 = /* @__PURE__ */ new Int32Array(32);
+    let sym = 0;
+    while (sym < 144) state.lens[sym++] = 8;
+    while (sym < 256) state.lens[sym++] = 9;
+    while (sym < 280) state.lens[sym++] = 7;
+    while (sym < 288) state.lens[sym++] = 8;
+    inflate_table2(LENS2, state.lens, 0, 288, lenfix2, 0, state.work, { bits: 9 });
+    sym = 0;
+    while (sym < 32) state.lens[sym++] = 5;
+    inflate_table2(DISTS2, state.lens, 0, 32, distfix2, 0, state.work, { bits: 5 });
+    virgin2 = false;
+  }
+  state.lencode = lenfix2;
+  state.lenbits = 9;
+  state.distcode = distfix2;
+  state.distbits = 5;
+};
+var updatewindow2 = (strm, src, end, copy) => {
+  let dist;
+  const state = strm.state;
+  if (state.window === null) state.window = new Uint8Array(1 << state.wbits);
+  if (state.wsize === 0) {
+    state.wsize = 1 << state.wbits;
+    state.wnext = 0;
+    state.whave = 0;
+  }
+  if (copy >= state.wsize) {
+    state.window.set(src.subarray(end - state.wsize, end), 0);
+    state.wnext = 0;
+    state.whave = state.wsize;
+  } else {
+    dist = state.wsize - state.wnext;
+    if (dist > copy) dist = copy;
+    state.window.set(src.subarray(end - copy, end - copy + dist), state.wnext);
+    copy -= dist;
+    if (copy) {
+      state.window.set(src.subarray(end - copy, end), 0);
+      state.wnext = copy;
+      state.whave = state.wsize;
+    } else {
+      state.wnext += dist;
+      if (state.wnext === state.wsize) state.wnext = 0;
+      if (state.whave < state.wsize) state.whave += dist;
+    }
+  }
+  return 0;
+};
+var inflate$12 = (strm, flush) => {
+  let state;
+  let input2, output;
+  let next;
+  let put;
+  let have, left;
+  let hold;
+  let bits;
+  let _in, _out;
+  let copy;
+  let from;
+  let from_source;
+  let here = 0;
+  let here_bits, here_op, here_val;
+  let last_bits, last_op, last_val;
+  let len;
+  let ret;
+  const hbuf = /* @__PURE__ */ new Uint8Array(4);
+  let opts;
+  let n;
+  const order = new Uint8Array([
+    16,
+    17,
+    18,
+    0,
+    8,
+    7,
+    9,
+    6,
+    10,
+    5,
+    11,
+    4,
+    12,
+    3,
+    13,
+    2,
+    14,
+    1,
+    15
+  ]);
+  if (inflateStateCheck2(strm) || !strm.output || !strm.input && strm.avail_in !== 0) return -2;
+  state = strm.state;
+  if (state.mode === TYPE2) state.mode = TYPEDO2;
+  put = strm.next_out;
+  output = strm.output;
+  left = strm.avail_out;
+  next = strm.next_in;
+  input2 = strm.input;
+  have = strm.avail_in;
+  hold = state.hold;
+  bits = state.bits;
+  _in = have;
+  _out = left;
+  ret = 0;
+  inf_leave: for (; ; ) switch (state.mode) {
+    case HEAD2:
+      if (state.wrap === 0) {
+        state.mode = TYPEDO2;
+        break;
+      }
+      while (bits < 16) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      if (state.wrap & 2 && hold === 35615) {
+        if (state.wbits === 0) state.wbits = 15;
+        state.check = 0;
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        state.check = crc322(state.check, hbuf, 2, 0);
+        hold = 0;
+        bits = 0;
+        state.mode = FLAGS2;
+        break;
+      }
+      if (state.head) state.head.done = false;
+      if (!(state.wrap & 1) || (((hold & 255) << 8) + (hold >> 8)) % 31) {
+        strm.msg = "incorrect header check";
+        state.mode = BAD2;
+        break;
+      }
+      if ((hold & 15) !== 8) {
+        strm.msg = "unknown compression method";
+        state.mode = BAD2;
+        break;
+      }
+      hold >>>= 4;
+      bits -= 4;
+      len = (hold & 15) + 8;
+      if (state.wbits === 0) state.wbits = len;
+      if (len > 15 || len > state.wbits) {
+        strm.msg = "invalid window size";
+        state.mode = BAD2;
+        break;
+      }
+      state.dmax = 1 << state.wbits;
+      state.flags = 0;
+      strm.adler = state.check = 1;
+      state.mode = hold & 512 ? DICTID2 : TYPE2;
+      hold = 0;
+      bits = 0;
+      break;
+    case FLAGS2:
+      while (bits < 16) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      state.flags = hold;
+      if ((state.flags & 255) !== 8) {
+        strm.msg = "unknown compression method";
+        state.mode = BAD2;
+        break;
+      }
+      if (state.flags & 57344) {
+        strm.msg = "unknown header flags set";
+        state.mode = BAD2;
+        break;
+      }
+      if (state.head) state.head.text = hold >> 8 & 1;
+      if (state.flags & 512 && state.wrap & 4) {
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        state.check = crc322(state.check, hbuf, 2, 0);
+      }
+      hold = 0;
+      bits = 0;
+      state.mode = TIME2;
+    case TIME2:
+      while (bits < 32) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      if (state.head) state.head.time = hold >>> 0;
+      if (state.flags & 512 && state.wrap & 4) {
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        hbuf[2] = hold >>> 16 & 255;
+        hbuf[3] = hold >>> 24 & 255;
+        state.check = crc322(state.check, hbuf, 4, 0);
+      }
+      hold = 0;
+      bits = 0;
+      state.mode = OS2;
+    case OS2:
+      while (bits < 16) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      if (state.head) {
+        state.head.xflags = hold & 255;
+        state.head.os = hold >> 8;
+      }
+      if (state.flags & 512 && state.wrap & 4) {
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        state.check = crc322(state.check, hbuf, 2, 0);
+      }
+      hold = 0;
+      bits = 0;
+      state.mode = EXLEN2;
+    case EXLEN2:
+      if (state.flags & 1024) {
+        while (bits < 16) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        state.length = hold;
+        if (state.head) state.head.extra_len = hold;
+        if (state.flags & 512 && state.wrap & 4) {
+          hbuf[0] = hold & 255;
+          hbuf[1] = hold >>> 8 & 255;
+          state.check = crc322(state.check, hbuf, 2, 0);
+        }
+        hold = 0;
+        bits = 0;
+      } else if (state.head) state.head.extra = null;
+      state.mode = EXTRA2;
+    case EXTRA2:
+      if (state.flags & 1024) {
+        copy = state.length;
+        if (copy > have) copy = have;
+        if (copy) {
+          if (state.head) {
+            len = state.head.extra_len - state.length;
+            if (!state.head.extra) state.head.extra = new Uint8Array(state.head.extra_len);
+            state.head.extra.set(input2.subarray(next, next + copy), len);
+          }
+          if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input2, copy, next);
+          have -= copy;
+          next += copy;
+          state.length -= copy;
+        }
+        if (state.length) break inf_leave;
+      }
+      state.length = 0;
+      state.mode = NAME2;
+    case NAME2:
+      if (state.flags & 2048) {
+        if (have === 0) break inf_leave;
+        copy = 0;
+        do {
+          len = input2[next + copy++];
+          if (state.head && len && state.length < 65536) state.head.name += String.fromCharCode(len);
+        } while (len && copy < have);
+        if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input2, copy, next);
+        have -= copy;
+        next += copy;
+        if (len) break inf_leave;
+      } else if (state.head) state.head.name = null;
+      state.length = 0;
+      state.mode = COMMENT2;
+    case COMMENT2:
+      if (state.flags & 4096) {
+        if (have === 0) break inf_leave;
+        copy = 0;
+        do {
+          len = input2[next + copy++];
+          if (state.head && len && state.length < 65536) state.head.comment += String.fromCharCode(len);
+        } while (len && copy < have);
+        if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input2, copy, next);
+        have -= copy;
+        next += copy;
+        if (len) break inf_leave;
+      } else if (state.head) state.head.comment = null;
+      state.mode = HCRC2;
+    case HCRC2:
+      if (state.flags & 512) {
+        while (bits < 16) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        if (state.wrap & 4 && hold !== (state.check & 65535)) {
+          strm.msg = "header crc mismatch";
+          state.mode = BAD2;
+          break;
+        }
+        hold = 0;
+        bits = 0;
+      }
+      if (state.head) {
+        state.head.hcrc = state.flags >> 9 & 1;
+        state.head.done = true;
+      }
+      strm.adler = state.check = 0;
+      state.mode = TYPE2;
+      break;
+    case DICTID2:
+      while (bits < 32) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      strm.adler = state.check = zswap322(hold);
+      hold = 0;
+      bits = 0;
+      state.mode = DICT2;
+    case DICT2:
+      if (state.havedict === 0) {
+        strm.next_out = put;
+        strm.avail_out = left;
+        strm.next_in = next;
+        strm.avail_in = have;
+        state.hold = hold;
+        state.bits = bits;
+        return 2;
+      }
+      strm.adler = state.check = 1;
+      state.mode = TYPE2;
+    case TYPE2:
+      if (flush === 5 || flush === 6) break inf_leave;
+    case TYPEDO2:
+      if (state.last) {
+        hold >>>= bits & 7;
+        bits -= bits & 7;
+        state.mode = CHECK2;
+        break;
+      }
+      while (bits < 3) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      state.last = hold & 1;
+      hold >>>= 1;
+      bits -= 1;
+      switch (hold & 3) {
+        case 0:
+          state.mode = STORED2;
+          break;
+        case 1:
+          fixedtables2(state);
+          state.mode = LEN_2;
+          if (flush === 6) {
+            hold >>>= 2;
+            bits -= 2;
+            break inf_leave;
+          }
+          break;
+        case 2:
+          state.mode = TABLE2;
+          break;
+        case 3:
+          strm.msg = "invalid block type";
+          state.mode = BAD2;
+      }
+      hold >>>= 2;
+      bits -= 2;
+      break;
+    case STORED2:
+      hold >>>= bits & 7;
+      bits -= bits & 7;
+      while (bits < 32) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      if ((hold & 65535) !== (hold >>> 16 ^ 65535)) {
+        strm.msg = "invalid stored block lengths";
+        state.mode = BAD2;
+        break;
+      }
+      state.length = hold & 65535;
+      hold = 0;
+      bits = 0;
+      state.mode = COPY_2;
+      if (flush === 6) break inf_leave;
+    case COPY_2:
+      state.mode = COPY2;
+    case COPY2:
+      copy = state.length;
+      if (copy) {
+        if (copy > have) copy = have;
+        if (copy > left) copy = left;
+        if (copy === 0) break inf_leave;
+        output.set(input2.subarray(next, next + copy), put);
+        have -= copy;
+        next += copy;
+        left -= copy;
+        put += copy;
+        state.length -= copy;
+        break;
+      }
+      state.mode = TYPE2;
+      break;
+    case TABLE2:
+      while (bits < 14) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      state.nlen = (hold & 31) + 257;
+      hold >>>= 5;
+      bits -= 5;
+      state.ndist = (hold & 31) + 1;
+      hold >>>= 5;
+      bits -= 5;
+      state.ncode = (hold & 15) + 4;
+      hold >>>= 4;
+      bits -= 4;
+      if (state.nlen > 286 || state.ndist > 30) {
+        strm.msg = "too many length or distance symbols";
+        state.mode = BAD2;
+        break;
+      }
+      state.have = 0;
+      state.mode = LENLENS2;
+    case LENLENS2:
+      while (state.have < state.ncode) {
+        while (bits < 3) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        state.lens[order[state.have++]] = hold & 7;
+        hold >>>= 3;
+        bits -= 3;
+      }
+      while (state.have < 19) state.lens[order[state.have++]] = 0;
+      state.lencode = state.lendyn;
+      state.lenbits = 7;
+      opts = { bits: state.lenbits };
+      ret = inflate_table2(CODES2, state.lens, 0, 19, state.lencode, 0, state.work, opts);
+      state.lenbits = opts.bits;
+      if (ret) {
+        strm.msg = "invalid code lengths set";
+        state.mode = BAD2;
+        break;
+      }
+      state.have = 0;
+      state.mode = CODELENS2;
+    case CODELENS2:
+      while (state.have < state.nlen + state.ndist) {
+        for (; ; ) {
+          here = state.lencode[hold & (1 << state.lenbits) - 1];
+          here_bits = here >>> 24;
+          here_op = here >>> 16 & 255;
+          here_val = here & 65535;
+          if (here_bits <= bits) break;
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        if (here_val < 16) {
+          hold >>>= here_bits;
+          bits -= here_bits;
+          state.lens[state.have++] = here_val;
+        } else {
+          if (here_val === 16) {
+            n = here_bits + 2;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input2[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= here_bits;
+            bits -= here_bits;
+            if (state.have === 0) {
+              strm.msg = "invalid bit length repeat";
+              state.mode = BAD2;
+              break;
+            }
+            len = state.lens[state.have - 1];
+            copy = 3 + (hold & 3);
+            hold >>>= 2;
+            bits -= 2;
+          } else if (here_val === 17) {
+            n = here_bits + 3;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input2[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= here_bits;
+            bits -= here_bits;
+            len = 0;
+            copy = 3 + (hold & 7);
+            hold >>>= 3;
+            bits -= 3;
+          } else {
+            n = here_bits + 7;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input2[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= here_bits;
+            bits -= here_bits;
+            len = 0;
+            copy = 11 + (hold & 127);
+            hold >>>= 7;
+            bits -= 7;
+          }
+          if (state.have + copy > state.nlen + state.ndist) {
+            strm.msg = "invalid bit length repeat";
+            state.mode = BAD2;
+            break;
+          }
+          while (copy--) state.lens[state.have++] = len;
+        }
+      }
+      if (state.mode === BAD2) break;
+      if (state.lens[256] === 0) {
+        strm.msg = "invalid code -- missing end-of-block";
+        state.mode = BAD2;
+        break;
+      }
+      state.lenbits = 9;
+      opts = { bits: state.lenbits };
+      ret = inflate_table2(LENS2, state.lens, 0, state.nlen, state.lencode, 0, state.work, opts);
+      state.lenbits = opts.bits;
+      if (ret) {
+        strm.msg = "invalid literal/lengths set";
+        state.mode = BAD2;
+        break;
+      }
+      state.distbits = 6;
+      state.distcode = state.distdyn;
+      opts = { bits: state.distbits };
+      ret = inflate_table2(DISTS2, state.lens, state.nlen, state.ndist, state.distcode, 0, state.work, opts);
+      state.distbits = opts.bits;
+      if (ret) {
+        strm.msg = "invalid distances set";
+        state.mode = BAD2;
+        break;
+      }
+      state.mode = LEN_2;
+      if (flush === 6) break inf_leave;
+    case LEN_2:
+      state.mode = LEN2;
+    case LEN2:
+      if (have >= 6 && left >= 258) {
+        strm.next_out = put;
+        strm.avail_out = left;
+        strm.next_in = next;
+        strm.avail_in = have;
+        state.hold = hold;
+        state.bits = bits;
+        inflate_fast2(strm, _out);
+        put = strm.next_out;
+        output = strm.output;
+        left = strm.avail_out;
+        next = strm.next_in;
+        input2 = strm.input;
+        have = strm.avail_in;
+        hold = state.hold;
+        bits = state.bits;
+        if (state.mode === TYPE2) state.back = -1;
+        break;
+      }
+      state.back = 0;
+      for (; ; ) {
+        here = state.lencode[hold & (1 << state.lenbits) - 1];
+        here_bits = here >>> 24;
+        here_op = here >>> 16 & 255;
+        here_val = here & 65535;
+        if (here_bits <= bits) break;
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      if (here_op && (here_op & 240) === 0) {
+        last_bits = here_bits;
+        last_op = here_op;
+        last_val = here_val;
+        for (; ; ) {
+          here = state.lencode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+          here_bits = here >>> 24;
+          here_op = here >>> 16 & 255;
+          here_val = here & 65535;
+          if (last_bits + here_bits <= bits) break;
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        hold >>>= last_bits;
+        bits -= last_bits;
+        state.back += last_bits;
+      }
+      hold >>>= here_bits;
+      bits -= here_bits;
+      state.back += here_bits;
+      state.length = here_val;
+      if (here_op === 0) {
+        state.mode = LIT2;
+        break;
+      }
+      if (here_op & 32) {
+        state.back = -1;
+        state.mode = TYPE2;
+        break;
+      }
+      if (here_op & 64) {
+        strm.msg = "invalid literal/length code";
+        state.mode = BAD2;
+        break;
+      }
+      state.extra = here_op & 15;
+      state.mode = LENEXT2;
+    case LENEXT2:
+      if (state.extra) {
+        n = state.extra;
+        while (bits < n) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        state.length += hold & (1 << state.extra) - 1;
+        hold >>>= state.extra;
+        bits -= state.extra;
+        state.back += state.extra;
+      }
+      state.was = state.length;
+      state.mode = DIST2;
+    case DIST2:
+      for (; ; ) {
+        here = state.distcode[hold & (1 << state.distbits) - 1];
+        here_bits = here >>> 24;
+        here_op = here >>> 16 & 255;
+        here_val = here & 65535;
+        if (here_bits <= bits) break;
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input2[next++] << bits;
+        bits += 8;
+      }
+      if ((here_op & 240) === 0) {
+        last_bits = here_bits;
+        last_op = here_op;
+        last_val = here_val;
+        for (; ; ) {
+          here = state.distcode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+          here_bits = here >>> 24;
+          here_op = here >>> 16 & 255;
+          here_val = here & 65535;
+          if (last_bits + here_bits <= bits) break;
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        hold >>>= last_bits;
+        bits -= last_bits;
+        state.back += last_bits;
+      }
+      hold >>>= here_bits;
+      bits -= here_bits;
+      state.back += here_bits;
+      if (here_op & 64) {
+        strm.msg = "invalid distance code";
+        state.mode = BAD2;
+        break;
+      }
+      state.offset = here_val;
+      state.extra = here_op & 15;
+      state.mode = DISTEXT2;
+    case DISTEXT2:
+      if (state.extra) {
+        n = state.extra;
+        while (bits < n) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        state.offset += hold & (1 << state.extra) - 1;
+        hold >>>= state.extra;
+        bits -= state.extra;
+        state.back += state.extra;
+      }
+      if (state.offset > state.dmax) {
+        strm.msg = "invalid distance too far back";
+        state.mode = BAD2;
+        break;
+      }
+      state.mode = MATCH2;
+    case MATCH2:
+      if (left === 0) break inf_leave;
+      copy = _out - left;
+      if (state.offset > copy) {
+        copy = state.offset - copy;
+        if (copy > state.whave) {
+          if (state.sane) {
+            strm.msg = "invalid distance too far back";
+            state.mode = BAD2;
+            break;
+          }
+        }
+        if (copy > state.wnext) {
+          copy -= state.wnext;
+          from = state.wsize - copy;
+        } else from = state.wnext - copy;
+        if (copy > state.length) copy = state.length;
+        from_source = state.window;
+      } else {
+        from_source = output;
+        from = put - state.offset;
+        copy = state.length;
+      }
+      if (copy > left) copy = left;
+      left -= copy;
+      state.length -= copy;
+      do
+        output[put++] = from_source[from++];
+      while (--copy);
+      if (state.length === 0) state.mode = LEN2;
+      break;
+    case LIT2:
+      if (left === 0) break inf_leave;
+      output[put++] = state.length;
+      left--;
+      state.mode = LEN2;
+      break;
+    case CHECK2:
+      if (state.wrap) {
+        while (bits < 32) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold |= input2[next++] << bits;
+          bits += 8;
+        }
+        _out -= left;
+        strm.total_out += _out;
+        state.total += _out;
+        if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc322(state.check, output, _out, put - _out) : adler322(state.check, output, _out, put - _out);
+        _out = left;
+        if (state.wrap & 4 && (state.flags ? hold : zswap322(hold)) !== state.check) {
+          strm.msg = "incorrect data check";
+          state.mode = BAD2;
+          break;
+        }
+        hold = 0;
+        bits = 0;
+      }
+      state.mode = LENGTH2;
+    case LENGTH2:
+      if (state.wrap && state.flags) {
+        while (bits < 32) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input2[next++] << bits;
+          bits += 8;
+        }
+        if (state.wrap & 4 && hold !== (state.total & 4294967295)) {
+          strm.msg = "incorrect length check";
+          state.mode = BAD2;
+          break;
+        }
+        hold = 0;
+        bits = 0;
+      }
+      state.mode = DONE2;
+    case DONE2:
+      ret = 1;
+      break inf_leave;
+    case BAD2:
+      ret = -3;
+      break inf_leave;
+    case MEM2:
+      return -4;
+    case SYNC2:
+    default:
+      return -2;
+  }
+  strm.next_out = put;
+  strm.avail_out = left;
+  strm.next_in = next;
+  strm.avail_in = have;
+  state.hold = hold;
+  state.bits = bits;
+  if (state.wsize || _out !== strm.avail_out && state.mode < BAD2 && (state.mode < CHECK2 || flush !== 4)) {
+    if (updatewindow2(strm, strm.output, strm.next_out, _out - strm.avail_out)) {
+      state.mode = MEM2;
+      return -4;
+    }
+  }
+  _in -= strm.avail_in;
+  _out -= strm.avail_out;
+  strm.total_in += _in;
+  strm.total_out += _out;
+  state.total += _out;
+  if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc322(state.check, output, _out, strm.next_out - _out) : adler322(state.check, output, _out, strm.next_out - _out);
+  strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE2 ? 128 : 0) + (state.mode === LEN_2 || state.mode === COPY_2 ? 256 : 0);
+  if ((_in === 0 && _out === 0 || flush === 4) && ret === 0) ret = -5;
+  return ret;
+};
+var inflateEnd2 = (strm) => {
+  if (inflateStateCheck2(strm)) return -2;
+  let state = strm.state;
+  if (state.window) state.window = null;
+  strm.state = null;
+  return 0;
+};
+var inflateSetDictionary2 = (strm, dictionary) => {
+  const dictLength = dictionary.length;
+  let state;
+  let dictid;
+  let ret;
+  if (inflateStateCheck2(strm)) return -2;
+  state = strm.state;
+  if (state.wrap !== 0 && state.mode !== DICT2) return -2;
+  if (state.mode === DICT2) {
+    dictid = 1;
+    dictid = adler322(dictid, dictionary, dictLength, 0);
+    if (dictid !== state.check) return -3;
+  }
+  ret = updatewindow2(strm, dictionary, dictLength, dictLength);
+  if (ret) {
+    state.mode = MEM2;
+    return -4;
+  }
+  state.havedict = 1;
+  return 0;
+};
+var ZStream2 = class {
+  constructor() {
+    this.input = null;
+    this.next_in = 0;
+    this.avail_in = 0;
+    this.total_in = 0;
+    this.output = null;
+    this.next_out = 0;
+    this.avail_out = 0;
+    this.total_out = 0;
+    this.msg = "";
+    this.state = null;
+    this.data_type = 2;
+    this.adler = 0;
+  }
+};
+var flattenChunks2 = (chunks) => {
+  const result = new Uint8Array(chunks.reduce((len, chunk2) => len + chunk2.length, 0));
+  let pos = 0;
+  for (const chunk2 of chunks) {
+    result.set(chunk2, pos);
+    pos += chunk2.length;
+  }
+  return result;
+};
+var toString2 = Object.prototype.toString;
+var defaultOptions2 = {
+  chunkSize: 1024 * 64,
+  windowBits: 15,
+  raw: false,
+  dictionary: /* @__PURE__ */ new Uint8Array(0)
+};
+var Inflate2 = class {
+  options;
+  /**
+  * Error code after inflate finishes. {@link Z_OK} on success.
+  * Should be checked when broken data is possible.
+  */
+  err;
+  /** Error message, if {@link Inflate.err} is not {@link Z_OK}. */
+  msg;
+  /**
+  * `true` once the compressed stream has ended. A stream may end before the
+  * caller's data does (trailing bytes), so check this to know when to stop
+  * pushing - further {@link Inflate.push} calls are no-ops.
+  */
+  ended;
+  started;
+  /**
+  * Chunks of output data, if {@link Inflate.onData} not overridden.
+  * @internal
+  */
+  chunks;
+  strm;
+  /**
+  * Uncompressed result, generated by default {@link Inflate.onData}
+  * and {@link Inflate.onEnd} handlers. Filled after you push last chunk
+  * (call {@link Inflate.push} with {@link Z_FINISH} / `true` param).
+  */
+  result;
+  /**
+  * Creates a new inflator instance with the specified params. Throws an
+  * exception on bad params. See {@link InflateOptions} for the list of
+  * supported options.
+  *
+  * By default, when no options are set, the deflate/gzip data format is
+  * autodetected via the wrapper header.
+  *
+  * @example
+  * ```javascript
+  * import { Inflate } from 'pako'
+  *
+  * const chunk1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+  * const chunk2 = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+  *
+  * const inflate = new Inflate({ level: 3 })
+  *
+  * inflate.push(chunk1, false)
+  * inflate.push(chunk2, true)  // true -> last chunk
+  *
+  * if (inflate.err) throw new Error(inflate.err)
+  *
+  * console.log(inflate.result)
+  * ```
+  */
+  constructor(options = {}) {
+    this.options = Object.assign({}, defaultOptions2, options);
+    const opt = this.options;
+    if (opt.raw && opt.windowBits >= 0 && opt.windowBits < 16) {
+      opt.windowBits = -opt.windowBits;
+      if (opt.windowBits === 0) opt.windowBits = -15;
+    }
+    if (opt.windowBits >= 0 && opt.windowBits < 16 && !options.windowBits) opt.windowBits += 32;
+    if (opt.windowBits > 15 && opt.windowBits < 48) {
+      if ((opt.windowBits & 15) === 0) opt.windowBits |= 15;
+    }
+    this.err = 0;
+    this.msg = "";
+    this.ended = false;
+    this.started = false;
+    this.chunks = [];
+    this.result = /* @__PURE__ */ new Uint8Array(0);
+    this.strm = new ZStream2();
+    this.strm.avail_out = 0;
+    let status = inflateInit22(this.strm, opt.windowBits);
+    if (status !== 0) throw new Error(messages_default2[status]);
+    if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") opt.dictionary = new Uint8Array(opt.dictionary);
+    const dictionary = opt.dictionary;
+    if (opt.raw && dictionary.length) {
+      status = inflateSetDictionary2(this.strm, dictionary);
+      if (status !== 0) throw new Error(messages_default2[status]);
+    }
+  }
+  /**
+  * Sends input data to the inflate pipe, generating {@link Inflate.onData} calls
+  * with new output chunks. Returns `true` on success. If end of stream is
+  * detected, {@link Inflate.onEnd} will be called.
+  *
+  * `flush_mode` is not needed for normal operation, because end of stream
+  * is detected automatically. Pass {@link Z_SYNC_FLUSH} to force the decoder
+  * to emit all currently available output — handy when you need to decode
+  * data frame-by-frame from a long-running stream.
+  *
+  * On failure, calls {@link Inflate.onEnd} with the error code and returns false.
+  *
+  * Once the stream has ended (a compressed stream may end before your data
+  * does), further `push` calls are no-ops and return whether the decode
+  * finished successfully. The final outcome is in {@link Inflate.result},
+  * {@link Inflate.err} and {@link Inflate.msg}.
+  *
+  * @param flush_mode 0..6 for corresponding {@link Z_NO_FLUSH}..{@link Z_TREES}
+  *   flush modes. See constants. Skipped or `false` means {@link Z_NO_FLUSH},
+  *   `true` means {@link Z_FINISH}.
+  *
+  * @example
+  * ```javascript
+  * push(chunk, false) // push one of data chunks
+  * ...
+  * push(chunk, true)  // push last chunk
+  * ```
+  */
+  push(data, flush_mode = false) {
+    const strm = this.strm;
+    const chunkSize = this.options.chunkSize;
+    let status;
+    let _flush_mode;
+    let last_avail_out;
+    if (this.ended) return this.err === 0;
+    if (typeof flush_mode === "number") _flush_mode = flush_mode;
+    else _flush_mode = flush_mode === true ? 4 : 0;
+    if (toString2.call(data) === "[object ArrayBuffer]") strm.input = new Uint8Array(data);
+    else strm.input = data;
+    strm.next_in = 0;
+    strm.avail_in = strm.input.length;
+    if (!this.started) {
+      this.started = true;
+      this.onStart(strm);
+    }
+    for (; ; ) {
+      if (strm.avail_out === 0) {
+        strm.output = new Uint8Array(chunkSize);
+        strm.next_out = 0;
+        strm.avail_out = chunkSize;
+      }
+      status = inflate$12(strm, _flush_mode);
+      if (status === 2) {
+        const dictionary = this.options.dictionary;
+        if (dictionary.length) {
+          status = inflateSetDictionary2(strm, dictionary);
+          if (status === 0) status = inflate$12(strm, _flush_mode);
+          else if (status === -3) status = 2;
+        }
+      }
+      while (strm.avail_in > 0 && status === 1 && strm.state.wrap & 2 && strm.state.flags !== 0 && strm.input[strm.next_in] !== 0) {
+        inflateReset3(strm);
+        status = inflate$12(strm, _flush_mode);
+      }
+      if (status === -2 || status === -3 || status === 2 || status === -4) break;
+      last_avail_out = strm.avail_out;
+      if (strm.next_out) {
+        if (strm.avail_out === 0 || status === 1 || _flush_mode > 0) {
+          this.onData(strm.output.length === strm.next_out ? strm.output : strm.output.subarray(0, strm.next_out));
+          strm.avail_out = 0;
+          strm.next_out = 0;
+        }
+      }
+      if ((status === 0 || status === -5) && last_avail_out === 0) continue;
+      if (status === 1) {
+        status = inflateEnd2(this.strm);
+        break;
+      }
+      if (strm.avail_in === 0) {
+        if (_flush_mode === 4) {
+          status = inflateEnd2(this.strm);
+          if (status === 0) status = -5;
+          break;
+        }
+        return true;
+      }
+    }
+    this.err = status;
+    this.msg = strm.msg || messages_default2[status];
+    this.ended = true;
+    this.onEnd(status);
+    return status === 0;
+  }
+  /**
+  * Called once before the first low-level inflate call.
+  *
+  * Override this handler to attach low-level inflate state, for example to read
+  * gzip header metadata:
+  *
+  * ```javascript
+  * import { Inflate, GZheader, zlibInflateGetHeader } from 'pako'
+  *
+  * const inflator = new Inflate()
+  *
+  * inflator.onStart = function (strm) {
+  *   this.header = new GZheader()
+  *   zlibInflateGetHeader(strm, this.header)
+  * }
+  *
+  * inflator.push(data, true)
+  * console.log(inflator.header.name)
+  * ```
+  */
+  onStart(strm) {
+  }
+  /**
+  * By default, stores data blocks in the {@link Inflate.chunks} property and glues
+  * them in {@link Inflate.onEnd}. Override this handler if you need another behaviour.
+  *
+  * @param chunk output data.
+  */
+  onData(chunk2) {
+    this.chunks.push(chunk2);
+  }
+  /**
+  * Called after you tell inflate that the input stream is
+  * complete ({@link Z_FINISH}). By default, joins the collected {@link Inflate.chunks},
+  * frees memory and fills the {@link Inflate.result} property.
+  *
+  * @param status inflate status. {@link Z_OK} on success, other if not.
+  */
+  onEnd(status) {
+    if (status === 0) this.result = flattenChunks2(this.chunks);
+    this.chunks = [];
+  }
+};
+
+// packages/assets/src/aseprite-binary.ts
+var ATLAS_FILE_LIMIT = ASSET_LIMITS.asepriteBytes;
+var decoder = new TextDecoder("utf-8", { fatal: true });
+var Cursor = class {
+  constructor(bytes) {
+    this.bytes = bytes;
+    this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  }
+  bytes;
+  view;
+  /** Byte offset within this cursor's bounded payload. */
+  position = 0;
+  take(length) {
+    integer(length, "Aseprite field size", 0, this.bytes.length - this.position);
+    const value = this.bytes.subarray(this.position, this.position + length);
+    this.position += length;
+    return value;
+  }
+  u8() {
+    return this.take(1)[0];
+  }
+  u16() {
+    const offset = this.position;
+    this.take(2);
+    return this.view.getUint16(offset, true);
+  }
+  i16() {
+    const offset = this.position;
+    this.take(2);
+    return this.view.getInt16(offset, true);
+  }
+  u32() {
+    const offset = this.position;
+    this.take(4);
+    return this.view.getUint32(offset, true);
+  }
+  i32() {
+    const offset = this.position;
+    this.take(4);
+    return this.view.getInt32(offset, true);
+  }
+  text() {
+    return decoder.decode(this.take(this.u16()));
+  }
+  finish() {
+    if (this.position !== this.bytes.length) {
+      throw new Error("Unexpected Aseprite chunk payload.");
+    }
+  }
+};
+var Fields = class {
+  parts = [];
+  /** Reserved bytes are checked while appending, before allocating the combined payload. */
+  length = 0;
+  raw(bytes) {
+    this.length = boundedSum(this.length, bytes.length, ATLAS_FILE_LIMIT, "Aseprite output size");
+    this.parts.push(bytes);
+    return this;
+  }
+  u8(value) {
+    return this.raw(Uint8Array.of(value));
+  }
+  u16(value) {
+    const bytes = new Uint8Array(2);
+    new DataView(bytes.buffer).setUint16(0, value, true);
+    return this.raw(bytes);
+  }
+  u32(value) {
+    const bytes = new Uint8Array(4);
+    new DataView(bytes.buffer).setUint32(0, value, true);
+    return this.raw(bytes);
+  }
+  text(value) {
+    const bytes = new TextEncoder().encode(value);
+    integer(bytes.length, "Aseprite text size", 0, 65535);
+    return this.u16(bytes.length).raw(bytes);
+  }
+  build() {
+    const bytes = new Uint8Array(this.length);
+    let offset = 0;
+    for (const part of this.parts) {
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    return bytes;
+  }
+};
+function chunk(type, data) {
+  return new Fields().u32(data.length + 6).u16(type).raw(data).build();
+}
+function rasterZlibSync(bytes, expected) {
+  integer(expected, "Decoded payload", 0, ASSET_LIMITS.decodedBytes);
+  const output = new Uint8Array(expected);
+  let offset = 0;
+  const inflator = new Inflate2({ windowBits: 15, chunkSize: 16 * 1024 });
+  let unread;
+  inflator.onStart = (stream) => {
+    unread = () => stream.avail_in;
+  };
+  inflator.onData = (part) => {
+    if (part.length > expected - offset) {
+      throw new Error("Aseprite decompressed raster exceeds its declared bounds.");
+    }
+    output.set(part, offset);
+    offset += part.length;
+  };
+  let completed = false;
+  inflator.onEnd = (status) => {
+    if (status !== 0) {
+      throw new Error("Invalid Aseprite zlib stream.");
+    }
+    completed = true;
+  };
+  try {
+    inflator.push(bytes, true);
+    if (!completed || offset !== expected || unread?.() !== 0) {
+      throw new Error("Aseprite decompressed raster length or stream mismatch.");
+    }
+  } catch (cause) {
+    throw new Error("Invalid bounded Aseprite zlib raster.", { cause });
+  }
+  return output;
+}
+
+// packages/assets/src/aseprite-document.ts
+var ID_PREFIX = "uttori-atlas-export:";
+function resolveAsepriteCels(document2) {
+  integer(document2.frames.length, "Aseprite frames", 1, ASSET_LIMITS.frames);
+  integer(document2.layers.length, "Aseprite layers", 1, ASSET_LIMITS.layers);
+  let references = 0;
+  const byFrame = document2.frames.map((frame) => {
+    references = boundedSum(
+      references,
+      frame.cels.length,
+      ASSET_LIMITS.references,
+      "Aseprite cel references"
+    );
+    const layers = /* @__PURE__ */ new Map();
+    for (const cel of frame.cels) {
+      integer(cel.layer, "Cel layer", 0, document2.layers.length - 1);
+      if (layers.has(cel.layer)) {
+        throw new Error("Duplicate Aseprite cel on one frame/layer.");
+      }
+      if (cel.kind === "linked") {
+        integer(cel.frame, "Linked frame", 0, document2.frames.length - 1);
+      } else {
+        if (cel.kind !== "raster" && cel.kind !== "tilemap") {
+          throw new Error("Unsupported Aseprite cel kind.");
+        }
+      }
+      layers.set(cel.layer, cel);
+    }
+    return layers;
+  });
+  const resolved = /* @__PURE__ */ new Map();
+  for (const frame of document2.frames) {
+    for (const initial of frame.cels) {
+      let cel = initial;
+      const chain = [];
+      const visited = /* @__PURE__ */ new Set();
+      while (!resolved.has(cel) && cel.kind === "linked") {
+        if (visited.has(cel) || chain.length >= ASSET_LIMITS.frames) {
+          throw new Error("Aseprite linked cel cycle or traversal limit.");
+        }
+        visited.add(cel);
+        chain.push(cel);
+        const target = byFrame[cel.frame]?.get(cel.layer);
+        if (!target) {
+          throw new Error("Aseprite linked cel has no target on its layer.");
+        }
+        cel = target;
+      }
+      const payload = resolved.get(cel);
+      let result;
+      if (payload) {
+        result = payload;
+      } else if (cel.kind !== "linked") {
+        result = cel;
+      } else {
+        throw new Error("Unresolved Aseprite linked cel.");
+      }
+      resolved.set(cel, result);
+      for (const link of chain) {
+        resolved.set(link, result);
+      }
+    }
+  }
+  return resolved;
+}
+function textSize(value) {
+  if (typeof value !== "string") {
+    throw new TypeError("Aseprite metadata must be text.");
+  }
+  return integer(new TextEncoder().encode(value).length, "Aseprite text bytes", 0, 65535);
+}
+function validateMasks(cel) {
+  if (![8, 16, 32].includes(cel.bits)) {
+    throw new Error("Unsupported Aseprite tile word width.");
+  }
+  const maximum = 2 ** cel.bits - 1;
+  integer(cel.idMask, "Tile ID mask", 1, maximum);
+  if ((cel.idMask & cel.idMask + 1) !== 0) {
+    throw new Error("Aseprite tile ID mask must use contiguous low bits.");
+  }
+  let claimed = cel.idMask;
+  for (const mask of [cel.flipXMask, cel.flipYMask, cel.diagonalMask]) {
+    integer(mask, "Tile transform mask", 0, maximum);
+    if ((mask & mask - 1) !== 0 || (mask & claimed) !== 0) {
+      throw new Error("Aseprite tile masks overlap or have multiple transform bits.");
+    }
+    claimed = (claimed | mask) >>> 0;
+  }
+}
+function validateAsepriteDocument(document2) {
+  rasterArea(document2.width, document2.height, "Aseprite", ASSET_LIMITS.interchangeSide);
+  indexedPalette(document2.palette);
+  integer(document2.transparentIndex, "Aseprite transparent slot", 0, document2.palette.length - 1);
+  if (document2.exportId !== void 0 && !/^[\da-f-]{36}$/.test(document2.exportId)) {
+    throw new Error("Invalid Aseprite export identity.");
+  }
+  integer(document2.frames.length, "Aseprite frames", 1, ASSET_LIMITS.frames);
+  integer(document2.layers.length, "Aseprite layers", 1, ASSET_LIMITS.layers);
+  integer(document2.tilesets.length, "Aseprite tilesets", 0, ASSET_LIMITS.tilesets);
+  integer(document2.tags.length, "Aseprite tags", 0, ASSET_LIMITS.frames);
+  let bytes = 0, metadata = 0, references = 0;
+  const addText = (value) => {
+    if (value !== void 0) {
+      metadata = boundedSum(
+        metadata,
+        textSize(value),
+        ASSET_LIMITS.metadataBytes,
+        "Aseprite metadata"
+      );
+    }
+  };
+  addText(document2.userData);
+  const tilesets = /* @__PURE__ */ new Map();
+  for (const set of document2.tilesets) {
+    integer(set.id, "Tileset ID", 0, 4294967295);
+    integer(set.flags, "Tileset flags", 0, 62);
+    if (tilesets.has(set.id) || set.flags & ~62 || !(set.flags & 2)) {
+      throw new Error("Duplicate, external or unsupported Aseprite tileset.");
+    }
+    integer(set.baseIndex, "Tileset base index", -32768, 32767);
+    const area = rasterArea(
+      set.tileWidth,
+      set.tileHeight,
+      "Aseprite tile",
+      ASSET_LIMITS.interchangeSide
+    );
+    integer(set.tileCount, "Aseprite tiles", 1, ASSET_LIMITS.owners);
+    const length = boundedProduct(area, set.tileCount, ASSET_LIMITS.decodedBytes, "Tileset pixels");
+    if (!(set.indexes instanceof Uint8Array) || set.indexes.length !== length || set.tileData.length !== set.tileCount) {
+      throw new Error("Aseprite tileset pixel or metadata inventory mismatch.");
+    }
+    if (set.indexes.some((slot) => slot >= document2.palette.length)) {
+      throw new Error("Aseprite tileset references a missing palette slot.");
+    }
+    bytes = boundedSum(bytes, length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
+    addText(set.name);
+    addText(set.userData);
+    for (const value of set.tileData) {
+      addText(value);
+    }
+    tilesets.set(set.id, set);
+  }
+  for (const layer of document2.layers) {
+    integer(layer.flags, "Layer flags", 0, 127);
+    if (layer.flags & (8 | 64) || layer.kind !== "raster" && layer.kind !== "tilemap") {
+      throw new Error("Unsupported Aseprite background/reference/group layer.");
+    }
+    if (layer.uuid !== void 0 && !/^[\da-f]{32}$/i.test(layer.uuid)) {
+      throw new Error("Invalid Aseprite layer UUID.");
+    }
+    if (layer.kind === "tilemap" && !tilesets.has(layer.tileset)) {
+      throw new Error("Aseprite layer references a missing embedded tileset.");
+    }
+    addText(layer.name);
+    addText(layer.userData);
+  }
+  for (const frame of document2.frames) {
+    integer(frame.durationMs, "Frame duration milliseconds", 1, 65535);
+    references = boundedSum(
+      references,
+      frame.cels.length,
+      ASSET_LIMITS.references,
+      "Aseprite cel references"
+    );
+    const layers = /* @__PURE__ */ new Set();
+    for (const cel of frame.cels) {
+      integer(cel.layer, "Cel layer", 0, document2.layers.length - 1);
+      if (layers.has(cel.layer)) {
+        throw new Error("Duplicate Aseprite cel on one frame/layer.");
+      }
+      layers.add(cel.layer);
+      integer(cel.x, "Cel x", -32768, 32767);
+      integer(cel.y, "Cel y", -32768, 32767);
+      integer(cel.zIndex, "Cel z-index", -32768, 32767);
+      addText(cel.userData);
+      if (cel.kind === "linked") {
+        integer(cel.frame, "Linked frame", 0, document2.frames.length - 1);
+      } else if (cel.kind === "raster") {
+        validateIndexedPixels(cel);
+        if (document2.layers[cel.layer].kind !== "raster" || cel.indexes.some((slot) => slot >= document2.palette.length)) {
+          throw new Error("Aseprite raster layer or palette slot mismatch.");
+        }
+        bytes = boundedSum(
+          bytes,
+          cel.indexes.length,
+          ASSET_LIMITS.decodedBytes,
+          "Aseprite decoded payload"
+        );
+      } else if (cel.kind === "tilemap") {
+        validateMasks(cel);
+        integer(cel.columns, "Tilemap columns", 1, 65535);
+        integer(cel.rows, "Tilemap rows", 1, 65535);
+        const count = boundedProduct(
+          cel.columns,
+          cel.rows,
+          ASSET_LIMITS.references,
+          "Tilemap cells"
+        );
+        if (!(cel.cells instanceof Uint32Array) || cel.cells.length !== count || document2.layers[cel.layer].kind !== "tilemap") {
+          throw new Error("Aseprite tilemap layer or cell inventory mismatch.");
+        }
+        bytes = boundedSum(
+          bytes,
+          boundedProduct(count, 4, ASSET_LIMITS.decodedBytes, "Tilemap bytes"),
+          ASSET_LIMITS.decodedBytes,
+          "Aseprite decoded payload"
+        );
+      } else {
+        throw new Error("Unsupported Aseprite cel kind.");
+      }
+    }
+  }
+  for (const tag of document2.tags) {
+    integer(tag.from, "Tag first frame", 0, document2.frames.length - 1);
+    integer(tag.to, "Tag final frame", tag.from, document2.frames.length - 1);
+    integer(tag.direction, "Tag direction", 0, 3);
+    integer(tag.repeat, "Tag repeat", 0, 65535);
+    addText(tag.name);
+    addText(tag.userData);
+  }
+  const resolved = resolveAsepriteCels(document2);
+  const checkedPayloads = /* @__PURE__ */ new Set();
+  for (const [cel, payload] of resolved) {
+    const layer = document2.layers[cel.layer];
+    if (payload.kind !== layer.kind) {
+      throw new Error("Linked payload does not match its layer.");
+    }
+    if (payload.kind === "tilemap" && layer.kind === "tilemap") {
+      if (checkedPayloads.has(payload)) {
+        continue;
+      }
+      checkedPayloads.add(payload);
+      const set = tilesets.get(layer.tileset);
+      for (const word of payload.cells) {
+        if (!(set.flags & 4) && word === 4294967295) {
+          continue;
+        }
+        const id2 = (word & payload.idMask) >>> 0;
+        const usedMask = (payload.idMask | payload.flipXMask | payload.flipYMask | payload.diagonalMask) >>> 0;
+        if ((word & ~usedMask) !== 0 || word > 2 ** payload.bits - 1 || id2 >= set.tileCount) {
+          throw new Error("Aseprite tilemap references unknown tile bits or an absent tile.");
+        }
+      }
+    }
+  }
+}
+function* parseAsepriteDocument(bytes, signal) {
+  integer(bytes.length, "Aseprite input bytes", 144, ASSET_LIMITS.asepriteBytes);
+  signal?.throwIfAborted();
+  const file = new Cursor(Uint8Array.from(bytes));
+  const header = new Cursor(file.take(128));
+  if (header.u32() !== bytes.length || header.u16() !== 42464) {
+    throw new Error("Invalid Aseprite header/length.");
+  }
+  const frameCount = integer(header.u16(), "Aseprite frames", 1, ASSET_LIMITS.frames);
+  const width = header.u16(), height = header.u16();
+  rasterArea(width, height, "Aseprite", ASSET_LIMITS.interchangeSide);
+  if (header.u16() !== 8) {
+    throw new Error("Aseprite interchange requires indexed color mode.");
+  }
+  const flags = header.u32();
+  if (flags & ~7) {
+    throw new Error("Unsupported Aseprite header flags.");
+  }
+  const speed = header.u16();
+  header.take(8);
+  const transparentIndex = header.u8();
+  header.take(3);
+  let paletteSize = header.u16() || 256;
+  integer(paletteSize, "Palette size", 1, 256);
+  const ratioX = header.u8(), ratioY = header.u8();
+  if (ratioX && ratioY && ratioX !== ratioY) {
+    throw new Error("Unsupported Aseprite pixel aspect ratio.");
+  }
+  const layers = [], tilesets = [], frames = [], tags = [];
+  const paletteState = [];
+  let palette = [], modern = false, decoded = 0, metadata = 0, chunks = 0, references = 0;
+  let exportId, userData;
+  const reserve = (length) => {
+    decoded = boundedSum(decoded, length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
+    return length;
+  };
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+    signal?.throwIfAborted();
+    const frameSize = integer(
+      file.u32(),
+      "Frame extent",
+      16,
+      file.bytes.length - file.position + 4
+    );
+    const frame = new Cursor(file.take(frameSize - 4));
+    if (frame.u16() !== 61946) {
+      throw new Error("Invalid Aseprite frame header.");
+    }
+    const oldCount = frame.u16(), durationMs = frame.u16() || speed;
+    frame.take(2);
+    const count = frame.u32() || oldCount;
+    chunks = boundedSum(chunks, count, ASSET_LIMITS.chunks, "Aseprite chunks");
+    if (count > Math.floor((frame.bytes.length - frame.position) / 6)) {
+      throw new Error("Aseprite chunk count exceeds frame extent.");
+    }
+    modern = false;
+    const cels = [];
+    let attachment;
+    let documentAttachment = false;
+    let lastCel;
+    for (let i = 0; i < count; i++) {
+      signal?.throwIfAborted();
+      const size = integer(frame.u32(), "Chunk extent", 6, frame.bytes.length - frame.position + 4);
+      const type = frame.u16(), data = new Cursor(frame.take(size - 6));
+      if (type !== 8224 && type !== 8198) {
+        attachment = void 0;
+        documentAttachment = false;
+      }
+      if ([8217, 4, 17].includes(type)) {
+        if (type === 8217) {
+          paletteSize = integer(data.u32(), "Palette size", 1, 256);
+          const first = data.u32(), last = data.u32();
+          data.take(8);
+          if (first > last || last >= paletteSize) {
+            throw new Error("Invalid Aseprite palette range.");
+          }
+          paletteState.length = paletteSize;
+          for (let slot = first; slot <= last; slot++) {
+            const entryFlags = data.u16();
+            if (entryFlags & ~1) {
+              throw new Error("Unsupported palette entry flags.");
+            }
+            paletteState[slot] = [data.u8(), data.u8(), data.u8(), data.u8()];
+            if (entryFlags & 1) {
+              data.text();
+            }
+          }
+          modern = true;
+        } else {
+          const packets = integer(data.u16(), "Palette packets", 0, 256);
+          let start = 0;
+          for (let packet = 0; packet < packets; packet++) {
+            start += data.u8();
+            const length = data.u8() || 256;
+            if (start + length > 256) {
+              throw new Error("Invalid legacy palette range.");
+            }
+            for (let slot = start; slot < start + length; slot++) {
+              const rgb = [data.u8(), data.u8(), data.u8()];
+              if (type === 17) {
+                for (let channel = 0; channel < 3; channel++) {
+                  integer(rgb[channel], "Legacy palette channel", 0, 63);
+                  rgb[channel] = rgb[channel] << 2 | rgb[channel] >> 4;
+                }
+              }
+              if (!modern) {
+                paletteState[slot] = [rgb[0], rgb[1], rgb[2], 255];
+              }
+            }
+          }
+        }
+        documentAttachment = true;
+        attachment = (text) => {
+          if (text?.startsWith(ID_PREFIX)) {
+            if (exportId !== void 0) {
+              throw new Error("Conflicting Aseprite export identity.");
+            }
+            exportId = text.slice(ID_PREFIX.length);
+          } else {
+            userData = text;
+          }
+          attachment = void 0;
+          documentAttachment = false;
+        };
+      } else if (type === 8196) {
+        if (frameIndex !== 0 || layers.length >= ASSET_LIMITS.layers) {
+          throw new Error("Aseprite layer declaration limit/order.");
+        }
+        const layerFlags = data.u16(), kind = data.u16(), level = data.u16();
+        data.take(4);
+        const blend2 = data.u16(), opacity = data.u8();
+        data.take(3);
+        const name = data.text();
+        if (![0, 2].includes(kind) || level || blend2 || flags & 1 && opacity !== 255) {
+          throw new Error("Unsupported Aseprite layer hierarchy/blend/opacity.");
+        }
+        let layer;
+        if (kind === 2) {
+          layer = { name, flags: layerFlags, kind: "tilemap", tileset: data.u32() };
+        } else {
+          layer = { name, flags: layerFlags, kind: "raster" };
+        }
+        if (flags & 4) {
+          const uuid = [...data.take(16)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+          layer = { ...layer, uuid };
+        }
+        layers.push(layer);
+        attachment = (text) => {
+          layer.userData = text;
+          attachment = void 0;
+        };
+      } else if (type === 8197) {
+        references = boundedSum(references, 1, ASSET_LIMITS.references, "Aseprite cel references");
+        const position = { layer: data.u16(), x: data.i16(), y: data.i16() };
+        const opacity = data.u8(), celType = data.u16(), zIndex = data.i16();
+        data.take(5);
+        if (opacity !== 255) {
+          throw new Error("Unsupported Aseprite cel opacity.");
+        }
+        let cel;
+        if (celType === 1) {
+          cel = { ...position, zIndex, kind: "linked", frame: data.u16() };
+        } else if (celType === 0 || celType === 2) {
+          const celWidth = data.u16(), celHeight = data.u16();
+          const length = reserve(rasterArea(celWidth, celHeight, "Aseprite cel"));
+          const indexes = celType === 0 ? data.take(length).slice() : yield { bytes: data.take(data.bytes.length - data.position), expected: length };
+          cel = {
+            ...position,
+            zIndex,
+            kind: "raster",
+            width: celWidth,
+            height: celHeight,
+            indexes
+          };
+        } else if (celType === 3) {
+          const columns = data.u16(), rows = data.u16(), bits = data.u16();
+          if (bits !== 8 && bits !== 16 && bits !== 32) {
+            throw new Error("Unsupported Aseprite tile word width.");
+          }
+          const masks = {
+            idMask: data.u32(),
+            flipXMask: data.u32(),
+            flipYMask: data.u32(),
+            diagonalMask: data.u32()
+          };
+          data.take(10);
+          const cellCount = boundedProduct(columns, rows, ASSET_LIMITS.references, "Tilemap cells");
+          reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
+          const raw = yield {
+            bytes: data.take(data.bytes.length - data.position),
+            expected: boundedProduct(
+              cellCount,
+              bits / 8,
+              ASSET_LIMITS.decodedBytes,
+              "Tilemap storage"
+            )
+          };
+          const cells = new Uint32Array(cellCount), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+          for (let cell = 0; cell < cellCount; cell++) {
+            if (bits === 8) {
+              cells[cell] = raw[cell];
+            } else if (bits === 16) {
+              cells[cell] = words.getUint16(cell * 2, true);
+            } else {
+              cells[cell] = words.getUint32(cell * 4, true);
+            }
+          }
+          cel = { ...position, zIndex, kind: "tilemap", columns, rows, bits, ...masks, cells };
+        } else {
+          throw new Error("Unsupported Aseprite cel type.");
+        }
+        cels.push(cel);
+        lastCel = cel;
+        attachment = (text) => {
+          cel.userData = text;
+          attachment = void 0;
+        };
+      } else if (type === 8227) {
+        if (frameIndex !== 0 || tilesets.length >= ASSET_LIMITS.tilesets) {
+          throw new Error("Aseprite tileset declaration limit/order.");
+        }
+        const id2 = data.u32(), tilesetFlags = data.u32(), tileCount = data.u32(), tileWidth = data.u16(), tileHeight = data.u16(), baseIndex = data.i16();
+        data.take(14);
+        const name = data.text();
+        if (tilesetFlags & ~62 || !(tilesetFlags & 2)) {
+          throw new Error("External or unsupported Aseprite tileset.");
+        }
+        integer(tileCount, "Tileset tiles", 1, ASSET_LIMITS.owners);
+        const length = reserve(
+          boundedProduct(
+            rasterArea(tileWidth, tileHeight, "Aseprite tile"),
+            tileCount,
+            ASSET_LIMITS.decodedBytes,
+            "Tileset pixels"
+          )
+        );
+        const compressed = data.take(data.u32());
+        const indexes = yield { bytes: compressed, expected: length };
+        const tileData = Array.from({ length: tileCount }, () => void 0);
+        const set = {
+          id: id2,
+          flags: tilesetFlags,
+          tileCount,
+          tileWidth,
+          tileHeight,
+          baseIndex,
+          name,
+          indexes,
+          tileData
+        };
+        tilesets.push(set);
+        let tile = -1;
+        attachment = (text) => {
+          if (tile < 0) {
+            set.userData = text;
+          } else {
+            tileData[tile] = text;
+          }
+          tile++;
+          if (tile === tileCount) {
+            attachment = void 0;
+          }
+        };
+      } else if (type === 8216) {
+        const length = integer(data.u16(), "Tag count", 0, ASSET_LIMITS.frames - tags.length);
+        data.take(8);
+        const firstTag = tags.length;
+        for (let tagIndex = 0; tagIndex < length; tagIndex++) {
+          const from = data.u16(), to = data.u16(), direction = data.u8(), repeat = data.u16();
+          data.take(10);
+          const tag2 = { from, to, direction, repeat, name: data.text() };
+          tags.push(tag2);
+        }
+        let tag = firstTag;
+        attachment = (text) => {
+          if (tag >= tags.length) {
+            throw new Error("Extra Aseprite tag metadata.");
+          }
+          if (text !== void 0) {
+            tags[tag].userData = text;
+          }
+          tag++;
+          if (tag === tags.length) {
+            attachment = void 0;
+          }
+        };
+      } else if (type === 8224) {
+        metadata = boundedSum(metadata, size - 6, ASSET_LIMITS.metadataBytes, "Aseprite metadata");
+        const userFlags = data.u32();
+        if (userFlags & ~7) {
+          throw new Error("Unsupported Aseprite user data flags.");
+        }
+        const text = userFlags & 1 ? data.text() : void 0;
+        if (userFlags & 2) {
+          data.take(4);
+        }
+        if (userFlags & 4) {
+          const length = integer(
+            data.u32(),
+            "Property extent",
+            8,
+            data.bytes.length - data.position + 4
+          );
+          data.take(length - 4);
+        }
+        if (text?.startsWith(ID_PREFIX) && !documentAttachment) {
+          throw new Error("Conflicting Aseprite export identity attachment.");
+        }
+        attachment?.(text);
+      } else if (type === 8198) {
+        const extraFlags = data.u32(), bounds = [data.i32(), data.i32(), data.i32(), data.i32()];
+        data.take(16);
+        if (extraFlags & ~1 || extraFlags & 1 && (!lastCel || lastCel.kind !== "raster")) {
+          throw new Error("Unsupported Aseprite precise cel bounds.");
+        }
+        if (extraFlags & 1 && lastCel?.kind === "raster") {
+          const expected = [lastCel.x, lastCel.y, lastCel.width, lastCel.height];
+          if (bounds.some((value, bound) => value !== expected[bound] * 65536)) {
+            throw new Error("Scaled or fractional Aseprite cel bounds are unsupported.");
+          }
+        }
+      } else if (type === 8199) {
+        const profile = data.u16(), profileFlags = data.u16();
+        data.take(12);
+        if (profile > 1 || profileFlags) {
+          throw new Error("Unsupported Aseprite color profile/gamma.");
+        }
+        attachment = void 0;
+      } else if ([8214, 8215, 8226].includes(type)) {
+        metadata = boundedSum(
+          metadata,
+          size - 6,
+          ASSET_LIMITS.metadataBytes,
+          "Aseprite annotations"
+        );
+        data.take(data.bytes.length);
+        attachment = void 0;
+      } else {
+        throw new Error(`Unsupported Aseprite chunk 0x${type.toString(16)}.`);
+      }
+      data.finish();
+    }
+    frame.finish();
+    const current = [];
+    for (let slot = 0; slot < paletteSize; slot++) {
+      const color = paletteState[slot];
+      if (!color) {
+        throw new Error("Aseprite palette does not define every slot.");
+      }
+      current.push(color);
+    }
+    if (frameIndex === 0) {
+      palette = current;
+    } else if (palette.length !== current.length || current.some((color, slot) => color.some((channel, i) => channel !== palette[slot][i]))) {
+      throw new Error("Animated palette changes are outside the indexed interchange profile.");
+    }
+    frames.push({ durationMs, cels });
+  }
+  file.finish();
+  signal?.throwIfAborted();
+  const document2 = {
+    width,
+    height,
+    palette,
+    transparentIndex,
+    exportId,
+    userData,
+    layers,
+    tilesets,
+    frames,
+    tags
+  };
+  validateAsepriteDocument(document2);
+  return document2;
+}
+async function compress(bytes, limit, signal) {
+  signal?.throwIfAborted();
+  const source = new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes.slice());
+      controller.close();
+    }
+  });
+  const reader = source.pipeThrough(new CompressionStream("deflate")).getReader();
+  const abort = () => {
+    void reader.cancel(signal?.reason).catch(() => {
+    });
+  };
+  signal?.addEventListener("abort", abort, { once: true });
+  const parts = [];
+  let size = 0;
+  try {
+    for (; ; ) {
+      signal?.throwIfAborted();
+      const next = await reader.read();
+      signal?.throwIfAborted();
+      if (next.done) {
+        break;
+      }
+      size = boundedSum(size, next.value.length, limit, "Aseprite compressed output");
+      parts.push(next.value);
+    }
+  } catch (cause) {
+    await reader.cancel().catch(() => {
+    });
+    throw cause;
+  } finally {
+    signal?.removeEventListener("abort", abort);
+    reader.releaseLock();
+  }
+  const output = new Uint8Array(size);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.length;
+  }
+  return output;
+}
+function encodedStructureBytes(document2) {
+  let size = boundedSum(
+    128,
+    document2.frames.length * 16,
+    ASSET_LIMITS.asepriteBytes,
+    "Aseprite output size"
+  ), chunks = 0;
+  const reserve = (bytes) => {
+    chunks = boundedSum(chunks, 1, ASSET_LIMITS.chunks, "Aseprite chunks");
+    size = boundedSum(size, bytes, ASSET_LIMITS.asepriteBytes, "Aseprite output size");
+  };
+  const user = (value) => reserve(10 + (value === void 0 ? 0 : 2 + textSize(value)));
+  reserve(26 + document2.palette.length * 6);
+  if (document2.exportId) {
+    user(ID_PREFIX + document2.exportId);
+  } else if (document2.userData !== void 0) {
+    user(document2.userData);
+  }
+  for (const set of document2.tilesets) {
+    reserve(44 + textSize(set.name));
+    if (set.userData !== void 0 || set.tileData.some((value) => value !== void 0)) {
+      user(set.userData);
+      let last = set.tileData.length - 1;
+      while (last >= 0 && set.tileData[last] === void 0) {
+        last--;
+      }
+      for (let tile = 0; tile <= last; tile++) {
+        user(set.tileData[tile]);
+      }
+    }
+  }
+  for (const layer of document2.layers) {
+    reserve(24 + textSize(layer.name) + (layer.kind === "tilemap" ? 4 : 0) + (layer.uuid ? 16 : 0));
+    if (layer.userData !== void 0) {
+      user(layer.userData);
+    }
+  }
+  if (document2.tags.length) {
+    reserve(16 + document2.tags.reduce((total, tag) => total + 19 + textSize(tag.name), 0));
+    if (document2.tags.some((tag) => tag.userData !== void 0)) {
+      for (const tag of document2.tags) {
+        user(tag.userData);
+      }
+    }
+  }
+  for (const frame of document2.frames) {
+    for (const cel of frame.cels) {
+      let extent = 26;
+      if (cel.kind === "linked") {
+        extent = 24;
+      } else if (cel.kind === "tilemap") {
+        extent = 54;
+      }
+      reserve(extent);
+      if (cel.userData !== void 0) {
+        user(cel.userData);
+      }
+    }
+  }
+  return size;
+}
+var userDataChunk = (text) => chunk(
+  8224,
+  text === void 0 ? new Fields().u32(0).build() : new Fields().u32(1).text(text).build()
+);
+async function encodeAsepriteDocument(document2, signal) {
+  signal?.throwIfAborted();
+  validateAsepriteDocument(document2);
+  let available = ASSET_LIMITS.asepriteBytes - encodedStructureBytes(document2);
+  const compressPayload = async (bytes) => {
+    const output = await compress(bytes, available, signal);
+    available -= output.length;
+    return output;
+  };
+  const hasUuid = document2.layers.some((layer) => layer.uuid !== void 0);
+  if (hasUuid && document2.layers.some((layer) => !layer.uuid)) {
+    throw new Error("All Aseprite layers require UUIDs when UUID storage is enabled.");
+  }
+  const allFrames = [];
+  for (let frameIndex = 0; frameIndex < document2.frames.length; frameIndex++) {
+    signal?.throwIfAborted();
+    const frame = document2.frames[frameIndex], chunks = [];
+    if (frameIndex === 0) {
+      const palette = new Fields().u32(document2.palette.length).u32(0).u32(document2.palette.length - 1).raw(new Uint8Array(8));
+      for (const color of document2.palette) {
+        palette.u16(0).raw(Uint8Array.from(color));
+      }
+      chunks.push(chunk(8217, palette.build()));
+      if (document2.exportId) {
+        chunks.push(userDataChunk(ID_PREFIX + document2.exportId));
+      } else if (document2.userData !== void 0) {
+        chunks.push(userDataChunk(document2.userData));
+      }
+      for (const set of document2.tilesets) {
+        const fields = new Fields().u32(set.id).u32(set.flags).u32(set.tileCount).u16(set.tileWidth).u16(set.tileHeight).u16(set.baseIndex).raw(new Uint8Array(14)).text(set.name);
+        const compressed = await compressPayload(set.indexes);
+        fields.u32(compressed.length).raw(compressed);
+        chunks.push(chunk(8227, fields.build()));
+        if (set.userData !== void 0 || set.tileData.some((text) => text !== void 0)) {
+          chunks.push(userDataChunk(set.userData));
+          let last = set.tileData.length - 1;
+          while (last >= 0 && set.tileData[last] === void 0) {
+            last--;
+          }
+          for (let tile = 0; tile <= last; tile++) {
+            chunks.push(userDataChunk(set.tileData[tile]));
+          }
+        }
+      }
+      for (const layer of document2.layers) {
+        const fields = new Fields().u16(layer.flags).u16(layer.kind === "raster" ? 0 : 2).u16(0).u16(0).u16(0).u16(0).u8(255).raw(new Uint8Array(3)).text(layer.name);
+        if (layer.kind === "tilemap") {
+          fields.u32(layer.tileset);
+        }
+        if (layer.uuid) {
+          fields.raw(Uint8Array.from(layer.uuid.match(/../g), (hex) => Number.parseInt(hex, 16)));
+        }
+        chunks.push(chunk(8196, fields.build()));
+        if (layer.userData !== void 0) {
+          chunks.push(userDataChunk(layer.userData));
+        }
+      }
+      if (document2.tags.length) {
+        const fields = new Fields().u16(document2.tags.length).raw(new Uint8Array(8));
+        for (const tag of document2.tags) {
+          fields.u16(tag.from).u16(tag.to).u8(tag.direction).u16(tag.repeat).raw(new Uint8Array(10)).text(tag.name);
+        }
+        chunks.push(chunk(8216, fields.build()));
+        if (document2.tags.some((tag) => tag.userData !== void 0)) {
+          for (const tag of document2.tags) {
+            chunks.push(userDataChunk(tag.userData));
+          }
+        }
+      }
+    }
+    for (const cel of frame.cels) {
+      const fields = new Fields().u16(cel.layer).u16(cel.x).u16(cel.y).u8(255);
+      let kind = 2;
+      if (cel.kind === "linked") {
+        kind = 1;
+      } else if (cel.kind === "tilemap") {
+        kind = 3;
+      }
+      fields.u16(kind).u16(cel.zIndex).raw(new Uint8Array(5));
+      if (cel.kind === "linked") {
+        fields.u16(cel.frame);
+      } else if (cel.kind === "raster") {
+        fields.u16(cel.width).u16(cel.height).raw(await compressPayload(cel.indexes));
+      } else {
+        fields.u16(cel.columns).u16(cel.rows).u16(cel.bits).u32(cel.idMask).u32(cel.flipXMask).u32(cel.flipYMask).u32(cel.diagonalMask).raw(new Uint8Array(10));
+        const bytes2 = new Uint8Array(cel.cells.length * (cel.bits / 8)), words = new DataView(bytes2.buffer);
+        for (let cell = 0; cell < cel.cells.length; cell++) {
+          if (cel.bits === 8) {
+            bytes2[cell] = cel.cells[cell];
+          } else if (cel.bits === 16) {
+            words.setUint16(cell * 2, cel.cells[cell], true);
+          } else {
+            words.setUint32(cell * 4, cel.cells[cell], true);
+          }
+        }
+        fields.raw(await compressPayload(bytes2));
+      }
+      chunks.push(chunk(8197, fields.build()));
+      if (cel.userData !== void 0) {
+        chunks.push(userDataChunk(cel.userData));
+      }
+    }
+    integer(chunks.length, "Frame chunks", 0, ASSET_LIMITS.chunks);
+    const payload = new Fields();
+    for (const bytes2 of chunks) {
+      payload.raw(bytes2);
+    }
+    const bytes = payload.build();
+    allFrames.push(
+      new Fields().u32(bytes.length + 16).u16(61946).u16(Math.min(chunks.length, 65535)).u16(frame.durationMs).u16(0).u32(chunks.length).raw(bytes).build()
+    );
+  }
+  const frames = new Fields();
+  for (const bytes of allFrames) {
+    frames.raw(bytes);
+  }
+  const framePayload = frames.build(), header = new Uint8Array(128), view = new DataView(header.buffer);
+  view.setUint32(0, framePayload.length + 128, true);
+  view.setUint16(4, 42464, true);
+  view.setUint16(6, document2.frames.length, true);
+  view.setUint16(8, document2.width, true);
+  view.setUint16(10, document2.height, true);
+  view.setUint16(12, 8, true);
+  view.setUint32(14, hasUuid ? 5 : 1, true);
+  view.setUint16(18, document2.frames[0].durationMs, true);
+  header[28] = document2.transparentIndex;
+  view.setUint16(32, document2.palette.length, true);
+  header[34] = 1;
+  header[35] = 1;
+  return new Fields().raw(header).raw(framePayload).build();
+}
+function decodeAsepriteDocumentSync(bytes) {
+  const parser = parseAsepriteDocument(bytes);
+  let step = parser.next();
+  while (!step.done) {
+    step = parser.next(rasterZlibSync(step.value.bytes, step.value.expected));
+  }
+  return step.value;
+}
+
+// packages/assets/src/atlas-interchange.ts
+var ATLAS_FILE_LIMIT2 = ASSET_LIMITS.asepriteBytes;
+function validateAtlasDocument(document2) {
+  validateIndexedPixels(document2);
+  rasterArea(document2.width, document2.height, "Atlas", ASSET_LIMITS.interchangeSide);
+  indexedPalette(document2.palette);
+  integer(document2.transparentIndex, "Atlas transparent slot", 0, document2.palette.length - 1);
+  if (document2.indexes.some((index) => index >= document2.palette.length)) {
+    throw new Error("Atlas pixel references a missing palette slot.");
+  }
+  if (document2.exportId !== void 0 && !/^[\da-f-]{36}$/.test(document2.exportId)) {
+    throw new Error("Invalid atlas export identity.");
+  }
+}
+function indexedAtlasDocument(value, transparentIndex) {
+  if (!value || typeof value !== "object" || !("kind" in value) || value.kind !== "indexed-image") {
+    throw new Error("Atlas interchange requires indexed artwork; RGB mapping is not supported.");
+  }
+  if (!("width" in value) || typeof value.width !== "number" || !("height" in value) || typeof value.height !== "number" || !("indexes" in value) || !(value.indexes instanceof Uint8Array) || !("palette" in value) || !Array.isArray(value.palette)) {
+    throw new Error("Invalid indexed atlas value.");
+  }
+  const palette = indexedPalette(value.palette);
+  const document2 = {
+    width: value.width,
+    height: value.height,
+    indexes: Uint8Array.from(value.indexes),
+    palette,
+    transparentIndex
+  };
+  validateAtlasDocument(document2);
+  return document2;
+}
+function inspectAtlasChanges(before, after, policy) {
+  validateAtlasDocument(before);
+  validateAtlasDocument(after);
+  if (before.width !== after.width || before.height !== after.height || before.transparentIndex !== after.transparentIndex || before.palette.length !== after.palette.length) {
+    throw new Error("Atlas canvas, transparency or palette inventory changed.");
+  }
+  if (before.exportId !== void 0 && after.exportId !== void 0 && before.exportId !== after.exportId) {
+    throw new Error("Atlas document belongs to a different export.");
+  }
+  const colors = indexedPaletteChanges(before.palette, after.palette, policy.editablePaletteSlots);
+  const claimed = new Uint8Array(before.indexes.length);
+  const ids = /* @__PURE__ */ new Set();
+  const pixels = [];
+  for (const owner of policy.owners) {
+    if (!owner.id || ids.has(owner.id)) {
+      throw new Error("Missing or duplicate atlas owner.");
+    }
+    ids.add(owner.id);
+    const oldPixels = extractIndexedRegion(before, owner);
+    const newPixels = extractIndexedRegion(after, owner);
+    for (let y = owner.y; y < owner.y + owner.height; y++) {
+      for (let x = owner.x; x < owner.x + owner.width; x++) {
+        const offset = y * before.width + x;
+        if (claimed[offset]) {
+          throw new Error("Overlapping atlas pixel authorities require reconciliation.");
+        }
+        if (before.indexes[offset] !== after.indexes[offset] && owner.indexMap && owner.indexMap[before.indexes[offset]] === owner.indexMap[after.indexes[offset]]) {
+          throw new Error("Changed atlas slot aliases require an explicit canonical mapping.");
+        }
+        claimed[offset] = 1;
+      }
+    }
+    if (newPixels.indexes.some((index, i) => index !== oldPixels.indexes[i])) {
+      pixels.push({ owner: owner.id, indexes: newPixels.indexes });
+    }
+  }
+  if (after.indexes.some((index, i) => index !== before.indexes[i] && !claimed[i])) {
+    throw new Error("Atlas padding or derived preview pixels changed.");
+  }
+  return { pixels, colors };
+}
+
+// packages/assets/src/indexed-ownership.ts
+function identity(id2) {
+  if (typeof id2 !== "string" || id2.length < 1 || new TextEncoder().encode(id2).length > 1024) {
+    throw new Error("Invalid indexed ownership identity.");
+  }
+}
+function nativeOffset(view, offset) {
+  const x = offset % view.width;
+  const y = Math.floor(offset / view.width);
+  const nx = view.flipX ? view.width - 1 - x : x;
+  const ny = view.flipY ? view.height - 1 - y : y;
+  return ny * view.width + nx;
+}
+function nativeSlot(view, slot, owner) {
+  const mapped = view.indexMap.at(slot);
+  if (mapped === void 0 || mapped === null || !owner.allowedIndexes.includes(mapped)) {
+    throw new Error(`View ${view.id}: unmapped or forbidden display slot ${slot}.`);
+  }
+  return mapped;
+}
+function validateIndexedOwnership(snapshot) {
+  integer(snapshot.owners.length, "Owner count", 1, ASSET_LIMITS.owners);
+  integer(snapshot.views.length, "View count", 1, ASSET_LIMITS.owners);
+  const owners = /* @__PURE__ */ new Map();
+  let bytes = 0;
+  for (const owner of snapshot.owners) {
+    identity(owner.id);
+    if (owners.has(owner.id)) {
+      throw new Error(`Duplicate owner ${owner.id}.`);
+    }
+    validateIndexedPixels(owner);
+    if (owner.editable !== void 0 && typeof owner.editable !== "boolean") {
+      throw new Error(`Owner ${owner.id}: invalid edit authority.`);
+    }
+    bytes = boundedSum(bytes, owner.indexes.length, ASSET_LIMITS.decodedBytes, "Ownership payload");
+    integer(owner.allowedIndexes.length, "Allowed slot count", 1, 256);
+    const allowed = new Set(owner.allowedIndexes);
+    if (allowed.size !== owner.allowedIndexes.length) {
+      throw new Error(`Owner ${owner.id}: duplicate allowed slot.`);
+    }
+    for (const slot of allowed) {
+      integer(slot, "Native slot", 0, 255);
+    }
+    if (owner.indexes.some((slot) => !allowed.has(slot))) {
+      throw new Error(`Owner ${owner.id}: forbidden baseline slot.`);
+    }
+    owners.set(owner.id, owner);
+  }
+  const ids = /* @__PURE__ */ new Set();
+  for (const view of snapshot.views) {
+    identity(view.id);
+    if (ids.has(view.id)) {
+      throw new Error(`Duplicate view ${view.id}.`);
+    }
+    ids.add(view.id);
+    const owner = owners.get(view.owner);
+    validateIndexedPixels(view);
+    bytes = boundedSum(bytes, view.indexes.length, ASSET_LIMITS.decodedBytes, "Ownership payload");
+    if (!owner || owner.width !== view.width || owner.height !== view.height) {
+      throw new Error(`View ${view.id}: missing owner or incompatible dimensions.`);
+    }
+    for (const flag of [view.flipX, view.flipY]) {
+      if (flag !== void 0 && typeof flag !== "boolean") {
+        throw new Error(`View ${view.id}: invalid reflection.`);
+      }
+    }
+    integer(view.indexMap.length, "Display slot map", 1, 256);
+    for (const slot of view.indexMap) {
+      if (slot !== null) {
+        integer(slot, "Mapped native slot", 0, 255);
+      }
+    }
+    for (let i = 0; i < view.indexes.length; i++) {
+      if (nativeSlot(view, view.indexes[i], owner) !== owner.indexes[nativeOffset(view, i)]) {
+        throw new Error(`View ${view.id}: inconsistent private baseline.`);
+      }
+    }
+  }
+}
+function reconcileIndexedViews(snapshot, candidates) {
+  validateIndexedOwnership(snapshot);
+  if (candidates.length !== snapshot.views.length) {
+    throw new Error("Indexed view inventory changed.");
+  }
+  const views = new Map(snapshot.views.map((view) => [view.id, view]));
+  const owners = new Map(snapshot.owners.map((owner) => [owner.id, owner]));
+  const seen = /* @__PURE__ */ new Set();
+  const changes = /* @__PURE__ */ new Map();
+  let candidateBytes = 0;
+  let proposalBytes = 0;
+  candidates.forEach((candidate, viewIndex) => {
+    const view = views.get(candidate.id);
+    if (!view || seen.has(candidate.id)) {
+      throw new Error(`Missing, unknown or duplicate view ${candidate.id}.`);
+    }
+    seen.add(candidate.id);
+    validateIndexedPixels(candidate);
+    candidateBytes = boundedSum(
+      candidateBytes,
+      candidate.indexes.length,
+      ASSET_LIMITS.decodedBytes,
+      "Candidate payload"
+    );
+    if (candidate.width !== view.width || candidate.height !== view.height) {
+      throw new Error(`View ${view.id}: dimensions changed.`);
+    }
+    const owner = owners.get(view.owner);
+    for (let offset = 0; offset < candidate.indexes.length; offset++) {
+      const slot = candidate.indexes[offset];
+      const proposed = nativeSlot(view, slot, owner);
+      if (slot === view.indexes[offset]) {
+        continue;
+      }
+      if (owner.editable === false) {
+        throw new Error(`Owner ${owner.id}: artwork is read-only.`);
+      }
+      const native = nativeOffset(view, offset);
+      if (proposed === owner.indexes[native]) {
+        throw new Error(
+          `View ${view.id}: changed slot aliases the unchanged native pixel ${native}.`
+        );
+      }
+      let change = changes.get(owner.id);
+      if (!change) {
+        proposalBytes = boundedSum(
+          proposalBytes,
+          owner.indexes.length * 5,
+          ASSET_LIMITS.decodedBytes,
+          "Native proposal payload"
+        );
+        change = {
+          indexes: owner.indexes.slice(),
+          contributors: new Uint32Array(owner.indexes.length)
+        };
+        changes.set(owner.id, change);
+      }
+      const contributor = change.contributors[native];
+      if (contributor && change.indexes[native] !== proposed) {
+        throw new Error(
+          `Owner ${owner.id} pixel ${native}: conflicting views ${candidates[contributor - 1].id} and ${view.id}.`
+        );
+      }
+      change.indexes[native] = proposed;
+      change.contributors[native] = viewIndex + 1;
+    }
+  });
+  return snapshot.owners.flatMap((owner) => {
+    const change = changes.get(owner.id);
+    return change ? [{ owner: owner.id, indexes: change.indexes }] : [];
+  });
+}
+
+// packages/assets/src/presentation-layout.ts
+function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeight, views) {
+  rasterArea(nativeWidth, nativeHeight, "Native presentation", ASSET_LIMITS.interchangeSide);
+  rasterArea(tileWidth, tileHeight, "Inventory tile", ASSET_LIMITS.interchangeSide);
+  integer(views, "Inventory views", 1, ASSET_LIMITS.owners);
+  const pageTiles = Math.min(
+    views,
+    Math.floor(ASSET_LIMITS.rasterPixels / (tileWidth * tileHeight))
+  );
+  const desiredColumns = Math.min(
+    Math.floor(ASSET_LIMITS.interchangeSide / tileWidth),
+    Math.ceil(Math.sqrt(pageTiles * tileHeight / tileWidth))
+  );
+  const maximumWidth = Math.min(
+    ASSET_LIMITS.interchangeSide,
+    Math.floor(ASSET_LIMITS.rasterPixels / Math.max(nativeHeight, tileHeight))
+  );
+  const width = Math.max(nativeWidth, Math.min(desiredColumns * tileWidth, maximumWidth)), columns = Math.floor(width / tileWidth);
+  const maximumHeight = Math.min(
+    ASSET_LIMITS.interchangeSide,
+    Math.floor(ASSET_LIMITS.rasterPixels / width)
+  );
+  const height = Math.max(
+    nativeHeight,
+    Math.min(Math.ceil(pageTiles / columns) * tileHeight, maximumHeight)
+  );
+  rasterArea(width, height, "Indexed presentation", ASSET_LIMITS.interchangeSide);
+  const rows = Math.floor(height / tileHeight);
+  const capacity = boundedProduct(columns, rows, ASSET_LIMITS.references, "Inventory page cells");
+  if (!capacity) {
+    throw new Error("Native presentation leaves no complete inventory tile capacity.");
+  }
+  const pages = Math.ceil(views / capacity);
+  integer(pages, "Inventory pages", 1, ASSET_LIMITS.frames);
+  return { width, height, columns, rows, capacity, pages };
+}
+
+// packages/assets/src/raster-interchange.ts
+function rasterInterchangeDocument(atlas) {
+  validateAtlasDocument(atlas);
+  return {
+    width: atlas.width,
+    height: atlas.height,
+    palette: atlas.palette,
+    transparentIndex: atlas.transparentIndex,
+    exportId: atlas.exportId,
+    layers: [{ kind: "raster", flags: 3, name: "Native views \u2014 fixed raster inventory" }],
+    tilesets: [],
+    tags: [],
+    frames: [
+      {
+        durationMs: 100,
+        cels: [
+          {
+            kind: "raster",
+            layer: 0,
+            x: 0,
+            y: 0,
+            zIndex: 0,
+            width: atlas.width,
+            height: atlas.height,
+            indexes: Uint8Array.from(atlas.indexes)
+          }
+        ]
+      }
+    ]
+  };
+}
+function rasterInterchangeAtlas(document2) {
+  validateAsepriteDocument(document2);
+  if (document2.frames.length !== 1 || document2.layers.length !== 1 || document2.layers[0].kind !== "raster" || !(document2.layers[0].flags & 1) || document2.tilesets.length || document2.tags.length) {
+    throw new Error("Raster interchange requires one visible raster layer and one fixed frame.");
+  }
+  const cels = document2.frames[0].cels;
+  if (cels.length > 1 || cels.some((cel) => cel.kind !== "raster" || cel.zIndex !== 0)) {
+    throw new Error("Raster interchange does not support linked cels or additional composition.");
+  }
+  const indexes = new Uint8Array(document2.width * document2.height).fill(document2.transparentIndex);
+  for (const cel of cels) {
+    if (cel.kind !== "raster") {
+      throw new Error("Invalid raster cel.");
+    }
+    if (cel.x < 0 || cel.y < 0 || cel.x + cel.width > document2.width || cel.y + cel.height > document2.height) {
+      throw new Error("Raster cel exceeds the fixed inventory canvas.");
+    }
+    for (let y = 0; y < cel.height; y++) {
+      indexes.set(
+        cel.indexes.subarray(y * cel.width, (y + 1) * cel.width),
+        (y + cel.y) * document2.width + cel.x
+      );
+    }
+  }
+  const result = {
+    width: document2.width,
+    height: document2.height,
+    indexes,
+    palette: document2.palette,
+    transparentIndex: document2.transparentIndex,
+    exportId: document2.exportId
+  };
+  validateAtlasDocument(result);
+  return result;
+}
+
+// packages/assets/src/source-codecs.ts
+var AssetSourceCodecRegistry = class {
+  #codecs = /* @__PURE__ */ new Map();
+  #revision = 0;
+  /** Changes invalidate adapter caches when newly registered probes alter content discovery. */
+  get revision() {
+    return this.#revision;
+  }
+  register(codec) {
+    if (!codec.id || this.#codecs.has(codec.id) || typeof codec.matches !== "function" || typeof codec.decode !== "function" || typeof codec.encode !== "function" || typeof codec.embeddedIdentity !== "boolean" || !Number.isSafeInteger(codec.version) || codec.version < 1 || !/^[\w+.-]+\/[\w+.-]+$/.test(codec.mediaType) || !codec.extensions.length || codec.extensions.some((extension) => !/^\.[\d.a-z-]+$/i.test(extension))) {
+      throw new Error(`Invalid or duplicate source codec '${codec.id}'.`);
+    }
+    const extensions = codec.extensions.map((extension) => extension.toLowerCase());
+    if (new Set(extensions).size !== extensions.length) {
+      throw new Error(`Duplicate source extension for '${codec.id}'.`);
+    }
+    for (const existing of this.#codecs.values()) {
+      if (existing.extensions.some((extension) => extensions.includes(extension))) {
+        throw new Error(`Ambiguous source extension for '${codec.id}'.`);
+      }
+    }
+    this.#codecs.set(
+      codec.id,
+      Object.freeze({
+        id: codec.id,
+        version: codec.version,
+        mediaType: codec.mediaType,
+        embeddedIdentity: codec.embeddedIdentity,
+        extensions: Object.freeze(extensions),
+        matches: codec.matches.bind(codec),
+        decode: codec.decode.bind(codec),
+        encode: codec.encode.bind(codec)
+      })
+    );
+    this.#revision++;
+    return this;
+  }
+  get(id2) {
+    const codec = this.#codecs.get(id2);
+    if (!codec) {
+      throw new Error(`Unsupported asset source representation '${id2}'.`);
+    }
+    return codec;
+  }
+  /** Content establishes representation; the filename and declared media type must agree when supplied. */
+  identify(bytes, hints = {}) {
+    const candidates = [...this.#codecs.values()].filter((codec2) => codec2.matches(bytes));
+    if (candidates.length !== 1) {
+      throw new Error(`Unrecognized or ambiguous asset source content: ${hints.path ?? "input"}.`);
+    }
+    const codec = candidates[0];
+    if (hints.path && !codec.extensions.some((extension) => hints.path.toLowerCase().endsWith(extension)) || hints.mediaType && hints.mediaType !== codec.mediaType) {
+      throw new Error(
+        `Asset source extension/content mismatch: ${hints.path ?? hints.mediaType}; content is ${codec.id}.`
+      );
+    }
+    return codec;
+  }
+  /** Discovery feeds editor menus without hard-coding the set of representations into the host. */
+  representations() {
+    return [...this.#codecs.values()].map(({ id: id2, mediaType, extensions }) => ({
+      id: id2,
+      mediaType,
+      extensions
+    }));
+  }
+};
+var indexedPngSourceCodec = {
+  id: "indexed-png",
+  version: 1,
+  mediaType: "image/png",
+  extensions: [".png"],
+  embeddedIdentity: false,
+  matches: (bytes) => [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte),
+  decode(bytes, reference) {
+    const image = indexedAtlasDocument(
+      pngImporter.import({ bytes, mediaType: "image/png" }).value,
+      reference?.transparentIndex ?? 0
+    );
+    return rasterInterchangeDocument({ ...image, exportId: reference?.exportId });
+  },
+  encode: (document2) => createIndexedPng(rasterInterchangeAtlas(document2))
+};
+var asepriteSourceCodec = {
+  id: "aseprite",
+  version: 1,
+  mediaType: "image/x-aseprite",
+  extensions: [".aseprite", ".ase"],
+  embeddedIdentity: true,
+  matches: (bytes) => bytes.length >= 128 && bytes[4] === 224 && bytes[5] === 165,
+  decode: decodeAsepriteDocumentSync,
+  encode: encodeAsepriteDocument
+};
+function indexedSourceCodecs() {
+  return new AssetSourceCodecRegistry().register(indexedPngSourceCodec).register(asepriteSourceCodec);
+}
+var asepriteRasterImporter = {
+  id: "uttori.import.aseprite-raster",
+  version: "1.0.0",
+  mediaTypes: ["image/x-aseprite"],
+  import(input2) {
+    const codec = indexedSourceCodecs().identify(input2.bytes, { mediaType: input2.mediaType });
+    const document2 = decodeAsepriteDocumentSync(input2.bytes);
+    if (codec.id !== "aseprite") {
+      throw new Error("Invalid Aseprite raster source.");
+    }
+    const atlas = rasterInterchangeAtlas(document2);
+    const value = {
+      kind: "indexed-image",
+      sourceBitDepth: 8,
+      width: atlas.width,
+      height: atlas.height,
+      indexes: atlas.indexes,
+      palette: atlas.palette
+    };
+    return { kind: value.kind, value };
+  }
+};
 
 // packages/assets/src/secret-of-mana/som-room-composition.ts
 var LIMITATION = "Background geometry only; omits actors, BG3, camera, mutable clones and color math.";
@@ -12666,20 +16991,20 @@ function isRoomAsset(value) {
 }
 function integer2(value, maximum, name) {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
-    assert2.fail(`${name} must be 0..${maximum}.`);
+    fail(`${name} must be 0..${maximum}.`);
   }
   return value;
 }
 function parseRoomAsset(source) {
-  assert2.equal(source.mediaType, "application/json", "Room source must be JSON.");
+  equal(source.mediaType, "application/json", "Room source must be JSON.");
   const parsed = JSON.parse(new TextDecoder().decode(source.bytes));
   if (!isRecord5(parsed)) {
-    assert2.fail("Room source must be a JSON object.");
+    fail("Room source must be a JSON object.");
   }
-  assert2.equal(parsed.format, "som.room");
-  assert2.equal(parsed.version, 1);
+  equal(parsed.format, "som.room");
+  equal(parsed.version, 1);
   integer2(parsed.id, 510, "room id");
-  assert2(
+  invariant(
     Array.isArray(parsed.header) && parsed.header.length === 8,
     "Room header requires eight bytes."
   );
@@ -12687,33 +17012,33 @@ function parseRoomAsset(source) {
     integer2(byte, 255, "header byte");
   }
   for (const key of ["entities", "pieces", "triggers"]) {
-    assert2(Array.isArray(parsed[key]), `Missing room ${key}.`);
+    invariant(Array.isArray(parsed[key]), `Missing room ${key}.`);
   }
   if (!isRoomAsset(parsed)) {
-    assert2.fail("Room entities, pieces, and triggers must match the room record.");
+    fail("Room entities, pieces, and triggers must match the room record.");
   }
   return parsed;
 }
 function parseRoomPreview(bytes) {
   const parsed = JSON.parse(new TextDecoder().decode(bytes));
   if (!isRecord5(parsed)) {
-    assert2.fail("Room preview resource must be a JSON object.");
+    fail("Room preview resource must be a JSON object.");
   }
-  assert2.equal(parsed.format, "som.room.preview");
-  assert2.equal(parsed.version, 1);
+  equal(parsed.format, "som.room.preview");
+  equal(parsed.version, 1);
   if (!isRoomPreview(parsed)) {
-    assert2.fail("Room preview resource must include tileset and layout records.");
+    fail("Room preview resource must include tileset and layout records.");
   }
   return parsed;
 }
 function condition(record) {
   const variable = integer2(record.variable, 255, "story variable");
   const minimum = integer2(record.minimum, 15, "story minimum"), maximum = integer2(record.maximum, 15, "story maximum");
-  assert2(minimum <= maximum, "Story range is reversed.");
+  invariant(minimum <= maximum, "Story range is reversed.");
   return [variable, minimum << 4 | maximum];
 }
 function encodeRoomSection(room, section) {
-  assert2(
+  invariant(
     ["objects", "assembly", "triggers"].includes(section),
     "Room section must be objects, assembly or triggers."
   );
@@ -12722,7 +17047,7 @@ function encodeRoomSection(room, section) {
     bytes.push(...room.header);
     for (const entity of room.entities) {
       const flags = integer2(entity.flags, 255, "entity flags");
-      assert2.equal(flags & 63, 0, "Only packed entity flags 40/80 are defined.");
+      equal(flags & 63, 0, "Only packed entity flags 40/80 are defined.");
       const event = integer2(entity.event, 4095, "entity event");
       bytes.push(
         ...condition(entity),
@@ -12738,15 +17063,15 @@ function encodeRoomSection(room, section) {
     let layer = 1;
     for (const piece of room.pieces) {
       if (piece.marker !== void 0) {
-        assert2(piece.marker === 254 || piece.marker === 255, "Layer marker must be FE or FF.");
+        invariant(piece.marker === 254 || piece.marker === 255, "Layer marker must be FE or FF.");
         bytes.push(piece.marker);
         layer = piece.marker - 253;
       }
-      assert2.equal(piece.layer, layer, "A layer change requires an explicit marker.");
+      equal(piece.layer, layer, "A layer change requires an explicit marker.");
       const predicate = condition(piece);
-      assert2(predicate[0] < 254, "FE/FF are layer markers, not piece story indexes.");
+      invariant(predicate[0] < 254, "FE/FF are layer markers, not piece story indexes.");
       const layout2 = integer2(piece.layout, 1023, "layout id");
-      assert2(layout2 > 0, "Native layout IDs are one-based.");
+      invariant(layout2 > 0, "Native layout IDs are one-based.");
       bytes.push(
         ...predicate,
         layout2 & 255,
@@ -12761,11 +17086,11 @@ function encodeRoomSection(room, section) {
     }
   }
   const owner = room.sections?.[section];
-  assert2(
+  invariant(
     owner && Number.isInteger(owner.address) && Number.isInteger(owner.bytes),
     "Missing fixed section ownership."
   );
-  assert2.equal(
+  equal(
     bytes.length,
     owner.bytes,
     "Room edit changes its fixed ROM extent; relocation is required."
@@ -12779,7 +17104,7 @@ function convertRoomAsset(source, options) {
     outputs[section] = { bytes: encodeRoomSection(room, section) };
   }
   const selected = options.section;
-  assert2(
+  invariant(
     typeof selected === "string" && Object.hasOwn(outputs, selected),
     "Select a room section."
   );
@@ -12798,25 +17123,1331 @@ function renderRoomAsset(room, preview, { layer, story } = {}) {
   };
 }
 
+// packages/assets/src/secret-of-mana/som-dialogue.ts
+var SOM_DIALOGUE_PAIR_COUNT = 61;
+var MAX_GLYPHS = 4096;
+var punctuation = /* @__PURE__ */ new Map([
+  [191, "."],
+  [192, ","],
+  [193, "/"],
+  [194, "'"],
+  [197, ":"],
+  [198, "-"],
+  [199, "%"],
+  [200, "!"],
+  [202, "?"]
+]);
+function readSomDialogueDictionary(bytes) {
+  if (bytes.length !== SOM_DIALOGUE_PAIR_COUNT * 2 || bytes.some((byte) => byte < 128 || byte > 210)) {
+    throw new Error("SoM dialogue requires 61 pairs of ordinary font codes.");
+  }
+  return Array.from({ length: SOM_DIALOGUE_PAIR_COUNT }, (_, i) => [bytes[i * 2], bytes[i * 2 + 1]]);
+}
+function glyphText(byte) {
+  if (byte === 127) return "\n";
+  if (byte === 128) return " ";
+  if (byte >= 129 && byte <= 154) return String.fromCharCode(byte - 129 + 97);
+  if (byte >= 155 && byte <= 180) return String.fromCharCode(byte - 155 + 65);
+  if (byte >= 181 && byte <= 190) return String.fromCharCode(byte - 181 + 48);
+  return punctuation.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`;
+}
+function expandSomDialogue(bytes, dictionary) {
+  const output = [];
+  for (const byte of bytes) {
+    let index;
+    if (byte >= 96 && byte <= 126) index = byte - 96;
+    else if (byte >= 211) index = byte - 195;
+    if (index !== void 0) {
+      const pair = dictionary[index];
+      if (!pair) throw new Error(`Missing SoM dialogue pair ${index}.`);
+      output.push(...pair);
+    } else {
+      if (byte < 127) throw new Error(`Event/control byte ${byte.toString(16)} is outside a text span.`);
+      output.push(byte);
+    }
+  }
+  return Uint8Array.from(output);
+}
+function decodeSomDialogue(bytes, dictionary) {
+  return [...expandSomDialogue(bytes, dictionary)].map(glyphText).join("");
+}
+function parseGlyphs(text) {
+  const inverse = new Map([...Array.from({ length: 84 }, (_, i) => i + 127)].filter((byte) => !glyphText(byte).startsWith("\\")).map((byte) => [glyphText(byte), byte]));
+  const bytes = [];
+  for (let offset = 0; offset < text.length; ) {
+    if (text[offset] === "\\") {
+      const match = /^\\x([0-9a-f]{2})/i.exec(text.slice(offset));
+      if (!match) throw new Error(`Invalid dialogue escape at character ${offset}.`);
+      const byte = Number.parseInt(match[1], 16);
+      if (byte < 127 || byte > 210) throw new Error("Dialogue escapes must select an ordinary glyph or line break.");
+      bytes.push(byte);
+      offset += 4;
+    } else {
+      const byte = inverse.get(text[offset]);
+      if (byte === void 0) throw new Error(`Unsupported dialogue character at ${offset}; use a verified glyph escape.`);
+      bytes.push(byte);
+      offset++;
+    }
+  }
+  if (bytes.length > MAX_GLYPHS) throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
+  return bytes;
+}
+function encodeSomDialogue(text, dictionary, options = {}) {
+  const glyphs = parseGlyphs(text);
+  const pairs = /* @__PURE__ */ new Map();
+  for (let code = 96; code <= 255; code++) {
+    if (code === 125) continue;
+    let index;
+    if (code <= 126) index = code - 96;
+    else if (code >= 211) index = code - 195;
+    if (index === void 0) continue;
+    const pair = dictionary[index];
+    if (!pair) throw new Error(`Missing SoM dialogue pair ${index}.`);
+    const key = pair[0] | pair[1] << 8;
+    if (!pairs.has(key)) pairs.set(key, code);
+  }
+  let target = options.byteLength;
+  if (target !== void 0 && (!Number.isSafeInteger(target) || target < 0 || target > MAX_GLYPHS)) {
+    throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
+  }
+  if (options.original && decodeSomDialogue(options.original, dictionary) === text) {
+    if (target !== void 0 && target !== options.original.length) throw new Error("Original dialogue disagrees with byte budget.");
+    return options.original.slice();
+  }
+  const pairAt = (i) => i + 1 < glyphs.length ? pairs.get(glyphs[i] | glyphs[i + 1] << 8) : void 0;
+  if (target === void 0) {
+    const minimum = new Uint16Array(glyphs.length + 1);
+    for (let i = glyphs.length - 1; i >= 0; i--) {
+      minimum[i] = minimum[i + 1] + 1;
+      if (pairAt(i) !== void 0) minimum[i] = Math.min(minimum[i], minimum[i + 2] + 1);
+    }
+    target = minimum[0];
+  }
+  const width = target + 1, possible = new Uint8Array((glyphs.length + 1) * width);
+  possible[glyphs.length * width] = 1;
+  for (let i = glyphs.length - 1; i >= 0; i--) {
+    for (let count = 1; count <= target; count++) {
+      if (possible[(i + 1) * width + count - 1] || pairAt(i) !== void 0 && possible[(i + 2) * width + count - 1]) possible[i * width + count] = 1;
+    }
+  }
+  if (!possible[target]) throw new Error(`Dialogue cannot fit its exact ${target}-byte ROM span; relocation or a different edit is required.`);
+  const encoded = [];
+  for (let i = 0, remaining = target; i < glyphs.length; remaining--) {
+    const pair = pairAt(i);
+    if (pair !== void 0 && possible[(i + 2) * width + remaining - 1]) {
+      encoded.push(pair);
+      i += 2;
+    } else {
+      encoded.push(glyphs[i++]);
+    }
+  }
+  return Uint8Array.from(encoded);
+}
+function hexBytes(value) {
+  if (typeof value !== "string" || value.length > MAX_GLYPHS * 2 || !/^(?:[0-9a-f]{2})*$/i.test(value)) {
+    throw new Error("Invalid or oversized native dialogue hex.");
+  }
+  return Uint8Array.from(value.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
+}
+function readSomDialogueScriptLayout(value) {
+  if (!value || typeof value !== "object" || !("format" in value) || value.format !== "som-dialogue-script" || !("version" in value) || value.version !== 1 || !("dictionaryHex" in value) || !("segments" in value) || !Array.isArray(value.segments) || value.segments.length === 0 || value.segments.length > 4096) {
+    throw new Error("Invalid SoM dialogue-script layout.");
+  }
+  const dictionary = readSomDialogueDictionary(hexBytes(value.dictionaryHex));
+  let total = 0;
+  for (const [index, segment] of value.segments.entries()) {
+    if (!segment || !["raw", "text"].includes(segment.kind) || index > 0 && segment.kind === value.segments[index - 1].kind) throw new Error("Dialogue segments must alternate raw/text.");
+    const bytes = hexBytes(segment.nativeHex);
+    if (!bytes.length || bytes.length > MAX_GLYPHS) throw new Error("Invalid dialogue segment size.");
+    if (segment.kind === "text") parseGlyphs(decodeSomDialogue(bytes, dictionary));
+    total += bytes.length;
+  }
+  if (total > 65536) throw new Error("Dialogue script exceeds one ROM bank.");
+  return value;
+}
+function convertSomDialogueScript(source, options, resources) {
+  if (source.bytes.some((byte) => byte > 127)) throw new Error("SoM dialogue source must be ASCII.");
+  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout)) throw new Error("Dialogue layout resource is required.");
+  const layout2 = readSomDialogueScriptLayout(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes)));
+  const dictionary = readSomDialogueDictionary(hexBytes(layout2.dictionaryHex));
+  let text = new TextDecoder().decode(source.bytes).replaceAll("\r\n", "\n");
+  if (text.includes("\r")) throw new Error("Bare carriage returns are not dialogue line breaks.");
+  if (layout2.segments.at(-1)?.kind === "raw" && text.endsWith("\n")) text = text.slice(0, -1);
+  const chunks = [];
+  let cursor = 0, raw = 0, nativePreserved = true;
+  for (const segment of layout2.segments) {
+    const original = hexBytes(segment.nativeHex);
+    if (segment.kind === "raw") {
+      const marker = `{raw:${raw++}}`;
+      if (!text.startsWith(marker, cursor)) throw new Error(`Missing or reordered command marker ${marker}.`);
+      cursor += marker.length;
+      chunks.push(original);
+    } else {
+      const next = text.indexOf(`{raw:${raw}}`, cursor);
+      const end = next < 0 ? text.length : next;
+      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, { original, byteLength: original.length });
+      nativePreserved &&= encoded.every((byte, index) => byte === original[index]);
+      chunks.push(encoded);
+      cursor = end;
+    }
+  }
+  if (cursor !== text.length) throw new Error("Unexpected text after the final command marker.");
+  const bytes = new Uint8Array(chunks.reduce((sum, chunk2) => sum + chunk2.length, 0));
+  let offset = 0;
+  for (const chunk2 of chunks) {
+    bytes.set(chunk2, offset);
+    offset += chunk2.length;
+  }
+  const output = { bytes, mediaType: "application/octet-stream", metadata: { nativePreserved, fixedFieldOffsets: true } };
+  return { primaryOutput: "script", outputs: { script: output } };
+}
+
+// packages/assets/src/interchange.ts
+var VIEW = "uttori-view:";
+var ROLE = "uttori-role:";
+var SET = "uttori-tileset:";
+var TAG = "uttori-timeline:";
+var interchangeIdentity = Object.freeze({
+  view: (identity2) => VIEW + identity2,
+  role: (identity2) => ROLE + identity2,
+  tileset: (identity2) => SET + identity2,
+  timeline: (identity2) => TAG + identity2
+});
+function id(value, prefix) {
+  if (!value?.startsWith(prefix) || value.length <= prefix.length || value.length > 1024 + prefix.length) {
+    throw new Error(`Missing or invalid interchange identity ${prefix}.`);
+  }
+  return value.slice(prefix.length);
+}
+function inventory(document2) {
+  const sets = /* @__PURE__ */ new Map(), setIds = /* @__PURE__ */ new Map(), views = /* @__PURE__ */ new Map(), tileIds = /* @__PURE__ */ new Map();
+  const seenSets = /* @__PURE__ */ new Set();
+  let bytes = 0;
+  for (const set of document2.tilesets) {
+    const setId = id(set.userData, SET);
+    if (seenSets.has(setId)) {
+      throw new Error(`Duplicate tileset identity ${setId}.`);
+    }
+    seenSets.add(setId);
+    sets.set(set.id, set);
+    setIds.set(set.id, setId);
+    const ids = [], area = set.tileWidth * set.tileHeight;
+    for (let tile = 0; tile < set.tileCount; tile++) {
+      if (set.flags & 4 && tile === 0) {
+        if (set.tileData[tile]?.startsWith(VIEW) || set.indexes.subarray(0, area).some((slot) => slot !== document2.transparentIndex)) {
+          throw new Error("Interchange empty tile acquired native identity or artwork.");
+        }
+        ids.push(null);
+        continue;
+      }
+      const viewId = id(set.tileData[tile], VIEW);
+      if (views.has(viewId)) {
+        throw new Error(`Duplicate view identity ${viewId}.`);
+      }
+      ids.push(viewId);
+      bytes = boundedSum(bytes, area, ASSET_LIMITS.decodedBytes, "Interchange view pixels");
+      views.set(viewId, {
+        id: viewId,
+        width: set.tileWidth,
+        height: set.tileHeight,
+        indexes: set.indexes.slice(tile * area, (tile + 1) * area)
+      });
+    }
+    tileIds.set(set.id, ids);
+  }
+  return { sets, setIds, views, tileIds };
+}
+function roles(document2) {
+  const result = /* @__PURE__ */ new Map();
+  document2.layers.forEach((layer, index) => {
+    const role = id(layer.userData, ROLE);
+    if (result.has(role)) {
+      throw new Error(`Duplicate role identity ${role}.`);
+    }
+    result.set(role, index);
+  });
+  return result;
+}
+function cellValue(payload, set, ids, offset, transforms) {
+  const word = payload.cells[offset];
+  if (!(set.flags & 4) && word === 4294967295) {
+    return null;
+  }
+  const view = ids.at((word & payload.idMask) >>> 0);
+  if (view === null) {
+    return null;
+  }
+  if (view === void 0) {
+    throw new Error("Interchange occurrence has no known view.");
+  }
+  for (const [name, mask] of [
+    ["flipX", payload.flipXMask],
+    ["flipY", payload.flipYMask],
+    ["diagonal", payload.diagonalMask]
+  ]) {
+    if (word & mask && !transforms.includes(name)) {
+      throw new Error(`View ${view}: unsupported native transform ${name}.`);
+    }
+  }
+  return JSON.stringify([
+    view,
+    !!(word & payload.flipXMask),
+    !!(word & payload.flipYMask),
+    !!(word & payload.diagonalMask)
+  ]);
+}
+function compareTilemap(beforeCel, before, oldSet, oldIds, afterCel, after, newSet, newIds, transforms) {
+  if (oldSet.tileWidth !== newSet.tileWidth || oldSet.tileHeight !== newSet.tileHeight || before && before.kind !== "tilemap" || after && after.kind !== "tilemap") {
+    throw new Error("Interchange tile dimensions or occurrence kind changed.");
+  }
+  const oldMap = before?.kind === "tilemap" ? before : void 0, newMap = after?.kind === "tilemap" ? after : void 0;
+  const at = (cel, map, set, ids, x, y) => {
+    if (!cel || !map) {
+      return null;
+    }
+    const column = (x - cel.x) / set.tileWidth, row = (y - cel.y) / set.tileHeight;
+    if (!Number.isInteger(column) || !Number.isInteger(row) || column < 0 || row < 0 || column >= map.columns || row >= map.rows) {
+      return null;
+    }
+    return cellValue(map, set, ids, row * map.columns + column, transforms);
+  };
+  const compare = (cel, map, set, ids, otherCel, otherMap, otherSet, otherIds) => {
+    if (!cel || !map) {
+      return;
+    }
+    for (let offset = 0; offset < map.cells.length; offset++) {
+      const value = cellValue(map, set, ids, offset, transforms);
+      if (value === null) {
+        continue;
+      }
+      const x = cel.x + offset % map.columns * set.tileWidth, y = cel.y + Math.floor(offset / map.columns) * set.tileHeight;
+      if (value !== at(otherCel, otherMap, otherSet, otherIds, x, y)) {
+        throw new Error("Read-only interchange tile references, offsets or flips changed.");
+      }
+    }
+  };
+  compare(beforeCel, oldMap, oldSet, oldIds, afterCel, newMap, newSet, newIds);
+  compare(afterCel, newMap, newSet, newIds, beforeCel, oldMap, oldSet, oldIds);
+}
+function compareRaster(beforeCel, before, afterCel, after, transparent) {
+  if (before && before.kind !== "raster" || after && after.kind !== "raster") {
+    throw new Error("Read-only raster occurrence kind changed.");
+  }
+  const oldRaster = before?.kind === "raster" ? before : void 0, newRaster = after?.kind === "raster" ? after : void 0;
+  const compare = (cel, image, otherCel, other) => {
+    if (!cel || !image) {
+      return;
+    }
+    for (let offset = 0; offset < image.indexes.length; offset++) {
+      const slot = image.indexes[offset];
+      if (slot === transparent) {
+        continue;
+      }
+      const x = cel.x + offset % image.width, y = cel.y + Math.floor(offset / image.width);
+      const ox = x - (otherCel?.x ?? 0), oy = y - (otherCel?.y ?? 0);
+      if (!other || !otherCel || ox < 0 || oy < 0 || ox >= other.width || oy >= other.height || other.indexes[oy * other.width + ox] !== slot) {
+        throw new Error("Read-only derived raster preview pixels or geometry changed.");
+      }
+    }
+  };
+  compare(beforeCel, oldRaster, afterCel, newRaster);
+  compare(afterCel, newRaster, beforeCel, oldRaster);
+}
+var timelineTags = (document2) => document2.tags.map(
+  (tag) => JSON.stringify([id(tag.userData, TAG), tag.from, tag.to, tag.direction, tag.repeat])
+).toSorted();
+function inspectTilemapInterchange(baseline, after) {
+  const before = baseline.document;
+  validateAsepriteDocument(before);
+  validateAsepriteDocument(after);
+  validateIndexedOwnership(baseline.ownership);
+  if (before.width !== after.width || before.height !== after.height || before.transparentIndex !== after.transparentIndex || before.frames.length !== after.frames.length || before.exportId !== after.exportId) {
+    throw new Error("Interchange canvas, transparency, timeline or export identity changed.");
+  }
+  const oldInventory = inventory(before), newInventory = inventory(after), oldRoles = roles(before), newRoles = roles(after);
+  if (oldInventory.views.size !== baseline.ownership.views.length || newInventory.views.size !== oldInventory.views.size || newInventory.sets.size !== oldInventory.sets.size || oldRoles.size !== newRoles.size) {
+    throw new Error("Interchange owner, view, tileset or role inventory changed.");
+  }
+  for (const view of baseline.ownership.views) {
+    const exported = oldInventory.views.get(view.id);
+    if (!exported || exported.width !== view.width || exported.height !== view.height || exported.indexes.some((slot, i) => slot !== view.indexes[i]) || !newInventory.views.has(view.id)) {
+      throw new Error(`Inconsistent private export or missing view ${view.id}.`);
+    }
+  }
+  const oldResolved = resolveAsepriteCels(before), newResolved = resolveAsepriteCels(after);
+  for (let frame = 0; frame < before.frames.length; frame++) {
+    if (before.frames[frame].durationMs !== after.frames[frame].durationMs) {
+      throw new Error("Read-only preview timing changed.");
+    }
+    const oldCels = new Map(before.frames[frame].cels.map((cel) => [cel.layer, cel])), newCels = new Map(after.frames[frame].cels.map((cel) => [cel.layer, cel]));
+    for (const [role, oldIndex] of oldRoles) {
+      const newIndex = newRoles.get(role);
+      if (newIndex === void 0) {
+        throw new Error(`Missing interchange role ${role}.`);
+      }
+      const oldLayer = before.layers[oldIndex], newLayer = after.layers[newIndex];
+      const oldCel = oldCels.get(oldIndex), newCel = newCels.get(newIndex);
+      if (oldLayer.kind !== newLayer.kind) {
+        throw new Error(`Read-only role ${role} kind changed.`);
+      }
+      if (oldLayer.kind === "tilemap" && newLayer.kind === "tilemap") {
+        if (oldInventory.setIds.get(oldLayer.tileset) !== newInventory.setIds.get(newLayer.tileset)) {
+          throw new Error(`Role ${role}: tileset binding changed.`);
+        }
+        compareTilemap(
+          oldCel,
+          oldCel && oldResolved.get(oldCel),
+          oldInventory.sets.get(oldLayer.tileset),
+          oldInventory.tileIds.get(oldLayer.tileset),
+          newCel,
+          newCel && newResolved.get(newCel),
+          newInventory.sets.get(newLayer.tileset),
+          newInventory.tileIds.get(newLayer.tileset),
+          baseline.nativeTransforms
+        );
+      } else {
+        compareRaster(
+          oldCel,
+          oldCel && oldResolved.get(oldCel),
+          newCel,
+          newCel && newResolved.get(newCel),
+          before.transparentIndex
+        );
+      }
+    }
+    const order = (document2, resolved) => document2.frames[frame].cels.filter((cel) => {
+      const payload = resolved.get(cel);
+      if (payload.kind === "raster") {
+        return payload.indexes.some((slot) => slot !== document2.transparentIndex);
+      }
+      const layer = document2.layers[cel.layer];
+      if (layer.kind !== "tilemap") {
+        throw new Error("Invalid tilemap layer binding.");
+      }
+      const source = document2 === before ? oldInventory : newInventory;
+      const set = source.sets.get(layer.tileset), ids = source.tileIds.get(layer.tileset);
+      return payload.cells.some(
+        (_, offset) => cellValue(payload, set, ids, offset, baseline.nativeTransforms) !== null
+      );
+    }).toSorted((a, b) => a.layer + a.zIndex - (b.layer + b.zIndex) || a.zIndex - b.zIndex).map((cel) => id(document2.layers[cel.layer].userData, ROLE));
+    if (JSON.stringify(order(before, oldResolved)) !== JSON.stringify(order(after, newResolved))) {
+      throw new Error("Read-only interchange stacking changed.");
+    }
+  }
+  if (JSON.stringify(timelineTags(before)) !== JSON.stringify(timelineTags(after))) {
+    throw new Error("Read-only interchange timeline membership changed.");
+  }
+  const pixels = reconcileIndexedViews(baseline.ownership, [...newInventory.views.values()]);
+  const colors = indexedPaletteChanges(
+    before.palette,
+    after.palette,
+    baseline.editablePaletteSlots
+  );
+  if (!baseline.capabilities.pixelEdits && pixels.length || !baseline.capabilities.paletteEdits && colors.length) {
+    throw new Error("Interchange edit exceeds exported capabilities.");
+  }
+  return { pixels, colors };
+}
+
+// packages/assets/src/source-binding.ts
+function sourceResourcePath(value) {
+  if (typeof value !== "string" || !value || value.length > 1024 || /[\0:\\]/.test(value) || value.startsWith("/")) {
+    throw new Error("Source binding requires a portable relative resource path.");
+  }
+  return value;
+}
+function isSourceBinding(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid asset source binding.");
+  }
+  const binding = value;
+  if (binding.format !== "uttori-asset-source" || binding.version !== 1 || typeof binding.id !== "string" || !/^[\da-f-]{36}$/.test(binding.id) || typeof binding.adapter !== "string" || !binding.adapter || !binding.source || typeof binding.source.representation !== "string" || !binding.resources || typeof binding.resources !== "object" || Array.isArray(binding.resources) || !Array.isArray(binding.native) || !binding.native.length || binding.native.length > 1024) {
+    throw new Error("Unsupported or incomplete asset source binding.");
+  }
+  sourceResourcePath(binding.source.path);
+  for (const resource of Object.values(binding.resources)) {
+    sourceResourcePath(resource);
+  }
+  const declarations = binding.native;
+  for (const declaration of declarations) {
+    if (!declaration || typeof declaration !== "object" || Array.isArray(declaration)) {
+      throw new Error("Invalid native declaration in asset source binding.");
+    }
+    const native = Object.fromEntries(Object.entries(declaration));
+    if (typeof native.format !== "string" || !native.format || !native.options || typeof native.options !== "object" || Array.isArray(native.options)) {
+      throw new Error("Invalid native declaration in asset source binding.");
+    }
+  }
+  return true;
+}
+function readAssetSourceBinding(bytes) {
+  if (bytes.length > ASSET_LIMITS.metadataBytes) {
+    throw new Error("Asset source binding exceeds its metadata budget.");
+  }
+  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (!isSourceBinding(value)) {
+    throw new Error("Invalid asset source binding.");
+  }
+  return value;
+}
+function bindingResourceKey(binding, resource) {
+  return `${binding}#${resource}`;
+}
+
+// packages/assets/src/secret-of-mana/som-palette-edit.ts
+function nativeBytes(atlas, source, catalog, segment) {
+  const options = atlas.nativeOptions?.[segment];
+  if (!options) {
+    return void 0;
+  }
+  const layoutName = typeof options.layout === "string" ? options.layout : "layout.json";
+  const paletteName = typeof options.palettes === "string" ? options.palettes : "palettes.json";
+  const result = convertBossImage(
+    source,
+    { ...options, segment, layout: layoutName, palettes: paletteName },
+    {
+      ...atlas.resources,
+      [layoutName]: {
+        bytes: new TextEncoder().encode(JSON.stringify(atlas.layout)),
+        mediaType: "application/json"
+      },
+      [paletteName]: {
+        bytes: new TextEncoder().encode(JSON.stringify(catalog)),
+        mediaType: "application/json"
+      }
+    }
+  );
+  return result.outputs.graphics.bytes;
+}
+function frameAtlasPreservedChunks(atlas, catalog) {
+  const bytes = atlas.source.bytes;
+  inspectFrameAtlas(atlas.source, atlas.layout, catalog, { whole: true });
+  const image = readAssetPng(bytes);
+  const names = [];
+  for (const { type: name } of image.chunks) {
+    if (/^soM[A-Z]$/.test(name)) {
+      const segment = Object.keys(atlas.layout.segments)[name.charCodeAt(3) - 65];
+      if (!segment || !atlas.nativeOptions?.[segment]) {
+        throw new Error(`Missing native storage declaration for ${atlas.id}/${name}.`);
+      }
+      nativeBytes(atlas, atlas.source, catalog, segment);
+      names.push(name);
+    }
+  }
+  return names;
+}
+function planSpritePaletteWords(catalog, edits) {
+  validateSpritePaletteAliases(catalog);
+  const next = structuredClone(catalog);
+  const changed = /* @__PURE__ */ new Set();
+  const slots = /* @__PURE__ */ new Set();
+  for (const edit of edits) {
+    spritePaletteBytes(catalog, edit.palette);
+    const record = next.palettes[edit.palette];
+    const offset = edit.index - record.firstIndex;
+    if (!Number.isSafeInteger(edit.index) || offset < 0 || offset >= record.words.length || !Array.isArray(edit.rgb) || edit.rgb.length !== 3) {
+      throw new Error(`Invalid palette slot ${edit.palette}:${edit.index}.`);
+    }
+    const address = Number.parseInt(record.romAddress, 16) + offset * 2;
+    if (slots.has(address)) {
+      throw new Error(`Duplicate palette edit ${edit.palette}:${edit.index}.`);
+    }
+    slots.add(address);
+    const channels = edit.rgb.map((color) => {
+      if (!Number.isInteger(color) || color < 0 || color > 255) {
+        throw new Error("Palette edits require RGB8.");
+      }
+      const value = color >>> 3;
+      if ((value << 3 | value >>> 2) !== color) {
+        throw new Error(`RGB channel ${color} is not exactly BGR555 representable.`);
+      }
+      return value;
+    });
+    const highBit = Number.parseInt(record.words[offset], 16) & 32768;
+    const word = (highBit + channels[0] + (channels[1] << 5) + (channels[2] << 10)).toString(16).toUpperCase().padStart(4, "0");
+    if (record.words[offset].toUpperCase() !== word) {
+      for (const [id2, alias] of Object.entries(next.palettes)) {
+        const index = (address - Number.parseInt(alias.romAddress, 16)) / 2;
+        if (Number.isInteger(index) && index >= 0 && index < alias.words.length) {
+          alias.words[index] = word;
+          changed.add(id2);
+        }
+      }
+    }
+  }
+  return { catalog: next, palettes: [...changed] };
+}
+
+// packages/assets/src/secret-of-mana/som-frame-edit.ts
+function renderStableFrameAtlas(tiles, layout2) {
+  const sources = /* @__PURE__ */ new Map();
+  const placements = [];
+  for (const [name, segment] of Object.entries(layout2.segments)) {
+    const native = tiles.get(name);
+    if (native?.length !== segment.tiles.length) {
+      throw new Error(`Missing native tiles: ${name}.`);
+    }
+    native.forEach((tile, index) => {
+      const source = JSON.stringify([name, index]);
+      const tileSlot = index >= 0 && index < segment.tiles.length ? segment.tiles[index] : void 0;
+      if (!tileSlot) {
+        throw new Error(`Missing native tiles: ${name}.`);
+      }
+      sources.set(source, tile);
+      placements.push({
+        id: `strip:${source}`,
+        source,
+        ...tileSlot,
+        transparentIndex: null,
+        indexMap: Array.from({ length: 16 }, (_, i) => i === 0 ? 0 : segment.palette * 16 + i)
+      });
+    });
+  }
+  for (const frame of layout2.frames ?? []) {
+    const native = validateFrameComposition(layout2, frame) ?? [];
+    const origin = frame.origin;
+    if (!origin) {
+      throw new Error(`Retained composition required: ${frame.id}.`);
+    }
+    for (const p of native) {
+      if (p.external) {
+        continue;
+      }
+      const segment = typeof p.segment === "string" && Object.hasOwn(layout2.segments, p.segment) ? layout2.segments[p.segment] : void 0;
+      if (!segment) {
+        throw new Error(`Unknown tile reference in ${frame.id}:${p.id}.`);
+      }
+      placements.push({
+        id: JSON.stringify([frame.id, p.id]),
+        source: JSON.stringify([p.segment, p.tile]),
+        x: origin[0] + p.x,
+        y: origin[1] + p.y,
+        flipX: p.flipX,
+        flipY: p.flipY,
+        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i)
+      });
+    }
+  }
+  return renderIndexedPlacements(sources, placements, {
+    x: 0,
+    y: 0,
+    width: layout2.width,
+    height: layout2.height
+  });
+}
+
+// packages/assets/src/secret-of-mana/som-atlas-interchange.ts
+function ownerId(segment, tile) {
+  return JSON.stringify([segment, tile]);
+}
+function createSomAtlasExport(atlas, catalog, exportId) {
+  if (atlas.layout.tileSources !== "native-strip") {
+    throw new Error("Atlas interchange requires explicitly declared native-strip pixel ownership.");
+  }
+  const inspected = inspectFrameAtlas(atlas.source, atlas.layout, catalog, { whole: true });
+  const document2 = { ...inspected.image, transparentIndex: 0, exportId };
+  const owners = Object.entries(atlas.layout.segments).flatMap(([name, segment]) => {
+    const indexMap = Array.from({ length: 256 }, () => null);
+    for (let slot = 0; slot < 16; slot++) {
+      indexMap[segment.palette * 16 + slot] = slot;
+    }
+    indexMap[0] = 0;
+    return segment.tiles.map((tile, index) => ({
+      ...tile,
+      id: ownerId(name, index),
+      width: 8,
+      height: 8,
+      indexMap
+    }));
+  });
+  const editablePaletteSlots = atlas.layout.paletteRefs.flatMap((id2, bank) => {
+    const stored = catalog.palettes[id2];
+    return stored.words.flatMap((_, index) => {
+      const slot = stored.firstIndex + index;
+      return slot > 0 && slot < 16 ? [bank * 16 + slot] : [];
+    });
+  });
+  const policy = { owners, editablePaletteSlots };
+  inspectAtlasChanges(document2, document2, policy);
+  return { document: document2, policy };
+}
+function planSomAtlasImport(atlas, catalog, changes) {
+  const before = inspectFrameAtlas(atlas.source, atlas.layout, catalog, { whole: true });
+  const definitions = createSomAtlasExport(atlas, catalog, "00000000-0000-0000-0000-000000000000");
+  const tiles = new Map(
+    [...before.tiles].map(([name, values]) => [
+      name,
+      values.map((tile) => ({ ...tile, indexes: tile.indexes.slice() }))
+    ])
+  );
+  const seen = /* @__PURE__ */ new Set();
+  for (const change of changes.pixels) {
+    if (seen.has(change.owner)) {
+      throw new Error("Duplicate SoM tile delta.");
+    }
+    seen.add(change.owner);
+    const owner = definitions.policy.owners.find((entry) => entry.id === change.owner);
+    if (!owner || change.indexes.length !== 64 || change.indexes.some((index) => index > 15)) {
+      throw new Error("Invalid SoM native tile delta.");
+    }
+    for (const [name, values] of tiles) {
+      const tile = values.findIndex((_, index) => ownerId(name, index) === change.owner);
+      if (tile !== -1) {
+        values[tile] = { ...values[tile], indexes: change.indexes.slice() };
+      }
+    }
+  }
+  const palettePlan = planSpritePaletteWords(
+    catalog,
+    changes.colors.map(({ index, color }) => {
+      if (!definitions.policy.editablePaletteSlots.includes(index)) {
+        throw new Error("Unsupported SoM palette slot delta.");
+      }
+      return {
+        palette: atlas.layout.paletteRefs[Math.floor(index / 16)],
+        index: index % 16,
+        rgb: color.slice(0, 3)
+      };
+    })
+  );
+  const changed = changes.pixels.length > 0 || palettePlan.palettes.length > 0;
+  let layout2 = structuredClone(atlas.layout);
+  let png = Uint8Array.from(atlas.source.bytes);
+  if (changed) {
+    layout2 = bindFrameAtlasPalette(atlas.source, atlas.layout, catalog);
+  }
+  if (changes.pixels.length) {
+    const oldRender = renderStableFrameAtlas(before.tiles, layout2);
+    const newRender = renderStableFrameAtlas(tiles, layout2);
+    const indexes = before.image.indexes.slice();
+    for (let index = 0; index < indexes.length; index++) {
+      if (oldRender.indexes[index] !== newRender.indexes[index]) {
+        indexes[index] = newRender.indexes[index];
+      }
+    }
+    png = rewriteIndexedPng(atlas.source.bytes, {
+      indexes,
+      preserveChunks: frameAtlasPreservedChunks(atlas, catalog)
+    });
+  }
+  inspectFrameAtlas({ bytes: png, mediaType: "image/png" }, layout2, palettePlan.catalog, {
+    whole: true
+  });
+  const palette = layout2.paletteRefs.flatMap((id2) => spritePaletteColors(palettePlan.catalog, id2));
+  return { png, layout: layout2, catalog: palettePlan.catalog, palettes: palettePlan.palettes, palette };
+}
+
+// packages/assets/src/tilemap-presentation.ts
+function tilemapPresentationCel(layer, x, y, columns, rows, cells) {
+  return {
+    kind: "tilemap",
+    layer,
+    x,
+    y,
+    zIndex: 0,
+    columns,
+    rows,
+    cells,
+    bits: 32,
+    idMask: 536870911,
+    flipXMask: 2147483648,
+    flipYMask: 1073741824,
+    diagonalMask: 536870912
+  };
+}
+function createTilemapInventory(ownership, nativeWidth, nativeHeight, name) {
+  validateIndexedOwnership(ownership);
+  const { views } = ownership, first = views.at(0);
+  if (!first || views.some((view) => view.width !== first.width || view.height !== first.height)) {
+    throw new Error("A shared tileset inventory requires uniform view geometry.");
+  }
+  const area = first.width * first.height, layout2 = planIndexedPresentation(
+    nativeWidth,
+    nativeHeight,
+    first.width,
+    first.height,
+    views.length
+  ), strip = new Uint8Array(
+    boundedProduct(views.length + 1, area, ASSET_LIMITS.decodedBytes, "Inventory tile pixels")
+  ), owners = new Map(ownership.owners.map((owner) => [owner.id, owner])), readonlyViews = views.map((view) => owners.get(view.owner)?.editable === false);
+  views.forEach((view, index) => strip.set(view.indexes, (index + 1) * area));
+  const layers = [
+    {
+      kind: "tilemap",
+      flags: 3,
+      tileset: 0,
+      name: "Tiles \u2014 edit pixels in Manual mode",
+      userData: interchangeIdentity.role("inventory")
+    }
+  ];
+  if (readonlyViews.some(Boolean)) {
+    layers.push({
+      kind: "tilemap",
+      flags: 1,
+      tileset: 0,
+      name: "Tiles (read-only: native inverse unproven)",
+      userData: interchangeIdentity.role("inventory-readonly")
+    });
+  }
+  const frames = [], tags = [];
+  for (let page = 0; page < layout2.pages; page++) {
+    const count = Math.min(layout2.capacity, views.length - page * layout2.capacity), rows = Math.ceil(count / layout2.columns), cels = [];
+    for (let layer = 0; layer < layers.length; layer++) {
+      const cells = new Uint32Array(layout2.columns * rows);
+      for (let index = 0; index < count; index++) {
+        const view = page * layout2.capacity + index;
+        if (readonlyViews[view] === (layer === 1)) {
+          cells[index] = view + 1;
+        }
+      }
+      cels.push(tilemapPresentationCel(layer, 0, 0, layout2.columns, rows, cells));
+    }
+    frames.push({ durationMs: 100, cels });
+    tags.push({
+      name: `Tiles ${page + 1} (presentation)`,
+      from: page,
+      to: page,
+      direction: 0,
+      repeat: 1,
+      userData: interchangeIdentity.timeline(`inventory:${page}`)
+    });
+  }
+  return {
+    width: layout2.width,
+    height: layout2.height,
+    layers,
+    frames,
+    tags,
+    tileset: {
+      id: 0,
+      flags: 30,
+      name,
+      baseIndex: 0,
+      tileWidth: first.width,
+      tileHeight: first.height,
+      tileCount: views.length + 1,
+      indexes: strip,
+      userData: interchangeIdentity.tileset("native-views"),
+      tileData: [void 0, ...views.map((view) => interchangeIdentity.view(view.id))]
+    }
+  };
+}
+
+// packages/assets/src/secret-of-mana/som-sprite-interchange.ts
+var X = 2147483648;
+var Y = 1073741824;
+function createSomSpriteInterchange(atlas, catalog, exportId, runs = []) {
+  if (atlas.layout.tileSources !== "native-strip") {
+    throw new Error("Sprite interchange requires declared native-strip ownership.");
+  }
+  const inspected = inspectFrameAtlas(atlas.source, atlas.layout, catalog, { whole: true });
+  const paletteIds = [
+    .../* @__PURE__ */ new Set([
+      ...atlas.layout.paletteRefs,
+      ...(atlas.layout.paletteVariants ?? []).map((variant) => variant.palette)
+    ])
+  ];
+  if (paletteIds.length > 16) {
+    throw new Error("Sprite palette views exceed indexed document slots.");
+  }
+  const palette = paletteIds.flatMap((name) => spritePaletteColors(catalog, name));
+  const paletteSlots = paletteIds.flatMap(
+    (name) => Array.from({ length: 16 }, (_, index) => ({ palette: name, index }))
+  );
+  const editablePaletteSlots = paletteSlots.flatMap((slot, index) => {
+    const stored = catalog.palettes[slot.palette];
+    return slot.index > 0 && slot.index >= stored.firstIndex && slot.index < stored.firstIndex + stored.words.length ? [index] : [];
+  });
+  const owners = [], views = [], references = /* @__PURE__ */ new Map();
+  const nativeSlots = Array.from({ length: 16 }, (_, slot) => slot), maps = /* @__PURE__ */ new Map();
+  for (const [segmentName, tiles] of inspected.tiles) {
+    const segment = atlas.layout.segments[segmentName], primary = atlas.layout.paletteRefs[segment.palette];
+    const variants = [
+      .../* @__PURE__ */ new Set([
+        primary,
+        ...(atlas.layout.paletteVariants ?? []).filter((variant) => variant.group === segment.palette).map((variant) => variant.palette)
+      ])
+    ];
+    tiles.forEach((tile, index) => {
+      const owner = JSON.stringify([segmentName, index]);
+      owners.push({
+        ...tile,
+        indexes: Uint8Array.from(tile.indexes),
+        id: owner,
+        allowedIndexes: nativeSlots
+      });
+      for (const name of variants) {
+        const bank = paletteIds.indexOf(name), id2 = JSON.stringify([owner, name]), cached = maps.get(bank);
+        let indexMap = cached;
+        if (!indexMap) {
+          const slots = Array(256).fill(null);
+          for (let slot = 1; slot < 16; slot++) {
+            slots[bank * 16 + slot] = slot;
+          }
+          slots[0] = 0;
+          maps.set(bank, slots);
+          indexMap = slots;
+        }
+        views.push({
+          id: id2,
+          owner,
+          width: 8,
+          height: 8,
+          indexes: Uint8Array.from(tile.indexes, (slot) => slot === 0 ? 0 : bank * 16 + slot),
+          indexMap
+        });
+        if (name === primary) {
+          references.set(owner, views.length);
+        }
+      }
+    });
+  }
+  boundedSum(0, owners.length, ASSET_LIMITS.owners, "Sprite native owners");
+  const poses = (atlas.layout.frames ?? []).map((frame) => {
+    const placements = validateFrameComposition(atlas.layout, frame);
+    if (!placements) {
+      throw new Error(`Pose ${frame.id}: retained native composition is required.`);
+    }
+    return { frame, placements };
+  });
+  let minX = 0, minY = 0, maxX = 8, maxY = 8, blocks = 0;
+  for (const pose of poses) {
+    blocks = Math.max(blocks, pose.frame.blocks?.length ?? 0);
+    for (const placement of pose.placements) {
+      minX = Math.min(minX, placement.x);
+      minY = Math.min(minY, placement.y);
+      maxX = Math.max(maxX, placement.x + 8);
+      maxY = Math.max(maxY, placement.y + 8);
+    }
+  }
+  for (const run of runs) {
+    for (const observed of run.frames) {
+      const pose = poses.find((entry) => String(entry.frame.id) === observed.pose);
+      if (!pose) {
+        throw new Error(`Sequence ${run.sequence}: unknown pose ${observed.pose}.`);
+      }
+      for (const placement of pose.placements) {
+        minX = Math.min(minX, placement.x + run.pivot.x);
+        minY = Math.min(minY, placement.y + run.pivot.y);
+        maxX = Math.max(maxX, placement.x + run.pivot.x + 8);
+        maxY = Math.max(maxY, placement.y + run.pivot.y + 8);
+      }
+    }
+  }
+  const displayOrigin = { x: -minX, y: -minY };
+  const inventory2 = createTilemapInventory(
+    { owners, views },
+    maxX - minX,
+    maxY - minY,
+    `${atlas.id} native views`
+  );
+  const { width, height, layers, frames, tags } = inventory2;
+  rasterArea(width, height, "Sprite presentation", ASSET_LIMITS.interchangeSide);
+  for (let index = 0; index < blocks; index++) {
+    layers.push({
+      kind: "tilemap",
+      flags: 3,
+      name: `Part ${index + 1}`,
+      tileset: 0,
+      userData: interchangeIdentity.role(`part-${index}`)
+    });
+  }
+  const poseFrames = /* @__PURE__ */ new Map();
+  for (const { frame, placements } of poses) {
+    const key = String(frame.id);
+    if (poseFrames.has(key)) {
+      throw new Error(`Duplicate sprite pose ${key}.`);
+    }
+    const cels = [];
+    (frame.blocks ?? []).forEach((block, index2) => {
+      const members = placements.filter((placement) => placement.block === block.id), columns = block.size / 8;
+      const values = new Uint32Array(columns * columns);
+      for (const placement of members) {
+        if (placement.external) {
+          continue;
+        }
+        const reference = references.get(JSON.stringify([placement.segment, placement.tile]));
+        if (!reference) {
+          throw new Error(`Pose ${key}: unknown native view ${placement.id}.`);
+        }
+        const x = (placement.x - block.x) / 8, y = (placement.y - block.y) / 8;
+        if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= columns || y >= columns) {
+          throw new Error(`Pose ${key}: block grid phase changed.`);
+        }
+        values[y * columns + x] = (reference | (placement.flipX ? X : 0) | (placement.flipY ? Y : 0)) >>> 0;
+      }
+      cels.push(
+        tilemapPresentationCel(
+          index2 + 1,
+          block.x + displayOrigin.x,
+          block.y + displayOrigin.y,
+          columns,
+          columns,
+          values
+        )
+      );
+    });
+    const index = frames.length;
+    poseFrames.set(key, index);
+    frames.push({ durationMs: 100, cels });
+    tags.push({
+      name: `Pose ${key} (presentation)`,
+      from: index,
+      to: index,
+      direction: 0,
+      repeat: 1,
+      userData: interchangeIdentity.timeline(`pose:${key}`)
+    });
+  }
+  for (const run of runs) {
+    const start = frames.length;
+    for (const observed of run.frames) {
+      const target = poseFrames.get(observed.pose);
+      if (target === void 0) {
+        throw new Error(`Sequence ${run.sequence}: unknown pose ${observed.pose}.`);
+      }
+      const cels = frames[target].cels.map((cel) => ({
+        kind: "linked",
+        layer: cel.layer,
+        x: cel.x + run.pivot.x,
+        y: cel.y + run.pivot.y,
+        zIndex: cel.zIndex,
+        frame: target
+      }));
+      frames.push({ durationMs: observed.durationMs, cels });
+    }
+    if (frames.length === start) {
+      continue;
+    }
+    tags.push({
+      name: `${run.sequence} (${run.provenance.kind})`,
+      from: start,
+      to: frames.length - 1,
+      direction: 0,
+      repeat: 1,
+      userData: interchangeIdentity.timeline(run.id)
+    });
+  }
+  const baseline = {
+    kind: "tilemap",
+    ownership: { owners, views },
+    editablePaletteSlots,
+    nativeTransforms: ["flipX", "flipY"],
+    capabilities: {
+      pixelEdits: true,
+      paletteEdits: true,
+      tileReferences: true,
+      previewTimeline: true
+    },
+    document: {
+      width,
+      height,
+      palette,
+      transparentIndex: 0,
+      exportId,
+      layers,
+      frames,
+      tags,
+      tilesets: [inventory2.tileset]
+    }
+  };
+  inspectTilemapInterchange(baseline, baseline.document);
+  return { baseline, paletteSlots, displayOrigin };
+}
+
+// packages/assets/src/secret-of-mana/som-source.ts
+function isSourceNames(value) {
+  return Array.isArray(value) && value.every((name) => typeof name === "string" && !!name);
+}
+function bindingNames(options) {
+  const result = [];
+  if (options.sourceBinding !== void 0) {
+    if (typeof options.sourceBinding !== "string" || !options.sourceBinding) {
+      throw new Error("sourceBinding must name an authoring sidecar.");
+    }
+    result.push(options.sourceBinding);
+  }
+  if (options.paletteSources !== void 0) {
+    if (!isSourceNames(options.paletteSources)) {
+      throw new Error("paletteSources must be an array of authoring sidecar paths.");
+    }
+    result.push(...options.paletteSources);
+  }
+  return [...new Set(result)];
+}
+function somSourceDependencies(_source, options, resources, codecs = indexedSourceCodecs()) {
+  return bindingNames(options).flatMap((name) => {
+    const requests = [{ key: name, path: name }];
+    if (!Object.hasOwn(resources, name)) {
+      return requests;
+    }
+    const binding = readAssetSourceBinding(resources[name].bytes);
+    for (const [key, path] of Object.entries(binding.resources)) {
+      requests.push({ key: bindingResourceKey(name, key), path, relativeTo: name });
+    }
+    if (name !== options.sourceBinding) {
+      requests.push({
+        key: bindingResourceKey(name, "source"),
+        path: binding.source.path,
+        relativeTo: name,
+        mediaType: codecs.get(binding.source.representation).mediaType
+      });
+    }
+    return requests;
+  });
+}
+function input(resources, key) {
+  if (!Object.hasOwn(resources, key)) {
+    throw new Error(`Missing authoring resource '${key}'.`);
+  }
+  return resources[key];
+}
+function somPngPaletteViews(atlas, catalog) {
+  const raster = createSomAtlasExport(atlas, catalog, atlas.id);
+  const primarySlots = atlas.layout.paletteRefs.flatMap(
+    (palette2) => Array.from({ length: 16 }, (_, index) => ({ palette: palette2, index }))
+  );
+  const slots = [...primarySlots];
+  while (slots.length < raster.document.palette.length) {
+    slots.push(null);
+  }
+  const palette = [...raster.document.palette];
+  const editable = [...raster.policy.editablePaletteSlots];
+  const variants = [
+    ...new Set((atlas.layout.paletteVariants ?? []).map((variant) => variant.palette))
+  ].filter((id2) => !atlas.layout.paletteRefs.includes(id2));
+  for (const id2 of variants) {
+    const first = palette.length;
+    palette.push(...spritePaletteColors(catalog, id2));
+    const record = catalog.palettes[id2];
+    for (let index = 0; index < 16; index++) {
+      slots.push({ palette: id2, index });
+      if (index > 0 && index >= record.firstIndex && index < record.firstIndex + record.words.length) {
+        editable.push(first + index);
+      }
+    }
+  }
+  if (palette.length > 256) {
+    throw new Error(
+      "PNG source requires more than 256 declared palette slots; choose a representation with sufficient palette capacity."
+    );
+  }
+  return {
+    document: { ...raster.document, palette },
+    policy: { ...raster.policy, editablePaletteSlots: editable },
+    slots
+  };
+}
+function inspectBoundSourceUncached(name, source, resources, codecs) {
+  const binding = readAssetSourceBinding(input(resources, name).bytes);
+  if (binding.adapter !== "som.sprite.native") {
+    throw new Error(`Unsupported source adapter '${binding.adapter}'.`);
+  }
+  const reference = input(resources, bindingResourceKey(name, "reference"));
+  const layoutInput = input(resources, bindingResourceKey(name, "layout"));
+  const catalog = parseSpritePaletteCatalog(
+    input(resources, bindingResourceKey(name, "palettes")).bytes
+  );
+  const layout2 = readFrameLayout({ layout: "layout.json" }, { "layout.json": layoutInput });
+  const nativeOptions = Object.fromEntries(
+    binding.native.flatMap((entry) => {
+      if (entry.format !== "som.boss.graphics") {
+        return [];
+      }
+      const segment = entry.options.segment;
+      if (typeof segment !== "string" || !Object.hasOwn(layout2.segments, segment)) {
+        throw new Error("Source binding has an unknown native segment.");
+      }
+      return [[segment, entry.options]];
+    })
+  );
+  const nativeResources = {};
+  for (const entry of binding.native) {
+    if (typeof entry.options.native === "string" && Object.hasOwn(binding.resources, entry.options.native)) {
+      nativeResources[entry.options.native] = input(
+        resources,
+        bindingResourceKey(name, entry.options.native)
+      );
+    }
+  }
+  const atlas = {
+    id: binding.id,
+    source: reference,
+    layout: layout2,
+    nativeOptions,
+    resources: nativeResources
+  };
+  const presentation = createSomSpriteInterchange(atlas, catalog, binding.id);
+  const codec = codecs.identify(source.bytes, { mediaType: source.mediaType });
+  if (codec.id !== binding.source.representation) {
+    throw new Error(`Source ${binding.source.path}: representation disagrees with its binding.`);
+  }
+  const document2 = codec.decode(source.bytes, presentation.baseline.document);
+  let changes;
+  let slots = presentation.paletteSlots;
+  if (document2.tilesets.length) {
+    changes = inspectTilemapInterchange(presentation.baseline, document2);
+  } else {
+    const raster = somPngPaletteViews(atlas, catalog);
+    const image = indexedAtlasDocument(pngImporter.import(source).value, 0);
+    if (codec.id !== "indexed-png") {
+      throw new Error("Sprite authoring requires its complete identified tilemap inventory.");
+    }
+    const owned = new Uint8Array(image.indexes.length);
+    for (const owner of raster.policy.owners) {
+      for (let y = 0; y < owner.height; y++) {
+        owned.fill(
+          1,
+          (owner.y + y) * image.width + owner.x,
+          (owner.y + y) * image.width + owner.x + owner.width
+        );
+      }
+    }
+    const nativeIndexes = image.indexes.map(
+      (slot, index) => owned[index] ? slot : raster.document.indexes[index]
+    );
+    changes = inspectAtlasChanges(
+      raster.document,
+      { ...image, indexes: nativeIndexes, exportId: binding.id },
+      raster.policy
+    );
+    const canonical = planSomAtlasImport(atlas, catalog, { pixels: changes.pixels, colors: [] });
+    const expected = indexedAtlasDocument(
+      pngImporter.import({ bytes: canonical.png, mediaType: "image/png" }).value,
+      0
+    );
+    if (image.indexes.some(
+      (slot, index) => !owned[index] && slot !== raster.document.indexes[index] && slot !== expected.indexes[index]
+    )) {
+      throw new Error(
+        "Read-only PNG guides or composition pixels changed outside native ownership."
+      );
+    }
+    slots = raster.slots;
+  }
+  return { binding, atlas, catalog, changes, slots };
+}
+var inspectionCaches = /* @__PURE__ */ new WeakMap();
+function inspectBoundSource(name, source, resources, codecs) {
+  const bindingBytes = input(resources, name).bytes;
+  const binding = readAssetSourceBinding(bindingBytes);
+  const snapshots = [
+    bindingBytes,
+    source.bytes,
+    ...Object.keys(binding.resources).toSorted().map((key) => input(resources, bindingResourceKey(name, key)).bytes)
+  ];
+  const cache = inspectionCaches.get(codecs) ?? [];
+  const found = cache.find(
+    (entry) => entry.revision === codecs.revision && entry.mediaType === source.mediaType && entry.snapshots.length === snapshots.length && entry.snapshots.every(
+      (before, index) => before.length === snapshots[index].length && before.every((byte, offset) => byte === snapshots[index][offset])
+    )
+  );
+  if (found) {
+    return found.value;
+  }
+  let value;
+  try {
+    value = inspectBoundSourceUncached(name, source, resources, codecs);
+  } catch (error) {
+    throw new Error(
+      `Source '${binding.source.path}': ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
+    );
+  }
+  const bytes = snapshots.reduce((total, item) => total + item.length, 0);
+  if (bytes <= 8 * 1024 * 1024) {
+    cache.unshift({
+      snapshots: snapshots.map((item) => item.slice()),
+      mediaType: source.mediaType,
+      revision: codecs.revision,
+      value
+    });
+    cache.splice(4);
+    inspectionCaches.set(codecs, cache);
+  }
+  return value;
+}
+function effectiveSomSourcePalette(catalog, options, resources, ownSource, codecs = indexedSourceCodecs()) {
+  const edits = /* @__PURE__ */ new Map();
+  for (const name of bindingNames(options)) {
+    let source;
+    if (name === options.sourceBinding && ownSource) {
+      source = ownSource;
+    } else {
+      source = input(resources, bindingResourceKey(name, "source"));
+    }
+    const inspected = inspectBoundSource(name, source, resources, codecs);
+    for (const change of inspected.changes.colors) {
+      const slot = inspected.slots[change.index];
+      if (!slot) {
+        throw new Error(
+          `Source ${inspected.binding.source.path}: read-only palette guide changed.`
+        );
+      }
+      if (!Object.hasOwn(catalog.palettes, slot.palette)) {
+        throw new Error(`Source ${inspected.binding.id}: missing palette owner ${slot.palette}.`);
+      }
+      const record = catalog.palettes[slot.palette];
+      const address = Number.parseInt(record.romAddress, 16) + (slot.index - record.firstIndex) * 2;
+      const rgb = change.color.slice(0, 3);
+      const previous = edits.get(address);
+      if (previous && previous.rgb.some((channel, index) => channel !== rgb[index])) {
+        throw new Error(
+          `Conflicting authored palette values at $${address.toString(16)} (${slot.palette}:${slot.index}).`
+        );
+      }
+      edits.set(address, { ...slot, rgb });
+    }
+  }
+  return planSpritePaletteWords(catalog, [...edits.values()]).catalog;
+}
+function normalizeSomSource(source, options, resources, catalog, codecs = indexedSourceCodecs()) {
+  const effective = effectiveSomSourcePalette(catalog, options, resources, source, codecs);
+  if (typeof options.sourceBinding !== "string") {
+    if (source.mediaType !== "image/png") {
+      throw new Error(
+        "Composed sprite sources require an explicit sourceBinding created by source conversion."
+      );
+    }
+    const layout3 = bindFrameAtlasPalette(source, readFrameLayout(options, resources), catalog);
+    return { source, layout: layout3, catalog: effective };
+  }
+  const inspected = inspectBoundSource(options.sourceBinding, source, resources, codecs);
+  const reconstructed = planSomAtlasImport(inspected.atlas, inspected.catalog, {
+    pixels: inspected.changes.pixels,
+    colors: []
+  });
+  const layout2 = bindFrameAtlasPalette(
+    inspected.atlas.source,
+    reconstructed.layout,
+    inspected.catalog
+  );
+  return {
+    source: { bytes: reconstructed.png, mediaType: "image/png" },
+    layout: layout2,
+    catalog: effective
+  };
+}
+
 // packages/assets/src/secret-of-mana/som-world-rle.ts
 function decodeWorldRow(bytes, size = 512) {
   if (!Number.isSafeInteger(size) || size < 1 || size > 65536) {
     throw new Error("World row size must be 1..65536 tiles.");
   }
   const data = new Uint8Array(size);
-  let input = 0, output = 0;
+  let input2 = 0, output = 0;
   while (output < size) {
-    if (input >= bytes.length) {
+    if (input2 >= bytes.length) {
       throw new Error("Truncated world row token.");
     }
-    const token = bytes[input++];
+    const token = bytes[input2++];
     let count = 1, tile = token;
     if (token >= 192) {
       count = (token & 63) + 1;
-      if (input >= bytes.length) {
+      if (input2 >= bytes.length) {
         throw new Error("Truncated world row run.");
       }
-      tile = bytes[input++];
+      tile = bytes[input2++];
     }
     if (output + count > size) {
       throw new Error("World row run crosses its output boundary.");
@@ -12824,7 +18455,7 @@ function decodeWorldRow(bytes, size = 512) {
     data.fill(tile, output, output + count);
     output += count;
   }
-  return { data, consumed: input };
+  return { data, consumed: input2 };
 }
 function encodeWorldRow(bytes) {
   if (bytes.length < 1 || bytes.length > 65536) {
@@ -12850,129 +18481,26 @@ function encodeWorldRow(bytes) {
 }
 
 // packages/assets/src/secret-of-mana/som-asset-plugin.ts
-var registry = new AssetRegistry().registerImporter(pngImporter);
+var registry2 = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
-  registry.registerEncoder(encoder);
+  registry2.registerEncoder(encoder);
 }
 var audioRegistry = new AssetRegistry().registerImporter(waveImporter);
 for (const encoder of withAudioEncoder(snesNativeEncoders)) {
   audioRegistry.registerEncoder(encoder);
 }
-function nativeBossChunk(png, wanted = "soMz") {
-  const image = readAssetPng(png);
-  let native;
-  for (const { type, data } of image.chunks) {
-    if (type === wanted) {
-      if (native) {
-        throw new Error("Duplicate native boss graphics PNG chunk.");
-      }
-      native = Uint8Array.from(data);
-    }
-  }
-  return native;
-}
-function decodeBossStream(native, storage, size) {
-  let intermediate = native;
-  let mode;
-  let unusedHeaderByte;
-  if (storage === "lz-rle") {
-    const decoded = decompressSomLz(native);
-    if (decoded.compressedBytes !== native.length) {
-      throw new Error("Boss LZ stream has trailing bytes.");
-    }
-    intermediate = decoded.data;
-    mode = decoded.mode;
-    unusedHeaderByte = decoded.unusedHeaderByte;
-  }
-  const expanded = expandBossGraphics(intermediate, size);
-  if (expanded.consumed !== intermediate.length) {
-    throw new Error("Boss mask stream has trailing bytes.");
-  }
-  return { bytes: expanded.data, mode, unusedHeaderByte };
-}
-function convertBossImage(source, options, resources = {}) {
-  const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
-  if (storage !== "lz-rle" && storage !== "rle") {
-    throw new Error("Boss storage must be lz-rle or rle.");
-  }
-  if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
-    throw new Error("Boss byteLength must be a positive integer.");
-  }
-  if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
-    throw new Error("Boss sizePolicy must be fixed or encoded.");
-  }
-  const layout2 = options.layout ? readFrameLayout(options, resources) : void 0;
-  let pixels;
-  let segmentName;
-  if (layout2) {
-    if (typeof options.segment !== "string") {
-      throw new Error("Frame atlas segment is required.");
-    }
-    segmentName = options.segment;
-    pixels = encodeFrameAtlas(
+function convertBossImage2(source, options, resources = {}, sourceCodecs = indexedSourceCodecs()) {
+  if (options.layout && (options.sourceBinding || options.paletteSources)) {
+    const normalized = normalizeSomSource(
       source,
-      layout2,
-      segmentName,
-      readSpritePaletteCatalog(options, resources)
+      options,
+      resources,
+      readSpritePaletteCatalog(options, resources),
+      sourceCodecs
     );
-  } else {
-    pixels = convertAsset(registry, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
+    return convertBossImage(normalized.source, options, resources, normalized);
   }
-  const segmentIndex = segmentName ? Object.keys(layout2?.segments ?? {}).indexOf(segmentName) : -1;
-  if (segmentIndex > 25) {
-    throw new Error("Boss atlas supports at most 26 native segments.");
-  }
-  const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
-  let original;
-  if (options.native !== void 0) {
-    if (typeof options.native !== "string" || !options.native) {
-      throw new Error("Boss native data requires an explicit original compressed resource.");
-    }
-    const nativeResource = Object.hasOwn(resources, options.native) ? resources[options.native] : void 0;
-    if (!nativeResource) {
-      throw new Error("Boss native data requires an explicit original compressed resource.");
-    }
-    original = nativeResource.bytes;
-  } else {
-    original = nativeBossChunk(source.bytes, chunkName);
-  }
-  if (original) {
-    if (original.length !== byteLength) {
-      throw new Error("Boss native data has the wrong byte length.");
-    }
-    const decoded = decodeBossStream(original, storage, pixels.length);
-    if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
-      return { primaryOutput: "graphics", outputs: { graphics: { bytes: original } } };
-    }
-  }
-  const intermediate = encodeBossGraphics(pixels);
-  let encoded = intermediate;
-  if (storage === "lz-rle") {
-    const selectedMode = original ? original[0] : mode;
-    const selectedHeaderByte = original ? original[1] : unusedHeaderByte;
-    encoded = compressSomLz(intermediate, {
-      mode: selectedMode,
-      unusedHeaderByte: selectedHeaderByte
-    });
-  }
-  if (sizePolicy === "fixed" && encoded.length > byteLength) {
-    throw new Error(
-      "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
-    );
-  }
-  const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
-  if (verified.some((byte, index) => byte !== pixels[index])) {
-    throw new Error("Boss graphics inverse failed.");
-  }
-  if (sizePolicy === "encoded") {
-    return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
-  }
-  const padded = new Uint8Array(byteLength);
-  padded.set(encoded);
-  if (original) {
-    padded.set(original.subarray(encoded.length), encoded.length);
-  }
-  return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
+  return convertBossImage(source, options, resources);
 }
 function readBrrWave(source) {
   const document2 = waveImporter.import(source);
@@ -12995,8 +18523,8 @@ function readBrrWave(source) {
     if (end + (length & 1) > bytes.length) {
       throw new Error("Truncated SoM BRR WAVE data.");
     }
-    const id = String.fromCharCode(...bytes.subarray(offset, offset + 4));
-    if (id === "sBRR") {
+    const id2 = String.fromCharCode(...bytes.subarray(offset, offset + 4));
+    if (id2 === "sBRR") {
       if (native) {
         throw new Error("Duplicate native BRR chunk in SoM WAVE.");
       }
@@ -13156,170 +18684,197 @@ var imageOptions = (options) => {
   }
   return rest;
 };
-var plugin = definePlugin({
-  manifest: {
-    id: "som.assets",
-    name: "Secret of Mana assets",
-    version: "1.0.0",
-    apiVersion: PLUGIN_API_VERSION,
-    requires: [{ pluginId: "uttori.asm-plugin-snes", version: "1.0.0" }]
-  },
-  activate(context) {
-    context.registerAssetFormat({
-      id: "som.room",
+function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
+  return definePlugin({
+    manifest: {
+      id: "som.assets",
+      name: "Secret of Mana assets",
       version: "1.0.0",
-      targets: ["snes.sfc"],
-      resourcePaths: (options) => typeof options.preview === "string" ? [options.preview] : [],
-      convert: convertRoomAsset
-    });
-    context.registerAssetFormat({
-      id: "som.palette.bgr555",
-      version: "1.0.0",
-      targets: ["snes.sfc"],
-      convert(source, options) {
-        if (source.mediaType !== "application/json" || typeof options.palette !== "string") {
-          throw new Error("SoM palette asset requires a JSON catalogue and palette address.");
-        }
-        for (const name of ["wordOffset", "wordCount"]) {
-          if (options[name] !== void 0 && typeof options[name] !== "number") {
-            throw new Error(`SoM palette ${name} must be a number.`);
+      apiVersion: PLUGIN_API_VERSION,
+      requires: [{ pluginId: "uttori.asm-plugin-snes", version: "1.0.0" }]
+    },
+    activate(context) {
+      context.registerAssetFormat({
+        id: "som.dialogue.script",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        resourcePaths: (options) => typeof options.layout === "string" ? [options.layout] : [],
+        convert: convertSomDialogueScript
+      });
+      context.registerAssetFormat({
+        id: "som.room",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        resourcePaths: (options) => typeof options.preview === "string" ? [options.preview] : [],
+        convert: convertRoomAsset
+      });
+      context.registerAssetFormat({
+        id: "som.palette.bgr555",
+        version: "1.1.0",
+        resourceDependencies: (source, options, resources) => somSourceDependencies(source, options, resources, sourceCodecs),
+        targets: ["snes.sfc"],
+        convert(source, options, resources) {
+          if (source.mediaType !== "application/json" || typeof options.palette !== "string") {
+            throw new Error("SoM palette asset requires a JSON catalogue and palette address.");
           }
-        }
-        const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
-          wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : void 0,
-          wordCount: typeof options.wordCount === "number" ? options.wordCount : void 0
-        });
-        return { primaryOutput: "palette", outputs: { palette: { bytes } } };
-      }
-    });
-    context.registerAssetFormat({
-      id: "som.boss.graphics",
-      version: "1.1.0",
-      targets: ["snes.sfc"],
-      resourcePaths: (options) => [options.layout, options.palettes, options.native].filter(
-        (path) => typeof path === "string"
-      ),
-      convert: convertBossImage
-    });
-    context.registerAssetFormat({
-      id: "som.sprite.frames",
-      version: "1.1.0",
-      targets: ["snes.sfc"],
-      resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
-      convert(source, options, resources) {
-        const tiles = encodeFrameAtlas(
-          source,
-          readFrameLayout(options, resources),
-          readFrameAtlasSelection(options),
-          readSpritePaletteCatalog(options, resources)
-        );
-        return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
-      }
-    });
-    context.registerAssetFormat({
-      id: "som.tile.actor3bpp",
-      version: "1.0.0",
-      targets: ["snes.sfc"],
-      resourcePaths: (options) => {
-        const palette = options.palette;
-        return typeof palette === "string" && palette !== "embedded" && palette !== "auto" ? [palette] : [];
-      },
-      convert(source, options, resources) {
-        const converted = convertAsset(registry, {
-          source,
-          format: "snes.tile.4bpp",
-          options: imageOptions(options),
-          resources
-        });
-        const native = converted.outputs.tiles.bytes;
-        const group = options.group;
-        if (typeof group !== "number") {
-          throw new Error("actor group must be 0..2.");
-        }
-        const packed = encodeActor3bpp(native, group);
-        const decoded = decodeActor3bpp(packed, group);
-        if (decoded.length !== native.length || decoded.some((byte, index) => byte !== native[index])) {
-          throw new Error("Actor conversion failed exact inverse verification.");
-        }
-        return {
-          primaryOutput: "tiles",
-          outputs: {
-            tiles: { bytes: packed },
-            tilemap: { bytes: converted.outputs.tilemap.bytes },
-            palette: { bytes: converted.outputs.palette.bytes }
+          for (const name of ["wordOffset", "wordCount"]) {
+            if (options[name] !== void 0 && typeof options[name] !== "number") {
+              throw new Error(`SoM palette ${name} must be a number.`);
+            }
           }
-        };
-      }
-    });
-    context.registerAssetFormat({
-      id: "som.brr.pcm",
-      version: "1.0.0",
-      targets: ["snes.sfc"],
-      convert: convertBrrWave
-    });
-    context.registerAssetFormat({
-      id: "som.brr.segment",
-      version: "1.0.0",
-      targets: ["snes.sfc"],
-      convert(source, options) {
-        const brr = convertBrrWave(source, options).outputs.brr;
-        return {
-          primaryOutput: "brr",
-          outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
-        };
-      }
-    });
-    context.registerAssetTransform({
-      id: "som.world.rle",
-      version: "1.0.0",
-      targets: ["snes.sfc"],
-      optionSchema: { size: { type: "integer", minimum: 1, maximum: 65536 } },
-      encode: (bytes, options) => {
-        const size = typeof options.size === "number" ? options.size : 512;
-        if (bytes.length !== size) {
-          throw new Error("World row size mismatch.");
+          const bytes = spritePaletteBytes(
+            effectiveSomSourcePalette(
+              parseSpritePaletteCatalog(source.bytes),
+              options,
+              resources,
+              void 0,
+              sourceCodecs
+            ),
+            options.palette,
+            {
+              wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : void 0,
+              wordCount: typeof options.wordCount === "number" ? options.wordCount : void 0
+            }
+          );
+          return { primaryOutput: "palette", outputs: { palette: { bytes } } };
         }
-        return encodeWorldRow(bytes);
-      },
-      decode: (bytes, options, maxOutputBytes) => {
-        const size = typeof options.size === "number" ? options.size : 512;
-        if (size > maxOutputBytes) {
-          throw new Error("World row exceeds output limit.");
+      });
+      context.registerAssetFormat({
+        id: "som.boss.graphics",
+        version: "1.2.0",
+        sourceRepresentations: sourceCodecs.representations(),
+        resourceDependencies: (source, options, resources) => somSourceDependencies(source, options, resources, sourceCodecs),
+        targets: ["snes.sfc"],
+        resourcePaths: (options) => [options.layout, options.palettes, options.native].filter(
+          (path) => typeof path === "string"
+        ),
+        convert: (source, options, resources) => convertBossImage2(source, options, resources, sourceCodecs)
+      });
+      context.registerAssetFormat({
+        id: "som.sprite.frames",
+        version: "1.2.0",
+        sourceRepresentations: sourceCodecs.representations(),
+        resourceDependencies: (source, options, resources) => somSourceDependencies(source, options, resources, sourceCodecs),
+        targets: ["snes.sfc"],
+        resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
+        convert(source, options, resources) {
+          const catalog = readSpritePaletteCatalog(options, resources);
+          const normalized = options.sourceBinding !== void 0 || options.paletteSources !== void 0 ? normalizeSomSource(source, options, resources, catalog, sourceCodecs) : { source, layout: readFrameLayout(options, resources), catalog };
+          const tiles = encodeFrameAtlas(
+            normalized.source,
+            normalized.layout,
+            readFrameAtlasSelection(options),
+            normalized.catalog
+          );
+          return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
         }
-        const result = decodeWorldRow(bytes, size);
-        if (result.consumed !== bytes.length) {
-          throw new Error("Trailing bytes after world row.");
+      });
+      context.registerAssetFormat({
+        id: "som.tile.actor3bpp",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        resourcePaths: (options) => {
+          const palette = options.palette;
+          return typeof palette === "string" && palette !== "embedded" && palette !== "auto" ? [palette] : [];
+        },
+        convert(source, options, resources) {
+          const converted = convertAsset(registry2, {
+            source,
+            format: "snes.tile.4bpp",
+            options: imageOptions(options),
+            resources
+          });
+          const native = converted.outputs.tiles.bytes;
+          const group = options.group;
+          if (typeof group !== "number") {
+            throw new Error("actor group must be 0..2.");
+          }
+          const packed = encodeActor3bpp(native, group);
+          const decoded = decodeActor3bpp(packed, group);
+          if (decoded.length !== native.length || decoded.some((byte, index) => byte !== native[index])) {
+            throw new Error("Actor conversion failed exact inverse verification.");
+          }
+          return {
+            primaryOutput: "tiles",
+            outputs: {
+              tiles: { bytes: packed },
+              tilemap: { bytes: converted.outputs.tilemap.bytes },
+              palette: { bytes: converted.outputs.palette.bytes }
+            }
+          };
         }
-        return result.data;
-      }
-    });
-    context.registerAssetTransform({
-      id: "som.lz",
-      version: "1.0.0",
-      targets: ["snes.sfc"],
-      optionSchema: {
-        mode: { type: "enum", enum: ["auto", 0, 1, 2, 3, 4, 5] },
-        unusedHeaderByte: { type: "integer", minimum: 0, maximum: 255 }
-      },
-      validateOptions: (options) => {
-        compressSomLz(new Uint8Array(), options);
-      },
-      encode: (bytes, options) => compressSomLz(bytes, options),
-      decode: (bytes, _options, maxOutputBytes) => {
-        const result = decompressSomLz(bytes, 0, maxOutputBytes);
-        if (result.compressedBytes !== bytes.length) {
-          throw new Error("Trailing bytes after SoM LZ stream.");
+      });
+      context.registerAssetFormat({
+        id: "som.brr.pcm",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        convert: convertBrrWave
+      });
+      context.registerAssetFormat({
+        id: "som.brr.segment",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        convert(source, options) {
+          const brr = convertBrrWave(source, options).outputs.brr;
+          return {
+            primaryOutput: "brr",
+            outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
+          };
         }
-        return result.data;
-      }
-    });
-  }
-});
+      });
+      context.registerAssetTransform({
+        id: "som.world.rle",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: { size: { type: "integer", minimum: 1, maximum: 65536 } },
+        encode: (bytes, options) => {
+          const size = typeof options.size === "number" ? options.size : 512;
+          if (bytes.length !== size) {
+            throw new Error("World row size mismatch.");
+          }
+          return encodeWorldRow(bytes);
+        },
+        decode: (bytes, options, maxOutputBytes) => {
+          const size = typeof options.size === "number" ? options.size : 512;
+          if (size > maxOutputBytes) {
+            throw new Error("World row exceeds output limit.");
+          }
+          const result = decodeWorldRow(bytes, size);
+          if (result.consumed !== bytes.length) {
+            throw new Error("Trailing bytes after world row.");
+          }
+          return result.data;
+        }
+      });
+      context.registerAssetTransform({
+        id: "som.lz",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          mode: { type: "enum", enum: ["auto", 0, 1, 2, 3, 4, 5] },
+          unusedHeaderByte: { type: "integer", minimum: 0, maximum: 255 }
+        },
+        validateOptions: (options) => {
+          compressSomLz(new Uint8Array(), options);
+        },
+        encode: (bytes, options) => compressSomLz(bytes, options),
+        decode: (bytes, _options, maxOutputBytes) => {
+          const result = decompressSomLz(bytes, 0, maxOutputBytes);
+          if (result.compressedBytes !== bytes.length) {
+            throw new Error("Trailing bytes after SoM LZ stream.");
+          }
+          return result.data;
+        }
+      });
+    }
+  });
+}
+var som_asset_plugin_default = createSomAssetPlugin();
 
 // packages/language-server/src/asset-preview-conversion.ts
-var registry2 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(waveImporter);
+var registry3 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
 for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
-  registry2.registerEncoder(encoder);
+  registry3.registerEncoder(encoder);
 }
 function storagePixels(composed, width, height, indexByCoordinate) {
   const widthTiles = width / 8;
@@ -13338,23 +18893,30 @@ function storagePixels(composed, width, height, indexByCoordinate) {
   }
   return result;
 }
-function convertSomFramePreview(input) {
-  const layout2 = readFrameLayout(input.options, input.resources);
-  const catalog = readSpritePaletteCatalog(input.options, input.resources);
-  const selection = readFrameAtlasSelection(input.options);
-  if (input.format === "som.boss.graphics" && typeof selection !== "string") {
+function convertSomFramePreview(input2) {
+  let layout2 = readFrameLayout(input2.options, input2.resources);
+  let catalog = readSpritePaletteCatalog(input2.options, input2.resources);
+  let source = input2.source;
+  if (input2.options.sourceBinding !== void 0 || input2.options.paletteSources !== void 0) {
+    const normalized = normalizeSomSource(source, input2.options, input2.resources, catalog);
+    source = normalized.source;
+    layout2 = normalized.layout;
+    catalog = normalized.catalog;
+  }
+  const selection = readFrameAtlasSelection(input2.options);
+  if (input2.format === "som.boss.graphics" && typeof selection !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
   }
   const named = typeof selection === "string";
-  const inspected = inspectFrameAtlas(input.source, layout2, catalog, {
+  const inspected = inspectFrameAtlas(source, layout2, catalog, {
     segmentName: named ? selection : void 0,
     whole: !named
   });
   const segments = named ? [selection] : frameAtlasSegmentOrder(layout2, selection);
   let encodedBytes;
   let output;
-  if (input.format === "som.boss.graphics") {
-    const result = convertBossImage(input.source, input.options, input.resources);
+  if (input2.format === "som.boss.graphics") {
+    const result = convertBossImage2(input2.source, input2.options, input2.resources);
     encodedBytes = result.outputs.graphics.bytes.length;
     output = "graphics";
   } else {
@@ -13365,8 +18927,8 @@ function convertSomFramePreview(input) {
     }
     output = "tiles";
   }
-  if (input.output !== void 0 && input.output !== output) {
-    throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+  if (input2.output !== void 0 && input2.output !== output) {
+    throw new Error(`Asset format '${input2.format}' has no output '${input2.output}'.`);
   }
   const image = inspected.image;
   const rgba = new Uint8Array(image.width * image.height * 4);
@@ -13391,9 +18953,9 @@ function convertSomFramePreview(input) {
   const primaryPalette = palettes[0];
   return {
     kind: "image",
-    sourceBytes: input.source.bytes.length,
+    sourceBytes: input2.source.bytes.length,
     encodedBytes,
-    format: input.format,
+    format: input2.format,
     output,
     metadata: {
       segment: named ? selection : void 0,
@@ -13405,30 +18967,34 @@ function convertSomFramePreview(input) {
       "base64"
     ),
     // The source PNG already carries the grid, frame labels and full native tile strip.
-    composedPngBase64: Buffer.from(input.source.bytes).toString("base64")
+    composedPngBase64: Buffer.from(source.bytes).toString("base64")
   };
 }
-function convertSomPalettePreview(input) {
-  const id = input.options.palette;
-  if (input.source.mediaType !== "application/json" || typeof id !== "string") {
+function convertSomPalettePreview(input2) {
+  const id2 = input2.options.palette;
+  if (input2.source.mediaType !== "application/json" || typeof id2 !== "string") {
     throw new Error("SoM palette preview requires a JSON catalogue and palette address.");
   }
-  if (input.output !== void 0 && input.output !== "palette") {
-    throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+  if (input2.output !== void 0 && input2.output !== "palette") {
+    throw new Error(`Asset format '${input2.format}' has no output '${input2.output}'.`);
   }
-  const catalog = parseSpritePaletteCatalog(input.source.bytes);
-  const bytes = spritePaletteBytes(catalog, id);
-  const preview = spritePalettePreview(catalog, id);
+  const catalog = effectiveSomSourcePalette(
+    parseSpritePaletteCatalog(input2.source.bytes),
+    input2.options,
+    input2.resources
+  );
+  const bytes = spritePaletteBytes(catalog, id2);
+  const preview = spritePalettePreview(catalog, id2);
   const png = Buffer.from(rgbaPreviewPng(preview.rgba, preview.width, preview.height));
-  const palette = catalog.palettes[id];
+  const palette = catalog.palettes[id2];
   return {
     kind: "image",
-    sourceBytes: input.source.bytes.length,
+    sourceBytes: input2.source.bytes.length,
     encodedBytes: bytes.length,
-    format: input.format,
+    format: input2.format,
     output: "palette",
     metadata: {
-      paletteId: id,
+      paletteId: id2,
       paletteRomAddress: palette.romAddress,
       paletteUsers: palette.users,
       previewWidth: preview.width
@@ -13437,29 +19003,29 @@ function convertSomPalettePreview(input) {
     composedPngBase64: png.toString("base64")
   };
 }
-function convertSomRoomPreview(input) {
-  const converted = convertRoomAsset(input.source, input.options);
-  const output = input.output ?? converted.primaryOutput;
+function convertSomRoomPreview(input2) {
+  const converted = convertRoomAsset(input2.source, input2.options);
+  const output = input2.output ?? converted.primaryOutput;
   if (!Object.hasOwn(converted.outputs, output)) {
     throw new Error(`Unknown room output '${output}'.`);
   }
-  const resourcePath = input.options.preview;
-  const resource = typeof resourcePath === "string" && Object.hasOwn(input.resources, resourcePath) ? input.resources[resourcePath] : void 0;
+  const resourcePath = input2.options.preview;
+  const resource = typeof resourcePath === "string" && Object.hasOwn(input2.resources, resourcePath) ? input2.resources[resourcePath] : void 0;
   if (!resource) {
     throw new Error("Room preview requires its shared preview JSON resource.");
   }
   if (resource.mediaType !== "application/json") {
     throw new Error("Room preview resource must be JSON.");
   }
-  const room = parseRoomAsset(input.source);
+  const room = parseRoomAsset(input2.source);
   const preview = renderRoomAsset(room, parseRoomPreview(resource.bytes), {
-    layer: input.options.layer
+    layer: input2.options.layer
   });
   return {
     kind: "image",
-    sourceBytes: input.source.bytes.length,
+    sourceBytes: input2.source.bytes.length,
     encodedBytes: converted.outputs[output].bytes.length,
-    format: input.format,
+    format: input2.format,
     output,
     metadata: {
       room: room.id,
@@ -13478,55 +19044,55 @@ function convertSomRoomPreview(input) {
     ).toString("base64")
   };
 }
-function convertSomBrrPreview(input) {
-  if (input.output !== void 0 && input.output !== "brr") {
-    throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+function convertSomBrrPreview(input2) {
+  if (input2.output !== void 0 && input2.output !== "brr") {
+    throw new Error(`Asset format '${input2.format}' has no output '${input2.output}'.`);
   }
-  const converted = convertBrrWave(input.source, input.options).outputs.brr;
+  const converted = convertBrrWave(input2.source, input2.options).outputs.brr;
   const native = converted.bytes;
-  const sourceAudio = readPcmAudio(waveImporter.import(input.source).value);
-  const segment = input.format === "som.brr.segment";
-  const selected = segment ? sliceBrrSegment(native, input.options) : native;
+  const sourceAudio = readPcmAudio(waveImporter.import(input2.source).value);
+  const segment = input2.format === "som.brr.segment";
+  const selected = segment ? sliceBrrSegment(native, input2.options) : native;
   const decoded = decodeBrrPcm(native);
   const metadata = { ...converted.metadata, previewScope: "full-stream" };
   if (segment) {
-    metadata.segmentStartByte = input.options.startByte;
+    metadata.segmentStartByte = input2.options.startByte;
     metadata.segmentByteLength = selected.length;
     metadata.fullStreamBytes = native.length;
   }
   return {
     kind: "audio",
-    sourceBytes: input.source.bytes.length,
+    sourceBytes: input2.source.bytes.length,
     encodedBytes: selected.length,
-    format: input.format,
+    format: input2.format,
     output: "brr",
     metadata,
     waveformPngBase64: Buffer.from(waveformPreviewPng(sourceAudio.samples)).toString("base64"),
-    sourceWavBase64: Buffer.from(input.source.bytes).toString("base64"),
+    sourceWavBase64: Buffer.from(input2.source.bytes).toString("base64"),
     decodedWavBase64: Buffer.from(writePcmWave(decoded, sourceAudio.sampleRate)).toString("base64")
   };
 }
-function convertAssetPreview(input) {
-  if (input.format === "som.room") {
-    return convertSomRoomPreview(input);
+function convertAssetPreview(input2) {
+  if (input2.format === "som.room") {
+    return convertSomRoomPreview(input2);
   }
-  if (input.format === "som.brr.pcm" || input.format === "som.brr.segment") {
-    return convertSomBrrPreview(input);
+  if (input2.format === "som.brr.pcm" || input2.format === "som.brr.segment") {
+    return convertSomBrrPreview(input2);
   }
-  if (input.format === "som.palette.bgr555") {
-    return convertSomPalettePreview(input);
+  if (input2.format === "som.palette.bgr555") {
+    return convertSomPalettePreview(input2);
   }
-  if (input.format === "som.sprite.frames" || input.format === "som.boss.graphics") {
-    return convertSomFramePreview(input);
+  if (input2.format === "som.sprite.frames" || input2.format === "som.boss.graphics") {
+    return convertSomFramePreview(input2);
   }
-  const result = convertAsset(registry2, input);
-  const outputName = input.output ?? result.primaryOutput;
+  const result = convertAsset(registry3, input2);
+  const outputName = input2.output ?? result.primaryOutput;
   const selected = Object.hasOwn(result.outputs, outputName) ? result.outputs[outputName] : void 0;
   if (!selected) {
-    throw new Error(`Asset format '${input.format}' has no output '${outputName}'.`);
+    throw new Error(`Asset format '${input2.format}' has no output '${outputName}'.`);
   }
   const common = {
-    sourceBytes: input.source.bytes.length,
+    sourceBytes: input2.source.bytes.length,
     encodedBytes: selected.bytes.length,
     format: result.encoder.id,
     output: outputName,
@@ -13562,7 +19128,7 @@ function convertAssetPreview(input) {
       ...common,
       kind: "audio",
       waveformPngBase64: Buffer.from(waveformPreviewPng(audio.samples)).toString("base64"),
-      sourceWavBase64: Buffer.from(input.source.bytes).toString("base64"),
+      sourceWavBase64: Buffer.from(input2.source.bytes).toString("base64"),
       decodedWavBase64: Buffer.from(decodedWav).toString("base64")
     };
   }

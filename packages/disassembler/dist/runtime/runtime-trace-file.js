@@ -238,7 +238,8 @@ export const readRuntimeTraceFileMetadata = async (file, options = {}) => {
             "addressSpace",
             "romContentSha256",
             "producer",
-        ].every((key) => Object.hasOwn(metadata, key))) {
+        ].every((key) => Object.hasOwn(metadata, key)) &&
+            (metadata.architecture !== "65xx.2a03" || Object.hasOwn(metadata, "romFileSha256"))) {
             return validateRuntimeInstructionTraceMetadata(metadata);
         }
     }

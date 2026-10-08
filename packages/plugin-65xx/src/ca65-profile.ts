@@ -76,6 +76,8 @@ export function resetCa65StageState(state: Ca65SessionState): void {
 export const ca65CpuNames: Readonly<Record<string, string>> = Object.freeze({
   "6502": "65xx.6502",
   "6502x": "65xx.6502x",
+  "2a03": "65xx.2a03",
+  "2a07": "65xx.2a03",
   "6502dtv": "65xx.6502dtv",
   "65sc02": "65xx.65sc02",
   "65c02": "65xx.65c02",
@@ -123,6 +125,7 @@ const cpuPredicateSymbols: Readonly<Record<string, string>> = Object.freeze({
 export const ca65CpuPredicateByArchitecture: Readonly<Record<string, string>> = Object.freeze({
   "65xx.6502": "__CA65_CPU_6502__",
   "65xx.6502x": "__CA65_CPU_6502X__",
+  "65xx.2a03": "__CA65_CPU_6502X__",
   "65xx.6502dtv": "__CA65_CPU_6502DTV__",
   "65xx.65sc02": "__CA65_CPU_65SC02__",
   "65xx.65c02": "__CA65_CPU_65C02__",

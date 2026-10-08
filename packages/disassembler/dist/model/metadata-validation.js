@@ -1,4 +1,5 @@
 import { validateSourceLabelName } from "./project-labels.js";
+import { isResearchMapping } from "./research-mapping.js";
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -62,6 +63,12 @@ export const validateEditableMetadataRecord = (shard, record) => {
         !/^\w[\w./:-]*$/.test(record.id) ||
         !isStringList(record.evidence)) {
         throw new Error("Metadata needs a stable record ID and evidence list.");
+    }
+    if (record.mapping !== undefined && !isResearchMapping(record.mapping)) {
+        throw new Error("Invalid research mapping selector.");
+    }
+    if (record.kind === "target-set" && record.mapping && "fileOffset" in record.mapping) {
+        throw new Error("Target sets use mapper state; a single physical anchor cannot select multiple targets.");
     }
     const address = record.address;
     if ("address" in record && !(isSafeInteger(address) && address >= 0)) {

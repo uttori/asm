@@ -30,8 +30,12 @@ const instructionFor = (range: DebugMapRange, output: Uint8Array): DebugInstruct
  */
 export const createDebugMapReplayScript = (map: DebugMap, output: Uint8Array): ReplayScript => {
   const issues = validateDebugMap(map, output);
-  if (issues.length > 0) {throw new Error(issues.join(" "));}
-  if (map.ranges.length === 0) {throw new Error("Debug map contains no executable source ranges.");}
+  if (issues.length > 0) {
+    throw new Error(issues.join(" "));
+  }
+  if (map.ranges.length === 0) {
+    throw new Error("Debug map contains no executable source ranges.");
+  }
 
   const architectures = [...new Set(map.ranges.map((range) => range.architecture))].toSorted();
   const threads: DebugThread[] = architectures.map((architecture, index) => ({

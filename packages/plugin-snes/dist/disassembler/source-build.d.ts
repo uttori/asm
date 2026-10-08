@@ -53,8 +53,8 @@ export interface SnesSourceBuild {
 }
 /** Inspect a prospective source edit without writing files, ROMs or build receipts. */
 export interface InspectSnesSourceOptions extends Omit<BuildSnesSourceOptions, "outputDirectory" | "toolchainSha256" | "configurationSha256"> {
-    /** Repository-relative existing source files. Bytes are copied before assembler passes begin. */
-    readonly overlays?: ReadonlyMap<string, Uint8Array>;
+    /** Repository-relative candidate files. Null hides a retired file; bytes also support not-yet-published resources. */
+    readonly overlays?: ReadonlyMap<string, Uint8Array | null>;
     /** Structured names needed by placement services in addition to ordinary labels and extents. */
     readonly resolveSymbols?: readonly string[];
 }

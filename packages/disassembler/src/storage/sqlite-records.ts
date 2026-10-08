@@ -7,6 +7,7 @@ import type {
 } from "../model/project-types.js";
 import { isFiniteNumber, isRecord, isStringArray } from "../model/record-shape.js";
 import type { RuntimeBusContext } from "../model/runtime-bus-types.js";
+import { isRuntimeGraphicsFact } from "../model/runtime-graphics-fact.js";
 import type { RuntimePPUEffect } from "../model/runtime-ppu-effect.js";
 import { parseSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
 
@@ -93,6 +94,31 @@ export const runtimeColumns = (
         accessedAddress: null,
         coverage: null,
         payload: canonicalJson({ bytes: record.bytes, state: record.state }),
+      };
+    case "runtime-graphics-access":
+      return {
+        addressSpace: null,
+        address: null,
+        start: null,
+        end: null,
+        fromAddressSpace: null,
+        fromAddress: null,
+        toAddressSpace: null,
+        toAddress: null,
+        instructionAddressSpace: record.context === "instruction" ? record.addressSpace : null,
+        instructionAddress: record.context === "instruction" ? record.pc : null,
+        accessedAddressSpace: record.addressSpace,
+        accessedAddress: record.address,
+        coverage: null,
+        payload: canonicalJson({
+          pc: record.pc,
+          actor: record.actor,
+          context: record.context,
+          direction: record.direction,
+          value: record.value,
+          cpuMapping: record.cpuMapping,
+          effect: record.effect,
+        }),
       };
     case "runtime-bus-access":
       return {
@@ -428,6 +454,24 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
       state: requireState(body.state),
     };
   }
+  if (kind === "runtime-graphics-access") {
+    const fact = {
+      ...requirePayload(extra),
+      addressSpace: row.accessed_address_space,
+      address: row.accessed_address,
+    };
+    if (!isRuntimeGraphicsFact(fact)) {
+      throw new Error("Invalid stored graphics fact.");
+    }
+    return {
+      ...fact,
+      id,
+      kind,
+      architecture: requireString(row.architecture, "architecture"),
+      count,
+      evidence: parsedEvidence,
+    };
+  }
   if (kind === "runtime-bus-access") {
     const body = requirePayload(extra);
     return {
@@ -538,6 +582,8 @@ export function isRuntimeEvidenceRecord(value: unknown): value is RuntimeEvidenc
     return false;
   }
   switch (value.kind) {
+    case "runtime-graphics-access":
+      return isRuntimeGraphicsFact(value);
     case "runtime-execution":
       return (
         typeof value.addressSpace === "string" &&

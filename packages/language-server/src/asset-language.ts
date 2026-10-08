@@ -1,5 +1,5 @@
 /** Lightweight asset-call parsing for editor requests; conversion belongs to explicit previews/builds. */
-import { parseAssetCall, type ParsedAssetCall } from "@uttori/asm-core";
+import { parseAssetCall, preprocessBlockCommands, type ParsedAssetCall } from "@uttori/asm-core";
 
 /** Strip an assembly comment without cutting semicolons inside quoted paths.
  * @param {string} line Source line.
@@ -37,6 +37,23 @@ export function assetCallOnLine(line: string, lineNumber: number): ParsedAssetCa
     // Incomplete editor text still gets syntax diagnostics from the assembler.
     return undefined;
   }
+}
+
+/** Resolve an explicit preview anywhere inside a continued call using the assembler's physical-line normalization. */
+export function assetCallContainingLine(
+  text: string,
+  lineNumber: number,
+): ParsedAssetCall | undefined {
+  if (!Number.isSafeInteger(lineNumber) || lineNumber < 0) {
+    return undefined;
+  }
+  for (const command of preprocessBlockCommands(text).sourcedCommands) {
+    const end = command.line + command.text.split("\n").length - 1;
+    if (command.line <= lineNumber && lineNumber <= end) {
+      return assetCallOnLine(command.text, command.line);
+    }
+  }
+  return undefined;
 }
 
 /** Read a line from a protocol position without treating a binary dependency as source text.

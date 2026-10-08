@@ -11,6 +11,36 @@ const isEscapedAt = (text, index) => {
     }
     return slashes % 2 === 1;
 };
+/** Only structured records and explicit asset calls acquire implicit physical-line continuation. */
+export function isStructuredCommandStart(text) {
+    return /^(?:datastruct\b|\[|includeasset\s*\()/i.test(text.trimStart());
+}
+/** Keep a parenthesized include buffered until its outer call closes; quoted filenames never affect depth. */
+export function isOpenStructuredCommand(text) {
+    if (!/^includeasset\s*\(/i.test(text.trimStart())) {
+        return isOpenStructInitializer(text);
+    }
+    let depth = 0;
+    let quote = "";
+    for (let index = 0; index < text.length; index++) {
+        const char = text[index];
+        if ((char === '"' || char === "'") && !isEscapedAt(text, index)) {
+            if (quote === char) {
+                quote = "";
+            }
+            else if (!quote) {
+                quote = char;
+            }
+        }
+        else if (!quote && char === "(") {
+            depth++;
+        }
+        else if (!quote && char === ")") {
+            depth--;
+        }
+    }
+    return depth > 0;
+}
 /**
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.
@@ -52,47 +82,51 @@ export const preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile
     let bufferStartLine;
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
         let line = lines[lineIndex];
-        const recordContinuation = /^(?:datastruct\b|\[)/i.test(nextCommandBuffer.trimStart());
+        const structuredContinuation = isStructuredCommandStart(nextCommandBuffer);
         line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
         if (!line.trim()) {
-            if (recordContinuation) {
+            if (structuredContinuation) {
                 nextCommandBuffer += "\n";
             }
             continue;
         }
         // Preserve the special test directive comment so downstream handling can
         // detect and execute fixture setup behavior.
-        if (!recordContinuation && line.trimStart().startsWith(";`+")) {
+        if (!structuredContinuation && line.trimStart().startsWith(";`+")) {
             sourcedCommands.push({ text: line, line: lineIndex });
             continue;
         }
         line = removeInlineComment(line, syntaxProfile);
         if (!line.trim()) {
-            if (recordContinuation) {
+            if (structuredContinuation) {
                 nextCommandBuffer += "\n";
             }
             continue;
         }
-        // Record literals carry physical whitespace through normalization so editor
-        // references can point at fields and values on their own source lines.
-        const record = recordContinuation || /^(?:datastruct\b|\[)/i.test(line);
-        if (record) {
+        // Structured statements retain physical whitespace for field attribution and
+        // semantic cursor targeting, including blank/comment-only continuation lines.
+        const structured = structuredContinuation || isStructuredCommandStart(line);
+        if (structured) {
             line = removeInlineComment(lines[lineIndex], {
                 ...syntaxProfile,
                 preserveLeadingWhitespace: true,
             });
         }
-        if (isOpenStructInitializer(nextCommandBuffer + line)) {
-            if (nextCommandBuffer === "") {
-                bufferStartLine = lineIndex;
-            }
-            nextCommandBuffer += `${line}\n`;
-        }
-        else if (line.endsWith("\\")) {
+        // Explicit backslash continuation predates structured calls; consume its marker before testing the buffered grammar.
+        if (line.endsWith("\\")) {
             if (nextCommandBuffer === "") {
                 bufferStartLine = lineIndex;
             }
             nextCommandBuffer += line.slice(0, -1);
+            if (structured) {
+                nextCommandBuffer += "\n";
+            }
+        }
+        else if (isOpenStructuredCommand(nextCommandBuffer + line)) {
+            if (nextCommandBuffer === "") {
+                bufferStartLine = lineIndex;
+            }
+            nextCommandBuffer += `${line}\n`;
         }
         else if (line.endsWith(",")) {
             if (nextCommandBuffer === "") {

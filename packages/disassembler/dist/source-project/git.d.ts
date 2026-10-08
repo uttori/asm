@@ -37,9 +37,11 @@ export declare function sourceGit(root: string, args: readonly string[], options
 export declare function sourceRepository(directory: string): Promise<SourceRepository>;
 /** NUL-delimited porcelain preserves filenames with spaces, tabs, and embedded newlines. */
 export declare function sourceStatus(repository: SourceRepository): Promise<Buffer>;
+/** Decode porcelain-v1 -z paths, including both sides of a rename/copy and all untracked files. */
+export declare function sourceStatusPaths(status: Buffer): string[];
 /** Reject concurrent Git operations before touching the index or worktree. */
 export declare function assertNoSourceOperation(repository: SourceRepository): void;
-/** A checkpoint protects native merge abort semantics. Ignored private evidence remains outside Git. */
+/** Reuse clean HEAD as the abort point; only existing local edits require preservation before a merge. */
 export declare function assertSourceCheckpoint(repository: SourceRepository): Promise<string>;
 /** Constrain object selectors supplied by receipts so they cannot become Git options or path expressions. */
 export declare function assertSourceObjectId(value: string): void;

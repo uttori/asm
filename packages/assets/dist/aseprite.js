@@ -1,7 +1,7 @@
 import { Fields, chunk } from "./aseprite-binary.js";
 import { decodeAsepriteDocument } from "./aseprite-document.js";
 import { validateAtlasDocument, } from "./atlas-interchange.js";
-export { decodeAsepriteDocument, encodeAsepriteDocument, validateAsepriteDocument, resolveAsepriteCels, } from "./aseprite-document.js";
+export { decodeAsepriteDocumentSync, decodeAsepriteDocument, encodeAsepriteDocument, validateAsepriteDocument, resolveAsepriteCels, } from "./aseprite-document.js";
 export { renderAsepriteFrame } from "./aseprite-render.js";
 const ID_PREFIX = "uttori-atlas-export:";
 /** Export a minimal indexed raster document. Raw cels avoid any runtime compression dependency for writing. */

@@ -174,6 +174,8 @@ Create a Git source project, then edit assembly, assets, and research as ordinar
 npx uttori-asm source init game-source game.sfc --mapper lorom
 # Optional creation import: --dizraw research.dizraw
 npx uttori-asm source import game-source capture.act2
+# Import several archives in selection order:
+npx uttori-asm source import game-source first.act2 second.act2 trace.json
 npx uttori-asm source analyze game-source
 npx uttori-asm source prepare game-source
 npx uttori-asm source preview game-source <candidate-commit>
@@ -187,8 +189,20 @@ npx uttori-asm source build game-source
 
 Git must have an author configured. Creation verifies an exact original-ROM build before adopting
 an immutable generation commit. Preparation and preview preserve uncommitted edits; applying a
-candidate requires a clean committed checkpoint. `source abort` returns an active merge to that
-checkpoint. `source finish` validates the resolved build before committing the merge.
+candidate requires a clean checkout and reuses the existing commit; no new commit is required when
+there are no local edits. Preserve any named existing edits before applying. `source abort` returns
+an active merge to the pre-merge commit. Review and stage the generated changes before `source finish`
+validates the resolved build and commits the merge.
+
+Capture imports log the absolute filename, archive identity, named stages, and provisional SQLite
+merge counts with rate and estimated remaining time to stderr; JSON results stay on stdout. Bulk
+imports commit each file independently and stop on failure or cancellation. The error identifies the
+failed file and completed/unattempted counts. Retrying the same queue preserves earlier imports
+without duplicating observations.
+
+Each worktree keeps its latest successfully prepared generation. Preparing a replacement releases
+older candidate pins and their preview after original-ROM verification succeeds. Failed or cancelled
+rendering preserves the previous proposal. Finished generations remain in ordinary source history.
 
 Tracked research under `.uttori/research/` retains original identities and preferred names.
 SQLite indexes those choices alongside capture evidence. Private ROM/evidence bindings live in
@@ -241,7 +255,7 @@ uttori-asm analyze game.analysis --rom game.sfc
 Additional entry points can be supplied with repeatable `--entry` options using `$`, `0x`, or decimal
 notation. Quote shell-sensitive addresses, for example `--entry='$008000'`.
 These are 24-bit CPU addresses, not ROM file offsets. `--max-work-items` is a positive
-integer (default 100,000). `--max-call-depth` is nonnegative (default 8, with 0 discarding call context).
+integer (default 1,000,000). `--max-call-depth` is nonnegative (default 16, with 0 discarding call context).
 Hitting either bound reports explicit incomplete analysis rather than silently truncating it. A pass
 that would lose existing decoded code can instead fail without replacing saved analysis.
 

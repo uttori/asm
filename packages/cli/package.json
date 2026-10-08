@@ -44,6 +44,11 @@
       "types": "./dist/source.d.ts",
       "import": "./dist/source.js"
     },
+    "./asset-source": {
+      "uttori-source": "./src/asset-source/operations.ts",
+      "types": "./dist/asset-source/operations.d.ts",
+      "import": "./dist/asset-source/operations.js"
+    },
     "./asset-interchange": {
       "uttori-source": "./src/asset-interchange/index.ts",
       "types": "./dist/asset-interchange/index.d.ts",
@@ -86,7 +91,8 @@
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
     "@uttori/asm-plugin-loader-node": "1.0.0",
-    "@uttori/asm-plugin-snes": "1.0.0"
+    "@uttori/asm-plugin-snes": "1.0.0",
+    "@uttori/asm-plugin-65xx": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.1",

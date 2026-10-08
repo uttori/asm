@@ -10,6 +10,7 @@ import {
   sourceGit,
   sourceRepository,
   retainSourceGeneration,
+  pinSourceCandidate,
   adoptSourceGeneration,
   finishSourceGeneration,
   type AnalysisProject,
@@ -33,6 +34,7 @@ import {
 } from "@uttori/asm-plugin-snes";
 
 import { test } from "../../../tests/ava-helper.js";
+import type { SourceCaptureImportBatchResult } from "../src/source-capture-imports.js";
 import { prepareSourceResearch } from "../src/source-research.js";
 import { executeSourceOperation } from "../src/source.js";
 
@@ -66,6 +68,10 @@ function isImportResult(value: unknown): value is { sourceSha256: string; change
   return (
     isRecord(value) && typeof value.sourceSha256 === "string" && typeof value.changed === "boolean"
   );
+}
+
+function isImportBatch(value: unknown): value is SourceCaptureImportBatchResult {
+  return isRecord(value) && Array.isArray(value.imports) && value.imports.every(isImportResult);
 }
 
 function isChangedResult(value: unknown): value is { changed: boolean } {
@@ -325,6 +331,24 @@ async function fixture(teardown: (cleanup: () => void) => void) {
 
 test("headless source commands preserve an edited raw byte through verified regeneration", async (t) => {
   const { directory, rom } = await fixture((cleanup) => t.teardown(cleanup));
+  const repository = await sourceRepository(directory);
+  const head = (await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString().trim();
+  const baseline = await acceptedSourceGeneration(repository, head);
+  const tree = (await sourceGit(directory, ["rev-parse", `${baseline}^{tree}`])).stdout
+    .toString()
+    .trim();
+  // Valid old proposals model a worktree opened after interrupted or superseded preparations.
+  // A fresh verified preparation must migrate the backlog without manual CLI cleanup.
+  for (let index = 0; index < 17; index++) {
+    const proposal = (
+      await sourceGit(directory, ["commit-tree", tree, "-p", baseline], {
+        input: `Old prepared proposal ${index}\n`,
+      })
+    ).stdout
+      .toString()
+      .trim();
+    await pinSourceCandidate(repository, proposal);
+  }
   const rawFile = path.join(directory, "source/assets/raw/000000.bin");
   const bytes = fs.readFileSync(rawFile);
   bytes[7] = 0xeb;
@@ -338,7 +362,14 @@ test("headless source commands preserve an edited raw byte through verified rege
   );
   t.is(generation.verification.outputSha256, rom.identity.contentSha256);
   const candidate = generation.generation.commit;
-  const repository = await sourceRepository(directory);
+  t.is(
+    (
+      await sourceGit(directory, ["for-each-ref", "--format=%(refname)", "refs/uttori/candidates/"])
+    ).stdout
+      .toString()
+      .trim(),
+    generation.generation.ref,
+  );
   const previewFile = path.join(repository.stateDirectory, "preview.json");
   await t.throwsAsync(executeSourceOperation({ directory, action: "apply", candidate }), {
     message: /Preview this generation with current edits/,
@@ -371,7 +402,7 @@ test("headless source commands preserve an edited raw byte through verified rege
   t.true(fs.existsSync(path.join(directory, ".uttori-local/evidence/analysis.json")));
   t.is((await expectOperation({ directory, action: "finish" }, isMergeStatus)).phase, "verified");
   t.false(fs.existsSync(previewFile));
-  const head = (await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString();
+  const completedHead = (await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString();
   const refs = (await sourceGit(directory, ["show-ref"])).stdout.toString();
   await executeSourceOperation({ directory, action: "apply", candidate });
   const completedStatus = await executeSourceOperation({ directory, action: "status", candidate });
@@ -387,7 +418,7 @@ test("headless source commands preserve an edited raw byte through verified rege
   const journalFile = path.join(repository.stateDirectory, "merge.json");
   const journal = fs.readFileSync(journalFile);
   await executeSourceOperation({ directory, action: "apply", candidate });
-  t.is((await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString(), head);
+  t.is((await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString(), completedHead);
   t.is((await sourceGit(directory, ["show-ref"])).stdout.toString(), refs);
   t.is((await sourceGit(directory, ["write-tree"])).stdout.toString(), index);
   t.deepEqual(fs.readFileSync(recipeFile), dirtyRecipe);
@@ -511,15 +542,28 @@ test("capture import records portable archive identity and survives idempotent r
       chunks: [{ sequenceStart: 1, addresses: [0x808000], droppedEvents: 0, active: false }],
     }),
   );
+  const progress: string[] = [];
   const imported = await expectOperation(
     {
       directory,
       action: "import",
       capture: file,
+      onProgress: (message) => progress.push(message),
     },
     isImportResult,
   );
   t.true(imported.changed);
+  t.true(
+    progress.some(
+      (message) => message.includes(file) && message.includes("Starting capture import"),
+    ),
+  );
+  t.true(
+    progress.some((message) => message.includes(file) && message.includes("1/1 records (100.0%)")),
+  );
+  t.true(
+    progress.some((message) => message.includes(file) && message.includes("Import completed")),
+  );
   const saved = readSourceCaptureCatalog(
     directory,
     ".uttori/captures.json",
@@ -578,6 +622,92 @@ test("capture import records portable archive identity and survives idempotent r
   t.is(completed?.analysis?.status, "incomplete");
   t.deepEqual(completed?.analysis?.sources, ["capture.json"]);
   t.false(fs.existsSync(file));
+});
+
+test("bulk source imports preserve per-file commits, retry idempotently and accept CLI queues", async (t) => {
+  const { directory, rom } = await fixture(t.teardown);
+  const captures = ["first.json", "second.json", "third.json"].map((name, index) => {
+    const file = path.join(directory, ".uttori-local", name);
+    fs.writeFileSync(
+      file,
+      JSON.stringify({
+        format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+        schemaVersion: RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
+        architecture: "snes.65816",
+        addressSpace: "snes.cpu",
+        romContentSha256: rom.identity.contentSha256,
+        producer: { id: "fixture", revision: `bulk-${index}` },
+        chunks: [
+          { sequenceStart: 1, addresses: [0x808000 + index], droppedEvents: 0, active: false },
+        ],
+      }),
+    );
+    return file;
+  });
+  const invalid = path.join(directory, ".uttori-local/invalid.json");
+  fs.writeFileSync(invalid, "{bad-json}");
+  await t.throwsAsync(
+    executeSourceOperation({
+      directory,
+      action: "import",
+      captures: [captures[0], invalid, captures[1]],
+    }),
+    { message: /invalid.json.*1 completed; 1 unattempted/ },
+  );
+  const readCatalog = () =>
+    readSourceCaptureCatalog(directory, ".uttori/captures.json", rom.identity.contentSha256);
+  t.is(readCatalog().catalog.captures.length, 1);
+  const progress: string[] = [];
+  const batch = await expectOperation(
+    {
+      directory,
+      action: "import",
+      captures: [...captures, captures[0]],
+      onProgress: (message) => progress.push(message),
+    },
+    isImportBatch,
+  );
+  t.deepEqual(
+    batch.imports.map((result) => result.capture),
+    captures,
+  );
+  t.deepEqual(
+    batch.imports.map((result) => result.changed),
+    [false, true, true],
+  );
+  t.true(
+    progress.some(
+      (message) =>
+        message.includes(`Capture 3/3 (${captures[2]})`) &&
+        message.includes("Merging runtime facts"),
+    ),
+  );
+  t.is(readCatalog().catalog.captures.length, 3);
+  const beforeRetry = readCatalog().fileSha256;
+  // Use the actual positional adapter in a child so stderr progress cannot corrupt JSON stdout.
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--conditions=uttori-source",
+      "--import=tsx",
+      "--input-type=module",
+      "-e",
+      "import {runSourceCli} from './packages/cli/src/source.ts'; process.exitCode = await runSourceCli(process.argv.slice(1));",
+      "import",
+      directory,
+      ...captures,
+    ],
+    { cwd: path.resolve("."), encoding: "utf8", timeout: 20000 },
+  );
+  t.is(child.status, 0, child.stderr);
+  const retried: unknown = JSON.parse(child.stdout);
+  t.true(isImportBatch(retried));
+  if (isImportBatch(retried)) {
+    t.true(retried.imports.every((result) => !result.changed));
+  }
+  t.true(child.stderr.includes(captures[2]));
+  t.regex(child.stderr, /Capture 3\/3.*Import completed/);
+  t.is(readCatalog().fileSha256, beforeRetry);
 });
 
 for (const phase of ["export", "verification"] as const) {

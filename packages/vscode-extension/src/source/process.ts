@@ -1,4 +1,8 @@
 import { executeAssetOperation, type AssetOperation } from "@uttori/asm-cli/asset-interchange";
+import {
+  executeAssetSourceOperation,
+  type AssetSourceOperation,
+} from "@uttori/asm-cli/asset-source";
 import { executeSourceOperation, type SourceOperation } from "@uttori/asm-cli/source";
 
 const cancellation = new AbortController();
@@ -35,7 +39,7 @@ const beforePublish = (paths: readonly string[]): Promise<void> =>
   });
 
 function isAssetOperation(
-  operation: SourceOperation | AssetOperation,
+  operation: SourceOperation | AssetOperation | AssetSourceOperation,
 ): operation is AssetOperation {
   return (
     operation.action === "asset-export" ||
@@ -53,7 +57,7 @@ process.on(
     message:
       | { type: "cancel" }
       | { type: "publish-confirm"; error?: string }
-      | { type: "run"; operation: SourceOperation | AssetOperation },
+      | { type: "run"; operation: SourceOperation | AssetOperation | AssetSourceOperation },
   ) => {
     if (message.type === "cancel") {
       cancellation.abort();
@@ -72,13 +76,28 @@ process.on(
       return;
     }
     started = true;
-    const operation = isAssetOperation(message.operation)
-      ? executeAssetOperation(message.operation, { signal: cancellation.signal, beforePublish })
-      : executeSourceOperation({
-          ...message.operation,
-          signal: cancellation.signal,
-          onProgress: (progress) => process.send?.({ type: "progress", message: progress }),
-        });
+    let operation: Promise<unknown>;
+    if (
+      message.operation.action === "asset-convert" ||
+      message.operation.action === "asset-conversion-finish" ||
+      message.operation.action === "asset-source-target"
+    ) {
+      operation = executeAssetSourceOperation(message.operation, {
+        signal: cancellation.signal,
+        beforePublish,
+      });
+    } else if (isAssetOperation(message.operation)) {
+      operation = executeAssetOperation(message.operation, {
+        signal: cancellation.signal,
+        beforePublish,
+      });
+    } else {
+      operation = executeSourceOperation({
+        ...message.operation,
+        signal: cancellation.signal,
+        onProgress: (progress) => process.send?.({ type: "progress", message: progress }),
+      });
+    }
     void operation.then(
       (value) => finish({ type: "result", value }),
       (error) =>

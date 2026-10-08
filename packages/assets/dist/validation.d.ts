@@ -18,4 +18,10 @@ export declare function unitCount(bytes: Uint8Array, size: number, label: string
  * @returns {boolean} Whether every namespace segment is valid.
  */
 export declare function isNamespacedId(id: string): boolean;
+/** Portable runtime assertion; narrows validated input without requiring Node's assertion module. */
+export declare function invariant(value: unknown, message?: string): asserts value;
+/** Exact scalar comparison, including NaN and signed-zero behavior, for portable native-format contracts. */
+export declare function equal(actual: unknown, expected: unknown, message?: string): void;
+/** Reject an invalid branch while preserving control-flow narrowing at the call site. */
+export declare function fail(message: string): never;
 //# sourceMappingURL=validation.d.ts.map

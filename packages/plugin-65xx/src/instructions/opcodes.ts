@@ -200,7 +200,7 @@ export const nmos6502xForms = Object.freeze([
 export const nmos6502Cpu: CpuDefinition = Object.freeze({
   id: "65xx.6502",
   displayName: "NMOS 6502",
-  aliases: ["6502", "6510", "8502", "2a03", "2a07", "6507"],
+  aliases: ["6502", "6510", "8502", "6507"],
   features: new Set<CpuFeature>(["nmos"]),
 });
 
@@ -208,6 +208,14 @@ export const nmos6502xCpu: CpuDefinition = Object.freeze({
   id: "65xx.6502x",
   displayName: "NMOS 6502 with undocumented opcodes",
   aliases: ["6502x"],
+  features: new Set<CpuFeature>(["nmos", "undocumented"]),
+});
+
+/** Ricoh NES CPU uses NMOS encodings, including unofficial opcodes, with decimal arithmetic disabled. */
+export const ricoh2a03Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.2a03",
+  displayName: "Ricoh 2A03 / 2A07",
+  aliases: ["2a03", "2a07"],
   features: new Set<CpuFeature>(["nmos", "undocumented"]),
 });
 

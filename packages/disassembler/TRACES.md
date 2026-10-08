@@ -79,9 +79,8 @@ JSON whitespace does not create a new capture. Reimporting the same source does 
 counts. Historical reduced-index receipts in existing Secret of Mana projects remain readable;
 reimporting them preserves retained facts with a warning rather than restoring omitted registers.
 
-Storage policy controls retained SQLite import history and maintenance. It is separate from the
-parser's input and index limits. Inspect storage before reducing retention, and back up a closed
-project before destructive maintenance. See [project storage](API.md).
+Storage policy controls disposable projections and the live SQLite page ceiling independently of
+parser input and index limits. Imports preserve prior evidence. Exact no-op imports do not run VACUUM. See [project storage](API.md).
 
 ## Cancellation and failure recovery
 
@@ -99,7 +98,7 @@ warnings. An error is not a promise that every file and setting stayed unchanged
 ## Static analysis
 
 Static analysis runs synchronously. It has no `AbortSignal` and does not perform file I/O.
-The default work budget is 100,000 items, and call-context depth defaults to 8. A result with
+The default work budget is 1,000,000 items, and call-context depth defaults to 16. A result with
 `status: "incomplete"` records a budget limit. Do not present it as complete coverage. Decoder state
 must remain conservative at joins. Preserve ambiguous paths and unknown bytes when exporting source.
 For SNES workflows and editable RAM/structure metadata, see the [SNES manual](../plugin-snes/MANUAL.md#65816-source-export).

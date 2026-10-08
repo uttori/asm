@@ -1,7 +1,9 @@
 import { RecordIdSet } from "../internal/record-id-set.js";
 import { validateAnalysisOwnership } from "./analysis-ownership.js";
 import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, } from "./project-types.js";
+import { isResearchMapping } from "./research-mapping.js";
 import { validateRuntimeBusFact } from "./runtime-bus-types.js";
+import { isRuntimeGraphicsFact } from "./runtime-graphics-fact.js";
 import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 function isObject(value) {
     return typeof value === "object" && value !== null;
@@ -200,6 +202,9 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
             }
             validateRuntimeBusFact(record);
         }
+        if (record.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record)) {
+            throw new Error("Invalid runtime graphics fact.");
+        }
         if (record.kind === "runtime-memory-access") {
             if ((record.actor !== undefined && !["cpu", "dma", "hdma"].includes(record.actor)) ||
                 (record.channel !== undefined &&
@@ -260,7 +265,7 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
                 [record.accessedAddressSpace, record.accessedAddress],
             ];
         }
-        else if (record.kind === "runtime-bus-access") {
+        else if (record.kind === "runtime-bus-access" || record.kind === "runtime-graphics-access") {
             addresses = [[record.addressSpace, record.pc]];
         }
         else if (record.kind === "runtime-control-target") {
@@ -495,6 +500,13 @@ export const validateLoadedShards = (shards, project, analysisScope = "complete"
             const addressSpace = addressSpaceById.get(record.addressSpace);
             if (!addressSpace) {
                 throw new Error(`Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`);
+            }
+            if ("mapping" in record && record.mapping !== undefined) {
+                if (!isResearchMapping(record.mapping) ||
+                    (record.mapping.fileOffset !== undefined &&
+                        record.mapping.fileOffset + ("start" in record ? record.end - record.start : 1) > project.rom.contentSize)) {
+                    throw new Error(`Invalid research mapping for '${record.id}'.`);
+                }
             }
             const maximum = 2 ** addressSpace.addressBits;
             let invalid = false;

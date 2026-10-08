@@ -2,9 +2,9 @@
 
 Assembly language support powered by [uttori-asm](https://github.com/uttori/asm), currently bundled with the first-party SNES target and 65xx (NES, 6502-like) targets.
 
-Requires VS Code 1.128 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
+Requires VS Code 1.140.0 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
 
-The extension, workers, language server, and embedded sidecars run on VS Code's bundled Node 24 runtime. Installing the extension does not require a separate Node executable. Building this repository and using its standalone npm tools requires Node 26. Extension packaging builds its embedded tools directly from source for the editor runtime, independently of the Node 26 bundles.
+The extension, workers, language server, and embedded sidecars run on VS Code's bundled runtime. Installing the extension does not require a separate Node executable. Building this repository and using its standalone npm tools requires Node 26. Extension packaging builds its embedded tools directly from source for the editor runtime, independently of the Node 26 bundles.
 
 ## Features
 
@@ -47,8 +47,10 @@ and assets directly. Use F2 for supported symbol renames, or the research comman
 annotations, state assumptions and classifications. Research edits open ordinary dirty documents;
 VS Code provides undo/redo, save, hot exit and Source Control diffs.
 
-Prepare regeneration whenever new evidence or recipes are ready. Preview incorporates supported
-unsaved edits. Before applying, save and commit your checkpoint in Git. Apply uses a native merge;
+Prepare regeneration whenever new evidence or recipes are ready. Preview shows clickable file diffs
+for the proposed merge, including supported unsaved edits, without changing the checkout. A clean
+checkout can apply using its existing commit. Preserve any existing local edits named by Preview
+by saving and committing or moving them before Apply. Apply uses a native merge;
 resolve conflicts with Source Control or Merge Editor, stage them, then validate and finish.
 An intentional edited ROM need not equal the original; the incoming pure generation must.
 
@@ -78,7 +80,7 @@ Source editors show configurable information independently of instruction docume
 
 Annotations are presented only when a validated native project and debug map name the same target and exact ROM content SHA-256/size, and the current source bytes still match the debug map's source SHA-256. Editing a mapped source clears its decorations immediately. Saving restores them only if the new bytes match a map. Logical addresses and explicit output offsets are indexed separately and filtered by architecture. The extension never guesses a mapper projection, changes emulator instructions, or lets an invalid analysis project prevent debugger startup.
 
-Compact source overlays query indexed execution counts without decoding detail payloads. Selected state fields, the inspector, and debugger overlays query SQLite for the requested addresses before decoding bounded detail payloads. The first request builds derived address/output indexes. Later reads update only changed entries. Frequently executed instructions show a bounded state/memory preview marked **details limited**. Execution totals include every matching observation. Debugger startup loads matching manifests, then batches annotation queries for each displayed disassembly page. Annotation queries, form edits, and source refresh share their own worker process. Bulk Coverage and Sources queries use a separate process, so their queue or failure cannot cancel an edit. Each process uses the configured analysis memory budget and serializes its own requests.
+Compact source overlays query indexed execution counts without decoding detail payloads. Selected state fields, the inspector, and debugger overlays query SQLite for the requested addresses before decoding bounded detail payloads. The first request builds derived address/output indexes. Later reads update only changed entries. Frequently executed instructions show a bounded state/memory preview marked **details limited**. Execution totals include every matching observation. Debugger startup loads matching manifests, then batches annotation queries for each displayed disassembly page. Bounded annotation queries run outside the editor host. Research proposals are ordinary file edits, and source operations use isolated workers. Bulk Coverage and Sources queries use a separate process, so their queue or failure cannot cancel an edit. Each process uses the configured analysis memory budget and serializes its own requests.
 
 ## Replay Debugging
 
@@ -149,9 +151,10 @@ Replay scripts can model instruction, step-in, step-over, and step-out transitio
 
 - **Assembly Source: Select Source Project** chooses the repository/worktree for subsequent actions.
 - The Source Project tree recommends the next valid step: **Analyze Evidence** → **Prepare Regeneration**
-  → **Preview with Current Edits** → save/commit a checkpoint → **Apply Previewed Generation**
+  → **Preview with Current Edits** and review file diffs → **Apply Previewed Generation** to a clean checkout
   → resolve/stage changes → **Validate and Finish Regeneration**. Finish builds, validates and commits
-  the merge. **Abort Regeneration** returns to the checkpoint.
+  the merge. The existing commit is sufficient for a clean checkout; only existing local edits need
+  preservation before Apply. **Abort Regeneration** returns to the pre-merge commit.
 - **Build Current Source** assembles saved source for running or debugging, independently of regeneration
   or Git commits. If inputs change during a build, the error names the files and offers **Save All and Rebuild**.
 - **Edit Symbol Research** and **Edit Analysis Research** prepare tracked declaration edits.
@@ -161,7 +164,7 @@ Replay scripts can model instruction, step-in, step-over, and step-out transitio
 - **Relocate Object** and **Expand ROM Capacity** propose supported layout changes and repair known references.
 - **Assembly: Build Binary**, **Run in Emulator**, **Debug in Emulator**, and **Run and Watch** use the
   selected source project's validated build and matching debug map.
-- **Start Runtime Trace Recording**, **Stop Runtime Trace Recording**, and **Stop Capture and Import Evidence**
+- **Start Capture**, **Stop Capture**, and **Stop Capture and Import Evidence**
   control capture. Import and regeneration remain separate operations.
 - **Explain Analysis Evidence** opens read-only provenance and reverse references.
 
@@ -178,10 +181,10 @@ refresh source status before resuming an interrupted operation.
 ### Record an Execution Window
 
 1. Start a debug session with a manifest-matched ares runtime that supports instruction tracing.
-2. While paused, choose **Start Runtime Trace Recording** and a destination file.
+2. While paused, choose **Start Capture** and a destination file.
 3. Continue until the behavior of interest has run, then pause.
-4. Choose **Stop Execution Capture and Show Routines** to import, analyze, regenerate, and verify.
-5. Inspect the new source entry, instruction observations, and unresolved locations.
+4. Choose **Stop Capture and Import Evidence** to finalize and import into the selected matching source project.
+5. Inspect Sources and Capture Notes. Analyze evidence, then prepare/preview/checkpoint/apply/finish when integrating new source.
 
 A trace records executed instructions. It does not reconstruct a complete call stack. Pause before stopping when the end boundary matters. Bounded live streams report dropped events. Lossless modes require the matching capture runtime.
 
@@ -216,6 +219,9 @@ Use the runtime recording commands to record a bounded window, then **Import Cap
 
 The sidebar provides **Project**, **Index Details**, **Outline**, **Source Project**, **Sources**, and **Analysis Coverage**.
 The source tree reflects the selected repository, candidate, merge state, and last validated build.
+Prepare Regeneration replaces the previous proposal only after the new generation verifies against
+the original ROM. Superseded proposals are retired automatically; failed or cancelled rendering
+preserves the previous proposal and preview. A pending merge must be finished or aborted first.
 
 ### Editing the Webviews
 
@@ -270,3 +276,36 @@ build. Unknown pointers, bank-dependent calls and ambiguous control flow block a
 Git retains source history. Build/scratch retention is bounded and protects active operations.
 Use **Clean Source Cache** for eligible material. Missing capture archives do not authorize deletion
 of normalized evidence. A failed or cancelled operation does not mark an unverified build current.
+
+### NES PPU inspection and recording
+
+For a Famicom source project, choose `asm.debug.traceMode: lossless-bus-ppu` to
+record CPU/OAM/DMC accesses with actual CHR/nametable/palette/OAM destinations.
+Pause before starting capture, then continue. Stop/import writes a verified
+private graphics report; use `lossless-instructions` for code discovery.
+**Assembly: Inspect NES PPU Snapshot** requires a paused session and opens mapped
+pattern, nametable and sprite-tile views. It saves the binary snapshot, identities
+and standalone HTML under `.uttori-local/graphics/snapshots/`. The panels inspect
+storage, not a composited frame. See [the NES PPU contract](../../docs/nes-ppu-evidence.md).
+
+Famicom context capture also supports **Add Capture Milestone**, **Replay Capture
+Inputs** and **Restore Capture Pre-action State**. It retains CPU/APU/PPU/mapper
+state, controller polling inputs and screenshots; replay validates the complete
+machine endpoint. Instruction recordings automatically include a separate PPU
+fetch/A12/IRQ timeline, which source import validates and saves as a graphics
+report. Use a matching context-capable runtime and Gamepad configuration. The
+[full NES contract](../../docs/nes-ppu-evidence.md) documents clock domains and
+unsupported expansion devices.
+
+
+NES research uses explicit mapper selectors for banked CPU addresses. **Edit
+Analysis Research** prompts for a mapping JSON object such as
+`{"state":{"prgMode":0,"r6":2,"r7":3}}`; optional `fileOffset` anchors the original
+headerless payload location. Unknown registers remain unknown when seeding code.
+NES ranges default to `65xx.2a03` and use mapper assumptions instead of 65816 widths.
+
+**Inspect NES Graphics Evidence** selects an imported PPU archive or instruction
+companion by its Git catalog identity and opens a bounded JSON report. It includes
+actual storage effects and physical-code matches to CPU SQLite evidence. Unknown
+mappings and non-instruction contexts do not join. Select from Source Project →
+Capture or the command palette; re-import older report-only archives to index them.

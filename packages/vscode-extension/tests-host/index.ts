@@ -12,12 +12,14 @@ import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
 import { runAssetInterchangeSmoke } from "./asset-interchange.js";
 import { runAssetRecoverySmoke } from "./asset-recovery.js";
+import { runAssetSourceConversionSmoke } from "./asset-source-conversion.js";
 import { runBinaryPreviewSmoke } from "./binary-preview.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
 import { runPaletteEditorSmoke } from "./palette-editor.js";
 import { runPngEditorSmoke } from "./png-editor.js";
 import { runReleaseAcceptance } from "./release-acceptance.js";
 import { runSourceGitUiSmoke } from "./source-git-ui.js";
+import { runNesSourceSmoke } from "./nes-source.js";
 import { runSourceLaunchSmoke } from "./source-launch.js";
 import { runSourceLifecycleSmoke } from "./source-lifecycle.js";
 import { runSourceWorkflowSmoke } from "./source-workflow.js";
@@ -491,7 +493,11 @@ export async function run(): Promise<void> {
   }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
+  if (process.env.UTTORI_VSCODE_NES_SOURCE === "1") return runNesSourceSmoke(folder);
   if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
+    if (process.env.UTTORI_VSCODE_ASSET_SOURCE_CONVERSION === "1") {
+      return runAssetSourceConversionSmoke(folder);
+    }
     if (process.env.UTTORI_VSCODE_ASSET_INTERCHANGE === "1") {
       return runAssetInterchangeSmoke(folder);
     }

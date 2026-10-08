@@ -43,8 +43,8 @@ baseline.
 
 ## Contributor layout
 
-Source and tests are grouped into `model`, `analysis`, `edits`, `runtime`, `storage`, `project`,
-`source`, and `internal`. The package root exports remain the consumer interface. See
+Source and tests are grouped into `model`, `analysis`, `research-inputs`, `runtime`, `storage`, `project`,
+`source`, `source-project`, and `internal`. The package root exports remain the consumer interface. See
 [internal boundaries](ARCHITECTURE.md#internal-module-boundaries) for dependency and ownership rules.
 Clean generated output before rebuilding file moves; TypeScript emit alone does not remove stale files.
 

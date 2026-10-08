@@ -7,7 +7,9 @@ import {
   type AnalysisProjectShards,
   type RuntimeEvidenceRecord,
 } from "./project-types.js";
+import { isResearchMapping } from "./research-mapping.js";
 import { validateRuntimeBusFact } from "./runtime-bus-types.js";
+import { isRuntimeGraphicsFact } from "./runtime-graphics-fact.js";
 import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -243,6 +245,9 @@ export const createRuntimeRecordValidator = (
       }
       validateRuntimeBusFact(record);
     }
+    if (record.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record)) {
+      throw new Error("Invalid runtime graphics fact.");
+    }
     if (record.kind === "runtime-memory-access") {
       if (
         (record.actor !== undefined && !["cpu", "dma", "hdma"].includes(record.actor)) ||
@@ -321,7 +326,7 @@ export const createRuntimeRecordValidator = (
         [record.instructionAddressSpace, record.instructionAddress],
         [record.accessedAddressSpace, record.accessedAddress],
       ];
-    } else if (record.kind === "runtime-bus-access") {
+    } else if (record.kind === "runtime-bus-access" || record.kind === "runtime-graphics-access") {
       addresses = [[record.addressSpace, record.pc]];
     } else if (record.kind === "runtime-control-target") {
       addresses = [
@@ -609,6 +614,16 @@ export const validateLoadedShards = (
         throw new Error(
           `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`,
         );
+      }
+      if ("mapping" in record && record.mapping !== undefined) {
+        if (
+          !isResearchMapping(record.mapping) ||
+          (record.mapping.fileOffset !== undefined &&
+            record.mapping.fileOffset + ("start" in record ? record.end - record.start : 1) >
+              project.rom.contentSize)
+        ) {
+          throw new Error(`Invalid research mapping for '${record.id}'.`);
+        }
       }
       const maximum = 2 ** addressSpace.addressBits;
       let invalid = false;

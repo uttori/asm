@@ -92,7 +92,7 @@ export interface AssetSourceHost {
         readonly repository: SourceRepository;
         readonly project: string;
     }>;
-    inspect(directory: string, overlays?: ReadonlyMap<string, Uint8Array>, signal?: AbortSignal): Promise<SourceProjectInspection>;
+    inspect(directory: string, overlays?: ReadonlyMap<string, Uint8Array | null>, signal?: AbortSignal): Promise<SourceProjectInspection>;
     drafts?(): readonly AssetSourceDraft[];
     /** Tests may pin a deterministic installed-package identity without an external checkout. */
     implementationIdentity?(adapterModule: string): string;

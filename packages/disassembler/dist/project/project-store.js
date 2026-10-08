@@ -135,7 +135,9 @@ export const loadAnalysisProjectView = (directory, createProjection) => {
 export const validateProjectRom = (manifest, rom) => {
     if (manifest.rom.sha256 !== rom.identity.sha256 ||
         manifest.rom.contentSha256 !== rom.identity.contentSha256 ||
-        manifest.rom.headerSize !== rom.identity.headerSize) {
+        manifest.rom.headerSize !== rom.identity.headerSize ||
+        manifest.rom.container?.format !== rom.identity.container?.format ||
+        manifest.rom.container?.headerSize !== rom.identity.container?.headerSize) {
         throw new Error(`ROM identity mismatch: project expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`);
     }
 };

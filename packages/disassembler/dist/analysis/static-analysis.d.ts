@@ -1,3 +1,4 @@
+import { type ResearchMapping } from "../model/research-mapping.js";
 /**
  * Target-neutral control-flow kinds emitted by a static-analysis adapter.
  * `stop` / `wait` do not fall through. `return` pops the call context when present.
@@ -113,8 +114,9 @@ export interface StaticAnalysisSeed<State> {
     readonly evidence: readonly string[];
     readonly detail?: string;
 }
-/** Manual resolution of an indirect control-flow site. At most one per address. */
+/** Manual resolution of an indirect site. At most one selector may match an instruction. */
 export interface StaticTargetOverride {
+    readonly mapping?: ResearchMapping;
     readonly id: string;
     readonly address: number;
     readonly targets: readonly number[];
@@ -158,6 +160,10 @@ export interface StaticAnalysisAdapter<State> {
     join(left: State, right: State): State;
     /** Stable identity for a state. Used to skip re-processing unchanged joins. */
     stateKey(state: State): string;
+    /** Stable bank/mapping identity. Different contexts must never join solely because their bus PCs match. */
+    executionContextKey?(address: number, state: State): string;
+    /** Flat mapper registers used by generic research selectors; unknown values stay null/absent. */
+    mappingState?(state: State): Readonly<Record<string, unknown>>;
     /** Applies address-derived state such as a program bank before decode. */
     enterAddress?(state: State, address: number): State;
 }

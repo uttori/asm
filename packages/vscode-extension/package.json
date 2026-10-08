@@ -45,6 +45,7 @@
     "@uttori/asm-debug-adapter": "1.0.0",
     "@uttori/asm-debug-sidecar-ares": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
+    "@uttori/asm-plugin-65xx": "1.0.0",
     "@uttori/asm-plugin-snes": "1.0.0",
     "jsonc-parser": "^3.3.1",
     "vscode-languageclient": "^10.1.2",
@@ -57,6 +58,11 @@
   },
   "contributes": {
     "commands": [
+      {
+        "command": "asm.nes.ppuSnapshot",
+        "title": "Inspect NES PPU Snapshot",
+        "category": "Assembly"
+      },
       {
         "command": "asm.source.initDiz",
         "title": "Create Git Source Project from Diz Research",
@@ -299,6 +305,12 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
+        "command": "asm.source.graphics",
+        "title": "Inspect NES Graphics Evidence",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.source.catalog",
         "title": "Refresh Capture Catalog",
         "category": "Assembly",
@@ -354,7 +366,7 @@
       },
       {
         "command": "asm.source.importCapture",
-        "title": "Import Capture into Source Project",
+        "title": "Import Captures into Source Project",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       },
@@ -380,6 +392,18 @@
         "command": "asm.asset.recover",
         "title": "Recover Interrupted Asset Edit",
         "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.asset.convertToAseprite",
+        "title": "Convert to Aseprite",
+        "category": "Assembly Source",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.asset.convertToPng",
+        "title": "Convert to PNG",
+        "category": "Assembly Source",
         "enablement": "isWorkspaceTrusted"
       }
     ],
@@ -538,6 +562,18 @@
           "command": "asm.debugEmulator",
           "when": "isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc)",
           "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "asm.asset.convertToAseprite",
+          "when": "isWorkspaceTrusted && asm.assetSourceRepresentation == indexed-png",
+          "group": "2_change@20"
+        },
+        {
+          "command": "asm.asset.convertToPng",
+          "when": "isWorkspaceTrusted && asm.assetSourceRepresentation == aseprite",
+          "group": "2_change@20"
         }
       ]
     },
@@ -970,7 +1006,7 @@
             "Lossless fetched instruction bytes and CPU state, saved to ACT2 for disassembly import. Requires the capture-v2 ares runtime.",
             "Lossless CPU/DMA/HDMA bus accesses with timing, channel and transfer phase, saved to ACT2 for bus activity import. Requires the capture-bus ares runtime.",
             "Lossless bus accesses plus explicit DMA run and HDMA payload-burst boundaries and channel snapshots. Requires the capture-transfer runtime. Imports show completed, interrupted and partial transfer windows.",
-            "Lossless bus and transfer capture with verified VRAM/CGRAM/OAM write destinations, blocked writes and latch-only outcomes, including during rendering. Requires the capture-ppu runtime."
+            "Lossless PPU bus evidence. SNES includes DMA/HDMA and VRAM/CGRAM/OAM effects; NES includes CPU/OAM/DMC accesses, scroll/latch state and physical CHR/nametable/palette/OAM destinations. Requires a runtime supporting the selected target scope."
           ],
           "description": "Runtime trace recording mode. Lossless modes slow emulation while storage drains and require a matching ares runtime. Instruction and bus capture are separate streams. Bus mode does not include fetched instruction bytes or full CPU registers."
         },

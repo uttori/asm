@@ -46,7 +46,7 @@ export const createRuntimeCaptureSource = async (
   const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-debug-adapter");
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
   const header = await readCaptureFileHeader(file, limits);
-  if (header.scope !== "snes.65816.instructions") {
+  if (header.scope !== "snes.65816.instructions" && header.scope !== "nes.2a03.instructions") {
     throw new Error(
       "This ACT2 file contains CPU/DMA/HDMA bus accesses. Instruction import requires an instruction capture.",
     );
@@ -63,7 +63,10 @@ export const createRuntimeCaptureSource = async (
         file,
         (chunk) => {
           // Recheck during consumption in case the path was replaced after reading its header.
-          if (chunk.scope !== "snes.65816.instructions") {
+          if (
+            chunk.scope !== "snes.65816.instructions" &&
+            chunk.scope !== "nes.2a03.instructions"
+          ) {
             throw new Error("Capture scope changed during instruction import.");
           }
           // Project sequence numbers are safe JS integers even though ACT2 stores exact u64s.

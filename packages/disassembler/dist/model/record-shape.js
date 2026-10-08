@@ -1,3 +1,4 @@
+import { isResearchMapping } from "./research-mapping.js";
 /** Structural checks for stored JSON. Address bounds and provenance stay in project validation. */
 export function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -131,6 +132,7 @@ function hasIdentity(value) {
 export function isProjectLabel(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
+        (value.mapping === undefined || isResearchMapping(value.mapping)) &&
         typeof value.addressSpace === "string" &&
         isFiniteNumber(value.address) &&
         typeof value.name === "string" &&
@@ -146,6 +148,7 @@ export function isProjectLabel(value) {
 export function isProjectComment(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
+        (value.mapping === undefined || isResearchMapping(value.mapping)) &&
         typeof value.addressSpace === "string" &&
         isFiniteNumber(value.address) &&
         typeof value.text === "string" &&
@@ -156,6 +159,7 @@ export function isProjectComment(value) {
 export function isProjectRegion(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
+        (value.mapping === undefined || isResearchMapping(value.mapping)) &&
         typeof value.addressSpace === "string" &&
         isFiniteNumber(value.start) &&
         isFiniteNumber(value.end) &&
@@ -168,6 +172,7 @@ export function isProjectRegion(value) {
 export function isIntervalAnnotation(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
+        (value.mapping === undefined || isResearchMapping(value.mapping)) &&
         typeof value.addressSpace === "string" &&
         isFiniteNumber(value.start) &&
         isFiniteNumber(value.end) &&
@@ -304,6 +309,7 @@ function isTargetOverride(value) {
     return (isRecord(value) &&
         value.kind === "target-override" &&
         hasIdentity(value) &&
+        (value.mapping === undefined || isResearchMapping(value.mapping)) &&
         typeof value.addressSpace === "string" &&
         isFiniteNumber(value.address) &&
         isFiniteNumberArray(value.targets));
@@ -312,6 +318,7 @@ function isTargetSet(value) {
     return (isRecord(value) &&
         value.kind === "target-set" &&
         hasIdentity(value) &&
+        (value.mapping === undefined || isResearchMapping(value.mapping)) &&
         typeof value.addressSpace === "string" &&
         typeof value.name === "string" &&
         isFiniteNumberArray(value.targets));

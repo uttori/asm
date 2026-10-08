@@ -1,10 +1,14 @@
 import { createHash } from "node:crypto";
-import path from "node:path";
 import { Worker } from "node:worker_threads";
 
-import type { AssetValueNode, WorkspaceIndex } from "@uttori/asm-core";
+import {
+  assetSourceMediaType,
+  resolveAssetResourceSnapshot,
+  type AssetValueNode,
+  type WorkspaceIndex,
+} from "@uttori/asm-core";
 
-import { assetCallOnLine, assetLineAt } from "./asset-language.js";
+import { assetCallContainingLine } from "./asset-language.js";
 import type { AssetPreviewInput, AssetPreviewResult } from "./asset-preview-conversion.js";
 import { OverlayFileProvider } from "./core.js";
 import { uriToPath } from "./providers.js";
@@ -104,16 +108,7 @@ function readInput(
   if (bytes.length > MAX_INPUT_BYTES) {
     throw new Error(`Asset '${name}' exceeds the preview input limit.`);
   }
-  const extension = path.extname(resolved).toLowerCase();
-  let mediaType = "application/octet-stream";
-  if (extension === ".png") {
-    mediaType = "image/png";
-  } else if (extension === ".wav" || extension === ".wave") {
-    mediaType = "audio/wav";
-  } else if (extension === ".json") {
-    mediaType = "application/json";
-  }
-  return { path: resolved, bytes, mediaType };
+  return { path: resolved, bytes, mediaType: assetSourceMediaType(resolved) };
 }
 
 /** Run conversion in a disposable worker so hover never blocks the server event loop.
@@ -175,7 +170,7 @@ export class AssetPreviewService {
     signal?: AbortSignal,
   ): Promise<AssetPreviewResponse> {
     try {
-      const call = assetCallOnLine(assetLineAt(text, request.line) ?? "", request.line);
+      const call = assetCallContainingLine(text, request.line);
       if (!call) {
         return { ok: false, message: "No complete includeAsset call on this line." };
       }
@@ -202,18 +197,32 @@ export class AssetPreviewService {
       if (output !== undefined && typeof output !== "string") {
         throw new Error("Asset preview output must be a string.");
       }
-      const resources: Record<string, { bytes: Uint8Array; mediaType: string }> = {};
-      const resourceSnapshots: Array<{ path: string; bytes: Uint8Array }> = [];
+      const resourceSnapshots = new Map<string, Uint8Array>([[source.path, source.bytes]]);
       let total = source.bytes.length;
-      for (const name of format.resourcePaths?.(allOptions) ?? []) {
-        const resource = readInput(provider, file, includePaths, name);
-        total += resource.bytes.length;
-        if (total > MAX_TOTAL_BYTES) {
-          throw new Error(`Asset preview inputs exceed ${MAX_TOTAL_BYTES} bytes combined.`);
-        }
-        resources[name] = { bytes: resource.bytes, mediaType: resource.mediaType };
-        resourceSnapshots.push({ path: resource.path, bytes: resource.bytes });
-      }
+      source.mediaType = assetSourceMediaType(source.path, format);
+      const { resources } = resolveAssetResourceSnapshot(format, source, allOptions, {
+        resolve: (name, declaringResource) =>
+          provider.resolvePath(
+            name,
+            declaringResource
+              ? { currentFile: declaringResource }
+              : { currentFile: file, includePaths: [...includePaths] },
+          ),
+        read: (resolved) => {
+          const cached = resourceSnapshots.get(resolved);
+          if (cached) {
+            return cached;
+          }
+          const resource = readInput(provider, file, includePaths, resolved);
+          total += resource.bytes.length;
+          if (total > MAX_TOTAL_BYTES) {
+            throw new Error(`Asset preview inputs exceed ${MAX_TOTAL_BYTES} bytes combined.`);
+          }
+          resourceSnapshots.set(resolved, resource.bytes);
+          return resource.bytes;
+        },
+        mediaType: (resolved) => assetSourceMediaType(resolved, format),
+      });
       const input: AssetPreviewInput = {
         source: { bytes: source.bytes, mediaType: source.mediaType },
         resources,
@@ -221,7 +230,7 @@ export class AssetPreviewService {
         options: allOptions,
         output,
       };
-      const observedInputs = [{ path: source.path, bytes: source.bytes }, ...resourceSnapshots];
+      const observedInputs = [...resourceSnapshots].map(([path, bytes]) => ({ path, bytes }));
       const hash = createHash("sha256");
       hash
         .update(format.id)

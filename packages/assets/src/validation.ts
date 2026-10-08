@@ -37,3 +37,25 @@ export function isNamespacedId(id: string): boolean {
     parts.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part))
   );
 }
+/** Portable runtime assertion; narrows validated input without requiring Node's assertion module. */
+export function invariant(value: unknown, message = "Invalid asset value."): asserts value {
+  if (!value) {
+    throw new Error(message);
+  }
+}
+
+/** Exact scalar comparison, including NaN and signed-zero behavior, for portable native-format contracts. */
+export function equal(
+  actual: unknown,
+  expected: unknown,
+  message = `Expected ${String(expected)}, received ${String(actual)}.`,
+): void {
+  if (!Object.is(actual, expected)) {
+    throw new Error(message);
+  }
+}
+
+/** Reject an invalid branch while preserving control-flow narrowing at the call site. */
+export function fail(message: string): never {
+  throw new Error(message);
+}

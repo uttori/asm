@@ -1,7 +1,6 @@
 import { createNormalizedCommand } from "../ir/normalized-command.js";
-import { preprocessBlockCommands as preprocessCommandBlock, removeInlineComment, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, } from "./command-text-service.js";
+import { preprocessBlockCommands as preprocessCommandBlock, removeInlineComment, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, isOpenStructuredCommand, isStructuredCommandStart, } from "./command-text-service.js";
 import { ProgramModelBuilder } from "./program-model-builder.js";
-import { isOpenStructInitializer } from "./struct-initializer.js";
 /**
  * Owns command buffering, normalization, and typed program-tree construction so
  * the assembler session can focus on execution instead of front-end shaping.
@@ -9,8 +8,8 @@ import { isOpenStructInitializer } from "./struct-initializer.js";
 export class AssemblyFrontEndService {
     host;
     commandBuffer = "";
-    /** Opening physical line when processCommand receives a record one line at a time. */
-    structBufferStart;
+    /** Opening physical line when processCommand receives a structured statement one line at a time. */
+    statementBufferStart;
     programModelBuilder;
     constructor(host) {
         this.host = host;
@@ -40,29 +39,29 @@ export class AssemblyFrontEndService {
      * @returns {SourcedCommand[]} The normalized sourced commands.
      */
     preprocessSourcedBlockCommands(block) {
-        const opening = this.structBufferStart;
+        const opening = this.statementBufferStart;
         if (opening && opening.file !== this.host.currentFile) {
-            throw new Error(`Unclosed dataStruct initializer in '${opening.file}'.`);
+            throw new Error(`Unclosed structured statement in '${opening.file}'.`);
         }
         const processed = preprocessCommandBlock(block, this.commandBuffer, this.host.syntaxProfile);
         if (opening && processed.sourcedCommands.length > 0) {
             // SourcedCommand lines are relative to this input block. A negative line
-            // points back into an earlier incremental call, where the literal opened.
+            // points back into an earlier incremental call, where the statement opened.
             processed.sourcedCommands[0].line = opening.line - this.host.currentLine;
         }
         this.commandBuffer = processed.commandBuffer;
-        if (isOpenStructInitializer(this.commandBuffer)) {
+        if (isOpenStructuredCommand(this.commandBuffer)) {
             if (!opening || processed.sourcedCommands.length > 0) {
                 const lines = block.split("\n");
-                const start = lines.findLastIndex((line) => /^(?:datastruct\b|\[)/i.test(line.trimStart()));
-                this.structBufferStart = {
+                const start = lines.findLastIndex(isStructuredCommandStart);
+                this.statementBufferStart = {
                     file: this.host.currentFile,
                     line: this.host.currentLine + Math.max(0, start),
                 };
             }
         }
         else {
-            this.structBufferStart = undefined;
+            this.statementBufferStart = undefined;
         }
         return processed.sourcedCommands;
     }

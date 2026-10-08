@@ -13,19 +13,21 @@ function consumerRejected(failed) {
 }
 function metadataValid(m) {
     if (!isRecord(m)) {
-        throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+        throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
     }
     const producer = m.producer;
-    if (m.architecture !== "snes.65816" ||
-        m.addressSpace !== "snes.cpu" ||
+    if (!((m.architecture === "snes.65816" && m.addressSpace === "snes.cpu") ||
+        (m.architecture === "65xx.2a03" && m.addressSpace === "nes.cpu")) ||
         typeof m.romContentSha256 !== "string" ||
         !/^[\da-f]{64}$/.test(m.romContentSha256) ||
+        (m.romFileSha256 !== undefined &&
+            (typeof m.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romFileSha256))) ||
         !isRecord(producer) ||
         typeof producer.id !== "string" ||
         !producer.id ||
         typeof producer.revision !== "string" ||
         !producer.revision) {
-        throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+        throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
     }
 }
 function captureOutputFormat(value) {
@@ -118,7 +120,9 @@ export class LosslessCaptureFileRecorder {
         const format = captureOutputFormat(options.format);
         // Reject before reserving files or arming the producer: legacy instruction JSON
         // cannot represent bus-only records without discarding their evidence.
-        if (scope !== "snes.65816.instructions" && format !== "act2") {
+        if (scope !== "snes.65816.instructions" &&
+            scope !== "nes.2a03.instructions" &&
+            format !== "act2") {
             throw new Error("Bus capture requires ACT2 output. Instruction JSON cannot represent it.");
         }
         validateCaptureCapabilities(await options.transport({ operation: "capabilities", scope }), scope);
@@ -172,13 +176,14 @@ export class LosslessCaptureFileRecorder {
                 maxChunkBytes: 262144,
                 allocatedBytes: position.allocatedBytes,
                 clock: {
-                    id: "snes.master",
+                    id: options.architecture === "65xx.2a03" ? "nes.master" : "snes.master",
                     numerator: position.clockNumerator,
                     denominator: position.clockDenominator,
                 },
                 architecture: options.architecture,
                 addressSpace: options.addressSpace,
                 romContentSha256: options.romContentSha256,
+                ...(options.romFileSha256 ? { romFileSha256: options.romFileSha256 } : {}),
                 producer: options.producer,
             };
             await handle.writeFile(jsonFrame("ACS2", header));
@@ -392,9 +397,12 @@ function assertCaptureFileHeader(value) {
     metadataValid(value);
     captureSession(value.session);
     captureScope(value.scope);
+    if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !==
+        (value.architecture === "65xx.2a03"))
+        throw new Error("Capture scope and architecture disagree.");
     const clock = value.clock;
     if (!isRecord(clock) ||
-        clock.id !== "snes.master" ||
+        clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") ||
         !captureU64(clock.numerator) ||
         !captureU64(clock.denominator)) {
         throw new Error("Invalid session clock domain.");
@@ -638,7 +646,8 @@ export const exportCaptureJson = async (archive, destination, reserved = false) 
     if (!verified.complete) {
         throw new Error(`Capture archive is incomplete: ${verified.reason}`);
     }
-    if (verified.header.scope !== "snes.65816.instructions") {
+    if (verified.header.scope !== "snes.65816.instructions" &&
+        verified.header.scope !== "nes.2a03.instructions") {
         throw new Error("Bus capture cannot be exported as an instruction trace. Retain the ACT2 archive.");
     }
     if (BigInt(verified.eventThrough) >= BigInt(Number.MAX_SAFE_INTEGER)) {
@@ -656,12 +665,13 @@ export const exportCaptureJson = async (archive, destination, reserved = false) 
             architecture: m.architecture,
             addressSpace: m.addressSpace,
             romContentSha256: m.romContentSha256,
+            ...(m.romFileSha256 ? { romFileSha256: m.romFileSha256 } : {}),
             producer: m.producer,
         }).slice(0, -1) + ',"chunks":[');
         let first = true;
         const result = await recoverCaptureFile(archive, async (chunk) => {
             // A replaced archive must not change scope between the verification and export scans.
-            if (chunk.scope !== "snes.65816.instructions") {
+            if (chunk.scope !== "snes.65816.instructions" && chunk.scope !== "nes.2a03.instructions") {
                 throw new Error("Capture scope changed during instruction export.");
             }
             await h.writeFile((first ? "" : ",") +
@@ -1006,6 +1016,7 @@ export class NativeCaptureFileRecorder {
                 scope,
                 bufferBytes: options.bufferBytes ?? 8 * 1024 * 1024,
                 romContentSha256: options.romContentSha256,
+                ...(options.romFileSha256 ? { romFileSha256: options.romFileSha256 } : {}),
                 producer: options.producer,
             });
             // Keep a valid identity before checking additional file/scope fields so

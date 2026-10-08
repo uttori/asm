@@ -5,17 +5,23 @@ export interface SourceFileReplacement {
     readonly before: Uint8Array;
     readonly after: Uint8Array;
 }
+/** Null denotes absence, allowing guarded create/remove operations alongside existing replacements. */
+export type SourceFileChange = SourceFileReplacement | {
+    readonly path: string;
+    readonly before: Uint8Array | null;
+    readonly after: Uint8Array | null;
+};
 /** Durable states survive termination between individual file renames; external readers are not globally atomic. */
 export interface SourceFileTransaction {
     readonly format: "uttori-source-file-transaction";
-    readonly version: 1;
+    readonly version: 1 | 2;
     readonly id: string;
     readonly state: "staged" | "publishing" | "completed" | "recovery";
     readonly direction: "after" | "before";
     readonly files: readonly {
         readonly path: string;
-        readonly before: string;
-        readonly after: string;
+        readonly before: string | null;
+        readonly after: string | null;
     }[];
 }
 /** Treat a corrupt private journal as a recovery issue, never unchecked trusted JSON. */
@@ -27,11 +33,13 @@ export declare function sourceFilePublicationEpoch(repository: SourceRepository)
  * integration. No-op calls create no files. Cancellation before staging visibility removes
  * only this invocation's private staging directory; later interruption leaves recovery data.
  */
-export declare function applySourceFileTransaction(repository: SourceRepository, replacements: readonly SourceFileReplacement[], options?: {
+export declare function applySourceFileTransaction(repository: SourceRepository, replacements: readonly SourceFileChange[], options?: {
     readonly signal?: AbortSignal;
     readonly onStage?: (stage: string) => void;
     /** Recheck dependencies and editor versions while holding the project operation lease. */
     readonly validate?: () => void;
+    /** Editor hosts stage recovery first, then publish through one native workspace edit with undo/redo. */
+    readonly stageOnly?: boolean;
 }): SourceFileTransaction | undefined;
 /** Explicit recovery completes or rolls back known bytes. It never overwrites an unknown external replacement. */
 export declare function recoverSourceFileTransaction(repository: SourceRepository, direction: "before" | "after", options?: {

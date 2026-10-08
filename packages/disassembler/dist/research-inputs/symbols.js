@@ -1,3 +1,4 @@
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { assertSourcePath } from "../internal/source-inputs.js";
 import { projectSourceLabelNames, validateSourceLabelName } from "../model/project-labels.js";
 import { parseResearchDocument, validateResearchSnapshot, } from "./inputs.js";
@@ -99,7 +100,9 @@ export function renameResearchSymbol(snapshot, identity, newName, newDocumentPat
     }
     const previous = previousValue;
     if (previous &&
-        (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address)) {
+        (previous.addressSpace !== identity.addressSpace ||
+            previous.address !== identity.address ||
+            canonicalJson(previous.mapping ?? null) !== canonicalJson(identity.mapping ?? null))) {
         throw new Error("The symbol's original identity changed. Refresh before renaming.");
     }
     if (previous?.sourceName && previous.sourceName !== identity.currentName) {
@@ -111,6 +114,7 @@ export function renameResearchSymbol(snapshot, identity, newName, newDocumentPat
             id: identity.id,
             addressSpace: identity.addressSpace,
             address: identity.address,
+            ...(identity.mapping ? { mapping: identity.mapping } : {}),
             evidence: identity.evidence,
             analysisEntryPoint: false,
         }),

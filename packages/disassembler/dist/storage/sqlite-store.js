@@ -14,6 +14,7 @@ import { mergeRuntimeEvidence, inspectRuntimeEvidence, } from "../runtime/runtim
 import { annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, readInstructionExecutionSummary, } from "./sqlite-annotation-query.js";
 import { cachedCoverage, prepareCoverage, coveragePage, coverageConflictPage, coverageSignature, publishCoverage, isSqliteCoverageSummary, } from "./sqlite-coverage-query.js";
 import { prepareGraph, publishGraph, isCallGraph } from "./sqlite-graph-query.js";
+import { queryGraphicsEvidence } from "./sqlite-graphics-query.js";
 import { encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds, isRuntimeEvidenceRecord, } from "./sqlite-records.js";
@@ -154,7 +155,17 @@ function requireTraceFact(value) {
         throw new Error("Invalid indexed trace fact.");
     }
     if (value.kind === "execution" && isFiniteNumber(value.address)) {
-        return { kind: "execution", address: value.address };
+        // Bank-qualified executions must survive the disk index just like in-memory facts.
+        // Dropping the suffix here would merge different mappings when publishing a capture.
+        if (value.identity !== undefined &&
+            (typeof value.identity !== "string" || !/^[\da-f]{64}$/.test(value.identity))) {
+            throw new Error("Invalid indexed execution mapping identity.");
+        }
+        return {
+            kind: "execution",
+            address: value.address,
+            ...(value.identity === undefined ? {} : { identity: value.identity }),
+        };
     }
     if (value.kind === "instruction" &&
         typeof value.identity === "string" &&
@@ -1805,9 +1816,11 @@ export class SqliteAnalysisStore {
     captureReceipt(sha256) {
         return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha256);
     }
-    /** Catalog rows contain small import provenance metadata, never capture contents.
-     * @returns {object[]} Small capture metadata rows in import order.
-     */
+    /** Bounded physical-code joins; graphics never imply that a CPU instruction executed. */
+    graphicsEvidence(query) {
+        return this.transaction(() => queryGraphicsEvidence(this.#database, query), false);
+    }
+    /** Small durable import receipts in import order. */
     captureCatalog() {
         return this.#database
             .prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256")
@@ -1818,14 +1831,15 @@ export class SqliteAnalysisStore {
      */
     recordCaptureReceipt(report) {
         this.#requireTransaction();
-        if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format)) {
+        if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace", "uttori-nes-ppu-evidence"].includes(report.format)) {
             return;
         }
         const now = Date.now();
         this.#database
             .prepare(`INSERT INTO capture_catalog(sha256,profile,source_name,imported_at,last_seen_at,observed_events,dropped_events)
       VALUES(?,?,?,?,?,?,?) ON CONFLICT(sha256) DO UPDATE SET last_seen_at=excluded.last_seen_at`)
-            .run(report.sourceSha256, report.indexProfile ?? "full", report.sourceName, now, now, observedImportCount(report.imported, "busEvents") ??
+            .run(report.sourceSha256, report.indexProfile ?? "full", report.sourceName, now, now, observedImportCount(report.imported, "graphicsEvents") ??
+            observedImportCount(report.imported, "busEvents") ??
             observedImportCount(report.imported, "executionEvents") ??
             0, report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0);
     }

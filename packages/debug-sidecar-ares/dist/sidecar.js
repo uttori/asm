@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { DEBUG_SIDECAR_SESSION_ENV, DebugSidecarServer, assertDebugSidecarSessionToken, } from "@uttori/asm-debug-adapter";
@@ -113,10 +114,22 @@ export const runAresSidecar = async (arguments_, environment = process.env) => {
         system: options.system,
         fastBoot: options.fastBoot,
     });
+    // Only Famicom has an external iNES prefix. Keep ordinary sidecar startup lazy until connect.
+    let contentSha256 = manifest.romSha256;
+    let nesPrgFileOffset;
+    if (/^(Famicom|NES|FC)$/i.test(options.system ?? "")) {
+        const romBytes = await readFile(options.rom);
+        if (!romBytes.subarray(0, 4).equals(Buffer.from([0x4e, 0x45, 0x53, 0x1a])))
+            throw new Error("Famicom launch requires an iNES cartridge.");
+        nesPrgFileOffset = 16 + (romBytes[6] & 4 ? 512 : 0);
+        contentSha256 = createHash("sha256").update(romBytes.subarray(16)).digest("hex");
+    }
     const backend = new AresRspDebugBackend({
+        nesPrgFileOffset,
         createClient: (connect) => host.createClient(connect),
         nativeFileIdentity: {
-            romSha256: manifest.romSha256,
+            romSha256: contentSha256,
+            romFileSha256: manifest.romSha256,
             executableSha256: manifest.executableSha256,
             producerRevision: `${manifest.forkRevision}:${manifest.patchSha256}:${manifest.executableSha256}`,
         },

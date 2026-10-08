@@ -206,7 +206,7 @@ export async function runLiveBusAnalysis(options: LiveBusStart) {
             await cursor.readThrough(
               position,
               (chunk) => {
-                if (chunk.scope === "snes.65816.instructions") {
+                if ("instructions" in chunk || chunk.scope === "nes.cpu-bus-ppu") {
                   throw new Error("Live bus analysis requires bus scope.");
                 }
                 accept({

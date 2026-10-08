@@ -143,6 +143,21 @@ export async function sourceStatus(repository: SourceRepository): Promise<Buffer
   ).stdout;
 }
 
+/** Decode porcelain-v1 -z paths, including both sides of a rename/copy and all untracked files. */
+export function sourceStatusPaths(status: Buffer): string[] {
+  const entries = status.toString("utf8").split("\0");
+  const files: string[] = [];
+  for (let index = 0; index < entries.length && entries[index]; index += 1) {
+    const entry = entries[index];
+    files.push(entry.slice(3));
+    // Porcelain -z places a rename/copy's original path in a separate record without status.
+    if (/[CR]/.test(entry.slice(0, 2))) {
+      files.push(entries[++index]);
+    }
+  }
+  return files;
+}
+
 /** Reject concurrent Git operations before touching the index or worktree. */
 export function assertNoSourceOperation(repository: SourceRepository): void {
   sourceFilePublicationEpoch(repository);
@@ -160,12 +175,14 @@ export function assertNoSourceOperation(repository: SourceRepository): void {
   }
 }
 
-/** A checkpoint protects native merge abort semantics. Ignored private evidence remains outside Git. */
+/** Reuse clean HEAD as the abort point; only existing local edits require preservation before a merge. */
 export async function assertSourceCheckpoint(repository: SourceRepository): Promise<string> {
   assertNoSourceOperation(repository);
-  if ((await sourceStatus(repository)).length) {
+  const status = await sourceStatus(repository);
+  if (status.length) {
+    const files = sourceStatusPaths(status);
     throw new Error(
-      "Commit or move the source changes and untracked files before applying regeneration. Preview remains available.",
+      `Commit or move these existing source changes and untracked files before applying regeneration: ${files.map((file) => JSON.stringify(file)).join(", ")}. Preview remains available; a clean checkout uses its existing commit.`,
     );
   }
   return (await sourceGit(repository.root, ["rev-parse", "--verify", "HEAD"])).stdout

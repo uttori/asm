@@ -39,6 +39,15 @@ export interface SourceMergeStatus {
     readonly conflicts: readonly string[];
     readonly journal?: SourceMergeJournal;
 }
+/**
+ * Prepare one replacement proposal while excluding source publication and merge operations.
+ * The renderer must verify original-ROM equality before resolving. Rendering failure or cancellation
+ * before replacement keeps previous candidates and previews. Replacement commits one Git ref
+ * transaction; once published, its proposal remains retained even if the host is interrupted.
+ */
+export declare function prepareSourceGeneration<T extends {
+    readonly generation: SourceGeneration;
+}>(repository: SourceRepository, render: () => Promise<T>, signal?: AbortSignal): Promise<T>;
 /** Compare source trees using a private index, preserving partial staging in the real index. */
 export declare function snapshotSourceTree(repository: SourceRepository, overlays?: readonly {
     readonly path: string;
@@ -56,7 +65,7 @@ export declare function sourceMergeStatus(repository: SourceRepository): Promise
  * the pending merge still needs normal validation and a user-visible commit.
  */
 export declare function adoptSourceGeneration(repository: SourceRepository, generation: SourceGeneration): Promise<SourceMergeStatus>;
-/** Apply only the previewed source contents after a clean explicit checkpoint. */
+/** Apply the previewed merge to a clean checkout using its existing HEAD; leave the result uncommitted. */
 export declare function applySourceGeneration(repository: SourceRepository, generation: SourceGeneration, preview: SourceMergePreview): Promise<SourceMergeStatus>;
 /**
  * Validate the exact staged/worktree result, then create the ordinary merge commit when needed.

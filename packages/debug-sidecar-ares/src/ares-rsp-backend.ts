@@ -23,6 +23,7 @@ import {
   type CaptureResultV2,
   type CaptureScopeV2,
 } from "@uttori/asm-debug-adapter";
+import { Cpu6502Decoder, formatCpu6502Instruction, ricoh2a03Cpu } from "@uttori/asm-plugin-65xx";
 import {
   Cpu65816Decoder,
   formatCpu65816Instruction,
@@ -38,6 +39,7 @@ import {
   ARES_65816_THREAD_ID,
   ARES_65816_WRAM_ADDRESS_SPACE,
   ARES_RSP_CAPABILITIES,
+  ARES_NES_CAPABILITIES,
   ARES_TRACE_BATCH_EVENTS,
 } from "./profile.js";
 import { parseAresTraceDetails } from "./trace-details.js";
@@ -67,10 +69,13 @@ export interface AresRspBackendOptions {
   ) => AresGdbRspClient | GdbRspClient | Promise<AresGdbRspClient | GdbRspClient>;
   readonly terminate?: () => Promise<void>;
   readonly stopTimeoutMs?: number;
+  /** Full-file start of PRG, including the iNES header and optional trainer; defaults to 16. */
+  readonly nesPrgFileOffset?: number;
   /** Set only by the manifest-verified local process host. Binds file provenance
    * and prevents native paths from being sent to an arbitrary remote RSP server. */
   readonly nativeFileIdentity?: {
     readonly romSha256: string;
+    readonly romFileSha256?: string;
     readonly executableSha256: string;
     readonly producerRevision?: string;
   };
@@ -211,6 +216,7 @@ const safeHexInteger = (value: string, context: string): number => {
 /** 65816 `DebugBackend` implemented over the maintained ares fork's private RSP channel. */
 export class AresRspDebugBackend implements DebugBackend {
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
+  #nes = false;
   #richTrace = false;
   #captureV2 = false;
   readonly #nativeFileIdentity: AresRspBackendOptions["nativeFileIdentity"];
@@ -221,6 +227,9 @@ export class AresRspDebugBackend implements DebugBackend {
   #contextBoundaryHeld = false;
   #contextReplayPending = false;
   get capabilities(): typeof ARES_RSP_CAPABILITIES {
+    if (this.#nes) {
+      return ARES_NES_CAPABILITIES;
+    }
     if (!this.#richTrace) {
       return ARES_RSP_CAPABILITIES;
     }
@@ -256,6 +265,7 @@ export class AresRspDebugBackend implements DebugBackend {
   readonly #createClient: AresRspBackendOptions["createClient"];
   readonly #terminate: () => Promise<void>;
   readonly #stopTimeoutMs: number;
+  readonly #nesPrgFileOffset: number;
   readonly #listeners = new Set<(event: DebugBackendEvent) => void>();
   readonly #expectedClose = new WeakSet<AresGdbRspClient>();
   readonly #breakpoints = new Map<number, DebugBreakpoint>();
@@ -279,6 +289,10 @@ export class AresRspDebugBackend implements DebugBackend {
   /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
   constructor(options: AresRspBackendOptions) {
     this.#nativeFileIdentity = options.nativeFileIdentity;
+    this.#nesPrgFileOffset = options.nesPrgFileOffset ?? 16;
+    if (![16, 528].includes(this.#nesPrgFileOffset)) {
+      throw new Error("Invalid iNES PRG file offset.");
+    }
     this.#createClient = options.createClient;
     this.#terminate = options.terminate ?? (() => Promise.resolve());
     this.#stopTimeoutMs = options.stopTimeoutMs ?? 5_000;
@@ -331,12 +345,17 @@ export class AresRspDebugBackend implements DebugBackend {
         throw new Error("ares RSP server does not advertise the required debugger extensions.");
       }
       const target = await this.#readTargetDescription(client);
-      for (const register of ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"]) {
+      this.#nes = target.includes("dev.ares.ricoh2a03.core");
+      const registerNames = this.#nes
+        ? ["a", "x", "y", "s", "pc", "p"]
+        : ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"];
+      for (const register of registerNames) {
         if (!target.includes(`name="${register}"`)) {
           throw new Error(`ares RSP target description is missing register '${register}'.`);
         }
       }
       this.#richTrace =
+        !this.#nes &&
         supported.includes("uttoriInstructionDetails+") &&
         supported.includes("uttoriSramMemory+") &&
         supported.includes("uttoriAramMemory+");
@@ -451,7 +470,11 @@ export class AresRspDebugBackend implements DebugBackend {
   threads(): Promise<readonly DebugThread[]> {
     this.#requireConnected();
     return Promise.resolve([
-      { id: ARES_65816_THREAD_ID, name: "Main CPU", architecture: ARES_65816_ARCHITECTURE },
+      {
+        id: ARES_65816_THREAD_ID,
+        name: "Main CPU",
+        architecture: this.#nes ? "65xx.2a03" : ARES_65816_ARCHITECTURE,
+      },
     ]);
   }
 
@@ -463,8 +486,8 @@ export class AresRspDebugBackend implements DebugBackend {
       {
         id: ARES_65816_FRAME_ID,
         threadId: ARES_65816_THREAD_ID,
-        name: "65816",
-        pc: this.#address(logicalPc(registers)),
+        name: this.#nes ? "Ricoh 2A03" : "65816",
+        pc: await this.#currentAddress(logicalPc(registers)),
         currentOnly: true,
       },
     ];
@@ -476,6 +499,17 @@ export class AresRspDebugBackend implements DebugBackend {
       throw new Error(`Unknown ares frame ${frameId}.`);
     }
     const registers = await this.#registerSnapshot();
+    if (this.#nes) {
+      return (["a", "x", "y", "s", "p", "pc"] as const).map((name) => {
+        const bits = name === "pc" ? 16 : 8;
+        return {
+          name: name.toUpperCase(),
+          value: registerHex(registers[name], bits),
+          bits,
+          group: "CPU",
+        };
+      });
+    }
     return [
       { name: "A", value: registerHex(registers.a, 16), bits: 16, group: "CPU" },
       { name: "X", value: registerHex(registers.x, 16), bits: 16, group: "CPU" },
@@ -496,7 +530,26 @@ export class AresRspDebugBackend implements DebugBackend {
       this.#richTrace &&
       ((address.architecture === "snes.65816" && address.addressSpace === "snes.sram") ||
         (address.architecture === "snes.spc700" && address.addressSpace === "snes.spc700.aram"));
-    const checked = extra ? { ...address } : checkedMemoryAddress(address, "Memory request");
+    let checked: DebugAddress;
+    if (this.#nes) {
+      if (
+        address.architecture !== "65xx.2a03" ||
+        ![
+          "nes.cpu",
+          "nes.ram",
+          "nes.prg-rom",
+          "nes.chr-rom",
+          "nes.prg-ram",
+          "nes.ppu-snapshot",
+          "nes.chr-ram",
+        ].includes(address.addressSpace)
+      ) {
+        throw new Error("Unsupported NES memory address.");
+      }
+      checked = { ...address };
+    } else {
+      checked = extra ? { ...address } : checkedMemoryAddress(address, "Memory request");
+    }
     checkedInteger(checked.address, "Memory address", 0xffffff);
     checkedInteger(count, "Memory count", 1_048_576);
     if (count === 0) {
@@ -531,7 +584,30 @@ export class AresRspDebugBackend implements DebugBackend {
   /** @inheritdoc */
   async setBreakpoints(addresses: readonly DebugAddress[]): Promise<readonly DebugBreakpoint[]> {
     const client = this.#requireStopped();
-    const requested = addresses.map((entry, index) => checkedAddress(entry, `Breakpoint ${index}`));
+    const requested = addresses.map((entry, index) => {
+      if (!this.#nes) {
+        return checkedAddress(entry, `Breakpoint ${index}`);
+      }
+      if (
+        entry.architecture !== "65xx.2a03" ||
+        !["nes.cpu", "65xx.ines-address-space"].includes(entry.addressSpace)
+      ) {
+        throw new Error("Unsupported NES breakpoint address.");
+      }
+      checkedInteger(entry.address, "NES CPU address", 65535);
+      if (entry.outputOffset !== undefined) {
+        checkedInteger(entry.outputOffset, "NES output offset", 0x80210);
+        if (entry.outputOffset < this.#nesPrgFileOffset) {
+          throw new Error("A cartridge header is not executable.");
+        }
+        return {
+          ...entry,
+          address:
+            0x100000000 + (entry.outputOffset - this.#nesPrgFileOffset) * 65536 + entry.address,
+        };
+      }
+      return entry;
+    });
     if (new Set(requested.map(({ address }) => address)).size !== requested.length) {
       throw new Error("Duplicate ares execute breakpoint addresses are not allowed.");
     }
@@ -546,7 +622,7 @@ export class AresRspDebugBackend implements DebugBackend {
     }
 
     const results: DebugBreakpoint[] = [];
-    for (const value of requested) {
+    for (const [index, value] of requested.entries()) {
       const existing = this.#breakpoints.get(value.address);
       if (existing) {
         results.push(existing);
@@ -555,7 +631,7 @@ export class AresRspDebugBackend implements DebugBackend {
       const response = await client.request(`Z0,${value.address.toString(16)},1`);
       const breakpoint: DebugBreakpoint = {
         id: this.#nextBreakpointId++,
-        address: value,
+        address: addresses[index],
         verified: response === "OK",
         ...(response === "OK" ? {} : { message: `ares RSP response '${response}'.` }),
       };
@@ -569,6 +645,37 @@ export class AresRspDebugBackend implements DebugBackend {
 
   /** @inheritdoc */
   async disassemble(address: DebugAddress, count: number): Promise<readonly DebugInstruction[]> {
+    if (this.#nes) {
+      if (address.architecture !== "65xx.2a03" || address.addressSpace !== "nes.cpu") {
+        throw new Error("Unsupported NES disassembly address.");
+      }
+      checkedInteger(address.address, "NES PC", 65535);
+      checkedInteger(count, "Disassembly count", 4096);
+      const decoder = new Cpu6502Decoder(ricoh2a03Cpu);
+      const instructions: DebugInstruction[] = [];
+      let pc = address.address;
+      for (let index = 0; index < count; index++) {
+        const memory = await this.#readCpuBus(pc, Math.min(3, 0x10000 - pc));
+        if (!memory) {
+          break;
+        }
+        const decoded = decoder.decode({
+          source: new Uint8ArrayDecoderSource(memory),
+          offset: 0,
+          logicalAddress: pc,
+        });
+        if (decoded.kind !== "instruction") {
+          break;
+        }
+        instructions.push({
+          address: this.#address(pc),
+          bytes: [...decoded.instruction.bytes],
+          text: formatCpu6502Instruction(decoded.instruction),
+        });
+        pc = (pc + decoded.instruction.size) & 65535;
+      }
+      return instructions;
+    }
     let current = checkedAddress(address, "Disassembly request").address;
     checkedInteger(count, "Disassembly count", 4_096);
     const registers = await this.#registerSnapshot();
@@ -611,6 +718,22 @@ export class AresRspDebugBackend implements DebugBackend {
   async capture(request: CaptureRequestV2): Promise<CaptureResultV2> {
     validateCaptureRequest(request);
     const client = this.#requireConnected();
+    if (
+      "scope" in request &&
+      request.scope &&
+      this.#nes &&
+      request.scope !== "nes.2a03.instructions" &&
+      request.scope !== "nes.cpu-bus-ppu"
+    ) {
+      throw new Error("Famicom supports NES instruction and PPU bus capture scopes.");
+    }
+    if (
+      !this.#nes &&
+      "scope" in request &&
+      (request.scope === "nes.2a03.instructions" || request.scope === "nes.cpu-bus-ppu")
+    ) {
+      throw new Error("NES capture requires a Famicom runtime.");
+    }
     if (request.operation === "context") {
       const identity = this.#nativeFileIdentity;
       if (!identity) {
@@ -627,6 +750,8 @@ export class AresRspDebugBackend implements DebugBackend {
       if ("directory" in request) {
         if (
           request.romContentSha256 !== identity.romSha256 ||
+          (this.#nes &&
+            (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256)) ||
           request.producer.id !== "ares" ||
           (request.producer.revision !== identity.executableSha256 &&
             request.producer.revision !== identity.producerRevision)
@@ -642,6 +767,9 @@ export class AresRspDebugBackend implements DebugBackend {
           encode(request.producer.id),
           encode(request.producer.revision),
         );
+        if (this.#nes) {
+          fields.push(encode(request.romFileSha256!));
+        }
       }
       if ("session" in request) {
         fields.push(request.session);
@@ -699,9 +827,11 @@ export class AresRspDebugBackend implements DebugBackend {
     ) {
       const negotiation =
         request.operation === "file-start" || request.operation === "file-capabilities";
-      const scope = negotiation ? (request.scope ?? "snes.65816.instructions") : this.#captureScope;
+      const scope = negotiation ? (request.scope ?? this.#instructionScope()) : this.#captureScope;
       const scopes = {
         "snes.65816.instructions": "instructions",
+        "nes.2a03.instructions": "instructions",
+        "nes.cpu-bus-ppu": "bus-ppu",
         "snes.cpu-bus": "bus",
         "snes.cpu-bus-transfers": "bus-transfers",
         "snes.cpu-bus-ppu": "bus-ppu",
@@ -715,6 +845,8 @@ export class AresRspDebugBackend implements DebugBackend {
         }
         if (
           request.romContentSha256 !== identity.romSha256 ||
+          (this.#nes &&
+            (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256)) ||
           request.producer.id !== "ares" ||
           (request.producer.revision !== identity.executableSha256 &&
             request.producer.revision !== identity.producerRevision)
@@ -733,6 +865,12 @@ export class AresRspDebugBackend implements DebugBackend {
           encode(request.producer.id),
           encode(request.producer.revision),
         );
+        if (this.#nes) {
+          if (!request.romFileSha256) {
+            throw new Error("NES capture requires a verified full cartridge identity.");
+          }
+          fields.push(request.romFileSha256);
+        }
         if (request.measureStages) {
           fields.push("profile");
         }
@@ -782,8 +920,8 @@ export class AresRspDebugBackend implements DebugBackend {
       return position;
     }
     const negotiation = request.operation === "start" || request.operation === "capabilities";
-    const requestedScope = negotiation ? (request.scope ?? "snes.65816.instructions") : undefined;
-    const ppu = requestedScope === "snes.cpu-bus-ppu";
+    const requestedScope = negotiation ? (request.scope ?? this.#instructionScope()) : undefined;
+    const ppu = requestedScope === "snes.cpu-bus-ppu" || requestedScope === "nes.cpu-bus-ppu";
     const bus =
       ppu || requestedScope === "snes.cpu-bus" || requestedScope === "snes.cpu-bus-transfers";
     const transfers = requestedScope === "snes.cpu-bus-transfers";
@@ -1049,14 +1187,53 @@ export class AresRspDebugBackend implements DebugBackend {
     }
   }
 
+  #instructionScope(): CaptureScopeV2 {
+    return this.#nes ? "nes.2a03.instructions" : "snes.65816.instructions";
+  }
+
   async #registerSnapshot(): Promise<RegisterSnapshot> {
-    return parseRegisters(await this.#requireStopped().request("g"));
+    const packet = await this.#requireStopped().request("g");
+    if (!this.#nes) {
+      return parseRegisters(packet);
+    }
+    if (!/^[\da-f]{14}$/i.test(packet)) {
+      throw new Error("Expected seven bytes of Ricoh CPU registers.");
+    }
+    const b = Buffer.from(packet, "hex");
+    return {
+      a: b[0],
+      x: b[1],
+      y: b[2],
+      s: b[3],
+      p: b[4],
+      pc: b.readUInt16LE(5),
+      d: 0,
+      db: 0,
+      pb: 0,
+      e: 1,
+    };
+  }
+
+  /** A stopped PC carries its physical PRG identity so identical bank windows resolve correctly. */
+  async #currentAddress(pc: number): Promise<DebugAddress> {
+    if (!this.#nes) {
+      return this.#address(pc);
+    }
+    const packet = await this.#requireStopped().request("qUttoriMemoryRead:nes.mapping:0,16");
+    if (!/^[\da-f]{44}$/i.test(packet)) {
+      throw new Error("Missing Famicom mapping snapshot.");
+    }
+    const offset = Buffer.from(packet, "hex").readUInt32LE(18);
+    return {
+      ...this.#address(pc),
+      ...(offset === 0xffffffff ? {} : { outputOffset: offset + this.#nesPrgFileOffset }),
+    };
   }
 
   #address(address: number): DebugAddress {
     return {
-      architecture: ARES_65816_ARCHITECTURE,
-      addressSpace: ARES_65816_ADDRESS_SPACE,
+      architecture: this.#nes ? "65xx.2a03" : ARES_65816_ARCHITECTURE,
+      addressSpace: this.#nes ? "nes.cpu" : ARES_65816_ADDRESS_SPACE,
       address,
     };
   }
@@ -1099,13 +1276,16 @@ export class AresRspDebugBackend implements DebugBackend {
           (status) => {
             this.#contextReplayPending = status === "replaying";
             if (status === "idle" || status === "replay-diverged") {
+              let text =
+                "Capture replay diverged from the retained input timing or final machine state. Execution is paused.\n";
+              if (status === "idle") {
+                const checked = this.#nes ? "CPU/APU/PPU/mapper/controller state" : "WRAM";
+                text = `Capture replay reached the recorded endpoint; ${checked} and input consumption match.\n`;
+              }
               this.#emit({
                 type: "output",
                 category: status === "idle" ? "console" : "stderr",
-                text:
-                  status === "idle"
-                    ? "Capture replay reached the recorded endpoint; WRAM and input consumption match.\n"
-                    : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n",
+                text,
               });
             }
             return;

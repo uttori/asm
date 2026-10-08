@@ -14,14 +14,18 @@ export interface RomIdentity {
   readonly fileSize: number;
   /** Byte length after stripping the copier header. */
   readonly contentSize: number;
-  /** `0` or `512`. Matches `fileSize - contentSize`. */
+  /** Copier prefix only. A target container may have an additional explicit header. */
   readonly headerSize: CopierHeaderSize;
+  /** Target-owned container prefix, distinct from an optional copier header. */
+  readonly container?: { readonly format: string; readonly headerSize: number };
 }
 
 /** Options for constructing a `RomImage`. Omitted `headerSize` is auto-detected. */
 export interface RomLoadOptions {
   /** Explicit copier-header size. Required when the file size is not 32 KiB aligned. */
   readonly headerSize?: CopierHeaderSize;
+  /** Explicit target container; disables SNES copier-header auto-detection. The target validates its contents. */
+  readonly container?: { readonly format: string; readonly headerSize: number };
 }
 
 const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
@@ -66,11 +70,20 @@ export class RomImage {
    */
   constructor(bytes: Uint8Array, options: RomLoadOptions & { readonly sourcePath?: string } = {}) {
     this.#fileBytes = Uint8Array.from(bytes);
-    const headerSize = options.headerSize ?? detectCopierHeaderSize(this.#fileBytes.length);
-    if (headerSize > this.#fileBytes.length) {
-      throw new Error(`Header size ${headerSize} exceeds ROM size ${this.#fileBytes.length}.`);
+    const container = options.container;
+    if (
+      container &&
+      (!container.format || !Number.isSafeInteger(container.headerSize) || container.headerSize < 0)
+    ) {
+      throw new Error("Invalid target container header.");
     }
-    this.#contentBytes = this.#fileBytes.slice(headerSize);
+    const headerSize =
+      options.headerSize ?? (container ? 0 : detectCopierHeaderSize(this.#fileBytes.length));
+    const contentStart = headerSize + (container?.headerSize ?? 0);
+    if (contentStart > this.#fileBytes.length) {
+      throw new Error(`Header size ${contentStart} exceeds ROM size ${this.#fileBytes.length}.`);
+    }
+    this.#contentBytes = this.#fileBytes.slice(contentStart);
     this.sourcePath = options.sourcePath;
     this.identity = Object.freeze({
       sha256: sha256(this.#fileBytes),
@@ -78,6 +91,7 @@ export class RomImage {
       fileSize: this.#fileBytes.length,
       contentSize: this.#contentBytes.length,
       headerSize,
+      ...(container ? { container: Object.freeze({ ...container }) } : {}),
     });
   }
 

@@ -273,3 +273,66 @@ test("replay verification rejects symlinked state files", async (t) => {
     message: /size\/type mismatch/,
   });
 });
+
+test("NES contexts bind the iNES header and retain full machine endpoints", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "nes-context-"));
+  t.teardown(() => rm(root, { recursive: true, force: true }));
+  const file = path.join(root, "nes.act2");
+  const nes = {
+    ...metadata,
+    architecture: "65xx.2a03",
+    addressSpace: "nes.cpu",
+    romFileSha256: "b".repeat(64),
+  };
+  let directory = "";
+  let preparedIdentity: string | undefined;
+  const producer = fixture();
+  const transport: CaptureTransportV2 = async (request) => {
+    if (request.operation === "capabilities") {
+      return {
+        version: 2,
+        scope: "nes.2a03.instructions",
+        mode: "lossless",
+        ownership: "durable-prefix",
+        maxChunkBytes: 262144,
+        requiredReserveBytes: 91,
+        overheadBytes: 4194304,
+        resumeSession: false,
+      };
+    }
+    const result = await producer.transport(request);
+    if (request.operation === "context" && request.action === "prepare") {
+      directory = request.directory;
+      preparedIdentity = request.romFileSha256;
+      await rm(path.join(directory, "wram-start.bin"));
+      await writeFile(path.join(directory, "ram-start.bin"), Buffer.alloc(2048));
+      await writeFile(path.join(directory, "start-extra.bin"), Buffer.alloc(38));
+    }
+    if (request.operation === "context" && request.action === "stop") {
+      await rm(path.join(directory, "wram-end.bin"));
+      await writeFile(path.join(directory, "ram-end.bin"), Buffer.alloc(2048));
+      await writeFile(path.join(directory, "end-state.bin"), Buffer.alloc(4096));
+    }
+    return "session" in result ? { ...result, scope: "nes.2a03.instructions" } : result;
+  };
+  const recorder = await LosslessCaptureFileRecorder.create({
+    ...nes,
+    file,
+    format: "act2",
+    scope: "nes.2a03.instructions",
+    transport,
+  });
+  t.is(preparedIdentity, nes.romFileSha256);
+  await recorder.stop();
+  await t.notThrowsAsync(verifyCaptureContext(directory, nes));
+  await t.throwsAsync(verifyCaptureContext(directory, { ...nes, romFileSha256: "c".repeat(64) }), {
+    message: /iNES/,
+  });
+  await t.throwsAsync(verifyCaptureContext(directory, metadata), { message: /iNES/ });
+  const manifest = JSON.parse(await readFile(path.join(directory, "manifest.json"), "utf8"));
+  t.is(manifest.graphics.scope, "nes.cpu-bus-ppu");
+  t.is(manifest.ram.bytes, 2048);
+  t.is(manifest.endpoint.encoding, "ares-famicom-canonical-v1");
+  await writeFile(path.join(directory, "end-state.bin"), Buffer.alloc(4096, 1));
+  await t.throwsAsync(verifyCaptureContext(directory, nes), { message: /checksum mismatch/ });
+});

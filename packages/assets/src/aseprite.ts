@@ -6,6 +6,7 @@ import {
   type AtlasFileCodec,
 } from "./atlas-interchange.js";
 export {
+  decodeAsepriteDocumentSync,
   decodeAsepriteDocument,
   encodeAsepriteDocument,
   validateAsepriteDocument,

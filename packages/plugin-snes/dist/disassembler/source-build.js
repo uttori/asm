@@ -17,11 +17,52 @@ class SourceBuildFiles extends NodeAssemblyFileProvider {
         super();
         this.overlays = overlays;
     }
+    /** Candidate creations/removals participate in the same search order as saved source files. */
+    resolvePath(filename, options = {}) {
+        const normalized = filename.replace(/^["']|["']$/g, "");
+        let candidates;
+        if (path.isAbsolute(normalized)) {
+            candidates = [normalized];
+        }
+        else {
+            candidates = [
+                options.macroSourceFile ? path.dirname(options.macroSourceFile) : undefined,
+                options.currentFile ? path.dirname(options.currentFile) : undefined,
+                ...(options.includePaths ?? []),
+                process.cwd(),
+            ]
+                .filter((item) => item !== undefined)
+                .map((directory) => path.resolve(directory, normalized));
+        }
+        for (const candidate of candidates) {
+            if (this.overlays.has(candidate)) {
+                if (this.overlays.get(candidate) !== null) {
+                    return candidate;
+                }
+            }
+            else if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+        }
+        return undefined;
+    }
+    stat(file) {
+        const name = path.resolve(file);
+        if (this.overlays.has(name)) {
+            const bytes = this.overlays.get(name);
+            return { exists: bytes !== null, readable: bytes !== null, size: bytes?.length };
+        }
+        return super.stat(file);
+    }
     readFile(file) {
         const name = path.resolve(file);
         let bytes = this.snapshots.get(name);
         if (!bytes) {
-            bytes = this.overlays.get(name) ?? super.readFile(name);
+            const overlay = this.overlays.get(name);
+            if (overlay === null) {
+                throw new Error(`Candidate source removed '${name}'.`);
+            }
+            bytes = overlay ?? super.readFile(name);
             this.#bytes += bytes.length;
             if (this.#bytes > 256 * 1024 * 1024) {
                 throw new Error("Source build input snapshot exceeds 256 MiB.");
@@ -43,11 +84,11 @@ export function inspectSnesSource(options) {
     let overlayBytes = 0;
     for (const [name, bytes] of options.overlays ?? []) {
         assertSourcePath(name);
-        overlayBytes += bytes.length;
+        overlayBytes += bytes?.length ?? 0;
         if (overlayBytes > 256 * 1024 * 1024) {
             throw new Error("Source overlays exceed 256 MiB.");
         }
-        overlays.set(path.resolve(root, name), Uint8Array.from(bytes));
+        overlays.set(path.resolve(root, name), bytes === null ? null : Uint8Array.from(bytes));
     }
     const files = new SourceBuildFiles(overlays);
     const assembler = new Assembler({
@@ -142,8 +183,10 @@ export function inspectSnesSource(options) {
         if (options.placements) {
             diagnostics.push(...checkSnesPlacements(output, symbols, options.placements));
         }
-        for (const file of overlays.keys()) {
-            if (!files.snapshots.has(file)) {
+        for (const [file, bytes] of overlays) {
+            // A retired input must no longer be consumed. Reading it already fails in the provider;
+            // absence therefore has the opposite success condition from a candidate creation/edit.
+            if (bytes !== null && !files.snapshots.has(file)) {
                 throw new Error(`Source preview overlay is not consumed by this assembly: ${file}`);
             }
         }

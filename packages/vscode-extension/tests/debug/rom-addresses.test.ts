@@ -173,3 +173,30 @@ test("source aliases share a native table with exact instruction breakpoints and
   const partial = await request("setBreakpoints", sourceArgs);
   t.like(partial.body, { breakpoints: [{ verified: false, line: 2 }] });
 });
+
+test("NES source breakpoints preserve physical identity across all MMC3 execution windows", (t) => {
+  const bytes = new Uint8Array(16 + 512 + 32768);
+  bytes.set([0x4e, 0x45, 0x53, 0x1a, 2, 0, 0x44]);
+  const map = createDebugMap({
+    target: "65xx.nes",
+    output: bytes,
+    mapping: new AddressToLineMapping(),
+    sourceRoot: "/tmp",
+  });
+  const resolver = createSnesDebugAddressResolvers(map, bytes);
+  const address: DebugAddress = {
+    architecture: "65xx.2a03",
+    addressSpace: "nes.cpu",
+    address: 0x8012,
+    outputOffset: 528 + 8192 + 0x12,
+  };
+  const aliases = resolver.sourceBreakpointAddresses!(address);
+  t.deepEqual(
+    aliases.map((entry) => entry.address),
+    [0x8012, 0xa012, 0xc012, 0xe012],
+  );
+  t.true(aliases.every((entry) => entry.outputOffset === address.outputOffset));
+  t.is(resolver.sourceOutputOffset!({ ...address, address: 0xa012 }), address.outputOffset);
+  t.is(resolver.sourceOutputOffset!({ ...address, outputOffset: undefined }), undefined);
+  t.deepEqual(resolver.sourceBreakpointAddresses!({ ...address, outputOffset: 16 }), []);
+});

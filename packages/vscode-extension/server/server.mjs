@@ -4424,8 +4424,8 @@ var require_messageReader = __commonJS({
             contentDecoders.set(contentDecoder.name, contentDecoder);
           }
           if (options.contentDecoders !== void 0) {
-            for (const decoder of options.contentDecoders) {
-              contentDecoders.set(decoder.name, decoder);
+            for (const decoder2 of options.contentDecoders) {
+              contentDecoders.set(decoder2.name, decoder2);
             }
           }
           if (options.contentTypeDecoder !== void 0) {
@@ -4433,8 +4433,8 @@ var require_messageReader = __commonJS({
             contentTypeDecoders.set(contentTypeDecoder.name, contentTypeDecoder);
           }
           if (options.contentTypeDecoders !== void 0) {
-            for (const decoder of options.contentTypeDecoders) {
-              contentTypeDecoders.set(decoder.name, decoder);
+            for (const decoder2 of options.contentTypeDecoders) {
+              contentTypeDecoders.set(decoder2.name, decoder2);
             }
           }
         }
@@ -4728,8 +4728,8 @@ var require_messageBuffer = __commonJS({
       get encoding() {
         return this._encoding;
       }
-      append(chunk) {
-        const toAppend = typeof chunk === "string" ? this.fromString(chunk, this._encoding) : chunk;
+      append(chunk2) {
+        const toAppend = typeof chunk2 === "string" ? this.fromString(chunk2, this._encoding) : chunk2;
         this._chunks.push(toAppend);
         this._totalLength += toAppend.byteLength;
       }
@@ -4742,10 +4742,10 @@ var require_messageBuffer = __commonJS({
         let offset = 0;
         let chunkBytesRead = 0;
         row: while (chunkIndex < this._chunks.length) {
-          const chunk = this._chunks[chunkIndex];
+          const chunk2 = this._chunks[chunkIndex];
           offset = 0;
-          while (offset < chunk.length) {
-            const value = chunk[offset];
+          while (offset < chunk2.length) {
+            const value = chunk2[offset];
             switch (value) {
               case CR:
                 switch (state) {
@@ -4777,7 +4777,7 @@ var require_messageBuffer = __commonJS({
             }
             offset++;
           }
-          chunkBytesRead += chunk.byteLength;
+          chunkBytesRead += chunk2.byteLength;
           chunkIndex++;
         }
         if (state !== 4) {
@@ -4819,15 +4819,15 @@ ${header}`);
           throw new Error(`Cannot read so many bytes!`);
         }
         if (this._chunks[0].byteLength === byteCount) {
-          const chunk = this._chunks[0];
+          const chunk2 = this._chunks[0];
           this._chunks.shift();
           this._totalLength -= byteCount;
-          return this.asNative(chunk);
+          return this.asNative(chunk2);
         }
         if (this._chunks[0].byteLength > byteCount) {
-          const chunk = this._chunks[0];
-          const result2 = this.asNative(chunk, byteCount);
-          this._chunks[0] = chunk.slice(byteCount);
+          const chunk2 = this._chunks[0];
+          const result2 = this.asNative(chunk2, byteCount);
+          this._chunks[0] = chunk2.slice(byteCount);
           this._totalLength -= byteCount;
           return result2;
         }
@@ -4835,20 +4835,20 @@ ${header}`);
         let resultOffset = 0;
         const chunkIndex = 0;
         while (byteCount > 0) {
-          const chunk = this._chunks[chunkIndex];
-          if (chunk.byteLength > byteCount) {
-            const chunkPart = chunk.slice(0, byteCount);
+          const chunk2 = this._chunks[chunkIndex];
+          if (chunk2.byteLength > byteCount) {
+            const chunkPart = chunk2.slice(0, byteCount);
             result.set(chunkPart, resultOffset);
             resultOffset += byteCount;
-            this._chunks[chunkIndex] = chunk.slice(byteCount);
+            this._chunks[chunkIndex] = chunk2.slice(byteCount);
             this._totalLength -= byteCount;
             byteCount -= byteCount;
           } else {
-            result.set(chunk, resultOffset);
-            resultOffset += chunk.byteLength;
+            result.set(chunk2, resultOffset);
+            resultOffset += chunk2.byteLength;
             this._chunks.shift();
-            this._totalLength -= chunk.byteLength;
-            byteCount -= chunk.byteLength;
+            this._totalLength -= chunk2.byteLength;
+            byteCount -= chunk2.byteLength;
           }
         }
         return result;
@@ -4989,7 +4989,7 @@ var require_connection = __commonJS({
         }
       }
       Trace2.fromString = fromString;
-      function toString2(value) {
+      function toString3(value) {
         switch (value) {
           case Trace2.Off:
             return "off";
@@ -5003,7 +5003,7 @@ var require_connection = __commonJS({
             return "off";
         }
       }
-      Trace2.toString = toString2;
+      Trace2.toString = toString3;
     })(Trace || (exports.Trace = Trace = {}));
     var TraceFormat;
     (function(TraceFormat2) {
@@ -7813,7 +7813,7 @@ var require_main = __commonJS({
       );
       var Is;
       (function(Is2) {
-        var toString2 = Object.prototype.toString;
+        var toString3 = Object.prototype.toString;
         function defined(value) {
           return typeof value !== "undefined";
         }
@@ -7827,27 +7827,27 @@ var require_main = __commonJS({
         }
         Is2.boolean = boolean;
         function string(value) {
-          return toString2.call(value) === "[object String]";
+          return toString3.call(value) === "[object String]";
         }
         Is2.string = string;
         function number(value) {
-          return toString2.call(value) === "[object Number]";
+          return toString3.call(value) === "[object Number]";
         }
         Is2.number = number;
         function numberRange(value, min, max) {
-          return toString2.call(value) === "[object Number]" && min <= value && value <= max;
+          return toString3.call(value) === "[object Number]" && min <= value && value <= max;
         }
         Is2.numberRange = numberRange;
         function integer5(value) {
-          return toString2.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
+          return toString3.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
         }
         Is2.integer = integer5;
         function uinteger2(value) {
-          return toString2.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
+          return toString3.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
         }
         Is2.uinteger = uinteger2;
         function func(value) {
-          return toString2.call(value) === "[object Function]";
+          return toString3.call(value) === "[object Function]";
         }
         Is2.func = func;
         function objectLiteral(value) {
@@ -11873,7 +11873,7 @@ var require_files = __commonJS({
     exports.resolveGlobalYarnPath = resolveGlobalYarnPath;
     exports.resolveModulePath = resolveModulePath;
     var url = __importStar(__require("url"));
-    var path20 = __importStar(__require("path"));
+    var path19 = __importStar(__require("path"));
     var fs10 = __importStar(__require("fs"));
     var child_process_1 = __require("child_process");
     function uriToFilePath(uri) {
@@ -11892,7 +11892,7 @@ var require_files = __commonJS({
           segments.shift();
         }
       }
-      return path20.normalize(segments.join("/"));
+      return path19.normalize(segments.join("/"));
     }
     function isWindows() {
       return process.platform === "win32";
@@ -11922,7 +11922,7 @@ var require_files = __commonJS({
         Object.keys(env).forEach((key) => newEnv[key] = env[key]);
         if (nodePath2 && fs10.existsSync(nodePath2)) {
           if (newEnv[nodePathKey]) {
-            newEnv[nodePathKey] = nodePath2 + path20.delimiter + newEnv[nodePathKey];
+            newEnv[nodePathKey] = nodePath2 + path19.delimiter + newEnv[nodePathKey];
           } else {
             newEnv[nodePathKey] = nodePath2;
           }
@@ -11994,9 +11994,9 @@ var require_files = __commonJS({
         }
         if (prefix.length > 0) {
           if (isWindows()) {
-            return path20.join(prefix, "node_modules");
+            return path19.join(prefix, "node_modules");
           } else {
-            return path20.join(prefix, "lib", "node_modules");
+            return path19.join(prefix, "lib", "node_modules");
           }
         }
         return void 0;
@@ -12035,7 +12035,7 @@ var require_files = __commonJS({
           try {
             const yarn = JSON.parse(line);
             if (yarn.type === "log") {
-              return path20.join(yarn.data, "node_modules");
+              return path19.join(yarn.data, "node_modules");
             }
           } catch (e) {
           }
@@ -12064,17 +12064,17 @@ var require_files = __commonJS({
       FileSystem2.isCaseSensitive = isCaseSensitive;
       function isParent(parent, child) {
         if (isCaseSensitive()) {
-          return path20.normalize(child).indexOf(path20.normalize(parent)) === 0;
+          return path19.normalize(child).indexOf(path19.normalize(parent)) === 0;
         } else {
-          return path20.normalize(child).toLowerCase().indexOf(path20.normalize(parent).toLowerCase()) === 0;
+          return path19.normalize(child).toLowerCase().indexOf(path19.normalize(parent).toLowerCase()) === 0;
         }
       }
       FileSystem2.isParent = isParent;
     })(FileSystem || (exports.FileSystem = FileSystem = {}));
     function resolveModulePath(workspaceRoot2, moduleName, nodePath2, tracer) {
       if (nodePath2) {
-        if (!path20.isAbsolute(nodePath2)) {
-          nodePath2 = path20.join(workspaceRoot2, nodePath2);
+        if (!path19.isAbsolute(nodePath2)) {
+          nodePath2 = path19.join(workspaceRoot2, nodePath2);
         }
         return resolve(moduleName, nodePath2, nodePath2, tracer).then((value) => {
           if (FileSystem.isParent(nodePath2, value)) {
@@ -12307,7 +12307,7 @@ var require_main2 = __commonJS({
     exports.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path20 = __importStar(__require("path"));
+    var path19 = __importStar(__require("path"));
     var os = __importStar(__require("os"));
     var fs10 = __importStar(__require("fs"));
     var crypto_1 = __require("crypto");
@@ -12459,7 +12459,7 @@ var require_main2 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path20.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path19.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -12919,8 +12919,8 @@ init_canonical_json();
 init_debug_map();
 import { createHash as createHash5 } from "node:crypto";
 import fs9 from "node:fs";
-import path19 from "node:path";
-import { crc32 as crc322 } from "node:zlib";
+import path18 from "node:path";
+import { crc32 as crc323 } from "node:zlib";
 
 // packages/core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
@@ -14574,6 +14574,31 @@ var isEscapedAt = (text2, index2) => {
   }
   return slashes % 2 === 1;
 };
+function isStructuredCommandStart(text2) {
+  return /^(?:datastruct\b|\[|includeasset\s*\()/i.test(text2.trimStart());
+}
+function isOpenStructuredCommand(text2) {
+  if (!/^includeasset\s*\(/i.test(text2.trimStart())) {
+    return isOpenStructInitializer(text2);
+  }
+  let depth = 0;
+  let quote = "";
+  for (let index2 = 0; index2 < text2.length; index2++) {
+    const char = text2[index2];
+    if ((char === '"' || char === "'") && !isEscapedAt(text2, index2)) {
+      if (quote === char) {
+        quote = "";
+      } else if (!quote) {
+        quote = char;
+      }
+    } else if (!quote && char === "(") {
+      depth++;
+    } else if (!quote && char === ")") {
+      depth--;
+    }
+  }
+  return depth > 0;
+}
 var removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
   let quote = "";
   for (let i = 0; i < line.length; i++) {
@@ -14598,43 +14623,46 @@ var preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile = ASAR_S
   let bufferStartLine;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     let line = lines[lineIndex];
-    const recordContinuation = /^(?:datastruct\b|\[)/i.test(nextCommandBuffer.trimStart());
+    const structuredContinuation = isStructuredCommandStart(nextCommandBuffer);
     line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
     if (!line.trim()) {
-      if (recordContinuation) {
+      if (structuredContinuation) {
         nextCommandBuffer += "\n";
       }
       continue;
     }
-    if (!recordContinuation && line.trimStart().startsWith(";`+")) {
+    if (!structuredContinuation && line.trimStart().startsWith(";`+")) {
       sourcedCommands.push({ text: line, line: lineIndex });
       continue;
     }
     line = removeInlineComment(line, syntaxProfile);
     if (!line.trim()) {
-      if (recordContinuation) {
+      if (structuredContinuation) {
         nextCommandBuffer += "\n";
       }
       continue;
     }
-    const record2 = recordContinuation || /^(?:datastruct\b|\[)/i.test(line);
-    if (record2) {
+    const structured = structuredContinuation || isStructuredCommandStart(line);
+    if (structured) {
       line = removeInlineComment(lines[lineIndex], {
         ...syntaxProfile,
         preserveLeadingWhitespace: true
       });
     }
-    if (isOpenStructInitializer(nextCommandBuffer + line)) {
+    if (line.endsWith("\\")) {
+      if (nextCommandBuffer === "") {
+        bufferStartLine = lineIndex;
+      }
+      nextCommandBuffer += line.slice(0, -1);
+      if (structured) {
+        nextCommandBuffer += "\n";
+      }
+    } else if (isOpenStructuredCommand(nextCommandBuffer + line)) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
       }
       nextCommandBuffer += `${line}
 `;
-    } else if (line.endsWith("\\")) {
-      if (nextCommandBuffer === "") {
-        bufferStartLine = lineIndex;
-      }
-      nextCommandBuffer += line.slice(0, -1);
     } else if (line.endsWith(",")) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
@@ -14956,20 +14984,20 @@ var parseAsarTableLine = (line, rtl, lineNumber) => {
     if (eq < 1 || eq !== line.length - 2) {
       throw invalidTableLine(lineNumber);
     }
-    const hex4 = line.slice(0, eq);
-    if (!/^[\dA-Fa-f]+$/.test(hex4)) {
+    const hex5 = line.slice(0, eq);
+    if (!/^[\dA-Fa-f]+$/.test(hex5)) {
       throw invalidTableLine(lineNumber);
     }
-    return { char: line[eq + 1], value: Number.parseInt(hex4, 16) };
+    return { char: line[eq + 1], value: Number.parseInt(hex5, 16) };
   }
   if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
     throw invalidTableLine(lineNumber);
   }
-  const hex3 = line.slice(2);
-  if (!/^[\dA-Fa-f]+$/.test(hex3)) {
+  const hex4 = line.slice(2);
+  if (!/^[\dA-Fa-f]+$/.test(hex4)) {
     throw invalidTableLine(lineNumber);
   }
-  return { char: line[0], value: Number.parseInt(hex3, 16) };
+  return { char: line[0], value: Number.parseInt(hex4, 16) };
 };
 var handleClearTable = ({ session }) => {
   session.characterMappings.clear();
@@ -19335,8 +19363,8 @@ var AssemblyFrontEndService = class {
   }
   host;
   commandBuffer = "";
-  /** Opening physical line when processCommand receives a record one line at a time. */
-  structBufferStart;
+  /** Opening physical line when processCommand receives a structured statement one line at a time. */
+  statementBufferStart;
   programModelBuilder;
   /**
    * Preprocesses raw source blocks while preserving continued-line buffering.
@@ -19352,26 +19380,26 @@ var AssemblyFrontEndService = class {
    * @returns {SourcedCommand[]} The normalized sourced commands.
    */
   preprocessSourcedBlockCommands(block) {
-    const opening = this.structBufferStart;
+    const opening = this.statementBufferStart;
     if (opening && opening.file !== this.host.currentFile) {
-      throw new Error(`Unclosed dataStruct initializer in '${opening.file}'.`);
+      throw new Error(`Unclosed structured statement in '${opening.file}'.`);
     }
     const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
     if (opening && processed.sourcedCommands.length > 0) {
       processed.sourcedCommands[0].line = opening.line - this.host.currentLine;
     }
     this.commandBuffer = processed.commandBuffer;
-    if (isOpenStructInitializer(this.commandBuffer)) {
+    if (isOpenStructuredCommand(this.commandBuffer)) {
       if (!opening || processed.sourcedCommands.length > 0) {
         const lines = block.split("\n");
-        const start = lines.findLastIndex((line) => /^(?:datastruct\b|\[)/i.test(line.trimStart()));
-        this.structBufferStart = {
+        const start = lines.findLastIndex(isStructuredCommandStart);
+        this.statementBufferStart = {
           file: this.host.currentFile,
           line: this.host.currentLine + Math.max(0, start)
         };
       }
     } else {
-      this.structBufferStart = void 0;
+      this.statementBufferStart = void 0;
     }
     return processed.sourcedCommands;
   }
@@ -19440,18 +19468,121 @@ var AssemblyFrontEndService = class {
   }
 };
 
+// packages/core/src/services/asset-resource-snapshot.ts
+function assetSourceMediaType(path19, format) {
+  const representation = format?.sourceRepresentations?.find(
+    (item) => item.extensions.some((extension2) => path19.toLowerCase().endsWith(extension2))
+  );
+  if (representation) {
+    return representation.mediaType;
+  }
+  const extension = path19.toLowerCase().split(".").pop();
+  if (extension === "png") {
+    return "image/png";
+  }
+  if (extension === "aseprite" || extension === "ase") {
+    return "image/x-aseprite";
+  }
+  if (extension === "wav" || extension === "wave") {
+    return "audio/wav";
+  }
+  if (extension === "json") {
+    return "application/json";
+  }
+  return "application/octet-stream";
+}
+function isName(value) {
+  return typeof value === "string" && !!value;
+}
+function isUnknownArray(value) {
+  return Array.isArray(value);
+}
+function isDependency(value) {
+  return !!value && typeof value === "object" && "key" in value && isName(value.key) && "path" in value && isName(value.path) && (!("relativeTo" in value) || value.relativeTo === void 0 || isName(value.relativeTo)) && (!("mediaType" in value) || value.mediaType === void 0 || isName(value.mediaType));
+}
+function resolveAssetResourceSnapshot(format, source, options, host) {
+  const resources = {};
+  const paths = {};
+  Object.setPrototypeOf(resources, null);
+  Object.setPrototypeOf(paths, null);
+  const parents = /* @__PURE__ */ new Map();
+  const declared = format.resourcePaths?.(structuredClone(options)) ?? [];
+  if (!isUnknownArray(declared) || !declared.every(isName)) {
+    throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
+  }
+  for (let depth = 0; depth < 32; depth++) {
+    const dynamic = format.resourceDependencies?.(
+      { ...source, bytes: source.bytes.slice() },
+      structuredClone(options),
+      Object.fromEntries(
+        Object.entries(resources).map(([key, value]) => [
+          key,
+          { ...value, bytes: value.bytes.slice() }
+        ])
+      )
+    ) ?? [];
+    if (!isUnknownArray(dynamic) || !dynamic.every(isDependency)) {
+      throw new Error(`Asset format '${format.id}' returned invalid resource dependencies.`);
+    }
+    if (declared.length + dynamic.length > 1024) {
+      throw new Error(`Asset format '${format.id}' exceeds the resource closure limit.`);
+    }
+    const requests = [
+      ...declared.map((path19) => ({ key: path19, path: path19, relativeTo: void 0, mediaType: void 0 })),
+      ...dynamic
+    ];
+    let added = false;
+    for (const request of requests) {
+      let parent;
+      if (request.relativeTo !== void 0) {
+        parent = paths[request.relativeTo];
+        if (!parent) {
+          throw new Error(`Resource '${request.key}' has an undiscovered relativeTo key.`);
+        }
+      }
+      const resolved = host.resolve(request.path, parent);
+      if (!resolved) {
+        throw new Error(`Resource '${request.key}' cannot find '${request.path}'.`);
+      }
+      for (let ancestor = request.relativeTo; ancestor; ancestor = parents.get(ancestor)) {
+        if (paths[ancestor] === resolved) {
+          throw new Error(`Resource dependency cycle at '${request.key}'.`);
+        }
+      }
+      const mediaType = request.mediaType ?? host.mediaType(resolved);
+      if (Object.hasOwn(paths, request.key)) {
+        if (paths[request.key] !== resolved || parents.get(request.key) !== request.relativeTo || resources[request.key].mediaType !== mediaType) {
+          throw new Error(`Conflicting resource identity '${request.key}'.`);
+        }
+        continue;
+      }
+      if (Object.keys(paths).length >= 1024) {
+        throw new Error(`Asset format '${format.id}' exceeds the resource closure limit.`);
+      }
+      paths[request.key] = resolved;
+      parents.set(request.key, request.relativeTo);
+      resources[request.key] = { bytes: host.read(resolved), mediaType };
+      added = true;
+    }
+    if (!added) {
+      return { resources, paths };
+    }
+  }
+  throw new Error(`Asset format '${format.id}' exceeds the resource discovery depth limit.`);
+}
+
 // packages/core/src/services/asset-assembly-service.ts
 function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function isUnknownArray(value) {
+function isUnknownArray2(value) {
   return Array.isArray(value);
 }
 function isNonEmptyString(value) {
   return typeof value === "string" && value.length > 0;
 }
 function isNonEmptyStringArray(value) {
-  return isUnknownArray(value) && value.every(isNonEmptyString);
+  return isUnknownArray2(value) && value.every(isNonEmptyString);
 }
 function copyAssetResources(resources) {
   return Object.fromEntries(
@@ -19470,6 +19601,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
   static MAX_STAGE_BYTES = 16 * 1024 * 1024;
   dependencies = /* @__PURE__ */ new Map();
   #files = /* @__PURE__ */ new Map();
+  #snapshotBytes = 0;
   #conversions = /* @__PURE__ */ new Map();
   #emissions = /* @__PURE__ */ new Map();
   /** Descriptor of the most recent successful statement, consumed immediately by emission metadata. */
@@ -19478,6 +19610,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
   beginBuild() {
     this.dependencies.clear();
     this.#files.clear();
+    this.#snapshotBytes = 0;
     this.#conversions.clear();
     this.#emissions.clear();
     this.lastEmission = void 0;
@@ -19486,8 +19619,8 @@ var AssetAssemblyService = class _AssetAssemblyService {
    * @param {string} path Provider identity.
    * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
    */
-  snapshot(path20) {
-    return this.#files.get(path20)?.slice();
+  snapshot(path19) {
+    return this.#files.get(path19)?.slice();
   }
   /** Resolve a string operand after define expansion.
    * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
@@ -19542,13 +19675,13 @@ var AssetAssemblyService = class _AssetAssemblyService {
    * @param {string} path Source-relative path.
    * @returns {string} Stable provider identity.
    */
-  #resolve(path20) {
+  #resolve(path19) {
     const resolved = this.session.fileProvider.resolvePath(
-      path20,
+      path19,
       this.session.includeSource.resolutionOptions
     );
     if (!resolved) {
-      throw new Error(`includeAsset cannot find '${path20}'.`);
+      throw new Error(`includeAsset cannot find '${path19}'.`);
     }
     return resolved;
   }
@@ -19557,32 +19690,27 @@ var AssetAssemblyService = class _AssetAssemblyService {
    * @param {"binary" | "resource"} kind Dependency role.
    * @returns {Uint8Array} Build-owned bytes.
    */
-  #read(path20, kind) {
-    const cached = this.#files.get(path20);
+  #read(path19, kind) {
+    const cached = this.#files.get(path19);
     if (cached) {
       return cached;
     }
-    const bytes = Uint8Array.from(this.session.fileProvider.readFile(path20));
-    this.#files.set(path20, bytes);
-    this.dependencies.set(path20, kind);
+    const supplied = this.session.fileProvider.readFile(path19);
+    this.#snapshotBytes += supplied.length;
+    if (this.#snapshotBytes > 256 * 1024 * 1024) {
+      throw new Error("Asset dependency snapshot exceeds 256 MiB.");
+    }
+    const bytes = Uint8Array.from(supplied);
+    this.#files.set(path19, bytes);
+    this.dependencies.set(path19, kind);
     return bytes;
   }
   /** Media type is inferred only from a declared, supported input extension.
    * @param {string} path Provider identity.
    * @returns {string} Portable media type.
    */
-  #mediaType(path20) {
-    const extension = path20.toLowerCase().split(".").pop();
-    if (extension === "png") {
-      return "image/png";
-    }
-    if (extension === "wav" || extension === "wave") {
-      return "audio/wav";
-    }
-    if (extension === "json") {
-      return "application/json";
-    }
-    return "application/octet-stream";
+  #mediaType(path19, format) {
+    return assetSourceMediaType(path19, format);
   }
   /** Canonical serialization makes equivalent option objects share one conversion.
    * @param {unknown} value JSON-compatible request value.
@@ -19643,7 +19771,20 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     return resources;
   }
-  /** Resolve input and declared resource paths for tooling without reading or converting bytes.
+  /** Resolve a bounded resource closure once per build. Provider callbacks cannot mutate cached bytes. */
+  #resources(format, source, options) {
+    return resolveAssetResourceSnapshot(format, source, options, {
+      resolve: (path19, declaringResource) => {
+        if (declaringResource) {
+          return this.session.fileProvider.resolvePath(path19, { currentFile: declaringResource });
+        }
+        return this.#resolve(path19);
+      },
+      read: (path19) => this.#read(path19, "resource"),
+      mediaType: (path19) => this.#mediaType(path19, format)
+    });
+  }
+  /** Resolve input and declared resource paths for tooling without encoding bytes.
    * @param {ParsedAssetCall} call Typed source directive.
    */
   discoverDependencies(call) {
@@ -19664,9 +19805,14 @@ var AssetAssemblyService = class _AssetAssemblyService {
     delete options.compress;
     delete options.compressOptions;
     delete options.maxSize;
-    for (const resourceName of format.resourcePaths?.(structuredClone(options)) ?? []) {
-      this.dependencies.set(this.#resolve(resourceName), "resource");
-    }
+    this.#resources(
+      format,
+      {
+        bytes: this.#read(sourcePath, "binary"),
+        mediaType: this.#mediaType(sourcePath, format)
+      },
+      options
+    );
     let transforms = [];
     if (typeof transformSpec === "string") {
       const compressOptions = Object.hasOwn(call.options, "compressOptions") ? call.options.compressOptions : void 0;
@@ -19712,7 +19858,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
       );
     }
     const output = options.output;
-    const compress = options.compress;
+    const compress2 = options.compress;
     const compressOptions = options.compressOptions;
     const maxSize = options.maxSize;
     delete options.output;
@@ -19729,26 +19875,14 @@ var AssetAssemblyService = class _AssetAssemblyService {
       }
       boundedSize = maxSize;
     }
-    const resources = {};
-    const resourcePaths = {};
-    const resourceIdentities = [];
-    const declaredResources = format.resourcePaths?.(structuredClone(options)) ?? [];
-    if (!isNonEmptyStringArray(declaredResources)) {
-      throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
-    }
-    for (const resourceName of declaredResources) {
-      const resourcePath = this.#resolve(resourceName);
-      resourcePaths[resourceName] = resourcePath;
-      resources[resourceName] = {
-        bytes: this.#read(resourcePath, "resource"),
-        mediaType: this.#mediaType(resourcePath)
-      };
-      resourceIdentities.push(`${resourceName}\0${resourcePath}`);
-    }
     const source = {
       bytes: this.#read(sourcePath, "binary"),
-      mediaType: this.#mediaType(sourcePath)
+      mediaType: this.#mediaType(sourcePath, format)
     };
+    const { resources, paths: resourcePaths } = this.#resources(format, source, options);
+    this.dependencies.delete(sourcePath);
+    this.dependencies.set(sourcePath, "binary");
+    const resourceIdentities = Object.entries(resourcePaths);
     const conversionKey = this.#stable([
       sourcePath,
       format.id,
@@ -19758,11 +19892,18 @@ var AssetAssemblyService = class _AssetAssemblyService {
     ]);
     let converted = this.#conversions.get(conversionKey);
     if (!converted) {
-      converted = format.convert(
-        { ...source, bytes: source.bytes.slice() },
-        structuredClone(options),
-        copyAssetResources(resources)
-      );
+      try {
+        converted = format.convert(
+          { ...source, bytes: source.bytes.slice() },
+          structuredClone(options),
+          copyAssetResources(resources)
+        );
+      } catch (error) {
+        throw new Error(
+          `Asset '${sourcePath}' format '${format.id}': ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error }
+        );
+      }
       if (!converted.primaryOutput || !Object.hasOwn(converted.outputs, converted.primaryOutput)) {
         throw new Error(`Asset format '${format.id}' omitted its primary output.`);
       }
@@ -19783,15 +19924,15 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     const part = converted.outputs[selected];
     let transformSpecs = [];
-    if (typeof compress === "string") {
-      transformSpecs = [{ id: compress, options: compressOptions ?? {} }];
-    } else if (compress !== void 0) {
-      transformSpecs = compress;
+    if (typeof compress2 === "string") {
+      transformSpecs = [{ id: compress2, options: compressOptions ?? {} }];
+    } else if (compress2 !== void 0) {
+      transformSpecs = compress2;
     }
-    if (!isUnknownArray(transformSpecs)) {
+    if (!isUnknownArray2(transformSpecs)) {
       throw new Error("includeAsset compress must be an ID or array of { id, options }.");
     }
-    if (typeof compress !== "string" && compressOptions !== void 0) {
+    if (typeof compress2 !== "string" && compressOptions !== void 0) {
       throw new Error("includeAsset compressOptions requires a single compress ID.");
     }
     const transforms = [];
@@ -19821,13 +19962,13 @@ var AssetAssemblyService = class _AssetAssemblyService {
       }
       const names = [.../* @__PURE__ */ new Set([...schemaResources, ...declared])];
       for (const name of names) {
-        const path20 = this.#resolve(name);
-        transformResourcePaths[name] = path20;
+        const path19 = this.#resolve(name);
+        transformResourcePaths[name] = path19;
         transformResources[name] = {
-          bytes: this.#read(path20, "resource"),
-          mediaType: this.#mediaType(path20)
+          bytes: this.#read(path19, "resource"),
+          mediaType: this.#mediaType(path19)
         };
-        transformResourceIdentities.push(`${name}\0${path20}`);
+        transformResourceIdentities.push(`${name}\0${path19}`);
       }
       transforms.push({
         provider: transform,
@@ -25969,6 +26110,9 @@ var Assembler = class _Assembler {
     if (/^(?:datastruct\b|\[)/i.test(this.frontEndService.commandBuffer.trimStart())) {
       throw new Error("Unclosed dataStruct initializer at end of source.");
     }
+    if (/^includeasset\s*\(/i.test(this.frontEndService.commandBuffer.trimStart())) {
+      throw new Error("Unclosed includeAsset call at end of source.");
+    }
     const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
     this.runLifecycleHook(
       "onStageEnd",
@@ -26801,7 +26945,7 @@ function fingerprintForSorted(sortedFileHashes) {
 function hashBytes2(bytes) {
   return createHash2("sha256").update(bytes).digest("hex");
 }
-function isUnknownArray2(value) {
+function isUnknownArray3(value) {
   return Array.isArray(value);
 }
 function isStringRecord(value) {
@@ -26811,10 +26955,10 @@ function isNumberRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) && Object.values(value).every((entry) => typeof entry === "number");
 }
 function isCacheIdentity(value) {
-  return typeof value === "object" && value !== null && "target" in value && typeof value.target === "string" && "architecture" in value && typeof value.architecture === "string" && "converterIdentity" in value && typeof value.converterIdentity === "string" && "targetOptionsIdentity" in value && typeof value.targetOptionsIdentity === "string" && "includePaths" in value && isUnknownArray2(value.includePaths) && value.includePaths.every((entry) => typeof entry === "string");
+  return typeof value === "object" && value !== null && "target" in value && typeof value.target === "string" && "architecture" in value && typeof value.architecture === "string" && "converterIdentity" in value && typeof value.converterIdentity === "string" && "targetOptionsIdentity" in value && typeof value.targetOptionsIdentity === "string" && "includePaths" in value && isUnknownArray3(value.includePaths) && value.includePaths.every((entry) => typeof entry === "string");
 }
 function isCachedAnalysis(value) {
-  return typeof value === "object" && value !== null && "followedIncludes" in value && typeof value.followedIncludes === "boolean" && "diagnostics" in value && isUnknownArray2(value.diagnostics) && "symbols" in value && isUnknownArray2(value.symbols) && "references" in value && isUnknownArray2(value.references) && "includeEdges" in value && isUnknownArray2(value.includeEdges) && "assetDependencies" in value && typeof value.assetDependencies === "object" && value.assetDependencies !== null && !Array.isArray(value.assetDependencies);
+  return typeof value === "object" && value !== null && "followedIncludes" in value && typeof value.followedIncludes === "boolean" && "diagnostics" in value && isUnknownArray3(value.diagnostics) && "symbols" in value && isUnknownArray3(value.symbols) && "references" in value && isUnknownArray3(value.references) && "includeEdges" in value && isUnknownArray3(value.includeEdges) && "assetDependencies" in value && typeof value.assetDependencies === "object" && value.assetDependencies !== null && !Array.isArray(value.assetDependencies);
 }
 function isCachePayload(value) {
   return typeof value === "object" && value !== null && "version" in value && typeof value.version === "number" && "root" in value && typeof value.root === "string" && "fingerprint" in value && typeof value.fingerprint === "string" && "identity" in value && isCacheIdentity(value.identity) && "fileHashes" in value && isStringRecord(value.fileHashes) && "analysis" in value && isCachedAnalysis(value.analysis) && (!("fileMtimes" in value) || value.fileMtimes === void 0 || isNumberRecord(value.fileMtimes));
@@ -30097,7 +30241,7 @@ var nmos6502xForms = Object.freeze([
 var nmos6502Cpu = Object.freeze({
   id: "65xx.6502",
   displayName: "NMOS 6502",
-  aliases: ["6502", "6510", "8502", "2a03", "2a07", "6507"],
+  aliases: ["6502", "6510", "8502", "6507"],
   features: /* @__PURE__ */ new Set(["nmos"])
 });
 var nmos6502xCpu = Object.freeze({
@@ -30106,8 +30250,21 @@ var nmos6502xCpu = Object.freeze({
   aliases: ["6502x"],
   features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
 });
+var ricoh2a03Cpu = Object.freeze({
+  id: "65xx.2a03",
+  displayName: "Ricoh 2A03 / 2A07",
+  aliases: ["2a03", "2a07"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
+});
 function cpuVariantForms(cpuId) {
   return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : void 0;
+}
+function getCpuDecodeTable(cpu) {
+  const variantForms = cpuVariantForms(cpu.id);
+  if (variantForms) {
+    return variantForms;
+  }
+  return nmos6502DecodeTable.filter((form) => matchesFeatures(form.availableWhen, cpu.features));
 }
 function getCpuAssemblyForms(cpu) {
   const variantForms = cpuVariantForms(cpu.id);
@@ -30707,6 +30864,8 @@ function resetCa65StageState(state) {
 var ca65CpuNames = Object.freeze({
   "6502": "65xx.6502",
   "6502x": "65xx.6502x",
+  "2a03": "65xx.2a03",
+  "2a07": "65xx.2a03",
   "6502dtv": "65xx.6502dtv",
   "65sc02": "65xx.65sc02",
   "65c02": "65xx.65c02",
@@ -30749,6 +30908,7 @@ var cpuPredicateSymbols = Object.freeze({
 var ca65CpuPredicateByArchitecture = Object.freeze({
   "65xx.6502": "__CA65_CPU_6502__",
   "65xx.6502x": "__CA65_CPU_6502X__",
+  "65xx.2a03": "__CA65_CPU_6502X__",
   "65xx.6502dtv": "__CA65_CPU_6502DTV__",
   "65xx.65sc02": "__CA65_CPU_65SC02__",
   "65xx.65c02": "__CA65_CPU_65C02__",
@@ -30852,6 +31012,143 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   bareMacroInvocations: true,
   macroParameterPrefix: "\\"
 });
+
+// packages/plugin-65xx/src/decoder.ts
+var hex = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
+function cpu6502Specifications(cpu) {
+  return getCpuDecodeTable(cpu).map((form) => ({
+    id: `${cpu.id}:${form.opcode.toString(16).padStart(2, "0")}`,
+    architecture: cpu.id,
+    opcode: form.encoding,
+    mnemonic: form.mnemonic,
+    mode: form.mode,
+    minimumSize: sizeOf(form),
+    maximumSize: sizeOf(form),
+    summary: form.note
+  }));
+}
+var Cpu6502Decoder = class {
+  constructor(cpu = nmos6502Cpu) {
+    this.cpu = cpu;
+    if (!cpu.features.has("nmos") || cpu.features.has("dtv")) {
+      throw new Error("The NMOS decoder requires an NMOS 6502 or Ricoh CPU profile.");
+    }
+    this.#forms = new Map(getCpuDecodeTable(cpu).map((form) => [form.opcode, form]));
+  }
+  cpu;
+  #forms;
+  decode(context) {
+    const { source, offset, logicalAddress } = context;
+    if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
+      return {
+        kind: "error",
+        code: "invalidState",
+        offset,
+        message: "6502 PC must be an unsigned 16-bit address."
+      };
+    }
+    const opcode = source.readByte(offset);
+    if (opcode === void 0) {
+      return {
+        kind: "error",
+        code: "outOfBounds",
+        offset,
+        message: "Opcode is outside the byte source."
+      };
+    }
+    const form = this.#forms.get(opcode);
+    if (!form) {
+      return {
+        kind: "error",
+        code: "invalidOpcode",
+        offset,
+        message: `Unsupported ${this.cpu.id} opcode ${hex(opcode)}.`
+      };
+    }
+    const size = sizeOf(form);
+    const bytes = source.readBytes(offset, size);
+    if (!bytes) {
+      return {
+        kind: "error",
+        code: "truncated",
+        offset,
+        requiredBytes: size,
+        availableBytes: Math.max(0, source.length - offset),
+        message: "Truncated 6502 instruction."
+      };
+    }
+    let value = bytes[1] ?? 0;
+    if (size === 3) {
+      value |= bytes[2] << 8;
+    }
+    const operands = [];
+    const references = [];
+    let flow = { kind: "fallthrough", fallthrough: true };
+    if (form.mode === "relative") {
+      const displacement = value >= 128 ? value - 256 : value;
+      const targetAddress = logicalAddress + size + displacement & 65535;
+      operands.push({
+        kind: "displacement",
+        value: displacement,
+        width: 1,
+        signed: true,
+        targetAddress
+      });
+      references.push({ kind: "branch", address: targetAddress, operandIndex: 0 });
+      flow = { kind: "conditionalBranch", fallthrough: true };
+    } else if (size > 1) {
+      const immediate3 = form.mode === "immediate";
+      operands.push({ kind: immediate3 ? "immediate" : "address", value, width: size - 1 });
+      if (!immediate3) {
+        const indirect = form.mode === "indirect" || form.mode === "indexedIndirectX" || form.mode === "indirectIndexedY";
+        let kind = "data";
+        if (form.mnemonic === "JSR") {
+          kind = "call";
+        }
+        if (form.mnemonic === "JMP") {
+          kind = "jump";
+        }
+        references.push({ kind, address: value, indirect, operandIndex: 0 });
+      }
+    } else if (form.mode === "accumulator") {
+      operands.push({ kind: "accumulator", register: "a" });
+    }
+    if (form.mnemonic === "JSR") {
+      flow = { kind: "call", fallthrough: true };
+    }
+    if (form.mnemonic === "JMP") {
+      flow = { kind: "jump", fallthrough: false, indirect: form.mode === "indirect" };
+    }
+    if (form.mnemonic === "RTS" || form.mnemonic === "RTI") {
+      flow = { kind: "return", fallthrough: false };
+    }
+    if (form.mnemonic === "BRK") {
+      flow = { kind: "interrupt", fallthrough: false };
+    }
+    if (form.mnemonic === "JAM") {
+      flow = { kind: "stop", fallthrough: false };
+    }
+    return {
+      kind: "instruction",
+      instruction: {
+        architecture: this.cpu.id,
+        specificationId: `${this.cpu.id}:${opcode.toString(16).padStart(2, "0")}`,
+        opcode,
+        mnemonic: form.mnemonic,
+        mode: form.mode,
+        offset,
+        logicalAddress,
+        bytes,
+        size,
+        operands,
+        references,
+        flow,
+        effects: [{ kind: "custom", name: "nmos6502", details: { opcode } }]
+      }
+    };
+  }
+};
 
 // packages/plugin-65xx/src/directives/ca65.ts
 function unquote(token) {
@@ -31830,15 +32127,19 @@ function createFlat65xxAddressSpace({ options }) {
   };
 }
 function updatePredicates(session, architecture) {
-  for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
+  for (const symbol of new Set(Object.values(ca65CpuPredicateByArchitecture))) {
     session.globalSymbols.add(symbol);
-    session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
+    session.labelTable.set(symbol, {
+      value: ca65CpuPredicateByArchitecture[architecture] === symbol ? 1 : 0,
+      isStatic: true
+    });
   }
 }
 function register65xxContributions(context) {
   for (const [cpu, forms] of [
     [nmos6502Cpu, nmos6502Forms],
     [nmos6502xCpu, nmos6502xForms],
+    [ricoh2a03Cpu, nmos6502xForms],
     ...variantCpus.map(
       (variantCpu) => [variantCpu, variantFormsByCpuId[variantCpu.id] ?? []]
     )
@@ -31853,6 +32154,9 @@ function register65xxContributions(context) {
       splitOperands: (text2) => text2.trim() ? [text2.trim()] : [],
       classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
       createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
+      // Vendor/CMOS tables have different semantics; expose the decoder only for NMOS/Ricoh profiles.
+      createDecoder: cpu.features.has("nmos") && !cpu.features.has("dtv") ? () => new Cpu6502Decoder(cpu) : void 0,
+      instructionSpecifications: cpu.features.has("nmos") && !cpu.features.has("dtv") ? cpu6502Specifications(cpu) : void 0,
       instructions: catalog
     });
   }
@@ -31885,7 +32189,12 @@ function register65xxContributions(context) {
     aliases: ["65xx", "6502-raw"],
     displayName: "65xx flat 16-bit raw binary",
     defaultArchitecture: nmos6502Cpu.id,
-    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
     addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
     outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
     directiveSets: [],
@@ -31943,7 +32252,12 @@ function register65xxContributions(context) {
     aliases: ["ca65-raw"],
     displayName: "65xx ca65-compatible flat 16-bit raw binary",
     defaultArchitecture: nmos6502Cpu.id,
-    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
     addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
     outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
     directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
@@ -32124,7 +32438,12 @@ function register65xxContributions(context) {
     aliases: ["nes", "ines", "6502-nes"],
     displayName: "NES iNES (ca65 / ld65 layout)",
     defaultArchitecture: nmos6502Cpu.id,
-    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
     addressSpace: NES_65XX_ADDRESS_SPACE_ID,
     outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
     directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
@@ -32135,6 +32454,17 @@ function register65xxContributions(context) {
     createOptions: createNes65xxTargetOptions
   });
 }
+function validate65xxPluginOptions(configured) {
+  if (configured && typeof configured === "object" && !Array.isArray(configured) && ("header" in configured || "linkerConfig" in configured || "fillByte" in configured)) {
+    const unknown = Object.keys(configured).filter(
+      (key) => !["header", "linkerConfig", "fillByte"].includes(key)
+    );
+    if (unknown.length) throw new Error(`Unknown NES target option(s): ${unknown.join(", ")}.`);
+    createNes65xxTargetOptions(configured);
+    return { ...configured };
+  }
+  return createRaw65xxTargetOptions(configured);
+}
 var plugin = definePlugin({
   manifest: {
     id: "uttori.asm-plugin-65xx",
@@ -32143,7 +32473,7 @@ var plugin = definePlugin({
     apiVersion: PLUGIN_API_VERSION,
     description: "65xx NMOS, CMOS, Commodore, MEGA65, Hudson, and Mitsubishi architectures with raw and NES iNES targets."
   },
-  validateOptions: createRaw65xxTargetOptions,
+  validateOptions: validate65xxPluginOptions,
   activate: register65xxContributions
 });
 var src_default = plugin;
@@ -38511,10 +38841,10 @@ var ArchSPC700 = class {
         opcodeByte = 202;
       }
     }
-    const hex3 = mem.addressText.match(/^\$([\da-f]+)$/i);
+    const hex4 = mem.addressText.match(/^\$([\da-f]+)$/i);
     let addr;
-    if (hex3) {
-      addr = Number.parseInt(hex3[1], 16) & 65535;
+    if (hex4) {
+      addr = Number.parseInt(hex4[1], 16) & 65535;
     } else {
       addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
     }
@@ -42854,11 +43184,11 @@ var ZStream = class {
   }
 };
 var flattenChunks = (chunks) => {
-  const result = new Uint8Array(chunks.reduce((len, chunk) => len + chunk.length, 0));
+  const result = new Uint8Array(chunks.reduce((len, chunk2) => len + chunk2.length, 0));
   let pos = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, pos);
-    pos += chunk.length;
+  for (const chunk2 of chunks) {
+    result.set(chunk2, pos);
+    pos += chunk2.length;
   }
   return result;
 };
@@ -43024,8 +43354,8 @@ var Deflate = class {
   * By default, stores data blocks in the {@link Deflate.chunks} property and glues
   * them in {@link Deflate.onEnd}. Override this handler if you need another behaviour.
   */
-  onData(chunk) {
-    this.chunks.push(chunk);
+  onData(chunk2) {
+    this.chunks.push(chunk2);
   }
   /**
   * Called once after you tell deflate that the input stream is
@@ -43254,8 +43584,8 @@ var Inflate = class {
   *
   * @param chunk output data.
   */
-  onData(chunk) {
-    this.chunks.push(chunk);
+  onData(chunk2) {
+    this.chunks.push(chunk2);
   }
   /**
   * Called after you tell inflate that the input stream is
@@ -44097,9 +44427,9 @@ var DataBuffer = class _DataBuffer {
     if (!this.available(length, false)) {
       throw new underflow_error_default(`Insufficient Bytes: ${length}`);
     }
-    const chunk = new _DataBuffer(new Uint8Array(this.data.subarray(this.offset, this.offset + length)));
+    const chunk2 = new _DataBuffer(new Uint8Array(this.data.subarray(this.offset, this.offset + length)));
     this.offset += length;
-    return chunk;
+    return chunk2;
   }
   /**
    * Read from the specified offset and return the value as a DataBuffer.
@@ -44943,8 +45273,8 @@ var AudioWAV = class extends data_buffer_default {
     return value;
   }
   /** Restrict a standalone decoder to its declared payload, excluding padding and later chunks. */
-  static #chunkBuffer(chunk, minimumSize, littleEndian2 = true) {
-    const buffer = new data_buffer_default(typeof Buffer !== "undefined" && Buffer.isBuffer(chunk) ? new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength) : chunk);
+  static #chunkBuffer(chunk2, minimumSize, littleEndian2 = true) {
+    const buffer = new data_buffer_default(typeof Buffer !== "undefined" && Buffer.isBuffer(chunk2) ? new Uint8Array(chunk2.buffer, chunk2.byteOffset, chunk2.byteLength) : chunk2);
     if (buffer.length < 8) {
       throw new RangeError("Truncated chunk header: expected 8 bytes");
     }
@@ -45103,8 +45433,8 @@ var AudioWAV = class extends data_buffer_default {
     if (this.remainingBytes() < 12) {
       throw new RangeError("Truncated file header: expected 12 bytes");
     }
-    const chunk = this.read(12, false);
-    const value = _a.decodeHeader(chunk);
+    const chunk2 = this.read(12, false);
+    const value = _a.decodeHeader(chunk2);
     this.chunks.push({ type: "header", value });
     this.type = value.type;
     this.container = value.type;
@@ -45151,9 +45481,9 @@ var AudioWAV = class extends data_buffer_default {
    * @throws {Error} Invalid WAV header
    * @static
    */
-  static decodeHeader(chunk) {
+  static decodeHeader(chunk2) {
     debug2("decodeHeader");
-    const header = new data_buffer_default(chunk);
+    const header = new data_buffer_default(chunk2);
     if (header.length < 12) {
       throw new RangeError("Truncated file header: expected 12 bytes");
     }
@@ -45280,43 +45610,43 @@ var AudioWAV = class extends data_buffer_default {
       padding = 0;
     }
     this.rewind(8);
-    const chunk = this.read(8 + size + padding, false);
-    let decodeBytes = chunk;
+    const chunk2 = this.read(8 + size + padding, false);
+    let decodeBytes = chunk2;
     if (extended && declaredSize === 4294967295 && size < 4294967295) {
-      decodeBytes = Uint8Array.from(chunk);
+      decodeBytes = Uint8Array.from(chunk2);
       new DataView(decodeBytes.buffer, decodeBytes.byteOffset, decodeBytes.byteLength).setUint32(4, size, true);
     }
     switch (type) {
       case "fmt ": {
         const value = _a.decodeFMT(decodeBytes);
         this.#format ??= value;
-        this.chunks.push({ type: "format", value, chunk });
+        this.chunks.push({ type: "format", value, chunk: chunk2 });
         break;
       }
       case "fact": {
         const value = _a.decodeFACT(decodeBytes);
         this.#fact ??= value;
-        this.chunks.push({ type: "fact", value, chunk });
+        this.chunks.push({ type: "fact", value, chunk: chunk2 });
         break;
       }
       case "inst": {
         const value = _a.decodeINST(decodeBytes);
-        this.chunks.push({ type: "instrument", value, chunk });
+        this.chunks.push({ type: "instrument", value, chunk: chunk2 });
         break;
       }
       case "DISP": {
         const value = _a.decodeDISP(decodeBytes);
-        this.chunks.push({ type: "display", value, chunk });
+        this.chunks.push({ type: "display", value, chunk: chunk2 });
         break;
       }
       case "smpl": {
         const value = _a.decodeSMPL(decodeBytes);
-        this.chunks.push({ type: "sample", value, chunk });
+        this.chunks.push({ type: "sample", value, chunk: chunk2 });
         break;
       }
       case "tlst": {
         const value = _a.decodeTLST(decodeBytes);
-        this.chunks.push({ type: "trigger_list", value, chunk });
+        this.chunks.push({ type: "trigger_list", value, chunk: chunk2 });
         break;
       }
       case "data": {
@@ -45331,52 +45661,52 @@ var AudioWAV = class extends data_buffer_default {
         }
         const value = { duration };
         this.#dataChunks.push({ value, size, complete });
-        this.chunks.push({ type: "data", chunk, value });
+        this.chunks.push({ type: "data", chunk: chunk2, value });
         break;
       }
       case "LIST": {
         const value = _a.decodeLIST(decodeBytes, this.options);
-        this.chunks.push({ type: "list", value, chunk });
+        this.chunks.push({ type: "list", value, chunk: chunk2 });
         break;
       }
       case "RLND": {
         const value = _a.decodeRLND(decodeBytes);
-        this.chunks.push({ type: "roland", value, chunk });
+        this.chunks.push({ type: "roland", value, chunk: chunk2 });
         break;
       }
       case "JUNK": {
         _a.decodeJUNK(decodeBytes, this.options);
-        this.chunks.push({ type: "junk", chunk });
+        this.chunks.push({ type: "junk", chunk: chunk2 });
         break;
       }
       case "PAD ": {
         _a.decodePAD(decodeBytes);
-        this.chunks.push({ type: "padding", chunk });
+        this.chunks.push({ type: "padding", chunk: chunk2 });
         break;
       }
       case "PEAK": {
         const value = _a.decodePEAK(decodeBytes, this.type !== "AIFF");
-        this.chunks.push({ type: "peak", value, chunk });
+        this.chunks.push({ type: "peak", value, chunk: chunk2 });
         break;
       }
       case "acid": {
         const value = _a.decodeACID(decodeBytes);
-        this.chunks.push({ type: "acid", value, chunk });
+        this.chunks.push({ type: "acid", value, chunk: chunk2 });
         break;
       }
       case "strc": {
         const value = _a.decodeSTRC(decodeBytes);
-        this.chunks.push({ type: "strc", value, chunk });
+        this.chunks.push({ type: "strc", value, chunk: chunk2 });
         break;
       }
       case "cue ": {
         const value = _a.decodeCue(decodeBytes);
-        this.chunks.push({ type: "cue_points", value, chunk });
+        this.chunks.push({ type: "cue_points", value, chunk: chunk2 });
         break;
       }
       case "bext": {
         const value = _a.decodeBEXT(decodeBytes, this.options);
-        this.chunks.push({ type: "broadcast_extension", value, chunk });
+        this.chunks.push({ type: "broadcast_extension", value, chunk: chunk2 });
         break;
       }
       case "ResU": {
@@ -45384,12 +45714,12 @@ var AudioWAV = class extends data_buffer_default {
         if (value.error) {
           this.#issue(value.error, offset);
         }
-        this.chunks.push({ type: "logic_resu", value, chunk });
+        this.chunks.push({ type: "logic_resu", value, chunk: chunk2 });
         break;
       }
       case "ds64": {
         const value = _a.decodeDS64(decodeBytes);
-        this.chunks.push({ type: "data_size_64", value, chunk });
+        this.chunks.push({ type: "data_size_64", value, chunk: chunk2 });
         if (extended) {
           if (this.#ds64) {
             this.#issue("Duplicate ds64 chunk", offset);
@@ -45414,13 +45744,13 @@ var AudioWAV = class extends data_buffer_default {
         break;
       }
       case "cart": {
-        this.chunks.push({ type: "cart", chunk, unknown: true });
+        this.chunks.push({ type: "cart", chunk: chunk2, unknown: true });
         break;
       }
       case "AFAn":
       case "AFmd": {
         debug2(`macOS Special Binary Chunk: '${type}' with ${size} bytes`);
-        this.chunks.push({ type, chunk, description: "macOS Special Binary Chunk" });
+        this.chunks.push({ type, chunk: chunk2, description: "macOS Special Binary Chunk" });
         break;
       }
       case "minf":
@@ -45429,24 +45759,24 @@ var AudioWAV = class extends data_buffer_default {
       case "ovwf":
       case "umid": {
         debug2(`ProTools Special Chunk: '${type}' with ${size} bytes`);
-        this.chunks.push({ type, chunk, description: "ProTools Special Chunk" });
+        this.chunks.push({ type, chunk: chunk2, description: "ProTools Special Chunk" });
         break;
       }
       case "COMM": {
         const value = _a.decodeCOMM(decodeBytes);
         this.#common ??= value;
-        this.chunks.push({ type: "common", value, chunk });
+        this.chunks.push({ type: "common", value, chunk: chunk2 });
         break;
       }
       case "SSND": {
         const value = _a.decodeSSND(decodeBytes);
         this.#soundChunks.push({ value, offset });
-        this.chunks.push({ type: "sound_data", value, chunk });
+        this.chunks.push({ type: "sound_data", value, chunk: chunk2 });
         break;
       }
       case "FVER": {
         const value = _a.decodeFVER(decodeBytes);
-        this.chunks.push({ type: "format_version", value, chunk });
+        this.chunks.push({ type: "format_version", value, chunk: chunk2 });
         break;
       }
       case "ANNO":
@@ -45458,12 +45788,12 @@ var AudioWAV = class extends data_buffer_default {
         const name = nameSize ? stream.readString(nameSize) : "";
         const value = { chunkID, size: nameSize, name };
         debug2("decodeGenericText =", value);
-        this.chunks.push({ type: chunkID.toLowerCase(), value, chunk });
+        this.chunks.push({ type: chunkID.toLowerCase(), value, chunk: chunk2 });
         break;
       }
       default: {
         debug2(`Unsupported Chunk: '${type}' with ${size} bytes`);
-        this.chunks.push({ type, chunk, unknown: true });
+        this.chunks.push({ type, chunk: chunk2, unknown: true });
         break;
       }
     }
@@ -45485,9 +45815,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeFMT(chunk) {
+  static decodeFMT(chunk2) {
     debug2("decodeFMT");
-    const format = _a.#chunkBuffer(chunk, 16);
+    const format = _a.#chunkBuffer(chunk2, 16);
     const chunkID = format.readString(4);
     const size = format.readUInt32(true);
     const audioFormatValue = format.readUInt16(true);
@@ -45625,9 +45955,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeLIST(chunk, options = {}) {
+  static decodeLIST(chunk2, options = {}) {
     debug2("decodeLIST");
-    const list = _a.#chunkBuffer(chunk, 4);
+    const list = _a.#chunkBuffer(chunk2, 4);
     const chunkID = list.readString(4);
     const size = list.readUInt32(true);
     const type = list.readString(4);
@@ -45755,8 +46085,8 @@ var AudioWAV = class extends data_buffer_default {
    * @param chunk Data Blob
    * @static
    */
-  static decodeDATA(chunk) {
-    debug2(`decodeDATA: ${chunk.length} data bytes`);
+  static decodeDATA(chunk2) {
+    debug2(`decodeDATA: ${chunk2.length} data bytes`);
   }
   /**
    * Decode the `tlst` (Trigger List) chunk.
@@ -45770,9 +46100,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeTLST(chunk) {
+  static decodeTLST(chunk2) {
     debug2("decodeTLST");
-    const tlst = _a.#chunkBuffer(chunk, 24);
+    const tlst = _a.#chunkBuffer(chunk2, 24);
     const _chunkID = tlst.readString(4);
     const size = tlst.readUInt32(true);
     debug2("decodeTLST size", size);
@@ -45827,9 +46157,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.recordingblogs.com/wiki/fact-chunk-of-a-wave-file | Fact chunk (of a Wave file)}
    * @see {@link http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html | Audio File Format Specifications}
    */
-  static decodeFACT(chunk) {
+  static decodeFACT(chunk2) {
     debug2("decodeFACT");
-    const fact = _a.#chunkBuffer(chunk, 4);
+    const fact = _a.#chunkBuffer(chunk2, 4);
     const _chunkID = fact.readString(4);
     const size = fact.readUInt32(true);
     debug2("decodeFACT size", size);
@@ -45847,9 +46177,9 @@ var AudioWAV = class extends data_buffer_default {
    * @static
    * @see {@link https://code.google.com/archive/p/awesome-wav/wikis/WAVFormat.wiki|awesome-wav - WAVFormat.wiki}
    */
-  static decodePEAK(chunk, littleEndian2 = true) {
+  static decodePEAK(chunk2, littleEndian2 = true) {
     debug2("decodePEAK");
-    const peak = _a.#chunkBuffer(chunk, 8, littleEndian2);
+    const peak = _a.#chunkBuffer(chunk2, 8, littleEndian2);
     const _chunkID = peak.readString(4);
     const size = peak.readUInt32(littleEndian2);
     debug2("decodePEAK size", size);
@@ -45900,9 +46230,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link http://netghost.narod.ru/gff/vendspec/micriff/ms_riff.txt|New Multimedia Data Types and Data Techniques}
    * @see {@link https://docs.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats|Standard Clipboard Formats}
    */
-  static decodeDISP(chunk) {
+  static decodeDISP(chunk2) {
     debug2("decodeDISP");
-    const disp = _a.#chunkBuffer(chunk, 4);
+    const disp = _a.#chunkBuffer(chunk2, 4);
     const _chunkID = disp.readString(4);
     const size = disp.readUInt32(true);
     debug2("decodeDISP size", size);
@@ -45931,9 +46261,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @memberof AudioWAV
    */
-  static decodeACID(chunk) {
+  static decodeACID(chunk2) {
     debug2("decodeACID");
-    const acid = _a.#chunkBuffer(chunk, 24);
+    const acid = _a.#chunkBuffer(chunk2, 24);
     const _chunkID = acid.readString(4);
     const size = acid.readUInt32(true);
     debug2("decodeACID size", size);
@@ -45967,9 +46297,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeINST(chunk) {
+  static decodeINST(chunk2) {
     debug2("decodeINST");
-    const inst = _a.#chunkBuffer(chunk, 7);
+    const inst = _a.#chunkBuffer(chunk2, 7);
     const _chunkID = inst.readString(4);
     const size = inst.readUInt32(true);
     debug2("decodeINST size", size);
@@ -46000,9 +46330,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeSMPL(chunk) {
+  static decodeSMPL(chunk2) {
     debug2("decodeSMPL");
-    const smpl = _a.#chunkBuffer(chunk, 36);
+    const smpl = _a.#chunkBuffer(chunk2, 36);
     const _chunkID = smpl.readString(4);
     const size = smpl.readUInt32(true);
     debug2("decodeSMPL size", size);
@@ -46082,9 +46412,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeRLND(chunk) {
+  static decodeRLND(chunk2) {
     debug2("decodeRLND");
-    const roland = _a.#chunkBuffer(chunk, 13);
+    const roland = _a.#chunkBuffer(chunk2, 13);
     const chunkID = roland.readString(4);
     const size = roland.readUInt32(true);
     const device = roland.readString(8);
@@ -46184,25 +46514,25 @@ var AudioWAV = class extends data_buffer_default {
    * @param options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
    * @static
    */
-  static decodeJUNK(chunk, options = {}) {
-    const junk = new data_buffer_default(chunk);
+  static decodeJUNK(chunk2, options = {}) {
+    const junk = new data_buffer_default(chunk2);
     const chunkID = junk.readString(4);
     let size = junk.readUInt32(true);
     if (options.roundOddChunks && size % 2 !== 0) {
       size += 1;
     }
-    debug2(`decodeJUNK: ${chunk.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
+    debug2(`decodeJUNK: ${chunk2.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
   }
   /**
    * Decode the `PAD ` (Padding) chunk.
    * @param chunk Data Blob
    * @static
    */
-  static decodePAD(chunk) {
-    const pad = new data_buffer_default(chunk);
+  static decodePAD(chunk2) {
+    const pad = new data_buffer_default(chunk2);
     const chunkID = pad.readString(4);
     const size = pad.readUInt32(true);
-    debug2(`decodePAD: ${chunk.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
+    debug2(`decodePAD: ${chunk2.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
   }
   /**
    * Decode the bext (Broadcast Wave Format (BWF) Broadcast Extension) chunk.
@@ -46214,9 +46544,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
    * @see {@link https://tech.ebu.ch/docs/tech/tech3285.pdf|Spec}
    */
-  static decodeBEXT(chunk, options = {}) {
+  static decodeBEXT(chunk2, options = {}) {
     debug2("decodeBEXT");
-    const bext = _a.#chunkBuffer(chunk, 602);
+    const bext = _a.#chunkBuffer(chunk2, 602);
     const chunkID = bext.readString(4);
     const size = bext.readUInt32(true);
     debug2("decodeBEXT roundOddChunks:", options.roundOddChunks);
@@ -46291,9 +46621,9 @@ var AudioWAV = class extends data_buffer_default {
    * @static
    * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
    */
-  static decodeCue(chunk) {
+  static decodeCue(chunk2) {
     debug2("decodeCue");
-    const cue = _a.#chunkBuffer(chunk, 4);
+    const cue = _a.#chunkBuffer(chunk2, 4);
     const chunkID = cue.readString(4);
     const size = cue.readUInt32(true);
     debug2("decodeCue size", size);
@@ -46337,9 +46667,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeResU(chunk, options = {}) {
+  static decodeResU(chunk2, options = {}) {
     debug2("decodeResU");
-    const resu = _a.#chunkBuffer(chunk, 0);
+    const resu = _a.#chunkBuffer(chunk2, 0);
     const chunkID = resu.readString(4);
     const size = resu.readUInt32(true);
     const data = size ? resu.read(size, false) : new Uint8Array();
@@ -46351,20 +46681,20 @@ var AudioWAV = class extends data_buffer_default {
     try {
       let bytes = 0;
       const text2 = [];
-      const decoder = new TextDecoder();
+      const decoder2 = new TextDecoder();
       const inflator = new Inflate({ chunkSize: 16384 });
       inflator.onData = (output) => {
         bytes += output.length;
         if (bytes > limit) {
           throw new RangeError(`ResU exceeds maxResUSize (${limit} bytes)`);
         }
-        text2.push(decoder.decode(output, { stream: true }));
+        text2.push(decoder2.decode(output, { stream: true }));
       };
       inflator.push(data, false);
       if (inflator.err || !inflator.ended) {
         throw new Error(inflator.msg || "Incomplete ResU compressed stream");
       }
-      text2.push(decoder.decode());
+      text2.push(decoder2.decode());
       const decompressed = text2.join("");
       debug2("Inflated Size:", bytes);
       value.data = JSON.parse(decompressed);
@@ -46382,8 +46712,8 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://tech.ebu.ch/docs/tech/tech3306v1_0.pdf|RF64: An extended File Format for Audio}
    * @static
    */
-  static decodeDS64(chunk) {
-    const ds64 = _a.#chunkBuffer(chunk, 28);
+  static decodeDS64(chunk2) {
+    const ds64 = _a.#chunkBuffer(chunk2, 28);
     const chunkID = ds64.readString(4);
     const size = ds64.readUInt32(true);
     const riffSizeLow = ds64.readUInt32(true);
@@ -46428,9 +46758,9 @@ var AudioWAV = class extends data_buffer_default {
    * @returns The decoded values.
    * @static
    */
-  static decodeSTRC(chunk) {
+  static decodeSTRC(chunk2) {
     debug2("decodeSTRC");
-    const strc = _a.#chunkBuffer(chunk, 28);
+    const strc = _a.#chunkBuffer(chunk2, 28);
     const _chunkID = strc.readString(4);
     const size = strc.readUInt32(true);
     debug2("decodeSTRC size:", size);
@@ -46489,9 +46819,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
    * @static
    */
-  static decodeCOMM(chunk) {
+  static decodeCOMM(chunk2) {
     debug2("decodeCOMM");
-    const commonChunk = _a.#chunkBuffer(chunk, 18, false);
+    const commonChunk = _a.#chunkBuffer(chunk2, 18, false);
     const chunkID = commonChunk.readString(4);
     const size = commonChunk.readUInt32();
     const channels = commonChunk.readUInt16();
@@ -46542,9 +46872,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
    * @static
    */
-  static decodeSSND(chunk) {
+  static decodeSSND(chunk2) {
     debug2("decodeSSND");
-    const ssndChunk = _a.#chunkBuffer(chunk, 8, false);
+    const ssndChunk = _a.#chunkBuffer(chunk2, 8, false);
     const chunkID = ssndChunk.readString(4);
     const size = ssndChunk.readUInt32();
     const offset = ssndChunk.readUInt32();
@@ -46575,9 +46905,9 @@ var AudioWAV = class extends data_buffer_default {
    * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
    * @static
    */
-  static decodeFVER(chunk) {
+  static decodeFVER(chunk2) {
     debug2("decodeFVER");
-    const formatVersionChunk = _a.#chunkBuffer(chunk, 4, false);
+    const formatVersionChunk = _a.#chunkBuffer(chunk2, 4, false);
     const chunkID = formatVersionChunk.readString(4);
     const size = formatVersionChunk.readUInt32();
     const timestamp = formatVersionChunk.readUInt32();
@@ -48600,7 +48930,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (!this._seenChunks.has("IHDR") && type !== "IHDR") {
       throw new Error("PNG IHDR must be first.");
     }
-    const chunk = this.data.subarray(offset + 8, end - 4);
+    const chunk2 = this.data.subarray(offset + 8, end - 4);
     const critical = (this.peekUInt8(offset + 4) & 32) === 0;
     const dataSeen = this.dataChunks.length !== 0;
     debug3("decodeChunk:", type, "length:", length);
@@ -48609,37 +48939,37 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
         if (this._seenChunks.has(type)) {
           throw new Error("PNG requires exactly one IHDR.");
         }
-        this.decodeIHDR(chunk);
+        this.decodeIHDR(chunk2);
         break;
       case "PLTE":
         if (this._seenChunks.has(type) || dataSeen || this._seenChunks.has("tRNS") || this.colorType === 0 || this.colorType === 4) {
           throw new Error("Invalid PNG PLTE placement.");
         }
-        this.decodePLTE(chunk);
+        this.decodePLTE(chunk2);
         break;
       case "tRNS":
         if (this._seenChunks.has(type) || dataSeen) {
           throw new Error("Invalid PNG tRNS placement.");
         }
-        this.decodeTRNS(chunk);
+        this.decodeTRNS(chunk2);
         break;
       case "pHYs":
         if (this._seenChunks.has(type) || dataSeen) {
           throw new Error("Invalid PNG pHYs placement.");
         }
-        this.decodePHYS(chunk);
+        this.decodePHYS(chunk2);
         break;
       case "IDAT":
         if (this._dataEnded || this.colorType === 3 && !this._seenChunks.has("PLTE")) {
           throw new Error("PNG IDAT chunks must be contiguous and follow PLTE.");
         }
-        this.decodeIDAT(chunk);
+        this.decodeIDAT(chunk2);
         break;
       case "IEND":
         if (!dataSeen || end !== this.data.length) {
           throw new Error("Invalid PNG IEND chunk or trailing file bytes.");
         }
-        this.decodeIEND(chunk);
+        this.decodeIEND(chunk2);
         break;
       // case 'cHRM': decodeCHRM(chunk); break;
       // case 'gAMA': decodeGAMA(chunk); break;
@@ -48666,7 +48996,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
       offset,
       end,
       length,
-      data: chunk,
+      data: chunk2,
       raw: this.data.subarray(offset, end),
       critical,
       safeToCopy: (this.peekUInt8(offset + 7) & 32) !== 0
@@ -48694,11 +49024,11 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IHDR|Image Header}
    * @see {@link http://www.libpng.org/pub/png/spec/1.2/png-1.2-pdg.html#C.IHDR|Image Header}
    */
-  decodeIHDR(chunk) {
-    if (chunk.length !== 13) {
+  decodeIHDR(chunk2) {
+    if (chunk2.length !== 13) {
       throw new Error("PNG requires a 13-byte IHDR.");
     }
-    const header = new data_buffer_default(chunk);
+    const header = new data_buffer_default(chunk2);
     const width = header.readUInt32();
     const height = header.readUInt32();
     const bitDepth = header.readUInt8();
@@ -48735,8 +49065,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param chunk Data Blob
    * @see {@link http://www.w3.org/TR/PNG/#11PLTE|Palette}
    */
-  decodePLTE(chunk) {
-    this.setPalette(chunk);
+  decodePLTE(chunk2) {
+    this.setPalette(chunk2);
   }
   /**
    * Decode the IDAT (Image Data) chunk.
@@ -48747,8 +49077,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @param chunk Data Blob
    * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IDAT|Image Data}
    */
-  decodeIDAT(chunk) {
-    this.dataChunks.push(chunk);
+  decodeIDAT(chunk2) {
+    this.dataChunks.push(chunk2);
     this.invalidatePixels();
   }
   /**
@@ -48758,20 +49088,20 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @throws {Error} Transparency is incompatible with the color type or sample depth.
    * @see {@link https://www.w3.org/TR/PNG/#11tRNS|Transparency}
    */
-  decodeTRNS(chunk) {
+  decodeTRNS(chunk2) {
     switch (this.colorType) {
       case 3:
-        if (this.palette.length === 0 || chunk.length === 0 || chunk.length > this.palette.length / 3) {
+        if (this.palette.length === 0 || chunk2.length === 0 || chunk2.length > this.palette.length / 3) {
           throw new Error("Invalid indexed PNG tRNS chunk.");
         }
         break;
       case 0:
-        if (chunk.length !== 2) {
+        if (chunk2.length !== 2) {
           throw new Error("Grayscale PNG tRNS requires two bytes.");
         }
         break;
       case 2:
-        if (chunk.length !== 6) {
+        if (chunk2.length !== 6) {
           throw new Error("RGB PNG tRNS requires six bytes.");
         }
         break;
@@ -48780,14 +49110,14 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     }
     if (this.colorType !== 3) {
       const maximum = 2 ** this.bitDepth - 1;
-      const buffer = new data_buffer_default(chunk);
+      const buffer = new data_buffer_default(chunk2);
       while (buffer.remainingBytes() > 0) {
         if (buffer.readUInt16() > maximum) {
           throw new Error("PNG tRNS sample exceeds bit depth.");
         }
       }
     }
-    this.transparency = Uint8Array.from(chunk);
+    this.transparency = Uint8Array.from(chunk2);
   }
   /**
    * Decode the pHYs (Pixel Dimensions) chunk.
@@ -48808,11 +49138,11 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @throws {Error} The length or unit specifier is invalid.
    * @see {@link https://www.w3.org/TR/PNG/#11pHYs|Pixel Dimensions}
    */
-  decodePHYS(chunk) {
-    if (chunk.length !== 9) {
+  decodePHYS(chunk2) {
+    if (chunk2.length !== 9) {
       throw new Error("Invalid PNG pHYs chunk.");
     }
-    const buffer = new data_buffer_default(chunk);
+    const buffer = new data_buffer_default(chunk2);
     const width = buffer.readUInt32();
     const height = buffer.readUInt32();
     const unit = buffer.readUInt8();
@@ -48828,8 +49158,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
    * @throws {Error} IEND contains data.
    * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IEND|Image Trailer}
    */
-  decodeIEND(chunk) {
-    if (chunk.length !== 0) {
+  decodeIEND(chunk2) {
+    if (chunk2.length !== 0) {
       throw new Error("IEND must be empty.");
     }
   }
@@ -48909,29 +49239,29 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     let compressedLength = 0;
     let ended = false;
     let errorCode = 0;
-    inflator.onData = (chunk) => {
-      if (written + chunk.length > expected) {
+    inflator.onData = (chunk2) => {
+      if (written + chunk2.length > expected) {
         throw new Error("PNG inflated data exceeds declared dimensions.");
       }
-      output.set(chunk, written);
-      written += chunk.length;
+      output.set(chunk2, written);
+      written += chunk2.length;
     };
     inflator.onEnd = (status) => {
       ended = true;
       errorCode = status;
     };
-    for (const chunk of this.dataChunks) {
-      if (chunk.length === 0) {
+    for (const chunk2 of this.dataChunks) {
+      if (chunk2.length === 0) {
         continue;
       }
       if (ended) {
         throw new Error("PNG has compressed data after the zlib stream.");
       }
-      compressedLength += chunk.length;
+      compressedLength += chunk2.length;
       if (compressedLength > this._limits.maxInputBytes) {
         throw new RangeError("PNG exceeds the input byte limit.");
       }
-      if (!inflator.push(chunk, false) || errorCode !== 0) {
+      if (!inflator.push(chunk2, false) || errorCode !== 0) {
         throw new Error(`Invalid PNG image data: ${zlib.msg || "inflate failure"}.`);
       }
       if (zlib.avail_in !== 0) {
@@ -49393,8 +49723,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     }
     const parts = [PNG_SIGNATURE];
     let wrotePixels = false;
-    for (const chunk of image.chunks) {
-      const { type } = chunk;
+    for (const chunk2 of image.chunks) {
+      const { type } = chunk2;
       if (type === "IHDR" && pixelsChanged) {
         parts.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
       } else if (type === "PLTE" && paletteChanged) {
@@ -49406,8 +49736,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
           parts.push(makeChunk(type, compressed));
           wrotePixels = true;
         }
-      } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk.safeToCopy || retained.has(type)) {
-        parts.push(chunk.raw);
+      } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk2.safeToCopy || retained.has(type)) {
+        parts.push(chunk2.raw);
       }
     }
     return joinChunks(parts, image._limits.maxOutputBytes);
@@ -49641,6 +49971,26 @@ var ASSET_LIMITS = Object.freeze({
   baselineMetadataNodes: 4 * 1024 * 1024,
   thumbnailEdge: 1024
 });
+function boundedProduct(a, b, maximum, label) {
+  integer(maximum, `${label} limit`, 0, Number.MAX_SAFE_INTEGER);
+  integer(a, label, 0, Number.MAX_SAFE_INTEGER);
+  integer(b, label, 0, Number.MAX_SAFE_INTEGER);
+  if (a !== 0 && b > Math.floor(maximum / a)) {
+    throw new RangeError(`${label} exceeds limit ${maximum}.`);
+  }
+  return a * b;
+}
+function boundedSum(total, next, maximum, label) {
+  integer(maximum, `${label} limit`, 0, Number.MAX_SAFE_INTEGER);
+  integer(total, label, 0, maximum);
+  integer(next, label, 0, maximum - total);
+  return total + next;
+}
+function rasterArea(width, height, label = "Raster", side = ASSET_LIMITS.rasterPixels) {
+  integer(width, `${label} width`, 1, side);
+  integer(height, `${label} height`, 1, side);
+  return boundedProduct(width, height, ASSET_LIMITS.rasterPixels, `${label} pixels`);
+}
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
 
 // packages/assets/src/png.ts
@@ -49677,6 +50027,47 @@ var pngImporter = Object.freeze({
     return { kind: value.kind, value };
   }
 });
+
+// packages/assets/src/indexed-edit.ts
+function validateIndexedPixels(image) {
+  const pixels = rasterArea(image.width, image.height, "Indexed");
+  if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
+    throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
+  }
+}
+
+// packages/assets/src/indexed-values.ts
+function indexedPalette(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 256) {
+    throw new Error("Indexed palette requires 1..256 slots.");
+  }
+  return value.map((slot) => {
+    if (!Array.isArray(slot) || slot.length !== 4) {
+      throw new Error("Palette slots require four RGBA8 channels.");
+    }
+    const channels = slot;
+    const result = [0, 0, 0, 0];
+    for (let channel = 0; channel < 4; channel++) {
+      const channelValue = channels[channel];
+      if (typeof channelValue !== "number") {
+        throw new TypeError("Palette channel must be a number.");
+      }
+      result[channel] = integer(channelValue, "Palette channel", 0, 255);
+    }
+    return result;
+  });
+}
+
+// packages/assets/src/png-edit.ts
+function createIndexedPng(image) {
+  validateIndexedPixels(image);
+  return data_image_png_default.encodeIndexed(image, {
+    ...ASSET_PNG_OPTIONS,
+    bitDepth: 8,
+    filter: "none",
+    level: 6
+  });
+}
 
 // packages/assets/src/image-conversion.ts
 var isRecord9 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -50225,8 +50616,3843 @@ function withImageEncoders(native) {
   });
 }
 
+// packages/assets/node_modules/pako/dist/pako.mjs
+var Z_FIXED2 = 4;
+var Z_BINARY2 = 0;
+var Z_TEXT2 = 1;
+var Z_UNKNOWN2 = 2;
+function zero$12(buf) {
+  let len = buf.length;
+  while (--len >= 0) buf[len] = 0;
+}
+var STORED_BLOCK2 = 0;
+var STATIC_TREES2 = 1;
+var DYN_TREES2 = 2;
+var LENGTH_CODES2 = 29;
+var LITERALS2 = 256;
+var L_CODES2 = 286;
+var D_CODES2 = 30;
+var BL_CODES2 = 19;
+var HEAP_SIZE$12 = 573;
+var MAX_BITS2 = 15;
+var Buf_size2 = 16;
+var END_BLOCK2 = 256;
+var REP_3_62 = 16;
+var REPZ_3_102 = 17;
+var REPZ_11_1382 = 18;
+var extra_lbits2 = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  2,
+  2,
+  3,
+  3,
+  3,
+  3,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  5,
+  0
+]);
+var extra_dbits2 = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  2,
+  2,
+  3,
+  3,
+  4,
+  4,
+  5,
+  5,
+  6,
+  6,
+  7,
+  7,
+  8,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  11,
+  12,
+  12,
+  13,
+  13
+]);
+var extra_blbits2 = new Uint8Array([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  2,
+  3,
+  7
+]);
+var bl_order2 = new Uint8Array([
+  16,
+  17,
+  18,
+  0,
+  8,
+  7,
+  9,
+  6,
+  10,
+  5,
+  11,
+  4,
+  12,
+  3,
+  13,
+  2,
+  14,
+  1,
+  15
+]);
+var DIST_CODE_LEN2 = 512;
+var static_ltree2 = new Array(288 * 2);
+zero$12(static_ltree2);
+var static_dtree2 = new Array(D_CODES2 * 2);
+zero$12(static_dtree2);
+var _dist_code2 = new Array(DIST_CODE_LEN2);
+zero$12(_dist_code2);
+var _length_code2 = new Array(256);
+zero$12(_length_code2);
+var base_length2 = new Array(LENGTH_CODES2);
+zero$12(base_length2);
+var base_dist2 = new Array(D_CODES2);
+zero$12(base_dist2);
+var d_code2 = (dist) => {
+  return dist < 256 ? _dist_code2[dist] : _dist_code2[256 + (dist >>> 7)];
+};
+var put_short2 = (s, w) => {
+  s.pending_buf[s.pending++] = w & 255;
+  s.pending_buf[s.pending++] = w >>> 8 & 255;
+};
+var send_bits2 = (s, value, length) => {
+  if (s.bi_valid > Buf_size2 - length) {
+    s.bi_buf |= value << s.bi_valid & 65535;
+    put_short2(s, s.bi_buf);
+    s.bi_buf = value >> Buf_size2 - s.bi_valid;
+    s.bi_valid += length - Buf_size2;
+  } else {
+    s.bi_buf |= value << s.bi_valid & 65535;
+    s.bi_valid += length;
+  }
+};
+var send_code2 = (s, c, tree) => {
+  send_bits2(s, tree[c * 2], tree[c * 2 + 1]);
+};
+var bi_reverse2 = (code, len) => {
+  let res = 0;
+  do {
+    res |= code & 1;
+    code >>>= 1;
+    res <<= 1;
+  } while (--len > 0);
+  return res >>> 1;
+};
+var gen_bitlen2 = (s, desc) => {
+  const tree = desc.dyn_tree;
+  const max_code = desc.max_code;
+  const stree = desc.stat_desc.static_tree;
+  const has_stree = desc.stat_desc.has_stree;
+  const extra = desc.stat_desc.extra_bits;
+  const base = desc.stat_desc.extra_base;
+  const max_length = desc.stat_desc.max_length;
+  let h;
+  let n, m;
+  let bits;
+  let xbits;
+  let f;
+  let overflow = 0;
+  for (bits = 0; bits <= MAX_BITS2; bits++) s.bl_count[bits] = 0;
+  tree[s.heap[s.heap_max] * 2 + 1] = 0;
+  for (h = s.heap_max + 1; h < HEAP_SIZE$12; h++) {
+    n = s.heap[h];
+    bits = tree[tree[n * 2 + 1] * 2 + 1] + 1;
+    if (bits > max_length) {
+      bits = max_length;
+      overflow++;
+    }
+    tree[n * 2 + 1] = bits;
+    if (n > max_code) continue;
+    s.bl_count[bits]++;
+    xbits = 0;
+    if (n >= base) xbits = extra[n - base];
+    f = tree[n * 2];
+    s.opt_len += f * (bits + xbits);
+    if (has_stree) s.static_len += f * (stree[n * 2 + 1] + xbits);
+  }
+  if (overflow === 0) return;
+  do {
+    bits = max_length - 1;
+    while (s.bl_count[bits] === 0) bits--;
+    s.bl_count[bits]--;
+    s.bl_count[bits + 1] += 2;
+    s.bl_count[max_length]--;
+    overflow -= 2;
+  } while (overflow > 0);
+  for (bits = max_length; bits !== 0; bits--) {
+    n = s.bl_count[bits];
+    while (n !== 0) {
+      m = s.heap[--h];
+      if (m > max_code) continue;
+      if (tree[m * 2 + 1] !== bits) {
+        s.opt_len += (bits - tree[m * 2 + 1]) * tree[m * 2];
+        tree[m * 2 + 1] = bits;
+      }
+      n--;
+    }
+  }
+};
+var gen_codes2 = (tree, max_code, bl_count) => {
+  const next_code = new Array(16);
+  let code = 0;
+  let bits;
+  let n;
+  for (bits = 1; bits <= MAX_BITS2; bits++) {
+    code = code + bl_count[bits - 1] << 1;
+    next_code[bits] = code;
+  }
+  for (n = 0; n <= max_code; n++) {
+    let len = tree[n * 2 + 1];
+    if (len === 0) continue;
+    tree[n * 2] = bi_reverse2(next_code[len]++, len);
+  }
+};
+var init_block2 = (s) => {
+  let n;
+  for (n = 0; n < L_CODES2; n++) s.dyn_ltree[n * 2] = 0;
+  for (n = 0; n < D_CODES2; n++) s.dyn_dtree[n * 2] = 0;
+  for (n = 0; n < BL_CODES2; n++) s.bl_tree[n * 2] = 0;
+  s.dyn_ltree[END_BLOCK2 * 2] = 1;
+  s.opt_len = s.static_len = 0;
+  s.sym_next = s.matches = 0;
+};
+var bi_windup2 = (s) => {
+  if (s.bi_valid > 8) put_short2(s, s.bi_buf);
+  else if (s.bi_valid > 0) s.pending_buf[s.pending++] = s.bi_buf;
+  s.bi_buf = 0;
+  s.bi_valid = 0;
+};
+var smaller2 = (tree, n, m, depth) => {
+  const _n2 = n * 2;
+  const _m2 = m * 2;
+  return tree[_n2] < tree[_m2] || tree[_n2] === tree[_m2] && depth[n] <= depth[m];
+};
+var pqdownheap2 = (s, tree, k) => {
+  const v = s.heap[k];
+  let j = k << 1;
+  while (j <= s.heap_len) {
+    if (j < s.heap_len && smaller2(tree, s.heap[j + 1], s.heap[j], s.depth)) j++;
+    if (smaller2(tree, v, s.heap[j], s.depth)) break;
+    s.heap[k] = s.heap[j];
+    k = j;
+    j <<= 1;
+  }
+  s.heap[k] = v;
+};
+var compress_block2 = (s, ltree, dtree) => {
+  let dist;
+  let lc;
+  let sx = 0;
+  let code;
+  let extra;
+  if (s.sym_next !== 0) do {
+    dist = s.pending_buf[s.sym_buf + sx++] & 255;
+    dist += (s.pending_buf[s.sym_buf + sx++] & 255) << 8;
+    lc = s.pending_buf[s.sym_buf + sx++];
+    if (dist === 0) send_code2(s, lc, ltree);
+    else {
+      code = _length_code2[lc];
+      send_code2(s, code + LITERALS2 + 1, ltree);
+      extra = extra_lbits2[code];
+      if (extra !== 0) {
+        lc -= base_length2[code];
+        send_bits2(s, lc, extra);
+      }
+      dist--;
+      code = d_code2(dist);
+      send_code2(s, code, dtree);
+      extra = extra_dbits2[code];
+      if (extra !== 0) {
+        dist -= base_dist2[code];
+        send_bits2(s, dist, extra);
+      }
+    }
+  } while (sx < s.sym_next);
+  send_code2(s, END_BLOCK2, ltree);
+};
+var build_tree2 = (s, desc) => {
+  const tree = desc.dyn_tree;
+  const stree = desc.stat_desc.static_tree;
+  const has_stree = desc.stat_desc.has_stree;
+  const elems = desc.stat_desc.elems;
+  let n, m;
+  let max_code = -1;
+  let node;
+  s.heap_len = 0;
+  s.heap_max = HEAP_SIZE$12;
+  for (n = 0; n < elems; n++) if (tree[n * 2] !== 0) {
+    s.heap[++s.heap_len] = max_code = n;
+    s.depth[n] = 0;
+  } else tree[n * 2 + 1] = 0;
+  while (s.heap_len < 2) {
+    node = s.heap[++s.heap_len] = max_code < 2 ? ++max_code : 0;
+    tree[node * 2] = 1;
+    s.depth[node] = 0;
+    s.opt_len--;
+    if (has_stree) s.static_len -= stree[node * 2 + 1];
+  }
+  desc.max_code = max_code;
+  for (n = s.heap_len >> 1; n >= 1; n--) pqdownheap2(s, tree, n);
+  node = elems;
+  do {
+    n = s.heap[1];
+    s.heap[1] = s.heap[s.heap_len--];
+    pqdownheap2(s, tree, 1);
+    m = s.heap[1];
+    s.heap[--s.heap_max] = n;
+    s.heap[--s.heap_max] = m;
+    tree[node * 2] = tree[n * 2] + tree[m * 2];
+    s.depth[node] = (s.depth[n] >= s.depth[m] ? s.depth[n] : s.depth[m]) + 1;
+    tree[n * 2 + 1] = tree[m * 2 + 1] = node;
+    s.heap[1] = node++;
+    pqdownheap2(s, tree, 1);
+  } while (s.heap_len >= 2);
+  s.heap[--s.heap_max] = s.heap[1];
+  gen_bitlen2(s, desc);
+  gen_codes2(tree, max_code, s.bl_count);
+};
+var scan_tree2 = (s, tree, max_code) => {
+  let n;
+  let prevlen = -1;
+  let curlen;
+  let nextlen = tree[1];
+  let count = 0;
+  let max_count = 7;
+  let min_count = 4;
+  if (nextlen === 0) {
+    max_count = 138;
+    min_count = 3;
+  }
+  tree[(max_code + 1) * 2 + 1] = 65535;
+  for (n = 0; n <= max_code; n++) {
+    curlen = nextlen;
+    nextlen = tree[(n + 1) * 2 + 1];
+    if (++count < max_count && curlen === nextlen) continue;
+    else if (count < min_count) s.bl_tree[curlen * 2] += count;
+    else if (curlen !== 0) {
+      if (curlen !== prevlen) s.bl_tree[curlen * 2]++;
+      s.bl_tree[REP_3_62 * 2]++;
+    } else if (count <= 10) s.bl_tree[REPZ_3_102 * 2]++;
+    else s.bl_tree[REPZ_11_1382 * 2]++;
+    count = 0;
+    prevlen = curlen;
+    if (nextlen === 0) {
+      max_count = 138;
+      min_count = 3;
+    } else if (curlen === nextlen) {
+      max_count = 6;
+      min_count = 3;
+    } else {
+      max_count = 7;
+      min_count = 4;
+    }
+  }
+};
+var send_tree2 = (s, tree, max_code) => {
+  let n;
+  let prevlen = -1;
+  let curlen;
+  let nextlen = tree[1];
+  let count = 0;
+  let max_count = 7;
+  let min_count = 4;
+  if (nextlen === 0) {
+    max_count = 138;
+    min_count = 3;
+  }
+  for (n = 0; n <= max_code; n++) {
+    curlen = nextlen;
+    nextlen = tree[(n + 1) * 2 + 1];
+    if (++count < max_count && curlen === nextlen) continue;
+    else if (count < min_count) do
+      send_code2(s, curlen, s.bl_tree);
+    while (--count !== 0);
+    else if (curlen !== 0) {
+      if (curlen !== prevlen) {
+        send_code2(s, curlen, s.bl_tree);
+        count--;
+      }
+      send_code2(s, REP_3_62, s.bl_tree);
+      send_bits2(s, count - 3, 2);
+    } else if (count <= 10) {
+      send_code2(s, REPZ_3_102, s.bl_tree);
+      send_bits2(s, count - 3, 3);
+    } else {
+      send_code2(s, REPZ_11_1382, s.bl_tree);
+      send_bits2(s, count - 11, 7);
+    }
+    count = 0;
+    prevlen = curlen;
+    if (nextlen === 0) {
+      max_count = 138;
+      min_count = 3;
+    } else if (curlen === nextlen) {
+      max_count = 6;
+      min_count = 3;
+    } else {
+      max_count = 7;
+      min_count = 4;
+    }
+  }
+};
+var build_bl_tree2 = (s) => {
+  let max_blindex;
+  scan_tree2(s, s.dyn_ltree, s.l_desc.max_code);
+  scan_tree2(s, s.dyn_dtree, s.d_desc.max_code);
+  build_tree2(s, s.bl_desc);
+  for (max_blindex = BL_CODES2 - 1; max_blindex >= 3; max_blindex--) if (s.bl_tree[bl_order2[max_blindex] * 2 + 1] !== 0) break;
+  s.opt_len += 3 * (max_blindex + 1) + 5 + 5 + 4;
+  return max_blindex;
+};
+var send_all_trees2 = (s, lcodes, dcodes, blcodes) => {
+  let rank2;
+  send_bits2(s, lcodes - 257, 5);
+  send_bits2(s, dcodes - 1, 5);
+  send_bits2(s, blcodes - 4, 4);
+  for (rank2 = 0; rank2 < blcodes; rank2++) send_bits2(s, s.bl_tree[bl_order2[rank2] * 2 + 1], 3);
+  send_tree2(s, s.dyn_ltree, lcodes - 1);
+  send_tree2(s, s.dyn_dtree, dcodes - 1);
+};
+var detect_data_type2 = (s) => {
+  let block_mask = 4093624447;
+  let n;
+  for (n = 0; n <= 31; n++, block_mask >>>= 1) if (block_mask & 1 && s.dyn_ltree[n * 2] !== 0) return Z_BINARY2;
+  if (s.dyn_ltree[18] !== 0 || s.dyn_ltree[20] !== 0 || s.dyn_ltree[26] !== 0) return Z_TEXT2;
+  for (n = 32; n < LITERALS2; n++) if (s.dyn_ltree[n * 2] !== 0) return Z_TEXT2;
+  return Z_BINARY2;
+};
+var _tr_stored_block2 = (s, buf, stored_len, last) => {
+  send_bits2(s, (STORED_BLOCK2 << 1) + (last ? 1 : 0), 3);
+  bi_windup2(s);
+  put_short2(s, stored_len);
+  put_short2(s, ~stored_len);
+  if (stored_len) s.pending_buf.set(s.window.subarray(buf, buf + stored_len), s.pending);
+  s.pending += stored_len;
+};
+var _tr_flush_block2 = (s, buf, stored_len, last) => {
+  let opt_lenb, static_lenb;
+  let max_blindex = 0;
+  if (s.level > 0) {
+    if (s.strm.data_type === Z_UNKNOWN2) s.strm.data_type = detect_data_type2(s);
+    build_tree2(s, s.l_desc);
+    build_tree2(s, s.d_desc);
+    max_blindex = build_bl_tree2(s);
+    opt_lenb = s.opt_len + 3 + 7 >>> 3;
+    static_lenb = s.static_len + 3 + 7 >>> 3;
+    if (static_lenb <= opt_lenb || s.strategy === Z_FIXED2) opt_lenb = static_lenb;
+  } else opt_lenb = static_lenb = stored_len + 5;
+  if (stored_len + 4 <= opt_lenb && buf !== -1) _tr_stored_block2(s, buf, stored_len, last);
+  else if (s.strategy === Z_FIXED2 || static_lenb === opt_lenb) {
+    send_bits2(s, (STATIC_TREES2 << 1) + (last ? 1 : 0), 3);
+    compress_block2(s, static_ltree2, static_dtree2);
+  } else {
+    send_bits2(s, (DYN_TREES2 << 1) + (last ? 1 : 0), 3);
+    send_all_trees2(s, s.l_desc.max_code + 1, s.d_desc.max_code + 1, max_blindex + 1);
+    compress_block2(s, s.dyn_ltree, s.dyn_dtree);
+  }
+  init_block2(s);
+  if (last) bi_windup2(s);
+};
+var _tr_tally2 = (s, dist, lc) => {
+  s.pending_buf[s.sym_buf + s.sym_next++] = dist;
+  s.pending_buf[s.sym_buf + s.sym_next++] = dist >> 8;
+  s.pending_buf[s.sym_buf + s.sym_next++] = lc;
+  if (dist === 0) s.dyn_ltree[lc * 2]++;
+  else {
+    s.matches++;
+    dist--;
+    s.dyn_ltree[(_length_code2[lc] + LITERALS2 + 1) * 2]++;
+    s.dyn_dtree[d_code2(dist) * 2]++;
+  }
+  return s.sym_next === s.sym_end;
+};
+var adler322 = (adler, buf, len, pos) => {
+  let s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
+  while (len !== 0) {
+    n = len > 2e3 ? 2e3 : len;
+    len -= n;
+    do {
+      s1 = s1 + buf[pos++] | 0;
+      s2 = s2 + s1 | 0;
+    } while (--n);
+    s1 %= 65521;
+    s2 %= 65521;
+  }
+  return s1 | s2 << 16 | 0;
+};
+var makeTable2 = () => {
+  let c, table = [];
+  for (var n = 0; n < 256; n++) {
+    c = n;
+    for (var k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+    table[n] = c;
+  }
+  return table;
+};
+var crcTable2 = new Uint32Array(makeTable2());
+var crc322 = (crc, buf, len, pos) => {
+  const t = crcTable2;
+  const end = pos + len;
+  crc ^= -1;
+  for (let i = pos; i < end; i++) crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
+  return crc ^ -1;
+};
+var messages_default2 = {
+  2: "need dictionary",
+  1: "stream end",
+  0: "",
+  "-1": "file error",
+  "-2": "stream error",
+  "-3": "data error",
+  "-4": "insufficient memory",
+  "-5": "buffer error",
+  "-6": "incompatible version"
+};
+var MIN_MATCH2 = 3;
+var MAX_MATCH2 = 258;
+var MIN_LOOKAHEAD2 = 262;
+var BS_NEED_MORE2 = 1;
+var BS_BLOCK_DONE2 = 2;
+var BS_FINISH_STARTED2 = 3;
+var BS_FINISH_DONE2 = 4;
+var slide_hash2 = (s) => {
+  let n, m;
+  let p;
+  let wsize = s.w_size;
+  n = s.hash_size;
+  p = n;
+  do {
+    m = s.head[--p];
+    s.head[p] = m >= wsize ? m - wsize : 0;
+  } while (--n);
+  n = wsize;
+  p = n;
+  do {
+    m = s.prev[--p];
+    s.prev[p] = m >= wsize ? m - wsize : 0;
+  } while (--n);
+};
+var HASH2 = (s, prev, data) => (prev << s.hash_shift ^ data) & s.hash_mask;
+var INSERT_STRING2 = (s, str) => {
+  let h;
+  if (s.legacy_hash) h = s.ins_h = HASH2(s, s.ins_h, s.window[str + MIN_MATCH2 - 1]);
+  else {
+    const w = s.window;
+    const value = w[str] | w[str + 1] << 8 | w[str + 2] << 16 | w[str + 3] << 24;
+    h = s.ins_h = Math.imul(value, 66521) + 66521 >>> 16 & s.hash_mask;
+  }
+  const hash_head = s.prev[str & s.w_mask] = s.head[h];
+  s.head[h] = str;
+  return hash_head;
+};
+var flush_pending2 = (strm) => {
+  const s = strm.state;
+  let len = s.pending;
+  if (len > strm.avail_out) len = strm.avail_out;
+  if (len === 0) return;
+  strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len), strm.next_out);
+  strm.next_out += len;
+  s.pending_out += len;
+  strm.total_out += len;
+  strm.avail_out -= len;
+  s.pending -= len;
+  if (s.pending === 0) s.pending_out = 0;
+};
+var flush_block_only2 = (s, last) => {
+  _tr_flush_block2(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
+  s.block_start = s.strstart;
+  flush_pending2(s.strm);
+};
+var read_buf2 = (strm, buf, start, size) => {
+  let len = strm.avail_in;
+  if (len > size) len = size;
+  if (len === 0) return 0;
+  strm.avail_in -= len;
+  buf.set(strm.input.subarray(strm.next_in, strm.next_in + len), start);
+  if (strm.state.wrap === 1) strm.adler = adler322(strm.adler, buf, len, start);
+  else if (strm.state.wrap === 2) strm.adler = crc322(strm.adler, buf, len, start);
+  strm.next_in += len;
+  strm.total_in += len;
+  return len;
+};
+var longest_match2 = (s, cur_match) => {
+  let chain_length = s.max_chain_length;
+  let scan = s.strstart;
+  let match;
+  let len;
+  let best_len = s.prev_length;
+  let nice_match = s.nice_match;
+  const limit = s.strstart > s.w_size - MIN_LOOKAHEAD2 ? s.strstart - (s.w_size - MIN_LOOKAHEAD2) : 0;
+  const _win = s.window;
+  const wmask = s.w_mask;
+  const prev = s.prev;
+  const strend = s.strstart + MAX_MATCH2;
+  let scan_end1 = _win[scan + best_len - 1];
+  let scan_end = _win[scan + best_len];
+  if (s.prev_length >= s.good_match) chain_length >>= 2;
+  if (nice_match > s.lookahead) nice_match = s.lookahead;
+  do {
+    match = cur_match;
+    if (_win[match + best_len] !== scan_end || _win[match + best_len - 1] !== scan_end1 || _win[match] !== _win[scan] || _win[++match] !== _win[scan + 1]) continue;
+    scan += 2;
+    match++;
+    do
+      ;
+    while (_win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && scan < strend);
+    len = MAX_MATCH2 - (strend - scan);
+    scan = strend - MAX_MATCH2;
+    if (len > best_len) {
+      s.match_start = cur_match;
+      best_len = len;
+      if (len >= nice_match) break;
+      scan_end1 = _win[scan + best_len - 1];
+      scan_end = _win[scan + best_len];
+    }
+  } while ((cur_match = prev[cur_match & wmask]) > limit && --chain_length !== 0);
+  if (best_len <= s.lookahead) return best_len;
+  return s.lookahead;
+};
+var fill_window2 = (s) => {
+  const _w_size = s.w_size;
+  let n, more, str;
+  do {
+    more = s.window_size - s.lookahead - s.strstart;
+    if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD2)) {
+      s.window.set(s.window.subarray(_w_size, _w_size + _w_size - more), 0);
+      s.match_start -= _w_size;
+      s.strstart -= _w_size;
+      s.block_start -= _w_size;
+      if (s.insert > s.strstart) s.insert = s.strstart;
+      slide_hash2(s);
+      more += _w_size;
+    }
+    if (s.strm.avail_in === 0) break;
+    n = read_buf2(s.strm, s.window, s.strstart + s.lookahead, more);
+    s.lookahead += n;
+    if (!s.legacy_hash) {
+      if (s.lookahead + s.insert > MIN_MATCH2) {
+        str = s.strstart - s.insert;
+        while (s.insert) {
+          INSERT_STRING2(s, str);
+          str++;
+          s.insert--;
+          if (s.lookahead + s.insert <= MIN_MATCH2) break;
+        }
+      }
+    } else if (s.lookahead + s.insert >= MIN_MATCH2) {
+      str = s.strstart - s.insert;
+      s.ins_h = s.window[str];
+      s.ins_h = HASH2(s, s.ins_h, s.window[str + 1]);
+      while (s.insert) {
+        INSERT_STRING2(s, str);
+        str++;
+        s.insert--;
+        if (s.lookahead + s.insert < MIN_MATCH2) break;
+      }
+    }
+  } while (s.lookahead < MIN_LOOKAHEAD2 && s.strm.avail_in !== 0);
+};
+var deflate_stored2 = (s, flush) => {
+  let min_block = s.pending_buf_size - 5 > s.w_size ? s.w_size : s.pending_buf_size - 5;
+  let len, left, have, last = 0;
+  let used = s.strm.avail_in;
+  do {
+    len = 65535;
+    have = s.bi_valid + 42 >> 3;
+    if (s.strm.avail_out < have) break;
+    have = s.strm.avail_out - have;
+    left = s.strstart - s.block_start;
+    if (len > left + s.strm.avail_in) len = left + s.strm.avail_in;
+    if (len > have) len = have;
+    if (len < min_block && (len === 0 && flush !== 4 || flush === 0 || len !== left + s.strm.avail_in)) break;
+    last = flush === 4 && len === left + s.strm.avail_in ? 1 : 0;
+    _tr_stored_block2(s, 0, 0, last);
+    s.pending_buf[s.pending - 4] = len;
+    s.pending_buf[s.pending - 3] = len >> 8;
+    s.pending_buf[s.pending - 2] = ~len;
+    s.pending_buf[s.pending - 1] = ~len >> 8;
+    flush_pending2(s.strm);
+    if (left) {
+      if (left > len) left = len;
+      s.strm.output.set(s.window.subarray(s.block_start, s.block_start + left), s.strm.next_out);
+      s.strm.next_out += left;
+      s.strm.avail_out -= left;
+      s.strm.total_out += left;
+      s.block_start += left;
+      len -= left;
+    }
+    if (len) {
+      read_buf2(s.strm, s.strm.output, s.strm.next_out, len);
+      s.strm.next_out += len;
+      s.strm.avail_out -= len;
+      s.strm.total_out += len;
+    }
+  } while (last === 0);
+  used -= s.strm.avail_in;
+  if (used) {
+    if (used >= s.w_size) {
+      s.matches = 2;
+      s.window.set(s.strm.input.subarray(s.strm.next_in - s.w_size, s.strm.next_in), 0);
+      s.strstart = s.w_size;
+      s.insert = s.strstart;
+    } else {
+      if (s.window_size - s.strstart <= used) {
+        s.strstart -= s.w_size;
+        s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+        if (s.matches < 2) s.matches++;
+        if (s.insert > s.strstart) s.insert = s.strstart;
+      }
+      s.window.set(s.strm.input.subarray(s.strm.next_in - used, s.strm.next_in), s.strstart);
+      s.strstart += used;
+      s.insert += used > s.w_size - s.insert ? s.w_size - s.insert : used;
+    }
+    s.block_start = s.strstart;
+  }
+  if (s.high_water < s.strstart) s.high_water = s.strstart;
+  if (last) return BS_FINISH_DONE2;
+  if (flush !== 0 && flush !== 4 && s.strm.avail_in === 0 && s.strstart === s.block_start) return BS_BLOCK_DONE2;
+  have = s.window_size - s.strstart;
+  if (s.strm.avail_in > have && s.block_start >= s.w_size) {
+    s.block_start -= s.w_size;
+    s.strstart -= s.w_size;
+    s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+    if (s.matches < 2) s.matches++;
+    have += s.w_size;
+    if (s.insert > s.strstart) s.insert = s.strstart;
+  }
+  if (have > s.strm.avail_in) have = s.strm.avail_in;
+  if (have) {
+    read_buf2(s.strm, s.window, s.strstart, have);
+    s.strstart += have;
+    s.insert += have > s.w_size - s.insert ? s.w_size - s.insert : have;
+  }
+  if (s.high_water < s.strstart) s.high_water = s.strstart;
+  have = s.bi_valid + 42 >> 3;
+  have = s.pending_buf_size - have > 65535 ? 65535 : s.pending_buf_size - have;
+  min_block = have > s.w_size ? s.w_size : have;
+  left = s.strstart - s.block_start;
+  if (left >= min_block || (left || flush === 4) && flush !== 0 && s.strm.avail_in === 0 && left <= have) {
+    len = left > have ? have : left;
+    last = flush === 4 && s.strm.avail_in === 0 && len === left ? 1 : 0;
+    _tr_stored_block2(s, s.block_start, len, last);
+    s.block_start += len;
+    flush_pending2(s.strm);
+  }
+  return last ? BS_FINISH_STARTED2 : BS_NEED_MORE2;
+};
+var deflate_fast2 = (s, flush) => {
+  let hash_head;
+  let bflush;
+  for (; ; ) {
+    if (s.lookahead < MIN_LOOKAHEAD2) {
+      fill_window2(s);
+      if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
+      if (s.lookahead === 0) break;
+    }
+    hash_head = 0;
+    if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
+    if (hash_head !== 0 && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) s.match_length = longest_match2(s, hash_head);
+    if (s.match_length >= MIN_MATCH2) {
+      bflush = _tr_tally2(s, s.strstart - s.match_start, s.match_length - MIN_MATCH2);
+      s.lookahead -= s.match_length;
+      if (s.match_length <= s.max_lazy_match && s.lookahead >= MIN_MATCH2) {
+        s.match_length--;
+        do {
+          s.strstart++;
+          hash_head = INSERT_STRING2(s, s.strstart);
+        } while (--s.match_length !== 0);
+        s.strstart++;
+      } else {
+        s.strstart += s.match_length;
+        s.match_length = 0;
+        if (s.legacy_hash) {
+          s.ins_h = s.window[s.strstart];
+          s.ins_h = HASH2(s, s.ins_h, s.window[s.strstart + 1]);
+        }
+      }
+    } else {
+      bflush = _tr_tally2(s, 0, s.window[s.strstart]);
+      s.lookahead--;
+      s.strstart++;
+    }
+    if (bflush) {
+      flush_block_only2(s, false);
+      if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+    }
+  }
+  s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
+  if (flush === 4) {
+    flush_block_only2(s, true);
+    if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
+    return BS_FINISH_DONE2;
+  }
+  if (s.sym_next) {
+    flush_block_only2(s, false);
+    if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+  }
+  return BS_BLOCK_DONE2;
+};
+var deflate_slow2 = (s, flush) => {
+  let hash_head;
+  let bflush;
+  let max_insert;
+  for (; ; ) {
+    if (s.lookahead < MIN_LOOKAHEAD2) {
+      fill_window2(s);
+      if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
+      if (s.lookahead === 0) break;
+    }
+    hash_head = 0;
+    if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
+    s.prev_length = s.match_length;
+    s.prev_match = s.match_start;
+    s.match_length = MIN_MATCH2 - 1;
+    if (hash_head !== 0 && s.prev_length < s.max_lazy_match && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) {
+      s.match_length = longest_match2(s, hash_head);
+      if (s.match_length <= 5 && (s.strategy === 1 || s.match_length === MIN_MATCH2 && s.strstart - s.match_start > 4096)) s.match_length = MIN_MATCH2 - 1;
+    }
+    if (s.prev_length >= MIN_MATCH2 && s.match_length <= s.prev_length) {
+      max_insert = s.strstart + s.lookahead - MIN_MATCH2;
+      bflush = _tr_tally2(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH2);
+      s.lookahead -= s.prev_length - 1;
+      s.prev_length -= 2;
+      do
+        if (++s.strstart <= max_insert) hash_head = INSERT_STRING2(s, s.strstart);
+      while (--s.prev_length !== 0);
+      s.match_available = 0;
+      s.match_length = MIN_MATCH2 - 1;
+      s.strstart++;
+      if (bflush) {
+        flush_block_only2(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+      }
+    } else if (s.match_available) {
+      bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
+      if (bflush)
+        flush_block_only2(s, false);
+      s.strstart++;
+      s.lookahead--;
+      if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+    } else {
+      s.match_available = 1;
+      s.strstart++;
+      s.lookahead--;
+    }
+  }
+  if (s.match_available) {
+    bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
+    s.match_available = 0;
+  }
+  s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
+  if (flush === 4) {
+    flush_block_only2(s, true);
+    if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
+    return BS_FINISH_DONE2;
+  }
+  if (s.sym_next) {
+    flush_block_only2(s, false);
+    if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+  }
+  return BS_BLOCK_DONE2;
+};
+var Config2 = class {
+  constructor(good_length, max_lazy, nice_length, max_chain, func) {
+    this.good_length = good_length;
+    this.max_lazy = max_lazy;
+    this.nice_length = nice_length;
+    this.max_chain = max_chain;
+    this.func = func;
+  }
+};
+var configuration_table2 = [
+  new Config2(0, 0, 0, 0, deflate_stored2),
+  new Config2(4, 4, 8, 4, deflate_fast2),
+  new Config2(4, 5, 16, 8, deflate_fast2),
+  new Config2(4, 6, 32, 32, deflate_fast2),
+  new Config2(4, 4, 16, 16, deflate_slow2),
+  new Config2(8, 16, 32, 32, deflate_slow2),
+  new Config2(8, 16, 128, 128, deflate_slow2),
+  new Config2(8, 32, 128, 256, deflate_slow2),
+  new Config2(32, 128, 258, 1024, deflate_slow2),
+  new Config2(32, 258, 258, 4096, deflate_slow2)
+];
+var BAD$12 = 16209;
+var TYPE$12 = 16191;
+function inflate_fast2(strm, start) {
+  let _in;
+  let last;
+  let _out;
+  let beg;
+  let end;
+  let dmax;
+  let wsize;
+  let whave;
+  let wnext;
+  let s_window;
+  let hold;
+  let bits;
+  let lcode;
+  let dcode;
+  let lmask;
+  let dmask;
+  let here;
+  let op2;
+  let len;
+  let dist;
+  let from;
+  let from_source;
+  let input, output;
+  const state = strm.state;
+  _in = strm.next_in;
+  input = strm.input;
+  last = _in + (strm.avail_in - 5);
+  _out = strm.next_out;
+  output = strm.output;
+  beg = _out - (start - strm.avail_out);
+  end = _out + (strm.avail_out - 257);
+  dmax = state.dmax;
+  wsize = state.wsize;
+  whave = state.whave;
+  wnext = state.wnext;
+  s_window = state.window;
+  hold = state.hold;
+  bits = state.bits;
+  lcode = state.lencode;
+  dcode = state.distcode;
+  lmask = (1 << state.lenbits) - 1;
+  dmask = (1 << state.distbits) - 1;
+  top: do {
+    if (bits < 15) {
+      hold += input[_in++] << bits;
+      bits += 8;
+      hold += input[_in++] << bits;
+      bits += 8;
+    }
+    here = lcode[hold & lmask];
+    dolen: for (; ; ) {
+      op2 = here >>> 24;
+      hold >>>= op2;
+      bits -= op2;
+      op2 = here >>> 16 & 255;
+      if (op2 === 0) output[_out++] = here & 65535;
+      else if (op2 & 16) {
+        len = here & 65535;
+        op2 &= 15;
+        if (op2) {
+          if (bits < op2) {
+            hold += input[_in++] << bits;
+            bits += 8;
+          }
+          len += hold & (1 << op2) - 1;
+          hold >>>= op2;
+          bits -= op2;
+        }
+        if (bits < 15) {
+          hold += input[_in++] << bits;
+          bits += 8;
+          hold += input[_in++] << bits;
+          bits += 8;
+        }
+        here = dcode[hold & dmask];
+        dodist: for (; ; ) {
+          op2 = here >>> 24;
+          hold >>>= op2;
+          bits -= op2;
+          op2 = here >>> 16 & 255;
+          if (op2 & 16) {
+            dist = here & 65535;
+            op2 &= 15;
+            if (bits < op2) {
+              hold += input[_in++] << bits;
+              bits += 8;
+              if (bits < op2) {
+                hold += input[_in++] << bits;
+                bits += 8;
+              }
+            }
+            dist += hold & (1 << op2) - 1;
+            if (dist > dmax) {
+              strm.msg = "invalid distance too far back";
+              state.mode = BAD$12;
+              break top;
+            }
+            hold >>>= op2;
+            bits -= op2;
+            op2 = _out - beg;
+            if (dist > op2) {
+              op2 = dist - op2;
+              if (op2 > whave) {
+                if (state.sane) {
+                  strm.msg = "invalid distance too far back";
+                  state.mode = BAD$12;
+                  break top;
+                }
+              }
+              from = 0;
+              from_source = s_window;
+              if (wnext === 0) {
+                from += wsize - op2;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              } else if (wnext < op2) {
+                from += wsize + wnext - op2;
+                op2 -= wnext;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = 0;
+                  if (wnext < len) {
+                    op2 = wnext;
+                    len -= op2;
+                    do
+                      output[_out++] = s_window[from++];
+                    while (--op2);
+                    from = _out - dist;
+                    from_source = output;
+                  }
+                }
+              } else {
+                from += wnext - op2;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              }
+              while (len > 2) {
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                len -= 3;
+              }
+              if (len) {
+                output[_out++] = from_source[from++];
+                if (len > 1) output[_out++] = from_source[from++];
+              }
+            } else {
+              from = _out - dist;
+              do {
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                len -= 3;
+              } while (len > 2);
+              if (len) {
+                output[_out++] = output[from++];
+                if (len > 1) output[_out++] = output[from++];
+              }
+            }
+          } else if ((op2 & 64) === 0) {
+            here = dcode[(here & 65535) + (hold & (1 << op2) - 1)];
+            continue dodist;
+          } else {
+            strm.msg = "invalid distance code";
+            state.mode = BAD$12;
+            break top;
+          }
+          break;
+        }
+      } else if ((op2 & 64) === 0) {
+        here = lcode[(here & 65535) + (hold & (1 << op2) - 1)];
+        continue dolen;
+      } else if (op2 & 32) {
+        state.mode = TYPE$12;
+        break top;
+      } else {
+        strm.msg = "invalid literal/length code";
+        state.mode = BAD$12;
+        break top;
+      }
+      break;
+    }
+  } while (_in < last && _out < end);
+  len = bits >> 3;
+  _in -= len;
+  bits -= len << 3;
+  hold &= (1 << bits) - 1;
+  strm.next_in = _in;
+  strm.next_out = _out;
+  strm.avail_in = _in < last ? 5 + (last - _in) : 5 - (_in - last);
+  strm.avail_out = _out < end ? 257 + (end - _out) : 257 - (_out - end);
+  state.hold = hold;
+  state.bits = bits;
+}
+var MAXBITS2 = 15;
+var ENOUGH_LENS$12 = 852;
+var ENOUGH_DISTS$12 = 592;
+var CODES$12 = 0;
+var LENS$12 = 1;
+var DISTS$12 = 2;
+var lbase2 = new Uint16Array([
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  13,
+  15,
+  17,
+  19,
+  23,
+  27,
+  31,
+  35,
+  43,
+  51,
+  59,
+  67,
+  83,
+  99,
+  115,
+  131,
+  163,
+  195,
+  227,
+  258,
+  0,
+  0
+]);
+var lext2 = new Uint8Array([
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  17,
+  17,
+  17,
+  17,
+  18,
+  18,
+  18,
+  18,
+  19,
+  19,
+  19,
+  19,
+  20,
+  20,
+  20,
+  20,
+  21,
+  21,
+  21,
+  21,
+  16,
+  199,
+  75
+]);
+var dbase2 = new Uint16Array([
+  1,
+  2,
+  3,
+  4,
+  5,
+  7,
+  9,
+  13,
+  17,
+  25,
+  33,
+  49,
+  65,
+  97,
+  129,
+  193,
+  257,
+  385,
+  513,
+  769,
+  1025,
+  1537,
+  2049,
+  3073,
+  4097,
+  6145,
+  8193,
+  12289,
+  16385,
+  24577,
+  0,
+  0
+]);
+var dext2 = new Uint8Array([
+  16,
+  16,
+  16,
+  16,
+  17,
+  17,
+  18,
+  18,
+  19,
+  19,
+  20,
+  20,
+  21,
+  21,
+  22,
+  22,
+  23,
+  23,
+  24,
+  24,
+  25,
+  25,
+  26,
+  26,
+  27,
+  27,
+  28,
+  28,
+  29,
+  29,
+  64,
+  64
+]);
+var inflate_table2 = (type, lens, lens_index, codes, table, table_index, work, opts) => {
+  const bits = opts.bits;
+  let len = 0;
+  let sym = 0;
+  let min = 0, max = 0;
+  let root = 0;
+  let curr = 0;
+  let drop = 0;
+  let left = 0;
+  let used = 0;
+  let huff = 0;
+  let incr;
+  let fill;
+  let low;
+  let mask;
+  let next;
+  let base = null;
+  let match;
+  const count = /* @__PURE__ */ new Uint16Array(16);
+  const offs = /* @__PURE__ */ new Uint16Array(16);
+  let extra = null;
+  let here_bits, here_op, here_val;
+  for (len = 0; len <= MAXBITS2; len++) count[len] = 0;
+  for (sym = 0; sym < codes; sym++) count[lens[lens_index + sym]]++;
+  root = bits;
+  for (max = MAXBITS2; max >= 1; max--) if (count[max] !== 0) break;
+  if (root > max) root = max;
+  if (max === 0) {
+    table[table_index++] = 20971520;
+    table[table_index++] = 20971520;
+    opts.bits = 1;
+    return 0;
+  }
+  for (min = 1; min < max; min++) if (count[min] !== 0) break;
+  if (root < min) root = min;
+  left = 1;
+  for (len = 1; len <= MAXBITS2; len++) {
+    left <<= 1;
+    left -= count[len];
+    if (left < 0) return -1;
+  }
+  if (left > 0 && (type === CODES$12 || max !== 1)) return -1;
+  offs[1] = 0;
+  for (len = 1; len < MAXBITS2; len++) offs[len + 1] = offs[len] + count[len];
+  for (sym = 0; sym < codes; sym++) if (lens[lens_index + sym] !== 0) work[offs[lens[lens_index + sym]]++] = sym;
+  if (type === CODES$12) {
+    base = extra = work;
+    match = 20;
+  } else if (type === LENS$12) {
+    base = lbase2;
+    extra = lext2;
+    match = 257;
+  } else {
+    base = dbase2;
+    extra = dext2;
+    match = 0;
+  }
+  huff = 0;
+  sym = 0;
+  len = min;
+  next = table_index;
+  curr = root;
+  drop = 0;
+  low = -1;
+  used = 1 << root;
+  mask = used - 1;
+  if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
+  for (; ; ) {
+    here_bits = len - drop;
+    if (work[sym] + 1 < match) {
+      here_op = 0;
+      here_val = work[sym];
+    } else if (work[sym] >= match) {
+      here_op = extra[work[sym] - match];
+      here_val = base[work[sym] - match];
+    } else {
+      here_op = 96;
+      here_val = 0;
+    }
+    incr = 1 << len - drop;
+    fill = 1 << curr;
+    min = fill;
+    do {
+      fill -= incr;
+      table[next + (huff >> drop) + fill] = here_bits << 24 | here_op << 16 | here_val | 0;
+    } while (fill !== 0);
+    incr = 1 << len - 1;
+    while (huff & incr) incr >>= 1;
+    if (incr !== 0) {
+      huff &= incr - 1;
+      huff += incr;
+    } else huff = 0;
+    sym++;
+    if (--count[len] === 0) {
+      if (len === max) break;
+      len = lens[lens_index + work[sym]];
+    }
+    if (len > root && (huff & mask) !== low) {
+      if (drop === 0) drop = root;
+      next += min;
+      curr = len - drop;
+      left = 1 << curr;
+      while (curr + drop < max) {
+        left -= count[curr + drop];
+        if (left <= 0) break;
+        curr++;
+        left <<= 1;
+      }
+      used += 1 << curr;
+      if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
+      low = huff & mask;
+      table[low] = root << 24 | curr << 16 | next - table_index | 0;
+    }
+  }
+  if (huff !== 0) table[next + huff] = len - drop << 24 | 4194304;
+  opts.bits = root;
+  return 0;
+};
+var CODES2 = 0;
+var LENS2 = 1;
+var DISTS2 = 2;
+var HEAD2 = 16180;
+var FLAGS2 = 16181;
+var TIME2 = 16182;
+var OS2 = 16183;
+var EXLEN2 = 16184;
+var EXTRA2 = 16185;
+var NAME2 = 16186;
+var COMMENT2 = 16187;
+var HCRC2 = 16188;
+var DICTID2 = 16189;
+var DICT2 = 16190;
+var TYPE2 = 16191;
+var TYPEDO2 = 16192;
+var STORED2 = 16193;
+var COPY_2 = 16194;
+var COPY2 = 16195;
+var TABLE2 = 16196;
+var LENLENS2 = 16197;
+var CODELENS2 = 16198;
+var LEN_2 = 16199;
+var LEN2 = 16200;
+var LENEXT2 = 16201;
+var DIST2 = 16202;
+var DISTEXT2 = 16203;
+var MATCH2 = 16204;
+var LIT2 = 16205;
+var CHECK2 = 16206;
+var LENGTH2 = 16207;
+var DONE2 = 16208;
+var BAD2 = 16209;
+var MEM2 = 16210;
+var SYNC2 = 16211;
+var ENOUGH_LENS2 = 852;
+var ENOUGH_DISTS2 = 592;
+var zswap322 = (q) => {
+  return (q >>> 24 & 255) + (q >>> 8 & 65280) + ((q & 65280) << 8) + ((q & 255) << 24);
+};
+var InflateState2 = class {
+  constructor() {
+    this.strm = null;
+    this.mode = 0;
+    this.last = false;
+    this.wrap = 0;
+    this.havedict = false;
+    this.flags = 0;
+    this.dmax = 0;
+    this.check = 0;
+    this.total = 0;
+    this.head = null;
+    this.wbits = 0;
+    this.wsize = 0;
+    this.whave = 0;
+    this.wnext = 0;
+    this.window = null;
+    this.hold = 0;
+    this.bits = 0;
+    this.length = 0;
+    this.offset = 0;
+    this.extra = 0;
+    this.lencode = null;
+    this.distcode = null;
+    this.lenbits = 0;
+    this.distbits = 0;
+    this.ncode = 0;
+    this.nlen = 0;
+    this.ndist = 0;
+    this.have = 0;
+    this.next = null;
+    this.lens = /* @__PURE__ */ new Uint16Array(320);
+    this.work = /* @__PURE__ */ new Uint16Array(288);
+    this.lendyn = null;
+    this.distdyn = null;
+    this.sane = 0;
+    this.back = 0;
+    this.was = 0;
+  }
+};
+var inflateStateCheck2 = (strm) => {
+  if (!strm) return 1;
+  const state = strm.state;
+  if (!state || state.strm !== strm || state.mode < HEAD2 || state.mode > SYNC2) return 1;
+  return 0;
+};
+var inflateResetKeep2 = (strm) => {
+  if (inflateStateCheck2(strm)) return -2;
+  const state = strm.state;
+  strm.total_in = strm.total_out = state.total = 0;
+  strm.msg = "";
+  if (state.wrap) strm.adler = state.wrap & 1;
+  state.mode = HEAD2;
+  state.last = 0;
+  state.havedict = 0;
+  state.flags = -1;
+  state.dmax = 32768;
+  state.head = null;
+  state.hold = 0;
+  state.bits = 0;
+  state.lencode = state.lendyn = new Int32Array(ENOUGH_LENS2);
+  state.distcode = state.distdyn = new Int32Array(ENOUGH_DISTS2);
+  state.sane = 1;
+  state.back = -1;
+  return 0;
+};
+var inflateReset3 = (strm) => {
+  if (inflateStateCheck2(strm)) return -2;
+  const state = strm.state;
+  state.wsize = 0;
+  state.whave = 0;
+  state.wnext = 0;
+  return inflateResetKeep2(strm);
+};
+var inflateReset22 = (strm, windowBits) => {
+  let wrap;
+  if (inflateStateCheck2(strm)) return -2;
+  const state = strm.state;
+  if (windowBits < 0) {
+    wrap = 0;
+    windowBits = -windowBits;
+  } else {
+    wrap = (windowBits >> 4) + 5;
+    if (windowBits < 48) windowBits &= 15;
+  }
+  if (windowBits && (windowBits < 8 || windowBits > 15)) return -2;
+  if (state.window !== null && state.wbits !== windowBits) state.window = null;
+  state.wrap = wrap;
+  state.wbits = windowBits;
+  return inflateReset3(strm);
+};
+var inflateInit22 = (strm, windowBits) => {
+  if (!strm) return -2;
+  const state = new InflateState2();
+  strm.state = state;
+  state.strm = strm;
+  state.window = null;
+  state.mode = HEAD2;
+  const ret = inflateReset22(strm, windowBits);
+  if (ret !== 0) strm.state = null;
+  return ret;
+};
+var virgin2 = true;
+var lenfix2;
+var distfix2;
+var fixedtables2 = (state) => {
+  if (virgin2) {
+    lenfix2 = /* @__PURE__ */ new Int32Array(512);
+    distfix2 = /* @__PURE__ */ new Int32Array(32);
+    let sym = 0;
+    while (sym < 144) state.lens[sym++] = 8;
+    while (sym < 256) state.lens[sym++] = 9;
+    while (sym < 280) state.lens[sym++] = 7;
+    while (sym < 288) state.lens[sym++] = 8;
+    inflate_table2(LENS2, state.lens, 0, 288, lenfix2, 0, state.work, { bits: 9 });
+    sym = 0;
+    while (sym < 32) state.lens[sym++] = 5;
+    inflate_table2(DISTS2, state.lens, 0, 32, distfix2, 0, state.work, { bits: 5 });
+    virgin2 = false;
+  }
+  state.lencode = lenfix2;
+  state.lenbits = 9;
+  state.distcode = distfix2;
+  state.distbits = 5;
+};
+var updatewindow2 = (strm, src, end, copy) => {
+  let dist;
+  const state = strm.state;
+  if (state.window === null) state.window = new Uint8Array(1 << state.wbits);
+  if (state.wsize === 0) {
+    state.wsize = 1 << state.wbits;
+    state.wnext = 0;
+    state.whave = 0;
+  }
+  if (copy >= state.wsize) {
+    state.window.set(src.subarray(end - state.wsize, end), 0);
+    state.wnext = 0;
+    state.whave = state.wsize;
+  } else {
+    dist = state.wsize - state.wnext;
+    if (dist > copy) dist = copy;
+    state.window.set(src.subarray(end - copy, end - copy + dist), state.wnext);
+    copy -= dist;
+    if (copy) {
+      state.window.set(src.subarray(end - copy, end), 0);
+      state.wnext = copy;
+      state.whave = state.wsize;
+    } else {
+      state.wnext += dist;
+      if (state.wnext === state.wsize) state.wnext = 0;
+      if (state.whave < state.wsize) state.whave += dist;
+    }
+  }
+  return 0;
+};
+var inflate$12 = (strm, flush) => {
+  let state;
+  let input, output;
+  let next;
+  let put;
+  let have, left;
+  let hold;
+  let bits;
+  let _in, _out;
+  let copy;
+  let from;
+  let from_source;
+  let here = 0;
+  let here_bits, here_op, here_val;
+  let last_bits, last_op, last_val;
+  let len;
+  let ret;
+  const hbuf = /* @__PURE__ */ new Uint8Array(4);
+  let opts;
+  let n;
+  const order = new Uint8Array([
+    16,
+    17,
+    18,
+    0,
+    8,
+    7,
+    9,
+    6,
+    10,
+    5,
+    11,
+    4,
+    12,
+    3,
+    13,
+    2,
+    14,
+    1,
+    15
+  ]);
+  if (inflateStateCheck2(strm) || !strm.output || !strm.input && strm.avail_in !== 0) return -2;
+  state = strm.state;
+  if (state.mode === TYPE2) state.mode = TYPEDO2;
+  put = strm.next_out;
+  output = strm.output;
+  left = strm.avail_out;
+  next = strm.next_in;
+  input = strm.input;
+  have = strm.avail_in;
+  hold = state.hold;
+  bits = state.bits;
+  _in = have;
+  _out = left;
+  ret = 0;
+  inf_leave: for (; ; ) switch (state.mode) {
+    case HEAD2:
+      if (state.wrap === 0) {
+        state.mode = TYPEDO2;
+        break;
+      }
+      while (bits < 16) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      if (state.wrap & 2 && hold === 35615) {
+        if (state.wbits === 0) state.wbits = 15;
+        state.check = 0;
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        state.check = crc322(state.check, hbuf, 2, 0);
+        hold = 0;
+        bits = 0;
+        state.mode = FLAGS2;
+        break;
+      }
+      if (state.head) state.head.done = false;
+      if (!(state.wrap & 1) || (((hold & 255) << 8) + (hold >> 8)) % 31) {
+        strm.msg = "incorrect header check";
+        state.mode = BAD2;
+        break;
+      }
+      if ((hold & 15) !== 8) {
+        strm.msg = "unknown compression method";
+        state.mode = BAD2;
+        break;
+      }
+      hold >>>= 4;
+      bits -= 4;
+      len = (hold & 15) + 8;
+      if (state.wbits === 0) state.wbits = len;
+      if (len > 15 || len > state.wbits) {
+        strm.msg = "invalid window size";
+        state.mode = BAD2;
+        break;
+      }
+      state.dmax = 1 << state.wbits;
+      state.flags = 0;
+      strm.adler = state.check = 1;
+      state.mode = hold & 512 ? DICTID2 : TYPE2;
+      hold = 0;
+      bits = 0;
+      break;
+    case FLAGS2:
+      while (bits < 16) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      state.flags = hold;
+      if ((state.flags & 255) !== 8) {
+        strm.msg = "unknown compression method";
+        state.mode = BAD2;
+        break;
+      }
+      if (state.flags & 57344) {
+        strm.msg = "unknown header flags set";
+        state.mode = BAD2;
+        break;
+      }
+      if (state.head) state.head.text = hold >> 8 & 1;
+      if (state.flags & 512 && state.wrap & 4) {
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        state.check = crc322(state.check, hbuf, 2, 0);
+      }
+      hold = 0;
+      bits = 0;
+      state.mode = TIME2;
+    case TIME2:
+      while (bits < 32) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      if (state.head) state.head.time = hold >>> 0;
+      if (state.flags & 512 && state.wrap & 4) {
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        hbuf[2] = hold >>> 16 & 255;
+        hbuf[3] = hold >>> 24 & 255;
+        state.check = crc322(state.check, hbuf, 4, 0);
+      }
+      hold = 0;
+      bits = 0;
+      state.mode = OS2;
+    case OS2:
+      while (bits < 16) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      if (state.head) {
+        state.head.xflags = hold & 255;
+        state.head.os = hold >> 8;
+      }
+      if (state.flags & 512 && state.wrap & 4) {
+        hbuf[0] = hold & 255;
+        hbuf[1] = hold >>> 8 & 255;
+        state.check = crc322(state.check, hbuf, 2, 0);
+      }
+      hold = 0;
+      bits = 0;
+      state.mode = EXLEN2;
+    case EXLEN2:
+      if (state.flags & 1024) {
+        while (bits < 16) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        state.length = hold;
+        if (state.head) state.head.extra_len = hold;
+        if (state.flags & 512 && state.wrap & 4) {
+          hbuf[0] = hold & 255;
+          hbuf[1] = hold >>> 8 & 255;
+          state.check = crc322(state.check, hbuf, 2, 0);
+        }
+        hold = 0;
+        bits = 0;
+      } else if (state.head) state.head.extra = null;
+      state.mode = EXTRA2;
+    case EXTRA2:
+      if (state.flags & 1024) {
+        copy = state.length;
+        if (copy > have) copy = have;
+        if (copy) {
+          if (state.head) {
+            len = state.head.extra_len - state.length;
+            if (!state.head.extra) state.head.extra = new Uint8Array(state.head.extra_len);
+            state.head.extra.set(input.subarray(next, next + copy), len);
+          }
+          if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input, copy, next);
+          have -= copy;
+          next += copy;
+          state.length -= copy;
+        }
+        if (state.length) break inf_leave;
+      }
+      state.length = 0;
+      state.mode = NAME2;
+    case NAME2:
+      if (state.flags & 2048) {
+        if (have === 0) break inf_leave;
+        copy = 0;
+        do {
+          len = input[next + copy++];
+          if (state.head && len && state.length < 65536) state.head.name += String.fromCharCode(len);
+        } while (len && copy < have);
+        if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input, copy, next);
+        have -= copy;
+        next += copy;
+        if (len) break inf_leave;
+      } else if (state.head) state.head.name = null;
+      state.length = 0;
+      state.mode = COMMENT2;
+    case COMMENT2:
+      if (state.flags & 4096) {
+        if (have === 0) break inf_leave;
+        copy = 0;
+        do {
+          len = input[next + copy++];
+          if (state.head && len && state.length < 65536) state.head.comment += String.fromCharCode(len);
+        } while (len && copy < have);
+        if (state.flags & 512 && state.wrap & 4) state.check = crc322(state.check, input, copy, next);
+        have -= copy;
+        next += copy;
+        if (len) break inf_leave;
+      } else if (state.head) state.head.comment = null;
+      state.mode = HCRC2;
+    case HCRC2:
+      if (state.flags & 512) {
+        while (bits < 16) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        if (state.wrap & 4 && hold !== (state.check & 65535)) {
+          strm.msg = "header crc mismatch";
+          state.mode = BAD2;
+          break;
+        }
+        hold = 0;
+        bits = 0;
+      }
+      if (state.head) {
+        state.head.hcrc = state.flags >> 9 & 1;
+        state.head.done = true;
+      }
+      strm.adler = state.check = 0;
+      state.mode = TYPE2;
+      break;
+    case DICTID2:
+      while (bits < 32) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      strm.adler = state.check = zswap322(hold);
+      hold = 0;
+      bits = 0;
+      state.mode = DICT2;
+    case DICT2:
+      if (state.havedict === 0) {
+        strm.next_out = put;
+        strm.avail_out = left;
+        strm.next_in = next;
+        strm.avail_in = have;
+        state.hold = hold;
+        state.bits = bits;
+        return 2;
+      }
+      strm.adler = state.check = 1;
+      state.mode = TYPE2;
+    case TYPE2:
+      if (flush === 5 || flush === 6) break inf_leave;
+    case TYPEDO2:
+      if (state.last) {
+        hold >>>= bits & 7;
+        bits -= bits & 7;
+        state.mode = CHECK2;
+        break;
+      }
+      while (bits < 3) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      state.last = hold & 1;
+      hold >>>= 1;
+      bits -= 1;
+      switch (hold & 3) {
+        case 0:
+          state.mode = STORED2;
+          break;
+        case 1:
+          fixedtables2(state);
+          state.mode = LEN_2;
+          if (flush === 6) {
+            hold >>>= 2;
+            bits -= 2;
+            break inf_leave;
+          }
+          break;
+        case 2:
+          state.mode = TABLE2;
+          break;
+        case 3:
+          strm.msg = "invalid block type";
+          state.mode = BAD2;
+      }
+      hold >>>= 2;
+      bits -= 2;
+      break;
+    case STORED2:
+      hold >>>= bits & 7;
+      bits -= bits & 7;
+      while (bits < 32) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      if ((hold & 65535) !== (hold >>> 16 ^ 65535)) {
+        strm.msg = "invalid stored block lengths";
+        state.mode = BAD2;
+        break;
+      }
+      state.length = hold & 65535;
+      hold = 0;
+      bits = 0;
+      state.mode = COPY_2;
+      if (flush === 6) break inf_leave;
+    case COPY_2:
+      state.mode = COPY2;
+    case COPY2:
+      copy = state.length;
+      if (copy) {
+        if (copy > have) copy = have;
+        if (copy > left) copy = left;
+        if (copy === 0) break inf_leave;
+        output.set(input.subarray(next, next + copy), put);
+        have -= copy;
+        next += copy;
+        left -= copy;
+        put += copy;
+        state.length -= copy;
+        break;
+      }
+      state.mode = TYPE2;
+      break;
+    case TABLE2:
+      while (bits < 14) {
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      state.nlen = (hold & 31) + 257;
+      hold >>>= 5;
+      bits -= 5;
+      state.ndist = (hold & 31) + 1;
+      hold >>>= 5;
+      bits -= 5;
+      state.ncode = (hold & 15) + 4;
+      hold >>>= 4;
+      bits -= 4;
+      if (state.nlen > 286 || state.ndist > 30) {
+        strm.msg = "too many length or distance symbols";
+        state.mode = BAD2;
+        break;
+      }
+      state.have = 0;
+      state.mode = LENLENS2;
+    case LENLENS2:
+      while (state.have < state.ncode) {
+        while (bits < 3) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        state.lens[order[state.have++]] = hold & 7;
+        hold >>>= 3;
+        bits -= 3;
+      }
+      while (state.have < 19) state.lens[order[state.have++]] = 0;
+      state.lencode = state.lendyn;
+      state.lenbits = 7;
+      opts = { bits: state.lenbits };
+      ret = inflate_table2(CODES2, state.lens, 0, 19, state.lencode, 0, state.work, opts);
+      state.lenbits = opts.bits;
+      if (ret) {
+        strm.msg = "invalid code lengths set";
+        state.mode = BAD2;
+        break;
+      }
+      state.have = 0;
+      state.mode = CODELENS2;
+    case CODELENS2:
+      while (state.have < state.nlen + state.ndist) {
+        for (; ; ) {
+          here = state.lencode[hold & (1 << state.lenbits) - 1];
+          here_bits = here >>> 24;
+          here_op = here >>> 16 & 255;
+          here_val = here & 65535;
+          if (here_bits <= bits) break;
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        if (here_val < 16) {
+          hold >>>= here_bits;
+          bits -= here_bits;
+          state.lens[state.have++] = here_val;
+        } else {
+          if (here_val === 16) {
+            n = here_bits + 2;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= here_bits;
+            bits -= here_bits;
+            if (state.have === 0) {
+              strm.msg = "invalid bit length repeat";
+              state.mode = BAD2;
+              break;
+            }
+            len = state.lens[state.have - 1];
+            copy = 3 + (hold & 3);
+            hold >>>= 2;
+            bits -= 2;
+          } else if (here_val === 17) {
+            n = here_bits + 3;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= here_bits;
+            bits -= here_bits;
+            len = 0;
+            copy = 3 + (hold & 7);
+            hold >>>= 3;
+            bits -= 3;
+          } else {
+            n = here_bits + 7;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= here_bits;
+            bits -= here_bits;
+            len = 0;
+            copy = 11 + (hold & 127);
+            hold >>>= 7;
+            bits -= 7;
+          }
+          if (state.have + copy > state.nlen + state.ndist) {
+            strm.msg = "invalid bit length repeat";
+            state.mode = BAD2;
+            break;
+          }
+          while (copy--) state.lens[state.have++] = len;
+        }
+      }
+      if (state.mode === BAD2) break;
+      if (state.lens[256] === 0) {
+        strm.msg = "invalid code -- missing end-of-block";
+        state.mode = BAD2;
+        break;
+      }
+      state.lenbits = 9;
+      opts = { bits: state.lenbits };
+      ret = inflate_table2(LENS2, state.lens, 0, state.nlen, state.lencode, 0, state.work, opts);
+      state.lenbits = opts.bits;
+      if (ret) {
+        strm.msg = "invalid literal/lengths set";
+        state.mode = BAD2;
+        break;
+      }
+      state.distbits = 6;
+      state.distcode = state.distdyn;
+      opts = { bits: state.distbits };
+      ret = inflate_table2(DISTS2, state.lens, state.nlen, state.ndist, state.distcode, 0, state.work, opts);
+      state.distbits = opts.bits;
+      if (ret) {
+        strm.msg = "invalid distances set";
+        state.mode = BAD2;
+        break;
+      }
+      state.mode = LEN_2;
+      if (flush === 6) break inf_leave;
+    case LEN_2:
+      state.mode = LEN2;
+    case LEN2:
+      if (have >= 6 && left >= 258) {
+        strm.next_out = put;
+        strm.avail_out = left;
+        strm.next_in = next;
+        strm.avail_in = have;
+        state.hold = hold;
+        state.bits = bits;
+        inflate_fast2(strm, _out);
+        put = strm.next_out;
+        output = strm.output;
+        left = strm.avail_out;
+        next = strm.next_in;
+        input = strm.input;
+        have = strm.avail_in;
+        hold = state.hold;
+        bits = state.bits;
+        if (state.mode === TYPE2) state.back = -1;
+        break;
+      }
+      state.back = 0;
+      for (; ; ) {
+        here = state.lencode[hold & (1 << state.lenbits) - 1];
+        here_bits = here >>> 24;
+        here_op = here >>> 16 & 255;
+        here_val = here & 65535;
+        if (here_bits <= bits) break;
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      if (here_op && (here_op & 240) === 0) {
+        last_bits = here_bits;
+        last_op = here_op;
+        last_val = here_val;
+        for (; ; ) {
+          here = state.lencode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+          here_bits = here >>> 24;
+          here_op = here >>> 16 & 255;
+          here_val = here & 65535;
+          if (last_bits + here_bits <= bits) break;
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        hold >>>= last_bits;
+        bits -= last_bits;
+        state.back += last_bits;
+      }
+      hold >>>= here_bits;
+      bits -= here_bits;
+      state.back += here_bits;
+      state.length = here_val;
+      if (here_op === 0) {
+        state.mode = LIT2;
+        break;
+      }
+      if (here_op & 32) {
+        state.back = -1;
+        state.mode = TYPE2;
+        break;
+      }
+      if (here_op & 64) {
+        strm.msg = "invalid literal/length code";
+        state.mode = BAD2;
+        break;
+      }
+      state.extra = here_op & 15;
+      state.mode = LENEXT2;
+    case LENEXT2:
+      if (state.extra) {
+        n = state.extra;
+        while (bits < n) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        state.length += hold & (1 << state.extra) - 1;
+        hold >>>= state.extra;
+        bits -= state.extra;
+        state.back += state.extra;
+      }
+      state.was = state.length;
+      state.mode = DIST2;
+    case DIST2:
+      for (; ; ) {
+        here = state.distcode[hold & (1 << state.distbits) - 1];
+        here_bits = here >>> 24;
+        here_op = here >>> 16 & 255;
+        here_val = here & 65535;
+        if (here_bits <= bits) break;
+        if (have === 0) break inf_leave;
+        have--;
+        hold += input[next++] << bits;
+        bits += 8;
+      }
+      if ((here_op & 240) === 0) {
+        last_bits = here_bits;
+        last_op = here_op;
+        last_val = here_val;
+        for (; ; ) {
+          here = state.distcode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+          here_bits = here >>> 24;
+          here_op = here >>> 16 & 255;
+          here_val = here & 65535;
+          if (last_bits + here_bits <= bits) break;
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        hold >>>= last_bits;
+        bits -= last_bits;
+        state.back += last_bits;
+      }
+      hold >>>= here_bits;
+      bits -= here_bits;
+      state.back += here_bits;
+      if (here_op & 64) {
+        strm.msg = "invalid distance code";
+        state.mode = BAD2;
+        break;
+      }
+      state.offset = here_val;
+      state.extra = here_op & 15;
+      state.mode = DISTEXT2;
+    case DISTEXT2:
+      if (state.extra) {
+        n = state.extra;
+        while (bits < n) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        state.offset += hold & (1 << state.extra) - 1;
+        hold >>>= state.extra;
+        bits -= state.extra;
+        state.back += state.extra;
+      }
+      if (state.offset > state.dmax) {
+        strm.msg = "invalid distance too far back";
+        state.mode = BAD2;
+        break;
+      }
+      state.mode = MATCH2;
+    case MATCH2:
+      if (left === 0) break inf_leave;
+      copy = _out - left;
+      if (state.offset > copy) {
+        copy = state.offset - copy;
+        if (copy > state.whave) {
+          if (state.sane) {
+            strm.msg = "invalid distance too far back";
+            state.mode = BAD2;
+            break;
+          }
+        }
+        if (copy > state.wnext) {
+          copy -= state.wnext;
+          from = state.wsize - copy;
+        } else from = state.wnext - copy;
+        if (copy > state.length) copy = state.length;
+        from_source = state.window;
+      } else {
+        from_source = output;
+        from = put - state.offset;
+        copy = state.length;
+      }
+      if (copy > left) copy = left;
+      left -= copy;
+      state.length -= copy;
+      do
+        output[put++] = from_source[from++];
+      while (--copy);
+      if (state.length === 0) state.mode = LEN2;
+      break;
+    case LIT2:
+      if (left === 0) break inf_leave;
+      output[put++] = state.length;
+      left--;
+      state.mode = LEN2;
+      break;
+    case CHECK2:
+      if (state.wrap) {
+        while (bits < 32) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold |= input[next++] << bits;
+          bits += 8;
+        }
+        _out -= left;
+        strm.total_out += _out;
+        state.total += _out;
+        if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc322(state.check, output, _out, put - _out) : adler322(state.check, output, _out, put - _out);
+        _out = left;
+        if (state.wrap & 4 && (state.flags ? hold : zswap322(hold)) !== state.check) {
+          strm.msg = "incorrect data check";
+          state.mode = BAD2;
+          break;
+        }
+        hold = 0;
+        bits = 0;
+      }
+      state.mode = LENGTH2;
+    case LENGTH2:
+      if (state.wrap && state.flags) {
+        while (bits < 32) {
+          if (have === 0) break inf_leave;
+          have--;
+          hold += input[next++] << bits;
+          bits += 8;
+        }
+        if (state.wrap & 4 && hold !== (state.total & 4294967295)) {
+          strm.msg = "incorrect length check";
+          state.mode = BAD2;
+          break;
+        }
+        hold = 0;
+        bits = 0;
+      }
+      state.mode = DONE2;
+    case DONE2:
+      ret = 1;
+      break inf_leave;
+    case BAD2:
+      ret = -3;
+      break inf_leave;
+    case MEM2:
+      return -4;
+    case SYNC2:
+    default:
+      return -2;
+  }
+  strm.next_out = put;
+  strm.avail_out = left;
+  strm.next_in = next;
+  strm.avail_in = have;
+  state.hold = hold;
+  state.bits = bits;
+  if (state.wsize || _out !== strm.avail_out && state.mode < BAD2 && (state.mode < CHECK2 || flush !== 4)) {
+    if (updatewindow2(strm, strm.output, strm.next_out, _out - strm.avail_out)) {
+      state.mode = MEM2;
+      return -4;
+    }
+  }
+  _in -= strm.avail_in;
+  _out -= strm.avail_out;
+  strm.total_in += _in;
+  strm.total_out += _out;
+  state.total += _out;
+  if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc322(state.check, output, _out, strm.next_out - _out) : adler322(state.check, output, _out, strm.next_out - _out);
+  strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE2 ? 128 : 0) + (state.mode === LEN_2 || state.mode === COPY_2 ? 256 : 0);
+  if ((_in === 0 && _out === 0 || flush === 4) && ret === 0) ret = -5;
+  return ret;
+};
+var inflateEnd2 = (strm) => {
+  if (inflateStateCheck2(strm)) return -2;
+  let state = strm.state;
+  if (state.window) state.window = null;
+  strm.state = null;
+  return 0;
+};
+var inflateSetDictionary2 = (strm, dictionary) => {
+  const dictLength = dictionary.length;
+  let state;
+  let dictid;
+  let ret;
+  if (inflateStateCheck2(strm)) return -2;
+  state = strm.state;
+  if (state.wrap !== 0 && state.mode !== DICT2) return -2;
+  if (state.mode === DICT2) {
+    dictid = 1;
+    dictid = adler322(dictid, dictionary, dictLength, 0);
+    if (dictid !== state.check) return -3;
+  }
+  ret = updatewindow2(strm, dictionary, dictLength, dictLength);
+  if (ret) {
+    state.mode = MEM2;
+    return -4;
+  }
+  state.havedict = 1;
+  return 0;
+};
+var ZStream2 = class {
+  constructor() {
+    this.input = null;
+    this.next_in = 0;
+    this.avail_in = 0;
+    this.total_in = 0;
+    this.output = null;
+    this.next_out = 0;
+    this.avail_out = 0;
+    this.total_out = 0;
+    this.msg = "";
+    this.state = null;
+    this.data_type = 2;
+    this.adler = 0;
+  }
+};
+var flattenChunks2 = (chunks) => {
+  const result = new Uint8Array(chunks.reduce((len, chunk2) => len + chunk2.length, 0));
+  let pos = 0;
+  for (const chunk2 of chunks) {
+    result.set(chunk2, pos);
+    pos += chunk2.length;
+  }
+  return result;
+};
+var toString2 = Object.prototype.toString;
+var defaultOptions2 = {
+  chunkSize: 1024 * 64,
+  windowBits: 15,
+  raw: false,
+  dictionary: /* @__PURE__ */ new Uint8Array(0)
+};
+var Inflate2 = class {
+  options;
+  /**
+  * Error code after inflate finishes. {@link Z_OK} on success.
+  * Should be checked when broken data is possible.
+  */
+  err;
+  /** Error message, if {@link Inflate.err} is not {@link Z_OK}. */
+  msg;
+  /**
+  * `true` once the compressed stream has ended. A stream may end before the
+  * caller's data does (trailing bytes), so check this to know when to stop
+  * pushing - further {@link Inflate.push} calls are no-ops.
+  */
+  ended;
+  started;
+  /**
+  * Chunks of output data, if {@link Inflate.onData} not overridden.
+  * @internal
+  */
+  chunks;
+  strm;
+  /**
+  * Uncompressed result, generated by default {@link Inflate.onData}
+  * and {@link Inflate.onEnd} handlers. Filled after you push last chunk
+  * (call {@link Inflate.push} with {@link Z_FINISH} / `true` param).
+  */
+  result;
+  /**
+  * Creates a new inflator instance with the specified params. Throws an
+  * exception on bad params. See {@link InflateOptions} for the list of
+  * supported options.
+  *
+  * By default, when no options are set, the deflate/gzip data format is
+  * autodetected via the wrapper header.
+  *
+  * @example
+  * ```javascript
+  * import { Inflate } from 'pako'
+  *
+  * const chunk1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+  * const chunk2 = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+  *
+  * const inflate = new Inflate({ level: 3 })
+  *
+  * inflate.push(chunk1, false)
+  * inflate.push(chunk2, true)  // true -> last chunk
+  *
+  * if (inflate.err) throw new Error(inflate.err)
+  *
+  * console.log(inflate.result)
+  * ```
+  */
+  constructor(options = {}) {
+    this.options = Object.assign({}, defaultOptions2, options);
+    const opt = this.options;
+    if (opt.raw && opt.windowBits >= 0 && opt.windowBits < 16) {
+      opt.windowBits = -opt.windowBits;
+      if (opt.windowBits === 0) opt.windowBits = -15;
+    }
+    if (opt.windowBits >= 0 && opt.windowBits < 16 && !options.windowBits) opt.windowBits += 32;
+    if (opt.windowBits > 15 && opt.windowBits < 48) {
+      if ((opt.windowBits & 15) === 0) opt.windowBits |= 15;
+    }
+    this.err = 0;
+    this.msg = "";
+    this.ended = false;
+    this.started = false;
+    this.chunks = [];
+    this.result = /* @__PURE__ */ new Uint8Array(0);
+    this.strm = new ZStream2();
+    this.strm.avail_out = 0;
+    let status = inflateInit22(this.strm, opt.windowBits);
+    if (status !== 0) throw new Error(messages_default2[status]);
+    if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") opt.dictionary = new Uint8Array(opt.dictionary);
+    const dictionary = opt.dictionary;
+    if (opt.raw && dictionary.length) {
+      status = inflateSetDictionary2(this.strm, dictionary);
+      if (status !== 0) throw new Error(messages_default2[status]);
+    }
+  }
+  /**
+  * Sends input data to the inflate pipe, generating {@link Inflate.onData} calls
+  * with new output chunks. Returns `true` on success. If end of stream is
+  * detected, {@link Inflate.onEnd} will be called.
+  *
+  * `flush_mode` is not needed for normal operation, because end of stream
+  * is detected automatically. Pass {@link Z_SYNC_FLUSH} to force the decoder
+  * to emit all currently available output — handy when you need to decode
+  * data frame-by-frame from a long-running stream.
+  *
+  * On failure, calls {@link Inflate.onEnd} with the error code and returns false.
+  *
+  * Once the stream has ended (a compressed stream may end before your data
+  * does), further `push` calls are no-ops and return whether the decode
+  * finished successfully. The final outcome is in {@link Inflate.result},
+  * {@link Inflate.err} and {@link Inflate.msg}.
+  *
+  * @param flush_mode 0..6 for corresponding {@link Z_NO_FLUSH}..{@link Z_TREES}
+  *   flush modes. See constants. Skipped or `false` means {@link Z_NO_FLUSH},
+  *   `true` means {@link Z_FINISH}.
+  *
+  * @example
+  * ```javascript
+  * push(chunk, false) // push one of data chunks
+  * ...
+  * push(chunk, true)  // push last chunk
+  * ```
+  */
+  push(data, flush_mode = false) {
+    const strm = this.strm;
+    const chunkSize = this.options.chunkSize;
+    let status;
+    let _flush_mode;
+    let last_avail_out;
+    if (this.ended) return this.err === 0;
+    if (typeof flush_mode === "number") _flush_mode = flush_mode;
+    else _flush_mode = flush_mode === true ? 4 : 0;
+    if (toString2.call(data) === "[object ArrayBuffer]") strm.input = new Uint8Array(data);
+    else strm.input = data;
+    strm.next_in = 0;
+    strm.avail_in = strm.input.length;
+    if (!this.started) {
+      this.started = true;
+      this.onStart(strm);
+    }
+    for (; ; ) {
+      if (strm.avail_out === 0) {
+        strm.output = new Uint8Array(chunkSize);
+        strm.next_out = 0;
+        strm.avail_out = chunkSize;
+      }
+      status = inflate$12(strm, _flush_mode);
+      if (status === 2) {
+        const dictionary = this.options.dictionary;
+        if (dictionary.length) {
+          status = inflateSetDictionary2(strm, dictionary);
+          if (status === 0) status = inflate$12(strm, _flush_mode);
+          else if (status === -3) status = 2;
+        }
+      }
+      while (strm.avail_in > 0 && status === 1 && strm.state.wrap & 2 && strm.state.flags !== 0 && strm.input[strm.next_in] !== 0) {
+        inflateReset3(strm);
+        status = inflate$12(strm, _flush_mode);
+      }
+      if (status === -2 || status === -3 || status === 2 || status === -4) break;
+      last_avail_out = strm.avail_out;
+      if (strm.next_out) {
+        if (strm.avail_out === 0 || status === 1 || _flush_mode > 0) {
+          this.onData(strm.output.length === strm.next_out ? strm.output : strm.output.subarray(0, strm.next_out));
+          strm.avail_out = 0;
+          strm.next_out = 0;
+        }
+      }
+      if ((status === 0 || status === -5) && last_avail_out === 0) continue;
+      if (status === 1) {
+        status = inflateEnd2(this.strm);
+        break;
+      }
+      if (strm.avail_in === 0) {
+        if (_flush_mode === 4) {
+          status = inflateEnd2(this.strm);
+          if (status === 0) status = -5;
+          break;
+        }
+        return true;
+      }
+    }
+    this.err = status;
+    this.msg = strm.msg || messages_default2[status];
+    this.ended = true;
+    this.onEnd(status);
+    return status === 0;
+  }
+  /**
+  * Called once before the first low-level inflate call.
+  *
+  * Override this handler to attach low-level inflate state, for example to read
+  * gzip header metadata:
+  *
+  * ```javascript
+  * import { Inflate, GZheader, zlibInflateGetHeader } from 'pako'
+  *
+  * const inflator = new Inflate()
+  *
+  * inflator.onStart = function (strm) {
+  *   this.header = new GZheader()
+  *   zlibInflateGetHeader(strm, this.header)
+  * }
+  *
+  * inflator.push(data, true)
+  * console.log(inflator.header.name)
+  * ```
+  */
+  onStart(strm) {
+  }
+  /**
+  * By default, stores data blocks in the {@link Inflate.chunks} property and glues
+  * them in {@link Inflate.onEnd}. Override this handler if you need another behaviour.
+  *
+  * @param chunk output data.
+  */
+  onData(chunk2) {
+    this.chunks.push(chunk2);
+  }
+  /**
+  * Called after you tell inflate that the input stream is
+  * complete ({@link Z_FINISH}). By default, joins the collected {@link Inflate.chunks},
+  * frees memory and fills the {@link Inflate.result} property.
+  *
+  * @param status inflate status. {@link Z_OK} on success, other if not.
+  */
+  onEnd(status) {
+    if (status === 0) this.result = flattenChunks2(this.chunks);
+    this.chunks = [];
+  }
+};
+
+// packages/assets/src/aseprite-binary.ts
+var ATLAS_FILE_LIMIT = ASSET_LIMITS.asepriteBytes;
+var decoder = new TextDecoder("utf-8", { fatal: true });
+var Cursor = class {
+  constructor(bytes) {
+    this.bytes = bytes;
+    this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  }
+  bytes;
+  view;
+  /** Byte offset within this cursor's bounded payload. */
+  position = 0;
+  take(length) {
+    integer(length, "Aseprite field size", 0, this.bytes.length - this.position);
+    const value = this.bytes.subarray(this.position, this.position + length);
+    this.position += length;
+    return value;
+  }
+  u8() {
+    return this.take(1)[0];
+  }
+  u16() {
+    const offset = this.position;
+    this.take(2);
+    return this.view.getUint16(offset, true);
+  }
+  i16() {
+    const offset = this.position;
+    this.take(2);
+    return this.view.getInt16(offset, true);
+  }
+  u32() {
+    const offset = this.position;
+    this.take(4);
+    return this.view.getUint32(offset, true);
+  }
+  i32() {
+    const offset = this.position;
+    this.take(4);
+    return this.view.getInt32(offset, true);
+  }
+  text() {
+    return decoder.decode(this.take(this.u16()));
+  }
+  finish() {
+    if (this.position !== this.bytes.length) {
+      throw new Error("Unexpected Aseprite chunk payload.");
+    }
+  }
+};
+var Fields = class {
+  parts = [];
+  /** Reserved bytes are checked while appending, before allocating the combined payload. */
+  length = 0;
+  raw(bytes) {
+    this.length = boundedSum(this.length, bytes.length, ATLAS_FILE_LIMIT, "Aseprite output size");
+    this.parts.push(bytes);
+    return this;
+  }
+  u8(value) {
+    return this.raw(Uint8Array.of(value));
+  }
+  u16(value) {
+    const bytes = new Uint8Array(2);
+    new DataView(bytes.buffer).setUint16(0, value, true);
+    return this.raw(bytes);
+  }
+  u32(value) {
+    const bytes = new Uint8Array(4);
+    new DataView(bytes.buffer).setUint32(0, value, true);
+    return this.raw(bytes);
+  }
+  text(value) {
+    const bytes = new TextEncoder().encode(value);
+    integer(bytes.length, "Aseprite text size", 0, 65535);
+    return this.u16(bytes.length).raw(bytes);
+  }
+  build() {
+    const bytes = new Uint8Array(this.length);
+    let offset = 0;
+    for (const part of this.parts) {
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    return bytes;
+  }
+};
+function chunk(type, data) {
+  return new Fields().u32(data.length + 6).u16(type).raw(data).build();
+}
+function rasterZlibSync(bytes, expected) {
+  integer(expected, "Decoded payload", 0, ASSET_LIMITS.decodedBytes);
+  const output = new Uint8Array(expected);
+  let offset = 0;
+  const inflator = new Inflate2({ windowBits: 15, chunkSize: 16 * 1024 });
+  let unread;
+  inflator.onStart = (stream) => {
+    unread = () => stream.avail_in;
+  };
+  inflator.onData = (part) => {
+    if (part.length > expected - offset) {
+      throw new Error("Aseprite decompressed raster exceeds its declared bounds.");
+    }
+    output.set(part, offset);
+    offset += part.length;
+  };
+  let completed = false;
+  inflator.onEnd = (status) => {
+    if (status !== 0) {
+      throw new Error("Invalid Aseprite zlib stream.");
+    }
+    completed = true;
+  };
+  try {
+    inflator.push(bytes, true);
+    if (!completed || offset !== expected || unread?.() !== 0) {
+      throw new Error("Aseprite decompressed raster length or stream mismatch.");
+    }
+  } catch (cause) {
+    throw new Error("Invalid bounded Aseprite zlib raster.", { cause });
+  }
+  return output;
+}
+
+// packages/assets/src/aseprite-document.ts
+var ID_PREFIX = "uttori-atlas-export:";
+function resolveAsepriteCels(document2) {
+  integer(document2.frames.length, "Aseprite frames", 1, ASSET_LIMITS.frames);
+  integer(document2.layers.length, "Aseprite layers", 1, ASSET_LIMITS.layers);
+  let references = 0;
+  const byFrame = document2.frames.map((frame) => {
+    references = boundedSum(
+      references,
+      frame.cels.length,
+      ASSET_LIMITS.references,
+      "Aseprite cel references"
+    );
+    const layers = /* @__PURE__ */ new Map();
+    for (const cel of frame.cels) {
+      integer(cel.layer, "Cel layer", 0, document2.layers.length - 1);
+      if (layers.has(cel.layer)) {
+        throw new Error("Duplicate Aseprite cel on one frame/layer.");
+      }
+      if (cel.kind === "linked") {
+        integer(cel.frame, "Linked frame", 0, document2.frames.length - 1);
+      } else {
+        if (cel.kind !== "raster" && cel.kind !== "tilemap") {
+          throw new Error("Unsupported Aseprite cel kind.");
+        }
+      }
+      layers.set(cel.layer, cel);
+    }
+    return layers;
+  });
+  const resolved = /* @__PURE__ */ new Map();
+  for (const frame of document2.frames) {
+    for (const initial of frame.cels) {
+      let cel = initial;
+      const chain = [];
+      const visited = /* @__PURE__ */ new Set();
+      while (!resolved.has(cel) && cel.kind === "linked") {
+        if (visited.has(cel) || chain.length >= ASSET_LIMITS.frames) {
+          throw new Error("Aseprite linked cel cycle or traversal limit.");
+        }
+        visited.add(cel);
+        chain.push(cel);
+        const target = byFrame[cel.frame]?.get(cel.layer);
+        if (!target) {
+          throw new Error("Aseprite linked cel has no target on its layer.");
+        }
+        cel = target;
+      }
+      const payload = resolved.get(cel);
+      let result;
+      if (payload) {
+        result = payload;
+      } else if (cel.kind !== "linked") {
+        result = cel;
+      } else {
+        throw new Error("Unresolved Aseprite linked cel.");
+      }
+      resolved.set(cel, result);
+      for (const link of chain) {
+        resolved.set(link, result);
+      }
+    }
+  }
+  return resolved;
+}
+function textSize(value) {
+  if (typeof value !== "string") {
+    throw new TypeError("Aseprite metadata must be text.");
+  }
+  return integer(new TextEncoder().encode(value).length, "Aseprite text bytes", 0, 65535);
+}
+function validateMasks(cel) {
+  if (![8, 16, 32].includes(cel.bits)) {
+    throw new Error("Unsupported Aseprite tile word width.");
+  }
+  const maximum = 2 ** cel.bits - 1;
+  integer(cel.idMask, "Tile ID mask", 1, maximum);
+  if ((cel.idMask & cel.idMask + 1) !== 0) {
+    throw new Error("Aseprite tile ID mask must use contiguous low bits.");
+  }
+  let claimed = cel.idMask;
+  for (const mask of [cel.flipXMask, cel.flipYMask, cel.diagonalMask]) {
+    integer(mask, "Tile transform mask", 0, maximum);
+    if ((mask & mask - 1) !== 0 || (mask & claimed) !== 0) {
+      throw new Error("Aseprite tile masks overlap or have multiple transform bits.");
+    }
+    claimed = (claimed | mask) >>> 0;
+  }
+}
+function validateAsepriteDocument(document2) {
+  rasterArea(document2.width, document2.height, "Aseprite", ASSET_LIMITS.interchangeSide);
+  indexedPalette(document2.palette);
+  integer(document2.transparentIndex, "Aseprite transparent slot", 0, document2.palette.length - 1);
+  if (document2.exportId !== void 0 && !/^[\da-f-]{36}$/.test(document2.exportId)) {
+    throw new Error("Invalid Aseprite export identity.");
+  }
+  integer(document2.frames.length, "Aseprite frames", 1, ASSET_LIMITS.frames);
+  integer(document2.layers.length, "Aseprite layers", 1, ASSET_LIMITS.layers);
+  integer(document2.tilesets.length, "Aseprite tilesets", 0, ASSET_LIMITS.tilesets);
+  integer(document2.tags.length, "Aseprite tags", 0, ASSET_LIMITS.frames);
+  let bytes = 0, metadata = 0, references = 0;
+  const addText = (value) => {
+    if (value !== void 0) {
+      metadata = boundedSum(
+        metadata,
+        textSize(value),
+        ASSET_LIMITS.metadataBytes,
+        "Aseprite metadata"
+      );
+    }
+  };
+  addText(document2.userData);
+  const tilesets = /* @__PURE__ */ new Map();
+  for (const set of document2.tilesets) {
+    integer(set.id, "Tileset ID", 0, 4294967295);
+    integer(set.flags, "Tileset flags", 0, 62);
+    if (tilesets.has(set.id) || set.flags & ~62 || !(set.flags & 2)) {
+      throw new Error("Duplicate, external or unsupported Aseprite tileset.");
+    }
+    integer(set.baseIndex, "Tileset base index", -32768, 32767);
+    const area = rasterArea(
+      set.tileWidth,
+      set.tileHeight,
+      "Aseprite tile",
+      ASSET_LIMITS.interchangeSide
+    );
+    integer(set.tileCount, "Aseprite tiles", 1, ASSET_LIMITS.owners);
+    const length = boundedProduct(area, set.tileCount, ASSET_LIMITS.decodedBytes, "Tileset pixels");
+    if (!(set.indexes instanceof Uint8Array) || set.indexes.length !== length || set.tileData.length !== set.tileCount) {
+      throw new Error("Aseprite tileset pixel or metadata inventory mismatch.");
+    }
+    if (set.indexes.some((slot) => slot >= document2.palette.length)) {
+      throw new Error("Aseprite tileset references a missing palette slot.");
+    }
+    bytes = boundedSum(bytes, length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
+    addText(set.name);
+    addText(set.userData);
+    for (const value of set.tileData) {
+      addText(value);
+    }
+    tilesets.set(set.id, set);
+  }
+  for (const layer of document2.layers) {
+    integer(layer.flags, "Layer flags", 0, 127);
+    if (layer.flags & (8 | 64) || layer.kind !== "raster" && layer.kind !== "tilemap") {
+      throw new Error("Unsupported Aseprite background/reference/group layer.");
+    }
+    if (layer.uuid !== void 0 && !/^[\da-f]{32}$/i.test(layer.uuid)) {
+      throw new Error("Invalid Aseprite layer UUID.");
+    }
+    if (layer.kind === "tilemap" && !tilesets.has(layer.tileset)) {
+      throw new Error("Aseprite layer references a missing embedded tileset.");
+    }
+    addText(layer.name);
+    addText(layer.userData);
+  }
+  for (const frame of document2.frames) {
+    integer(frame.durationMs, "Frame duration milliseconds", 1, 65535);
+    references = boundedSum(
+      references,
+      frame.cels.length,
+      ASSET_LIMITS.references,
+      "Aseprite cel references"
+    );
+    const layers = /* @__PURE__ */ new Set();
+    for (const cel of frame.cels) {
+      integer(cel.layer, "Cel layer", 0, document2.layers.length - 1);
+      if (layers.has(cel.layer)) {
+        throw new Error("Duplicate Aseprite cel on one frame/layer.");
+      }
+      layers.add(cel.layer);
+      integer(cel.x, "Cel x", -32768, 32767);
+      integer(cel.y, "Cel y", -32768, 32767);
+      integer(cel.zIndex, "Cel z-index", -32768, 32767);
+      addText(cel.userData);
+      if (cel.kind === "linked") {
+        integer(cel.frame, "Linked frame", 0, document2.frames.length - 1);
+      } else if (cel.kind === "raster") {
+        validateIndexedPixels(cel);
+        if (document2.layers[cel.layer].kind !== "raster" || cel.indexes.some((slot) => slot >= document2.palette.length)) {
+          throw new Error("Aseprite raster layer or palette slot mismatch.");
+        }
+        bytes = boundedSum(
+          bytes,
+          cel.indexes.length,
+          ASSET_LIMITS.decodedBytes,
+          "Aseprite decoded payload"
+        );
+      } else if (cel.kind === "tilemap") {
+        validateMasks(cel);
+        integer(cel.columns, "Tilemap columns", 1, 65535);
+        integer(cel.rows, "Tilemap rows", 1, 65535);
+        const count = boundedProduct(
+          cel.columns,
+          cel.rows,
+          ASSET_LIMITS.references,
+          "Tilemap cells"
+        );
+        if (!(cel.cells instanceof Uint32Array) || cel.cells.length !== count || document2.layers[cel.layer].kind !== "tilemap") {
+          throw new Error("Aseprite tilemap layer or cell inventory mismatch.");
+        }
+        bytes = boundedSum(
+          bytes,
+          boundedProduct(count, 4, ASSET_LIMITS.decodedBytes, "Tilemap bytes"),
+          ASSET_LIMITS.decodedBytes,
+          "Aseprite decoded payload"
+        );
+      } else {
+        throw new Error("Unsupported Aseprite cel kind.");
+      }
+    }
+  }
+  for (const tag of document2.tags) {
+    integer(tag.from, "Tag first frame", 0, document2.frames.length - 1);
+    integer(tag.to, "Tag final frame", tag.from, document2.frames.length - 1);
+    integer(tag.direction, "Tag direction", 0, 3);
+    integer(tag.repeat, "Tag repeat", 0, 65535);
+    addText(tag.name);
+    addText(tag.userData);
+  }
+  const resolved = resolveAsepriteCels(document2);
+  const checkedPayloads = /* @__PURE__ */ new Set();
+  for (const [cel, payload] of resolved) {
+    const layer = document2.layers[cel.layer];
+    if (payload.kind !== layer.kind) {
+      throw new Error("Linked payload does not match its layer.");
+    }
+    if (payload.kind === "tilemap" && layer.kind === "tilemap") {
+      if (checkedPayloads.has(payload)) {
+        continue;
+      }
+      checkedPayloads.add(payload);
+      const set = tilesets.get(layer.tileset);
+      for (const word2 of payload.cells) {
+        if (!(set.flags & 4) && word2 === 4294967295) {
+          continue;
+        }
+        const id = (word2 & payload.idMask) >>> 0;
+        const usedMask = (payload.idMask | payload.flipXMask | payload.flipYMask | payload.diagonalMask) >>> 0;
+        if ((word2 & ~usedMask) !== 0 || word2 > 2 ** payload.bits - 1 || id >= set.tileCount) {
+          throw new Error("Aseprite tilemap references unknown tile bits or an absent tile.");
+        }
+      }
+    }
+  }
+}
+function* parseAsepriteDocument(bytes, signal) {
+  integer(bytes.length, "Aseprite input bytes", 144, ASSET_LIMITS.asepriteBytes);
+  signal?.throwIfAborted();
+  const file = new Cursor(Uint8Array.from(bytes));
+  const header = new Cursor(file.take(128));
+  if (header.u32() !== bytes.length || header.u16() !== 42464) {
+    throw new Error("Invalid Aseprite header/length.");
+  }
+  const frameCount = integer(header.u16(), "Aseprite frames", 1, ASSET_LIMITS.frames);
+  const width = header.u16(), height = header.u16();
+  rasterArea(width, height, "Aseprite", ASSET_LIMITS.interchangeSide);
+  if (header.u16() !== 8) {
+    throw new Error("Aseprite interchange requires indexed color mode.");
+  }
+  const flags = header.u32();
+  if (flags & ~7) {
+    throw new Error("Unsupported Aseprite header flags.");
+  }
+  const speed = header.u16();
+  header.take(8);
+  const transparentIndex = header.u8();
+  header.take(3);
+  let paletteSize = header.u16() || 256;
+  integer(paletteSize, "Palette size", 1, 256);
+  const ratioX = header.u8(), ratioY = header.u8();
+  if (ratioX && ratioY && ratioX !== ratioY) {
+    throw new Error("Unsupported Aseprite pixel aspect ratio.");
+  }
+  const layers = [], tilesets = [], frames = [], tags = [];
+  const paletteState = [];
+  let palette = [], modern = false, decoded2 = 0, metadata = 0, chunks = 0, references = 0;
+  let exportId, userData;
+  const reserve = (length) => {
+    decoded2 = boundedSum(decoded2, length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
+    return length;
+  };
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+    signal?.throwIfAborted();
+    const frameSize = integer(
+      file.u32(),
+      "Frame extent",
+      16,
+      file.bytes.length - file.position + 4
+    );
+    const frame = new Cursor(file.take(frameSize - 4));
+    if (frame.u16() !== 61946) {
+      throw new Error("Invalid Aseprite frame header.");
+    }
+    const oldCount = frame.u16(), durationMs = frame.u16() || speed;
+    frame.take(2);
+    const count = frame.u32() || oldCount;
+    chunks = boundedSum(chunks, count, ASSET_LIMITS.chunks, "Aseprite chunks");
+    if (count > Math.floor((frame.bytes.length - frame.position) / 6)) {
+      throw new Error("Aseprite chunk count exceeds frame extent.");
+    }
+    modern = false;
+    const cels = [];
+    let attachment;
+    let documentAttachment = false;
+    let lastCel;
+    for (let i = 0; i < count; i++) {
+      signal?.throwIfAborted();
+      const size = integer(frame.u32(), "Chunk extent", 6, frame.bytes.length - frame.position + 4);
+      const type = frame.u16(), data = new Cursor(frame.take(size - 6));
+      if (type !== 8224 && type !== 8198) {
+        attachment = void 0;
+        documentAttachment = false;
+      }
+      if ([8217, 4, 17].includes(type)) {
+        if (type === 8217) {
+          paletteSize = integer(data.u32(), "Palette size", 1, 256);
+          const first = data.u32(), last = data.u32();
+          data.take(8);
+          if (first > last || last >= paletteSize) {
+            throw new Error("Invalid Aseprite palette range.");
+          }
+          paletteState.length = paletteSize;
+          for (let slot = first; slot <= last; slot++) {
+            const entryFlags = data.u16();
+            if (entryFlags & ~1) {
+              throw new Error("Unsupported palette entry flags.");
+            }
+            paletteState[slot] = [data.u8(), data.u8(), data.u8(), data.u8()];
+            if (entryFlags & 1) {
+              data.text();
+            }
+          }
+          modern = true;
+        } else {
+          const packets = integer(data.u16(), "Palette packets", 0, 256);
+          let start = 0;
+          for (let packet = 0; packet < packets; packet++) {
+            start += data.u8();
+            const length = data.u8() || 256;
+            if (start + length > 256) {
+              throw new Error("Invalid legacy palette range.");
+            }
+            for (let slot = start; slot < start + length; slot++) {
+              const rgb = [data.u8(), data.u8(), data.u8()];
+              if (type === 17) {
+                for (let channel = 0; channel < 3; channel++) {
+                  integer(rgb[channel], "Legacy palette channel", 0, 63);
+                  rgb[channel] = rgb[channel] << 2 | rgb[channel] >> 4;
+                }
+              }
+              if (!modern) {
+                paletteState[slot] = [rgb[0], rgb[1], rgb[2], 255];
+              }
+            }
+          }
+        }
+        documentAttachment = true;
+        attachment = (text2) => {
+          if (text2?.startsWith(ID_PREFIX)) {
+            if (exportId !== void 0) {
+              throw new Error("Conflicting Aseprite export identity.");
+            }
+            exportId = text2.slice(ID_PREFIX.length);
+          } else {
+            userData = text2;
+          }
+          attachment = void 0;
+          documentAttachment = false;
+        };
+      } else if (type === 8196) {
+        if (frameIndex !== 0 || layers.length >= ASSET_LIMITS.layers) {
+          throw new Error("Aseprite layer declaration limit/order.");
+        }
+        const layerFlags = data.u16(), kind = data.u16(), level = data.u16();
+        data.take(4);
+        const blend2 = data.u16(), opacity = data.u8();
+        data.take(3);
+        const name = data.text();
+        if (![0, 2].includes(kind) || level || blend2 || flags & 1 && opacity !== 255) {
+          throw new Error("Unsupported Aseprite layer hierarchy/blend/opacity.");
+        }
+        let layer;
+        if (kind === 2) {
+          layer = { name, flags: layerFlags, kind: "tilemap", tileset: data.u32() };
+        } else {
+          layer = { name, flags: layerFlags, kind: "raster" };
+        }
+        if (flags & 4) {
+          const uuid = [...data.take(16)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+          layer = { ...layer, uuid };
+        }
+        layers.push(layer);
+        attachment = (text2) => {
+          layer.userData = text2;
+          attachment = void 0;
+        };
+      } else if (type === 8197) {
+        references = boundedSum(references, 1, ASSET_LIMITS.references, "Aseprite cel references");
+        const position = { layer: data.u16(), x: data.i16(), y: data.i16() };
+        const opacity = data.u8(), celType = data.u16(), zIndex = data.i16();
+        data.take(5);
+        if (opacity !== 255) {
+          throw new Error("Unsupported Aseprite cel opacity.");
+        }
+        let cel;
+        if (celType === 1) {
+          cel = { ...position, zIndex, kind: "linked", frame: data.u16() };
+        } else if (celType === 0 || celType === 2) {
+          const celWidth = data.u16(), celHeight = data.u16();
+          const length = reserve(rasterArea(celWidth, celHeight, "Aseprite cel"));
+          const indexes = celType === 0 ? data.take(length).slice() : yield { bytes: data.take(data.bytes.length - data.position), expected: length };
+          cel = {
+            ...position,
+            zIndex,
+            kind: "raster",
+            width: celWidth,
+            height: celHeight,
+            indexes
+          };
+        } else if (celType === 3) {
+          const columns = data.u16(), rows2 = data.u16(), bits = data.u16();
+          if (bits !== 8 && bits !== 16 && bits !== 32) {
+            throw new Error("Unsupported Aseprite tile word width.");
+          }
+          const masks = {
+            idMask: data.u32(),
+            flipXMask: data.u32(),
+            flipYMask: data.u32(),
+            diagonalMask: data.u32()
+          };
+          data.take(10);
+          const cellCount = boundedProduct(columns, rows2, ASSET_LIMITS.references, "Tilemap cells");
+          reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
+          const raw = yield {
+            bytes: data.take(data.bytes.length - data.position),
+            expected: boundedProduct(
+              cellCount,
+              bits / 8,
+              ASSET_LIMITS.decodedBytes,
+              "Tilemap storage"
+            )
+          };
+          const cells = new Uint32Array(cellCount), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+          for (let cell = 0; cell < cellCount; cell++) {
+            if (bits === 8) {
+              cells[cell] = raw[cell];
+            } else if (bits === 16) {
+              cells[cell] = words.getUint16(cell * 2, true);
+            } else {
+              cells[cell] = words.getUint32(cell * 4, true);
+            }
+          }
+          cel = { ...position, zIndex, kind: "tilemap", columns, rows: rows2, bits, ...masks, cells };
+        } else {
+          throw new Error("Unsupported Aseprite cel type.");
+        }
+        cels.push(cel);
+        lastCel = cel;
+        attachment = (text2) => {
+          cel.userData = text2;
+          attachment = void 0;
+        };
+      } else if (type === 8227) {
+        if (frameIndex !== 0 || tilesets.length >= ASSET_LIMITS.tilesets) {
+          throw new Error("Aseprite tileset declaration limit/order.");
+        }
+        const id = data.u32(), tilesetFlags = data.u32(), tileCount = data.u32(), tileWidth = data.u16(), tileHeight = data.u16(), baseIndex = data.i16();
+        data.take(14);
+        const name = data.text();
+        if (tilesetFlags & ~62 || !(tilesetFlags & 2)) {
+          throw new Error("External or unsupported Aseprite tileset.");
+        }
+        integer(tileCount, "Tileset tiles", 1, ASSET_LIMITS.owners);
+        const length = reserve(
+          boundedProduct(
+            rasterArea(tileWidth, tileHeight, "Aseprite tile"),
+            tileCount,
+            ASSET_LIMITS.decodedBytes,
+            "Tileset pixels"
+          )
+        );
+        const compressed = data.take(data.u32());
+        const indexes = yield { bytes: compressed, expected: length };
+        const tileData = Array.from({ length: tileCount }, () => void 0);
+        const set = {
+          id,
+          flags: tilesetFlags,
+          tileCount,
+          tileWidth,
+          tileHeight,
+          baseIndex,
+          name,
+          indexes,
+          tileData
+        };
+        tilesets.push(set);
+        let tile = -1;
+        attachment = (text2) => {
+          if (tile < 0) {
+            set.userData = text2;
+          } else {
+            tileData[tile] = text2;
+          }
+          tile++;
+          if (tile === tileCount) {
+            attachment = void 0;
+          }
+        };
+      } else if (type === 8216) {
+        const length = integer(data.u16(), "Tag count", 0, ASSET_LIMITS.frames - tags.length);
+        data.take(8);
+        const firstTag = tags.length;
+        for (let tagIndex = 0; tagIndex < length; tagIndex++) {
+          const from = data.u16(), to = data.u16(), direction = data.u8(), repeat = data.u16();
+          data.take(10);
+          const tag2 = { from, to, direction, repeat, name: data.text() };
+          tags.push(tag2);
+        }
+        let tag = firstTag;
+        attachment = (text2) => {
+          if (tag >= tags.length) {
+            throw new Error("Extra Aseprite tag metadata.");
+          }
+          if (text2 !== void 0) {
+            tags[tag].userData = text2;
+          }
+          tag++;
+          if (tag === tags.length) {
+            attachment = void 0;
+          }
+        };
+      } else if (type === 8224) {
+        metadata = boundedSum(metadata, size - 6, ASSET_LIMITS.metadataBytes, "Aseprite metadata");
+        const userFlags = data.u32();
+        if (userFlags & ~7) {
+          throw new Error("Unsupported Aseprite user data flags.");
+        }
+        const text2 = userFlags & 1 ? data.text() : void 0;
+        if (userFlags & 2) {
+          data.take(4);
+        }
+        if (userFlags & 4) {
+          const length = integer(
+            data.u32(),
+            "Property extent",
+            8,
+            data.bytes.length - data.position + 4
+          );
+          data.take(length - 4);
+        }
+        if (text2?.startsWith(ID_PREFIX) && !documentAttachment) {
+          throw new Error("Conflicting Aseprite export identity attachment.");
+        }
+        attachment?.(text2);
+      } else if (type === 8198) {
+        const extraFlags = data.u32(), bounds = [data.i32(), data.i32(), data.i32(), data.i32()];
+        data.take(16);
+        if (extraFlags & ~1 || extraFlags & 1 && (!lastCel || lastCel.kind !== "raster")) {
+          throw new Error("Unsupported Aseprite precise cel bounds.");
+        }
+        if (extraFlags & 1 && lastCel?.kind === "raster") {
+          const expected = [lastCel.x, lastCel.y, lastCel.width, lastCel.height];
+          if (bounds.some((value, bound) => value !== expected[bound] * 65536)) {
+            throw new Error("Scaled or fractional Aseprite cel bounds are unsupported.");
+          }
+        }
+      } else if (type === 8199) {
+        const profile = data.u16(), profileFlags = data.u16();
+        data.take(12);
+        if (profile > 1 || profileFlags) {
+          throw new Error("Unsupported Aseprite color profile/gamma.");
+        }
+        attachment = void 0;
+      } else if ([8214, 8215, 8226].includes(type)) {
+        metadata = boundedSum(
+          metadata,
+          size - 6,
+          ASSET_LIMITS.metadataBytes,
+          "Aseprite annotations"
+        );
+        data.take(data.bytes.length);
+        attachment = void 0;
+      } else {
+        throw new Error(`Unsupported Aseprite chunk 0x${type.toString(16)}.`);
+      }
+      data.finish();
+    }
+    frame.finish();
+    const current = [];
+    for (let slot = 0; slot < paletteSize; slot++) {
+      const color = paletteState[slot];
+      if (!color) {
+        throw new Error("Aseprite palette does not define every slot.");
+      }
+      current.push(color);
+    }
+    if (frameIndex === 0) {
+      palette = current;
+    } else if (palette.length !== current.length || current.some((color, slot) => color.some((channel, i) => channel !== palette[slot][i]))) {
+      throw new Error("Animated palette changes are outside the indexed interchange profile.");
+    }
+    frames.push({ durationMs, cels });
+  }
+  file.finish();
+  signal?.throwIfAborted();
+  const document2 = {
+    width,
+    height,
+    palette,
+    transparentIndex,
+    exportId,
+    userData,
+    layers,
+    tilesets,
+    frames,
+    tags
+  };
+  validateAsepriteDocument(document2);
+  return document2;
+}
+async function compress(bytes, limit, signal) {
+  signal?.throwIfAborted();
+  const source = new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes.slice());
+      controller.close();
+    }
+  });
+  const reader = source.pipeThrough(new CompressionStream("deflate")).getReader();
+  const abort = () => {
+    void reader.cancel(signal?.reason).catch(() => {
+    });
+  };
+  signal?.addEventListener("abort", abort, { once: true });
+  const parts = [];
+  let size = 0;
+  try {
+    for (; ; ) {
+      signal?.throwIfAborted();
+      const next = await reader.read();
+      signal?.throwIfAborted();
+      if (next.done) {
+        break;
+      }
+      size = boundedSum(size, next.value.length, limit, "Aseprite compressed output");
+      parts.push(next.value);
+    }
+  } catch (cause) {
+    await reader.cancel().catch(() => {
+    });
+    throw cause;
+  } finally {
+    signal?.removeEventListener("abort", abort);
+    reader.releaseLock();
+  }
+  const output = new Uint8Array(size);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.length;
+  }
+  return output;
+}
+function encodedStructureBytes(document2) {
+  let size = boundedSum(
+    128,
+    document2.frames.length * 16,
+    ASSET_LIMITS.asepriteBytes,
+    "Aseprite output size"
+  ), chunks = 0;
+  const reserve = (bytes) => {
+    chunks = boundedSum(chunks, 1, ASSET_LIMITS.chunks, "Aseprite chunks");
+    size = boundedSum(size, bytes, ASSET_LIMITS.asepriteBytes, "Aseprite output size");
+  };
+  const user = (value) => reserve(10 + (value === void 0 ? 0 : 2 + textSize(value)));
+  reserve(26 + document2.palette.length * 6);
+  if (document2.exportId) {
+    user(ID_PREFIX + document2.exportId);
+  } else if (document2.userData !== void 0) {
+    user(document2.userData);
+  }
+  for (const set of document2.tilesets) {
+    reserve(44 + textSize(set.name));
+    if (set.userData !== void 0 || set.tileData.some((value) => value !== void 0)) {
+      user(set.userData);
+      let last = set.tileData.length - 1;
+      while (last >= 0 && set.tileData[last] === void 0) {
+        last--;
+      }
+      for (let tile = 0; tile <= last; tile++) {
+        user(set.tileData[tile]);
+      }
+    }
+  }
+  for (const layer of document2.layers) {
+    reserve(24 + textSize(layer.name) + (layer.kind === "tilemap" ? 4 : 0) + (layer.uuid ? 16 : 0));
+    if (layer.userData !== void 0) {
+      user(layer.userData);
+    }
+  }
+  if (document2.tags.length) {
+    reserve(16 + document2.tags.reduce((total, tag) => total + 19 + textSize(tag.name), 0));
+    if (document2.tags.some((tag) => tag.userData !== void 0)) {
+      for (const tag of document2.tags) {
+        user(tag.userData);
+      }
+    }
+  }
+  for (const frame of document2.frames) {
+    for (const cel of frame.cels) {
+      let extent = 26;
+      if (cel.kind === "linked") {
+        extent = 24;
+      } else if (cel.kind === "tilemap") {
+        extent = 54;
+      }
+      reserve(extent);
+      if (cel.userData !== void 0) {
+        user(cel.userData);
+      }
+    }
+  }
+  return size;
+}
+var userDataChunk = (text2) => chunk(
+  8224,
+  text2 === void 0 ? new Fields().u32(0).build() : new Fields().u32(1).text(text2).build()
+);
+async function encodeAsepriteDocument(document2, signal) {
+  signal?.throwIfAborted();
+  validateAsepriteDocument(document2);
+  let available = ASSET_LIMITS.asepriteBytes - encodedStructureBytes(document2);
+  const compressPayload = async (bytes) => {
+    const output = await compress(bytes, available, signal);
+    available -= output.length;
+    return output;
+  };
+  const hasUuid = document2.layers.some((layer) => layer.uuid !== void 0);
+  if (hasUuid && document2.layers.some((layer) => !layer.uuid)) {
+    throw new Error("All Aseprite layers require UUIDs when UUID storage is enabled.");
+  }
+  const allFrames = [];
+  for (let frameIndex = 0; frameIndex < document2.frames.length; frameIndex++) {
+    signal?.throwIfAborted();
+    const frame = document2.frames[frameIndex], chunks = [];
+    if (frameIndex === 0) {
+      const palette = new Fields().u32(document2.palette.length).u32(0).u32(document2.palette.length - 1).raw(new Uint8Array(8));
+      for (const color of document2.palette) {
+        palette.u16(0).raw(Uint8Array.from(color));
+      }
+      chunks.push(chunk(8217, palette.build()));
+      if (document2.exportId) {
+        chunks.push(userDataChunk(ID_PREFIX + document2.exportId));
+      } else if (document2.userData !== void 0) {
+        chunks.push(userDataChunk(document2.userData));
+      }
+      for (const set of document2.tilesets) {
+        const fields = new Fields().u32(set.id).u32(set.flags).u32(set.tileCount).u16(set.tileWidth).u16(set.tileHeight).u16(set.baseIndex).raw(new Uint8Array(14)).text(set.name);
+        const compressed = await compressPayload(set.indexes);
+        fields.u32(compressed.length).raw(compressed);
+        chunks.push(chunk(8227, fields.build()));
+        if (set.userData !== void 0 || set.tileData.some((text2) => text2 !== void 0)) {
+          chunks.push(userDataChunk(set.userData));
+          let last = set.tileData.length - 1;
+          while (last >= 0 && set.tileData[last] === void 0) {
+            last--;
+          }
+          for (let tile = 0; tile <= last; tile++) {
+            chunks.push(userDataChunk(set.tileData[tile]));
+          }
+        }
+      }
+      for (const layer of document2.layers) {
+        const fields = new Fields().u16(layer.flags).u16(layer.kind === "raster" ? 0 : 2).u16(0).u16(0).u16(0).u16(0).u8(255).raw(new Uint8Array(3)).text(layer.name);
+        if (layer.kind === "tilemap") {
+          fields.u32(layer.tileset);
+        }
+        if (layer.uuid) {
+          fields.raw(Uint8Array.from(layer.uuid.match(/../g), (hex4) => Number.parseInt(hex4, 16)));
+        }
+        chunks.push(chunk(8196, fields.build()));
+        if (layer.userData !== void 0) {
+          chunks.push(userDataChunk(layer.userData));
+        }
+      }
+      if (document2.tags.length) {
+        const fields = new Fields().u16(document2.tags.length).raw(new Uint8Array(8));
+        for (const tag of document2.tags) {
+          fields.u16(tag.from).u16(tag.to).u8(tag.direction).u16(tag.repeat).raw(new Uint8Array(10)).text(tag.name);
+        }
+        chunks.push(chunk(8216, fields.build()));
+        if (document2.tags.some((tag) => tag.userData !== void 0)) {
+          for (const tag of document2.tags) {
+            chunks.push(userDataChunk(tag.userData));
+          }
+        }
+      }
+    }
+    for (const cel of frame.cels) {
+      const fields = new Fields().u16(cel.layer).u16(cel.x).u16(cel.y).u8(255);
+      let kind = 2;
+      if (cel.kind === "linked") {
+        kind = 1;
+      } else if (cel.kind === "tilemap") {
+        kind = 3;
+      }
+      fields.u16(kind).u16(cel.zIndex).raw(new Uint8Array(5));
+      if (cel.kind === "linked") {
+        fields.u16(cel.frame);
+      } else if (cel.kind === "raster") {
+        fields.u16(cel.width).u16(cel.height).raw(await compressPayload(cel.indexes));
+      } else {
+        fields.u16(cel.columns).u16(cel.rows).u16(cel.bits).u32(cel.idMask).u32(cel.flipXMask).u32(cel.flipYMask).u32(cel.diagonalMask).raw(new Uint8Array(10));
+        const bytes2 = new Uint8Array(cel.cells.length * (cel.bits / 8)), words = new DataView(bytes2.buffer);
+        for (let cell = 0; cell < cel.cells.length; cell++) {
+          if (cel.bits === 8) {
+            bytes2[cell] = cel.cells[cell];
+          } else if (cel.bits === 16) {
+            words.setUint16(cell * 2, cel.cells[cell], true);
+          } else {
+            words.setUint32(cell * 4, cel.cells[cell], true);
+          }
+        }
+        fields.raw(await compressPayload(bytes2));
+      }
+      chunks.push(chunk(8197, fields.build()));
+      if (cel.userData !== void 0) {
+        chunks.push(userDataChunk(cel.userData));
+      }
+    }
+    integer(chunks.length, "Frame chunks", 0, ASSET_LIMITS.chunks);
+    const payload = new Fields();
+    for (const bytes2 of chunks) {
+      payload.raw(bytes2);
+    }
+    const bytes = payload.build();
+    allFrames.push(
+      new Fields().u32(bytes.length + 16).u16(61946).u16(Math.min(chunks.length, 65535)).u16(frame.durationMs).u16(0).u32(chunks.length).raw(bytes).build()
+    );
+  }
+  const frames = new Fields();
+  for (const bytes of allFrames) {
+    frames.raw(bytes);
+  }
+  const framePayload = frames.build(), header = new Uint8Array(128), view = new DataView(header.buffer);
+  view.setUint32(0, framePayload.length + 128, true);
+  view.setUint16(4, 42464, true);
+  view.setUint16(6, document2.frames.length, true);
+  view.setUint16(8, document2.width, true);
+  view.setUint16(10, document2.height, true);
+  view.setUint16(12, 8, true);
+  view.setUint32(14, hasUuid ? 5 : 1, true);
+  view.setUint16(18, document2.frames[0].durationMs, true);
+  header[28] = document2.transparentIndex;
+  view.setUint16(32, document2.palette.length, true);
+  header[34] = 1;
+  header[35] = 1;
+  return new Fields().raw(header).raw(framePayload).build();
+}
+function decodeAsepriteDocumentSync(bytes) {
+  const parser = parseAsepriteDocument(bytes);
+  let step = parser.next();
+  while (!step.done) {
+    step = parser.next(rasterZlibSync(step.value.bytes, step.value.expected));
+  }
+  return step.value;
+}
+
+// packages/assets/src/atlas-interchange.ts
+var ATLAS_FILE_LIMIT2 = ASSET_LIMITS.asepriteBytes;
+function validateAtlasDocument(document2) {
+  validateIndexedPixels(document2);
+  rasterArea(document2.width, document2.height, "Atlas", ASSET_LIMITS.interchangeSide);
+  indexedPalette(document2.palette);
+  integer(document2.transparentIndex, "Atlas transparent slot", 0, document2.palette.length - 1);
+  if (document2.indexes.some((index2) => index2 >= document2.palette.length)) {
+    throw new Error("Atlas pixel references a missing palette slot.");
+  }
+  if (document2.exportId !== void 0 && !/^[\da-f-]{36}$/.test(document2.exportId)) {
+    throw new Error("Invalid atlas export identity.");
+  }
+}
+function indexedAtlasDocument(value, transparentIndex) {
+  if (!value || typeof value !== "object" || !("kind" in value) || value.kind !== "indexed-image") {
+    throw new Error("Atlas interchange requires indexed artwork; RGB mapping is not supported.");
+  }
+  if (!("width" in value) || typeof value.width !== "number" || !("height" in value) || typeof value.height !== "number" || !("indexes" in value) || !(value.indexes instanceof Uint8Array) || !("palette" in value) || !Array.isArray(value.palette)) {
+    throw new Error("Invalid indexed atlas value.");
+  }
+  const palette = indexedPalette(value.palette);
+  const document2 = {
+    width: value.width,
+    height: value.height,
+    indexes: Uint8Array.from(value.indexes),
+    palette,
+    transparentIndex
+  };
+  validateAtlasDocument(document2);
+  return document2;
+}
+
+// packages/assets/src/raster-interchange.ts
+function rasterInterchangeDocument(atlas) {
+  validateAtlasDocument(atlas);
+  return {
+    width: atlas.width,
+    height: atlas.height,
+    palette: atlas.palette,
+    transparentIndex: atlas.transparentIndex,
+    exportId: atlas.exportId,
+    layers: [{ kind: "raster", flags: 3, name: "Native views \u2014 fixed raster inventory" }],
+    tilesets: [],
+    tags: [],
+    frames: [
+      {
+        durationMs: 100,
+        cels: [
+          {
+            kind: "raster",
+            layer: 0,
+            x: 0,
+            y: 0,
+            zIndex: 0,
+            width: atlas.width,
+            height: atlas.height,
+            indexes: Uint8Array.from(atlas.indexes)
+          }
+        ]
+      }
+    ]
+  };
+}
+function rasterInterchangeAtlas(document2) {
+  validateAsepriteDocument(document2);
+  if (document2.frames.length !== 1 || document2.layers.length !== 1 || document2.layers[0].kind !== "raster" || !(document2.layers[0].flags & 1) || document2.tilesets.length || document2.tags.length) {
+    throw new Error("Raster interchange requires one visible raster layer and one fixed frame.");
+  }
+  const cels = document2.frames[0].cels;
+  if (cels.length > 1 || cels.some((cel) => cel.kind !== "raster" || cel.zIndex !== 0)) {
+    throw new Error("Raster interchange does not support linked cels or additional composition.");
+  }
+  const indexes = new Uint8Array(document2.width * document2.height).fill(document2.transparentIndex);
+  for (const cel of cels) {
+    if (cel.kind !== "raster") {
+      throw new Error("Invalid raster cel.");
+    }
+    if (cel.x < 0 || cel.y < 0 || cel.x + cel.width > document2.width || cel.y + cel.height > document2.height) {
+      throw new Error("Raster cel exceeds the fixed inventory canvas.");
+    }
+    for (let y = 0; y < cel.height; y++) {
+      indexes.set(
+        cel.indexes.subarray(y * cel.width, (y + 1) * cel.width),
+        (y + cel.y) * document2.width + cel.x
+      );
+    }
+  }
+  const result = {
+    width: document2.width,
+    height: document2.height,
+    indexes,
+    palette: document2.palette,
+    transparentIndex: document2.transparentIndex,
+    exportId: document2.exportId
+  };
+  validateAtlasDocument(result);
+  return result;
+}
+
+// packages/assets/src/source-codecs.ts
+var AssetSourceCodecRegistry = class {
+  #codecs = /* @__PURE__ */ new Map();
+  #revision = 0;
+  /** Changes invalidate adapter caches when newly registered probes alter content discovery. */
+  get revision() {
+    return this.#revision;
+  }
+  register(codec) {
+    if (!codec.id || this.#codecs.has(codec.id) || typeof codec.matches !== "function" || typeof codec.decode !== "function" || typeof codec.encode !== "function" || typeof codec.embeddedIdentity !== "boolean" || !Number.isSafeInteger(codec.version) || codec.version < 1 || !/^[\w+.-]+\/[\w+.-]+$/.test(codec.mediaType) || !codec.extensions.length || codec.extensions.some((extension) => !/^\.[\d.a-z-]+$/i.test(extension))) {
+      throw new Error(`Invalid or duplicate source codec '${codec.id}'.`);
+    }
+    const extensions = codec.extensions.map((extension) => extension.toLowerCase());
+    if (new Set(extensions).size !== extensions.length) {
+      throw new Error(`Duplicate source extension for '${codec.id}'.`);
+    }
+    for (const existing of this.#codecs.values()) {
+      if (existing.extensions.some((extension) => extensions.includes(extension))) {
+        throw new Error(`Ambiguous source extension for '${codec.id}'.`);
+      }
+    }
+    this.#codecs.set(
+      codec.id,
+      Object.freeze({
+        id: codec.id,
+        version: codec.version,
+        mediaType: codec.mediaType,
+        embeddedIdentity: codec.embeddedIdentity,
+        extensions: Object.freeze(extensions),
+        matches: codec.matches.bind(codec),
+        decode: codec.decode.bind(codec),
+        encode: codec.encode.bind(codec)
+      })
+    );
+    this.#revision++;
+    return this;
+  }
+  get(id) {
+    const codec = this.#codecs.get(id);
+    if (!codec) {
+      throw new Error(`Unsupported asset source representation '${id}'.`);
+    }
+    return codec;
+  }
+  /** Content establishes representation; the filename and declared media type must agree when supplied. */
+  identify(bytes, hints = {}) {
+    const candidates = [...this.#codecs.values()].filter((codec2) => codec2.matches(bytes));
+    if (candidates.length !== 1) {
+      throw new Error(`Unrecognized or ambiguous asset source content: ${hints.path ?? "input"}.`);
+    }
+    const codec = candidates[0];
+    if (hints.path && !codec.extensions.some((extension) => hints.path.toLowerCase().endsWith(extension)) || hints.mediaType && hints.mediaType !== codec.mediaType) {
+      throw new Error(
+        `Asset source extension/content mismatch: ${hints.path ?? hints.mediaType}; content is ${codec.id}.`
+      );
+    }
+    return codec;
+  }
+  /** Discovery feeds editor menus without hard-coding the set of representations into the host. */
+  representations() {
+    return [...this.#codecs.values()].map(({ id, mediaType, extensions }) => ({
+      id,
+      mediaType,
+      extensions
+    }));
+  }
+};
+var indexedPngSourceCodec = {
+  id: "indexed-png",
+  version: 1,
+  mediaType: "image/png",
+  extensions: [".png"],
+  embeddedIdentity: false,
+  matches: (bytes) => [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index2) => bytes[index2] === byte),
+  decode(bytes, reference) {
+    const image = indexedAtlasDocument(
+      pngImporter.import({ bytes, mediaType: "image/png" }).value,
+      reference?.transparentIndex ?? 0
+    );
+    return rasterInterchangeDocument({ ...image, exportId: reference?.exportId });
+  },
+  encode: (document2) => createIndexedPng(rasterInterchangeAtlas(document2))
+};
+var asepriteSourceCodec = {
+  id: "aseprite",
+  version: 1,
+  mediaType: "image/x-aseprite",
+  extensions: [".aseprite", ".ase"],
+  embeddedIdentity: true,
+  matches: (bytes) => bytes.length >= 128 && bytes[4] === 224 && bytes[5] === 165,
+  decode: decodeAsepriteDocumentSync,
+  encode: encodeAsepriteDocument
+};
+function indexedSourceCodecs() {
+  return new AssetSourceCodecRegistry().register(indexedPngSourceCodec).register(asepriteSourceCodec);
+}
+var asepriteRasterImporter = {
+  id: "uttori.import.aseprite-raster",
+  version: "1.0.0",
+  mediaTypes: ["image/x-aseprite"],
+  import(input) {
+    const codec = indexedSourceCodecs().identify(input.bytes, { mediaType: input.mediaType });
+    const document2 = decodeAsepriteDocumentSync(input.bytes);
+    if (codec.id !== "aseprite") {
+      throw new Error("Invalid Aseprite raster source.");
+    }
+    const atlas = rasterInterchangeAtlas(document2);
+    const value = {
+      kind: "indexed-image",
+      sourceBitDepth: 8,
+      width: atlas.width,
+      height: atlas.height,
+      indexes: atlas.indexes,
+      palette: atlas.palette
+    };
+    return { kind: value.kind, value };
+  }
+};
+
 // packages/plugin-snes/src/assets/assembly-formats.ts
-var registry = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(waveImporter);
+var registry = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
 var encoders = [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder];
 for (const encoder of encoders) {
   registry.registerEncoder(encoder);
@@ -50268,6 +54494,7 @@ var snesAssetFormats = encoders.map((encoder) => ({
   aliases: aliases2[encoder.id] ?? [],
   targets: ["snes.sfc"],
   optionSchema: optionSchemaFor(encoder.id),
+  sourceRepresentations: encoder.id.startsWith("snes.tile.") ? indexedSourceCodecs().representations() : void 0,
   resourcePaths: (options) => {
     const palette = options.palette;
     if (typeof palette === "string" && palette !== "embedded" && palette !== "auto") {
@@ -51957,6 +56184,40 @@ var projectSourceLabelNames = (labels, reserved = []) => {
   return names;
 };
 
+// packages/disassembler/src/model/research-mapping.ts
+function isRecord11(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isResearchMapping(value) {
+  if (!isRecord11(value)) {
+    return false;
+  }
+  const record2 = value;
+  if (Object.keys(record2).some((key) => key !== "fileOffset" && key !== "state")) {
+    return false;
+  }
+  if (record2.fileOffset !== void 0 && !(Number.isSafeInteger(record2.fileOffset) && Number(record2.fileOffset) >= 0)) {
+    return false;
+  }
+  let fields = 0;
+  if (record2.state !== void 0) {
+    if (typeof record2.state !== "object" || record2.state === null || Array.isArray(record2.state)) {
+      return false;
+    }
+    const entries3 = Object.entries(record2.state);
+    if (entries3.length === 0 || entries3.length > 64) {
+      return false;
+    }
+    for (const [key, entry] of entries3) {
+      if (!/^[A-Za-z][\w.]{0,63}$/.test(key) || typeof entry !== "boolean" && !(Number.isSafeInteger(entry) && Number(entry) >= 0)) {
+        return false;
+      }
+    }
+    fields = entries3.length;
+  }
+  return record2.fileOffset !== void 0 || fields > 0;
+}
+
 // packages/disassembler/src/research-inputs/inputs.ts
 init_canonical_json();
 import fs2 from "node:fs";
@@ -51973,7 +56234,7 @@ function assertSourcePath(relative2) {
 }
 
 // packages/disassembler/src/model/metadata-validation.ts
-function isRecord11(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringList(value) {
@@ -52024,8 +56285,16 @@ var CLASSIFICATIONS = [
   "text"
 ];
 var validateEditableMetadataRecord = (shard, record2) => {
-  if (!isRecord11(record2) || typeof record2.id !== "string" || !/^\w[\w./:-]*$/.test(record2.id) || !isStringList(record2.evidence)) {
+  if (!isRecord12(record2) || typeof record2.id !== "string" || !/^\w[\w./:-]*$/.test(record2.id) || !isStringList(record2.evidence)) {
     throw new Error("Metadata needs a stable record ID and evidence list.");
+  }
+  if (record2.mapping !== void 0 && !isResearchMapping(record2.mapping)) {
+    throw new Error("Invalid research mapping selector.");
+  }
+  if (record2.kind === "target-set" && record2.mapping && "fileOffset" in record2.mapping) {
+    throw new Error(
+      "Target sets use mapper state; a single physical anchor cannot select multiple targets."
+    );
   }
   const address3 = record2.address;
   if ("address" in record2 && !(isSafeInteger(address3) && address3 >= 0)) {
@@ -52108,10 +56377,10 @@ var validateEditableMetadataRecord = (shard, record2) => {
 
 // packages/disassembler/src/research-inputs/inputs.ts
 var isArray2 = (value) => Array.isArray(value);
-function isRecord12(value) {
+function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function isUnknownArray3(value) {
+function isUnknownArray4(value) {
   return Array.isArray(value);
 }
 function isResearchCollection(value) {
@@ -52153,7 +56422,7 @@ function validateResearchSnapshot(snapshot) {
 }
 var compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 function validateResearchDecision(decision) {
-  if (!isRecord12(decision)) {
+  if (!isRecord13(decision)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
   const collection = decision.collection;
@@ -52165,7 +56434,7 @@ function validateResearchDecision(decision) {
   if (record2 === null) {
     return;
   }
-  if (!isRecord12(record2) || record2.id !== id) {
+  if (!isRecord13(record2) || record2.id !== id) {
     throw new Error(`Research record identity mismatch: ${id}`);
   }
   if (collection === "evidence") {
@@ -52177,8 +56446,11 @@ function validateResearchDecision(decision) {
     return;
   }
   const evidence = record2.evidence;
-  if (!isUnknownArray3(evidence) || evidence.some((entry) => typeof entry !== "string")) {
+  if (!isUnknownArray4(evidence) || evidence.some((entry) => typeof entry !== "string")) {
     throw new Error(`Research record ${id} needs an evidence list.`);
+  }
+  if (record2.mapping !== void 0 && !isResearchMapping(record2.mapping)) {
+    throw new Error("Invalid research mapping selector.");
   }
   if (collection === "regions") {
     const name = record2.name;
@@ -52192,7 +56464,7 @@ function validateResearchDecision(decision) {
   }
   if (collection === "labels" && record2.aliases !== void 0) {
     const aliases3 = record2.aliases;
-    if (!isUnknownArray3(aliases3)) {
+    if (!isUnknownArray4(aliases3)) {
       throw new Error("Symbol aliases must be an array.");
     }
     for (const alias of aliases3) {
@@ -52209,13 +56481,13 @@ function validateResearchDecision(decision) {
   }
 }
 function parseResearchDocument(value) {
-  if (!isRecord12(value)) {
+  if (!isRecord13(value)) {
     throw new Error("Invalid research document header.");
   }
   const project = value.project;
   const romSha256 = value.romSha256;
   const decisions = value.decisions;
-  if (value.format !== "uttori-research" || value.version !== 1 || typeof project !== "string" || !/^[\w.-]+$/.test(project) || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray3(decisions) || Object.keys(value).some(
+  if (value.format !== "uttori-research" || value.version !== 1 || typeof project !== "string" || !/^[\w.-]+$/.test(project) || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray4(decisions) || Object.keys(value).some(
     (key) => !["format", "version", "project", "romSha256", "decisions"].includes(key)
   )) {
     throw new Error("Invalid research document header.");
@@ -52350,13 +56622,13 @@ function readSourceFileTransaction(repository) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Invalid source publication journal.");
   }
-  if (!("format" in value) || value.format !== "uttori-source-file-transaction" || !("version" in value) || value.version !== 1 || !("id" in value) || typeof value.id !== "string" || !/^[\da-f-]{36}$/.test(value.id) || !("state" in value) || value.state !== "staged" && value.state !== "publishing" && value.state !== "completed" && value.state !== "recovery" || !("direction" in value) || value.direction !== "before" && value.direction !== "after" || !("files" in value) || !Array.isArray(value.files) || value.files.length > 65536) {
+  if (!("format" in value) || value.format !== "uttori-source-file-transaction" || !("version" in value) || value.version !== 1 && value.version !== 2 || !("id" in value) || typeof value.id !== "string" || !/^[\da-f-]{36}$/.test(value.id) || !("state" in value) || value.state !== "staged" && value.state !== "publishing" && value.state !== "completed" && value.state !== "recovery" || !("direction" in value) || value.direction !== "before" && value.direction !== "after" || !("files" in value) || !Array.isArray(value.files) || value.files.length > 65536) {
     throw new Error("Unsupported or corrupt source publication journal.");
   }
   const files = [], seen = /* @__PURE__ */ new Set();
   const entries3 = value.files;
   for (const item of entries3) {
-    if (!item || typeof item !== "object" || !("path" in item) || typeof item.path !== "string" || !("before" in item) || typeof item.before !== "string" || !/^[\da-f]{64}$/.test(item.before) || !("after" in item) || typeof item.after !== "string" || !/^[\da-f]{64}$/.test(item.after) || seen.has(item.path)) {
+    if (!item || typeof item !== "object" || !("path" in item) || typeof item.path !== "string" || !("before" in item) || item.before !== null && (typeof item.before !== "string" || !/^[\da-f]{64}$/.test(item.before)) || !("after" in item) || item.after !== null && (typeof item.after !== "string" || !/^[\da-f]{64}$/.test(item.after)) || item.before === null && item.after === null || value.version === 1 && (item.before === null || item.after === null) || seen.has(item.path)) {
       throw new Error("Invalid source publication entry.");
     }
     assertSourcePath(item.path);
@@ -52419,17 +56691,17 @@ function sourceGit(root, args, options = {}) {
     const stderr = [];
     let bytes = 0;
     let failure;
-    const collect = (chunks, chunk) => {
-      bytes += chunk.length;
+    const collect = (chunks, chunk2) => {
+      bytes += chunk2.length;
       if (bytes > (options.maxOutputBytes ?? 64 * 1024 * 1024)) {
         failure = new Error("Git output exceeded the operation's bounded output budget.");
         child.kill();
       } else {
-        chunks.push(chunk);
+        chunks.push(chunk2);
       }
     };
-    child.stdout.on("data", (chunk) => collect(stdout, chunk));
-    child.stderr.on("data", (chunk) => collect(stderr, chunk));
+    child.stdout.on("data", (chunk2) => collect(stdout, chunk2));
+    child.stderr.on("data", (chunk2) => collect(stderr, chunk2));
     child.on("error", (error) => {
       failure = error;
     });
@@ -52475,17 +56747,17 @@ async function sourceRepository(directory) {
 init_canonical_json();
 import fs4 from "node:fs";
 import path12 from "node:path";
-function isUnknownArray4(value) {
+function isUnknownArray5(value) {
   return Array.isArray(value);
 }
-function isRecord13(value) {
+function isRecord14(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSafeInteger3(value) {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 function assertSourceProjectConfiguration(value) {
-  if (!isRecord13(value)) {
+  if (!isRecord14(value)) {
     throw new Error("Invalid Git source project configuration.");
   }
   const id = value.id;
@@ -52493,7 +56765,7 @@ function assertSourceProjectConfiguration(value) {
   const romSha256 = value.romSha256;
   const sourceRoots = value.sourceRoots;
   const researchRoots = value.researchRoots;
-  if (value.format !== "uttori-source-project" || value.version !== 1 || typeof id !== "string" || !/^[\w.-]+$/.test(id) || typeof target !== "string" || target === "" || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray4(sourceRoots) || sourceRoots.length === 0 || !isUnknownArray4(researchRoots) || researchRoots.length === 0) {
+  if (value.format !== "uttori-source-project" || value.version !== 1 || typeof id !== "string" || !/^[\w.-]+$/.test(id) || typeof target !== "string" || target === "" || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray5(sourceRoots) || sourceRoots.length === 0 || !isUnknownArray5(researchRoots) || researchRoots.length === 0) {
     throw new Error("Invalid Git source project configuration.");
   }
   for (const name of [
@@ -52509,7 +56781,7 @@ function assertSourceProjectConfiguration(value) {
     assertSourcePath(name);
   }
   if (value.limits !== void 0) {
-    if (!isRecord13(value.limits)) {
+    if (!isRecord14(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
     for (const [name, limit] of Object.entries(value.limits)) {
@@ -52544,6 +56816,7 @@ async function openSourceProject(directory) {
 }
 
 // packages/disassembler/src/research-inputs/symbols.ts
+init_canonical_json();
 function isProjectLabel(value) {
   return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
 }
@@ -52570,7 +56843,7 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
     throw new Error("Invalid research label.");
   }
   const previous = previousValue;
-  if (previous && (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address)) {
+  if (previous && (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address || identity.mapping !== void 0 && canonicalJson(previous.mapping ?? null) !== canonicalJson(identity.mapping))) {
     throw new Error("The symbol's original identity changed. Refresh before renaming.");
   }
   if (previous?.sourceName && previous.sourceName !== identity.currentName) {
@@ -52584,6 +56857,7 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
       id: identity.id,
       addressSpace: identity.addressSpace,
       address: identity.address,
+      ...identity.mapping ? { mapping: identity.mapping } : {},
       evidence: identity.evidence,
       analysisEntryPoint: false
     },
@@ -52635,8 +56909,8 @@ function renameResearchSymbol(snapshot, identity, newName, newDocumentPath, rese
 // packages/plugin-snes/src/disassembler/ram-map.ts
 var SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
 var SNES_RAM_MAP_SCHEMA_VERSION = 1;
-var isRecord14 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+var isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var hex2 = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var cleanText = (value, field) => {
   const cleaned = value.replaceAll(/\s+/g, " ").trim();
   if (!cleaned) {
@@ -52681,7 +56955,7 @@ var parseAddress = (value, memory) => {
   return address3;
 };
 var validateSnesRamMap = (value) => {
-  if (!isRecord14(value)) {
+  if (!isRecord15(value)) {
     throw new Error("RAM map must be a JSON object.");
   }
   if (value.format !== SNES_RAM_MAP_FORMAT) {
@@ -52699,7 +56973,7 @@ var validateSnesRamMap = (value) => {
   const names = /* @__PURE__ */ new Set();
   const addresses = /* @__PURE__ */ new Set();
   const variables = value.variables.map((input, index2) => {
-    if (!isRecord14(input)) {
+    if (!isRecord15(input)) {
       throw new Error(`RAM-map variable ${index2 + 1} must be an object.`);
     }
     if (typeof input.name !== "string") {
@@ -52723,7 +56997,7 @@ var validateSnesRamMap = (value) => {
     }
     const address3 = parseAddress(input.address, memory);
     if (addresses.has(address3)) {
-      throw new Error(`Duplicate RAM-map address '${hex(address3)}'. Combine aliases in one entry.`);
+      throw new Error(`Duplicate RAM-map address '${hex2(address3)}'. Combine aliases in one entry.`);
     }
     addresses.add(address3);
     const size = input.size ?? 1;
@@ -52779,7 +57053,7 @@ var validateSnesRamMap = (value) => {
     const current = sorted[index2];
     if (current.address < previous.address + previous.size) {
       throw new Error(
-        `RAM-map variables '${previous.name}' and '${current.name}' overlap at ${hex(current.address)}.`
+        `RAM-map variables '${previous.name}' and '${current.name}' overlap at ${hex2(current.address)}.`
       );
     }
   }
@@ -53066,9 +57340,9 @@ function describeSnesStructAccess(binding, address3, width) {
 }
 
 // packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
-var isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord16 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var record = (value) => {
-  if (!isRecord15(value)) {
+  if (!isRecord16(value)) {
     throw new Error("Struct instruction-use entries must be objects.");
   }
   return value;
@@ -53085,7 +57359,7 @@ var text = (value) => {
   }
   return value.replaceAll(/\s+/g, " ").trim();
 };
-var hex2 = (value) => `$${value.toString(16).toUpperCase()}`;
+var hex3 = (value) => `$${value.toString(16).toUpperCase()}`;
 var validateSnesStructInstructionUses = (value, structures, bindings, constants = []) => {
   if (value === void 0) {
     return [];
@@ -53102,7 +57376,7 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
     const entry = record(input);
     const address3 = integer2(entry.address, 0, 16777215);
     if (addresses.has(address3)) {
-      throw new Error(`Duplicate struct instruction use at ${hex2(address3)}.`);
+      throw new Error(`Duplicate struct instruction use at ${hex3(address3)}.`);
     }
     addresses.add(address3);
     if (!Array.isArray(entry.expectedBytes) || entry.expectedBytes.length < 1 || entry.expectedBytes.length > 4) {
@@ -53185,10 +57459,10 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
 // packages/plugin-snes/src/disassembler/struct-map.ts
 var widths = { db: 1, dw: 2, dl: 3, dd: 4 };
 var comment = (value) => value.replaceAll(/\s+/g, " ").trim();
-var isRecord16 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord17 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var isStringList2 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var object = (value) => {
-  if (!isRecord16(value)) {
+  if (!isRecord17(value)) {
     throw new Error("Struct-map records must be objects.");
   }
   return value;
@@ -53632,7 +57906,6 @@ var import_node = __toESM(require_main4(), 1);
 
 // packages/language-server/src/asset-preview-service.ts
 import { createHash as createHash4 } from "node:crypto";
-import path14 from "node:path";
 import { Worker } from "node:worker_threads";
 
 // packages/language-server/src/asset-language.ts
@@ -53661,6 +57934,18 @@ function assetCallOnLine(line, lineNumber) {
   } catch {
     return void 0;
   }
+}
+function assetCallContainingLine(text2, lineNumber) {
+  if (!Number.isSafeInteger(lineNumber) || lineNumber < 0) {
+    return void 0;
+  }
+  for (const command of preprocessBlockCommands(text2).sourcedCommands) {
+    const end = command.line + command.text.split("\n").length - 1;
+    if (command.line <= lineNumber && lineNumber <= end) {
+      return assetCallOnLine(command.text, command.line);
+    }
+  }
+  return void 0;
 }
 function assetLineAt(text2, lineNumber) {
   if (!Number.isSafeInteger(lineNumber) || lineNumber < 0) {
@@ -55088,16 +59373,7 @@ function readInput(provider, declaringFile, includePaths, name) {
   if (bytes.length > MAX_INPUT_BYTES) {
     throw new Error(`Asset '${name}' exceeds the preview input limit.`);
   }
-  const extension = path14.extname(resolved).toLowerCase();
-  let mediaType = "application/octet-stream";
-  if (extension === ".png") {
-    mediaType = "image/png";
-  } else if (extension === ".wav" || extension === ".wave") {
-    mediaType = "audio/wav";
-  } else if (extension === ".json") {
-    mediaType = "application/json";
-  }
-  return { path: resolved, bytes, mediaType };
+  return { path: resolved, bytes, mediaType: assetSourceMediaType(resolved) };
 }
 function inWorker(input, signal) {
   return new Promise((resolve, reject) => {
@@ -55145,7 +59421,7 @@ var AssetPreviewService = class {
    */
   async preview(index2, text2, request, signal) {
     try {
-      const call = assetCallOnLine(assetLineAt(text2, request.line) ?? "", request.line);
+      const call = assetCallContainingLine(text2, request.line);
       if (!call) {
         return { ok: false, message: "No complete includeAsset call on this line." };
       }
@@ -55171,18 +59447,29 @@ var AssetPreviewService = class {
       if (output !== void 0 && typeof output !== "string") {
         throw new Error("Asset preview output must be a string.");
       }
-      const resources = {};
-      const resourceSnapshots = [];
+      const resourceSnapshots = /* @__PURE__ */ new Map([[source.path, source.bytes]]);
       let total = source.bytes.length;
-      for (const name of format.resourcePaths?.(allOptions) ?? []) {
-        const resource = readInput(provider, file, includePaths, name);
-        total += resource.bytes.length;
-        if (total > MAX_TOTAL_BYTES) {
-          throw new Error(`Asset preview inputs exceed ${MAX_TOTAL_BYTES} bytes combined.`);
-        }
-        resources[name] = { bytes: resource.bytes, mediaType: resource.mediaType };
-        resourceSnapshots.push({ path: resource.path, bytes: resource.bytes });
-      }
+      source.mediaType = assetSourceMediaType(source.path, format);
+      const { resources } = resolveAssetResourceSnapshot(format, source, allOptions, {
+        resolve: (name, declaringResource) => provider.resolvePath(
+          name,
+          declaringResource ? { currentFile: declaringResource } : { currentFile: file, includePaths: [...includePaths] }
+        ),
+        read: (resolved) => {
+          const cached2 = resourceSnapshots.get(resolved);
+          if (cached2) {
+            return cached2;
+          }
+          const resource = readInput(provider, file, includePaths, resolved);
+          total += resource.bytes.length;
+          if (total > MAX_TOTAL_BYTES) {
+            throw new Error(`Asset preview inputs exceed ${MAX_TOTAL_BYTES} bytes combined.`);
+          }
+          resourceSnapshots.set(resolved, resource.bytes);
+          return resource.bytes;
+        },
+        mediaType: (resolved) => assetSourceMediaType(resolved, format)
+      });
       const input = {
         source: { bytes: source.bytes, mediaType: source.mediaType },
         resources,
@@ -55190,7 +59477,7 @@ var AssetPreviewService = class {
         options: allOptions,
         output
       };
-      const observedInputs = [{ path: source.path, bytes: source.bytes }, ...resourceSnapshots];
+      const observedInputs = [...resourceSnapshots].map(([path19, bytes]) => ({ path: path19, bytes }));
       const hash = createHash4("sha256");
       hash.update(format.id).update(format.version).update(JSON.stringify(allOptions)).update(output ?? "");
       hash.update(source.bytes);
@@ -55238,7 +59525,7 @@ var AssetPreviewService = class {
 
 // packages/language-server/src/build.ts
 import fs6 from "node:fs";
-import path15 from "node:path";
+import path14 from "node:path";
 var temporaryArtifactSequence = 0;
 var sameFileContent = (file, content) => {
   try {
@@ -55252,18 +59539,18 @@ var sameFileContent = (file, content) => {
 };
 var stageArtifact = (file, content) => {
   temporaryArtifactSequence += 1;
-  const staged = path15.join(
-    path15.dirname(file),
-    `.${path15.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
+  const staged = path14.join(
+    path14.dirname(file),
+    `.${path14.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
   );
   fs6.writeFileSync(staged, content, { flag: "wx" });
   return staged;
 };
 function commitBuildArtifactPair(outputPath, output, debugMapJson) {
-  const resolvedOutput = path15.resolve(outputPath);
+  const resolvedOutput = path14.resolve(outputPath);
   const debugMapPath = `${resolvedOutput}.debug.json`;
   const mapBytes = Buffer.from(debugMapJson, "utf8");
-  fs6.mkdirSync(path15.dirname(resolvedOutput), { recursive: true });
+  fs6.mkdirSync(path14.dirname(resolvedOutput), { recursive: true });
   const outputChanged = !sameFileContent(resolvedOutput, output);
   const debugMapChanged = !sameFileContent(debugMapPath, mapBytes);
   if (!outputChanged && !debugMapChanged) {
@@ -55303,12 +59590,12 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   const resolvedEntries = [
     ...new Set(
       entryPoints.map(
-        (entry) => path15.isAbsolute(entry) ? path15.normalize(entry) : path15.resolve(workspaceRoot2, entry)
+        (entry) => path14.isAbsolute(entry) ? path14.normalize(entry) : path14.resolve(workspaceRoot2, entry)
       )
     )
   ];
   if (requestedFile) {
-    const requested = path15.resolve(requestedFile);
+    const requested = path14.resolve(requestedFile);
     if (resolvedEntries.some((entry) => entry === requested)) {
       return {
         file: requested,
@@ -55320,7 +59607,7 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
     if (resolvedEntries.length > 0) {
       return {
         file: resolvedEntries[0],
-        reason: `active file ${path15.basename(requested)} is not a project entry point. Using ${path15.basename(resolvedEntries[0])}`,
+        reason: `active file ${path14.basename(requested)} is not a project entry point. Using ${path14.basename(resolvedEntries[0])}`,
         usedEntryPoint: true,
         requestedFile: requested
       };
@@ -55335,14 +59622,14 @@ function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   if (resolvedEntries.length > 0) {
     return {
       file: resolvedEntries[0],
-      reason: `no active editor. Using first project entry point ${path15.basename(resolvedEntries[0])}`,
+      reason: `no active editor. Using first project entry point ${path14.basename(resolvedEntries[0])}`,
       usedEntryPoint: true
     };
   }
   throw new Error("Open a source file or set asm.entryPoints before building.");
 }
 function emptyOutputMessage(file, usedEntryPoint) {
-  const base = path15.basename(file);
+  const base = path14.basename(file);
   if (usedEntryPoint) {
     return `Assembly produced 0 bytes for ${base}. Writes to unmapped addresses are skipped. the root file likely never set a mapper/org, or every store landed outside ROM.`;
   }
@@ -55354,7 +59641,7 @@ function formatElapsed(startedAt) {
 
 // packages/language-server/src/project-environment.ts
 import { existsSync as existsSync3 } from "node:fs";
-import path16 from "node:path";
+import path15 from "node:path";
 function isPluginModuleRequest(value) {
   return typeof value === "object" && value !== null && "module" in value && typeof value.module === "string";
 }
@@ -55405,7 +59692,7 @@ var ProjectEnvironmentController = class {
    * @throws {Error} Configuration, plugin loading, or initial indexing fails.
    */
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
-    const cwd = path16.resolve(settings2.cwd);
+    const cwd = path15.resolve(settings2.cwd);
     const pluginModules = configuredPluginModules(settings2.plugins);
     const configuredPath = discoverProjectConfigurationPath(cwd, settings2.configFile);
     const hasWorkspaceConfiguration = Boolean(settings2.configFile) || Boolean(configuredPath && existsSync3(configuredPath));
@@ -55437,7 +59724,7 @@ var ProjectEnvironmentController = class {
         entryPoints: [...settings2.entryPoints ?? []],
         includePaths: [...loaded.includePaths],
         logger: this.options.logger,
-        cacheDir: path16.join(cwd, ".uttori-asm", "cache")
+        cacheDir: path15.join(cwd, ".uttori-asm", "cache")
       });
       for (const [file, content] of overlays) {
         index2.updateDocument(file, content);
@@ -55498,32 +59785,32 @@ var ProjectEnvironmentController = class {
 
 // packages/language-server/src/research-rename.ts
 import fs8 from "node:fs";
-import path18 from "node:path";
+import path17 from "node:path";
 var import_vscode_languageserver2 = __toESM(require_api3(), 1);
 
 // packages/language-server/src/recipe-rename.ts
 import fs7 from "node:fs";
-import path17 from "node:path";
-function isRecord17(value) {
+import path16 from "node:path";
+function isRecord18(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isNamed(value) {
-  return isRecord17(value) && typeof value.name === "string";
+  return isRecord18(value) && typeof value.name === "string";
 }
 function isRamMap(value) {
-  return isRecord17(value) && Array.isArray(value.variables) && value.variables.every(isNamed);
+  return isRecord18(value) && Array.isArray(value.variables) && value.variables.every(isNamed);
 }
 function isStructure(value) {
-  return isRecord17(value) && typeof value.id === "string" && Array.isArray(value.fields) && value.fields.every(isNamed);
+  return isRecord18(value) && typeof value.id === "string" && Array.isArray(value.fields) && value.fields.every(isNamed);
 }
 function isBinding(value) {
-  return isRecord17(value) && typeof value.name === "string" && typeof value.structure === "string";
+  return isRecord18(value) && typeof value.name === "string" && typeof value.structure === "string";
 }
 function isObservation(value) {
-  return isRecord17(value) && typeof value.target === "string";
+  return isRecord18(value) && typeof value.target === "string";
 }
 function isInstructionUse(value) {
-  if (!isRecord17(value)) {
+  if (!isRecord18(value)) {
     return false;
   }
   if (value.operand !== void 0 && typeof value.operand !== "string") {
@@ -55535,7 +59822,7 @@ function isInstructionUse(value) {
   return value.observations === void 0 || Array.isArray(value.observations) && value.observations.every(isObservation);
 }
 function isStructMap(value) {
-  if (!isRecord17(value) || !Array.isArray(value.structures) || !Array.isArray(value.bindings)) {
+  if (!isRecord18(value) || !Array.isArray(value.structures) || !Array.isArray(value.bindings)) {
     return false;
   }
   if (!value.structures.every(isStructure) || !value.bindings.every(isBinding)) {
@@ -55590,14 +59877,14 @@ function renameRecipeExpression(expression, oldName, newName, containers) {
   return output;
 }
 function readRecipe(root, relative2, buffers) {
-  const file = path17.join(root, relative2);
+  const file = path16.join(root, relative2);
   const buffer = buffers.find((item) => item.uri === pathToUri(file));
   if (!buffer && !fs7.existsSync(file)) {
     return void 0;
   }
   if (fs7.existsSync(file)) {
-    const actual = path17.relative(fs7.realpathSync(root), fs7.realpathSync(file));
-    if (!fs7.lstatSync(file).isFile() || actual.startsWith(`..${path17.sep}`) || path17.isAbsolute(actual)) {
+    const actual = path16.relative(fs7.realpathSync(root), fs7.realpathSync(file));
+    if (!fs7.lstatSync(file).isFile() || actual.startsWith(`..${path16.sep}`) || path16.isAbsolute(actual)) {
       throw new Error("Rename requires a regular recipe inside the source project.");
     }
     if (fs7.statSync(file).size > 8 * 1024 * 1024) {
@@ -55611,7 +59898,7 @@ function readRecipe(root, relative2, buffers) {
   return { path: file, before, version: buffer?.version ?? null };
 }
 function sourceRecipeRename(root, sourceRoot, definition, newName, buffers) {
-  const source = path17.relative(path17.join(root, sourceRoot), definition.location.file);
+  const source = path16.relative(path16.join(root, sourceRoot), definition.location.file);
   if (source === "ram-defines.asm" && definition.kind === "label" && !definition.containerName) {
     const input2 = readRecipe(root, `${sourceRoot}/ram-map.json`, buffers);
     if (!input2) {
@@ -55712,34 +59999,34 @@ function sourceRecipeRename(root, sourceRoot, definition, newName, buffers) {
 function isJsonObject(value) {
   return typeof value === "object" && value !== null;
 }
-function isUnknownArray5(value) {
+function isUnknownArray6(value) {
   return Array.isArray(value);
 }
 function isProjectLabel2(value) {
-  if (!isJsonObject(value) || !isUnknownArray5(value.evidence)) {
+  if (!isJsonObject(value) || !isUnknownArray6(value.evidence)) {
     return false;
   }
   return typeof value.id === "string" && typeof value.addressSpace === "string" && typeof value.address === "number" && typeof value.name === "string" && (value.sourceName === void 0 || typeof value.sourceName === "string") && (value.suppressed === void 0 || typeof value.suppressed === "boolean") && value.evidence.every((entry) => typeof entry === "string");
 }
 function isCatalogSymbol(value) {
-  if (!isJsonObject(value) || !isUnknownArray5(value.evidence)) {
+  if (!isJsonObject(value) || !isUnknownArray6(value.evidence)) {
     return false;
   }
   return typeof value.id === "string" && typeof value.name === "string" && typeof value.addressSpace === "string" && typeof value.address === "number" && value.evidence.every((entry) => typeof entry === "string");
 }
 function isSymbolCatalog(value) {
-  if (!isJsonObject(value) || !isUnknownArray5(value.symbols)) {
+  if (!isJsonObject(value) || !isUnknownArray6(value.symbols)) {
     return false;
   }
   return value.format === "uttori-source-symbols" && value.version === 1 && typeof value.romSha256 === "string" && value.symbols.every(isCatalogSymbol);
 }
 function projectRoot(file) {
-  let directory = path18.dirname(file);
+  let directory = path17.dirname(file);
   while (true) {
-    if (fs8.existsSync(path18.join(directory, ".git"))) {
-      return fs8.existsSync(path18.join(directory, ".uttori/project.json")) ? directory : void 0;
+    if (fs8.existsSync(path17.join(directory, ".git"))) {
+      return fs8.existsSync(path17.join(directory, ".uttori/project.json")) ? directory : void 0;
     }
-    const parent = path18.dirname(directory);
+    const parent = path17.dirname(directory);
     if (parent === directory) {
       return void 0;
     }
@@ -55755,7 +60042,7 @@ function wholeDocument(text2) {
   return import_vscode_languageserver2.Range.create(0, 0, lines.length - 1, lines.at(-1).length);
 }
 function layoutRenameEdit(root, name, romSha256, oldName, newName, buffers, fieldContainers) {
-  const file = path18.join(root, name), uri = pathToUri(file);
+  const file = path17.join(root, name), uri = pathToUri(file);
   const buffer = buffers.find((item) => item.uri === uri);
   if (!buffer && !fs8.existsSync(file)) {
     return void 0;
@@ -55777,7 +60064,7 @@ function layoutRenameEdit(root, name, romSha256, oldName, newName, buffers, fiel
     if (records === void 0) {
       continue;
     }
-    if (!isUnknownArray5(records)) {
+    if (!isUnknownArray6(records)) {
       throw new Error(`Invalid layout collection: ${collection}`);
     }
     for (const record2 of records) {
@@ -55821,7 +60108,7 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
     return ordinary;
   }
   const project = await openSourceProject(root);
-  const relativeDefinition = path18.relative(root, definition.location.file).split(path18.sep).join("/");
+  const relativeDefinition = path17.relative(root, definition.location.file).split(path17.sep).join("/");
   const sourceRoot = project.configuration.sourceRoots.find(
     (name) => relativeDefinition.startsWith(`${name}/`)
   );
@@ -55874,7 +60161,7 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
   if (recipe || definition.kind === "struct" || definition.kind === "structMember") {
     return { documentChanges: changes };
   }
-  const catalogPath = path18.join(root, sourceRoot, "source-symbols.json");
+  const catalogPath = path17.join(root, sourceRoot, "source-symbols.json");
   if (!fs8.existsSync(catalogPath)) {
     throw new Error("Generate the project's symbol identities before renaming research symbols.");
   }
@@ -55887,7 +60174,7 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
   }
   const overlays = new Map(
     buffers.filter((buffer) => buffer.uri.startsWith("file:")).map((buffer) => [
-      path18.relative(root, uriToPath(buffer.uri)).split(path18.sep).join("/"),
+      path17.relative(root, uriToPath(buffer.uri)).split(path17.sep).join("/"),
       buffer.text
     ])
   );
@@ -55930,10 +60217,10 @@ async function researchRenameEditsFor(index2, file, position, newName, buffers) 
     index2.getAllSymbols().filter((item) => item.name !== definition.name).map((item) => item.name)
   );
   parseResearchDocument(edit.document);
-  const uri = pathToUri(path18.join(root, edit.path));
+  const uri = pathToUri(path17.join(root, edit.path));
   const existing = buffers.find((buffer) => buffer.uri === uri);
-  const exists = fs8.existsSync(path18.join(root, edit.path));
-  const before = existing?.text ?? (exists ? fs8.readFileSync(path18.join(root, edit.path), "utf8") : "");
+  const exists = fs8.existsSync(path17.join(root, edit.path));
+  const before = existing?.text ?? (exists ? fs8.readFileSync(path17.join(root, edit.path), "utf8") : "");
   if (!exists && !existing) {
     changes.push(import_vscode_languageserver2.CreateFile.create(uri, { overwrite: false, ignoreIfExists: false }));
   }
@@ -55991,14 +60278,14 @@ var configurationDiagnostic;
 var configurationQueue = Promise.resolve();
 var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
 function resolveAgainstWorkspace(value) {
-  return path19.isAbsolute(value) ? path19.normalize(value) : path19.resolve(workspaceRoot(), value);
+  return path18.isAbsolute(value) ? path18.normalize(value) : path18.resolve(workspaceRoot(), value);
 }
 function isProjectConfigFile(file) {
-  const resolved = path19.resolve(file);
+  const resolved = path18.resolve(file);
   if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
     return true;
   }
-  return path19.basename(file) === PROJECT_CONFIG_FILENAME;
+  return path18.basename(file) === PROJECT_CONFIG_FILENAME;
 }
 function stringValue(value) {
   return typeof value === "string" && value.trim() ? value : void 0;
@@ -56006,14 +60293,14 @@ function stringValue(value) {
 function stringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : void 0;
 }
-function isRecord18(value) {
+function isRecord19(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isPluginSettingList(value) {
   return Array.isArray(value);
 }
 function mergeServerSettings(previous, value) {
-  if (!isRecord18(value)) {
+  if (!isRecord19(value)) {
     return previous;
   }
   const next = value;
@@ -56035,8 +60322,8 @@ function applyConfigFileDefaults(next) {
   if (!discovered || !fs9.existsSync(discovered)) {
     return next;
   }
-  const relativeConfig = path19.relative(workspaceRoot(), discovered) || path19.basename(discovered);
-  const relativeToConfig = (value) => path19.resolve(path19.dirname(discovered), value);
+  const relativeConfig = path18.relative(workspaceRoot(), discovered) || path18.basename(discovered);
+  const relativeToConfig = (value) => path18.resolve(path18.dirname(discovered), value);
   let extras = {};
   try {
     extras = validateProjectConfiguration(JSON.parse(fs9.readFileSync(discovered, "utf8")));
@@ -56231,15 +60518,15 @@ connection.onDidChangeConfiguration((params) => {
     return;
   }
   const changed = params.settings;
-  const asm = isRecord18(changed) ? changed.asm ?? changed : changed;
+  const asm = isRecord19(changed) ? changed.asm ?? changed : changed;
   editorSettings = mergeServerSettings(editorSettings, asm);
   enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
 });
 function defaultOutputPath(file) {
-  const parsed = path19.parse(file);
+  const parsed = path18.parse(file);
   const { loaded } = environmentController.current;
   const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-  return path19.join(
+  return path18.join(
     parsed.dir,
     `${parsed.name}${extension.startsWith(".") ? extension : `.${extension}`}`
   );
@@ -56248,7 +60535,7 @@ function resolveOptionalBuildPath(configured, file) {
   if (!configured) {
     return void 0;
   }
-  return path19.isAbsolute(configured) ? path19.normalize(configured) : path19.resolve(workspaceRoots[0] ?? path19.dirname(file), configured);
+  return path18.isAbsolute(configured) ? path18.normalize(configured) : path18.resolve(workspaceRoots[0] ?? path18.dirname(file), configured);
 }
 function buildBinary(requestedFile, output, baseImage) {
   const startedAt = Date.now();
@@ -56294,7 +60581,7 @@ function buildBinary(requestedFile, output, baseImage) {
     });
     try {
       const includePaths = [
-        .../* @__PURE__ */ new Set([path19.dirname(file), ...environmentController.current.loaded.includePaths])
+        .../* @__PURE__ */ new Set([path18.dirname(file), ...environmentController.current.loaded.includePaths])
       ];
       log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
       assembler.setIncludePaths(includePaths);
@@ -56333,7 +60620,7 @@ function buildBinary(requestedFile, output, baseImage) {
           return {
             name: entry.name,
             size: sourceBytes.length,
-            crc: crc322(sourceBytes),
+            crc: crc323(sourceBytes),
             sha256: createHash5("sha256").update(sourceBytes).digest("hex")
           };
         }

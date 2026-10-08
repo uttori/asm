@@ -7,6 +7,8 @@ export declare const nmos6502Forms: readonly InstructionForm[];
 export declare const nmos6502xForms: readonly InstructionForm[];
 export declare const nmos6502Cpu: CpuDefinition;
 export declare const nmos6502xCpu: CpuDefinition;
+/** Ricoh NES CPU uses NMOS encodings, including unofficial opcodes, with decimal arithmetic disabled. */
+export declare const ricoh2a03Cpu: CpuDefinition;
 /**
  * Looks up the NMOS decode-table form for a byte.
  *

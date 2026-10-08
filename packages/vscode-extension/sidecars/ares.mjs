@@ -65,6 +65,27 @@ var init_debug_expression = __esm({
   }
 });
 
+// packages/core/src/canonical-json.ts
+var init_canonical_json = __esm({
+  "packages/core/src/canonical-json.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/debug-map.ts
+var init_debug_map = __esm({
+  "packages/core/src/debug-map.ts"() {
+    "use strict";
+  }
+});
+
+// packages/debug-adapter/src/capture-nes-ppu.ts
+var init_capture_nes_ppu = __esm({
+  "packages/debug-adapter/src/capture-nes-ppu.ts"() {
+    "use strict";
+  }
+});
+
 // packages/debug-adapter/src/capture-v2.ts
 function isFieldRecord(value) {
   return typeof value === "object" && value !== null;
@@ -77,10 +98,11 @@ function validateCaptureRequest(value) {
     let fields2 = ["operation", "action"];
     const action = value.action;
     if (action === "prepare" || action === "replay" || action === "restore") {
-      fields2.push("directory", "romContentSha256", "producer");
+      fields2.push("directory", "romContentSha256", "romFileSha256", "producer");
       validateCaptureRequest({
         operation: "file-start",
         file: value.directory,
+        romFileSha256: value.romFileSha256,
         romContentSha256: value.romContentSha256,
         producer: value.producer,
         bufferBytes: 8388608
@@ -119,6 +141,7 @@ function validateCaptureRequest(value) {
         "bufferBytes",
         "file",
         "romContentSha256",
+        "romFileSha256",
         "producer",
         "measureStages"
       ].includes(key)
@@ -134,7 +157,7 @@ function validateCaptureRequest(value) {
       scope: value.scope
     });
     const producer = value.producer;
-    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key) => !["id", "revision"].includes(key))) {
+    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || value.romFileSha256 !== void 0 && (typeof value.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romFileSha256)) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key) => !["id", "revision"].includes(key))) {
       throw new Error(
         "Native file capture requires an absolute bounded path and exact ROM/producer identity."
       );
@@ -243,7 +266,7 @@ var init_capture_v2 = __esm({
     "use strict";
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
-      if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
+      if (value !== "nes.cpu-bus-ppu" && value !== "nes.2a03.instructions" && value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
         throw new Error("Unsupported capture scope.");
       }
       return value;
@@ -263,7 +286,10 @@ var init_capture_v2 = __esm({
     bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
     validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
       captureScope(scope);
-      let reserve = 71;
+      let reserve = scope === "nes.2a03.instructions" ? 91 : 71;
+      if (scope === "nes.cpu-bus-ppu") {
+        reserve = 128;
+      }
       if (scope === "snes.cpu-bus") {
         reserve = 64;
       }
@@ -510,20 +536,20 @@ var init_sidecar_protocol = __esm({
           }
           const body = this.#buffer.subarray(4, length + 4);
           this.#buffer = this.#buffer.subarray(length + 4);
-          let decoded;
+          let decoded2;
           try {
-            decoded = JSON.parse(body.toString("utf8"));
+            decoded2 = JSON.parse(body.toString("utf8"));
           } catch {
             throw new Error("Sidecar frame contains invalid JSON.");
           }
-          assertDebugSidecarMessage(decoded, this.#limits);
-          if (decoded.sequence <= this.#lastSequence) {
+          assertDebugSidecarMessage(decoded2, this.#limits);
+          if (decoded2.sequence <= this.#lastSequence) {
             throw new Error(
-              `Sidecar sequence ${decoded.sequence} is not greater than ${this.#lastSequence}.`
+              `Sidecar sequence ${decoded2.sequence} is not greater than ${this.#lastSequence}.`
             );
           }
-          this.#lastSequence = decoded.sequence;
-          messages.push(decoded);
+          this.#lastSequence = decoded2.sequence;
+          messages.push(decoded2);
         }
         return messages;
       }
@@ -1009,11 +1035,20 @@ var init_capture_context = __esm({
       if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || !isRecord3(producer) || producer.id !== identity.producer.id || producer.revision !== identity.producer.revision || !isRecord3(manifest.files)) {
         throw new Error("Capture context requires the matching ROM and emulator build.");
       }
+      const nes = manifest.architecture === "65xx.2a03";
+      if (nes && (!identity.romFileSha256 || identity.romFileSha256 !== manifest.romFileSha256 || manifest.addressSpace !== "nes.cpu") || !nes && identity.romFileSha256 !== void 0) {
+        throw new Error("Capture context requires the matching full iNES image.");
+      }
       const files = manifest.files;
+      if (nes && manifest.scope !== "nes.2a03.instructions" && manifest.scope !== "nes.cpu-bus-ppu") {
+        throw new Error("Invalid NES capture context scope.");
+      }
+      if (nes && manifest.scope === "nes.2a03.instructions" && !files["graphics.act2"]) {
+        throw new Error("NES instruction context is missing its graphics companion.");
+      }
       for (const name of [
         "start.bst",
-        "wram-start.bin",
-        "wram-end.bin",
+        ...nes ? ["ram-start.bin", "ram-end.bin", "start-extra.bin", "end-state.bin"] : ["wram-start.bin", "wram-end.bin"],
         "inputs.bin",
         "identity.txt",
         "machine.json",
@@ -1027,13 +1062,13 @@ var init_capture_context = __esm({
       }
       for (const [name, artifact] of Object.entries(files)) {
         signal?.throwIfAborted();
-        if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+        if (!/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
           name
         ) || !isRecord3(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
           throw new Error("Invalid capture context artifact descriptor.");
         }
         const file = path.join(directory, name), stat2 = await lstat(file);
-        if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && stat2.size !== 131072 || name === "inputs.bin" && stat2.size % 18) {
+        if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && (nes || stat2.size !== 131072) || name.startsWith("ram-") && (!nes || stat2.size !== 2048) || name === "start-extra.bin" && (!nes || stat2.size !== 38) || name === "end-state.bin" && (!nes || stat2.size < 2048 || stat2.size > 32 * 1048576) || name === "inputs.bin" && stat2.size % 18) {
           throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
         if (await digestFile(file, signal) !== artifact.sha256) {
@@ -1070,11 +1105,13 @@ var init_src = __esm({
     init_capture_v2();
     init_capture_file();
     init_capture_context();
+    init_capture_nes_ppu();
   }
 });
 
 // packages/debug-sidecar-ares/src/sidecar.ts
 init_src();
+import { createHash as createHash3 } from "node:crypto";
 import { readFile as readFile2 } from "node:fs/promises";
 import path3 from "node:path";
 
@@ -2080,6 +2117,44 @@ var AresProcessHost = class {
   }
 };
 
+// packages/core/src/syntax-profile.ts
+var ASAR_SYNTAX_PROFILE = Object.freeze({
+  id: "asar",
+  preserveLeadingWhitespace: false,
+  splitColonStatements: true,
+  splitRelativeLabelStatements: true,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze(["@"]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
+});
+var NATIVE_SYNTAX_PROFILE = Object.freeze({
+  id: "native",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze([]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
+});
+var CA65_SYNTAX_PROFILE = Object.freeze({
+  id: "ca65",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: false,
+  directivePrefixes: Object.freeze(["."]),
+  cheapLocalPrefix: "@",
+  fileLocalSymbols: true
+});
+
+// packages/core/src/plugin/contracts.ts
+var PLUGIN_API_VERSION = 1;
+function definePlugin(plugin2) {
+  return plugin2;
+}
+
 // packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
@@ -2122,13 +2197,4682 @@ var Uint8ArrayDecoderSource = class {
   }
 };
 
+// packages/core/src/index.ts
+init_debug_map();
+init_canonical_json();
+
 // packages/debug-sidecar-ares/src/ares-rsp-backend.ts
 init_src();
 
+// packages/plugin-65xx/src/instructions/catalog.ts
+var syntax = {
+  implied: "",
+  accumulator: "A",
+  immediate: "#value",
+  zeroPage: "zp",
+  zeroPageIndexedX: "zp,x",
+  zeroPageIndexedY: "zp,y",
+  absolute: "addr",
+  absoluteIndexedX: "addr,x",
+  absoluteIndexedY: "addr,y",
+  absoluteLongIndexedX: "long,x",
+  indirect: "(addr)",
+  zeroPageIndirect: "(zp)",
+  zeroPageIndirectLong: "[zp]",
+  indexedIndirectX: "(zp,x)",
+  indirectIndexedY: "(zp),y",
+  absoluteIndexedIndirect: "(addr,x)",
+  zeroPageIndirectIndexedZ: "(zp),z",
+  stackRelative: "offset,s",
+  stackRelativeIndirectIndexedY: "(offset,s),y",
+  relative: "target",
+  relative16: "target",
+  zeroPageRelative: "zp,target",
+  accumulatorRelative: "A,target",
+  zeroPageImmediate: "zp,#value",
+  specialPage: "$FFnn",
+  blockTransfer: "source,destination,length",
+  immediateZeroPage: "#value,zp",
+  immediateZeroPageIndexedX: "#value,zp,x",
+  immediateAbsolute: "#value,addr",
+  immediateAbsoluteIndexedX: "#value,addr,x",
+  basePageIndirectIndexedZ: "[zp],z",
+  quadAccumulator: "Q"
+};
+var summaries = {
+  ADC: "Add memory to the accumulator with carry.",
+  AND: "Bitwise AND memory with the accumulator.",
+  ASL: "Shift left one bit.",
+  BCC: "Branch when carry is clear.",
+  BCS: "Branch when carry is set.",
+  BEQ: "Branch when equal (zero set).",
+  BIT: "Test accumulator bits without storing a result.",
+  BMI: "Branch when negative.",
+  BNE: "Branch when not equal (zero clear).",
+  BPL: "Branch when positive.",
+  BRK: "Trigger a software interrupt.",
+  BVC: "Branch when overflow is clear.",
+  BVS: "Branch when overflow is set.",
+  CMP: "Compare memory with the accumulator.",
+  CPX: "Compare memory with X.",
+  CPY: "Compare memory with Y.",
+  EOR: "Exclusive-OR memory with the accumulator.",
+  JMP: "Jump to an address.",
+  JSR: "Call a subroutine.",
+  LDA: "Load the accumulator.",
+  LDX: "Load X.",
+  LDY: "Load Y.",
+  NOP: "Perform no operation.",
+  ORA: "Bitwise OR memory with the accumulator.",
+  SBC: "Subtract memory and borrow from the accumulator.",
+  STA: "Store the accumulator.",
+  STX: "Store X.",
+  STY: "Store Y."
+};
+function buildInstructionCatalog(forms) {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const form of forms) {
+    const entries2 = grouped.get(form.mnemonic) ?? [];
+    entries2.push(form);
+    grouped.set(form.mnemonic, entries2);
+  }
+  return [...grouped.entries()].toSorted(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries2]) => ({
+    mnemonic,
+    summary: summaries[mnemonic] ?? (entries2.some((entry) => !entry.documented) ? "Undocumented NMOS 6502 instruction." : `${mnemonic} instruction.`),
+    modes: entries2.map((form) => ({
+      mode: form.mode,
+      syntax: syntax[form.mode],
+      opcode: form.opcode,
+      size: form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0)
+    }))
+  }));
+}
+
+// packages/plugin-65xx/src/instructions/schema.ts
+function matchesFeatures(expression, features) {
+  if (expression.allOf?.some((feature) => !features.has(feature))) {
+    return false;
+  }
+  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) {
+    return false;
+  }
+  if (expression.noneOf?.some((feature) => features.has(feature))) {
+    return false;
+  }
+  return true;
+}
+function getOperandCodec(mode2) {
+  switch (mode2) {
+    case "implied":
+    case "accumulator":
+    case "quadAccumulator":
+      return "none";
+    case "absolute":
+    case "absoluteIndexedX":
+    case "absoluteIndexedY":
+    case "indirect":
+    case "absoluteIndexedIndirect":
+      return "unsigned16-le";
+    case "absoluteLongIndexedX":
+      return "unsigned24-le";
+    case "relative":
+      return "relative8";
+    case "relative16":
+      return "relative16";
+    case "zeroPageRelative":
+      return "zero-page-relative8";
+    case "accumulatorRelative":
+      return "accumulator-relative8";
+    case "zeroPageImmediate":
+      return "zero-page-immediate8";
+    case "specialPage":
+      return "special-page";
+    case "blockTransfer":
+      return "three-unsigned16-le";
+    case "immediateZeroPage":
+    case "immediateZeroPageIndexedX":
+      return "immediate-unsigned8";
+    case "immediateAbsolute":
+    case "immediateAbsoluteIndexedX":
+      return "immediate-unsigned16";
+    case "immediate":
+    case "zeroPage":
+    case "zeroPageIndexedX":
+    case "zeroPageIndexedY":
+    case "zeroPageIndirect":
+    case "zeroPageIndirectLong":
+    case "indexedIndirectX":
+    case "indirectIndexedY":
+    case "zeroPageIndirectIndexedZ":
+    case "stackRelative":
+    case "stackRelativeIndirectIndexedY":
+    case "basePageIndirectIndexedZ":
+      return "unsigned8";
+  }
+  const leftover = mode2;
+  throw new Error(`Unsupported addressing mode: ${String(leftover)}`);
+}
+function getOperandFields(codec) {
+  switch (codec) {
+    case "none":
+      return [];
+    case "unsigned16-le":
+      return [{ name: "address", width: 2 }];
+    case "unsigned24-le":
+      return [{ name: "address", width: 3 }];
+    case "relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "relative16":
+      return [{ name: "target", width: 2, signed: true, relative: true }];
+    case "zero-page-relative8":
+      return [
+        { name: "address", width: 1 },
+        { name: "target", width: 1, signed: true, relative: true }
+      ];
+    case "accumulator-relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "zero-page-immediate8":
+      return [
+        { name: "address", width: 1 },
+        { name: "value", width: 1 }
+      ];
+    case "special-page":
+      return [{ name: "address", width: 1 }];
+    case "three-unsigned16-le":
+      return [
+        { name: "source", width: 2 },
+        { name: "destination", width: 2 },
+        { name: "length", width: 2 }
+      ];
+    case "immediate-unsigned8":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 1 }
+      ];
+    case "immediate-unsigned16":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 2 }
+      ];
+    case "unsigned8":
+      return [{ name: "value", width: 1 }];
+  }
+  return [];
+}
+
+// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+var ca65EaTable = [
+  [
+    0,
+    0,
+    5,
+    13,
+    15,
+    21,
+    29,
+    31,
+    0,
+    25,
+    18,
+    0,
+    7,
+    17,
+    23,
+    1,
+    0,
+    0,
+    0,
+    3,
+    19,
+    9,
+    0,
+    9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0
+  ],
+  [
+    8,
+    8,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    20,
+    28,
+    0,
+    128,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    36,
+    44,
+    15,
+    52,
+    60,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    137,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    58,
+    58,
+    198,
+    206,
+    0,
+    214,
+    222,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    26,
+    26,
+    230,
+    238,
+    0,
+    246,
+    254,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    96,
+    152,
+    0,
+    112,
+    158,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    32,
+    0,
+    0,
+    0,
+    0,
+    48,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    144,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    220,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    64,
+    1,
+    65,
+    0,
+    9,
+    73,
+    0,
+    0,
+    0,
+    0,
+    81,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    64,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    16,
+    0,
+    32,
+    48,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    234,
+    0,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    8,
+    8,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    20,
+    28,
+    0,
+    128,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    8,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    76,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    178,
+    108,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    5,
+    13,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0,
+    18,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0
+  ],
+  [
+    10,
+    10,
+    6,
+    14,
+    0,
+    22,
+    30,
+    0,
+    0,
+    0,
+    18,
+    0,
+    18,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    10
+  ],
+  [
+    3,
+    3,
+    4,
+    12,
+    0,
+    20,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3
+  ]
+];
+var ca65VariantTables = {
+  "4510": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 9479788, 160, 0, "Put4510"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["MAP", 1, 92, 0, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1091180, 128, 0, "Put4510"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  "6502DTV": [
+    ["ADC", 8430188, 96, 0, "PutAll"],
+    ["ALR", 8388608, 75, 0, "PutAll"],
+    ["ANC", 8388608, 11, 0, "PutAll"],
+    ["AND", 8430188, 32, 0, "PutAll"],
+    ["ANE", 8388608, 139, 0, "PutAll"],
+    ["ARR", 8388608, 107, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["AXS", 8388608, 203, 0, "PutAll"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 12, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 18, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8430188, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEC", 108, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8430188, 64, 0, "PutAll"],
+    ["INC", 108, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 2056, 76, 6, "PutJMP"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LAS", 512, 187, 0, "PutAll"],
+    ["LAX", 8430348, 163, 11, "PutAll"],
+    ["LDA", 8430188, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 8388717, 0, 10, "PutAll"],
+    ["ORA", 8430188, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["RLA", 41580, 35, 0, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RRA", 41580, 99, 0, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SAC", 8388608, 50, 1, "PutAll"],
+    ["SBC", 8430188, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SHA", 8704, 147, 1, "PutAll"],
+    ["SHX", 512, 158, 1, "PutAll"],
+    ["SHY", 64, 156, 1, "PutAll"],
+    ["SIR", 8388608, 66, 1, "PutAll"],
+    ["STA", 41580, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  "65SC02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  "65C02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  W65C02: [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STP", 1, 219, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["WAI", 1, 203, 0, "PutAll"]
+  ],
+  "65CE02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["AUG", 1, 92, 0, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 9479788, 160, 0, "Put4510"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1091180, 128, 0, "Put4510"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  "45GS02": [
+    ["ADC", 1082173036, 96, 0, "Put45GS02"],
+    ["ADCQ", 5132, 96, 13, "Put45GS02_Q"],
+    ["AND", 1082173036, 32, 0, "Put45GS02"],
+    ["ANDQ", 5132, 32, 13, "Put45GS02_Q"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASLQ", 2147483886, 0, 14, "Put45GS02_Q"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASRQ", 2147483686, 64, 15, "Put45GS02_Q"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BITQ", 12, 32, 15, "Put45GS02_Q"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 1, 0, 0, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 1082173036, 192, 0, "Put45GS02"],
+    ["CMPQ", 5132, 192, 13, "Put45GS02_Q"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEQ", 2147483886, 192, 14, "Put45GS02_Q"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 1082173036, 64, 0, "Put45GS02"],
+    ["EORQ", 5132, 64, 13, "Put45GS02_Q"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INQ", 2147483886, 224, 14, "Put45GS02_Q"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 1083221612, 160, 0, "Put45GS02"],
+    ["LDQ", 1073746956, 160, 13, "Put45GS02_Q"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["LSRQ", 2147483886, 64, 14, "Put45GS02_Q"],
+    ["MAP", 1, 92, 0, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 1082173036, 0, 0, "Put45GS02"],
+    ["ORQ", 5132, 0, 13, "Put45GS02_Q"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROLQ", 2147483886, 32, 14, "Put45GS02_Q"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RORQ", 2147483886, 96, 14, "Put45GS02_Q"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 1082173036, 224, 0, "Put45GS02"],
+    ["SBCQ", 5132, 224, 13, "Put45GS02_Q"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1074833004, 128, 0, "Put45GS02"],
+    ["STQ", 5132, 128, 13, "Put45GS02_Q"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  HuC6280: [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 131072, 68, 0, "PutPCRel8"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLA", 1, 98, 0, "PutAll"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CLX", 1, 130, 0, "PutAll"],
+    ["CLY", 1, 194, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CSH", 1, 212, 0, "PutAll"],
+    ["CSL", 1, 84, 0, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SAX", 1, 34, 0, "PutAll"],
+    ["SAY", 1, 66, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SET", 1, 244, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["ST0", 8388608, 3, 1, "PutAll"],
+    ["ST1", 8388608, 19, 1, "PutAll"],
+    ["ST2", 8388608, 35, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["SXY", 1, 2, 0, "PutAll"],
+    ["TAI", 33554432, 243, 0, "PutBlockTransfer"],
+    ["TAM", 8388608, 83, 1, "PutAll"],
+    ["TAM0", 1, 1, 0, "PutTAMn"],
+    ["TAM1", 1, 2, 0, "PutTAMn"],
+    ["TAM2", 1, 4, 0, "PutTAMn"],
+    ["TAM3", 1, 8, 0, "PutTAMn"],
+    ["TAM4", 1, 16, 0, "PutTAMn"],
+    ["TAM5", 1, 32, 0, "PutTAMn"],
+    ["TAM6", 1, 64, 0, "PutTAMn"],
+    ["TAM7", 1, 128, 0, "PutTAMn"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TDD", 33554432, 195, 0, "PutBlockTransfer"],
+    ["TIA", 33554432, 227, 0, "PutBlockTransfer"],
+    ["TII", 33554432, 115, 0, "PutBlockTransfer"],
+    ["TIN", 33554432, 211, 0, "PutBlockTransfer"],
+    ["TMA", 8388608, 67, 1, "PutTMA"],
+    ["TMA0", 1, 1, 0, "PutTMAn"],
+    ["TMA1", 1, 2, 0, "PutTMAn"],
+    ["TMA2", 1, 4, 0, "PutTMAn"],
+    ["TMA3", 1, 8, 0, "PutTMAn"],
+    ["TMA4", 1, 16, 0, "PutTMAn"],
+    ["TMA5", 1, 32, 0, "PutTMAn"],
+    ["TMA6", 1, 64, 0, "PutTMAn"],
+    ["TMA7", 1, 128, 0, "PutTMAn"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TST", 108, 131, 9, "PutTST"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  M740: [
+    ["ADC", 8430188, 96, 0, "PutAll"],
+    ["AND", 8430188, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBC0", 268435458, 19, 10, "PutBitBranch_m740"],
+    ["BBC1", 268435458, 51, 10, "PutBitBranch_m740"],
+    ["BBC2", 268435458, 83, 10, "PutBitBranch_m740"],
+    ["BBC3", 268435458, 115, 10, "PutBitBranch_m740"],
+    ["BBC4", 268435458, 147, 10, "PutBitBranch_m740"],
+    ["BBC5", 268435458, 179, 10, "PutBitBranch_m740"],
+    ["BBC6", 268435458, 211, 10, "PutBitBranch_m740"],
+    ["BBC7", 268435458, 243, 10, "PutBitBranch_m740"],
+    ["BBS0", 268435458, 3, 10, "PutBitBranch_m740"],
+    ["BBS1", 268435458, 35, 10, "PutBitBranch_m740"],
+    ["BBS2", 268435458, 67, 10, "PutBitBranch_m740"],
+    ["BBS3", 268435458, 99, 10, "PutBitBranch_m740"],
+    ["BBS4", 268435458, 131, 10, "PutBitBranch_m740"],
+    ["BBS5", 268435458, 163, 10, "PutBitBranch_m740"],
+    ["BBS6", 268435458, 195, 10, "PutBitBranch_m740"],
+    ["BBS7", 268435458, 227, 10, "PutBitBranch_m740"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 12, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 1, 0, 0, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLB0", 6, 27, 10, "PutAll"],
+    ["CLB1", 6, 59, 10, "PutAll"],
+    ["CLB2", 6, 91, 10, "PutAll"],
+    ["CLB3", 6, 123, 10, "PutAll"],
+    ["CLB4", 6, 155, 10, "PutAll"],
+    ["CLB5", 6, 187, 10, "PutAll"],
+    ["CLB6", 6, 219, 10, "PutAll"],
+    ["CLB7", 6, 251, 10, "PutAll"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLT", 1, 18, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8430188, 192, 0, "PutAll"],
+    ["COM", 4, 68, 1, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8430188, 64, 0, "PutAll"],
+    ["FST", 1, 226, 0, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 3080, 0, 12, "PutAll"],
+    ["JSR", 536871944, 0, 0, "PutJSR_m740"],
+    ["LDA", 8430188, 160, 0, "PutAll"],
+    ["LDM", 268435456, 60, 0, "PutLDM_m740"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8430188, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["RMB0", 6, 27, 10, "PutAll"],
+    ["RMB1", 6, 59, 10, "PutAll"],
+    ["RMB2", 6, 91, 10, "PutAll"],
+    ["RMB3", 6, 123, 10, "PutAll"],
+    ["RMB4", 6, 155, 10, "PutAll"],
+    ["RMB5", 6, 187, 10, "PutAll"],
+    ["RMB6", 6, 219, 10, "PutAll"],
+    ["RMB7", 6, 251, 10, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RRF", 4, 130, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8430188, 224, 0, "PutAll"],
+    ["SEB0", 6, 11, 10, "PutAll"],
+    ["SEB1", 6, 43, 10, "PutAll"],
+    ["SEB2", 6, 75, 10, "PutAll"],
+    ["SEB3", 6, 107, 10, "PutAll"],
+    ["SEB4", 6, 139, 10, "PutAll"],
+    ["SEB5", 6, 171, 10, "PutAll"],
+    ["SEB6", 6, 203, 10, "PutAll"],
+    ["SEB7", 6, 235, 10, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SET", 1, 50, 0, "PutAll"],
+    ["SLW", 1, 194, 0, "PutAll"],
+    ["STA", 41580, 128, 0, "PutAll"],
+    ["STP", 1, 66, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TST", 4, 100, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ]
+};
+
+// packages/plugin-65xx/src/instructions/variants.ts
+var commonModes = {
+  0: { mode: "implied" },
+  1: { mode: "accumulator" },
+  2: { mode: "zeroPage" },
+  3: { mode: "absolute" },
+  5: { mode: "zeroPageIndexedX" },
+  6: { mode: "absoluteIndexedX" },
+  7: { mode: "absoluteLongIndexedX", codec: "unsigned24-le" },
+  8: { mode: "zeroPageIndexedY" },
+  9: { mode: "absoluteIndexedY" },
+  11: { mode: "indirect" },
+  12: { mode: "zeroPageIndirectLong" },
+  13: { mode: "indirectIndexedY" },
+  15: { mode: "indexedIndirectX" },
+  16: { mode: "absoluteIndexedIndirect" },
+  17: { mode: "relative" },
+  18: { mode: "relative16" },
+  20: { mode: "stackRelativeIndirectIndexedY" },
+  21: { mode: "immediate" },
+  22: { mode: "immediate" },
+  23: { mode: "immediate" },
+  27: { mode: "immediate", codec: "unsigned16-le" },
+  30: { mode: "basePageIndirectIndexedZ" },
+  31: { mode: "quadAccumulator" }
+};
+var featureByTable = {
+  "6502DTV": "dtv",
+  "65SC02": "cmos",
+  "65C02": "rockwell",
+  W65C02: "wdc",
+  "65CE02": "ce02",
+  "4510": "4510",
+  "45GS02": "45gs02",
+  HuC6280: "huc6280",
+  M740: "m740"
+};
+function opcodeFor(row, modeIndex) {
+  if (row[4] === "PutJSR_m740") {
+    if (modeIndex === 10) {
+      return 2;
+    }
+    if (modeIndex === 29) {
+      return 34;
+    }
+    return 32;
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    return modeIndex === 28 ? row[2] + 4 : row[2];
+  }
+  if (row[4] === "PutLDM_m740") {
+    return row[2];
+  }
+  const [, , base, eaTable] = row;
+  const eaRow = eaTable >= 0 && eaTable < ca65EaTable.length ? ca65EaTable[eaTable] : void 0;
+  const extension = eaRow !== void 0 && modeIndex >= 0 && modeIndex < eaRow.length ? eaRow[modeIndex] : void 0;
+  if (extension === void 0) {
+    throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+  }
+  let opcode = base | extension;
+  if (row[4] === "Put4510" || row[4] === "Put45GS02") {
+    opcode = (/* @__PURE__ */ new Map([
+      [71, 68],
+      [87, 84],
+      [147, 130],
+      [156, 139],
+      [158, 155],
+      [175, 171],
+      [191, 187],
+      [179, 226],
+      [208, 194],
+      [252, 35]
+    ])).get(opcode) ?? opcode;
+  }
+  if (row[4] === "Put45GS02_Q") {
+    if (opcode === 234) {
+      opcode = 26;
+    } else if (opcode === 202) {
+      opcode = 58;
+    }
+  }
+  return opcode;
+}
+function modeFor(table, row, modeIndex) {
+  if (row[4] === "PutBlockTransfer" && modeIndex === 25) {
+    return { mode: "blockTransfer", codec: "three-unsigned16-le" };
+  }
+  if (row[4] === "PutTST") {
+    if (modeIndex === 2) {
+      return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
+    }
+    if (modeIndex === 3) {
+      return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
+    }
+    if (modeIndex === 5) {
+      return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
+    }
+    if (modeIndex === 6) {
+      return { mode: "immediateAbsoluteIndexedX", codec: "immediate-unsigned16" };
+    }
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    if (modeIndex === 1) {
+      return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
+    }
+    if (modeIndex === 28) {
+      return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+    }
+  }
+  if (row[4] === "PutLDM_m740" && modeIndex === 28) {
+    return { mode: "zeroPageImmediate", codec: "zero-page-immediate8" };
+  }
+  if (row[4] === "PutJSR_m740" && modeIndex === 29) {
+    return { mode: "specialPage", codec: "special-page" };
+  }
+  if (modeIndex === 10) {
+    return table === "65CE02" || table === "4510" || table === "45GS02" ? { mode: "zeroPageIndirectIndexedZ" } : { mode: "zeroPageIndirect" };
+  }
+  return commonModes[modeIndex];
+}
+function createForm(table, row, modeIndex, modeDefinition) {
+  let opcode = opcodeFor(row, modeIndex);
+  const codec = modeDefinition.codec ?? getOperandCodec(modeDefinition.mode);
+  const prefixes = [];
+  if (row[4] === "PutTAMn") {
+    prefixes.push(83);
+    opcode = row[2];
+  } else if (row[4] === "PutTMAn") {
+    prefixes.push(67);
+    opcode = row[2];
+  } else if (row[4] === "Put45GS02_Q") {
+    prefixes.push(66, 66);
+    if (modeIndex === 12 || modeIndex === 30) {
+      prefixes.push(234);
+    }
+  } else if (row[4] === "Put45GS02" && modeIndex === 30) {
+    prefixes.push(234);
+  }
+  let relativeBaseOffset;
+  if (row[4] === "PutPCRel4510") {
+    relativeBaseOffset = 2;
+  } else if (row[4] === "PutBitBranch_m740") {
+    relativeBaseOffset = 3;
+  }
+  return Object.freeze({
+    opcode,
+    mnemonic: row[0],
+    mode: modeDefinition.mode,
+    encoding: [...prefixes, opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: [featureByTable[table]] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    relativeBaseOffset,
+    operandConstraint: row[4] === "PutTMA" ? "power-of-two" : void 0
+  });
+}
+function decodeTable(table) {
+  const forms = [];
+  for (const row of ca65VariantTables[table]) {
+    if (row[4] === "PutBitBranch") {
+      forms.push(
+        Object.freeze({
+          opcode: row[2],
+          mnemonic: row[0],
+          mode: "zeroPageRelative",
+          encoding: [row[2]],
+          operands: getOperandFields("zero-page-relative8"),
+          codec: "zero-page-relative8",
+          availableWhen: { allOf: [featureByTable[table]] },
+          canonical: true,
+          documented: true,
+          stability: "documented",
+          relativeBaseOffset: 3
+        })
+      );
+      continue;
+    }
+    if (row[4] === "PutPCRel8" || row[4] === "PutPCRel4510") {
+      const modeIndex = row[4] === "PutPCRel8" ? 17 : 18;
+      const modeDefinition = commonModes[modeIndex];
+      if (modeDefinition) {
+        forms.push(createForm(table, row, modeIndex, modeDefinition));
+      }
+      continue;
+    }
+    const seenModes = /* @__PURE__ */ new Set();
+    for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
+      if ((row[1] & 2 ** modeIndex) === 0) {
+        continue;
+      }
+      if (modeIndex === 0 && (row[1] & 2) !== 0) {
+        continue;
+      }
+      const modeDefinition = modeFor(table, row, modeIndex);
+      if (!modeDefinition) {
+        throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
+      }
+      const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
+      if (seenModes.has(key)) {
+        continue;
+      }
+      seenModes.add(key);
+      forms.push(createForm(table, row, modeIndex, modeDefinition));
+    }
+  }
+  return Object.freeze(forms);
+}
+var mos6502DtvForms = decodeTable("6502DTV");
+var cmos65sc02Forms = decodeTable("65SC02");
+var cmos65c02Forms = decodeTable("65C02");
+var wdc65c02Forms = decodeTable("W65C02");
+var csg65ce02Forms = decodeTable("65CE02");
+var commodore4510Forms = decodeTable("4510");
+var mega65Gs02Forms = decodeTable("45GS02");
+var hudsonHuC6280Forms = decodeTable("HuC6280");
+var mitsubishiM740Forms = decodeTable("M740");
+var mos6502DtvCpu = Object.freeze({
+  id: "65xx.6502dtv",
+  displayName: "C64DTV 6502",
+  aliases: ["6502dtv", "dtv"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented", "dtv"])
+});
+var cmos65sc02Cpu = Object.freeze({
+  id: "65xx.65sc02",
+  displayName: "65SC02",
+  aliases: ["65sc02"],
+  features: /* @__PURE__ */ new Set(["cmos"])
+});
+var cmos65c02Cpu = Object.freeze({
+  id: "65xx.65c02",
+  displayName: "65C02 with Rockwell extensions",
+  aliases: ["65c02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell"])
+});
+var wdc65c02Cpu = Object.freeze({
+  id: "65xx.w65c02",
+  displayName: "WDC W65C02",
+  aliases: ["w65c02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "wdc"])
+});
+var csg65ce02Cpu = Object.freeze({
+  id: "65xx.65ce02",
+  displayName: "CSG 65CE02",
+  aliases: ["65ce02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02"])
+});
+var commodore4510Cpu = Object.freeze({
+  id: "65xx.4510",
+  displayName: "Commodore 4510",
+  aliases: ["4510"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510"])
+});
+var mega65Gs02Cpu = Object.freeze({
+  id: "65xx.45gs02",
+  displayName: "MEGA65 45GS02",
+  aliases: ["45gs02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510", "45gs02"])
+});
+var hudsonHuC6280Cpu = Object.freeze({
+  id: "65xx.huc6280",
+  displayName: "Hudson HuC6280",
+  aliases: ["huc6280", "6280"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "huc6280"])
+});
+var mitsubishiM740Cpu = Object.freeze({
+  id: "65xx.m740",
+  displayName: "Mitsubishi M740",
+  aliases: ["m740", "740"],
+  features: /* @__PURE__ */ new Set(["m740"])
+});
+var variantCpus = Object.freeze([
+  mos6502DtvCpu,
+  cmos65sc02Cpu,
+  cmos65c02Cpu,
+  wdc65c02Cpu,
+  csg65ce02Cpu,
+  commodore4510Cpu,
+  mega65Gs02Cpu,
+  hudsonHuC6280Cpu,
+  mitsubishiM740Cpu
+]);
+var variantFormsByCpuId = Object.freeze({
+  [mos6502DtvCpu.id]: mos6502DtvForms,
+  [cmos65sc02Cpu.id]: cmos65sc02Forms,
+  [cmos65c02Cpu.id]: cmos65c02Forms,
+  [wdc65c02Cpu.id]: wdc65c02Forms,
+  [csg65ce02Cpu.id]: csg65ce02Forms,
+  [commodore4510Cpu.id]: commodore4510Forms,
+  [mega65Gs02Cpu.id]: mega65Gs02Forms,
+  [hudsonHuC6280Cpu.id]: hudsonHuC6280Forms,
+  [mitsubishiM740Cpu.id]: mitsubishiM740Forms
+});
+
+// packages/plugin-65xx/src/instructions/opcodes.ts
+var rows = [
+  "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
+  "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
+  "JSR:abs AND:inx JAM:imp RLA:inx BIT:zp AND:zp ROL:zp RLA:zp PLP:imp AND:imm ROL:acc ANC:imm BIT:abs AND:abs ROL:abs RLA:abs",
+  "BMI:rel AND:iny JAM:imp RLA:iny NOP:zpx AND:zpx ROL:zpx RLA:zpx SEC:imp AND:aby NOP:imp RLA:aby NOP:abx AND:abx ROL:abx RLA:abx",
+  "RTI:imp EOR:inx JAM:imp SRE:inx NOP:zp EOR:zp LSR:zp SRE:zp PHA:imp EOR:imm LSR:acc ALR:imm JMP:abs EOR:abs LSR:abs SRE:abs",
+  "BVC:rel EOR:iny JAM:imp SRE:iny NOP:zpx EOR:zpx LSR:zpx SRE:zpx CLI:imp EOR:aby NOP:imp SRE:aby NOP:abx EOR:abx LSR:abx SRE:abx",
+  "RTS:imp ADC:inx JAM:imp RRA:inx NOP:zp ADC:zp ROR:zp RRA:zp PLA:imp ADC:imm ROR:acc ARR:imm JMP:ind ADC:abs ROR:abs RRA:abs",
+  "BVS:rel ADC:iny JAM:imp RRA:iny NOP:zpx ADC:zpx ROR:zpx RRA:zpx SEI:imp ADC:aby NOP:imp RRA:aby NOP:abx ADC:abx ROR:abx RRA:abx",
+  "NOP:imm STA:inx NOP:imm SAX:inx STY:zp STA:zp STX:zp SAX:zp DEY:imp NOP:imm TXA:imp ANE:imm STY:abs STA:abs STX:abs SAX:abs",
+  "BCC:rel STA:iny JAM:imp SHA:iny STY:zpx STA:zpx STX:zpy SAX:zpy TYA:imp STA:aby TXS:imp TAS:aby SHY:abx STA:abx SHX:aby SHA:aby",
+  "LDY:imm LDA:inx LDX:imm LAX:inx LDY:zp LDA:zp LDX:zp LAX:zp TAY:imp LDA:imm TAX:imp LAX:imm LDY:abs LDA:abs LDX:abs LAX:abs",
+  "BCS:rel LDA:iny JAM:imp LAX:iny LDY:zpx LDA:zpx LDX:zpy LAX:zpy CLV:imp LDA:aby TSX:imp LAS:aby LDY:abx LDA:abx LDX:aby LAX:aby",
+  "CPY:imm CMP:inx NOP:imm DCP:inx CPY:zp CMP:zp DEC:zp DCP:zp INY:imp CMP:imm DEX:imp AXS:imm CPY:abs CMP:abs DEC:abs DCP:abs",
+  "BNE:rel CMP:iny JAM:imp DCP:iny NOP:zpx CMP:zpx DEC:zpx DCP:zpx CLD:imp CMP:aby NOP:imp DCP:aby NOP:abx CMP:abx DEC:abx DCP:abx",
+  "CPX:imm SBC:inx NOP:imm ISC:inx CPX:zp SBC:zp INC:zp ISC:zp INX:imp SBC:imm NOP:imp SBC:imm CPX:abs SBC:abs INC:abs ISC:abs",
+  "BEQ:rel SBC:iny JAM:imp ISC:iny NOP:zpx SBC:zpx INC:zpx ISC:zpx SED:imp SBC:aby NOP:imp ISC:aby NOP:abx SBC:abx INC:abx ISC:abx"
+];
+var modeNames = {
+  imp: "implied",
+  acc: "accumulator",
+  imm: "immediate",
+  zp: "zeroPage",
+  zpx: "zeroPageIndexedX",
+  zpy: "zeroPageIndexedY",
+  abs: "absolute",
+  abx: "absoluteIndexedX",
+  aby: "absoluteIndexedY",
+  ind: "indirect",
+  inx: "indexedIndirectX",
+  iny: "indirectIndexedY",
+  rel: "relative"
+};
+var legalOpcodes = /* @__PURE__ */ new Set([
+  0,
+  1,
+  5,
+  6,
+  8,
+  9,
+  10,
+  13,
+  14,
+  16,
+  17,
+  21,
+  22,
+  24,
+  25,
+  29,
+  30,
+  32,
+  33,
+  36,
+  37,
+  38,
+  40,
+  41,
+  42,
+  44,
+  45,
+  46,
+  48,
+  49,
+  53,
+  54,
+  56,
+  57,
+  61,
+  62,
+  64,
+  65,
+  69,
+  70,
+  72,
+  73,
+  74,
+  76,
+  77,
+  78,
+  80,
+  81,
+  85,
+  86,
+  88,
+  89,
+  93,
+  94,
+  96,
+  97,
+  101,
+  102,
+  104,
+  105,
+  106,
+  108,
+  109,
+  110,
+  112,
+  113,
+  117,
+  118,
+  120,
+  121,
+  125,
+  126,
+  129,
+  132,
+  133,
+  134,
+  136,
+  138,
+  140,
+  141,
+  142,
+  144,
+  145,
+  148,
+  149,
+  150,
+  152,
+  153,
+  154,
+  157,
+  160,
+  161,
+  162,
+  164,
+  165,
+  166,
+  168,
+  169,
+  170,
+  172,
+  173,
+  174,
+  176,
+  177,
+  180,
+  181,
+  182,
+  184,
+  185,
+  186,
+  188,
+  189,
+  190,
+  192,
+  193,
+  196,
+  197,
+  198,
+  200,
+  201,
+  202,
+  204,
+  205,
+  206,
+  208,
+  209,
+  213,
+  214,
+  216,
+  217,
+  221,
+  222,
+  224,
+  225,
+  228,
+  229,
+  230,
+  232,
+  233,
+  234,
+  236,
+  237,
+  238,
+  240,
+  241,
+  245,
+  246,
+  248,
+  249,
+  253,
+  254
+]);
+var aliases = {
+  ALR: ["ASR"],
+  ANC: ["AAC"],
+  ANE: ["XAA"],
+  AXS: ["SBX"],
+  DCP: ["DCM"],
+  ISC: ["ISB", "INS"],
+  JAM: ["KIL", "HLT"],
+  LAS: ["LAR"],
+  SAX: ["AAX"],
+  SHA: ["AHX"],
+  SHX: ["SXA"],
+  SHY: ["SYA"],
+  SRE: ["LSE"],
+  TAS: ["SHS"]
+};
+var unstable = /* @__PURE__ */ new Set([
+  "ANE:immediate",
+  "LAX:immediate",
+  "SHA:indirectIndexedY",
+  "SHA:absoluteIndexedY",
+  "SHX:absoluteIndexedY",
+  "SHY:absoluteIndexedX",
+  "TAS:absoluteIndexedY"
+]);
+var decoded = rows.flatMap((row) => row.split(" "));
+if (decoded.length !== 256) {
+  throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
+}
+var mutableForms = decoded.map((entry, opcode) => {
+  const [mnemonic, shortMode] = entry.split(":");
+  const mode2 = modeNames[shortMode];
+  if (!mnemonic || !mode2) {
+    throw new Error(`Invalid opcode table entry '${entry}' at $${opcode.toString(16)}.`);
+  }
+  const documented = legalOpcodes.has(opcode);
+  const codec = getOperandCodec(mode2);
+  const key = `${mnemonic}:${mode2}`;
+  let stability = "stable-undocumented";
+  if (documented) {
+    stability = "documented";
+  } else if (unstable.has(key)) {
+    stability = "unstable-undocumented";
+  }
+  let note;
+  if (unstable.has(key)) {
+    note = "Opcode semantics are unstable or chip-dependent. Assembly emits the canonical ca65-compatible byte.";
+  } else if (opcode === 108) {
+    note = "NMOS hardware wraps the high-byte fetch within the same page when the indirect pointer ends in $FF.";
+  }
+  return {
+    opcode,
+    mnemonic,
+    aliases: aliases[mnemonic],
+    mode: mode2,
+    encoding: [opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: documented ? ["nmos"] : ["nmos", "undocumented"] },
+    canonical: false,
+    documented,
+    stability,
+    note
+  };
+});
+var groups = /* @__PURE__ */ new Map();
+for (const form of mutableForms) {
+  const key = `${form.mnemonic}:${form.mode}`;
+  const group = groups.get(key) ?? [];
+  group.push(form);
+  groups.set(key, group);
+}
+for (const group of groups.values()) {
+  const documented = group.find((form) => form.documented);
+  const fallback = group.length > 0 ? group[0] : void 0;
+  const preferred = documented ?? fallback;
+  if (preferred) {
+    preferred.canonical = true;
+  }
+}
+var nmos6502DecodeTable = Object.freeze(
+  mutableForms.map((form) => Object.freeze({ ...form }))
+);
+var brkSignatureForms = Object.freeze(
+  ["immediate", "zeroPage", "absolute"].map((mode2) => ({
+    opcode: 0,
+    mnemonic: "BRK",
+    mode: mode2,
+    encoding: [0],
+    operands: [{ name: "signature", width: 1 }],
+    codec: "unsigned8",
+    availableWhen: { allOf: ["nmos"] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    note: "Current ca65-guide BRK signature extension. Pinned ca65 V2.19 rejects this form."
+  }))
+);
+var nmos6502Forms = Object.freeze([
+  ...nmos6502DecodeTable.filter((form) => form.documented && form.canonical),
+  ...brkSignatureForms
+]);
+var nmos6502xForms = Object.freeze([
+  ...nmos6502DecodeTable.filter((form) => form.canonical),
+  ...brkSignatureForms
+]);
+var nmos6502Cpu = Object.freeze({
+  id: "65xx.6502",
+  displayName: "NMOS 6502",
+  aliases: ["6502", "6510", "8502", "6507"],
+  features: /* @__PURE__ */ new Set(["nmos"])
+});
+var nmos6502xCpu = Object.freeze({
+  id: "65xx.6502x",
+  displayName: "NMOS 6502 with undocumented opcodes",
+  aliases: ["6502x"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
+});
+var ricoh2a03Cpu = Object.freeze({
+  id: "65xx.2a03",
+  displayName: "Ricoh 2A03 / 2A07",
+  aliases: ["2a03", "2a07"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
+});
+function cpuVariantForms(cpuId) {
+  return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : void 0;
+}
+function getOpcodeForm(opcode) {
+  if (!Number.isInteger(opcode) || opcode < 0 || opcode > 255) {
+    throw new RangeError(`Opcode ${opcode} is outside the byte range.`);
+  }
+  return nmos6502DecodeTable[opcode];
+}
+function getCpuDecodeTable(cpu) {
+  const variantForms = cpuVariantForms(cpu.id);
+  if (variantForms) {
+    return variantForms;
+  }
+  return nmos6502DecodeTable.filter((form) => matchesFeatures(form.availableWhen, cpu.features));
+}
+function getCpuAssemblyForms(cpu) {
+  const variantForms = cpuVariantForms(cpu.id);
+  if (variantForms) {
+    return variantForms;
+  }
+  return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
+}
+
+// packages/plugin-65xx/src/architecture.ts
+var directToAbsolute = {
+  zeroPage: "absolute",
+  zeroPageIndexedX: "absoluteIndexedX",
+  zeroPageIndexedY: "absoluteIndexedY",
+  zeroPageIndirect: "indirect",
+  indexedIndirectX: "absoluteIndexedIndirect"
+};
+var absoluteToDirect = {
+  absolute: "zeroPage",
+  absoluteIndexedX: "zeroPageIndexedX",
+  absoluteIndexedY: "zeroPageIndexedY",
+  indirect: "zeroPageIndirect",
+  absoluteIndexedIndirect: "indexedIndirectX"
+};
+var addressingModes = {
+  implied: true,
+  accumulator: true,
+  immediate: true,
+  zeroPage: true,
+  zeroPageIndexedX: true,
+  zeroPageIndexedY: true,
+  absolute: true,
+  absoluteIndexedX: true,
+  absoluteIndexedY: true,
+  absoluteLongIndexedX: true,
+  indirect: true,
+  zeroPageIndirect: true,
+  zeroPageIndirectLong: true,
+  indexedIndirectX: true,
+  indirectIndexedY: true,
+  absoluteIndexedIndirect: true,
+  zeroPageIndirectIndexedZ: true,
+  stackRelative: true,
+  stackRelativeIndirectIndexedY: true,
+  relative: true,
+  relative16: true,
+  zeroPageRelative: true,
+  accumulatorRelative: true,
+  zeroPageImmediate: true,
+  specialPage: true,
+  blockTransfer: true,
+  immediateZeroPage: true,
+  immediateZeroPageIndexedX: true,
+  immediateAbsolute: true,
+  immediateAbsoluteIndexedX: true,
+  basePageIndirectIndexedZ: true,
+  quadAccumulator: true
+};
+function isAddressingMode(value) {
+  for (const mode2 of Object.keys(addressingModes)) {
+    if (value === mode2) {
+      return true;
+    }
+  }
+  return false;
+}
+function mappedAddressingMode(table, mode2) {
+  if (mode2 === void 0 || !isAddressingMode(mode2)) {
+    return void 0;
+  }
+  return table[mode2];
+}
+var aliasToMnemonic = /* @__PURE__ */ new Map();
+for (const form of nmos6502DecodeTable) {
+  for (const alias of form.aliases ?? []) {
+    aliasToMnemonic.set(alias, form.mnemonic);
+  }
+}
+function parseMnemonic(value) {
+  const match = value.trim().toUpperCase().match(/^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/);
+  if (!match) {
+    return { mnemonic: value.trim().toUpperCase() };
+  }
+  let forcedWidth;
+  if (match[2] === "B") {
+    forcedWidth = 1;
+  } else if (match[2] === "W") {
+    forcedWidth = 2;
+  }
+  return {
+    mnemonic: match[1],
+    forcedWidth
+  };
+}
+function modeSize(form) {
+  return form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
+}
+function splitTopLevelOperands(value) {
+  const operands = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      operands.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  operands.push(value.slice(start).trim());
+  return operands.filter(Boolean);
+}
+var Arch65xx = class {
+  /**
+   * @param {ArchitectureEncoderContext} context Encoder host (operands, emission, diagnostics).
+   * @param {CpuDefinition} cpu CPU whose feature set filters {@link getCpuAssemblyForms}.
+   */
+  constructor(context, cpu) {
+    this.context = context;
+    this.cpu = cpu;
+    this.forms = getCpuAssemblyForms(cpu).filter(
+      (form) => matchesFeatures(form.availableWhen, cpu.features)
+    );
+    this.catalog = buildInstructionCatalog(this.forms);
+    const grouped = /* @__PURE__ */ new Map();
+    for (const form of this.forms) {
+      const entries2 = grouped.get(form.mnemonic) ?? [];
+      entries2.push(form);
+      grouped.set(form.mnemonic, entries2);
+    }
+    for (const [mnemonic, entries2] of grouped) {
+      this.formsByMnemonic.set(mnemonic, entries2);
+    }
+  }
+  context;
+  cpu;
+  forms;
+  catalog;
+  formsByMnemonic = /* @__PURE__ */ new Map();
+  getInstructionCatalog() {
+    return this.catalog;
+  }
+  /**
+   * Estimates size from tokenized words.
+   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
+   * @returns {number} Encoded size in bytes, or 0 if unknown.
+   */
+  estimateSize(words) {
+    if (words.length === 0) {
+      return 0;
+    }
+    const operand = words.slice(1).join(" ");
+    return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
+  }
+  /**
+   * Encodes tokenized words. Returns false when the mnemonic is unknown on this CPU.
+   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
+   * @returns {boolean} True if encoded.
+   */
+  encode(words) {
+    if (words.length === 0) {
+      return true;
+    }
+    const operand = words.slice(1).join(" ");
+    return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
+  }
+  /**
+   * Estimates the size of a resolved instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {number} The estimated size in bytes.
+   */
+  estimateInstruction(instruction) {
+    return this.estimateResolved(instruction.mnemonic, instruction.loweredOperand);
+  }
+  /**
+   * Encodes a resolved instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {boolean} True if encoded.
+   */
+  encodeInstruction(instruction) {
+    return this.encodeResolved(instruction.mnemonic, instruction.loweredOperand);
+  }
+  /**
+   * Estimates the size of a resolved instruction.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {number} The estimated size in bytes.
+   */
+  estimateResolved(rawMnemonic, operand) {
+    const resolved = this.resolveForm(rawMnemonic, operand);
+    return resolved ? modeSize(resolved) : 0;
+  }
+  /**
+   * Encodes a resolved instruction.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {boolean} True if encoded.
+   */
+  encodeResolved(rawMnemonic, operand) {
+    const resolved = this.resolveForm(rawMnemonic, operand);
+    if (!resolved) {
+      return false;
+    }
+    const form = resolved;
+    const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
+    let branchDelta = 0;
+    if (form.codec === "relative8" || form.codec === "relative16") {
+      const branchWidth = form.codec === "relative8" ? 1 : 2;
+      branchDelta = this.readBranchDelta(operand, relativeBaseOffset, branchWidth);
+    }
+    const compoundOperands = form.codec === "zero-page-relative8" || form.codec === "accumulator-relative8" || form.codec === "zero-page-immediate8" || form.codec === "three-unsigned16-le" || form.codec === "immediate-unsigned8" || form.codec === "immediate-unsigned16" ? splitTopLevelOperands(operand.expanded) : [];
+    const compoundValues = this.readCompoundValues(form, compoundOperands);
+    let operandWidth = 0;
+    if (form.codec === "unsigned8") {
+      operandWidth = 1;
+    } else if (form.codec === "unsigned16-le") {
+      operandWidth = 2;
+    } else if (form.codec === "unsigned24-le") {
+      operandWidth = 3;
+    }
+    const operandKind = operandWidth === 1 ? "operand" : "address";
+    let operandValue = 0;
+    if (operandWidth !== 0) {
+      operandValue = this.readExpressionValue(
+        operand.baseExpression ?? operand.expanded,
+        operandWidth,
+        `${form.mnemonic} ${operandKind}`,
+        operand.mode === "immediate"
+      );
+      if (form.operandConstraint === "power-of-two" && (operandValue === 0 || (operandValue & operandValue - 1) !== 0)) {
+        throw this.context.diagnostics.error(`${form.mnemonic} operand must be a power of two.`);
+      }
+    }
+    const specialPageValue = form.codec === "special-page" ? this.readExpressionValue(
+      operand.baseExpression ?? operand.expanded,
+      2,
+      `${form.mnemonic} special-page address`,
+      false
+    ) : 0;
+    if (form.codec === "special-page" && (specialPageValue & 65280) !== 65280) {
+      throw this.context.diagnostics.error(
+        `${form.mnemonic} special-page address must be in $FF00-$FFFF.`
+      );
+    }
+    this.context.emission.writeBytes(form.encoding);
+    switch (form.codec) {
+      case "none":
+        return true;
+      case "unsigned8":
+        this.context.emission.writeByte(operandValue);
+        return true;
+      case "unsigned16-le":
+        this.context.emission.writeValue(operandValue, 2, "little");
+        return true;
+      case "unsigned24-le":
+        this.context.emission.writeValue(operandValue, 3, "little");
+        return true;
+      case "relative8":
+        this.context.emission.writeByte(branchDelta & 255);
+        return true;
+      case "relative16":
+        this.context.emission.writeValue(branchDelta & 65535, 2, "little");
+        return true;
+      case "zero-page-relative8": {
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte((compoundValues[1] ?? 0) & 255);
+        return true;
+      }
+      case "accumulator-relative8":
+        this.context.emission.writeByte((compoundValues[0] ?? 0) & 255);
+        return true;
+      case "zero-page-immediate8":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte(compoundValues[1] ?? 0);
+        return true;
+      case "special-page":
+        this.context.emission.writeByte(specialPageValue & 255);
+        return true;
+      case "three-unsigned16-le":
+        for (const value of compoundValues) {
+          this.context.emission.writeValue(value, 2, "little");
+        }
+        return true;
+      case "immediate-unsigned8":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte(compoundValues[1] ?? 0);
+        return true;
+      case "immediate-unsigned16":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeValue(compoundValues[1] ?? 0, 2, "little");
+        return true;
+    }
+    return false;
+  }
+  /**
+   * Reads compound values from operands.
+   * @param {InstructionForm} form The instruction form.
+   * @param {readonly string[]} operands The operands.
+   * @returns {readonly number[]} The compound values.
+   */
+  readCompoundValues(form, operands) {
+    const expect = (count, description) => {
+      if (operands.length !== count) {
+        throw this.context.diagnostics.error(`${form.mnemonic} expects ${description}.`);
+      }
+    };
+    switch (form.codec) {
+      case "zero-page-relative8":
+        expect(2, "a zero-page address and branch target");
+        return [
+          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
+          this.readBranchExpression(
+            operands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1
+          )
+        ];
+      case "accumulator-relative8":
+        expect(2, "A and a branch target");
+        if (operands[0]?.trim().toUpperCase() !== "A") {
+          throw this.context.diagnostics.error(`${form.mnemonic} accumulator branch must use A.`);
+        }
+        return [
+          this.readBranchExpression(
+            operands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1
+          )
+        ];
+      case "zero-page-immediate8":
+        expect(2, "a zero-page address and immediate value");
+        if (!operands[1]?.trim().startsWith("#")) {
+          throw this.context.diagnostics.error(
+            `${form.mnemonic} second operand must be immediate.`
+          );
+        }
+        return [
+          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
+          this.readExpressionValue(
+            operands[1]?.trim().slice(1) ?? "",
+            1,
+            `${form.mnemonic} immediate`,
+            true
+          )
+        ];
+      case "three-unsigned16-le":
+        expect(3, "source, destination, and length operands");
+        return operands.map(
+          (expression, index) => this.readExpressionValue(
+            expression,
+            2,
+            `${form.mnemonic} ${["source", "destination", "length"][index]}`,
+            false
+          )
+        );
+      case "immediate-unsigned8":
+      case "immediate-unsigned16": {
+        const indexed = form.mode.endsWith("IndexedX");
+        expect(indexed ? 3 : 2, "an immediate value and address");
+        if (!operands[0]?.trim().startsWith("#")) {
+          throw this.context.diagnostics.error(`${form.mnemonic} first operand must be immediate.`);
+        }
+        if (indexed && operands[2]?.trim().toUpperCase() !== "X") {
+          throw this.context.diagnostics.error(`${form.mnemonic} indexed test operand must use X.`);
+        }
+        return [
+          this.readExpressionValue(
+            operands[0]?.trim().slice(1) ?? "",
+            1,
+            `${form.mnemonic} immediate`,
+            true
+          ),
+          this.readExpressionValue(
+            operands[1] ?? "",
+            form.codec === "immediate-unsigned8" ? 1 : 2,
+            `${form.mnemonic} address`,
+            false
+          )
+        ];
+      }
+      case "none":
+      case "relative16":
+      case "relative8":
+      case "special-page":
+      case "unsigned16-le":
+      case "unsigned24-le":
+      case "unsigned8":
+      default:
+        return [];
+    }
+  }
+  /**
+   * Resolves a form for a mnemonic and operand.
+   * @param {string} rawMnemonic The raw mnemonic.
+   * @param {LoweredOperand} operand The operand.
+   * @returns {InstructionForm | undefined} The resolved form.
+   */
+  resolveForm(rawMnemonic, operand) {
+    const parsed = parseMnemonic(rawMnemonic);
+    let mnemonic = parsed.mnemonic;
+    let forms = this.formsByMnemonic.get(mnemonic);
+    const variantArchitectures = Object.entries(variantFormsByCpuId).filter(([, entries2]) => entries2.some((entry) => entry.mnemonic === parsed.mnemonic)).map(([cpuId]) => cpuId);
+    if (!forms) {
+      const canonical = aliasToMnemonic.get(mnemonic);
+      const aliasedForms = canonical ? this.formsByMnemonic.get(canonical) : void 0;
+      if (canonical && aliasedForms) {
+        mnemonic = canonical;
+        forms = aliasedForms;
+      }
+    }
+    const { forcedWidth } = parsed;
+    if (!forms) {
+      if (variantArchitectures.length > 0) {
+        throw this.context.diagnostics.error(
+          `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`
+        );
+      }
+      const knownOnlyOn6502x = nmos6502DecodeTable.some(
+        (form2) => form2.mnemonic === mnemonic || form2.aliases?.includes(mnemonic)
+      );
+      if (knownOnlyOn6502x) {
+        throw this.context.diagnostics.error(
+          `Instruction '${mnemonic}' or this operand form requires architecture '65xx.6502x'.`
+        );
+      }
+      return void 0;
+    }
+    const hasOperand = operand.raw.trim() !== "";
+    if (mnemonic === "BRK" && forcedWidth === 2) {
+      throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
+    }
+    let mode2 = operand.mode;
+    if (operand.raw.trim().toUpperCase() === "A") {
+      mode2 = "accumulator";
+    }
+    if (operand.raw.trim().toUpperCase() === "Q") {
+      mode2 = "quadAccumulator";
+    }
+    if (this.cpu.id === "65xx.m740" && mnemonic === "JSR" && mode2 === "absolute" && /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(operand.expanded.trim())) {
+      mode2 = "specialPage";
+    }
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
+      mode2 = "relative16";
+    } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
+      mode2 = "relative";
+    }
+    if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
+      if (forms.some((entry) => entry.mode === "accumulator")) {
+        mode2 = "accumulator";
+      } else if (forms.some((entry) => entry.mode === "quadAccumulator")) {
+        mode2 = "quadAccumulator";
+      }
+    }
+    if (forcedWidth) {
+      const byteMode = mappedAddressingMode(absoluteToDirect, mode2);
+      const wordMode = mappedAddressingMode(directToAbsolute, mode2);
+      const alreadyRequestedWidth = forcedWidth === 1 && mode2 !== void 0 && mode2.startsWith("zeroPage") || forcedWidth === 2 && (mode2 === "absolute" || mode2 === "indirect" || mode2 !== void 0 && mode2.startsWith("absoluteIndexed"));
+      if (!byteMode && !wordMode && !alreadyRequestedWidth) {
+        throw this.context.diagnostics.error(
+          `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode2}.`
+        );
+      }
+      const promoted = forcedWidth === 1 ? byteMode : wordMode;
+      mode2 = promoted ?? mode2;
+    }
+    let form = forms.find((entry) => entry.mode === mode2);
+    const widened = mappedAddressingMode(directToAbsolute, mode2);
+    if (!form && widened) {
+      form = forms.find((entry) => entry.mode === widened);
+    }
+    if (!form) {
+      const accepted = forms.map((entry) => entry.mode).join(", ");
+      throw this.context.diagnostics.error(
+        `${mnemonic} does not support addressing mode '${mode2 ?? "unknown"}' on ${this.cpu.id}. Expected ${accepted}.`
+      );
+    }
+    return form;
+  }
+  /**
+   * Reads an expression value.
+   * @param {string} expression The expression.
+   * @param {1 | 2 | 3} width The width.
+   * @param {string} description The description.
+   * @param {boolean} immediate Whether the expression is immediate.
+   * @returns {number} The value.
+   */
+  readExpressionValue(expression, width, description, immediate) {
+    const value = this.context.operands.getnum(expression);
+    const minimum = width === 1 && immediate ? -128 : 0;
+    let maximum = 255;
+    if (width === 2) {
+      maximum = 65535;
+    } else if (width === 3) {
+      maximum = 16777215;
+    }
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+      throw this.context.diagnostics.error(
+        `${description} ${value} is outside the ${width * 8}-bit range.`
+      );
+    }
+    return value & maximum;
+  }
+  /**
+   * Reads a branch delta.
+   * @param {LoweredOperand} operand The operand.
+   * @param {number} relativeBaseOffset The relative base offset.
+   * @param {1 | 2} width The width.
+   * @returns {number} The branch delta.
+   */
+  readBranchDelta(operand, relativeBaseOffset, width) {
+    return this.readBranchExpression(
+      operand.baseExpression ?? operand.expanded,
+      relativeBaseOffset,
+      width
+    );
+  }
+  /**
+   * Reads a branch expression.
+   * @param {string} expression The expression.
+   * @param {number} relativeBaseOffset The relative base offset.
+   * @param {1 | 2} width The width.
+   * @returns {number} The branch expression.
+   */
+  readBranchExpression(expression, relativeBaseOffset, width) {
+    if (!this.context.branches.enforceResolvedLabels()) {
+      return 0;
+    }
+    const reference = this.context.sizing.getCurrentAddress() + relativeBaseOffset & 65535;
+    let target;
+    if (/^\++$/.test(expression)) {
+      target = this.context.branches.findNextLabel(expression, reference);
+    } else if (/^-+$/.test(expression)) {
+      target = this.context.branches.findPreviousLabel(expression, reference);
+    } else {
+      target = this.context.operands.getnum(expression);
+    }
+    if (!Number.isInteger(target) || target < 0 || target > 65535) {
+      throw this.context.diagnostics.error(
+        `Branch target ${target} is outside the 16-bit address space.`
+      );
+    }
+    const delta = (target - reference + 32768 & 65535) - 32768;
+    const minimum = width === 1 ? -128 : -32768;
+    const maximum = width === 1 ? 127 : 32767;
+    if (delta < minimum || delta > maximum) {
+      throw this.context.diagnostics.error(
+        `Branch target $${target.toString(16).toUpperCase()} is out of range from $${reference.toString(16).toUpperCase()} (${delta}).`
+      );
+    }
+    return delta;
+  }
+};
+
+// packages/plugin-65xx/src/ca65-profile.ts
+var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
+function isSessionStateKey(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey(id) {
+  const key = { id };
+  if (!isSessionStateKey(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var ca65SessionStateKey = createSessionStateKey(
+  CA65_65XX_SESSION_STATE_ID
+);
+function createCa65SessionState() {
+  return {
+    defaultArchitecture: "65xx.6502",
+    currentArchitecture: "65xx.6502",
+    cpuStack: [],
+    scopeStack: [],
+    segmentStack: [],
+    currentFlatSegment: ""
+  };
+}
+function cloneCa65SessionState(state) {
+  return {
+    ...state,
+    cpuStack: [...state.cpuStack],
+    scopeStack: [...state.scopeStack],
+    segmentStack: [...state.segmentStack]
+  };
+}
+function resetCa65StageState(state) {
+  state.currentArchitecture = state.defaultArchitecture;
+  state.cpuStack = [];
+  state.scopeStack = [];
+  state.segmentStack = [];
+  state.currentFlatSegment = "";
+}
+var ca65CpuNames = Object.freeze({
+  "6502": "65xx.6502",
+  "6502x": "65xx.6502x",
+  "2a03": "65xx.2a03",
+  "2a07": "65xx.2a03",
+  "6502dtv": "65xx.6502dtv",
+  "65sc02": "65xx.65sc02",
+  "65c02": "65xx.65c02",
+  w65c02: "65xx.w65c02",
+  "65ce02": "65xx.65ce02",
+  "4510": "65xx.4510",
+  "45gs02": "65xx.45gs02",
+  huc6280: "65xx.huc6280",
+  m740: "65xx.m740"
+});
+function resolve65xxCpuName(name) {
+  return ca65CpuNames[name.trim().toLowerCase()];
+}
+var ca65CpuShorthands = Object.freeze({
+  p02: "6502",
+  p02x: "6502x",
+  pdtv: "6502dtv",
+  psc02: "65sc02",
+  pc02: "65c02",
+  pwc02: "w65c02",
+  pce02: "65ce02",
+  p4510: "4510",
+  p45gs02: "45gs02",
+  p6280: "huc6280",
+  pm740: "m740"
+});
+var cpuPredicateSymbols = Object.freeze({
+  ifp02: "__CA65_CPU_6502__",
+  ifp02x: "__CA65_CPU_6502X__",
+  ifpdtv: "__CA65_CPU_6502DTV__",
+  ifpsc02: "__CA65_CPU_65SC02__",
+  ifpc02: "__CA65_CPU_65C02__",
+  ifpwc02: "__CA65_CPU_W65C02__",
+  ifpce02: "__CA65_CPU_65CE02__",
+  ifp4510: "__CA65_CPU_4510__",
+  ifp45gs02: "__CA65_CPU_45GS02__",
+  ifp6280: "__CA65_CPU_HUC6280__",
+  ifpm740: "__CA65_CPU_M740__"
+});
+var ca65CpuPredicateByArchitecture = Object.freeze({
+  "65xx.6502": "__CA65_CPU_6502__",
+  "65xx.6502x": "__CA65_CPU_6502X__",
+  "65xx.2a03": "__CA65_CPU_6502X__",
+  "65xx.6502dtv": "__CA65_CPU_6502DTV__",
+  "65xx.65sc02": "__CA65_CPU_65SC02__",
+  "65xx.65c02": "__CA65_CPU_65C02__",
+  "65xx.w65c02": "__CA65_CPU_W65C02__",
+  "65xx.65ce02": "__CA65_CPU_65CE02__",
+  "65xx.4510": "__CA65_CPU_4510__",
+  "65xx.45gs02": "__CA65_CPU_45GS02__",
+  "65xx.huc6280": "__CA65_CPU_HUC6280__",
+  "65xx.m740": "__CA65_CPU_M740__"
+});
+function splitArguments(value) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(") {
+      depth++;
+    } else if (character === ")") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+function rewriteScopedNames(value) {
+  let result = "";
+  let quote = "";
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if ((character === '"' || character === "'") && value[index - 1] !== "\\") {
+      quote = quote === character ? "" : quote || character;
+    }
+    if (!quote && character === ":" && value[index + 1] === ":") {
+      result += "_";
+      index++;
+    } else {
+      result += character;
+    }
+  }
+  return result;
+}
+function rewriteCa65Command(command, context) {
+  let rewritten = rewriteScopedNames(command);
+  rewritten = rewritten.replace(/\.(defined|lobyte|hibyte|bankbyte|loword|hiword)\s*\(/gi, "$1(");
+  rewritten = rewritten.replace(
+    /(^|[^\w@])@([0-7]+)\b/g,
+    (_match, prefix, digits) => `${prefix}${Number.parseInt(digits, 8)}`
+  );
+  rewritten = rewritten.replace(/<>/g, "!=");
+  const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
+  if (!match) {
+    return rewritten;
+  }
+  const [, indent, rawKeyword, rawRest] = match;
+  const keyword = rawKeyword.toLowerCase();
+  const rest = rawRest.trim();
+  const predicate = cpuPredicateSymbols[keyword];
+  if (predicate) {
+    return `${indent}if ${predicate}`;
+  }
+  if (["if", "elseif", "else", "endif"].includes(keyword)) {
+    return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
+  }
+  if (keyword === "ifdef") {
+    return `${indent}if defined(${rest})`;
+  }
+  if (keyword === "ifndef") {
+    return `${indent}if defined(${rest}) == 0`;
+  }
+  if (keyword === "macro") {
+    const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
+    if (!header) {
+      return rewritten;
+    }
+    const params = splitArguments(header[2]).join(",");
+    return `${indent}macro ${header[1]}(${params})`;
+  }
+  if (keyword === "endmacro") {
+    return `${indent}endmacro`;
+  }
+  if (keyword === "repeat") {
+    const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
+    return `${indent}for ${variable} = 0..(${count})`;
+  }
+  if (keyword === "endrepeat") {
+    return `${indent}endfor`;
+  }
+  if (keyword === "undefine") {
+    return `${indent}undef ${rest}`;
+  }
+  return rewritten;
+}
+var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
+  ...CA65_SYNTAX_PROFILE,
+  id: "ca65-65xx",
+  rewriteCommand: rewriteCa65Command,
+  bareMacroInvocations: true,
+  macroParameterPrefix: "\\"
+});
+
+// packages/plugin-65xx/src/decoder.ts
+var hex = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
+function cpu6502Specifications(cpu) {
+  return getCpuDecodeTable(cpu).map((form) => ({
+    id: `${cpu.id}:${form.opcode.toString(16).padStart(2, "0")}`,
+    architecture: cpu.id,
+    opcode: form.encoding,
+    mnemonic: form.mnemonic,
+    mode: form.mode,
+    minimumSize: sizeOf(form),
+    maximumSize: sizeOf(form),
+    summary: form.note
+  }));
+}
+var Cpu6502Decoder = class {
+  constructor(cpu = nmos6502Cpu) {
+    this.cpu = cpu;
+    if (!cpu.features.has("nmos") || cpu.features.has("dtv")) {
+      throw new Error("The NMOS decoder requires an NMOS 6502 or Ricoh CPU profile.");
+    }
+    this.#forms = new Map(getCpuDecodeTable(cpu).map((form) => [form.opcode, form]));
+  }
+  cpu;
+  #forms;
+  decode(context) {
+    const { source, offset, logicalAddress } = context;
+    if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
+      return {
+        kind: "error",
+        code: "invalidState",
+        offset,
+        message: "6502 PC must be an unsigned 16-bit address."
+      };
+    }
+    const opcode = source.readByte(offset);
+    if (opcode === void 0) {
+      return {
+        kind: "error",
+        code: "outOfBounds",
+        offset,
+        message: "Opcode is outside the byte source."
+      };
+    }
+    const form = this.#forms.get(opcode);
+    if (!form) {
+      return {
+        kind: "error",
+        code: "invalidOpcode",
+        offset,
+        message: `Unsupported ${this.cpu.id} opcode ${hex(opcode)}.`
+      };
+    }
+    const size = sizeOf(form);
+    const bytes = source.readBytes(offset, size);
+    if (!bytes) {
+      return {
+        kind: "error",
+        code: "truncated",
+        offset,
+        requiredBytes: size,
+        availableBytes: Math.max(0, source.length - offset),
+        message: "Truncated 6502 instruction."
+      };
+    }
+    let value = bytes[1] ?? 0;
+    if (size === 3) {
+      value |= bytes[2] << 8;
+    }
+    const operands = [];
+    const references = [];
+    let flow = { kind: "fallthrough", fallthrough: true };
+    if (form.mode === "relative") {
+      const displacement = value >= 128 ? value - 256 : value;
+      const targetAddress = logicalAddress + size + displacement & 65535;
+      operands.push({
+        kind: "displacement",
+        value: displacement,
+        width: 1,
+        signed: true,
+        targetAddress
+      });
+      references.push({ kind: "branch", address: targetAddress, operandIndex: 0 });
+      flow = { kind: "conditionalBranch", fallthrough: true };
+    } else if (size > 1) {
+      const immediate = form.mode === "immediate";
+      operands.push({ kind: immediate ? "immediate" : "address", value, width: size - 1 });
+      if (!immediate) {
+        const indirect = form.mode === "indirect" || form.mode === "indexedIndirectX" || form.mode === "indirectIndexedY";
+        let kind = "data";
+        if (form.mnemonic === "JSR") {
+          kind = "call";
+        }
+        if (form.mnemonic === "JMP") {
+          kind = "jump";
+        }
+        references.push({ kind, address: value, indirect, operandIndex: 0 });
+      }
+    } else if (form.mode === "accumulator") {
+      operands.push({ kind: "accumulator", register: "a" });
+    }
+    if (form.mnemonic === "JSR") {
+      flow = { kind: "call", fallthrough: true };
+    }
+    if (form.mnemonic === "JMP") {
+      flow = { kind: "jump", fallthrough: false, indirect: form.mode === "indirect" };
+    }
+    if (form.mnemonic === "RTS" || form.mnemonic === "RTI") {
+      flow = { kind: "return", fallthrough: false };
+    }
+    if (form.mnemonic === "BRK") {
+      flow = { kind: "interrupt", fallthrough: false };
+    }
+    if (form.mnemonic === "JAM") {
+      flow = { kind: "stop", fallthrough: false };
+    }
+    return {
+      kind: "instruction",
+      instruction: {
+        architecture: this.cpu.id,
+        specificationId: `${this.cpu.id}:${opcode.toString(16).padStart(2, "0")}`,
+        opcode,
+        mnemonic: form.mnemonic,
+        mode: form.mode,
+        offset,
+        logicalAddress,
+        bytes,
+        size,
+        operands,
+        references,
+        flow,
+        effects: [{ kind: "custom", name: "nmos6502", details: { opcode } }]
+      }
+    };
+  }
+};
+function formatCpu6502Instruction(instruction, addressExpression) {
+  const form = getOpcodeForm(instruction.opcode);
+  if (!form.canonical) {
+    return `.byte ${[...instruction.bytes].map((byte) => hex(byte)).join(", ")} ; ${form.mnemonic}`;
+  }
+  const operand = instruction.operands[0];
+  const value = operand?.value ?? 0;
+  let text = "";
+  let suffix = "";
+  switch (form.mode) {
+    case "implied":
+      break;
+    case "accumulator":
+      text = "a";
+      break;
+    case "immediate":
+      text = `#${hex(value)}`;
+      break;
+    case "relative":
+      text = hex(operand.targetAddress, 4);
+      break;
+    case "zeroPage":
+      text = hex(value);
+      break;
+    case "zeroPageIndexedX":
+      text = `${hex(value)},x`;
+      break;
+    case "zeroPageIndexedY":
+      text = `${hex(value)},y`;
+      break;
+    case "absolute":
+      text = addressExpression ?? hex(value, 4);
+      suffix = ".w";
+      break;
+    case "absoluteIndexedX":
+      text = `${hex(value, 4)},x`;
+      suffix = ".w";
+      break;
+    case "absoluteIndexedY":
+      text = `${hex(value, 4)},y`;
+      suffix = ".w";
+      break;
+    case "indirect":
+      text = `(${hex(value, 4)})`;
+      suffix = ".w";
+      break;
+    case "indexedIndirectX":
+      text = `(${hex(value)},x)`;
+      break;
+    case "indirectIndexedY":
+      text = `(${hex(value)}),y`;
+      break;
+    // Other 65xx dialect modes cannot occur in an NMOS opcode table.
+    case "absoluteIndexedIndirect":
+    case "absoluteLongIndexedX":
+    case "accumulatorRelative":
+    case "basePageIndirectIndexedZ":
+    case "blockTransfer":
+    case "immediateAbsolute":
+    case "immediateAbsoluteIndexedX":
+    case "immediateZeroPage":
+    case "immediateZeroPageIndexedX":
+    case "quadAccumulator":
+    case "relative16":
+    case "specialPage":
+    case "stackRelative":
+    case "stackRelativeIndirectIndexedY":
+    case "zeroPageImmediate":
+    case "zeroPageIndirect":
+    case "zeroPageIndirectIndexedZ":
+    case "zeroPageIndirectLong":
+    case "zeroPageRelative":
+      throw new Error(`Unsupported NMOS mode ${form.mode}.`);
+  }
+  return `${form.mnemonic.toLowerCase()}${suffix}${text ? ` ${text}` : ""}`;
+}
+
+// packages/plugin-65xx/src/directives/ca65.ts
+function unquote(token) {
+  if (token.length >= 2) {
+    const quote = token[0];
+    if ((quote === '"' || quote === "'") && token.endsWith(quote)) {
+      return token.slice(1, -1);
+    }
+  }
+  return token;
+}
+function parameterList(words) {
+  const joined = words.slice(1).join(" ");
+  const parts = [];
+  let current = "";
+  let parenDepth = 0;
+  let quote;
+  for (const char of joined) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = void 0;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === "(") {
+      parenDepth++;
+    } else if (char === ")") {
+      parenDepth--;
+    }
+    if (char === "," && parenDepth === 0) {
+      const trimmed2 = current.trim();
+      if (trimmed2) {
+        parts.push(trimmed2);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts.push(trimmed);
+  }
+  return parts;
+}
+function markGlobalSymbol(session, name) {
+  if (!name) {
+    return;
+  }
+  const localKey = session.symbolScope.qualifySymbolName(name);
+  session.globalSymbols.add(name);
+  if (localKey !== name) {
+    const existing = session.labelTable.get(localKey);
+    if (existing) {
+      session.symbolScope.setLabel(name, existing.value, existing.isStatic);
+    }
+  }
+}
+function closeActiveSegment(session, state) {
+  if (!state.currentSegment) {
+    return;
+  }
+  const segment = state.linker.segments.get(state.currentSegment);
+  if (!segment) {
+    state.currentSegment = null;
+    return;
+  }
+  const size = session.currentTargetBaseAddress - state.segmentLoadStart;
+  state.memoryCursors[segment.load] = session.currentTargetBaseAddress;
+  if (segment.define) {
+    const loadName = `__${segment.name}_LOAD__`;
+    const runName = `__${segment.name}_RUN__`;
+    const sizeName = `__${segment.name}_SIZE__`;
+    const runEndName = `__${segment.name}_RUN_END__`;
+    session.globalSymbols.add(loadName);
+    session.globalSymbols.add(runName);
+    session.globalSymbols.add(sizeName);
+    session.globalSymbols.add(runEndName);
+    session.symbolScope.setLabel(loadName, state.segmentLoadStart, true);
+    session.symbolScope.setLabel(runName, state.segmentRunStart, true);
+    session.symbolScope.setLabel(sizeName, size, true);
+    session.symbolScope.setLabel(runEndName, state.segmentRunStart + size, true);
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+}
+function applyLinkerSymbols(session, state) {
+  for (const symbol of state.linker.symbols) {
+    session.globalSymbols.add(symbol.name);
+    const value = session.operandResolver.getnum(symbol.valueExpr);
+    session.symbolScope.setLabel(symbol.name, value, true);
+  }
+}
+function openSegment(session, state, segment) {
+  const loadMemory = state.linker.memories.get(segment.load);
+  const runMemory = state.linker.memories.get(segment.run);
+  if (!loadMemory || !runMemory) {
+    throw new Error(`.segment "${segment.name}" references unknown MEMORY.`);
+  }
+  const loadCursor = Object.hasOwn(state.memoryCursors, segment.load) ? state.memoryCursors[segment.load] : void 0;
+  const loadStart = segment.start ?? loadCursor ?? loadMemory.start;
+  session.setWritePosition(loadStart);
+  const runStart = segment.run === segment.load ? loadStart : runMemory.start;
+  if (runStart !== loadStart) {
+    session.currentTargetAddress = runStart;
+    session.currentTargetStartAddress = runStart;
+  }
+  state.currentSegment = segment.name;
+  state.currentLoadMemory = segment.load;
+  state.segmentLoadStart = loadStart;
+  state.segmentRunStart = runStart;
+}
+function handleSegment(session, state, words) {
+  const name = unquote(words[1] ?? "").trim();
+  if (!name) {
+    throw new Error(".segment requires a segment name.");
+  }
+  const segment = state.linker.segments.get(name);
+  if (!segment) {
+    throw new Error(`.segment "${name}" is not defined in the linker configuration.`);
+  }
+  closeActiveSegment(session, state);
+  openSegment(session, state, segment);
+}
+function markGlobalSymbols(session, words, keyword) {
+  const names = parameterList(words).map((entry) => unquote(entry).trim()).filter(Boolean);
+  if (names.length === 0) {
+    throw new Error(`${keyword} requires at least one identifier.`);
+  }
+  for (const name of names) {
+    markGlobalSymbol(session, name);
+  }
+}
+function handleExport(session, words) {
+  markGlobalSymbols(session, words, ".export");
+}
+function handleImport(session, words) {
+  markGlobalSymbols(session, words, ".import");
+}
+function handleByte(session, words) {
+  session.directiveRuntime.handleDataDirective("db", words.slice(1));
+}
+function handleAddr(session, words) {
+  session.directiveRuntime.handleDataDirective("dw", words.slice(1));
+}
+function emitMappedBytes(session, words, write2, width) {
+  const params = parameterList(words);
+  if (params.length === 0) {
+    throw new Error(`${words[0]} requires at least one parameter.`);
+  }
+  if (session.isDefinitionCollectionStage) {
+    session.step(params.length * width);
+    return;
+  }
+  for (const param of params) {
+    write2(session.operandResolver.getnum(param));
+  }
+}
+function handleLobytes(session, words) {
+  emitMappedBytes(session, words, (value) => session.write1(value & 255), 1);
+}
+function handleHibytes(session, words) {
+  emitMappedBytes(session, words, (value) => session.write1(value >> 8 & 255), 1);
+}
+function handleDbyt(session, words) {
+  emitMappedBytes(
+    session,
+    words,
+    (value) => {
+      session.write1(value >> 8 & 255);
+      session.write1(value & 255);
+    },
+    2
+  );
+}
+function handleDword(session, words, width = 4) {
+  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", words.slice(1));
+}
+function handleSetcpu(session, state, words) {
+  const name = unquote(words.slice(1).join(" ").trim());
+  if (!name) {
+    throw new Error(".setcpu requires a CPU name argument.");
+  }
+  const architecture = resolve65xxCpuName(name);
+  if (!architecture) {
+    throw new Error(
+      `.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`
+    );
+  }
+  session.selectArchitecture(architecture, name.toLowerCase());
+  state.currentArchitecture = architecture;
+}
+function handlePushcpu(session, state) {
+  state.cpuStack.push(session.resolveActiveArchitecture().name);
+}
+function handlePopcpu(session, state) {
+  const architecture = state.cpuStack.pop();
+  if (!architecture) {
+    throw new Error(".popcpu: CPU stack is empty.");
+  }
+  session.selectArchitecture(architecture, architecture);
+  state.currentArchitecture = architecture;
+}
+function handleCpuShorthand(session, state, words) {
+  const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
+  const cpu = ca65CpuShorthands[keyword];
+  if (!cpu) {
+    throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  }
+  handleSetcpu(session, state, ["setcpu", cpu]);
+}
+function handleRes(session, words) {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 2) {
+    throw new Error(".res expects count and an optional fill value.");
+  }
+  const count = session.operandResolver.getnum(params[0] ?? "");
+  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(".res count must be non-negative.");
+  }
+  if (session.isDefinitionCollectionStage) {
+    session.step(count);
+    return;
+  }
+  for (let index = 0; index < count; index++) {
+    session.write1(fill & 255);
+  }
+}
+function handleAlign(session, words) {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 2) {
+    throw new Error(".align expects a boundary and optional fill value.");
+  }
+  const boundary = session.operandResolver.getnum(params[0] ?? "");
+  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  if (!Number.isInteger(boundary) || boundary <= 0) {
+    throw new Error(".align boundary must be a positive integer.");
+  }
+  const count = (boundary - session.currentTargetAddress % boundary) % boundary;
+  if (session.isDefinitionCollectionStage) {
+    session.step(count);
+    return;
+  }
+  for (let index = 0; index < count; index++) {
+    session.write1(fill & 255);
+  }
+}
+function handleCa65Incbin(session, words) {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 3) {
+    throw new Error(".incbin expects a filename, optional offset, and optional size.");
+  }
+  const filename = unquote(params[0] ?? "");
+  const data = session.includeSource.readFile(filename);
+  if (!(data instanceof Uint8Array)) {
+    throw new Error(`Failed to read binary include: ${filename}`);
+  }
+  const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
+  if (!Number.isInteger(offset) || !Number.isInteger(size) || offset < 0 || size < 0 || offset + size > data.length) {
+    throw new Error(
+      `.incbin range ${offset}+${size} is outside '${filename}' (${data.length} bytes).`
+    );
+  }
+  if (session.isDefinitionCollectionStage) {
+    session.step(size);
+    return;
+  }
+  for (const byte of data.subarray(offset, offset + size)) {
+    session.write1(byte);
+  }
+}
+function handleCa65Assert(session, words) {
+  const params = parameterList(words);
+  if (params.length === 0) {
+    throw new Error(".assert requires an expression.");
+  }
+  if (session.operandResolver.getnum(params[0] ?? "") !== 0) {
+    return;
+  }
+  const message = params.find((part) => /^["']/.test(part));
+  throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
+}
+function handleScope(session, state, words, procedure) {
+  const name = words[1]?.trim() || `__anonymous_scope_${session.currentLine}`;
+  if (procedure) {
+    session.symbolScope.setLabel(session.symbolScope.qualifySymbolName(name));
+  }
+  state.scopeStack.push(session.currentNamespace);
+  session.currentNamespace = session.currentNamespace ? `${session.currentNamespace}_${name}` : name;
+}
+function handleEndScope(session, state) {
+  const previous = state.scopeStack.pop();
+  if (previous === void 0) {
+    throw new Error("ca65 scope stack is empty.");
+  }
+  session.currentNamespace = previous;
+}
+function handleFlatSegment(state, words) {
+  const name = unquote(words[1] ?? "").trim();
+  if (!name) {
+    throw new Error(".segment requires a segment name.");
+  }
+  state.currentFlatSegment = name;
+}
+function handlePushseg(state) {
+  state.segmentStack.push(state.currentFlatSegment);
+}
+function handlePopseg(state) {
+  const segment = state.segmentStack.pop();
+  if (segment === void 0) {
+    throw new Error(".popseg: segment stack is empty.");
+  }
+  state.currentFlatSegment = segment;
+}
+function handleUnsupportedCa65(words) {
+  const keyword = words[0] ?? "<unknown>";
+  throw new Error(
+    `.${keyword.replace(/^\./, "")} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`
+  );
+}
+
+// packages/plugin-65xx/src/operands/classifier.ts
+function classify65xxOperand(resolver, operand) {
+  const raw = operand.trim();
+  const sizePrefix = parseCa65AddressSizePrefix(raw);
+  const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
+  let length = inferredLength;
+  if (sizePrefix.force === 1) {
+    length = 1;
+  } else if (sizePrefix.force === 2) {
+    length = Math.max(2, inferredLength);
+  } else if (sizePrefix.force === 3) {
+    length = Math.max(3, inferredLength);
+  }
+  const normalized = expanded.trim();
+  const normalizedUpper = normalized.toUpperCase();
+  const compound = splitTopLevelOperands2(normalized);
+  let mode2 = "unknown";
+  let baseExpression = normalized;
+  let registerName;
+  if (normalized === "") {
+    mode2 = "implied";
+  } else if (normalizedUpper === "A") {
+    mode2 = "accumulator";
+    registerName = "a";
+  } else if (normalizedUpper === "Q") {
+    mode2 = "quadAccumulator";
+    registerName = "q";
+  } else if (compound.length >= 2 && compound[0]?.startsWith("#")) {
+    const indexedX = compound.length === 3 && compound[2]?.toUpperCase() === "X";
+    const address2 = compound[1] ?? "";
+    const addressLength = resolver.expandOperand(address2).length;
+    mode2 = `${addressLength <= 1 ? "immediateZeroPage" : "immediateAbsolute"}${indexedX ? "IndexedX" : ""}`;
+    baseExpression = normalized;
+  } else if (normalized.startsWith("#")) {
+    mode2 = "immediate";
+    baseExpression = normalized.slice(1).trim();
+  } else {
+    const indexedIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*x\s*\)$/i);
+    const stackRelativeIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i);
+    const indirectIndexed = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*y$/i);
+    const indirectIndexedZ = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*z$/i);
+    const indirect = normalized.match(/^\(\s*(.+?)\s*\)$/i);
+    const basePageIndirectZ = normalized.match(/^\[\s*(.+?)\s*]\s*,\s*z$/i);
+    const indirectLong = normalized.match(/^\[\s*(.+?)\s*]$/i);
+    const indexed = normalized.match(/^(.+?)\s*,\s*([sx-z])$/i);
+    const topLevelComma = findTopLevelComma(normalized);
+    if (stackRelativeIndirect) {
+      mode2 = "stackRelativeIndirectIndexedY";
+      baseExpression = stackRelativeIndirect[1].trim();
+    } else if (indexedIndirect) {
+      mode2 = resolver.expandOperand(indexedIndirect[1].trim()).length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
+      baseExpression = indexedIndirect[1].trim();
+    } else if (indirectIndexed && !indirectIndexed[1].includes(",")) {
+      mode2 = "indirectIndexedY";
+      baseExpression = indirectIndexed[1].trim();
+    } else if (indirectIndexedZ && !indirectIndexedZ[1].includes(",")) {
+      mode2 = "zeroPageIndirectIndexedZ";
+      baseExpression = indirectIndexedZ[1].trim();
+    } else if (basePageIndirectZ) {
+      mode2 = "basePageIndirectIndexedZ";
+      baseExpression = basePageIndirectZ[1].trim();
+    } else if (indirectLong) {
+      mode2 = "zeroPageIndirectLong";
+      baseExpression = indirectLong[1].trim();
+    } else if (indirect) {
+      mode2 = resolver.expandOperand(indirect[1].trim()).length <= 1 ? "zeroPageIndirect" : "indirect";
+      baseExpression = indirect[1].trim();
+    } else if (indexed) {
+      const register = indexed[2].toLowerCase();
+      if (register === "s") {
+        mode2 = "stackRelative";
+      } else if (register === "z") {
+        mode2 = "unknown";
+      } else if (length > 2 && register === "x") {
+        mode2 = "absoluteLongIndexedX";
+      } else {
+        mode2 = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
+      }
+      baseExpression = indexed[1].trim();
+    } else if (topLevelComma >= 0) {
+      if (compound.length === 3) {
+        mode2 = "blockTransfer";
+      } else if (compound[0]?.toUpperCase() === "A") {
+        mode2 = "accumulatorRelative";
+      } else if (compound[1]?.startsWith("#")) {
+        mode2 = "zeroPageImmediate";
+      } else {
+        mode2 = "zeroPageRelative";
+      }
+      baseExpression = normalized;
+    } else {
+      mode2 = length <= 1 ? "zeroPage" : "absolute";
+    }
+  }
+  return {
+    // Unused
+    immediate: false,
+    // Unused
+    indirect: false,
+    mode: mode2,
+    baseExpression,
+    registerName,
+    raw,
+    expanded,
+    length,
+    // 24-bit values are not 6502-legal. Encoder can still emit long-x on 4510.
+    metadata: length > 2 ? { addressOutOfRange: true } : void 0
+  };
+}
+function splitTopLevelOperands2(value) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+function findTopLevelComma(value) {
+  let depth = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      return index;
+    }
+  }
+  return -1;
+}
+function parseCa65AddressSizePrefix(operand) {
+  const match = operand.match(/^([afz]):(.*)$/i);
+  if (!match) {
+    return { rest: operand, force: void 0 };
+  }
+  const rest = match[2].trim();
+  const key = match[1].toLowerCase();
+  if (key === "z") {
+    return { rest, force: 1 };
+  }
+  if (key === "a") {
+    return { rest, force: 2 };
+  }
+  return { rest, force: 3 };
+}
+
+// packages/plugin-65xx/src/session-state.ts
+var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
+function isSessionStateKey2(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey2(id) {
+  const key = { id };
+  if (!isSessionStateKey2(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var nes65xxSessionStateKey = createSessionStateKey2(NES_65XX_SESSION_STATE_ID);
+function cloneNes65xxSessionState(value) {
+  return {
+    ...value,
+    header: [...value.header],
+    memoryCursors: { ...value.memoryCursors }
+  };
+}
+function resetNes65xxStageState(state) {
+  state.memoryCursors = {};
+  for (const memory of state.linker.memories.values()) {
+    state.memoryCursors[memory.name] = memory.start;
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+  state.segmentLoadStart = 0;
+  state.segmentRunStart = 0;
+}
+
+// packages/plugin-65xx/src/linker-config.ts
+var DEFAULT_LINKER_CONFIG = `MEMORY {
+    ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
+}
+SEGMENTS {
+    CODE: load = ROM, type = ro ;
+}
+`;
+function defaultLd65ConfigText() {
+  return DEFAULT_LINKER_CONFIG;
+}
+function parseLd65Config(source) {
+  const text = source.replace(/\/\*[\S\s]*?\*\//g, " ");
+  const memories = /* @__PURE__ */ new Map();
+  const segments = /* @__PURE__ */ new Map();
+  const symbols = [];
+  let fileOffset = 0;
+  for (const statement of readBlockStatements(text, "MEMORY")) {
+    const parsed = parseNamedStatement(statement);
+    const start = requireNumber(parsed.attrs, "start", parsed.name);
+    const size = requireNumber(parsed.attrs, "size", parsed.name);
+    const file = parsed.attrs.file ?? "%O";
+    const isRam = file === '""' || file === "''" || file === "";
+    const region = {
+      name: parsed.name,
+      start,
+      size,
+      fileOffset: isRam ? -1 : fileOffset,
+      fill: parseYesNo(parsed.attrs.fill) ?? false,
+      fillval: parseNumberToken(parsed.attrs.fillval ?? "0") ?? 0
+    };
+    memories.set(region.name, region);
+    if (!isRam) {
+      fileOffset += size;
+    }
+  }
+  for (const statement of readBlockStatements(text, "SEGMENTS")) {
+    const parsed = parseNamedStatement(statement);
+    const load = parsed.attrs.load;
+    if (!load) {
+      throw new Error(`ld65 segment '${parsed.name}' is missing load = MEMORY.`);
+    }
+    if (!memories.has(load)) {
+      throw new Error(`ld65 segment '${parsed.name}' loads unknown memory '${load}'.`);
+    }
+    const run = parsed.attrs.run ?? load;
+    if (!memories.has(run)) {
+      throw new Error(`ld65 segment '${parsed.name}' runs in unknown memory '${run}'.`);
+    }
+    segments.set(parsed.name, {
+      name: parsed.name,
+      load,
+      run,
+      start: parseNumberToken(parsed.attrs.start),
+      define: parseYesNo(parsed.attrs.define) ?? false,
+      type: parsed.attrs.type ?? "ro"
+    });
+  }
+  for (const statement of readBlockStatements(text, "SYMBOLS")) {
+    const parsed = parseNamedStatement(statement);
+    const valueExpr = parsed.attrs.value;
+    if (!valueExpr) {
+      throw new Error(`ld65 symbol '${parsed.name}' is missing value = EXPR.`);
+    }
+    symbols.push({ name: parsed.name, valueExpr });
+  }
+  if (memories.size === 0) {
+    throw new Error("ld65 config MEMORY block is empty.");
+  }
+  return {
+    memories,
+    segments,
+    symbols,
+    imageSize: fileOffset
+  };
+}
+function linkerDefinedSymbolNames(config) {
+  const names = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) {
+      continue;
+    }
+    names.push(
+      `__${segment.name}_LOAD__`,
+      `__${segment.name}_RUN__`,
+      `__${segment.name}_SIZE__`,
+      `__${segment.name}_RUN_END__`
+    );
+  }
+  for (const symbol of config.symbols) {
+    names.push(symbol.name);
+  }
+  return names;
+}
+var LD65_BLOCK_BODY = {
+  MEMORY: /memory\s*{([\S\s]*?)}/i,
+  SEGMENTS: /segments\s*{([\S\s]*?)}/i,
+  SYMBOLS: /symbols\s*{([\S\s]*?)}/i
+};
+function readBlockStatements(source, block) {
+  const match = source.match(LD65_BLOCK_BODY[block]);
+  if (!match) {
+    return [];
+  }
+  return match[1].split(";").map((entry) => entry.trim()).filter(Boolean);
+}
+function parseNamedStatement(statement) {
+  const colon = statement.indexOf(":");
+  if (colon <= 0) {
+    throw new Error(`Invalid ld65 statement: ${statement}`);
+  }
+  const name = statement.slice(0, colon).trim();
+  const attrs = {};
+  for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
+    const equals = part.indexOf("=");
+    if (equals <= 0) {
+      continue;
+    }
+    const key = part.slice(0, equals).trim().toLowerCase();
+    const value = part.slice(equals + 1).trim();
+    attrs[key] = value;
+  }
+  return { name, attrs };
+}
+function splitTopLevelCommas(input) {
+  const parts = [];
+  let current = "";
+  let quote;
+  for (const char of input) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = void 0;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ",") {
+      const trimmed2 = current.trim();
+      if (trimmed2) {
+        parts.push(trimmed2);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts.push(trimmed);
+  }
+  return parts;
+}
+function parseNumberToken(token) {
+  if (token === void 0 || token === "") {
+    return void 0;
+  }
+  if (token.startsWith("$")) {
+    const value = Number.parseInt(token.slice(1), 16);
+    return Number.isFinite(value) ? value : void 0;
+  }
+  if (/^-?\d+$/.test(token)) {
+    return Number.parseInt(token, 10);
+  }
+  return void 0;
+}
+function requireNumber(attrs, key, owner) {
+  const value = parseNumberToken(attrs[key]);
+  if (value === void 0) {
+    throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);
+  }
+  return value;
+}
+function parseYesNo(raw) {
+  if (raw === void 0) {
+    return void 0;
+  }
+  const normalized = raw.toLowerCase();
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
+  return void 0;
+}
+
+// packages/plugin-65xx/src/target/nes.ts
+var NES_65XX_TARGET_ID = "65xx.nes";
+var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
+var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
+var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
+var INES_MAGIC = [78, 69, 83, 26];
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function createNes65xxTargetOptions(configured) {
+  const value = isRecord5(configured) ? configured : {};
+  const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim() ? value.linkerConfig : defaultLd65ConfigText();
+  const linker = parseLd65Config(linkerConfig);
+  const fillByte = typeof value.fillByte === "number" && Number.isInteger(value.fillByte) ? value.fillByte & 255 : 255;
+  const header = normalizeHeader(value.header, linker.imageSize);
+  return { header, linkerConfig, fillByte, linker };
+}
+function createInitialNesState(context) {
+  const options = createNes65xxTargetOptions(context.targetOptions);
+  const state = {
+    header: options.header,
+    fillByte: options.fillByte,
+    linker: options.linker,
+    memoryCursors: {},
+    currentSegment: null,
+    currentLoadMemory: null,
+    segmentLoadStart: 0,
+    segmentRunStart: 0
+  };
+  resetNes65xxStageState(state);
+  return state;
+}
+function validate(address2) {
+  if (!Number.isInteger(address2) || address2 < 0 || address2 > 65535) {
+    throw new Error(`Address $${address2.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+  }
+  return address2;
+}
+function createNesAddressSpace({ state }) {
+  return {
+    addressWidth: 16,
+    defaultOrigin: 0,
+    normalizeForWrite: validate,
+    advance(address2, amount) {
+      return validate(address2 + amount & 65535);
+    },
+    toOutputOffset(address2) {
+      const nes = state.get(nes65xxSessionStateKey);
+      if (!nes.currentLoadMemory) {
+        return -1;
+      }
+      const memory = nes.linker.memories.get(nes.currentLoadMemory);
+      if (!memory || memory.fileOffset < 0) {
+        return -1;
+      }
+      if (address2 < memory.start || address2 >= memory.start + memory.size) {
+        return -1;
+      }
+      return nes.header.length + memory.fileOffset + (address2 - memory.start);
+    },
+    fromOutputOffset(offset) {
+      const nes = state.get(nes65xxSessionStateKey);
+      const prgOffset = offset - nes.header.length;
+      if (prgOffset < 0) {
+        return -1;
+      }
+      for (const memory of nes.linker.memories.values()) {
+        if (memory.fileOffset < 0) {
+          continue;
+        }
+        if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
+          return memory.start + (prgOffset - memory.fileOffset);
+        }
+      }
+      return -1;
+    },
+    validateWrite(address2) {
+      validate(address2);
+    }
+  };
+}
+function createNesOutputFormat() {
+  return {
+    finalize: () => void 0,
+    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+  };
+}
+function createNesLifecycle({ state }) {
+  const prefill = (session) => {
+    const nes = state.get(nes65xxSessionStateKey);
+    resetNes65xxStageState(nes);
+    session.outputFillByte = nes.fillByte;
+    const total = nes.header.length + nes.linker.imageSize;
+    const image = Array.from({ length: total }, () => nes.fillByte);
+    for (let index = 0; index < nes.header.length; index++) {
+      image[index] = nes.header[index] ?? 0;
+    }
+    session.outputBytes = image;
+    session.bytes = 0;
+    for (const name of linkerDefinedSymbolNames(nes.linker)) {
+      session.globalSymbols.add(name);
+    }
+  };
+  return {
+    onSessionCreated: ({ session }) => {
+      prefill(session);
+    },
+    onStageStart: ({ session }) => {
+      prefill(session);
+    },
+    onStageEnd: ({ session }) => {
+      const nes = state.get(nes65xxSessionStateKey);
+      closeActiveSegment(session, nes);
+      applyLinkerSymbols(session, nes);
+    }
+  };
+}
+function normalizeHeader(configured, imageSize) {
+  if (configured instanceof Uint8Array || Array.isArray(configured)) {
+    const bytes = [...configured].map((value) => Number(value) & 255);
+    if (bytes.length === 0) {
+      throw new Error("65xx NES target header must not be empty.");
+    }
+    return bytes;
+  }
+  if (configured !== void 0) {
+    throw new Error("65xx NES target header must be a byte array.");
+  }
+  const prgBanks = Math.max(1, Math.ceil(imageSize / 16384));
+  const header = Array.from({ length: 16 }, () => 0);
+  header[0] = INES_MAGIC[0];
+  header[1] = INES_MAGIC[1];
+  header[2] = INES_MAGIC[2];
+  header[3] = INES_MAGIC[3];
+  header[4] = prgBanks & 255;
+  return header;
+}
+
+// packages/plugin-65xx/src/index.ts
+var RAW_65XX_TARGET_ID = "65xx.raw";
+var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
+var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
+var RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+var CA65_RAW_65XX_TARGET_ID = "65xx.ca65-raw";
+var CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+var CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
+var CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
+function createRaw65xxTargetOptions(configured) {
+  if (configured === void 0) {
+    return { origin: 0 };
+  }
+  if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
+    throw new Error("65xx raw target options must be an object with an optional numeric 'origin'.");
+  }
+  const keys = Object.keys(configured);
+  const unknown = keys.filter((key) => key !== "origin");
+  if (unknown.length > 0) {
+    throw new Error(`Unknown 65xx raw target option(s): ${unknown.join(", ")}.`);
+  }
+  const value = "origin" in configured ? configured.origin : 0;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 65535) {
+    throw new Error("65xx raw target origin must be an integer from 0 through 65535.");
+  }
+  return { origin: value };
+}
+var descriptor = (keyword, summary, syntax2, group) => ({ keyword, summary, syntax: syntax2, group });
+var ca65Tooling = [
+  descriptor("setcpu", "Select a 65xx CPU.", '.setcpu "CPU"', "architecture"),
+  descriptor("cpu", "Alias for .setcpu.", '.cpu "CPU"', "architecture"),
+  descriptor("pushcpu", "Push the current CPU.", ".pushcpu", "architecture"),
+  descriptor("popcpu", "Restore the pushed CPU.", ".popcpu", "architecture"),
+  descriptor("segment", "Switch to an ld65 segment.", '.segment "NAME"', "layout"),
+  descriptor("pushseg", "Push the current flat segment.", ".pushseg", "layout"),
+  descriptor("popseg", "Restore the pushed flat segment.", ".popseg", "layout"),
+  descriptor("export", "Export a symbol to other files.", ".export ident[, ident...]", "label"),
+  descriptor(
+    "import",
+    "Import a symbol defined in another file.",
+    ".import ident[, ident...]",
+    "label"
+  ),
+  descriptor("byte", "Emit one or more bytes.", ".byte value[, value...]", "data"),
+  descriptor("byt", "Alias for .byte.", ".byt value[, value...]", "data"),
+  descriptor("addr", "Emit 16-bit little-endian addresses.", ".addr value[, value...]", "data"),
+  descriptor("word", "Alias for .addr.", ".word value[, value...]", "data"),
+  descriptor(
+    "lobytes",
+    "Emit the low byte of each expression.",
+    ".lobytes expr[, expr...]",
+    "data"
+  ),
+  descriptor(
+    "hibytes",
+    "Emit the high byte of each expression.",
+    ".hibytes expr[, expr...]",
+    "data"
+  ),
+  descriptor("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data"),
+  descriptor("dword", "Emit 32-bit little-endian values.", ".dword value[, value...]", "data"),
+  descriptor(
+    "faraddr",
+    "Emit 24-bit little-endian addresses.",
+    ".faraddr value[, value...]",
+    "data"
+  ),
+  descriptor("res", "Reserve bytes with an optional fill value.", ".res count[, fill]", "data"),
+  descriptor("align", "Align the location counter.", ".align boundary[, fill]", "layout"),
+  descriptor("incbin", "Include a binary range.", '.incbin "file"[, offset[, size]]', "include"),
+  descriptor(
+    "assert",
+    "Require an expression to be true.",
+    '.assert expr[, error[, "message"]]',
+    "diagnostic"
+  ),
+  descriptor("scope", "Enter a lexical scope.", ".scope [name]", "label"),
+  descriptor("endscope", "Leave a lexical scope.", ".endscope", "label"),
+  descriptor("proc", "Define and enter a procedure scope.", ".proc name", "label"),
+  descriptor("endproc", "Leave a procedure scope.", ".endproc", "label")
+];
+var ca65ExpressionFunctions = [
+  ["lobyte", "Low byte of a value.", (value) => value & 255],
+  ["hibyte", "High byte of a value.", (value) => value >>> 8 & 255],
+  ["bankbyte", "Bank byte of a value.", (value) => value >>> 16 & 255],
+  ["loword", "Low word of a value.", (value) => value & 65535],
+  ["hiword", "High word of a value.", (value) => value >>> 16 & 65535]
+];
+var directive = (id, keywords, handler) => {
+  const wanted = new Set(keywords);
+  return {
+    id,
+    keywords,
+    phase: "lowered",
+    createHandler: handler,
+    tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword))
+  };
+};
+function validate2(address2) {
+  if (!Number.isInteger(address2) || address2 < 0 || address2 > 65535) {
+    throw new Error(`Address $${address2.toString(16).toUpperCase()} is outside flat16.`);
+  }
+  return address2;
+}
+function createFlat65xxAddressSpace({ options }) {
+  const { origin } = createRaw65xxTargetOptions(options);
+  return {
+    addressWidth: 16,
+    defaultOrigin: origin,
+    normalizeForWrite: validate2,
+    advance(address2, amount) {
+      return validate2(address2 + amount);
+    },
+    toOutputOffset(address2) {
+      return Number.isInteger(address2) && address2 >= origin && address2 <= 65535 ? address2 - origin : -1;
+    },
+    fromOutputOffset(offset) {
+      const address2 = origin + offset;
+      return Number.isInteger(offset) && offset >= 0 && address2 <= 65535 ? address2 : -1;
+    },
+    validateWrite(address2, width) {
+      validate2(address2);
+      validate2(address2 + width - 1);
+      if (address2 < origin) {
+        throw new Error(
+          `Address $${address2.toString(16).toUpperCase()} precedes raw origin $${origin.toString(16).toUpperCase()}.`
+        );
+      }
+    }
+  };
+}
+function updatePredicates(session, architecture) {
+  for (const symbol of new Set(Object.values(ca65CpuPredicateByArchitecture))) {
+    session.globalSymbols.add(symbol);
+    session.labelTable.set(symbol, {
+      value: ca65CpuPredicateByArchitecture[architecture] === symbol ? 1 : 0,
+      isStatic: true
+    });
+  }
+}
+function register65xxContributions(context) {
+  for (const [cpu, forms] of [
+    [nmos6502Cpu, nmos6502Forms],
+    [nmos6502xCpu, nmos6502xForms],
+    [ricoh2a03Cpu, nmos6502xForms],
+    ...variantCpus.map(
+      (variantCpu) => [variantCpu, variantFormsByCpuId[variantCpu.id] ?? []]
+    )
+  ]) {
+    const catalog = buildInstructionCatalog(forms);
+    context.registerArchitecture({
+      id: cpu.id,
+      aliases: cpu.aliases,
+      displayName: cpu.displayName,
+      unknownInstructionBehavior: "throw",
+      // Same as 65816: `LDA $12,x` is one operand, not two.
+      splitOperands: (text) => text.trim() ? [text.trim()] : [],
+      classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
+      createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
+      // Vendor/CMOS tables have different semantics; expose the decoder only for NMOS/Ricoh profiles.
+      createDecoder: cpu.features.has("nmos") && !cpu.features.has("dtv") ? () => new Cpu6502Decoder(cpu) : void 0,
+      instructionSpecifications: cpu.features.has("nmos") && !cpu.features.has("dtv") ? cpu6502Specifications(cpu) : void 0,
+      instructions: catalog
+    });
+  }
+  context.registerAddressSpace({
+    id: FLAT_65XX_ADDRESS_SPACE_ID,
+    create: createFlat65xxAddressSpace
+  });
+  context.registerOutputFormat({
+    id: RAW_65XX_OUTPUT_FORMAT_ID,
+    // Emit the buffer as a headerless image, without checksum or padding.
+    create: () => ({
+      finalize: () => void 0,
+      getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+    })
+  });
+  context.registerLifecycle({
+    id: RAW_65XX_LIFECYCLE_ID,
+    create: ({ options }) => {
+      const { origin } = createRaw65xxTargetOptions(options);
+      return {
+        onStageStart: ({ session }) => {
+          session.setWritePosition(origin);
+          session.bytes = 0;
+        }
+      };
+    }
+  });
+  context.registerTarget({
+    id: RAW_65XX_TARGET_ID,
+    aliases: ["65xx", "6502-raw"],
+    displayName: "65xx flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [],
+    expressionSets: [],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID],
+    syntaxProfile: NATIVE_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions
+  });
+  context.registerSessionState({
+    id: CA65_65XX_SESSION_STATE_ID,
+    create: createCa65SessionState,
+    clone: cloneCa65SessionState,
+    resetForStage: resetCa65StageState
+  });
+  context.registerExpressionSet({
+    id: CA65_65XX_EXPRESSION_SET_ID,
+    functions: ca65ExpressionFunctions.map(([name, summary, transform]) => ({
+      name,
+      signature: { parameters: ["value"], minimumArguments: 1, maximumArguments: 1 },
+      summary,
+      evaluate: (_expressionContext, args) => {
+        const value = args[0];
+        if (typeof value !== "number") {
+          throw new Error(`${name}() expects a numeric argument.`);
+        }
+        return transform(value);
+      }
+    }))
+  });
+  context.registerLifecycle({
+    id: CA65_65XX_LIFECYCLE_ID,
+    create: () => {
+      return {
+        onSessionCreated: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.defaultArchitecture = session.resolveActiveArchitecture().name;
+          profile.currentArchitecture = profile.defaultArchitecture;
+          updatePredicates(session, profile.defaultArchitecture);
+        },
+        onStageStart: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          session.selectArchitecture(profile.defaultArchitecture, profile.defaultArchitecture);
+        },
+        onArchitectureSelected: ({ session, state, architecture }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.currentArchitecture = architecture;
+          updatePredicates(session, architecture);
+        }
+      };
+    }
+  });
+  context.registerTarget({
+    id: CA65_RAW_65XX_TARGET_ID,
+    aliases: ["ca65-raw"],
+    displayName: "65xx ca65-compatible flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions
+  });
+  context.registerSessionState({
+    id: NES_65XX_SESSION_STATE_ID,
+    create: createInitialNesState,
+    clone: cloneNes65xxSessionState,
+    resetForStage: resetNes65xxStageState
+  });
+  context.registerAddressSpace({
+    id: NES_65XX_ADDRESS_SPACE_ID,
+    create: createNesAddressSpace
+  });
+  context.registerOutputFormat({
+    id: NES_65XX_OUTPUT_FORMAT_ID,
+    create: createNesOutputFormat
+  });
+  context.registerLifecycle({
+    id: NES_65XX_LIFECYCLE_ID,
+    create: createNesLifecycle
+  });
+  context.registerDirectiveSet({
+    id: CA65_65XX_DIRECTIVE_SET_ID,
+    directives: [
+      directive(
+        "65xx.directive.segment",
+        ["segment"],
+        ({ targetId, session, state }) => (_ctx, words) => {
+          if (targetId === NES_65XX_TARGET_ID) {
+            handleSegment(session, state.get(nes65xxSessionStateKey), words);
+          } else {
+            handleFlatSegment(state.get(ca65SessionStateKey), words);
+          }
+        }
+      ),
+      directive(
+        "65xx.directive.setcpu",
+        ["setcpu", "cpu"],
+        ({ session, state }) => (_ctx, words) => handleSetcpu(session, state.get(ca65SessionStateKey), words)
+      ),
+      directive(
+        "65xx.directive.pushcpu",
+        ["pushcpu"],
+        ({ session, state }) => () => handlePushcpu(session, state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.popcpu",
+        ["popcpu"],
+        ({ session, state }) => () => handlePopcpu(session, state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.cpu-shorthand",
+        Object.keys(ca65CpuShorthands),
+        ({ session, state }) => (_ctx, words) => handleCpuShorthand(session, state.get(ca65SessionStateKey), words)
+      ),
+      directive(
+        "65xx.directive.export",
+        ["export"],
+        ({ session }) => (_ctx, words) => handleExport(session, words)
+      ),
+      directive(
+        "65xx.directive.import",
+        ["import"],
+        ({ session }) => (_ctx, words) => handleImport(session, words)
+      ),
+      directive(
+        "65xx.directive.byte",
+        ["byte", "byt"],
+        ({ session }) => (_ctx, words) => handleByte(session, words)
+      ),
+      directive(
+        "65xx.directive.addr",
+        ["addr", "word"],
+        ({ session }) => (_ctx, words) => handleAddr(session, words)
+      ),
+      directive(
+        "65xx.directive.lobytes",
+        ["lobytes"],
+        ({ session }) => (_ctx, words) => handleLobytes(session, words)
+      ),
+      directive(
+        "65xx.directive.hibytes",
+        ["hibytes"],
+        ({ session }) => (_ctx, words) => handleHibytes(session, words)
+      ),
+      directive(
+        "65xx.directive.dbyt",
+        ["dbyt"],
+        ({ session }) => (_ctx, words) => handleDbyt(session, words)
+      ),
+      directive(
+        "65xx.directive.dword",
+        ["dword"],
+        ({ session }) => (_ctx, words) => handleDword(session, words)
+      ),
+      directive(
+        "65xx.directive.faraddr",
+        ["faraddr"],
+        ({ session }) => (_ctx, words) => handleDword(session, words, 3)
+      ),
+      directive(
+        "65xx.directive.res",
+        ["res"],
+        ({ session }) => (_ctx, words) => handleRes(session, words)
+      ),
+      directive(
+        "65xx.directive.align",
+        ["align"],
+        ({ session }) => (_ctx, words) => handleAlign(session, words)
+      ),
+      directive(
+        "65xx.directive.incbin",
+        ["incbin"],
+        ({ session }) => (_ctx, words) => handleCa65Incbin(session, words)
+      ),
+      directive(
+        "65xx.directive.assert",
+        ["assert"],
+        ({ session }) => (_ctx, words) => handleCa65Assert(session, words)
+      ),
+      directive(
+        "65xx.directive.scope",
+        ["scope", "proc"],
+        ({ session, state }) => (_ctx, words) => handleScope(
+          session,
+          state.get(ca65SessionStateKey),
+          words,
+          (words[0] ?? "").replace(/^\./, "").toLowerCase() === "proc"
+        )
+      ),
+      directive(
+        "65xx.directive.endscope",
+        ["endscope", "endproc"],
+        ({ session, state }) => () => handleEndScope(session, state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.pushseg",
+        ["pushseg"],
+        ({ state }) => () => handlePushseg(state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.popseg",
+        ["popseg"],
+        ({ state }) => () => handlePopseg(state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.unsupported-object",
+        [
+          "autoimport",
+          "constructor",
+          "debuginfo",
+          "destructor",
+          "exportzp",
+          "forceimport",
+          "globalzp",
+          "importzp",
+          "interruptor",
+          "reloc"
+        ],
+        () => (_ctx, words) => handleUnsupportedCa65(words)
+      ),
+      directive("65xx.directive.unsupported-macro", ["exitmacro", "local"], () => (_ctx, words) => {
+        throw new Error(
+          `.${(words[0] ?? "").replace(/^\./, "")} is not yet supported by the ca65 macro compatibility slice.`
+        );
+      })
+    ],
+    tooling: ca65Tooling
+  });
+  context.registerTarget({
+    id: NES_65XX_TARGET_ID,
+    aliases: ["nes", "ines", "6502-nes"],
+    displayName: "NES iNES (ca65 / ld65 layout)",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
+    addressSpace: NES_65XX_ADDRESS_SPACE_ID,
+    outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [NES_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+    defaultOutputExtension: ".nes",
+    createOptions: createNes65xxTargetOptions
+  });
+}
+function validate65xxPluginOptions(configured) {
+  if (configured && typeof configured === "object" && !Array.isArray(configured) && ("header" in configured || "linkerConfig" in configured || "fillByte" in configured)) {
+    const unknown = Object.keys(configured).filter(
+      (key) => !["header", "linkerConfig", "fillByte"].includes(key)
+    );
+    if (unknown.length) throw new Error(`Unknown NES target option(s): ${unknown.join(", ")}.`);
+    createNes65xxTargetOptions(configured);
+    return { ...configured };
+  }
+  return createRaw65xxTargetOptions(configured);
+}
+var plugin = definePlugin({
+  manifest: {
+    id: "uttori.asm-plugin-65xx",
+    name: "Uttori ASM 65xx",
+    version: "1.0.0",
+    apiVersion: PLUGIN_API_VERSION,
+    description: "65xx NMOS, CMOS, Commodore, MEGA65, Hudson, and Mitsubishi architectures with raw and NES iNES targets."
+  },
+  validateOptions: validate65xxPluginOptions,
+  activate: register65xxContributions
+});
+
 // packages/plugin-snes/src/architectures/65816-spec.ts
-var mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
+var mode = (id, syntax2, minimumSize, maximumSize = minimumSize, widthFlag) => ({
   id,
-  syntax,
+  syntax: syntax2,
   minimumSize,
   maximumSize,
   ...widthFlag ? { widthFlag } : {}
@@ -2183,7 +6927,7 @@ var opcodeRows = [
   "CPX:immX SBC:dix SEP:sig SBC:sr CPX:dp SBC:dp INC:dp SBC:dil INX:imp SBC:immM NOP:imp XBA:imp CPX:abs SBC:abs INC:abs SBC:long",
   "BEQ:rel8 SBC:diy SBC:dpi SBC:sriy PEA:imm16 SBC:dpx INC:dpx SBC:dily SED:imp SBC:aby PLX:imp XCE:imp JSR:indx SBC:abx INC:abx SBC:longx"
 ];
-var summaries = {
+var summaries2 = {
   ADC: "Add with carry to the accumulator.",
   AND: "Bitwise AND with the accumulator.",
   ASL: "Arithmetic shift left.",
@@ -2397,7 +7141,7 @@ var cpu65816Specifications = Object.freeze(
       syntax: mnemonic === "PEI" ? "dp" : definition.syntax,
       minimumSize: definition.minimumSize,
       maximumSize: definition.maximumSize,
-      summary: summaries[mnemonic] ?? `${mnemonic} instruction.`,
+      summary: summaries2[mnemonic] ?? `${mnemonic} instruction.`,
       flow: flowFor(mnemonic, definition.id),
       effects: effects[mnemonic] ?? [],
       ...definition.widthFlag ? { widthFlag: definition.widthFlag } : {},
@@ -2709,7 +7453,7 @@ var Cpu65816Decoder = class {
     return { kind: "instruction", instruction: alternatives[0] };
   }
 };
-var hex = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
+var hex2 = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
 function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
@@ -2724,76 +7468,76 @@ function formatCpu65816Instruction(instruction) {
     case "accumulator":
       break;
     case "signature":
-      text = `#${hex(value, 1)}`;
+      text = `#${hex2(value, 1)}`;
       break;
     case "immediate":
-      text = `#${hex(value, operand?.width ?? 1)}`;
+      text = `#${hex2(value, operand?.width ?? 1)}`;
       break;
     case "immediate16":
-      text = hex(value, 2);
+      text = hex2(value, 2);
       break;
     case "direct":
-      text = hex(value, 1);
+      text = hex2(value, 1);
       break;
     case "directIndexedX":
-      text = `${hex(value, 1)},x`;
+      text = `${hex2(value, 1)},x`;
       break;
     case "directIndexedY":
-      text = `${hex(value, 1)},y`;
+      text = `${hex2(value, 1)},y`;
       break;
     case "directIndirect":
-      text = instruction.mnemonic === "PEI" ? hex(value, 1) : `(${hex(value, 1)})`;
+      text = instruction.mnemonic === "PEI" ? hex2(value, 1) : `(${hex2(value, 1)})`;
       break;
     case "directIndirectLong":
-      text = `[${hex(value, 1)}]`;
+      text = `[${hex2(value, 1)}]`;
       break;
     case "directIndexedXIndirect":
-      text = `(${hex(value, 1)},x)`;
+      text = `(${hex2(value, 1)},x)`;
       break;
     case "directIndirectIndexedY":
-      text = `(${hex(value, 1)}),y`;
+      text = `(${hex2(value, 1)}),y`;
       break;
     case "directIndirectLongIndexedY":
-      text = `[${hex(value, 1)}],y`;
+      text = `[${hex2(value, 1)}],y`;
       break;
     case "stackRelative":
-      text = `${hex(value, 1)},s`;
+      text = `${hex2(value, 1)},s`;
       break;
     case "stackRelativeIndirectIndexedY":
-      text = `(${hex(value, 1)},s),y`;
+      text = `(${hex2(value, 1)},s),y`;
       break;
     case "absolute":
-      text = hex(value, 2);
+      text = hex2(value, 2);
       break;
     case "absoluteIndexedX":
-      text = `${hex(value, 2)},x`;
+      text = `${hex2(value, 2)},x`;
       break;
     case "absoluteIndexedY":
-      text = `${hex(value, 2)},y`;
+      text = `${hex2(value, 2)},y`;
       break;
     case "absoluteLong":
-      text = hex(value, 3);
+      text = hex2(value, 3);
       break;
     case "absoluteLongIndexedX":
-      text = `${hex(value, 3)},x`;
+      text = `${hex2(value, 3)},x`;
       break;
     case "absoluteIndirect":
-      text = `(${hex(value, 2)})`;
+      text = `(${hex2(value, 2)})`;
       break;
     case "absoluteIndexedXIndirect":
-      text = `(${hex(value, 2)},x)`;
+      text = `(${hex2(value, 2)},x)`;
       break;
     case "absoluteIndirectLong":
-      text = `[${hex(value, 2)}]`;
+      text = `[${hex2(value, 2)}]`;
       break;
     case "relative":
-      text = hex(operand?.targetAddress ?? 0, 3);
+      text = hex2(operand?.targetAddress ?? 0, 3);
       break;
     case "relativeLong":
-      text = instruction.mnemonic === "PER" ? hex(value, 2) : hex(operand?.targetAddress ?? 0, 3);
+      text = instruction.mnemonic === "PER" ? hex2(value, 2) : hex2(operand?.targetAddress ?? 0, 3);
       break;
     case "blockMove":
-      text = `${hex(instruction.operands[0]?.value ?? 0, 1)},${hex(instruction.operands[1]?.value ?? 0, 1)}`;
+      text = `${hex2(instruction.operands[0]?.value ?? 0, 1)},${hex2(instruction.operands[1]?.value ?? 0, 1)}`;
       break;
     default:
       throw new Error(`Unsupported 65816 formatter mode '${instruction.mode}'.`);
@@ -2885,6 +7629,46 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
     })
   ])
 });
+var ARES_NES_CAPABILITIES = Object.freeze({
+  ...ARES_RSP_CAPABILITIES,
+  architectures: [
+    {
+      architecture: "65xx.2a03",
+      addressSpaces: [
+        "nes.cpu",
+        "nes.ram",
+        "nes.prg-rom",
+        "nes.chr-rom",
+        "nes.prg-ram",
+        "nes.ppu-snapshot",
+        "nes.chr-ram"
+      ],
+      memorySpaces: [
+        "nes.ram",
+        "nes.prg-rom",
+        "nes.chr-rom",
+        "nes.prg-ram",
+        "nes.ppu-snapshot",
+        "nes.chr-ram",
+        "nes.cpu"
+      ].map((addressSpace) => ({ addressSpace, sideEffectFree: true })),
+      trace: {
+        addressSpaces: ["nes.cpu"],
+        maxBufferedEvents: ARES_TRACE_BUFFER_EVENTS,
+        maxBatchEvents: ARES_TRACE_BATCH_EVENTS,
+        instructionDetails: true
+      },
+      pause: true,
+      step: true,
+      stepKinds: ARES_STEP_KINDS,
+      registers: true,
+      memory: true,
+      stackFrames: true,
+      breakpoints: true,
+      disassemble: true
+    }
+  ]
+});
 
 // packages/debug-sidecar-ares/src/trace-details.ts
 var integer2 = (value, maximum = Number.MAX_SAFE_INTEGER) => {
@@ -2902,15 +7686,15 @@ var parseAresTraceDetails = (response, maximum) => {
   if (!match || response.length > 16534) {
     throw new Error("Malformed rich instruction trace response.");
   }
-  const rows = match[5] === "" ? [] : match[5].split(";");
-  if (rows.length && rows.pop() !== "") {
+  const rows2 = match[5] === "" ? [] : match[5].split(";");
+  if (rows2.length && rows2.pop() !== "") {
     throw new Error("Rich trace row is unterminated.");
   }
-  if (rows.length > maximum || rows.length > 240) {
+  if (rows2.length > maximum || rows2.length > 240) {
     throw new Error("Rich trace exceeds the requested batch limit.");
   }
   const addresses2 = [];
-  const details = rows.map((row) => {
+  const details = rows2.map((row) => {
     const fields = row.split(",");
     if (fields.length !== 5 || !/^[\da-f]{40}$/i.test(fields[1]) || !/^[\da-f]{2,8}$/i.test(fields[2]) || fields[2].length % 2 !== 0 || fields[4].length % 21 !== 0 || fields[4].length > 32 * 21) {
       throw new Error("Malformed rich trace instruction fields.");
@@ -3008,9 +7792,9 @@ var isEvenHex = (value) => {
   }
   return true;
 };
-var littleEndian = (hex2) => {
-  const bytes = hex2.match(/../g);
-  if (!bytes || bytes.join("") !== hex2) {
+var littleEndian = (hex3) => {
+  const bytes = hex3.match(/../g);
+  if (!bytes || bytes.join("") !== hex3) {
     throw new Error("Malformed little-endian register data.");
   }
   return Number.parseInt(bytes.toReversed().join(""), 16);
@@ -3058,6 +7842,7 @@ var safeHexInteger = (value, context) => {
 };
 var AresRspDebugBackend = class {
   protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
+  #nes = false;
   #richTrace = false;
   #captureV2 = false;
   #nativeFileIdentity;
@@ -3068,6 +7853,9 @@ var AresRspDebugBackend = class {
   #contextBoundaryHeld = false;
   #contextReplayPending = false;
   get capabilities() {
+    if (this.#nes) {
+      return ARES_NES_CAPABILITIES;
+    }
     if (!this.#richTrace) {
       return ARES_RSP_CAPABILITIES;
     }
@@ -3102,6 +7890,7 @@ var AresRspDebugBackend = class {
   #createClient;
   #terminate;
   #stopTimeoutMs;
+  #nesPrgFileOffset;
   #listeners = /* @__PURE__ */ new Set();
   #expectedClose = /* @__PURE__ */ new WeakSet();
   #breakpoints = /* @__PURE__ */ new Map();
@@ -3117,6 +7906,10 @@ var AresRspDebugBackend = class {
   /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
   constructor(options) {
     this.#nativeFileIdentity = options.nativeFileIdentity;
+    this.#nesPrgFileOffset = options.nesPrgFileOffset ?? 16;
+    if (![16, 528].includes(this.#nesPrgFileOffset)) {
+      throw new Error("Invalid iNES PRG file offset.");
+    }
     this.#createClient = options.createClient;
     this.#terminate = options.terminate ?? (() => Promise.resolve());
     this.#stopTimeoutMs = options.stopTimeoutMs ?? 5e3;
@@ -3163,12 +7956,14 @@ var AresRspDebugBackend = class {
         throw new Error("ares RSP server does not advertise the required debugger extensions.");
       }
       const target = await this.#readTargetDescription(client);
-      for (const register of ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"]) {
+      this.#nes = target.includes("dev.ares.ricoh2a03.core");
+      const registerNames = this.#nes ? ["a", "x", "y", "s", "pc", "p"] : ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"];
+      for (const register of registerNames) {
         if (!target.includes(`name="${register}"`)) {
           throw new Error(`ares RSP target description is missing register '${register}'.`);
         }
       }
-      this.#richTrace = supported.includes("uttoriInstructionDetails+") && supported.includes("uttoriSramMemory+") && supported.includes("uttoriAramMemory+");
+      this.#richTrace = !this.#nes && supported.includes("uttoriInstructionDetails+") && supported.includes("uttoriSramMemory+") && supported.includes("uttoriAramMemory+");
       this.#instructionBoundaryStop = supported.includes("uttoriInstructionBoundaryStop+");
       await this.#handshakeStop(client, this.#instructionBoundaryStop);
       this.#connected = true;
@@ -3270,7 +8065,11 @@ var AresRspDebugBackend = class {
   threads() {
     this.#requireConnected();
     return Promise.resolve([
-      { id: ARES_65816_THREAD_ID, name: "Main CPU", architecture: ARES_65816_ARCHITECTURE }
+      {
+        id: ARES_65816_THREAD_ID,
+        name: "Main CPU",
+        architecture: this.#nes ? "65xx.2a03" : ARES_65816_ARCHITECTURE
+      }
     ]);
   }
   /** @inheritdoc */
@@ -3281,8 +8080,8 @@ var AresRspDebugBackend = class {
       {
         id: ARES_65816_FRAME_ID,
         threadId: ARES_65816_THREAD_ID,
-        name: "65816",
-        pc: this.#address(logicalPc(registers)),
+        name: this.#nes ? "Ricoh 2A03" : "65816",
+        pc: await this.#currentAddress(logicalPc(registers)),
         currentOnly: true
       }
     ];
@@ -3293,6 +8092,17 @@ var AresRspDebugBackend = class {
       throw new Error(`Unknown ares frame ${frameId}.`);
     }
     const registers = await this.#registerSnapshot();
+    if (this.#nes) {
+      return ["a", "x", "y", "s", "p", "pc"].map((name) => {
+        const bits = name === "pc" ? 16 : 8;
+        return {
+          name: name.toUpperCase(),
+          value: registerHex(registers[name], bits),
+          bits,
+          group: "CPU"
+        };
+      });
+    }
     return [
       { name: "A", value: registerHex(registers.a, 16), bits: 16, group: "CPU" },
       { name: "X", value: registerHex(registers.x, 16), bits: 16, group: "CPU" },
@@ -3309,7 +8119,23 @@ var AresRspDebugBackend = class {
   /** @inheritdoc */
   async readMemory(address2, count) {
     const extra = this.#richTrace && (address2.architecture === "snes.65816" && address2.addressSpace === "snes.sram" || address2.architecture === "snes.spc700" && address2.addressSpace === "snes.spc700.aram");
-    const checked = extra ? { ...address2 } : checkedMemoryAddress(address2, "Memory request");
+    let checked;
+    if (this.#nes) {
+      if (address2.architecture !== "65xx.2a03" || ![
+        "nes.cpu",
+        "nes.ram",
+        "nes.prg-rom",
+        "nes.chr-rom",
+        "nes.prg-ram",
+        "nes.ppu-snapshot",
+        "nes.chr-ram"
+      ].includes(address2.addressSpace)) {
+        throw new Error("Unsupported NES memory address.");
+      }
+      checked = { ...address2 };
+    } else {
+      checked = extra ? { ...address2 } : checkedMemoryAddress(address2, "Memory request");
+    }
     checkedInteger(checked.address, "Memory address", 16777215);
     checkedInteger(count, "Memory count", 1048576);
     if (count === 0) {
@@ -3343,7 +8169,26 @@ var AresRspDebugBackend = class {
   /** @inheritdoc */
   async setBreakpoints(addresses2) {
     const client = this.#requireStopped();
-    const requested = addresses2.map((entry, index) => checkedAddress(entry, `Breakpoint ${index}`));
+    const requested = addresses2.map((entry, index) => {
+      if (!this.#nes) {
+        return checkedAddress(entry, `Breakpoint ${index}`);
+      }
+      if (entry.architecture !== "65xx.2a03" || !["nes.cpu", "65xx.ines-address-space"].includes(entry.addressSpace)) {
+        throw new Error("Unsupported NES breakpoint address.");
+      }
+      checkedInteger(entry.address, "NES CPU address", 65535);
+      if (entry.outputOffset !== void 0) {
+        checkedInteger(entry.outputOffset, "NES output offset", 524816);
+        if (entry.outputOffset < this.#nesPrgFileOffset) {
+          throw new Error("A cartridge header is not executable.");
+        }
+        return {
+          ...entry,
+          address: 4294967296 + (entry.outputOffset - this.#nesPrgFileOffset) * 65536 + entry.address
+        };
+      }
+      return entry;
+    });
     if (new Set(requested.map(({ address: address2 }) => address2)).size !== requested.length) {
       throw new Error("Duplicate ares execute breakpoint addresses are not allowed.");
     }
@@ -3356,7 +8201,7 @@ var AresRspDebugBackend = class {
       this.#breakpoints.delete(address2);
     }
     const results = [];
-    for (const value of requested) {
+    for (const [index, value] of requested.entries()) {
       const existing = this.#breakpoints.get(value.address);
       if (existing) {
         results.push(existing);
@@ -3365,7 +8210,7 @@ var AresRspDebugBackend = class {
       const response = await client.request(`Z0,${value.address.toString(16)},1`);
       const breakpoint = {
         id: this.#nextBreakpointId++,
-        address: value,
+        address: addresses2[index],
         verified: response === "OK",
         ...response === "OK" ? {} : { message: `ares RSP response '${response}'.` }
       };
@@ -3378,6 +8223,37 @@ var AresRspDebugBackend = class {
   }
   /** @inheritdoc */
   async disassemble(address2, count) {
+    if (this.#nes) {
+      if (address2.architecture !== "65xx.2a03" || address2.addressSpace !== "nes.cpu") {
+        throw new Error("Unsupported NES disassembly address.");
+      }
+      checkedInteger(address2.address, "NES PC", 65535);
+      checkedInteger(count, "Disassembly count", 4096);
+      const decoder = new Cpu6502Decoder(ricoh2a03Cpu);
+      const instructions2 = [];
+      let pc = address2.address;
+      for (let index = 0; index < count; index++) {
+        const memory = await this.#readCpuBus(pc, Math.min(3, 65536 - pc));
+        if (!memory) {
+          break;
+        }
+        const decoded2 = decoder.decode({
+          source: new Uint8ArrayDecoderSource(memory),
+          offset: 0,
+          logicalAddress: pc
+        });
+        if (decoded2.kind !== "instruction") {
+          break;
+        }
+        instructions2.push({
+          address: this.#address(pc),
+          bytes: [...decoded2.instruction.bytes],
+          text: formatCpu6502Instruction(decoded2.instruction)
+        });
+        pc = pc + decoded2.instruction.size & 65535;
+      }
+      return instructions2;
+    }
     let current = checkedAddress(address2, "Disassembly request").address;
     checkedInteger(count, "Disassembly count", 4096);
     const registers = await this.#registerSnapshot();
@@ -3395,23 +8271,23 @@ var AresRspDebugBackend = class {
       if (!memory) {
         break;
       }
-      const decoded = this.#decoder.decode({
+      const decoded2 = this.#decoder.decode({
         source: new Uint8ArrayDecoderSource(memory),
         offset: 0,
         logicalAddress: current,
         state: { ...state, programBank: current >>> 16 }
       });
-      if (decoded.kind !== "instruction") {
+      if (decoded2.kind !== "instruction") {
         throw new Error(
-          decoded.kind === "ambiguous" ? decoded.reason : `65816 decode failed: ${decoded.message}`
+          decoded2.kind === "ambiguous" ? decoded2.reason : `65816 decode failed: ${decoded2.message}`
         );
       }
       instructions.push({
         address: this.#address(current),
-        bytes: [...decoded.instruction.bytes],
-        text: formatCpu65816Instruction(decoded.instruction)
+        bytes: [...decoded2.instruction.bytes],
+        text: formatCpu65816Instruction(decoded2.instruction)
       });
-      current = current + decoded.instruction.size & 16777215;
+      current = current + decoded2.instruction.size & 16777215;
     }
     return instructions;
   }
@@ -3419,6 +8295,12 @@ var AresRspDebugBackend = class {
   async capture(request) {
     validateCaptureRequest(request);
     const client = this.#requireConnected();
+    if ("scope" in request && request.scope && this.#nes && request.scope !== "nes.2a03.instructions" && request.scope !== "nes.cpu-bus-ppu") {
+      throw new Error("Famicom supports NES instruction and PPU bus capture scopes.");
+    }
+    if (!this.#nes && "scope" in request && (request.scope === "nes.2a03.instructions" || request.scope === "nes.cpu-bus-ppu")) {
+      throw new Error("NES capture requires a Famicom runtime.");
+    }
     if (request.operation === "context") {
       const identity = this.#nativeFileIdentity;
       if (!identity) {
@@ -3432,7 +8314,7 @@ var AresRspDebugBackend = class {
       this.#requireStopped();
       const fields2 = ["qUttoriContext", request.action];
       if ("directory" in request) {
-        if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
+        if (request.romContentSha256 !== identity.romSha256 || this.#nes && (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256) || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
           throw new Error("Capture context ROM/build does not match the verified runtime.");
         }
         if (request.action === "replay" || request.action === "restore") {
@@ -3444,6 +8326,9 @@ var AresRspDebugBackend = class {
           encode(request.producer.id),
           encode(request.producer.revision)
         );
+        if (this.#nes) {
+          fields2.push(encode(request.romFileSha256));
+        }
       }
       if ("session" in request) {
         fields2.push(request.session);
@@ -3493,9 +8378,11 @@ var AresRspDebugBackend = class {
     }
     if (request.operation === "file-start" || request.operation === "file-capabilities" || request.operation === "file-status" || request.operation === "file-stop" || request.operation === "file-abort" || request.operation === "file-release") {
       const negotiation2 = request.operation === "file-start" || request.operation === "file-capabilities";
-      const scope = negotiation2 ? request.scope ?? "snes.65816.instructions" : this.#captureScope;
+      const scope = negotiation2 ? request.scope ?? this.#instructionScope() : this.#captureScope;
       const scopes = {
         "snes.65816.instructions": "instructions",
+        "nes.2a03.instructions": "instructions",
+        "nes.cpu-bus-ppu": "bus-ppu",
         "snes.cpu-bus": "bus",
         "snes.cpu-bus-transfers": "bus-transfers",
         "snes.cpu-bus-ppu": "bus-ppu"
@@ -3507,7 +8394,7 @@ var AresRspDebugBackend = class {
         if (!identity) {
           throw new Error("Native file capture requires a verified local runtime host.");
         }
-        if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
+        if (request.romContentSha256 !== identity.romSha256 || this.#nes && (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256) || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
           throw new Error(
             "Native capture identity does not match the verified ROM and executable."
           );
@@ -3521,6 +8408,12 @@ var AresRspDebugBackend = class {
           encode(request.producer.id),
           encode(request.producer.revision)
         );
+        if (this.#nes) {
+          if (!request.romFileSha256) {
+            throw new Error("NES capture requires a verified full cartridge identity.");
+          }
+          fields2.push(request.romFileSha256);
+        }
         if (request.measureStages) {
           fields2.push("profile");
         }
@@ -3570,8 +8463,8 @@ var AresRspDebugBackend = class {
       return position2;
     }
     const negotiation = request.operation === "start" || request.operation === "capabilities";
-    const requestedScope = negotiation ? request.scope ?? "snes.65816.instructions" : void 0;
-    const ppu = requestedScope === "snes.cpu-bus-ppu";
+    const requestedScope = negotiation ? request.scope ?? this.#instructionScope() : void 0;
+    const ppu = requestedScope === "snes.cpu-bus-ppu" || requestedScope === "nes.cpu-bus-ppu";
     const bus = ppu || requestedScope === "snes.cpu-bus" || requestedScope === "snes.cpu-bus-transfers";
     const transfers = requestedScope === "snes.cpu-bus-transfers";
     if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported)) {
@@ -3810,13 +8703,50 @@ var AresRspDebugBackend = class {
       closeSubscription.dispose();
     }
   }
+  #instructionScope() {
+    return this.#nes ? "nes.2a03.instructions" : "snes.65816.instructions";
+  }
   async #registerSnapshot() {
-    return parseRegisters(await this.#requireStopped().request("g"));
+    const packet = await this.#requireStopped().request("g");
+    if (!this.#nes) {
+      return parseRegisters(packet);
+    }
+    if (!/^[\da-f]{14}$/i.test(packet)) {
+      throw new Error("Expected seven bytes of Ricoh CPU registers.");
+    }
+    const b = Buffer.from(packet, "hex");
+    return {
+      a: b[0],
+      x: b[1],
+      y: b[2],
+      s: b[3],
+      p: b[4],
+      pc: b.readUInt16LE(5),
+      d: 0,
+      db: 0,
+      pb: 0,
+      e: 1
+    };
+  }
+  /** A stopped PC carries its physical PRG identity so identical bank windows resolve correctly. */
+  async #currentAddress(pc) {
+    if (!this.#nes) {
+      return this.#address(pc);
+    }
+    const packet = await this.#requireStopped().request("qUttoriMemoryRead:nes.mapping:0,16");
+    if (!/^[\da-f]{44}$/i.test(packet)) {
+      throw new Error("Missing Famicom mapping snapshot.");
+    }
+    const offset = Buffer.from(packet, "hex").readUInt32LE(18);
+    return {
+      ...this.#address(pc),
+      ...offset === 4294967295 ? {} : { outputOffset: offset + this.#nesPrgFileOffset }
+    };
   }
   #address(address2) {
     return {
-      architecture: ARES_65816_ARCHITECTURE,
-      addressSpace: ARES_65816_ADDRESS_SPACE,
+      architecture: this.#nes ? "65xx.2a03" : ARES_65816_ARCHITECTURE,
+      addressSpace: this.#nes ? "nes.cpu" : ARES_65816_ADDRESS_SPACE,
       address: address2
     };
   }
@@ -3851,10 +8781,16 @@ var AresRspDebugBackend = class {
         (status) => {
           this.#contextReplayPending = status === "replaying";
           if (status === "idle" || status === "replay-diverged") {
+            let text = "Capture replay diverged from the retained input timing or final machine state. Execution is paused.\n";
+            if (status === "idle") {
+              const checked = this.#nes ? "CPU/APU/PPU/mapper/controller state" : "WRAM";
+              text = `Capture replay reached the recorded endpoint; ${checked} and input consumption match.
+`;
+            }
             this.#emit({
               type: "output",
               category: status === "idle" ? "console" : "stderr",
-              text: status === "idle" ? "Capture replay reached the recorded endpoint; WRAM and input consumption match.\n" : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n"
+              text
             });
           }
           return;
@@ -4000,10 +8936,21 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
     system: options.system,
     fastBoot: options.fastBoot
   });
+  let contentSha256 = manifest.romSha256;
+  let nesPrgFileOffset;
+  if (/^(Famicom|NES|FC)$/i.test(options.system ?? "")) {
+    const romBytes = await readFile2(options.rom);
+    if (!romBytes.subarray(0, 4).equals(Buffer.from([78, 69, 83, 26])))
+      throw new Error("Famicom launch requires an iNES cartridge.");
+    nesPrgFileOffset = 16 + (romBytes[6] & 4 ? 512 : 0);
+    contentSha256 = createHash3("sha256").update(romBytes.subarray(16)).digest("hex");
+  }
   const backend = new AresRspDebugBackend({
+    nesPrgFileOffset,
     createClient: (connect) => host.createClient(connect),
     nativeFileIdentity: {
-      romSha256: manifest.romSha256,
+      romSha256: contentSha256,
+      romFileSha256: manifest.romSha256,
       executableSha256: manifest.executableSha256,
       producerRevision: `${manifest.forkRevision}:${manifest.patchSha256}:${manifest.executableSha256}`
     },

@@ -6,8 +6,11 @@ import path from "node:path";
 import { test } from "../../../../tests/ava-helper.js";
 import {
   acceptedSourceGeneration,
+  pinSourceCandidate,
+  sourceCandidateRef,
   verifySourceGeneration,
   retainSourceGeneration,
+  type SourceGeneration,
   type SourceGenerationInputs,
 } from "../../src/source-project/generation.js";
 import {
@@ -22,6 +25,7 @@ import {
   adoptSourceGeneration,
   applySourceGeneration,
   finishSourceGeneration,
+  prepareSourceGeneration,
   previewSourceGeneration,
   sourceMergeStatus,
   type SourceBuildVerification,
@@ -521,6 +525,151 @@ test("discard releases candidate and preview pins while merged baselines remain 
   t.is((await sourceStatus(repository)).length, 0);
 });
 
+test("successful preparation replaces packed candidate backlogs only in its worktree", async (t) => {
+  const { repository, baseline } = await fixture();
+  const linkedPath = repository.root + "-linked";
+  t.teardown(() => {
+    for (const directory of [repository.root, linkedPath]) {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+  await sourceGit(repository.root, ["worktree", "add", "--detach", linkedPath]);
+  const linked = await sourceRepository(linkedPath);
+  const otherRef = await pinSourceCandidate(linked, baseline.commit);
+  const candidates: SourceGeneration[] = [];
+  for (let index = 0; index < 17; index++) {
+    candidates.push(
+      await retainSourceGeneration(repository, {
+        inputs,
+        parent: baseline.commit,
+        files: [{ path: "main.asm", bytes: Buffer.from(`db $${index.toString(16)}\n`) }],
+      }),
+    );
+  }
+  const preview = await previewSourceGeneration(repository, candidates[0].commit);
+  const previewFile = path.join(repository.stateDirectory, "preview.json");
+  fs.writeFileSync(previewFile, JSON.stringify(preview));
+  const symbolic = sourceCandidateRef(repository, baseline.commit);
+  await sourceGit(repository.root, ["symbolic-ref", symbolic, "refs/heads/main"]);
+  await sourceGit(repository.root, ["pack-refs", "--all", "--prune"]);
+  fs.appendFileSync(path.join(repository.root, "notes.md"), "Committed authoring\n");
+  await commit(repository, "Save authoring changes after regeneration");
+  t.is((await sourceMergeStatus(repository)).phase, "committed");
+  // Both index and unstaged authoring bytes remain independent of candidate replacement.
+  fs.appendFileSync(path.join(repository.root, "notes.md"), "Staged research\n");
+  await sourceGit(repository.root, ["add", "notes.md"]);
+  fs.appendFileSync(path.join(repository.root, "main.asm"), "db $ff\n");
+  const before = {
+    head: (await sourceGit(repository.root, ["rev-parse", "HEAD"])).stdout,
+    index: fs.readFileSync(path.join(repository.gitDirectory, "index")),
+    source: fs.readFileSync(path.join(repository.root, "main.asm")),
+  };
+  const incoming = candidates.at(-1)!;
+  t.deepEqual(await prepareSourceGeneration(repository, async () => ({ generation: incoming })), {
+    generation: incoming,
+  });
+  const refs = (
+    await sourceGit(repository.root, ["for-each-ref", "--format=%(refname)", "refs/uttori/"])
+  ).stdout
+    .toString()
+    .trim()
+    .split("\n");
+  t.deepEqual(refs, [incoming.ref, otherRef, symbolic].toSorted());
+  t.false(fs.existsSync(previewFile));
+  t.deepEqual((await sourceGit(repository.root, ["rev-parse", "HEAD"])).stdout, before.head);
+  t.deepEqual(fs.readFileSync(path.join(repository.gitDirectory, "index")), before.index);
+  t.deepEqual(fs.readFileSync(path.join(repository.root, "main.asm")), before.source);
+  await prepareSourceGeneration(repository, async () => ({ generation: incoming }));
+  t.is((await verifySourceGeneration(repository, incoming.commit)).files.length, 1);
+  t.is(
+    (await sourceGit(repository.root, ["rev-parse", otherRef])).stdout.toString().trim(),
+    baseline.commit,
+  );
+});
+
+test("failed or cancelled replacement preserves the previous proposal and preview for retry", async (t) => {
+  const { repository, baseline } = await fixture();
+  t.teardown(() => fs.rmSync(repository.root, { recursive: true, force: true }));
+  const prior = await retainSourceGeneration(repository, {
+    inputs,
+    parent: baseline.commit,
+    files: [{ path: "main.asm", bytes: Buffer.from("db $07\n") }],
+  });
+  const preview = await previewSourceGeneration(repository, prior.commit);
+  const previewCommit = (await sourceGit(repository.root, ["rev-parse", preview.ref!])).stdout;
+  const previewFile = path.join(repository.stateDirectory, "preview.json");
+  fs.writeFileSync(previewFile, JSON.stringify(preview));
+  const before = (await sourceGit(repository.root, ["show-ref"])).stdout;
+  await t.throwsAsync(
+    prepareSourceGeneration(repository, async () => {
+      throw new Error("Original-ROM verification failed");
+    }),
+    { message: "Original-ROM verification failed" },
+  );
+  t.deepEqual((await sourceGit(repository.root, ["show-ref"])).stdout, before);
+  const controller = new AbortController();
+  const replacement = await retainSourceGeneration(repository, {
+    inputs,
+    parent: baseline.commit,
+    files: [{ path: "main.asm", bytes: Buffer.from("db $08\n") }],
+  });
+  await t.throwsAsync(
+    prepareSourceGeneration(
+      repository,
+      async () => {
+        controller.abort();
+        return { generation: replacement };
+      },
+      controller.signal,
+    ),
+    { name: "AbortError" },
+  );
+  t.is(
+    (await sourceGit(repository.root, ["rev-parse", prior.ref])).stdout.toString().trim(),
+    prior.commit,
+  );
+  t.true(fs.existsSync(previewFile));
+  t.deepEqual(
+    (await sourceGit(repository.root, ["rev-parse", preview.ref!])).stdout,
+    previewCommit,
+  );
+  await prepareSourceGeneration(repository, async () => ({ generation: replacement }));
+  t.false(fs.existsSync(previewFile));
+  const refs = (
+    await sourceGit(repository.root, ["for-each-ref", "--format=%(refname)", "refs/uttori/"])
+  ).stdout
+    .toString()
+    .trim();
+  t.is(refs, replacement.ref);
+});
+
+test("preparation cannot replace the proposal of an unfinished merge", async (t) => {
+  const { repository, baseline } = await fixture();
+  t.teardown(() => fs.rmSync(repository.root, { recursive: true, force: true }));
+  const incoming = await retainSourceGeneration(repository, {
+    inputs,
+    parent: baseline.commit,
+    files: [{ path: "main.asm", bytes: Buffer.from("db $07\n") }],
+  });
+  await applySourceGeneration(
+    repository,
+    incoming,
+    await previewSourceGeneration(repository, incoming.commit),
+  );
+  const before = (await sourceGit(repository.root, ["show-ref"])).stdout;
+  let rendered = false;
+  await t.throwsAsync(
+    prepareSourceGeneration(repository, async () => {
+      rendered = true;
+      return { generation: incoming };
+    }),
+    { message: /Finish or abort/ },
+  );
+  t.false(rendered);
+  t.deepEqual((await sourceGit(repository.root, ["show-ref"])).stdout, before);
+  await abortSourceGeneration(repository);
+});
+
 test("native regeneration keeps edits, advances ancestry, and survives an ordinary clone", async (t) => {
   const { repository, baseline } = await fixture();
   t.teardown(() => fs.rmSync(repository.root, { recursive: true, force: true }));
@@ -797,6 +946,12 @@ test("preview preserves partially staged edits and apply refuses until checkpoin
   fs.writeFileSync(file, "db $09\ndb $02\ndb $03\ndb $04\ndb $05\n");
   await sourceGit(repository.root, ["add", "main.asm"]);
   fs.appendFileSync(file, "; unfinished comment\n");
+  fs.writeFileSync(path.join(repository.root, "notes with spaces.md"), "Uncommitted notes\n");
+  fs.renameSync(
+    path.join(repository.root, "notes.md"),
+    path.join(repository.root, "reviewed notes.md"),
+  );
+  await sourceGit(repository.root, ["add", "--", "notes.md", "reviewed notes.md"]);
   const index = fs.readFileSync(path.join(repository.gitDirectory, "index"));
   const status = await sourceStatus(repository);
   const incoming = await retainSourceGeneration(repository, {
@@ -807,9 +962,11 @@ test("preview preserves partially staged edits and apply refuses until checkpoin
   const preview = await previewSourceGeneration(repository, incoming.commit);
   t.deepEqual(fs.readFileSync(path.join(repository.gitDirectory, "index")), index);
   t.deepEqual(await sourceStatus(repository), status);
-  await t.throwsAsync(applySourceGeneration(repository, incoming, preview), {
-    message: /Commit or move/,
+  const error = await t.throwsAsync(applySourceGeneration(repository, incoming, preview), {
+    message: /Commit or move.*"main\.asm".*"notes with spaces\.md"/,
   });
+  t.true(error.message.includes('"reviewed notes.md"'));
+  t.true(error.message.includes('"notes.md"'));
   await commit(repository, "Checkpoint edited source");
   await applySourceGeneration(repository, incoming, preview);
   await abortSourceGeneration(repository);

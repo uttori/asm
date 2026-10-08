@@ -1,6 +1,9 @@
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
+
 import { assertSourcePath } from "../internal/source-inputs.js";
 import { projectSourceLabelNames, validateSourceLabelName } from "../model/project-labels.js";
 import type { ProjectLabel } from "../model/project-types.js";
+import type { ResearchMapping } from "../model/research-mapping.js";
 import {
   parseResearchDocument,
   validateResearchSnapshot,
@@ -18,6 +21,7 @@ function isProjectLabel(value: ResearchRecord): value is ProjectLabel {
 
 /** Original address is stable through source relocation; ordinary spelling changes never replace the ID. */
 export interface ResearchSymbolIdentity {
+  readonly mapping?: ResearchMapping;
   readonly id: string;
   readonly addressSpace: string;
   readonly address: number;
@@ -163,7 +167,10 @@ export function renameResearchSymbol(
   const previous = previousValue;
   if (
     previous &&
-    (previous.addressSpace !== identity.addressSpace || previous.address !== identity.address)
+    (previous.addressSpace !== identity.addressSpace ||
+      previous.address !== identity.address ||
+      (identity.mapping !== undefined &&
+        canonicalJson(previous.mapping ?? null) !== canonicalJson(identity.mapping)))
   ) {
     throw new Error("The symbol's original identity changed. Refresh before renaming.");
   }
@@ -178,6 +185,7 @@ export function renameResearchSymbol(
       id: identity.id,
       addressSpace: identity.addressSpace,
       address: identity.address,
+      ...(identity.mapping ? { mapping: identity.mapping } : {}),
       evidence: identity.evidence,
       analysisEntryPoint: false,
     }),

@@ -1,3 +1,4 @@
+import { assetSourceMediaType, resolveAssetResourceSnapshot } from "./asset-resource-snapshot.js";
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -24,6 +25,7 @@ export class AssetAssemblyService {
     static MAX_STAGE_BYTES = 16 * 1024 * 1024;
     dependencies = new Map();
     #files = new Map();
+    #snapshotBytes = 0;
     #conversions = new Map();
     #emissions = new Map();
     /** Descriptor of the most recent successful statement, consumed immediately by emission metadata. */
@@ -35,6 +37,7 @@ export class AssetAssemblyService {
     beginBuild() {
         this.dependencies.clear();
         this.#files.clear();
+        this.#snapshotBytes = 0;
         this.#conversions.clear();
         this.#emissions.clear();
         this.lastEmission = undefined;
@@ -114,7 +117,12 @@ export class AssetAssemblyService {
         if (cached) {
             return cached;
         }
-        const bytes = Uint8Array.from(this.session.fileProvider.readFile(path));
+        const supplied = this.session.fileProvider.readFile(path);
+        this.#snapshotBytes += supplied.length;
+        if (this.#snapshotBytes > 256 * 1024 * 1024) {
+            throw new Error("Asset dependency snapshot exceeds 256 MiB.");
+        }
+        const bytes = Uint8Array.from(supplied);
         this.#files.set(path, bytes);
         this.dependencies.set(path, kind);
         return bytes;
@@ -123,18 +131,8 @@ export class AssetAssemblyService {
      * @param {string} path Provider identity.
      * @returns {string} Portable media type.
      */
-    #mediaType(path) {
-        const extension = path.toLowerCase().split(".").pop();
-        if (extension === "png") {
-            return "image/png";
-        }
-        if (extension === "wav" || extension === "wave") {
-            return "audio/wav";
-        }
-        if (extension === "json") {
-            return "application/json";
-        }
-        return "application/octet-stream";
+    #mediaType(path, format) {
+        return assetSourceMediaType(path, format);
     }
     /** Canonical serialization makes equivalent option objects share one conversion.
      * @param {unknown} value JSON-compatible request value.
@@ -202,7 +200,20 @@ export class AssetAssemblyService {
         }
         return resources;
     }
-    /** Resolve input and declared resource paths for tooling without reading or converting bytes.
+    /** Resolve a bounded resource closure once per build. Provider callbacks cannot mutate cached bytes. */
+    #resources(format, source, options) {
+        return resolveAssetResourceSnapshot(format, source, options, {
+            resolve: (path, declaringResource) => {
+                if (declaringResource) {
+                    return this.session.fileProvider.resolvePath(path, { currentFile: declaringResource });
+                }
+                return this.#resolve(path);
+            },
+            read: (path) => this.#read(path, "resource"),
+            mediaType: (path) => this.#mediaType(path, format),
+        });
+    }
+    /** Resolve input and declared resource paths for tooling without encoding bytes.
      * @param {ParsedAssetCall} call Typed source directive.
      */
     discoverDependencies(call) {
@@ -219,9 +230,11 @@ export class AssetAssemblyService {
         delete options.compress;
         delete options.compressOptions;
         delete options.maxSize;
-        for (const resourceName of format.resourcePaths?.(structuredClone(options)) ?? []) {
-            this.dependencies.set(this.#resolve(resourceName), "resource");
-        }
+        // Source sidecars can declare further inputs. Tooling snapshots the same closure as normal builds.
+        this.#resources(format, {
+            bytes: this.#read(sourcePath, "binary"),
+            mediaType: this.#mediaType(sourcePath, format),
+        }, options);
         // Compression dictionaries and other schema-declared inputs also invalidate analysis.
         let transforms = [];
         if (typeof transformSpec === "string") {
@@ -284,26 +297,15 @@ export class AssetAssemblyService {
             }
             boundedSize = maxSize;
         }
-        const resources = {};
-        const resourcePaths = {};
-        const resourceIdentities = [];
-        const declaredResources = format.resourcePaths?.(structuredClone(options)) ?? [];
-        if (!isNonEmptyStringArray(declaredResources)) {
-            throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
-        }
-        for (const resourceName of declaredResources) {
-            const resourcePath = this.#resolve(resourceName);
-            resourcePaths[resourceName] = resourcePath;
-            resources[resourceName] = {
-                bytes: this.#read(resourcePath, "resource"),
-                mediaType: this.#mediaType(resourcePath),
-            };
-            resourceIdentities.push(`${resourceName}\u0000${resourcePath}`);
-        }
         const source = {
             bytes: this.#read(sourcePath, "binary"),
-            mediaType: this.#mediaType(sourcePath),
+            mediaType: this.#mediaType(sourcePath, format),
         };
+        const { resources, paths: resourcePaths } = this.#resources(format, source, options);
+        // Preserve legacy dependency ordering while source-aware discovery still sees one immutable source snapshot.
+        this.dependencies.delete(sourcePath);
+        this.dependencies.set(sourcePath, "binary");
+        const resourceIdentities = Object.entries(resourcePaths);
         const conversionKey = this.#stable([
             sourcePath,
             format.id,
@@ -315,7 +317,12 @@ export class AssetAssemblyService {
         if (!converted) {
             // Converter ownership is external. Pass copies so a misbehaving provider
             // cannot change the build snapshot used by a later asset statement.
-            converted = format.convert({ ...source, bytes: source.bytes.slice() }, structuredClone(options), copyAssetResources(resources));
+            try {
+                converted = format.convert({ ...source, bytes: source.bytes.slice() }, structuredClone(options), copyAssetResources(resources));
+            }
+            catch (error) {
+                throw new Error(`Asset '${sourcePath}' format '${format.id}': ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+            }
             if (!converted.primaryOutput || !Object.hasOwn(converted.outputs, converted.primaryOutput)) {
                 throw new Error(`Asset format '${format.id}' omitted its primary output.`);
             }

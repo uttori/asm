@@ -5,6 +5,7 @@ import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceContentHash, assertSourcePath } from "../internal/source-inputs.js";
 import { validateEditableMetadataRecord } from "../model/metadata-validation.js";
 import { validateSourceLabelName } from "../model/project-labels.js";
+import { isResearchMapping } from "../model/research-mapping.js";
 /** Check runtime shape without widening typed readonly arrays to any[]. */
 const isArray = (value) => Array.isArray(value);
 function isRecord(value) {
@@ -94,6 +95,9 @@ export function validateResearchDecision(decision) {
     const evidence = record.evidence;
     if (!isUnknownArray(evidence) || evidence.some((entry) => typeof entry !== "string")) {
         throw new Error(`Research record ${id} needs an evidence list.`);
+    }
+    if (record.mapping !== undefined && !isResearchMapping(record.mapping)) {
+        throw new Error("Invalid research mapping selector.");
     }
     if (collection === "regions") {
         const name = record.name;

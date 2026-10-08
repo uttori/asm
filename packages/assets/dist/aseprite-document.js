@@ -1,4 +1,4 @@
-import { Cursor, Fields, chunk, rasterZlib } from "./aseprite-binary.js";
+import { Cursor, Fields, chunk, rasterZlib, rasterZlibSync } from "./aseprite-binary.js";
 import { validateIndexedPixels } from "./indexed-edit.js";
 import { indexedPalette } from "./indexed-values.js";
 import { ASSET_LIMITS, boundedProduct, boundedSum, rasterArea } from "./limits.js";
@@ -237,8 +237,10 @@ export function validateAsepriteDocument(document) {
         }
     }
 }
-/** Parse indexed structure without consulting native ownership. Runtime cancellation is checked between chunks. */
-export async function decodeAsepriteDocument(bytes, signal) {
+/** Both decoding APIs walk exactly the same structure and allocation budgets.
+ * @yields A bounded compressed raster and exact expected decoded length; the driver returns owned decoded bytes.
+ */
+function* parseAsepriteDocument(bytes, signal) {
     integer(bytes.length, "Aseprite input bytes", 144, ASSET_LIMITS.asepriteBytes);
     signal?.throwIfAborted();
     const file = new Cursor(Uint8Array.from(bytes));
@@ -409,7 +411,7 @@ export async function decodeAsepriteDocument(bytes, signal) {
                     const length = reserve(rasterArea(celWidth, celHeight, "Aseprite cel"));
                     const indexes = celType === 0
                         ? data.take(length).slice()
-                        : await rasterZlib(data.take(data.bytes.length - data.position), length, signal);
+                        : yield { bytes: data.take(data.bytes.length - data.position), expected: length };
                     cel = {
                         ...position,
                         zIndex,
@@ -433,7 +435,10 @@ export async function decodeAsepriteDocument(bytes, signal) {
                     data.take(10);
                     const cellCount = boundedProduct(columns, rows, ASSET_LIMITS.references, "Tilemap cells");
                     reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
-                    const raw = await rasterZlib(data.take(data.bytes.length - data.position), boundedProduct(cellCount, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"), signal);
+                    const raw = yield {
+                        bytes: data.take(data.bytes.length - data.position),
+                        expected: boundedProduct(cellCount, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"),
+                    };
                     const cells = new Uint32Array(cellCount), words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
                     // Widen native words into one canonical buffer; DataView keeps decoding independent of host byte order.
                     for (let cell = 0; cell < cellCount; cell++) {
@@ -473,7 +478,7 @@ export async function decodeAsepriteDocument(bytes, signal) {
                 integer(tileCount, "Tileset tiles", 1, ASSET_LIMITS.owners);
                 const length = reserve(boundedProduct(rasterArea(tileWidth, tileHeight, "Aseprite tile"), tileCount, ASSET_LIMITS.decodedBytes, "Tileset pixels"));
                 const compressed = data.take(data.u32());
-                const indexes = await rasterZlib(compressed, length, signal);
+                const indexes = yield { bytes: compressed, expected: length };
                 const tileData = Array.from({ length: tileCount }, () => undefined);
                 const set = {
                     id,
@@ -901,5 +906,23 @@ export async function encodeAsepriteDocument(document, signal) {
     header[34] = 1;
     header[35] = 1;
     return new Fields().raw(header).raw(framePayload).build();
+}
+/** Decode saved sources synchronously in Node or a browser, without editor subprocesses or source writes. */
+export function decodeAsepriteDocumentSync(bytes) {
+    const parser = parseAsepriteDocument(bytes);
+    let step = parser.next();
+    while (!step.done) {
+        step = parser.next(rasterZlibSync(step.value.bytes, step.value.expected));
+    }
+    return step.value;
+}
+/** Parse with cancellable streaming inflation; validations are shared with synchronous assembly. */
+export async function decodeAsepriteDocument(bytes, signal) {
+    const parser = parseAsepriteDocument(bytes, signal);
+    let step = parser.next();
+    while (!step.done) {
+        step = parser.next(await rasterZlib(step.value.bytes, step.value.expected, signal));
+    }
+    return step.value;
 }
 //# sourceMappingURL=aseprite-document.js.map

@@ -28,6 +28,8 @@ export interface RuntimeInstructionTraceArtifact {
     readonly architecture: string;
     readonly addressSpace: string;
     readonly romContentSha256: string;
+    /** Complete cartridge identity, including iNES mapper/header bytes. */
+    readonly romFileSha256?: string;
     readonly producer: {
         readonly id: string;
         readonly revision: string;
@@ -102,6 +104,7 @@ export declare const importRuntimeInstructionTrace: (value: unknown, context: Ru
 export type RuntimeTraceIndexedFact = {
     readonly kind: "execution";
     readonly address: number;
+    readonly identity?: string;
 } | {
     readonly kind: "instruction";
     readonly identity: string;

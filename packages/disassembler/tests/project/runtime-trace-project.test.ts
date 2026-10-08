@@ -574,3 +574,61 @@ test("SQLite import validates the actual destination ROM before publishing any f
   );
   t.deepEqual(loadAnalysisProject(root), before);
 });
+
+test("NES disk imports retain distinct banks at one CPU PC and match the memory importer", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-nes-banks-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const original = fixture();
+  const project: AnalysisProject = {
+    ...original,
+    manifest: {
+      ...original.manifest,
+      target: "65xx.nes",
+      addressSpaces: [{ id: "nes.cpu", name: "CPU", addressBits: 16, kind: "cpu" }],
+    },
+    shards: { ...original.shards, runtime: [] },
+  };
+  publishAnalysisProject(directory, project);
+  const artifact: RuntimeInstructionTraceArtifact = {
+    ...trace(project),
+    architecture: "65xx.2a03",
+    romFileSha256: project.manifest.rom.sha256,
+    addressSpace: "nes.cpu",
+    chunks: [
+      {
+        sequenceStart: 1,
+        addresses: [0x8000, 0x8000, 0x8000],
+        active: false,
+        droppedEvents: 0,
+        details: [0, 1, 0].map((bank) => ({
+          bytes: [0xea],
+          state: { mapper: 4, prgMode: 0, r6: bank, r7: 0, prg0: bank * 8192 },
+        })),
+      },
+    ],
+  };
+  const context = { projectRomContentSha256: artifact.romContentSha256, sourceName: "NES banks" };
+  const expected = importRuntimeInstructionTrace(artifact, context);
+  await t.throwsAsync(
+    importRuntimeTraceSourceIntoProject(
+      instructionTraceSource({ ...artifact, romFileSha256: "f".repeat(64) }),
+      directory,
+      context,
+    ),
+    { message: /full-file identity/ },
+  );
+  t.is(loadAnalysisProject(directory).shards.runtime.length, 0);
+  await importRuntimeTraceSourceIntoProject(instructionTraceSource(artifact), directory, context);
+  const actual = loadAnalysisProject(directory).shards.runtime;
+  const executions = actual.filter((record) => record.kind === "runtime-execution");
+  t.is(executions.length, 2);
+  t.deepEqual(executions.map((record) => record.count).sort(), [1, 2]);
+  t.is(new Set(executions.map((record) => record.id)).size, 2);
+  t.deepEqual(
+    [...actual].sort((a, b) => a.id.localeCompare(b.id)),
+    [...expected.batch.runtime!].sort((a, b) => a.id.localeCompare(b.id)),
+  );
+  // Reimport uses the collision-checking path, independently of the optimized initial batch.
+  await importRuntimeTraceSourceIntoProject(instructionTraceSource(artifact), directory, context);
+  t.deepEqual(loadAnalysisProject(directory).shards.runtime, actual);
+});

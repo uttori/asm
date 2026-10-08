@@ -1,4 +1,4 @@
-import { Cursor, Fields, chunk, rasterZlib } from "./aseprite-binary.js";
+import { Cursor, Fields, chunk, rasterZlib, rasterZlibSync } from "./aseprite-binary.js";
 import { validateIndexedPixels } from "./indexed-edit.js";
 import { indexedPalette, type IndexedColor } from "./indexed-values.js";
 import { ASSET_LIMITS, boundedProduct, boundedSum, rasterArea } from "./limits.js";
@@ -6,89 +6,23 @@ import { integer } from "./validation.js";
 
 const ID_PREFIX = "uttori-atlas-export:";
 
-/** Format metadata is descriptive. Import authority belongs exclusively to the host's private baseline. */
-export interface AsepriteMetadata {
-  userData?: string;
-}
-
-/** Flat normal/tilemap layers. Names, visibility and edit locks do not establish native authority. */
-export type AsepriteLayer = AsepriteMetadata & {
-  readonly name: string;
-  readonly flags: number;
-  readonly uuid?: string;
-} & ({ readonly kind: "raster" } | { readonly kind: "tilemap"; readonly tileset: number });
-
-/** Embedded indexed storage in vertical tile order. Base index only changes the editor's numbering. */
-export interface AsepriteTileset extends AsepriteMetadata {
-  readonly id: number;
-  readonly name: string;
-  readonly flags: number;
-  readonly baseIndex: number;
-  readonly tileWidth: number;
-  readonly tileHeight: number;
-  readonly tileCount: number;
-  readonly indexes: Uint8Array;
-  readonly tileData: readonly (string | undefined)[];
-}
-
-/** Pixel offsets and z-index belong to the occurrence, including when its payload is linked. */
-interface CelPosition extends AsepriteMetadata {
-  readonly layer: number;
-  readonly x: number;
-  readonly y: number;
-  readonly zIndex: number;
-}
-
-/** Linked cels share one decoded payload; they never allocate a copied image for each timeline frame. */
-export type AsepriteCel = CelPosition &
-  (
-    | {
-        readonly kind: "raster";
-        readonly width: number;
-        readonly height: number;
-        readonly indexes: Uint8Array;
-      }
-    | { readonly kind: "linked"; readonly frame: number }
-    | {
-        readonly kind: "tilemap";
-        readonly columns: number;
-        readonly rows: number;
-        readonly bits: 8 | 16 | 32;
-        readonly idMask: number;
-        readonly flipXMask: number;
-        readonly flipYMask: number;
-        readonly diagonalMask: number;
-        readonly cells: Uint32Array;
-      }
-  );
-
-/** One global duration in milliseconds. Separate layer clocks are not part of this file profile. */
-export interface AsepriteFrame {
-  readonly durationMs: number;
-  readonly cels: readonly AsepriteCel[];
-}
-
-/** Inclusive timeline range with native Aseprite playback direction and repeat count. */
-export interface AsepriteTag extends AsepriteMetadata {
-  readonly name: string;
-  readonly from: number;
-  readonly to: number;
-  readonly direction: number;
-  readonly repeat: number;
-}
-
-/** Indexed file structure, independent of game grammar, native tile IDs and editable ownership. */
-export interface AsepriteDocument extends AsepriteMetadata {
-  readonly width: number;
-  readonly height: number;
-  readonly palette: readonly IndexedColor[];
-  readonly transparentIndex: number;
-  readonly exportId?: string;
-  readonly layers: readonly AsepriteLayer[];
-  readonly tilesets: readonly AsepriteTileset[];
-  readonly frames: readonly AsepriteFrame[];
-  readonly tags: readonly AsepriteTag[];
-}
+import type {
+  IndexedDocumentLayer as AsepriteLayer,
+  IndexedDocumentTileset as AsepriteTileset,
+  IndexedDocumentCel as AsepriteCel,
+  IndexedDocumentFrame as AsepriteFrame,
+  IndexedDocumentTag as AsepriteTag,
+  IndexedDocument as AsepriteDocument,
+} from "./indexed-document.js";
+export type {
+  IndexedDocumentMetadata as AsepriteMetadata,
+  IndexedDocumentLayer as AsepriteLayer,
+  IndexedDocumentTileset as AsepriteTileset,
+  IndexedDocumentCel as AsepriteCel,
+  IndexedDocumentFrame as AsepriteFrame,
+  IndexedDocumentTag as AsepriteTag,
+  IndexedDocument as AsepriteDocument,
+} from "./indexed-document.js";
 
 type CelPayload = Exclude<AsepriteCel, { kind: "linked" }>;
 
@@ -369,11 +303,19 @@ export function validateAsepriteDocument(document: AsepriteDocument): void {
   }
 }
 
-/** Parse indexed structure without consulting native ownership. Runtime cancellation is checked between chunks. */
-export async function decodeAsepriteDocument(
+/** A bounded payload request separates structural parsing from the host's inflation driver. */
+interface RasterInflation {
+  readonly bytes: Uint8Array;
+  readonly expected: number;
+}
+
+/** Both decoding APIs walk exactly the same structure and allocation budgets.
+ * @yields A bounded compressed raster and exact expected decoded length; the driver returns owned decoded bytes.
+ */
+function* parseAsepriteDocument(
   bytes: Uint8Array,
   signal?: AbortSignal,
-): Promise<AsepriteDocument> {
+): Generator<RasterInflation, AsepriteDocument, Uint8Array> {
   integer(bytes.length, "Aseprite input bytes", 144, ASSET_LIMITS.asepriteBytes);
   signal?.throwIfAborted();
   const file = new Cursor(Uint8Array.from(bytes));
@@ -563,7 +505,7 @@ export async function decodeAsepriteDocument(
           const indexes =
             celType === 0
               ? data.take(length).slice()
-              : await rasterZlib(data.take(data.bytes.length - data.position), length, signal);
+              : yield { bytes: data.take(data.bytes.length - data.position), expected: length };
           cel = {
             ...position,
             zIndex,
@@ -588,11 +530,15 @@ export async function decodeAsepriteDocument(
           data.take(10);
           const cellCount = boundedProduct(columns, rows, ASSET_LIMITS.references, "Tilemap cells");
           reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
-          const raw = await rasterZlib(
-            data.take(data.bytes.length - data.position),
-            boundedProduct(cellCount, bits / 8, ASSET_LIMITS.decodedBytes, "Tilemap storage"),
-            signal,
-          );
+          const raw = yield {
+            bytes: data.take(data.bytes.length - data.position),
+            expected: boundedProduct(
+              cellCount,
+              bits / 8,
+              ASSET_LIMITS.decodedBytes,
+              "Tilemap storage",
+            ),
+          };
           const cells = new Uint32Array(cellCount),
             words = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
           // Widen native words into one canonical buffer; DataView keeps decoding independent of host byte order.
@@ -641,7 +587,7 @@ export async function decodeAsepriteDocument(
           ),
         );
         const compressed = data.take(data.u32());
-        const indexes = await rasterZlib(compressed, length, signal);
+        const indexes = yield { bytes: compressed, expected: length };
         const tileData: (string | undefined)[] = Array.from({ length: tileCount }, () => undefined);
         const set: AsepriteTileset = {
           id,
@@ -1096,4 +1042,27 @@ export async function encodeAsepriteDocument(
   header[34] = 1;
   header[35] = 1;
   return new Fields().raw(header).raw(framePayload).build();
+}
+
+/** Decode saved sources synchronously in Node or a browser, without editor subprocesses or source writes. */
+export function decodeAsepriteDocumentSync(bytes: Uint8Array): AsepriteDocument {
+  const parser = parseAsepriteDocument(bytes);
+  let step = parser.next();
+  while (!step.done) {
+    step = parser.next(rasterZlibSync(step.value.bytes, step.value.expected));
+  }
+  return step.value;
+}
+
+/** Parse with cancellable streaming inflation; validations are shared with synchronous assembly. */
+export async function decodeAsepriteDocument(
+  bytes: Uint8Array,
+  signal?: AbortSignal,
+): Promise<AsepriteDocument> {
+  const parser = parseAsepriteDocument(bytes, signal);
+  let step = parser.next();
+  while (!step.done) {
+    step = parser.next(await rasterZlib(step.value.bytes, step.value.expected, signal));
+  }
+  return step.value;
 }

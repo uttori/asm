@@ -42,7 +42,6 @@ Prefer the validated APIs below for application edits.
 | `loadAnalysisProjectViewSnapshot`                                               | Metadata plus optional runtime projection. Omitted runtime is not an empty backing store.                                                                                                                                                |
 | `commitAnalysisProjectTransaction` / `commitPreparedAnalysisProjectTransaction` | Complete replacement, including runtime. Require the caller's revision for existing projects.                                                                                                                                            |
 | `commitAnalysisProjectViewUpdate`                                               | Each supplied metadata array replaces that entire table. Omitted tables and all runtime remain. `[]` clears a supplied table.                                                                                                            |
-| `commitAnalysisProjectSelectedEdit`                                             | Patch stable IDs in the original/edited selection. Preserve records outside it. Include required evidence. Both runtime arrays must be empty.                                                                                            |
 | `publishAnalysisProject`                                                        | Create or replace everything, including runtime. Samples the revision at call time and cannot detect a replacement based on an old caller snapshot. Editing clients use the revision-checked commit APIs. View updates preserve history. |
 
 ## Project Layout
@@ -217,8 +216,8 @@ order. `runtimeInstructionVariants()` groups captured bytes and decoder state in
 cursor. Prepare it before opening its consuming read transaction. Reanalysis reads grouped execution
 seeds and selected MMIO accesses, while all original runtime facts remain in the database.
 
-`commitAnalysisProjectSelectedEdit()` patches only selected stable IDs and checks retained evidence
-before removal. Omitted CFG/runtime records are preserved. `commitRuntimeEvidenceBatch()` similarly
+Git source research is saved as ordinary JSON and synchronized into the evidence index.
+`commitRuntimeEvidenceBatch()`
 merges offline imports against destination IDs without expanding the saved trace history. Full
 snapshot APIs remain available for callers explicitly requesting a complete in-memory project.
 Normal editor queries, source regeneration, and offline imports do not use them.

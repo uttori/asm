@@ -74,23 +74,24 @@ SPC700 and Super FX instruction capture are not advertised by these native modes
 
 ## Record and import
 
-Start while paused with **Assembly: Start Runtime Trace Recording**, choose a new destination,
-then continue or step. Use **Assembly: Stop Runtime Trace Recording** to drain and finalize it.
+Start while paused with **Assembly: Start Capture**, choose a new destination,
+then continue or step. Use **Assembly: Stop Capture** to drain and finalize it.
 An independent debugger pause remains in effect while the capture drains.
 
 ACT2 recording writes a `.partial` archive with durable checkpoints. A complete archive is
 published only after sequence/count checks and a synced terminal frame. Instruction recording can
 also export JSON for the CLI's `evidence-import --instruction-trace` workflow. Use
-**Assembly: Import Runtime Trace and Update Disassembly** for instruction captures, or
-**Assembly: Import Bus Capture and Show DMA/HDMA Activity** (`asm.trace.importBus`) for bus archives.
+**Assembly: Import Capture into Source Project** (`asm.source.importCapture`) for instruction
+or bus captures, or choose **Stop Capture and Import Evidence** during the active recording.
 
 Keep original captures: project storage retains facts, counts, and provenance, while ordered
-history and omitted registers remain in the capture. `asm.trace.maxImportSizeMiB` defaults to 2048.
-Raise it deliberately for larger files. `asm.trace.indexMode` selects instruction retention.
+history and replay context remain in the original archive and companion files. `asm.trace.maxImportSizeMiB` defaults to 2048.
+Raise it deliberately for larger files. `asm.trace.indexMode` supports full instruction indexing only.
 See the [CLI evidence reference](https://github.com/uttori/asm/blob/master/packages/cli/GUIDE.md#offline-runtime-evidence).
 Import validates ROM identity and the entire stream before publication. A failed, cancelled,
 oversized, or stale-revision import cannot publish partial evidence. If import succeeds but source
-regeneration fails, retry **Assembly: Analyze and Regenerate Disassembly** using the saved evidence.
+generation preparation fails, inspect **Uttori Analysis** and retry **Analyze Source Project Evidence**
+and **Prepare Regeneration** using the saved evidence. Preview and merge source separately.
 
 ## Explicit transfer boundaries
 
@@ -161,3 +162,16 @@ Source pins, patches, and reproduction commands are retained with the
 packages. The [benchmark audit](native/capture-benchmark-audit/README.md) describes reproducible
 coverage. Local measurements do not establish realtime behavior for every game, storage device,
 PPU implementation, or platform.
+
+## Famicom PPU scope
+
+`nes.cpu-bus-ppu` negotiates its own 128-byte NES record dictionary and reuses the
+same durable transport. It records CPU, OAM DMA, DMC DMA and dummy bus reads,
+actual PPU memory effects, render fetches, A12/mapper IRQ events and scroll/latch transitions. The
+`nes.ppu-snapshot` named memory space exposes a halted NPP1 graphics view through
+passive storage reads. NES context uses physical 2 KiB RAM images, a synchronized
+state plus a capture-only supplement, controller polling samples, screenshots and
+a canonical CPU/APU/PPU/mapper/controller endpoint. Instruction captures include a
+full-window graphics companion. Replay requires full iNES and payload hashes plus
+the exact runtime and machine profile. SNES context and serial-input schemas are unchanged. See [NES PPU evidence](../../docs/nes-ppu-evidence.md)
+for the wire layout, supported boards, reader APIs and limits.

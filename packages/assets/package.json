@@ -87,6 +87,11 @@
       "types": "./dist/secret-of-mana/som-asset-plugin.d.ts",
       "import": "./dist/secret-of-mana/som-asset-plugin.js"
     },
+    "./secret-of-mana/som-dialogue": {
+      "uttori-source": "./src/secret-of-mana/som-dialogue.ts",
+      "types": "./dist/secret-of-mana/som-dialogue.d.ts",
+      "import": "./dist/secret-of-mana/som-dialogue.js"
+    },
     "./secret-of-mana/som-frame-atlas": {
       "uttori-source": "./src/secret-of-mana/som-frame-atlas.ts",
       "types": "./dist/secret-of-mana/som-frame-atlas.d.ts",
@@ -191,6 +196,26 @@
       "uttori-source": "./src/raster-interchange.ts",
       "types": "./dist/raster-interchange.d.ts",
       "import": "./dist/raster-interchange.js"
+    },
+    "./source-binding": {
+      "uttori-source": "./src/source-binding.ts",
+      "types": "./dist/source-binding.d.ts",
+      "import": "./dist/source-binding.js"
+    },
+    "./source-codecs": {
+      "uttori-source": "./src/source-codecs.ts",
+      "types": "./dist/source-codecs.d.ts",
+      "import": "./dist/source-codecs.js"
+    },
+    "./indexed-document": {
+      "uttori-source": "./src/indexed-document.ts",
+      "types": "./dist/indexed-document.d.ts",
+      "import": "./dist/indexed-document.js"
+    },
+    "./secret-of-mana/som-source": {
+      "uttori-source": "./src/secret-of-mana/som-source.ts",
+      "types": "./dist/secret-of-mana/som-source.d.ts",
+      "import": "./dist/secret-of-mana/som-source.js"
     }
   },
   "publishConfig": {
@@ -203,7 +228,8 @@
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace assets && npm run make-types"
   },
   "dependencies": {
-    "@uttori/data-tools": "^5"
+    "@uttori/data-tools": "^5",
+    "pako": "^3.0.2"
   },
   "engines": {
     "node": ">=26"

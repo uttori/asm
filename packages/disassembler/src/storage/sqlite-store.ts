@@ -66,6 +66,7 @@ import {
   isSqliteCoverageSummary,
 } from "./sqlite-coverage-query.js";
 import { prepareGraph, publishGraph, isCallGraph } from "./sqlite-graph-query.js";
+import { queryGraphicsEvidence, type GraphicsEvidenceQuery } from "./sqlite-graphics-query.js";
 import {
   encodeSqlitePayload,
   decodeSqlitePayload,
@@ -260,7 +261,19 @@ function requireTraceFact(value: unknown): RuntimeTraceIndexedFact {
     throw new Error("Invalid indexed trace fact.");
   }
   if (value.kind === "execution" && isFiniteNumber(value.address)) {
-    return { kind: "execution", address: value.address };
+    // Bank-qualified executions must survive the disk index just like in-memory facts.
+    // Dropping the suffix here would merge different mappings when publishing a capture.
+    if (
+      value.identity !== undefined &&
+      (typeof value.identity !== "string" || !/^[\da-f]{64}$/.test(value.identity))
+    ) {
+      throw new Error("Invalid indexed execution mapping identity.");
+    }
+    return {
+      kind: "execution",
+      address: value.address,
+      ...(value.identity === undefined ? {} : { identity: value.identity }),
+    };
   }
   if (
     value.kind === "instruction" &&
@@ -2211,9 +2224,12 @@ export class SqliteAnalysisStore {
     return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha256);
   }
 
-  /** Catalog rows contain small import provenance metadata, never capture contents.
-   * @returns {object[]} Small capture metadata rows in import order.
-   */
+  /** Bounded physical-code joins; graphics never imply that a CPU instruction executed. */
+  graphicsEvidence(query: GraphicsEvidenceQuery) {
+    return this.transaction(() => queryGraphicsEvidence(this.#database, query), false);
+  }
+
+  /** Small durable import receipts in import order. */
   captureCatalog() {
     return this.#database
       .prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256")
@@ -2225,7 +2241,11 @@ export class SqliteAnalysisStore {
    */
   recordCaptureReceipt(report: ImportReport): void {
     this.#requireTransaction();
-    if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format)) {
+    if (
+      !["uttori-asm-instruction-trace", "uttori-asm-bus-trace", "uttori-nes-ppu-evidence"].includes(
+        report.format,
+      )
+    ) {
       return;
     }
     const now = Date.now();
@@ -2238,7 +2258,8 @@ export class SqliteAnalysisStore {
         report.sourceName,
         now,
         now,
-        observedImportCount(report.imported, "busEvents") ??
+        observedImportCount(report.imported, "graphicsEvents") ??
+          observedImportCount(report.imported, "busEvents") ??
           observedImportCount(report.imported, "executionEvents") ??
           0,
         report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0,

@@ -1,9 +1,10 @@
 import { definePlugin, NATIVE_SYNTAX_PROFILE, PLUGIN_API_VERSION, PluginManager, } from "@uttori/asm-core";
 import { Arch65xx } from "./architecture.js";
 import { CA65_65XX_SESSION_STATE_ID, CA65_65XX_SYNTAX_PROFILE, ca65CpuPredicateByArchitecture, ca65CpuShorthands, ca65SessionStateKey, cloneCa65SessionState, createCa65SessionState, resetCa65StageState, } from "./ca65-profile.js";
+import { Cpu6502Decoder, cpu6502Specifications } from "./decoder.js";
 import { handleAlign, handleAddr, handleByte, handleCa65Assert, handleCa65Incbin, handleCpuShorthand, handleDbyt, handleDword, handleEndScope, handleExport, handleFlatSegment, handleHibytes, handleImport, handleLobytes, handlePopcpu, handlePopseg, handlePushcpu, handlePushseg, handleRes, handleScope, handleSegment, handleSetcpu, handleUnsupportedCa65, } from "./directives/ca65.js";
 import { buildInstructionCatalog } from "./instructions/catalog.js";
-import { nmos6502Cpu, nmos6502Forms, nmos6502xCpu, nmos6502xForms, } from "./instructions/opcodes.js";
+import { nmos6502Cpu, nmos6502Forms, nmos6502xCpu, nmos6502xForms, ricoh2a03Cpu, } from "./instructions/opcodes.js";
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
 import { classify65xxOperand } from "./operands/classifier.js";
 import { NES_65XX_SESSION_STATE_ID, cloneNes65xxSessionState, nes65xxSessionStateKey, resetNes65xxStageState, } from "./session-state.js";
@@ -147,9 +148,13 @@ function createFlat65xxAddressSpace({ options }) {
  * @param {string} architecture Architecture id being selected.
  */
 function updatePredicates(session, architecture) {
-    for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
+    // Several execution profiles share one ca65 predicate; assign each symbol exactly once.
+    for (const symbol of new Set(Object.values(ca65CpuPredicateByArchitecture))) {
         session.globalSymbols.add(symbol);
-        session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
+        session.labelTable.set(symbol, {
+            value: ca65CpuPredicateByArchitecture[architecture] === symbol ? 1 : 0,
+            isStatic: true,
+        });
     }
 }
 /**
@@ -163,6 +168,7 @@ export function register65xxContributions(context) {
     for (const [cpu, forms] of [
         [nmos6502Cpu, nmos6502Forms],
         [nmos6502xCpu, nmos6502xForms],
+        [ricoh2a03Cpu, nmos6502xForms],
         ...variantCpus.map((variantCpu) => [variantCpu, variantFormsByCpuId[variantCpu.id] ?? []]),
     ]) {
         const catalog = buildInstructionCatalog(forms);
@@ -175,6 +181,13 @@ export function register65xxContributions(context) {
             splitOperands: (text) => (text.trim() ? [text.trim()] : []),
             classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
             createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
+            // Vendor/CMOS tables have different semantics; expose the decoder only for NMOS/Ricoh profiles.
+            createDecoder: cpu.features.has("nmos") && !cpu.features.has("dtv")
+                ? () => new Cpu6502Decoder(cpu)
+                : undefined,
+            instructionSpecifications: cpu.features.has("nmos") && !cpu.features.has("dtv")
+                ? cpu6502Specifications(cpu)
+                : undefined,
             instructions: catalog,
         });
     }
@@ -207,7 +220,12 @@ export function register65xxContributions(context) {
         aliases: ["65xx", "6502-raw"],
         displayName: "65xx flat 16-bit raw binary",
         defaultArchitecture: nmos6502Cpu.id,
-        architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+        architectures: [
+            nmos6502Cpu.id,
+            nmos6502xCpu.id,
+            ricoh2a03Cpu.id,
+            ...variantCpus.map((cpu) => cpu.id),
+        ],
         addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
         outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
         directiveSets: [],
@@ -265,7 +283,12 @@ export function register65xxContributions(context) {
         aliases: ["ca65-raw"],
         displayName: "65xx ca65-compatible flat 16-bit raw binary",
         defaultArchitecture: nmos6502Cpu.id,
-        architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+        architectures: [
+            nmos6502Cpu.id,
+            nmos6502xCpu.id,
+            ricoh2a03Cpu.id,
+            ...variantCpus.map((cpu) => cpu.id),
+        ],
         addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
         outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
         directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
@@ -348,7 +371,12 @@ export function register65xxContributions(context) {
         aliases: ["nes", "ines", "6502-nes"],
         displayName: "NES iNES (ca65 / ld65 layout)",
         defaultArchitecture: nmos6502Cpu.id,
-        architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+        architectures: [
+            nmos6502Cpu.id,
+            nmos6502xCpu.id,
+            ricoh2a03Cpu.id,
+            ...variantCpus.map((cpu) => cpu.id),
+        ],
         addressSpace: NES_65XX_ADDRESS_SPACE_ID,
         outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
         directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
@@ -359,6 +387,20 @@ export function register65xxContributions(context) {
         createOptions: createNes65xxTargetOptions,
     });
 }
+/** Activation accepts either target's configuration; the selected target validates it again per session. */
+function validate65xxPluginOptions(configured) {
+    if (configured &&
+        typeof configured === "object" &&
+        !Array.isArray(configured) &&
+        ("header" in configured || "linkerConfig" in configured || "fillByte" in configured)) {
+        const unknown = Object.keys(configured).filter((key) => !["header", "linkerConfig", "fillByte"].includes(key));
+        if (unknown.length)
+            throw new Error(`Unknown NES target option(s): ${unknown.join(", ")}.`);
+        createNes65xxTargetOptions(configured);
+        return { ...configured };
+    }
+    return createRaw65xxTargetOptions(configured);
+}
 const plugin = definePlugin({
     manifest: {
         id: "uttori.asm-plugin-65xx",
@@ -367,7 +409,7 @@ const plugin = definePlugin({
         apiVersion: PLUGIN_API_VERSION,
         description: "65xx NMOS, CMOS, Commodore, MEGA65, Hudson, and Mitsubishi architectures with raw and NES iNES targets.",
     },
-    validateOptions: createRaw65xxTargetOptions,
+    validateOptions: validate65xxPluginOptions,
     activate: register65xxContributions,
 });
 /**
@@ -382,6 +424,10 @@ export async function create65xxAssemblerEnvironment(options = {}) {
     return manager.freeze();
 }
 export default plugin;
+export { Cpu6502Decoder, cpu6502Specifications, formatCpu6502Instruction } from "./decoder.js";
+export * from "./nes/cartridge.js";
+export * from "./nes/mapper.js";
+export { ricoh2a03Cpu } from "./instructions/opcodes.js";
 export { Arch65xx, materializeOpcodeForm } from "./architecture.js";
 export { buildInstructionCatalog } from "./instructions/catalog.js";
 export { getCpuAssemblyForms, getOpcodeForm, getCpuDecodeTable, nmos6502Cpu, nmos6502DecodeTable, nmos6502Forms, nmos6502xCpu, nmos6502xForms, } from "./instructions/opcodes.js";

@@ -50,7 +50,12 @@ export function assertTraceRecordNamespace(
   // Execution IDs use uppercase, padded PCs; content identities use lowercase SHA-256.
   let validSuffix = /^[\da-f]{64}$/.test(suffix);
   if (record.kind === "runtime-execution") {
-    validSuffix = suffix === record.address.toString(16).toUpperCase().padStart(6, "0");
+    const pc = record.address.toString(16).toUpperCase().padStart(6, "0");
+    validSuffix =
+      suffix === pc ||
+      (record.architecture === "65xx.2a03" &&
+        suffix.startsWith(`${pc}:mapping:`) &&
+        /^[\da-f]{64}$/.test(suffix.slice(pc.length + 9)));
   }
   if (
     !record.id.startsWith(prefix) ||

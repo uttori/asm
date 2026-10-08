@@ -1,6 +1,7 @@
 import type { DebugMap } from "@uttori/asm-core/debug-map";
 import type { DebugAdapterSessionOptions, DebugAddress } from "@uttori/asm-debug-adapter";
 import { RomImage } from "@uttori/asm-disassembler";
+import { NesCartridge } from "@uttori/asm-plugin-65xx";
 import {
   createSnesAddressContext,
   detectSnesRom,
@@ -25,6 +26,32 @@ export const createSnesDebugAddressResolvers = (
   map: DebugMap,
   output: Uint8Array,
 ): AddressResolvers => {
+  if (map.target === "65xx.nes") {
+    const cartridge = new NesCartridge(output);
+    return {
+      sourceBreakpointAddresses: (address) => {
+        if (address.outputOffset === undefined)
+          return [{ ...address, architecture: "65xx.2a03", addressSpace: "nes.cpu" }];
+        const offset = address.outputOffset - cartridge.prg.offset;
+        if (offset < 0 || offset >= cartridge.prg.size) return [];
+        let windows = [0x8000, 0xa000, 0xc000, 0xe000].map((base) => base + (offset & 8191));
+        if (cartridge.mapper === 0) {
+          windows = [0x8000 + offset];
+          if (cartridge.prg.size === 16384) windows.push(0xc000 + offset);
+        }
+        // A source bank can execute in several windows; native stops still require the exact physical byte.
+        return windows.map((pc) => ({
+          ...address,
+          architecture: "65xx.2a03",
+          addressSpace: "nes.cpu",
+          address: pc,
+        }));
+      },
+      // A live mapper observation is required; a CPU address alone cannot select a PRG bank.
+      sourceOutputOffset: (address) =>
+        address.architecture === "65xx.2a03" ? address.outputOffset : undefined,
+    };
+  }
   if (map.target !== "snes.sfc") {
     return {};
   }

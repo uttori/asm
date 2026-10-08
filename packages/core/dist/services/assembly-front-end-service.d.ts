@@ -21,8 +21,8 @@ export type AssemblyFrontEndHost = {
 export declare class AssemblyFrontEndService {
     readonly host: AssemblyFrontEndHost;
     commandBuffer: string;
-    /** Opening physical line when processCommand receives a record one line at a time. */
-    private structBufferStart?;
+    /** Opening physical line when processCommand receives a structured statement one line at a time. */
+    private statementBufferStart?;
     readonly programModelBuilder: ProgramModelBuilder;
     constructor(host: AssemblyFrontEndHost);
     /**

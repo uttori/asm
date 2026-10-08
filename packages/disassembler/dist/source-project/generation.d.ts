@@ -50,7 +50,7 @@ export declare function verifySourceGeneration(repository: SourceRepository, com
 }>;
 /** Each worktree owns its pins even when another worktree prepares the identical immutable commit. */
 export declare function sourceCandidateRef(repository: SourceRepository, commit: string): string;
-/** Bound candidate pins atomically per worktree; reuse and direct CLI selection obey the same limit. */
+/** Retain an immutable generation per worktree until preparation supersedes it or a merge accepts it. */
 export declare function pinSourceCandidate(repository: SourceRepository, commit: string, signal?: AbortSignal): Promise<string>;
 /** Validate all externally loaded identity fields before using a descriptor for ancestry selection. */
 export declare function parseSourceGeneration(value: unknown): SourceGenerationDescriptor;

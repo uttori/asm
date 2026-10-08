@@ -10,4 +10,6 @@ export declare const ARES_TRACE_BUFFER_EVENTS = 65536;
 export declare const ARES_TRACE_BATCH_EVENTS = 240;
 /** Immutable editor/sidecar negotiation profile for the patched ares RSP interface. */
 export declare const ARES_RSP_CAPABILITIES: Readonly<DebugBackendCapabilities>;
+/** Famicom exposes only features its native hooks implement; PPU capture is negotiated independently and replay remains unsupported. */
+export declare const ARES_NES_CAPABILITIES: Readonly<DebugBackendCapabilities>;
 //# sourceMappingURL=profile.d.ts.map

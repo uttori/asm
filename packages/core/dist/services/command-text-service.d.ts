@@ -10,6 +10,10 @@ export type PreprocessBlockCommandsResult = {
     sourcedCommands: SourcedCommand[];
     commandBuffer: string;
 };
+/** Only structured records and explicit asset calls acquire implicit physical-line continuation. */
+export declare function isStructuredCommandStart(text: string): boolean;
+/** Keep a parenthesized include buffered until its outer call closes; quoted filenames never affect depth. */
+export declare function isOpenStructuredCommand(text: string): boolean;
 /**
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.

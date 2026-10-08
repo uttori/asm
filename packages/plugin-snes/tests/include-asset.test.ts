@@ -24,6 +24,56 @@ for (const encoder of withAudioEncoder(withImageEncoders(snesNativeEncoders))) {
   registry.registerEncoder(encoder);
 }
 
+for (const incremental of [false, true]) {
+  test(`multiline asset calls preserve define evaluation and opening attribution (${incremental ? "incremental" : "program"})`, (t) => {
+    const png = fixture("colored-4bpp.png");
+    const assembler = new Assembler(undefined, {
+      fileProvider: new MemoryAssemblyFileProvider({ "art/title.png": png }),
+    });
+    let source = `!image = "art/title.png"
+org $808000
+includeAsset(
+  "!image", ; a quoted path is evaluated in the assembly context
+
+  "snes.tile.4bpp",
+  layout: { tileOrder: "row-major" },
+  palette: "embedded"
+)
+AfterAsset:`;
+    if (incremental) {
+      source = source.replace("includeAsset(\n", "includeAsset(\\\n");
+    }
+    if (incremental) {
+      for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+        assembler.activateStage(stage);
+        assembler.setCurrentFile("main.asm");
+        source.split("\n").forEach((line, index) => {
+          assembler.setCurrentLine(index);
+          assembler.processCommand(line);
+        });
+        assembler.finishPass();
+      }
+    } else {
+      assembler.assembleSource(source, "main.asm");
+    }
+    const expected = convertAsset(registry, {
+      source: { bytes: png, mediaType: "image/png" },
+      format: "snes.tile.4bpp",
+      options: { palette: "embedded", layout: { tileOrder: "row-major" } },
+    }).outputs.tiles.bytes;
+    t.deepEqual(assembler.getBinaryOutput().subarray(0, expected.length), expected);
+    t.is(assembler.addressToLineMapping.assets[0].line, 3);
+    t.is(assembler.symbolScope.getLabelValue("AfterAsset", false), 0x808000 + expected.length);
+  });
+}
+
+test("an unfinished multiline asset call fails instead of silently emitting an empty source", (t) => {
+  const assembler = new Assembler();
+  t.throws(() => assembler.assembleSource('includeAsset(\n "a.png",\n "4bpp"', "main.asm"), {
+    message: /Unclosed includeAsset call/,
+  });
+});
+
 test("includeAsset emits PNG parts equal to the direct helper and sizes following labels", (t) => {
   const png = fixture("colored-4bpp.png");
   const provider = new MemoryAssemblyFileProvider({ "art/title.png": png });

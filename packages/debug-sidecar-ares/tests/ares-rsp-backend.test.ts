@@ -937,3 +937,92 @@ test("capture context binds the runtime identity and holds the setup boundary", 
   await backend.capture({ operation: "context", action: "abort" });
   await backend.disconnect();
 });
+
+test("Famicom context requires full iNES identity before sending a native prepare", async (t) => {
+  const xml =
+    '<target><feature name="dev.ares.ricoh2a03.core">' +
+    ["a", "x", "y", "s", "p", "pc"].map((name) => `<reg name="${name}"/>`).join("") +
+    "</feature></target>";
+  const client = new FakeAresRspClient(
+    fakeState(),
+    xml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const original = client.request.bind(client);
+  const commands: string[] = [];
+  client.request = async (command) => {
+    if (command === "g") {
+      return "000000fd240080";
+    }
+    if (command.startsWith("qUttoriContext:")) {
+      commands.push(command);
+      if (command.startsWith("qUttoriContext:prepare:")) {
+        return "prepared";
+      }
+      if (command === "qUttoriContext:abort") {
+        return "aborted";
+      }
+    }
+    if (command.startsWith("qUttoriCaptureFile:")) {
+      commands.push(command);
+      let value: unknown = {
+        ...busPosition(),
+        scope: "nes.cpu-bus-ppu",
+        fileState: "writing",
+        fileBytes: "0",
+        fileBatches: "0",
+      };
+      if (command.includes(":capabilities:")) {
+        value = {
+          ...busCapabilities,
+          scope: "nes.cpu-bus-ppu",
+          requiredReserveBytes: 128,
+          nativeFile: true,
+        };
+      }
+      return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
+    }
+    return original(command);
+  };
+  const identity = {
+    romSha256: "a".repeat(64),
+    romFileSha256: "b".repeat(64),
+    executableSha256: "c".repeat(64),
+  };
+  const backend = new AresRspDebugBackend({
+    createClient: async () => client,
+    nativeFileIdentity: identity,
+  });
+  await backend.connect();
+  const request = {
+    operation: "context",
+    action: "prepare",
+    directory: "/tmp/nes.context",
+    romContentSha256: identity.romSha256,
+    producer: { id: "ares", revision: identity.executableSha256 },
+  } as const;
+  await t.throwsAsync(backend.capture(request), { message: /does not match/ });
+  await t.throwsAsync(backend.capture({ ...request, romFileSha256: "d".repeat(64) }), {
+    message: /does not match/,
+  });
+  t.is(commands.length, 0);
+  t.deepEqual(await backend.capture({ ...request, romFileSha256: identity.romFileSha256 }), {
+    contextState: "prepared",
+  });
+  t.true(commands[0].endsWith(`:${Buffer.from(identity.romFileSha256).toString("hex")}`));
+  await backend.capture({ operation: "context", action: "abort" });
+  // Keep the native file command's digest raw, while context commands encode text.
+  await backend.capture({
+    operation: "file-start",
+    scope: "nes.cpu-bus-ppu",
+    file: "/tmp/nes.act2",
+    bufferBytes: 8388608,
+    romContentSha256: identity.romSha256,
+    romFileSha256: identity.romFileSha256,
+    producer: request.producer,
+  });
+  const start = commands.find((command) => command.startsWith("qUttoriCaptureFile:start:"))!;
+  t.is(start.split(":").length, 9);
+  t.true(start.endsWith(`:${identity.romFileSha256}`));
+  await backend.disconnect();
+});

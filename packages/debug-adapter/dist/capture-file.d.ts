@@ -5,6 +5,8 @@ export interface CaptureFileMetadata {
     readonly architecture: string;
     readonly addressSpace: string;
     readonly romContentSha256: string;
+    /** Complete cartridge identity, including iNES mapper/header bytes. */
+    readonly romFileSha256?: string;
     readonly producer: {
         readonly id: string;
         readonly revision: string;
@@ -21,7 +23,7 @@ export interface CaptureFileHeader extends CaptureFileMetadata {
     readonly maxChunkBytes: 262144;
     readonly allocatedBytes: number;
     readonly clock: {
-        readonly id: "snes.master";
+        readonly id: "snes.master" | "nes.master";
         readonly numerator: string;
         readonly denominator: string;
     };

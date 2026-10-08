@@ -3319,6 +3319,9 @@ export class Assembler {
     if (/^(?:datastruct\b|\[)/i.test(this.frontEndService.commandBuffer.trimStart())) {
       throw new Error("Unclosed dataStruct initializer at end of source.");
     }
+    if (/^includeasset\s*\(/i.test(this.frontEndService.commandBuffer.trimStart())) {
+      throw new Error("Unclosed includeAsset call at end of source.");
+    }
     const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
     this.runLifecycleHook("onStageEnd", (lifecycle) =>
       lifecycle.onStageEnd?.({ state: this.pluginState, session: this, stage }),

@@ -3,6 +3,7 @@ import { waveImporter, withAudioEncoder } from "@uttori/asm-assets/audio";
 import { rawEncoder, rawImporter, jsonImporter } from "@uttori/asm-assets/data";
 import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
+import { asepriteRasterImporter, indexedSourceCodecs } from "@uttori/asm-assets/source-codecs";
 import type { AssetFormatContribution } from "@uttori/asm-core/plugin";
 
 /** Shared portable converter; no assembler state or file access enters this registry. */
@@ -10,6 +11,7 @@ const registry = new AssetRegistry()
   .registerImporter(rawImporter)
   .registerImporter(jsonImporter)
   .registerImporter(pngImporter)
+  .registerImporter(asepriteRasterImporter)
   .registerImporter(waveImporter);
 const encoders = [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder];
 for (const encoder of encoders) {
@@ -62,6 +64,9 @@ export const snesAssetFormats: readonly AssetFormatContribution[] = encoders.map
   aliases: aliases[encoder.id] ?? [],
   targets: ["snes.sfc"],
   optionSchema: optionSchemaFor(encoder.id),
+  sourceRepresentations: encoder.id.startsWith("snes.tile.")
+    ? indexedSourceCodecs().representations()
+    : undefined,
   resourcePaths: (options) => {
     const palette = options.palette;
     if (typeof palette === "string" && palette !== "embedded" && palette !== "auto") {

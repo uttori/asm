@@ -1,12 +1,14 @@
 import { fork, type ChildProcess } from "node:child_process";
 
 import type { AssetOperation } from "@uttori/asm-cli/asset-interchange";
+import type { AssetSourceOperation } from "@uttori/asm-cli/asset-source";
 import type { SourceOperation } from "@uttori/asm-cli/source";
 
 /** Serializable request: buffers use advanced IPC serialization, while cancellation stays process-local. */
 export type SourceProcessOperation =
   | Omit<SourceOperation, "signal" | "onProgress">
-  | AssetOperation;
+  | AssetOperation
+  | AssetSourceOperation;
 
 /** Isolate assembly/SQLite CPU and memory from the extension host; dispose terminates owned children. */
 export class SourceProcessClient {
@@ -17,6 +19,10 @@ export class SourceProcessClient {
     readonly log: (message: string) => void = () => {},
   ) {}
 
+  /**
+   * Own one child and its status timer until exit. Quiet phases retain their last reported stage.
+   * Cancellation may race a durable commit; an orderly completed result remains authoritative.
+   */
   run<T = unknown>(
     operation: SourceProcessOperation,
     options: {
@@ -36,6 +42,21 @@ export class SourceProcessClient {
     }
     return new Promise((resolve, reject) => {
       const started = Date.now();
+      let lastUpdate = started;
+      let lastStage = "Waiting for worker startup.";
+      let label = `Source ${operation.action}: ${operation.directory}`;
+      if ("capture" in operation && operation.capture) {
+        label += `; capture ${operation.capture}`;
+      }
+      this.log(`${label}: started.`);
+      if ("captures" in operation && operation.captures) {
+        for (const [index, capture] of operation.captures.entries()) {
+          this.log(`Queued capture ${index + 1}/${operation.captures.length}: ${capture}`);
+        }
+      } else if ("capture" in operation && operation.capture) {
+        this.log(`Importing capture: ${operation.capture}`);
+        lastStage = `Starting import of ${operation.capture}.`;
+      }
       const child = fork(this.file, [], {
         execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
         env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
@@ -47,21 +68,44 @@ export class SourceProcessClient {
       let finished = false;
       let stderr = "";
       let cancellationTimer: NodeJS.Timeout | undefined;
+      const report = (message: string): void => {
+        const progress = `[${((Date.now() - started) / 1000).toFixed(1)}s] ${message}`;
+        this.log(progress);
+        options.onProgress?.(progress);
+      };
+      // This timer belongs to the responsive parent. Worker timers cannot run during synchronous
+      // assembly or SQLite work. Stage age shows a quiet worker without claiming measurable progress.
+      const heartbeat = setInterval(() => {
+        if (finished || response || options.signal?.aborted || Date.now() - lastUpdate < 10_000) {
+          return;
+        }
+        report(
+          `Waiting for worker ${child.pid}; last progress update ${((Date.now() - lastUpdate) / 1000).toFixed(0)}s ago. ${lastStage}`,
+        );
+      }, 10_000);
+      heartbeat.unref();
       const finish = (error?: Error, value?: T): void => {
         if (finished) {
           return;
         }
         finished = true;
+        clearInterval(heartbeat);
         clearTimeout(cancellationTimer);
         options.signal?.removeEventListener("abort", cancel);
+        const seconds = ((Date.now() - started) / 1000).toFixed(1);
         if (error) {
+          this.log(`${label}: failed after ${seconds}s. Last stage: ${lastStage} ${error.message}`);
           reject(error);
         } else {
+          this.log(`${label}: completed in ${seconds}s. Last stage: ${lastStage}`);
           resolve(value!);
         }
       };
       const cancel = (): void => {
-        options.onProgress?.("Cancelling; the next status check will reconcile native Git state.");
+        clearInterval(heartbeat);
+        report(
+          `Cancelling ${label}; last stage: ${lastStage}. The next status check will reconcile native Git state.`,
+        );
         if (child.connected) {
           child.send({ type: "cancel" }, () => {});
         }
@@ -79,9 +123,9 @@ export class SourceProcessClient {
         (message: { type: string; message?: string; value?: T; paths?: unknown }) => {
           if (message.type === "progress" && typeof message.message === "string") {
             // All phases get elapsed time, including Git/SQLite operations without a fixed work total.
-            const progress = `[${((Date.now() - started) / 1000).toFixed(1)}s] ${message.message}`;
-            this.log(progress);
-            options.onProgress?.(progress);
+            lastStage = message.message;
+            lastUpdate = Date.now();
+            report(lastStage);
           } else if (message.type === "result") {
             response = { value: message.value! };
           } else if (message.type === "error") {

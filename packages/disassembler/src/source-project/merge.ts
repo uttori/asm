@@ -19,6 +19,7 @@ import {
   assertSourcePath,
   assertSourceCheckpoint,
   assertSourceObjectId,
+  acquireSourceOperationLease,
   sourceGit,
   type SourceRepository,
 } from "./git.js";
@@ -70,6 +71,93 @@ export interface SourceMergeStatus {
 
 const journalFile = (repository: SourceRepository): string =>
   path.join(repository.stateDirectory, "merge.json");
+
+/**
+ * Prepare one replacement proposal while excluding source publication and merge operations.
+ * The renderer must verify original-ROM equality before resolving. Rendering failure or cancellation
+ * before replacement keeps previous candidates and previews. Replacement commits one Git ref
+ * transaction; once published, its proposal remains retained even if the host is interrupted.
+ */
+export async function prepareSourceGeneration<T extends { readonly generation: SourceGeneration }>(
+  repository: SourceRepository,
+  render: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  signal?.throwIfAborted();
+  const lease = acquireSourceOperationLease(repository);
+  try {
+    assertNoSourceOperation(repository);
+    const status = await sourceMergeStatus(repository);
+    if (["merging", "diverged"].includes(status.phase)) {
+      throw new Error(
+        "Finish or resolve the pending regeneration before preparing its replacement.",
+      );
+    }
+    // Committed generations are already retained by source ancestry. Later authoring commits
+    // can invalidate an old build receipt without requiring another temporary candidate pin.
+    const prepared = await render();
+    signal?.throwIfAborted();
+    // Retain and verify the replacement before releasing any older recovery root.
+    // A killed renderer can leave an extra pin; the next successful Prepare retires it as well.
+    await verifySourceGeneration(repository, prepared.generation.commit);
+    signal?.throwIfAborted();
+    await retireSupersededCandidates(repository, prepared.generation, signal);
+    await clearSourcePreview(repository);
+    return prepared;
+  } finally {
+    lease.release();
+  }
+}
+
+/** Caller owns the operation lease; the candidate lease serializes low-level pin admission too. */
+async function retireSupersededCandidates(
+  repository: SourceRepository,
+  generation: SourceGeneration,
+  signal?: AbortSignal,
+): Promise<void> {
+  const ref = sourceCandidateRef(repository, generation.commit);
+  if (generation.ref !== ref) {
+    throw new Error("Prepared generation belongs to another worktree.");
+  }
+  const lease = acquireFileLease(path.join(repository.stateDirectory, "candidate.lock"));
+  try {
+    const prefix = ref.slice(0, -generation.commit.length);
+    const listing = (
+      await sourceGit(
+        repository.root,
+        ["for-each-ref", "--format=%(refname) %(objectname) %(symref)", "refs/uttori/candidates/"],
+        { signal },
+      )
+    ).stdout.toString("utf8");
+    const entries = listing
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => line.split(" "));
+    const replacement = entries.find(([name]) => name === ref);
+    if (!replacement || replacement[1] !== generation.commit || replacement[2]) {
+      throw new Error("Prepared generation pin changed outside the source workflow.");
+    }
+    const commands = ["option no-deref", `verify ${ref} ${generation.commit}`];
+    for (const [name, commit, symbolic] of entries) {
+      // Keep sibling owners and externally replaced/symbolic refs. Only exact workflow pins
+      // are replaceable, even when Git has packed them and no loose ref file exists.
+      if (name === ref || !name.startsWith(prefix) || symbolic || name !== prefix + commit) {
+        continue;
+      }
+      assertSourceObjectId(commit);
+      commands.push(`delete ${name} ${commit}`);
+    }
+    // Git checks every old identity before committing the deletions as one transaction.
+    // Concurrent external ref changes must retain all proposals rather than permit partial cleanup.
+    await sourceGit(repository.root, ["update-ref", "--stdin"], {
+      input: commands.join("\n") + "\n",
+      signal,
+    });
+  } finally {
+    lease.release();
+  }
+}
 
 /** Read only known journal fields; malformed recovery state must not trigger an automatic reset. */
 function readJournal(repository: SourceRepository): SourceMergeJournal | undefined {
@@ -431,7 +519,7 @@ export async function adoptSourceGeneration(
   }
 }
 
-/** Apply only the previewed source contents after a clean explicit checkpoint. */
+/** Apply the previewed merge to a clean checkout using its existing HEAD; leave the result uncommitted. */
 export async function applySourceGeneration(
   repository: SourceRepository,
   generation: SourceGeneration,

@@ -25,7 +25,7 @@ export declare class AssetAssemblyService {
      * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
      */
     snapshot(path: string): Uint8Array | undefined;
-    /** Resolve input and declared resource paths for tooling without reading or converting bytes.
+    /** Resolve input and declared resource paths for tooling without encoding bytes.
      * @param {ParsedAssetCall} call Typed source directive.
      */
     discoverDependencies(call: ParsedAssetCall): void;

@@ -37,12 +37,16 @@ export class CaptureContextRecorder {
 
   constructor(archive: string, metadata: CaptureFileMetadata, transport: CaptureTransportV2) {
     this.directory = `${archive}.context`;
+    if (metadata.architecture === "65xx.2a03" && !metadata.romFileSha256) {
+      throw new Error("NES context requires the full iNES image identity.");
+    }
     // Recorder options also contain format, callbacks and host paths. Copy only
     // identity fields so they cannot overwrite the companion's format contract.
     this.#metadata = {
       architecture: metadata.architecture,
       addressSpace: metadata.addressSpace,
       romContentSha256: metadata.romContentSha256,
+      ...(metadata.romFileSha256 ? { romFileSha256: metadata.romFileSha256 } : {}),
       producer: metadata.producer,
     };
     this.#native = transport;
@@ -53,6 +57,7 @@ export class CaptureContextRecorder {
             operation: "context",
             action: "prepare",
             directory: this.directory,
+            ...(metadata.romFileSha256 ? { romFileSha256: metadata.romFileSha256 } : {}),
             romContentSha256: metadata.romContentSha256,
             producer: metadata.producer,
           },
@@ -80,7 +85,7 @@ export class CaptureContextRecorder {
       }
       if (request.operation === "stop" || request.operation === "file-stop") {
         // Stop first pauses at an acknowledged CPU boundary. It stays held while
-        // the independent graphics writer drains, so the end WRAM image
+        // the independent graphics writer drains, so the retained machine endpoint
         // and primary terminal counters describe the same execution position.
         for (;;) {
           const result = await transport({
@@ -125,10 +130,11 @@ export class CaptureContextRecorder {
     ) {
       throw new Error("Capture context boundary does not match the completed ACT2 archive.");
     }
+    const nes = this.#metadata.architecture === "65xx.2a03";
     const files: Partial<Record<string, { bytes: number; sha256: string }>> = {};
     for (const name of (await readdir(this.directory)).toSorted()) {
       if (
-        !/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+        !/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
           name,
         )
       ) {
@@ -139,8 +145,13 @@ export class CaptureContextRecorder {
       if (!stat.isFile() || stat.isSymbolicLink()) {
         throw new Error("Capture context artifacts must be regular files.");
       }
-      if (name.startsWith("wram-") && stat.size !== 131072) {
-        throw new Error("WRAM snapshots must contain exactly 128 KiB.");
+      if (
+        (name.startsWith("wram-") && (nes || stat.size !== 131072)) ||
+        (name.startsWith("ram-") && (!nes || stat.size !== 2048)) ||
+        (name === "start-extra.bin" && (!nes || stat.size !== 38)) ||
+        (name === "end-state.bin" && (!nes || stat.size < 2048 || stat.size > 32 * 1048576))
+      ) {
+        throw new Error("Capture RAM snapshot does not match its machine profile.");
       }
       if (name === "inputs.bin" && stat.size % 18) {
         throw new Error("Controller evidence has an incomplete row.");
@@ -156,8 +167,9 @@ export class CaptureContextRecorder {
     }
     for (const name of [
       "start.bst",
-      "wram-start.bin",
-      "wram-end.bin",
+      ...(nes
+        ? ["ram-start.bin", "ram-end.bin", "start-extra.bin", "end-state.bin"]
+        : ["wram-start.bin", "wram-end.bin"]),
       "inputs.bin",
       "milestones.jsonl",
       "identity.txt",
@@ -169,7 +181,10 @@ export class CaptureContextRecorder {
         throw new Error(`Missing capture context artifact: ${name}.`);
       }
     }
-    if (summary.scope === "snes.65816.instructions" && !files["graphics.act2"]) {
+    if (
+      (summary.scope === "snes.65816.instructions" || summary.scope === "nes.2a03.instructions") &&
+      !files["graphics.act2"]
+    ) {
       throw new Error("Instruction context is missing its graphics companion.");
     }
     // Require the producer's explicit full-window acknowledgement so a mismatched
@@ -177,6 +192,7 @@ export class CaptureContextRecorder {
     if (files["graphics.act2"] && boundaries.graphicsWindowFrames !== null) {
       throw new Error("Capture context requires full-capture graphics from the native runtime.");
     }
+    const graphicsScope = nes ? "nes.cpu-bus-ppu" : "snes.cpu-bus-ppu";
     const manifest = path.join(this.directory, "manifest.json");
     const handle = await open(`${manifest}.partial`, "wx");
     try {
@@ -189,11 +205,22 @@ export class CaptureContextRecorder {
             archive: path.basename(summary.archive),
             scope: summary.scope,
             boundaries,
-            wram: { address: 0x7e0000, bytes: 131072 },
+            ...(nes
+              ? {
+                  ram: { addressSpace: "nes.ram", address: 0, bytes: 2048 },
+                  endpoint: {
+                    file: "end-state.bin",
+                    encoding: "ares-famicom-canonical-v1",
+                    includes: "CPU,APU,PPU,mapper,controllers,RNG",
+                  },
+                }
+              : { wram: { address: 0x7e0000, bytes: 131072 } }),
             inputs: {
               file: "inputs.bin",
               rowBytes: 18,
-              encoding: "le-u64-clock,u64-instruction-ordinal,u8-port,u8-serial-bits",
+              encoding: nes
+                ? "le-u64-clock,u64-instruction-ordinal,u8-sample-slot,u8-button-value"
+                : "le-u64-clock,u64-instruction-ordinal,u8-port,u8-serial-bits",
             },
             visuals: {
               timing: "last-presented-frame",
@@ -201,7 +228,11 @@ export class CaptureContextRecorder {
               automaticLimit: 24,
             },
             graphics: files["graphics.act2"]
-              ? { scope: "snes.cpu-bus-ppu", windowFrames: null, file: "graphics.act2" }
+              ? {
+                  scope: graphicsScope,
+                  windowFrames: null,
+                  file: "graphics.act2",
+                }
               : {
                   scope: summary.scope,
                   windowFrames: null,
@@ -233,11 +264,11 @@ export class CaptureContextRecorder {
 /** Verify the entire companion before feeding a save state to native code. Every
  * path is a flat, regular artifact, and every byte is bound to this ROM/build.
  * @param {string} directory Companion directory selected by the user.
- * @param {Pick<CaptureFileMetadata, "romContentSha256" | "producer">} identity ROM and producer identity of the verified running emulator.
+ * @param {Pick<CaptureFileMetadata, "romContentSha256" | "romFileSha256" | "producer">} identity ROM and producer identity of the verified running emulator.
  */
 export const verifyCaptureContext = async (
   directory: string,
-  identity: Pick<CaptureFileMetadata, "romContentSha256" | "producer">,
+  identity: Pick<CaptureFileMetadata, "romContentSha256" | "romFileSha256" | "producer">,
   signal?: AbortSignal,
 ): Promise<void> => {
   signal?.throwIfAborted();
@@ -262,11 +293,29 @@ export const verifyCaptureContext = async (
   ) {
     throw new Error("Capture context requires the matching ROM and emulator build.");
   }
+  const nes = manifest.architecture === "65xx.2a03";
+  if (
+    (nes &&
+      (!identity.romFileSha256 ||
+        identity.romFileSha256 !== manifest.romFileSha256 ||
+        manifest.addressSpace !== "nes.cpu")) ||
+    (!nes && identity.romFileSha256 !== undefined)
+  ) {
+    throw new Error("Capture context requires the matching full iNES image.");
+  }
   const files = manifest.files;
+  if (nes && manifest.scope !== "nes.2a03.instructions" && manifest.scope !== "nes.cpu-bus-ppu") {
+    throw new Error("Invalid NES capture context scope.");
+  }
+  if (nes && manifest.scope === "nes.2a03.instructions" && !files["graphics.act2"]) {
+    throw new Error("NES instruction context is missing its graphics companion.");
+  }
+
   for (const name of [
     "start.bst",
-    "wram-start.bin",
-    "wram-end.bin",
+    ...(nes
+      ? ["ram-start.bin", "ram-end.bin", "start-extra.bin", "end-state.bin"]
+      : ["wram-start.bin", "wram-end.bin"]),
     "inputs.bin",
     "identity.txt",
     "machine.json",
@@ -281,7 +330,7 @@ export const verifyCaptureContext = async (
   for (const [name, artifact] of Object.entries(files)) {
     signal?.throwIfAborted();
     if (
-      !/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+      !/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
         name,
       ) ||
       !isRecord(artifact) ||
@@ -300,7 +349,10 @@ export const verifyCaptureContext = async (
       stat.isSymbolicLink() ||
       stat.size !== artifact.bytes ||
       (name === "start.bst" && (stat.size < 538 || stat.size > 32 * 1048576)) ||
-      (name.startsWith("wram-") && stat.size !== 131072) ||
+      (name.startsWith("wram-") && (nes || stat.size !== 131072)) ||
+      (name.startsWith("ram-") && (!nes || stat.size !== 2048)) ||
+      (name === "start-extra.bin" && (!nes || stat.size !== 38)) ||
+      (name === "end-state.bin" && (!nes || stat.size < 2048 || stat.size > 32 * 1048576)) ||
       (name === "inputs.bin" && stat.size % 18)
     ) {
       throw new Error(`Capture context artifact size/type mismatch: ${name}.`);

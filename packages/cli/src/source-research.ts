@@ -15,6 +15,7 @@ import {
   type ResearchAnalysisChange,
   type ResearchAnalysisRecord,
 } from "@uttori/asm-disassembler";
+import { loadNesRom, nesResearchInputs } from "@uttori/asm-plugin-65xx/disassembler";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -176,6 +177,17 @@ export function prepareSourceResearch(
         addressSpaces: spaces,
         records,
       };
+    }
+    if (project.configuration.target === "65xx.nes" && request.change.kind === "put") {
+      const { cartridge } = loadNesRom(sourceProjectLocalInputs(project).rom);
+      const value = request.change.value;
+      nesResearchInputs(cartridge, {
+        labels: [],
+        comments: [],
+        regions: [],
+        annotations: "classification" in value ? [value] : [],
+        analysis: "kind" in value ? [value] : [],
+      });
     }
     const edit = changeResearchAnalysis(snapshot, request.change, spaces);
     const before =

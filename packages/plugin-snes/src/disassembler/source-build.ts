@@ -7,6 +7,8 @@ import {
   createDebugMap,
   type AssemblerEnvironment,
   type AddressToLineMapping,
+  type AssemblyFileResolutionOptions,
+  type AssemblyFileStat,
 } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
@@ -80,8 +82,8 @@ export interface InspectSnesSourceOptions extends Omit<
   BuildSnesSourceOptions,
   "outputDirectory" | "toolchainSha256" | "configurationSha256"
 > {
-  /** Repository-relative existing source files. Bytes are copied before assembler passes begin. */
-  readonly overlays?: ReadonlyMap<string, Uint8Array>;
+  /** Repository-relative candidate files. Null hides a retired file; bytes also support not-yet-published resources. */
+  readonly overlays?: ReadonlyMap<string, Uint8Array | null>;
   /** Structured names needed by placement services in addition to ordinary labels and extents. */
   readonly resolveSymbols?: readonly string[];
 }
@@ -101,15 +103,59 @@ class SourceBuildFiles extends NodeAssemblyFileProvider {
   readonly snapshots = new Map<string, Uint8Array>();
   #bytes = 0;
 
-  constructor(readonly overlays: ReadonlyMap<string, Uint8Array> = new Map()) {
+  constructor(readonly overlays: ReadonlyMap<string, Uint8Array | null> = new Map()) {
     super();
+  }
+
+  /** Candidate creations/removals participate in the same search order as saved source files. */
+  override resolvePath(
+    filename: string,
+    options: AssemblyFileResolutionOptions = {},
+  ): string | undefined {
+    const normalized = filename.replace(/^["']|["']$/g, "");
+    let candidates: string[];
+    if (path.isAbsolute(normalized)) {
+      candidates = [normalized];
+    } else {
+      candidates = [
+        options.macroSourceFile ? path.dirname(options.macroSourceFile) : undefined,
+        options.currentFile ? path.dirname(options.currentFile) : undefined,
+        ...(options.includePaths ?? []),
+        process.cwd(),
+      ]
+        .filter((item): item is string => item !== undefined)
+        .map((directory) => path.resolve(directory, normalized));
+    }
+    for (const candidate of candidates) {
+      if (this.overlays.has(candidate)) {
+        if (this.overlays.get(candidate) !== null) {
+          return candidate;
+        }
+      } else if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+    return undefined;
+  }
+
+  override stat(file: string): AssemblyFileStat {
+    const name = path.resolve(file);
+    if (this.overlays.has(name)) {
+      const bytes = this.overlays.get(name);
+      return { exists: bytes !== null, readable: bytes !== null, size: bytes?.length };
+    }
+    return super.stat(file);
   }
 
   override readFile(file: string): Uint8Array {
     const name = path.resolve(file);
     let bytes = this.snapshots.get(name);
     if (!bytes) {
-      bytes = this.overlays.get(name) ?? super.readFile(name);
+      const overlay = this.overlays.get(name);
+      if (overlay === null) {
+        throw new Error(`Candidate source removed '${name}'.`);
+      }
+      bytes = overlay ?? super.readFile(name);
       this.#bytes += bytes.length;
       if (this.#bytes > 256 * 1024 * 1024) {
         throw new Error("Source build input snapshot exceeds 256 MiB.");
@@ -129,15 +175,15 @@ export function inspectSnesSource(options: InspectSnesSourceOptions): SnesSource
   options.signal?.throwIfAborted();
   const root = path.resolve(options.root);
   const entrySource = path.resolve(root, options.entrySource);
-  const overlays = new Map<string, Uint8Array>();
+  const overlays = new Map<string, Uint8Array | null>();
   let overlayBytes = 0;
   for (const [name, bytes] of options.overlays ?? []) {
     assertSourcePath(name);
-    overlayBytes += bytes.length;
+    overlayBytes += bytes?.length ?? 0;
     if (overlayBytes > 256 * 1024 * 1024) {
       throw new Error("Source overlays exceed 256 MiB.");
     }
-    overlays.set(path.resolve(root, name), Uint8Array.from(bytes));
+    overlays.set(path.resolve(root, name), bytes === null ? null : Uint8Array.from(bytes));
   }
   const files = new SourceBuildFiles(overlays);
   const assembler = new Assembler({
@@ -246,8 +292,10 @@ export function inspectSnesSource(options: InspectSnesSourceOptions): SnesSource
     if (options.placements) {
       diagnostics.push(...checkSnesPlacements(output, symbols, options.placements));
     }
-    for (const file of overlays.keys()) {
-      if (!files.snapshots.has(file)) {
+    for (const [file, bytes] of overlays) {
+      // A retired input must no longer be consumed. Reading it already fails in the provider;
+      // absence therefore has the opposite success condition from a candidate creation/edit.
+      if (bytes !== null && !files.snapshots.has(file)) {
         throw new Error(`Source preview overlay is not consumed by this assembly: ${file}`);
       }
     }

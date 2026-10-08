@@ -8,6 +8,7 @@ import type {
 } from "@uttori/asm-cli/asset-interchange";
 import { readAssetOperation } from "@uttori/asm-cli/asset-interchange/operation-records";
 import { readAssetImportReview } from "@uttori/asm-cli/asset-interchange/public-records";
+import type { AssetSourceOperation, AssetSourceConversionPlan } from "@uttori/asm-cli/asset-source";
 import type { SourceAction, SourceResearchRequest } from "@uttori/asm-cli/source";
 import {
   sourceGit,
@@ -17,6 +18,7 @@ import {
   type SourceMergeStatus,
   type SourceProjectConfiguration,
   type ResearchAnalysisChange,
+  type SourceCaptureIdentity,
 } from "@uttori/asm-disassembler";
 import type { SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import { SNES_MAPPERS } from "@uttori/asm-plugin-snes";
@@ -26,6 +28,7 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   EventEmitter,
+  env,
   languages,
   ProgressLocation,
   Range,
@@ -56,6 +59,8 @@ import { editAnalysisResearch } from "./analysis-editor.js";
 import { assertAssetEditorVersions, type AssetEditorVersion } from "./asset-drafts.js";
 import { captureBuildControls, changedBuildInputs, type SavedBuildInput } from "./build-inputs.js";
 import { registerSourceCodeActions } from "./code-actions.js";
+import { applyAssetSourceEdit } from "./conversion-editor.js";
+import { readSourceGenerationReview, type SourceGenerationReview } from "./generation-review.js";
 import { SourceGitFiles } from "./git-files.js";
 import { SourceProcessClient } from "./process-client.js";
 import { findEvidenceSourceRoot, findSourceRoot } from "./project-path.js";
@@ -230,6 +235,9 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
   /** Watcher changes during coordinated publication are delivered once, including interrupted partial publication. */
   #assetSavedInputPending = false;
   #refreshTimer?: NodeJS.Timeout;
+  #assetContextTimer?: NodeJS.Timeout;
+  #assetContextAbort?: AbortController;
+  #assetContextVersion = 0;
   #watcher?: Disposable;
   #epoch = 0;
   /** Last authoring input notification, retained to explain conservative publication invalidation. */
@@ -298,6 +306,16 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         this.guard(() => this.assetFile("apply", request)),
       ),
       commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
+      commands.registerCommand("asm.asset.convertToAseprite", (request?: unknown) =>
+        this.guard(() => this.assetConvert("aseprite", request)),
+      ),
+      commands.registerCommand("asm.asset.convertToPng", (request?: unknown) =>
+        this.guard(() => this.assetConvert("indexed-png", request)),
+      ),
+      window.onDidChangeActiveTextEditor(() => this.scheduleAssetContext()),
+      window.onDidChangeTextEditorSelection(() => this.scheduleAssetContext()),
+      workspace.onDidChangeTextDocument(() => this.scheduleAssetContext()),
+      workspace.onDidSaveTextDocument(() => this.scheduleAssetContext()),
       commands.registerCommand("asm.source.diff", (left: Uri, right: Uri, title: string) =>
         commands.executeCommand("vscode.diff", left, right, title),
       ),
@@ -413,10 +431,69 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       this.#disposables.push(
         commands.registerCommand(
           `asm.source.${action === "import" ? "importCapture" : action}`,
-          (capture?: Uri) => this.guard(() => this.perform(action, undefined, undefined, capture)),
+          (capture?: Uri | readonly Uri[]) =>
+            this.guard(() => this.perform(action, undefined, undefined, capture)),
         ),
       );
     }
+    this.#disposables.push(
+      commands.registerCommand("asm.source.graphics", (captureSha256?: string) =>
+        this.guard(async () => {
+          const root = this.#root;
+          if (!root || !workspace.isTrusted) {
+            throw new Error("Select a trusted NES source project first.");
+          }
+          const selection = await this.#worker.run<{ captures: readonly SourceCaptureIdentity[] }>(
+            { action: "graphics", directory: root },
+            { maxMemoryMiB: 512 },
+          );
+          if (!selection.captures.length) {
+            await window.showInformationMessage(
+              "Import NES graphics captures to inspect their CPU evidence links.",
+            );
+            return;
+          }
+          const choices = selection.captures.map((capture) => ({
+            label: capture.sourceName,
+            description: `${capture.observedEvents.toLocaleString()} events`,
+            detail: capture.sha256,
+            capture,
+          }));
+          let selected;
+          if (captureSha256 !== undefined) {
+            selected = choices.find((choice) => choice.capture.sha256 === captureSha256);
+            if (!selected) {
+              throw new Error("Select an imported graphics capture identity.");
+            }
+          } else {
+            selected = await window.showQuickPick(choices, {
+              title: "NES Graphics Evidence",
+              matchOnDetail: true,
+            });
+          }
+          if (!selected) {
+            return;
+          }
+          if (root !== this.#root) {
+            throw new Error("The selected source project changed.");
+          }
+          const report = await this.#worker.run(
+            {
+              action: "graphics",
+              directory: root,
+              graphicsQuery: { captureSha256: selected.capture.sha256 },
+            },
+            { maxMemoryMiB: 512 },
+          );
+          await window.showTextDocument(
+            await workspace.openTextDocument({
+              language: "json",
+              content: JSON.stringify(report, null, 2) + "\n",
+            }),
+          );
+        }),
+      ),
+    );
     void this.restore();
   }
 
@@ -483,7 +560,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     );
     source.description = "checking status";
     if (this.#status) {
-      source.description = this.#status.dirty ? "uncommitted changes" : "checkpoint saved";
+      source.description = this.#status.dirty ? "uncommitted changes" : "clean";
     }
     source.iconPath = new ThemeIcon("git-branch");
     const unsaved =
@@ -511,23 +588,28 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       current?.command,
     );
     next.tooltip = current?.description;
-    // A reviewed candidate resumes at Preview/Checkpoint/Apply; an active merge owns Finish.
+    // A pending candidate remains reviewable before Apply; an active merge owns Finish.
     if (
       this.#candidate &&
       !["merging", "committed", "diverged"].includes(this.#status?.phase ?? "")
     ) {
+      const previewed = this.#preview?.candidate === this.#candidate;
+      const reviewLabel = previewed ? "Generation Preview" : "Incoming Generation";
       const incoming = new SourceRow(
-        `Incoming Generation · ${this.#incoming.length} files`,
+        `${reviewLabel} · ${this.#incoming.length} files`,
         this.#incoming,
       );
-      // Full games can have thousands of incoming files. Keep review available without burying
-      // the workflow actions below an automatically expanded diff list.
-      incoming.collapsibleState = TreeItemCollapsibleState.Collapsed;
+      // Pure exports can have thousands of files; expand the proposed merge only after Preview
+      // so its changes are visible before the user applies or commits them.
+      incoming.collapsibleState = previewed
+        ? TreeItemCollapsibleState.Expanded
+        : TreeItemCollapsibleState.Collapsed;
+      incoming.tooltip = "Click a file to review its diff. Preview leaves working files unchanged.";
       steps.unshift(incoming);
     }
     const regeneration = new SourceRow("Update Source from Evidence", steps);
     regeneration.tooltip =
-      "Analyze → Prepare → Preview → save/commit checkpoint → Apply → resolve/stage → Finish. Finish builds and creates the merge commit.";
+      "Analyze → Prepare → Preview diffs → Apply to a clean checkout → review/resolve/stage → Finish. Finish builds and creates the merge commit.";
     const build = new SourceRow("Build Current Source", [], "asm.source.build");
     if (this.#build) {
       build.description = this.#buildStale ? "source changed" : "verified";
@@ -553,7 +635,10 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       stopImport.iconPath = new ThemeIcon("database");
       captureRows.push(stop, stopImport);
     }
-    captureRows.push(new SourceRow("Import Capture", [], "asm.source.importCapture"));
+    captureRows.push(new SourceRow("Import Captures", [], "asm.source.importCapture"));
+    if (this.#configuration?.target === "65xx.nes") {
+      captureRows.push(new SourceRow("Inspect Graphics Evidence", [], "asm.source.graphics"));
+    }
     return [
       source,
       build,
@@ -589,8 +674,8 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     const rom = (
       await window.showOpenDialog({
         canSelectMany: false,
-        title: "Original SNES ROM",
-        filters: { "SNES ROM": ["sfc", "smc"] },
+        title: "Original SNES or NES ROM",
+        filters: { "Cartridge ROM": ["sfc", "smc", "nes"] },
       })
     )?.[0];
     if (!rom) {
@@ -619,9 +704,12 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     if (!destination) {
       return;
     }
-    const mapper = await window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
-      title: "SNES cartridge mapping",
-    });
+    const nes = path.extname(rom.fsPath).toLowerCase() === ".nes";
+    const mapper = nes
+      ? "Detect automatically"
+      : await window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
+          title: "SNES cartridge mapping",
+        });
     if (!mapper || (mapper !== "Detect automatically" && !isSnesMapper(mapper))) {
       return;
     }
@@ -790,7 +878,11 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         }
       }
       if (authoring) {
-        if (this.#busy === "asset-apply" || this.#busy === "asset-recover") {
+        if (
+          this.#busy === "asset-apply" ||
+          this.#busy === "asset-recover" ||
+          this.#busy === "asset-convert"
+        ) {
           this.#assetSavedInputPending = true;
         } else {
           this.#savedInput.fire();
@@ -935,6 +1027,191 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         }),
       ),
     ];
+  }
+
+  /** Hide stale menu actions immediately; evaluated paths and continued calls come from the normal build worker. */
+  private scheduleAssetContext(): void {
+    clearTimeout(this.#assetContextTimer);
+    this.#assetContextAbort?.abort();
+    const version = ++this.#assetContextVersion;
+    void commands.executeCommand("setContext", "asm.assetSourceRepresentation", "");
+    this.#assetContextTimer = setTimeout(() => {
+      void (async () => {
+        const editor = window.activeTextEditor;
+        if (
+          !workspace.isTrusted ||
+          this.#busy ||
+          !editor ||
+          editor.document.isDirty ||
+          editor.document.uri.scheme !== "file" ||
+          !/^(uttori-|asm)/.test(editor.document.languageId)
+        ) {
+          return;
+        }
+        const root = await findSourceRoot(editor.document.uri.fsPath);
+        if (!root || version !== this.#assetContextVersion) {
+          return;
+        }
+        const abort = new AbortController();
+        this.#assetContextAbort = abort;
+        try {
+          const result = await this.#worker.run<{ representation: string } | undefined>(
+            {
+              action: "asset-source-target",
+              directory: root,
+              file: editor.document.uri.fsPath,
+              line: editor.selection.active.line + 1,
+            },
+            { signal: abort.signal, maxMemoryMiB: 4096 },
+          );
+          // The document can acquire a draft while the worker is running; never publish context from that older saved version.
+          // oxlint-disable-next-line typescript/no-unnecessary-condition
+          if (version === this.#assetContextVersion && !editor.document.isDirty) {
+            await commands.executeCommand(
+              "setContext",
+              "asm.assetSourceRepresentation",
+              result?.representation ?? "",
+            );
+          }
+        } catch {
+          // Ordinary cursor locations, invalid current builds and cancelled probes have no applicable conversion menu.
+        }
+      })();
+    }, 400);
+  }
+
+  /** One clean command stages validated recovery bytes, publishes a native undo unit, then verifies the saved ROM. */
+  private async assetConvert(representation: string, request?: unknown): Promise<unknown> {
+    if (!workspace.isTrusted) {
+      throw new Error("Trust this workspace before converting source assets.");
+    }
+    if (this.#busy) {
+      throw new Error(`Source operation already running: ${this.#busy}.`);
+    }
+    const editor = window.activeTextEditor;
+    let file = editor?.document.uri.fsPath;
+    let line = editor ? editor.selection.active.line + 1 : undefined;
+    let destination: string | undefined;
+    if (request instanceof Uri) {
+      // Editor context menus supply the model URI. Resolve the active cursor only if that same editor still owns the invocation.
+      if (editor?.document.uri.toString() !== request.toString()) {
+        throw new Error(
+          "The selected editor changed before conversion. Invoke the command on the intended include again.",
+        );
+      }
+    } else if (isRecord(request)) {
+      if (
+        typeof request.file !== "string" ||
+        !Number.isSafeInteger(request.line) ||
+        Number(request.line) < 1 ||
+        (request.destination !== undefined && typeof request.destination !== "string")
+      ) {
+        throw new Error("Conversion needs a file and one-based cursor line.");
+      }
+      file = request.file;
+      line = Number(request.line);
+      destination = request.destination;
+    }
+    if (!file || !line) {
+      throw new Error("Place the cursor in an includeAsset call to convert its saved source.");
+    }
+    const root = await findSourceRoot(file);
+    if (!root) {
+      throw new Error("The selected include is outside an adopted source project.");
+    }
+    if (this.#root !== root) {
+      await this.select(root);
+    }
+    this.#assetContextAbort?.abort();
+    const epoch = this.#epoch;
+    const versions = this.assetEditorVersions();
+    this.#busy = "asset-convert";
+    this.#assetSavedInputPending = false;
+    this.#changed.fire(undefined);
+    let published = false;
+    try {
+      const result = await this.runAssetOperation<
+        AssetSourceConversionPlan & { transaction?: string }
+      >(
+        {
+          action: "asset-convert",
+          directory: root,
+          file,
+          line,
+          representation,
+          destination,
+          stageOnly: true,
+          drafts: versions
+            .filter((entry) => entry.dirty)
+            .map(({ path: filePath, version, opaque }) => ({ path: filePath, version, opaque })),
+        },
+        epoch,
+        versions,
+      );
+      if (!result.transaction) {
+        throw new Error("Conversion returned no staged publication journal.");
+      }
+      await applyAssetSourceEdit(root, result, (paths) => {
+        if (this.#root !== root) {
+          throw new Error(
+            "Selected source project changed before conversion publication. Recover the staged conversion.",
+          );
+        }
+        assertAssetEditorVersions(versions, this.assetEditorVersions(), paths);
+      });
+      published = true;
+      // Native publication deliberately changes document versions. The finish operation checks their new
+      // saved state against the staged after bytes, while the journal still protects interrupted publication.
+      const savedVersions = this.assetEditorVersions();
+      await this.runAssetOperation(
+        {
+          action: "asset-conversion-finish",
+          directory: root,
+          transaction: result.transaction,
+          outputSha256: result.outputSha256,
+          drafts: savedVersions
+            .filter((entry) => entry.dirty)
+            .map(({ path: filePath, version, opaque }) => ({ path: filePath, version, opaque })),
+        },
+        this.#epoch,
+        savedVersions,
+      );
+      this.#assetReview = undefined;
+      const document = await workspace.openTextDocument(Uri.file(file));
+      await window.showTextDocument(document, {
+        selection: new Range(line - 1, 0, line - 1, 0),
+        preview: false,
+      });
+      const destinationUri = Uri.file(path.resolve(root, result.destination));
+      await commands.executeCommand("revealInExplorer", destinationUri);
+      const retained = result.retained.length
+        ? ` Retained other source references: ${result.retained.join(", ")}.`
+        : "";
+      const unresolved = result.unresolvedDeclarations.length
+        ? ` ${result.unresolvedDeclarations.length} declarations are outside the current build.`
+        : "";
+      void window
+        .showInformationMessage(
+          `Converted ${result.destination}; complete ROM verified. Updated ${result.affected.length} includes.${retained}${unresolved}`,
+          "Open in Associated Editor",
+        )
+        .then((choice) => (choice ? env.openExternal(destinationUri) : undefined));
+      return result;
+    } finally {
+      this.#busy = undefined;
+      this.#changed.fire(undefined);
+      // A throw after native publication still invalidates build state; TypeScript does not retain that mutation through finally.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
+      if (published || this.#assetSavedInputPending) {
+        this.#buildStale = true;
+        this.#savedInput.fire();
+      }
+      this.#assetSavedInputPending = false;
+      await this.refresh().catch((error: unknown) =>
+        this.output.warn(`Conversion status requires recovery: ${String(error)}`),
+      );
+      this.scheduleAssetContext();
+    }
   }
 
   /** Saved-source export/review/apply share the existing source worker, busy state and live editor-version checks. */
@@ -1147,12 +1424,12 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
   }
 
   /** All asset workers use the same cancellation and final live-buffer gate, including explicit journal recovery. */
-  private async runAssetOperation(
-    operation: AssetOperation,
+  private async runAssetOperation<Result = unknown>(
+    operation: AssetOperation | AssetSourceOperation,
     epoch: number,
     versions: readonly AssetEditorVersion[],
     reviewedVersions = versions,
-  ): Promise<unknown> {
+  ): Promise<Result> {
     const root = operation.directory;
     return window.withProgress(
       {
@@ -1164,14 +1441,21 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         const abort = new AbortController(),
           listener = token.onCancellationRequested(() => abort.abort());
         try {
-          return await this.#worker.run(operation, {
+          return await this.#worker.run<Result>(operation, {
             signal: abort.signal,
             maxMemoryMiB: workspace
               .getConfiguration("asm", Uri.file(root))
               .get<number>("analysis.maxMemoryMiB", 4096),
             onProgress: (message) => reporter.report({ message }),
             onBeforePublish: (paths) => {
-              if (this.#root !== root || this.#epoch !== epoch) {
+              // File creates/removals can deliver delayed watcher events from the native edit itself.
+              // Finishing checks current editor versions and exact journal bytes instead of that event counter.
+              if (
+                this.#root !== root ||
+                (operation.action !== "asset-convert" &&
+                  operation.action !== "asset-conversion-finish" &&
+                  this.#epoch !== epoch)
+              ) {
                 const input = this.#epochInput
                   ? ` (${path.relative(root, this.#epochInput)}; ${this.#epochEvent} event)`
                   : "";
@@ -1308,11 +1592,15 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       });
   }
 
+  /**
+   * Run against the selected project while retaining its busy state through worker settlement.
+   * Explicit capture URIs bypass the picker; queues retain completed per-file commits on interruption.
+   */
   private async perform(
     action: SourceAction,
     cancellation?: AbortSignal,
     progress?: (message: string) => void,
-    captureUri?: Uri,
+    captureUri?: Uri | readonly Uri[],
   ): Promise<unknown> {
     if (!workspace.isTrusted) {
       throw new Error("Trust this workspace before running source tools or plugins.");
@@ -1365,6 +1653,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       );
     }
     let capture: string | undefined;
+    let captures: readonly string[] | undefined;
     let objectId: string | undefined;
     let expansionSize: number | undefined;
     if (action === "expand") {
@@ -1429,19 +1718,33 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       }
     }
     if (action === "import") {
-      if (captureUri && (!(captureUri instanceof Uri) || captureUri.scheme !== "file")) {
+      let selected: readonly Uri[] | undefined;
+      if (Array.isArray(captureUri)) {
+        selected = captureUri;
+      } else if (captureUri instanceof Uri) {
+        selected = [captureUri];
+      } else if (captureUri !== undefined) {
         throw new Error("Capture import requires a local file URI.");
       }
-      capture =
-        captureUri?.fsPath ??
-        (
-          await window.showOpenDialog({
-            canSelectMany: false,
-            filters: { "Capture archives": ["act2", "json"] },
-          })
-        )?.[0]?.fsPath;
-      if (!capture) {
+      selected ??= await window.showOpenDialog({
+        title: "Import captures into source project",
+        canSelectMany: true,
+        canSelectFiles: true,
+        canSelectFolders: false,
+        filters: { "Capture archives": ["act2", "json"] },
+      });
+      if (!selected?.length) {
         return undefined;
+      }
+      if (selected.some((uri) => !(uri instanceof Uri) || uri.scheme !== "file")) {
+        throw new Error("Capture import requires local file URIs.");
+      }
+      // Preserve the single-file command result used by Stop Capture and Import Evidence.
+      // Multiple selections use one worker and cancellation scope, with separate per-file commits.
+      if (selected.length === 1) {
+        capture = selected[0].fsPath;
+      } else {
+        captures = selected.map((uri) => uri.fsPath);
       }
     }
     this.#busy = action;
@@ -1471,6 +1774,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
             directory: root,
             candidate: this.#candidate,
             capture,
+            captures,
             objectId,
             expansionSize,
             overlays: action === "preview" ? overlays : undefined,
@@ -1513,9 +1817,36 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
           throw new Error("Invalid source preview.");
         }
         this.#preview = result;
-        void window.showInformationMessage(
-          `Preview: ${this.#preview.conflicts.length} conflicting files. Next: save and commit your reviewed checkpoint in Source Control, then Apply Previewed Generation. After applying, resolve/stage changes and Finish; Finish builds and commits the merge.`,
-        );
+        const review = await this.incoming();
+        if (!review) {
+          throw new Error("Selected source project changed during preview. Preview again.");
+        }
+        const conflicts = this.#preview.conflicts;
+        const fileLabel = conflicts.length === 1 ? "file" : "files";
+        let summary = `Preview: ${conflicts.length} predicted merge conflicts.`;
+        if (conflicts.length) {
+          summary = `Preview: ${conflicts.length} ${fileLabel} with predicted merge conflicts: ${conflicts.join(", ")}.`;
+        }
+        let next =
+          "Apply Previewed Generation to see the changes in Source Control. Your existing commit is the starting point; no additional commit is needed before Apply.";
+        if (review.localChanges.length) {
+          // Only existing local edits need a checkpoint; generated changes are committed after review.
+          next = `Before Apply, save and commit or move these existing local changes: ${review.localChanges.join(", ")}.`;
+        }
+        const message = `${summary} Review ${review.files.length} changed files in Generation Preview. ${next} After applying, review/resolve and stage changes, then Finish; Finish builds and commits the merge.`;
+        // Persist every conflicting path and the next steps after the notification disappears.
+        this.output.info(message);
+        void window
+          .showInformationMessage(message, "Review Generation", "Show Analysis Output")
+          .then((choice) => {
+            if (choice === "Review Generation") {
+              void commands.executeCommand("uttori-asm.sourceProject.focus");
+            }
+            if (choice === "Show Analysis Output") {
+              this.output.show(true);
+            }
+            return undefined;
+          });
       } else if (action === "build") {
         if (!isSnesSourceBuild(result)) {
           throw new Error("Invalid source build.");
@@ -1583,6 +1914,9 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       } else if (action === "import" || action === "analyze") {
         let message =
           "Capture imported. Next: Analyze Evidence, then Prepare Regeneration. Current source has not changed.";
+        if (captures && isRecord(result) && Array.isArray(result.imports)) {
+          message = `${result.imports.length} captures imported. Next: Analyze Evidence, then Prepare Regeneration. Current source has not changed.`;
+        }
         let button = "Analyze Evidence";
         let command = "asm.source.analyze";
         if (action === "analyze") {
@@ -1657,37 +1991,34 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     }
   }
 
-  private async incoming(): Promise<void> {
+  /** Populate immutable review diffs without saving or applying the proposed generation. */
+  private async incoming(): Promise<SourceGenerationReview | undefined> {
     if (!this.#candidate || !this.#root) {
-      return;
+      return undefined;
     }
     const root = this.#root,
       candidate = this.#candidate;
-    const base = (await sourceGit(root, ["rev-parse", `${candidate}^`])).stdout.toString().trim();
-    const result = await sourceGit(root, [
-      "diff",
-      "--no-renames",
-      "--name-status",
-      "-z",
-      base,
-      candidate,
-    ]);
-    const parts = result.stdout.toString("utf8").split("\0");
+    const preview = this.#preview;
+    const review = await readSourceGenerationReview(root, candidate, preview);
+    // A selection or newer preview can arrive while Git is reading immutable trees.
+    if (root !== this.#root || candidate !== this.#candidate || preview !== this.#preview) {
+      return undefined;
+    }
     const rows: SourceRow[] = [];
-    for (let index = 0; index + 1 < parts.length; index += 2) {
-      const status = parts[index],
-        file = parts[index + 1];
-      const left = this.#files.uri(root, status === "A" ? null : base, file);
-      const right = this.#files.uri(root, status === "D" ? null : candidate, file);
+    const label = review.previewed ? "Generation Preview" : "Generated";
+    for (const { status, path: file, conflict } of review.files) {
+      const left = this.#files.uri(root, status === "A" ? null : review.before, file);
+      const right = this.#files.uri(root, status === "D" ? null : review.after, file);
       const row = new SourceRow(file, [], "asm.source.diff", [
         left,
         right,
-        `${file} · Generated ${base.slice(0, 7)} → ${candidate.slice(0, 7)}`,
+        `${file} · ${label} ${review.before.slice(0, 7)} → ${review.after.slice(0, 7)}`,
       ]);
-      row.description = status;
+      row.description = conflict ? "predicted conflict" : status;
       rows.push(row);
     }
     this.#incoming = rows;
+    return review;
   }
 
   private buildTask(root: string, folder?: WorkspaceFolder): Task {
@@ -1863,6 +2194,8 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
   }
   dispose(): void {
     clearTimeout(this.#refreshTimer);
+    clearTimeout(this.#assetContextTimer);
+    this.#assetContextAbort?.abort();
     this.#watcher?.dispose();
     for (const item of this.#disposables) {
       item.dispose();

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -64,6 +65,7 @@ import {
 } from "../runtime/trace-recorder.js";
 import { chooseLiveBusProject } from "../source/evidence-selection.js";
 import { createDebugInstructionAnnotation } from "./analysis-annotations.js";
+import { saveNesPPUSnapshot } from "./nes-ppu.js";
 import { createSnesDebugAddressResolvers } from "./rom-addresses.js";
 import { resolveDebugSourceRoot } from "./source-root.js";
 
@@ -365,6 +367,7 @@ let debuggingExtensionRoot = "";
 const liveAnalyses = new Set<LiveBusAnalysis>();
 /** ROM/producer identity retained for ordinary runtime trace recording. */
 interface DebugTraceSessionContext {
+  readonly romContentSha256?: string;
   readonly map: DebugMap;
   readonly producer: EditorTraceMetadata["producer"];
 }
@@ -537,11 +540,18 @@ const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTra
     throw new Error("No loaded debug-session identity is available.");
   }
   const map = loaded.map;
-  const romContentSha256 = stringField(map.output.sha256, "debugMap.output.sha256").toLowerCase();
+  const romContentSha256 =
+    loaded.romContentSha256 ??
+    stringField(map.output.sha256, "debugMap.output.sha256").toLowerCase();
   if (!/^[\da-f]{64}$/.test(romContentSha256)) {
     throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
   }
-  return { ...trace, romContentSha256, producer: loaded.producer };
+  return {
+    ...trace,
+    romContentSha256,
+    ...(map.target === "65xx.nes" ? { romFileSha256: map.output.sha256 } : {}),
+    producer: loaded.producer,
+  };
 };
 
 /**
@@ -668,8 +678,15 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
   }
   const metadata = traceMetadata(session, trace);
   if (lossless) {
-    let captureScope: import("@uttori/asm-debug-adapter").CaptureScopeV2 =
-      "snes.65816.instructions";
+    const nes = trace.architecture === "65xx.2a03";
+    if (nes && bus && !ppu) {
+      throw new Error(
+        "Famicom supports lossless instructions and lossless PPU bus capture; select either mode.",
+      );
+    }
+    let captureScope: import("@uttori/asm-debug-adapter").CaptureScopeV2 = nes
+      ? "nes.2a03.instructions"
+      : "snes.65816.instructions";
     if (bus) {
       captureScope = "snes.cpu-bus";
     }
@@ -677,7 +694,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       captureScope = "snes.cpu-bus-transfers";
     }
     if (ppu) {
-      captureScope = "snes.cpu-bus-ppu";
+      captureScope = nes ? "nes.cpu-bus-ppu" : "snes.cpu-bus-ppu";
     }
     const nativeFile =
       workspace
@@ -685,7 +702,8 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
         .get<string>("debug.captureSink", "stream") === "native-file";
     const recorderType = nativeFile ? NativeCaptureFileRecorder : LosslessCaptureFileRecorder;
     const settings = workspace.getConfiguration("asm", session.workspaceFolder?.uri);
-    const liveEnabled = nativeFile && bus && settings.get<boolean>("debug.liveBusAnalysis", false);
+    const liveEnabled =
+      !nes && nativeFile && bus && settings.get<boolean>("debug.liveBusAnalysis", false);
     // A stopped capture may still be catching up. Bound the editor to one
     // analysis worker, even if a new recording is requested during that drain.
     if (liveEnabled && liveAnalyses.size > 0) {
@@ -920,6 +938,7 @@ const restoreRuntimeCapture = async (replay: boolean): Promise<void> => {
     operation: "context",
     action: replay ? "replay" : "restore",
     directory: selected[0].fsPath,
+    ...(metadata.romFileSha256 ? { romFileSha256: metadata.romFileSha256 } : {}),
     romContentSha256: metadata.romContentSha256,
     producer: metadata.producer,
   });
@@ -965,7 +984,11 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   };
   const summary = await finalize();
   // Bus evidence has its own importer: observed accesses cannot supply instruction bytes or code seeds.
-  if ("scope" in summary && summary.scope !== "snes.65816.instructions") {
+  if (
+    "scope" in summary &&
+    summary.scope !== "snes.65816.instructions" &&
+    summary.scope !== "nes.2a03.instructions"
+  ) {
     if (active.live) {
       try {
         await active.live.completion;
@@ -979,7 +1002,7 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
       return;
     }
     const action = await window.showInformationMessage(
-      `Assembly: ${summary.observedEvents.toLocaleString()} CPU/DMA/HDMA capture event(s) retained. Zero dropped. Wrote ${summary.file}.`,
+      `Assembly: ${summary.observedEvents.toLocaleString()} bus capture event(s) retained. Zero dropped. Wrote ${summary.file}.`,
       "Import Bus Activity",
     );
     if (action === "Import Bus Activity") {
@@ -1068,6 +1091,7 @@ const createLiveBackend = (
   extensionRoot: string,
   program: string,
   romSha256: string,
+  target: string,
   log: (message: string) => void,
 ): DebugBackend => {
   if (!workspace.isTrusted) {
@@ -1105,9 +1129,11 @@ const createLiveBackend = (
         "--runtime-dir",
         runtimeDirectory,
       ];
-      if (configuration.aresSystem) {
-        args.push("--system", configuration.aresSystem);
-      }
+      // The paired debug map owns target selection, independent of a saved SNES runtime binding.
+      args.push(
+        "--system",
+        target === "65xx.nes" ? "Famicom" : (configuration.aresSystem ?? "Super Famicom"),
+      );
       if (configuration.fastBoot === false) {
         args.push("--no-fast-boot");
       }
@@ -1178,6 +1204,7 @@ const loadConfiguration = (
         extensionRoot,
         program,
         map.output.sha256,
+        map.target,
         log,
       );
     }
@@ -1387,6 +1414,9 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
     }
     sessionContexts.set(session.id, {
       map: loaded.map,
+      romContentSha256: createHash("sha256")
+        .update(loaded.map.target === "65xx.nes" ? loaded.output.subarray(16) : loaded.output)
+        .digest("hex"),
       producer: traceProducer(session, loaded.map),
     });
     let instructionAnnotation: DebugAdapterSessionOptions["instructionAnnotation"];
@@ -1442,6 +1472,21 @@ export const registerDebugging = (extensionRoot: string): readonly Disposable[] 
       UTTORI_ASM_DEBUG_TYPE,
       new UttoriDebugAdapterFactory(extensionRoot, output),
     ),
+    commands.registerCommand("asm.nes.ppuSnapshot", async () => {
+      const session = debug.activeDebugSession;
+      if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE) {
+        throw new Error("Start and pause a Famicom debug session first.");
+      }
+      const trace = await chooseTrace(session);
+      if (!trace || trace.architecture !== "65xx.2a03" || !session.workspaceFolder) {
+        throw new Error("PPU snapshots require a Famicom workspace session.");
+      }
+      return saveNesPPUSnapshot(
+        session,
+        traceMetadata(session, trace),
+        session.workspaceFolder.uri.fsPath,
+      );
+    }),
     commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
     commands.registerCommand("asm.trace.mark", () => runTraceCommand(markRuntimeCapture)),
     commands.registerCommand("asm.trace.replay", () =>

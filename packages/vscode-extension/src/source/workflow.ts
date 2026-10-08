@@ -123,20 +123,21 @@ export function sourceWorkflow(state: SourceWorkflowState): SourceWorkflowStep[]
   }
   steps.push({
     label: "3. Preview with Current Edits",
-    description: "Review the incoming generation and merge against your current edits.",
+    description: "Show file diffs for the proposed merge before applying or committing it.",
     command: "asm.source.preview",
     current: !state.previewed,
   });
   if (!state.previewed) {
     steps.push({
       label: "4. Apply · preview required",
-      description: "Preview first; then save and commit your checkpoint.",
+      description:
+        "Review the generated file diffs first. A clean checkout can apply using its existing commit.",
     });
   } else if (state.dirty) {
     steps.push({
       label: "4. Save and Commit Checkpoint",
       description:
-        "Save files, review and commit changes in Source Control, then Apply. A build does not create a checkpoint.",
+        "Review Generation Preview first. Preserve existing local edits by saving and committing or moving them before Apply.",
       command: "workbench.view.scm",
       current: true,
     });
@@ -144,7 +145,7 @@ export function sourceWorkflow(state: SourceWorkflowState): SourceWorkflowStep[]
     steps.push({
       label: "4. Apply Previewed Generation",
       description:
-        "Checkpoint is saved. Start the reviewed Git merge; Finish validates and commits it.",
+        "Apply the reviewed generation using the existing commit. Review and stage the result before Finish validates and commits it.",
       command: "asm.source.apply",
       current: true,
     });

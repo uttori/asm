@@ -1,3 +1,5 @@
+import { Inflate } from "pako";
+
 import { ASSET_LIMITS, boundedSum } from "./limits.js";
 import { integer } from "./validation.js";
 
@@ -144,4 +146,43 @@ export function chunk(type: number, data: Uint8Array): Uint8Array {
     .u16(type)
     .raw(data)
     .build();
+}
+
+/** Inflate into a fixed buffer. Streaming callbacks stop expansion before an oversized payload can accumulate. */
+export function rasterZlibSync(bytes: Uint8Array, expected: number): Uint8Array {
+  integer(expected, "Decoded payload", 0, ASSET_LIMITS.decodedBytes);
+  const output = new Uint8Array(expected);
+  let offset = 0;
+  const inflator = new Inflate({ windowBits: 15, chunkSize: 16 * 1024 });
+  let unread: (() => number) | undefined;
+  // Pako permits unused bytes after a zlib member. The async Web Streams driver rejects them;
+  // inspect its public start-hook stream so both parser drivers enforce one complete member.
+  inflator.onStart = (stream): void => {
+    unread = () => stream.avail_in;
+  };
+  inflator.onData = (part: Uint8Array): void => {
+    if (part.length > expected - offset) {
+      throw new Error("Aseprite decompressed raster exceeds its declared bounds.");
+    }
+    output.set(part, offset);
+    offset += part.length;
+  };
+  let completed = false;
+  inflator.onEnd = (status): void => {
+    if (status !== 0) {
+      throw new Error("Invalid Aseprite zlib stream.");
+    }
+    completed = true;
+  };
+  try {
+    inflator.push(bytes, true);
+    // Completion is set by Pako's callback; retain the explicit check even though TypeScript cannot follow that lifecycle.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
+    if (!completed || offset !== expected || unread?.() !== 0) {
+      throw new Error("Aseprite decompressed raster length or stream mismatch.");
+    }
+  } catch (cause) {
+    throw new Error("Invalid bounded Aseprite zlib raster.", { cause });
+  }
+  return output;
 }

@@ -26,4 +26,9 @@ export declare function rewriteIndexedPng(source: Uint8Array, edit: IndexedPngEd
  * @returns {Uint8Array} Owned PNG bytes within the asset limits.
  */
 export declare function createIndexedPng(image: Pick<IndexedImage, "width" | "height" | "indexes" | "palette">): Uint8Array;
+/** Extend an eight-bit indexed palette without changing IDAT or existing slot identities.
+ * Palette-only source views can use new slots without assigning them native pixels. Unsafe ancillary
+ * chunks require the same explicit validation/retention policy as ordinary PNG edits.
+ */
+export declare function extendIndexedPngPalette(source: Uint8Array, colors: IndexedImage["palette"], preserveChunks?: readonly string[]): Uint8Array;
 //# sourceMappingURL=png-edit.d.ts.map

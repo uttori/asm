@@ -13,3 +13,7 @@ export * from "./trace-buffer.js";
 export * from "./capture-v2.js";
 export * from "./capture-file.js";
 export * from "./capture-context.js";
+
+export * from "./capture-nes-ppu.js";
+
+export type { CaptureNesTimelineV2, NesMapperIRQ } from "./capture-nes-timeline.js";

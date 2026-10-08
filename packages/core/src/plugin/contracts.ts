@@ -260,6 +260,24 @@ export interface AssetFormatResult {
   readonly outputs: Readonly<Record<string, { readonly bytes: Uint8Array }>>;
 }
 
+/** One authoring representation, independently of the native output codec. IDs are stable across editor integrations. */
+export interface AssetSourceRepresentation {
+  readonly id: string;
+  readonly mediaType: string;
+  /** Lowercase filename suffixes including the dot; the first is the generated default. */
+  readonly extensions: readonly string[];
+}
+
+/** A resource key identifies bytes passed to converters; relativeTo names an already discovered resource key. */
+export interface AssetResourceDependency {
+  readonly key: string;
+  readonly path: string;
+  /** Omission resolves from the assembly call; nested sidecars resolve from their declaring file. */
+  readonly relativeTo?: string;
+  /** Explicit type for representation resources whose extensions are supplied by a codec plugin. */
+  readonly mediaType?: string;
+}
+
 /** Synchronous, target-scoped conversion from supplied bytes. */
 export interface AssetFormatContribution {
   readonly id: string;
@@ -271,6 +289,16 @@ export interface AssetFormatContribution {
   readonly optionSchema?: Readonly<
     Record<string, { readonly summary: string; readonly valueSyntax?: string }>
   >;
+  readonly sourceRepresentations?: readonly AssetSourceRepresentation[];
+  /** Discover the complete closure incrementally. Inputs are owned callback copies, fixed for this build.
+   * Return the same requests on each invocation plus new requests unlocked by supplied resources.
+   * Discovery stops when no new keys appear; recursive/cyclic declarations and more than 1024 resources fail.
+   */
+  readonly resourceDependencies?: (
+    source: AssetSource,
+    options: Readonly<Record<string, unknown>>,
+    resources: Readonly<Record<string, AssetSource>>,
+  ) => readonly AssetResourceDependency[];
   /** Return every external resource path the converter will read. */
   readonly resourcePaths?: (options: Readonly<Record<string, unknown>>) => readonly string[];
   convert(

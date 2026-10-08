@@ -1,5 +1,6 @@
 export { pngImporter } from "./png.js";
-export { rewriteIndexedPng, createIndexedPng } from "./png-edit.js";
+export { rewriteIndexedPng, createIndexedPng, extendIndexedPngPalette } from "./png-edit.js";
+export { readAssetPng } from "./png.js";
 export type { IndexedPngEdit } from "./png-edit.js";
 export {
   expandIndexedGrid,

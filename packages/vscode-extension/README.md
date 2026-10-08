@@ -43,8 +43,8 @@ The **Source Project** tree shows a **Next** action and an ordered **Update Sour
 
 1. **Analyze Evidence** after importing captures or changing analysis research.
 2. **Prepare Regeneration** to generate an incoming candidate.
-3. **Preview with Current Edits** to review the proposed merge, including supported unsaved edits.
-4. Save files and commit your reviewed checkpoint in Source Control, then **Apply Previewed Generation**.
+3. **Preview with Current Edits** shows clickable file diffs under **Generation Preview**, including predicted conflicts and supported unsaved edits, without changing the checkout.
+4. **Apply Previewed Generation** uses the existing commit when the checkout is clean. If Preview names existing local edits, save and commit or move those edits first to preserve the merge's abort point.
 5. Resolve conflicts with the native Merge Editor and stage the intended changes in Source Control.
 6. **Validate and Finish Regeneration** builds the staged result, validates it and creates the merge commit.
 
@@ -73,8 +73,16 @@ offers import; Stop and Import also imports it into the selected source project.
 finalization state stays visible, including recordings started from the command palette. The
 Source Project title also has Record/Stop buttons during an ares debug session.
 
-Indexed PNG and palette custom editors share VS Code's save/undo/recovery lifecycle. Preview can include unsaved supported text and binary edits; merge application requires saving and committing a checkpoint.
-Apply appears after preview and a clean saved checkpoint, and is retired when the merge starts. Finish becomes available once conflicts are resolved and changes staged. Finish clears the completed candidate, including stale selections restored from editor state. After reloading with a pending candidate, preview again before applying; a missing private preview produces a recovery instruction instead of a filesystem error.
+**Import Captures** accepts multiple ACT2 or JSON archives. Files import sequentially, with the
+filename and queue position in the notification and **Uttori Analysis** Output log. Merge updates
+include provisional record counts, percentage, rate and estimated remaining time. Quiet source
+operations show the worker PID, elapsed time and age of the last progress update every ten seconds;
+this indicates a pending worker, while record counts show measurable progress. Output also records
+completion, failure, archive hashes and import totals. Failure or cancellation stops the queue and
+preserves completed imports; retrying the queue is safe.
+
+Indexed PNG and palette custom editors share VS Code's save/undo/recovery lifecycle. Preview can include unsaved supported text and binary edits. Apply requires a clean checkout; the existing commit suffices, and generated changes are reviewed and staged before Finish commits them.
+Apply appears after preview when the checkout is clean, and is retired when the merge starts. Finish becomes available once conflicts are resolved and changes staged. Finish clears the completed candidate, including stale selections restored from editor state. After reloading with a pending candidate, preview again before applying; a missing private preview produces a recovery instruction instead of a filesystem error.
 
 ## Editor Information
 

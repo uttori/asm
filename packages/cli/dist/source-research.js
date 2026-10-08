@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { changeResearchSymbol, changeResearchAnalysis, openAnalysisProjectStore, sourceProjectLocalInputs, readResearchInputs, sourceContentHash, } from "@uttori/asm-disassembler";
+import { loadNesRom, nesResearchInputs } from "@uttori/asm-plugin-65xx/disassembler";
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -89,6 +90,17 @@ export function prepareSourceResearch(project, request = {}, buffers = []) {
                 addressSpaces: spaces,
                 records,
             };
+        }
+        if (project.configuration.target === "65xx.nes" && request.change.kind === "put") {
+            const { cartridge } = loadNesRom(sourceProjectLocalInputs(project).rom);
+            const value = request.change.value;
+            nesResearchInputs(cartridge, {
+                labels: [],
+                comments: [],
+                regions: [],
+                annotations: "classification" in value ? [value] : [],
+                analysis: "kind" in value ? [value] : [],
+            });
         }
         const edit = changeResearchAnalysis(snapshot, request.change, spaces);
         const before = overlays.get(edit.path) ??

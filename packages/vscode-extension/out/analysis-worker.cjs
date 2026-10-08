@@ -14,8 +14,8 @@ var __esm = (fn, res, err) => function __init() {
   }
 };
 var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
+  for (var name2 in all)
+    __defProp(target, name2, { get: all[name2], enumerable: true });
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -103,8 +103,8 @@ var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
 // packages/disassembler/src/model/project-labels.ts
-var validateSourceLabelName = (name) => {
-  if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
+var validateSourceLabelName = (name2) => {
+  if (typeof name2 !== "string" || name2.length > 256 || !/^[A-Z_a-z]\w*$/.test(name2)) {
     throw new Error(
       "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
     );
@@ -325,7 +325,7 @@ var sorted = (values) => [...new Set(values)].toSorted();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
   const sources = /* @__PURE__ */ new Map();
-  const ensure = (id, name, format, sha256) => {
+  const ensure = (id, name2, format, sha256) => {
     let source = sources.get(id);
     if (!source) {
       source = {
@@ -339,7 +339,7 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
       };
       sources.set(id, source);
     }
-    source.names.add(name);
+    source.names.add(name2);
     return source;
   };
   const reportSources = /* @__PURE__ */ new Map();
@@ -402,8 +402,8 @@ var addAll = (target, values) => {
   }
   return target;
 };
-var numberField = (record, name) => {
-  const value = record[name];
+var numberField = (record2, name2) => {
+  const value = record2[name2];
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
 };
 var effectiveAddress = (value) => {
@@ -426,7 +426,7 @@ var effectiveAddress = (value) => {
   };
 };
 var annotationState = (annotation) => annotation.state;
-var runtimeState = (record) => record.state;
+var runtimeState = (record2) => record2.state;
 var lowerBound = (values, target, at) => {
   let low = 0;
   let high = values.length;
@@ -541,9 +541,9 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
       addAll(transition.evidence, node.evidence);
     }
   };
-  for (const record of shards.analysis) {
-    if (record.kind === "cfg-node") {
-      addNode(record);
+  for (const record2 of shards.analysis) {
+    if (record2.kind === "cfg-node") {
+      addNode(record2);
     }
   }
   for (const annotation of shards.annotations) {
@@ -555,38 +555,38 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
       instruction.outputOffsets = addValue(instruction.outputOffsets, annotation.start);
     }
   }
-  for (const record of runtime()) {
-    if (record.kind === "runtime-execution") {
-      const instruction = ensure(record.addressSpace, record.address);
-      if (record.fileOffset !== void 0) {
-        instruction.outputOffsets = addValue(instruction.outputOffsets, record.fileOffset);
+  for (const record2 of runtime()) {
+    if (record2.kind === "runtime-execution") {
+      const instruction = ensure(record2.addressSpace, record2.address);
+      if (record2.fileOffset !== void 0) {
+        instruction.outputOffsets = addValue(instruction.outputOffsets, record2.fileOffset);
       }
-      instruction.architectures = addValue(instruction.architectures, record.architecture);
-      instruction.executionCount += record.count;
-      instruction.executionRecordIds = addValue(instruction.executionRecordIds, record.id);
-      instruction.evidence = addAll(instruction.evidence, record.evidence);
-    } else if (record.kind === "runtime-cpu-state") {
-      const instruction = ensure(record.addressSpace, record.address);
+      instruction.architectures = addValue(instruction.architectures, record2.architecture);
+      instruction.executionCount += record2.count;
+      instruction.executionRecordIds = addValue(instruction.executionRecordIds, record2.id);
+      instruction.evidence = addAll(instruction.evidence, record2.evidence);
+    } else if (record2.kind === "runtime-cpu-state") {
+      const instruction = ensure(record2.addressSpace, record2.address);
       addStateObservation(
         instruction,
         "runtime",
-        record.architecture,
-        runtimeState(record),
-        record.id,
-        record.evidence,
-        record.count
+        record2.architecture,
+        runtimeState(record2),
+        record2.id,
+        record2.evidence,
+        record2.count
       );
-    } else if (record.kind === "runtime-memory-access") {
-      const instruction = ensure(record.instructionAddressSpace, record.instructionAddress);
-      instruction.architectures = addValue(instruction.architectures, record.architecture);
+    } else if (record2.kind === "runtime-memory-access") {
+      const instruction = ensure(record2.instructionAddressSpace, record2.instructionAddress);
+      instruction.architectures = addValue(instruction.architectures, record2.architecture);
       const value = {
-        accessedAddressSpace: record.accessedAddressSpace,
-        accessedAddress: record.accessedAddress,
-        access: record.access,
-        width: record.width,
-        ...record.actor === void 0 ? {} : { actor: record.actor },
-        ...record.channel === void 0 ? {} : { channel: record.channel },
-        ...record.value === void 0 ? {} : { value: record.value }
+        accessedAddressSpace: record2.accessedAddressSpace,
+        accessedAddress: record2.accessedAddress,
+        access: record2.access,
+        width: record2.width,
+        ...record2.actor === void 0 ? {} : { actor: record2.actor },
+        ...record2.channel === void 0 ? {} : { channel: record2.channel },
+        ...record2.value === void 0 ? {} : { value: record2.value }
       };
       const key3 = canonicalJsonCompact(value);
       const accesses = instruction.memoryAccesses ??= /* @__PURE__ */ new Map();
@@ -595,10 +595,10 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
         access = { value, count: 0, recordIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
         accesses.set(key3, access);
       }
-      access.count += record.count;
-      access.recordIds.add(record.id);
-      addAll(access.evidence, record.evidence);
-      instruction.evidence = addAll(instruction.evidence, record.evidence);
+      access.count += record2.count;
+      access.recordIds.add(record2.id);
+      addAll(access.evidence, record2.evidence);
+      instruction.evidence = addAll(instruction.evidence, record2.evidence);
     }
   }
   for (const comment of shards.comments) {
@@ -657,19 +657,19 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
     });
   }
   const coverageById = /* @__PURE__ */ new Map();
-  for (const record of runtime()) {
-    if (record.kind !== "runtime-coverage") {
+  for (const record2 of runtime()) {
+    if (record2.kind !== "runtime-coverage") {
       continue;
     }
-    coverageById.set(record.id, record);
-    attachToRange(record.addressSpace, record.start, record.end, (instruction) => {
-      instruction.architectures = addValue(instruction.architectures, record.architecture);
-      instruction.coverageRecordIds = addValue(instruction.coverageRecordIds, record.id);
-      instruction.evidence = addAll(instruction.evidence, record.evidence);
+    coverageById.set(record2.id, record2);
+    attachToRange(record2.addressSpace, record2.start, record2.end, (instruction) => {
+      instruction.architectures = addValue(instruction.architectures, record2.architecture);
+      instruction.coverageRecordIds = addValue(instruction.coverageRecordIds, record2.id);
+      instruction.evidence = addAll(instruction.evidence, record2.evidence);
     });
   }
   const summaries = new Set(
-    shards.analysis.filter((record) => record.kind === "summary").map(({ architecture }) => architecture)
+    shards.analysis.filter((record2) => record2.kind === "summary").map(({ architecture }) => architecture)
   );
   if (summaries.size === 1) {
     const [architecture] = summaries;
@@ -682,13 +682,13 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
   const finalized = mutable.map((instruction) => {
     const coverage = /* @__PURE__ */ new Map();
     for (const recordId of instruction.coverageRecordIds ?? []) {
-      const record = coverageById.get(recordId);
-      const previous = coverage.get(record.coverage);
-      coverage.set(record.coverage, {
-        coverage: record.coverage,
-        count: (previous?.count ?? 0) + record.count,
-        recordIds: sortedStrings([...previous?.recordIds ?? [], record.id]),
-        evidence: sortedStrings([...previous?.evidence ?? [], ...record.evidence])
+      const record2 = coverageById.get(recordId);
+      const previous = coverage.get(record2.coverage);
+      coverage.set(record2.coverage, {
+        coverage: record2.coverage,
+        count: (previous?.count ?? 0) + record2.count,
+        recordIds: sortedStrings([...previous?.recordIds ?? [], record2.id]),
+        evidence: sortedStrings([...previous?.evidence ?? [], ...record2.evidence])
       });
     }
     return Object.assign(
@@ -767,27 +767,61 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
   };
 };
 
+// packages/disassembler/src/model/research-mapping.ts
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isResearchMapping(value) {
+  if (!isRecord3(value)) {
+    return false;
+  }
+  const record2 = value;
+  if (Object.keys(record2).some((key3) => key3 !== "fileOffset" && key3 !== "state")) {
+    return false;
+  }
+  if (record2.fileOffset !== void 0 && !(Number.isSafeInteger(record2.fileOffset) && Number(record2.fileOffset) >= 0)) {
+    return false;
+  }
+  let fields = 0;
+  if (record2.state !== void 0) {
+    if (typeof record2.state !== "object" || record2.state === null || Array.isArray(record2.state)) {
+      return false;
+    }
+    const entries = Object.entries(record2.state);
+    if (entries.length === 0 || entries.length > 64) {
+      return false;
+    }
+    for (const [key3, entry] of entries) {
+      if (!/^[A-Za-z][\w.]{0,63}$/.test(key3) || typeof entry !== "boolean" && !(Number.isSafeInteger(entry) && Number(entry) >= 0)) {
+        return false;
+      }
+    }
+    fields = entries.length;
+  }
+  return record2.fileOffset !== void 0 || fields > 0;
+}
+
 // packages/disassembler/src/analysis/project-evidence.ts
 var evidenceReferences = (shards, evidenceId) => [
-  ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
-  ...shards.annotations.filter((record) => record.evidence.includes(evidenceId)).map((record) => `annotations:${record.id}`),
-  ...shards.labels.filter((record) => record.evidence.includes(evidenceId)).map((record) => `labels:${record.id}`),
-  ...shards.comments.filter((record) => record.evidence.includes(evidenceId)).map((record) => `comments:${record.id}`),
-  ...shards.regions.filter((record) => record.evidence.includes(evidenceId)).map((record) => `regions:${record.id}`),
-  ...shards.runtime.filter((record) => record.evidence.includes(evidenceId)).map((record) => `runtime:${record.id}`)
+  ...shards.analysis.filter((record2) => record2.evidence.includes(evidenceId)).map((record2) => `analysis:${record2.id}`),
+  ...shards.annotations.filter((record2) => record2.evidence.includes(evidenceId)).map((record2) => `annotations:${record2.id}`),
+  ...shards.labels.filter((record2) => record2.evidence.includes(evidenceId)).map((record2) => `labels:${record2.id}`),
+  ...shards.comments.filter((record2) => record2.evidence.includes(evidenceId)).map((record2) => `comments:${record2.id}`),
+  ...shards.regions.filter((record2) => record2.evidence.includes(evidenceId)).map((record2) => `regions:${record2.id}`),
+  ...shards.runtime.filter((record2) => record2.evidence.includes(evidenceId)).map((record2) => `runtime:${record2.id}`)
 ];
 var sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 var explainProjectEvidence = (shards, shard, recordId) => {
   const records = shards[shard];
-  const record = records.find(({ id }) => id === recordId);
-  if (!record) {
+  const record2 = records.find(({ id }) => id === recordId);
+  if (!record2) {
     throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
   }
   let evidenceIds = [];
   if (shard === "evidence") {
-    evidenceIds = [record.id];
-  } else if ("evidence" in record) {
-    evidenceIds = record.evidence;
+    evidenceIds = [record2.id];
+  } else if ("evidence" in record2) {
+    evidenceIds = record2.evidence;
   }
   const evidence = evidenceIds.map((id) => {
     const found = shards.evidence.find((entry) => entry.id === id);
@@ -801,7 +835,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   const conflicts = shards.analysis.filter(
     (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
   ).toSorted((left, right) => left.id.localeCompare(right.id));
-  return { shard, record, evidence, referencedBy, conflicts };
+  return { shard, record: record2, evidence, referencedBy, conflicts };
 };
 
 // packages/disassembler/src/runtime/runtime-evidence.ts
@@ -820,40 +854,40 @@ var sortedUnique2 = (values) => [...new Set(values)].toSorted((left, right) => l
 var stateValueKey = (value) => `${typeof value}:${String(value)}`;
 var conflictReport = (runtime) => {
   const observations = [];
-  for (const record of runtime) {
-    if (record.kind === "runtime-cpu-state") {
-      for (const [field, value] of Object.entries(record.state)) {
+  for (const record2 of runtime) {
+    if (record2.kind === "runtime-cpu-state") {
+      for (const [field, value] of Object.entries(record2.state)) {
         observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
+          architecture: record2.architecture,
+          addressSpace: record2.addressSpace,
+          address: record2.address,
           field,
           value,
-          record: record.id,
-          evidence: record.evidence
+          record: record2.id,
+          evidence: record2.evidence
         });
       }
-    } else if (record.kind === "runtime-execution") {
-      if (record.size !== void 0) {
+    } else if (record2.kind === "runtime-execution") {
+      if (record2.size !== void 0) {
         observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
+          architecture: record2.architecture,
+          addressSpace: record2.addressSpace,
+          address: record2.address,
           field: "instruction-size",
-          value: record.size,
-          record: record.id,
-          evidence: record.evidence
+          value: record2.size,
+          record: record2.id,
+          evidence: record2.evidence
         });
       }
-      if (record.opcode !== void 0) {
+      if (record2.opcode !== void 0) {
         observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
+          architecture: record2.architecture,
+          addressSpace: record2.addressSpace,
+          address: record2.address,
           field: "opcode",
-          value: record.opcode,
-          record: record.id,
-          evidence: record.evidence
+          value: record2.opcode,
+          record: record2.id,
+          evidence: record2.evidence
         });
       }
     }
@@ -909,7 +943,7 @@ var conflictReport = (runtime) => {
 };
 var explanationReport = (shards) => {
   const runtimeEvidence = new Set(
-    shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id)
+    shards.evidence.filter((record2) => record2.source === "runtime").map((record2) => record2.id)
   );
   const explanations = [];
   for (const annotation of shards.annotations) {
@@ -924,17 +958,17 @@ var explanationReport = (shards) => {
       evidence: sortedUnique2(evidence)
     });
   }
-  for (const record of shards.analysis) {
-    if (record.kind !== "target-override") {
+  for (const record2 of shards.analysis) {
+    if (record2.kind !== "target-override") {
       continue;
     }
-    const evidence = record.evidence.filter((id) => runtimeEvidence.has(id));
+    const evidence = record2.evidence.filter((id) => runtimeEvidence.has(id));
     if (evidence.length === 0) {
       continue;
     }
     explanations.push({
-      recordId: record.id,
-      detail: `Runtime observation resolves control flow to ${record.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
+      recordId: record2.id,
+      detail: `Runtime observation resolves control flow to ${record2.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
       evidence: sortedUnique2(evidence)
     });
   }
@@ -944,30 +978,30 @@ var mergeRecords = (kind, prior, incoming, added, updated, existing, combine) =>
   if (incoming.length === 0) {
     return prior;
   }
-  const records = new Map(prior.map((record) => [record.id, record]));
-  for (const record of incoming) {
-    const current = records.get(record.id);
+  const records = new Map(prior.map((record2) => [record2.id, record2]));
+  for (const record2 of incoming) {
+    const current = records.get(record2.id);
     if (!current) {
-      records.set(record.id, record);
+      records.set(record2.id, record2);
       added[kind]++;
-    } else if (canonicalEquals(current, record)) {
+    } else if (canonicalEquals(current, record2)) {
       existing[kind]++;
     } else if (combine) {
-      const merged = combine(current, record);
+      const merged = combine(current, record2);
       if (!merged) {
         throw new Error(
-          `Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`
+          `Runtime evidence id '${record2.id}' in '${kind}' changed content. Use a content-derived id.`
         );
       }
       if (canonicalEquals(current, merged)) {
         existing[kind]++;
       } else {
-        records.set(record.id, merged);
+        records.set(record2.id, merged);
         updated[kind]++;
       }
     } else {
       throw new Error(
-        `Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`
+        `Runtime evidence id '${record2.id}' in '${kind}' changed content. Use a content-derived id.`
       );
     }
   }
@@ -997,17 +1031,17 @@ var mergeRuntimeEvidence = (shards, batch) => {
       added,
       updated,
       existing,
-      (current, record) => {
-        if (current.kind !== "target-override" || record.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
+      (current, record2) => {
+        if (current.kind !== "target-override" || record2.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
           return void 0;
         }
-        if (current.addressSpace !== record.addressSpace || current.address !== record.address) {
-          throw new Error(`Runtime target override '${record.id}' changed its control-flow site.`);
+        if (current.addressSpace !== record2.addressSpace || current.address !== record2.address) {
+          throw new Error(`Runtime target override '${record2.id}' changed its control-flow site.`);
         }
         return {
           ...current,
-          targets: [.../* @__PURE__ */ new Set([...current.targets, ...record.targets])].toSorted((a, b) => a - b),
-          evidence: sortedUnique2([...current.evidence, ...record.evidence])
+          targets: [.../* @__PURE__ */ new Set([...current.targets, ...record2.targets])].toSorted((a, b) => a - b),
+          evidence: sortedUnique2([...current.evidence, ...record2.evidence])
         };
       }
     ),
@@ -1204,14 +1238,14 @@ var RecordIdSet = class {
 // packages/disassembler/src/model/analysis-ownership.ts
 function validateAnalysisOwnership(records, scope = "complete") {
   if (!records.some(
-    (record) => record.kind === "cfg-node" && (record.functionEntry !== void 0 || record.evidencePredecessor !== void 0)
+    (record2) => record2.kind === "cfg-node" && (record2.functionEntry !== void 0 || record2.evidencePredecessor !== void 0)
   )) {
     return;
   }
   const nodes = /* @__PURE__ */ new Map();
-  for (const record of records) {
-    if (record.kind === "cfg-node") {
-      nodes.set(record.id, record);
+  for (const record2 of records) {
+    if (record2.kind === "cfg-node") {
+      nodes.set(record2.id, record2);
     }
   }
   const complete = /* @__PURE__ */ new Set();
@@ -1255,6 +1289,32 @@ function validateAnalysisOwnership(records, scope = "complete") {
   }
 }
 
+// packages/disassembler/src/model/runtime-graphics-fact.ts
+var record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var unsigned = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
+var name = (value) => typeof value === "string" && /^[A-Za-z][\w.-]{0,63}$/.test(value);
+function isRuntimeGraphicsFact(value) {
+  if (!record(value) || !name(value.addressSpace) || !unsigned(value.address) || !unsigned(value.pc) || !name(value.actor) || value.context !== "instruction" && value.context !== "interrupt" && value.context !== "unattributed" || value.direction !== "read" && value.direction !== "write" || !unsigned(value.value) || value.value > 255) {
+    return false;
+  }
+  if (value.cpuMapping !== null && (!record(value.cpuMapping) || !name(value.cpuMapping.offsetStateField) || !unsigned(value.cpuMapping.physicalOffset))) {
+    return false;
+  }
+  if (value.effect === null) {
+    return true;
+  }
+  const effect = value.effect;
+  if (!record(effect) || !name(effect.target) || value.direction !== "write" || !Array.isArray(effect.bytes) || effect.bytes.length > 16) {
+    return false;
+  }
+  if (effect.outcome === "blocked") {
+    return effect.bytes.length === 0;
+  }
+  return effect.outcome === "written" && effect.bytes.length > 0 && effect.bytes.every(
+    (byte) => record(byte) && unsigned(byte.offset) && unsigned(byte.value) && byte.value <= 255
+  );
+}
+
 // packages/disassembler/src/model/project-validation.ts
 function isObject(value) {
   return typeof value === "object" && value !== null;
@@ -1293,8 +1353,8 @@ function validateAnalysisProjectManifest(manifest) {
       throw new Error("Analysis address spaces require non-empty ids and names.");
     }
     const id = entry.id;
-    const name = entry.name;
-    if (typeof id !== "string" || id === "" || typeof name !== "string" || name === "") {
+    const name2 = entry.name;
+    if (typeof id !== "string" || id === "" || typeof name2 !== "string" || name2 === "") {
       throw new Error("Analysis address spaces require non-empty ids and names.");
     }
     if (addressSpaceIds.has(id)) {
@@ -1333,15 +1393,15 @@ var assertNoRomPayload = (value, location) => {
   if (!value || typeof value !== "object" || !isRowRecord(value)) {
     return;
   }
-  const record = value;
-  for (const key3 in record) {
-    if (!Object.hasOwn(record, key3)) {
+  const record2 = value;
+  for (const key3 in record2) {
+    if (!Object.hasOwn(record2, key3)) {
       continue;
     }
     if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
       throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
     }
-    const entry = record[key3];
+    const entry = record2[key3];
     if (entry && typeof entry === "object") {
       assertNoRomPayload(entry, `${location}.${key3}`);
     }
@@ -1397,116 +1457,119 @@ var assertCodecReference = (reference, location) => {
 };
 var createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
   const ids = checkDuplicateIds ? new RecordIdSet() : void 0;
-  const evidenceIds = new Set(evidence.map((record) => record.id));
+  const evidenceIds = new Set(evidence.map((record2) => record2.id));
   const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
-  const validate = (record) => {
-    if (!record || typeof record.id !== "string" || record.id === "") {
+  const validate = (record2) => {
+    if (!record2 || typeof record2.id !== "string" || record2.id === "") {
       throw new Error("Analysis shard 'runtime' contains a record without an id.");
     }
-    if (ids && !ids.add(record.id)) {
-      throw new Error(`Analysis shard 'runtime' contains duplicate id '${record.id}'.`);
+    if (ids && !ids.add(record2.id)) {
+      throw new Error(`Analysis shard 'runtime' contains duplicate id '${record2.id}'.`);
     }
-    for (const id of record.evidence) {
+    for (const id of record2.evidence) {
       if (!evidenceIds.has(id)) {
-        throw new Error(`Analysis record '${record.id}' refers to missing evidence '${id}'.`);
+        throw new Error(`Analysis record '${record2.id}' refers to missing evidence '${id}'.`);
       }
     }
-    if (!Number.isSafeInteger(record.count) || record.count <= 0) {
-      throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
+    if (!Number.isSafeInteger(record2.count) || record2.count <= 0) {
+      throw new Error(`Runtime record '${record2.id}' has an invalid observation count.`);
     }
-    if (record.kind === "runtime-coverage") {
-      if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
-        throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
+    if (record2.kind === "runtime-coverage") {
+      if (!Number.isSafeInteger(record2.start) || !Number.isSafeInteger(record2.end) || record2.start < 0 || record2.end <= record2.start) {
+        throw new Error(`Runtime coverage '${record2.id}' has an invalid half-open range.`);
       }
     }
-    if (record.kind === "runtime-bus-access") {
-      if (record.architecture !== "snes.65816") {
+    if (record2.kind === "runtime-bus-access") {
+      if (record2.architecture !== "snes.65816") {
         throw new Error("Bus facts require the SNES 65816 architecture.");
       }
-      validateRuntimeBusFact(record);
+      validateRuntimeBusFact(record2);
     }
-    if (record.kind === "runtime-memory-access") {
-      if (record.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record.actor) || record.channel !== void 0 && (!Number.isInteger(record.channel) || record.channel < 0 || record.channel > 7 || !["dma", "hdma"].includes(record.actor ?? "cpu"))) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
-      }
-      if (!Number.isSafeInteger(record.width) || record.width <= 0) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
-      }
-      if (record.value !== void 0 && (!Number.isSafeInteger(record.value) || record.value < 0)) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
-      }
+    if (record2.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record2)) {
+      throw new Error("Invalid runtime graphics fact.");
     }
-    if (record.kind === "runtime-execution") {
-      if (record.size !== void 0 && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
+    if (record2.kind === "runtime-memory-access") {
+      if (record2.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record2.actor) || record2.channel !== void 0 && (!Number.isInteger(record2.channel) || record2.channel < 0 || record2.channel > 7 || !["dma", "hdma"].includes(record2.actor ?? "cpu"))) {
+        throw new Error(`Runtime memory access '${record2.id}' has an invalid actor/channel.`);
       }
-      if (record.opcode !== void 0 && (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 255)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
+      if (!Number.isSafeInteger(record2.width) || record2.width <= 0) {
+        throw new Error(`Runtime memory access '${record2.id}' has an invalid width.`);
       }
-      if (record.fileOffset !== void 0 && (!Number.isSafeInteger(record.fileOffset) || record.fileOffset < 0 || record.fileOffset >= project.rom.contentSize)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
+      if (record2.value !== void 0 && (!Number.isSafeInteger(record2.value) || record2.value < 0)) {
+        throw new Error(`Runtime memory access '${record2.id}' has an invalid value.`);
       }
     }
-    if (record.kind === "runtime-instruction") {
-      validateRuntimeInstructionDetails([{ bytes: record.bytes, state: record.state }], 1);
+    if (record2.kind === "runtime-execution") {
+      if (record2.size !== void 0 && (!Number.isSafeInteger(record2.size) || record2.size <= 0)) {
+        throw new Error(`Runtime execution '${record2.id}' has an invalid instruction size.`);
+      }
+      if (record2.opcode !== void 0 && (!Number.isInteger(record2.opcode) || record2.opcode < 0 || record2.opcode > 255)) {
+        throw new Error(`Runtime execution '${record2.id}' has an invalid opcode.`);
+      }
+      if (record2.fileOffset !== void 0 && (!Number.isSafeInteger(record2.fileOffset) || record2.fileOffset < 0 || record2.fileOffset >= project.rom.contentSize)) {
+        throw new Error(`Runtime execution '${record2.id}' has an invalid ROM file offset.`);
+      }
     }
-    if (record.kind === "runtime-cpu-state") {
-      for (const [name, value] of Object.entries(record.state)) {
-        if (name === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
-          throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
+    if (record2.kind === "runtime-instruction") {
+      validateRuntimeInstructionDetails([{ bytes: record2.bytes, state: record2.state }], 1);
+    }
+    if (record2.kind === "runtime-cpu-state") {
+      for (const [name2, value] of Object.entries(record2.state)) {
+        if (name2 === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
+          throw new Error(`Runtime CPU state '${record2.id}' has invalid field '${name2}'.`);
         }
       }
     }
-    if ("addressSpace" in record) {
-      const space = addressSpaceById.get(record.addressSpace);
+    if ("addressSpace" in record2) {
+      const space = addressSpaceById.get(record2.addressSpace);
       if (!space) {
         throw new Error(
-          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+          `Analysis record '${record2.id}' refers to unknown address space '${record2.addressSpace}'.`
         );
       }
-      const addresses2 = record.kind === "runtime-coverage" ? [record.start, record.end - 1] : [record.address];
+      const addresses2 = record2.kind === "runtime-coverage" ? [record2.start, record2.end - 1] : [record2.address];
       if (addresses2.some(
         (address) => !Number.isSafeInteger(address) || address < 0 || address >= 2 ** space.addressBits
       )) {
         throw new Error(
-          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+          `Analysis record '${record2.id}' exceeds address space '${record2.addressSpace}'.`
         );
       }
     }
     let addresses = [];
-    if (record.kind === "runtime-memory-access") {
+    if (record2.kind === "runtime-memory-access") {
       addresses = [
-        [record.instructionAddressSpace, record.instructionAddress],
-        [record.accessedAddressSpace, record.accessedAddress]
+        [record2.instructionAddressSpace, record2.instructionAddress],
+        [record2.accessedAddressSpace, record2.accessedAddress]
       ];
-    } else if (record.kind === "runtime-bus-access") {
-      addresses = [[record.addressSpace, record.pc]];
-    } else if (record.kind === "runtime-control-target") {
+    } else if (record2.kind === "runtime-bus-access" || record2.kind === "runtime-graphics-access") {
+      addresses = [[record2.addressSpace, record2.pc]];
+    } else if (record2.kind === "runtime-control-target") {
       addresses = [
-        [record.fromAddressSpace, record.fromAddress],
-        [record.toAddressSpace, record.toAddress]
+        [record2.fromAddressSpace, record2.fromAddress],
+        [record2.toAddressSpace, record2.toAddress]
       ];
     }
     for (const [spaceId, address] of addresses) {
       const addressSpace = addressSpaceById.get(spaceId);
       if (!addressSpace) {
         throw new Error(
-          `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`
+          `Runtime record '${record2.id}' refers to unknown address space '${spaceId}'.`
         );
       }
       if (!Number.isSafeInteger(address) || address < 0 || address >= 2 ** addressSpace.addressBits) {
-        throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
+        throw new Error(`Runtime record '${record2.id}' exceeds address space '${spaceId}'.`);
       }
     }
-    assertNoRomPayload(record, `shards.runtime.${record.id}`);
+    assertNoRomPayload(record2, `shards.runtime.${record2.id}`);
   };
   return Object.assign(validate, { close: () => ids?.close() });
 };
 var validateRuntimeRecords = (records, project, evidence) => {
   const validate = createRuntimeRecordValidator(project, evidence);
   try {
-    for (const record of records) {
-      validate(record);
+    for (const record2 of records) {
+      validate(record2);
     }
   } finally {
     validate.close();
@@ -1515,7 +1578,7 @@ var validateRuntimeRecords = (records, project, evidence) => {
 var outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
 var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   const { addressSpaces } = project;
-  const evidenceIds = new Set(shards.evidence.map((record) => record.id));
+  const evidenceIds = new Set(shards.evidence.map((record2) => record2.id));
   const shardKinds = [
     "analysis",
     "annotations",
@@ -1527,21 +1590,21 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   ];
   for (const kind of shardKinds) {
     const ids = /* @__PURE__ */ new Set();
-    for (const record of shards[kind]) {
-      if (typeof record.id !== "string" || record.id === "") {
+    for (const record2 of shards[kind]) {
+      if (typeof record2.id !== "string" || record2.id === "") {
         throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
       }
-      if (ids.has(record.id)) {
-        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
+      if (ids.has(record2.id)) {
+        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record2.id}'.`);
       }
-      ids.add(record.id);
-      if (!("evidence" in record)) {
+      ids.add(record2.id);
+      if (!("evidence" in record2)) {
         continue;
       }
-      for (const evidence of record.evidence) {
+      for (const evidence of record2.evidence) {
         if (!evidenceIds.has(evidence)) {
           throw new Error(
-            `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
+            `Analysis record '${record2.id}' refers to missing evidence '${evidence}'.`
           );
         }
       }
@@ -1687,41 +1750,46 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
     shards.regions,
     shards.analysis
   ]) {
-    for (const record of records) {
-      if (!("addressSpace" in record)) {
+    for (const record2 of records) {
+      if (!("addressSpace" in record2)) {
         continue;
       }
-      const addressSpace = addressSpaceById.get(record.addressSpace);
+      const addressSpace = addressSpaceById.get(record2.addressSpace);
       if (!addressSpace) {
         throw new Error(
-          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+          `Analysis record '${record2.id}' refers to unknown address space '${record2.addressSpace}'.`
         );
+      }
+      if ("mapping" in record2 && record2.mapping !== void 0) {
+        if (!isResearchMapping(record2.mapping) || record2.mapping.fileOffset !== void 0 && record2.mapping.fileOffset + ("start" in record2 ? record2.end - record2.start : 1) > project.rom.contentSize) {
+          throw new Error(`Invalid research mapping for '${record2.id}'.`);
+        }
       }
       const maximum = 2 ** addressSpace.addressBits;
       let invalid = false;
-      if ("start" in record) {
-        invalid = outsideSpace(record.start, maximum) || outsideSpace(record.end - 1, maximum);
-      } else if ("address" in record) {
-        invalid = outsideSpace(record.address, maximum);
-        if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
-          invalid ||= outsideSpace(record.end - 1, maximum);
+      if ("start" in record2) {
+        invalid = outsideSpace(record2.start, maximum) || outsideSpace(record2.end - 1, maximum);
+      } else if ("address" in record2) {
+        invalid = outsideSpace(record2.address, maximum);
+        if ("kind" in record2 && record2.kind === "conflict" && record2.end !== void 0) {
+          invalid ||= outsideSpace(record2.end - 1, maximum);
         }
       } else {
-        if ("fromAddress" in record) {
-          invalid = outsideSpace(record.fromAddress, maximum);
+        if ("fromAddress" in record2) {
+          invalid = outsideSpace(record2.fromAddress, maximum);
         }
-        if ("toAddress" in record && record.toAddress !== void 0) {
-          invalid ||= outsideSpace(record.toAddress, maximum);
+        if ("toAddress" in record2 && record2.toAddress !== void 0) {
+          invalid ||= outsideSpace(record2.toAddress, maximum);
         }
-        if ("targets" in record) {
-          for (const target of record.targets) {
+        if ("targets" in record2) {
+          for (const target of record2.targets) {
             invalid ||= outsideSpace(target, maximum);
           }
         }
       }
       if (invalid) {
         throw new Error(
-          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+          `Analysis record '${record2.id}' exceeds address space '${record2.addressSpace}'.`
         );
       }
     }
@@ -1731,7 +1799,7 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
 };
 
 // packages/disassembler/src/model/record-shape.ts
-function isRecord3(value) {
+function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringArray(value) {
@@ -1753,7 +1821,7 @@ function isJsonValue(value) {
   if (Array.isArray(value)) {
     return value.every(isJsonValue);
   }
-  return isRecord3(value) && Object.values(value).every(isJsonValue);
+  return isRecord4(value) && Object.values(value).every(isJsonValue);
 }
 function allowsString(value) {
   return value === void 0 || typeof value === "string";
@@ -1765,15 +1833,15 @@ function allowsBoolean(value) {
   return value === void 0 || typeof value === "boolean";
 }
 function isNumberRecord(value) {
-  return isRecord3(value) && Object.values(value).every(isFiniteNumber);
+  return isRecord4(value) && Object.values(value).every(isFiniteNumber);
 }
 function isAttributeRecord(value) {
-  return isRecord3(value) && Object.values(value).every(
+  return isRecord4(value) && Object.values(value).every(
     (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
   );
 }
 function isRecordArray(value) {
-  return Array.isArray(value) && value.every(isRecord3);
+  return Array.isArray(value) && value.every(isRecord4);
 }
 var CLASSIFICATIONS = [
   "unreached",
@@ -1800,7 +1868,7 @@ function isAnnotationState(value) {
   if (value === void 0) {
     return true;
   }
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     return false;
   }
   for (const key3 of Object.keys(value)) {
@@ -1830,78 +1898,78 @@ function isCodecFields(value) {
   }
   const provider = value.provider;
   if (provider !== void 0) {
-    if (!isRecord3(provider) || typeof provider.pluginId !== "string" || typeof provider.pluginVersion !== "string") {
+    if (!isRecord4(provider) || typeof provider.pluginId !== "string" || typeof provider.pluginVersion !== "string") {
       return false;
     }
   }
   return value.options === void 0 || isJsonValue(value.options);
 }
 function isAsset(value) {
-  if (!isRecord3(value) || !isCodecFields(value)) {
+  if (!isRecord4(value) || !isCodecFields(value)) {
     return false;
   }
   const compression = value.compression;
   if (compression === void 0) {
     return true;
   }
-  return isRecord3(compression) && isCodecFields(compression) && allowsFinite(compression.maximumSize) && allowsFinite(compression.bankStart) && allowsFinite(compression.bankEnd) && allowsFinite(compression.fillByte);
+  return isRecord4(compression) && isCodecFields(compression) && allowsFinite(compression.maximumSize) && allowsFinite(compression.bankStart) && allowsFinite(compression.bankEnd) && allowsFinite(compression.fillByte);
 }
 function hasIdentity(value) {
   return typeof value.id === "string" && isStringArray(value.evidence);
 }
 function isProjectLabel(value) {
-  return isRecord3(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.name === "string" && allowsString(value.comment) && allowsString(value.sourceName) && (value.aliases === void 0 || isStringArray(value.aliases)) && allowsString(value.inlineComment) && allowsBoolean(value.analysisEntryPoint) && allowsBoolean(value.suppressed) && allowsString(value.author) && allowsString(value.confidence);
+  return isRecord4(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.name === "string" && allowsString(value.comment) && allowsString(value.sourceName) && (value.aliases === void 0 || isStringArray(value.aliases)) && allowsString(value.inlineComment) && allowsBoolean(value.analysisEntryPoint) && allowsBoolean(value.suppressed) && allowsString(value.author) && allowsString(value.confidence);
 }
 function isProjectComment(value) {
-  return isRecord3(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.text === "string" && (value.placement === void 0 || value.placement === "before" || value.placement === "inline-instruction");
+  return isRecord4(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.text === "string" && (value.placement === void 0 || value.placement === "before" || value.placement === "inline-instruction");
 }
 function isProjectRegion(value) {
-  return isRecord3(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && typeof value.name === "string" && allowsString(value.parentRegion) && allowsString(value.context) && allowsFinite(value.priority) && (value.attributes === void 0 || isAttributeRecord(value.attributes));
+  return isRecord4(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && typeof value.name === "string" && allowsString(value.parentRegion) && allowsString(value.context) && allowsFinite(value.priority) && (value.attributes === void 0 || isAttributeRecord(value.attributes));
 }
 function isIntervalAnnotation(value) {
-  return isRecord3(value) && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && isClassification(value.classification) && typeof value.architecture === "string" && isAnnotationState(value.state) && isPoints(value.points) && (value.asset === void 0 || isAsset(value.asset));
+  return isRecord4(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && isClassification(value.classification) && typeof value.architecture === "string" && isAnnotationState(value.state) && isPoints(value.points) && (value.asset === void 0 || isAsset(value.asset));
 }
 function isArtifact(value) {
   if (value === void 0) {
     return true;
   }
-  return isRecord3(value) && typeof value.format === "string" && typeof value.sha256 === "string" && typeof value.romContentSha256 === "string" && allowsString(value.formatVersion) && allowsString(value.mapper);
+  return isRecord4(value) && typeof value.format === "string" && typeof value.sha256 === "string" && typeof value.romContentSha256 === "string" && allowsString(value.formatVersion) && allowsString(value.mapper);
 }
 function isEvidenceRecord(value) {
-  return isRecord3(value) && typeof value.id === "string" && (value.source === "manual" || value.source === "import" || value.source === "detector" || value.source === "static" || value.source === "runtime") && typeof value.sourceId === "string" && (value.confidence === "certain" || value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" || value.confidence === "unknown") && allowsString(value.detail) && isArtifact(value.artifact);
+  return isRecord4(value) && typeof value.id === "string" && (value.source === "manual" || value.source === "import" || value.source === "detector" || value.source === "static" || value.source === "runtime") && typeof value.sourceId === "string" && (value.confidence === "certain" || value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" || value.confidence === "unknown") && allowsString(value.detail) && isArtifact(value.artifact);
 }
 function isLossItem(value) {
-  return isRecord3(value) && typeof value.field === "string" && isFiniteNumber(value.count) && typeof value.reason === "string";
+  return isRecord4(value) && typeof value.field === "string" && isFiniteNumber(value.count) && typeof value.reason === "string";
 }
 function isImportReport(value) {
-  return isRecord3(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && allowsString(value.sourceVersion) && allowsString(value.indexProfile) && isNumberRecord(value.imported) && Array.isArray(value.unsupported) && value.unsupported.every(isLossItem) && isStringArray(value.warnings);
+  return isRecord4(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && allowsString(value.sourceVersion) && allowsString(value.indexProfile) && isNumberRecord(value.imported) && Array.isArray(value.unsupported) && value.unsupported.every(isLossItem) && isStringArray(value.warnings);
 }
 function isControlFlowNode(value) {
-  return isRecord3(value) && value.kind === "cfg-node" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.fileOffset) && (value.bytes === void 0 || isFiniteNumberArray(value.bytes)) && isFiniteNumber(value.size) && isFiniteNumber(value.opcode) && typeof value.specificationId === "string" && typeof value.mnemonic === "string" && typeof value.mode === "string" && isFiniteNumberArray(value.context) && isRecord3(value.incomingState) && isRecord3(value.outgoingState) && isRecordArray(value.effectiveAddresses) && typeof value.entryPoint === "string" && allowsString(value.functionEntry) && allowsString(value.evidencePredecessor) && isStringArray(value.evidencePath);
+  return isRecord4(value) && value.kind === "cfg-node" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.fileOffset) && (value.bytes === void 0 || isFiniteNumberArray(value.bytes)) && isFiniteNumber(value.size) && isFiniteNumber(value.opcode) && typeof value.specificationId === "string" && typeof value.mnemonic === "string" && typeof value.mode === "string" && isFiniteNumberArray(value.context) && isRecord4(value.incomingState) && isRecord4(value.outgoingState) && isRecordArray(value.effectiveAddresses) && typeof value.entryPoint === "string" && allowsString(value.functionEntry) && allowsString(value.evidencePredecessor) && isStringArray(value.evidencePath);
 }
 function isControlFlowEdge(value) {
-  return isRecord3(value) && value.kind === "cfg-edge" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.from === "string" && isFiniteNumber(value.fromAddress) && allowsString(value.to) && allowsFinite(value.toAddress) && typeof value.edgeKind === "string" && typeof value.indirect === "boolean" && allowsString(value.override) && allowsString(value.explanation);
+  return isRecord4(value) && value.kind === "cfg-edge" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.from === "string" && isFiniteNumber(value.fromAddress) && allowsString(value.to) && allowsFinite(value.toAddress) && typeof value.edgeKind === "string" && typeof value.indirect === "boolean" && allowsString(value.override) && allowsString(value.explanation);
 }
 function isFunctionRecord(value) {
-  return isRecord3(value) && value.kind === "function" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isStringArray(value.evidencePath);
+  return isRecord4(value) && value.kind === "function" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isStringArray(value.evidencePath);
 }
 function isConflictRecord(value) {
-  return isRecord3(value) && value.kind === "conflict" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.end) && typeof value.conflictKind === "string" && typeof value.message === "string" && isStringArray(value.nodes);
+  return isRecord4(value) && value.kind === "conflict" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.end) && typeof value.conflictKind === "string" && typeof value.message === "string" && isStringArray(value.nodes);
 }
 function isUnresolvedRecord(value) {
-  return isRecord3(value) && value.kind === "unresolved" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string";
+  return isRecord4(value) && value.kind === "unresolved" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string";
 }
 function isSummaryRecord(value) {
-  return isRecord3(value) && value.kind === "summary" && hasIdentity(value) && typeof value.architecture === "string" && (value.status === "complete" || value.status === "incomplete") && isNumberRecord(value.coverage) && isFiniteNumber(value.processedWorkItems) && isRecordArray(value.incompleteReasons);
+  return isRecord4(value) && value.kind === "summary" && hasIdentity(value) && typeof value.architecture === "string" && (value.status === "complete" || value.status === "incomplete") && isNumberRecord(value.coverage) && isFiniteNumber(value.processedWorkItems) && isRecordArray(value.incompleteReasons);
 }
 function isTargetOverride(value) {
-  return isRecord3(value) && value.kind === "target-override" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isFiniteNumberArray(value.targets);
+  return isRecord4(value) && value.kind === "target-override" && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isFiniteNumberArray(value.targets);
 }
 function isTargetSet(value) {
-  return isRecord3(value) && value.kind === "target-set" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.name === "string" && isFiniteNumberArray(value.targets);
+  return isRecord4(value) && value.kind === "target-set" && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && typeof value.name === "string" && isFiniteNumberArray(value.targets);
 }
 function isAnalysisRecord(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     return false;
   }
   switch (value.kind) {
@@ -2007,7 +2075,7 @@ function assertSourcePath(relative) {
 }
 
 // packages/disassembler/src/model/metadata-validation.ts
-function isRecord4(value) {
+function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringList(value) {
@@ -2057,23 +2125,31 @@ var CLASSIFICATIONS2 = [
   "empty",
   "text"
 ];
-var validateEditableMetadataRecord = (shard, record) => {
-  if (!isRecord4(record) || typeof record.id !== "string" || !/^\w[\w./:-]*$/.test(record.id) || !isStringList(record.evidence)) {
+var validateEditableMetadataRecord = (shard, record2) => {
+  if (!isRecord5(record2) || typeof record2.id !== "string" || !/^\w[\w./:-]*$/.test(record2.id) || !isStringList(record2.evidence)) {
     throw new Error("Metadata needs a stable record ID and evidence list.");
   }
-  const address = record.address;
-  if ("address" in record && !(isSafeInteger3(address) && address >= 0)) {
+  if (record2.mapping !== void 0 && !isResearchMapping(record2.mapping)) {
+    throw new Error("Invalid research mapping selector.");
+  }
+  if (record2.kind === "target-set" && record2.mapping && "fileOffset" in record2.mapping) {
+    throw new Error(
+      "Target sets use mapper state; a single physical anchor cannot select multiple targets."
+    );
+  }
+  const address = record2.address;
+  if ("address" in record2 && !(isSafeInteger3(address) && address >= 0)) {
     throw new Error("Metadata needs a nonnegative integer address.");
   }
-  if (typeof record.addressSpace !== "string") {
+  if (typeof record2.addressSpace !== "string") {
     throw new Error("Metadata needs a named address space.");
   }
   if (shard === "labels") {
-    const name = record.name;
-    if (typeof name !== "string" || name === "" || !("address" in record) || "kind" in record) {
+    const name2 = record2.name;
+    if (typeof name2 !== "string" || name2 === "" || !("address" in record2) || "kind" in record2) {
       throw new Error("Invalid label metadata.");
     }
-    const sourceName = record.sourceName;
+    const sourceName = record2.sourceName;
     if (sourceName !== void 0) {
       if (typeof sourceName !== "string") {
         throw new Error(
@@ -2082,31 +2158,31 @@ var validateEditableMetadataRecord = (shard, record) => {
       }
       validateSourceLabelName(sourceName);
     }
-    if (record.suppressed !== void 0 && typeof record.suppressed !== "boolean") {
+    if (record2.suppressed !== void 0 && typeof record2.suppressed !== "boolean") {
       throw new Error("Invalid label suppression flag.");
     }
-    for (const value of [record.comment, record.inlineComment]) {
+    for (const value of [record2.comment, record2.inlineComment]) {
       if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
         throw new Error("Invalid label comment.");
       }
     }
   } else if (shard === "comments") {
-    const text = record.text;
-    if (typeof text !== "string" || !text.trim() || text.includes("\0") || !("address" in record) || "kind" in record) {
+    const text = record2.text;
+    if (typeof text !== "string" || !text.trim() || text.includes("\0") || !("address" in record2) || "kind" in record2) {
       throw new Error("A standalone comment needs nonempty text.");
     }
   } else if (shard === "annotations") {
-    const classification = record.classification;
-    const architecture = record.architecture;
+    const classification = record2.classification;
+    const architecture = record2.architecture;
     if (typeof classification !== "string" || !CLASSIFICATIONS2.some((candidate) => candidate === classification) || typeof architecture !== "string" || architecture === "") {
       throw new Error("Invalid classification metadata.");
     }
-    const start = record.start;
-    const end = record.end;
+    const start = record2.start;
+    const end = record2.end;
     if (!(isSafeInteger3(start) && isSafeInteger3(end) && start >= 0 && end > start)) {
       throw new Error("Classification bounds must describe a nonempty half-open interval.");
     }
-    const state = record.state ?? {};
+    const state = record2.state ?? {};
     for (const [field, value] of stateEntries(state)) {
       if (field === "e" || field === "m" || field === "x" || field === "carry") {
         if (typeof value !== "boolean") {
@@ -2119,22 +2195,22 @@ var validateEditableMetadataRecord = (shard, record) => {
         }
       }
     }
-    const points = record.points;
+    const points = record2.points;
     if (Array.isArray(points) && points.some(
       (point) => point !== "in" && point !== "out" && point !== "end" && point !== "read" || typeof point !== "string"
     )) {
       throw new Error("Invalid entry-point metadata.");
     }
   } else {
-    const kind = record.kind;
-    const targets = record.targets;
+    const kind = record2.kind;
+    const targets = record2.targets;
     if (kind !== "target-override" && kind !== "target-set" || !Array.isArray(targets) || targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
       throw new Error("Only target overrides and target sets are editable analysis records.");
     }
-    if (kind === "target-set" && (typeof record.name !== "string" || !record.name.trim())) {
+    if (kind === "target-set" && (typeof record2.name !== "string" || !record2.name.trim())) {
       throw new Error("A target set needs a name.");
     }
-    if (kind === "target-override" && !Number.isSafeInteger(record.address)) {
+    if (kind === "target-override" && !Number.isSafeInteger(record2.address)) {
       throw new Error("A target override needs an instruction anchor.");
     }
   }
@@ -2142,7 +2218,7 @@ var validateEditableMetadataRecord = (shard, record) => {
 
 // packages/disassembler/src/research-inputs/inputs.ts
 var isArray = (value) => Array.isArray(value);
-function isRecord5(value) {
+function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isUnknownArray2(value) {
@@ -2187,7 +2263,7 @@ function validateResearchSnapshot(snapshot) {
 }
 var compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 function validateResearchDecision(decision) {
-  if (!isRecord5(decision)) {
+  if (!isRecord6(decision)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
   const collection = decision.collection;
@@ -2195,37 +2271,40 @@ function validateResearchDecision(decision) {
   if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
-  const record = decision.value;
-  if (record === null) {
+  const record2 = decision.value;
+  if (record2 === null) {
     return;
   }
-  if (!isRecord5(record) || record.id !== id) {
+  if (!isRecord6(record2) || record2.id !== id) {
     throw new Error(`Research record identity mismatch: ${id}`);
   }
   if (collection === "evidence") {
-    const sourceId = record.sourceId;
-    const detail = record.detail;
-    if (record.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record.confidence) || detail !== void 0 && typeof detail !== "string") {
+    const sourceId = record2.sourceId;
+    const detail = record2.detail;
+    if (record2.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record2.confidence) || detail !== void 0 && typeof detail !== "string") {
       throw new Error("Research files may author only valid manual evidence.");
     }
     return;
   }
-  const evidence = record.evidence;
+  const evidence = record2.evidence;
   if (!isUnknownArray2(evidence) || evidence.some((entry) => typeof entry !== "string")) {
     throw new Error(`Research record ${id} needs an evidence list.`);
   }
+  if (record2.mapping !== void 0 && !isResearchMapping(record2.mapping)) {
+    throw new Error("Invalid research mapping selector.");
+  }
   if (collection === "regions") {
-    const name = record.name;
-    const start = record.start;
-    const end = record.end;
-    if (typeof name !== "string" || name === "" || !(isSafeInteger4(start) && isSafeInteger4(end) && start >= 0 && end > start)) {
+    const name2 = record2.name;
+    const start = record2.start;
+    const end = record2.end;
+    if (typeof name2 !== "string" || name2 === "" || !(isSafeInteger4(start) && isSafeInteger4(end) && start >= 0 && end > start)) {
       throw new Error(`Invalid research region: ${id}`);
     }
   } else {
-    validateEditableMetadataRecord(collection, record);
+    validateEditableMetadataRecord(collection, record2);
   }
-  if (collection === "labels" && record.aliases !== void 0) {
-    const aliases = record.aliases;
+  if (collection === "labels" && record2.aliases !== void 0) {
+    const aliases = record2.aliases;
     if (!isUnknownArray2(aliases)) {
       throw new Error("Symbol aliases must be an array.");
     }
@@ -2243,7 +2322,7 @@ function validateResearchDecision(decision) {
   }
 }
 function parseResearchDocument(value) {
-  if (!isRecord5(value)) {
+  if (!isRecord6(value)) {
     throw new Error("Invalid research document header.");
   }
   const project = value.project;
@@ -2299,11 +2378,11 @@ function readResearchInputs(root, roots, identity, overlays = /* @__PURE__ */ ne
     if (!relative.endsWith(".json")) {
       return;
     }
-    const name = relative.normalize("NFC").toLowerCase();
-    if (names.has(name)) {
+    const name2 = relative.normalize("NFC").toLowerCase();
+    if (names.has(name2)) {
       throw new Error(`Repeated or ambiguous research input: ${relative}`);
     }
-    names.add(name);
+    names.add(name2);
     const size = overlay === void 0 ? stat?.size : Buffer.byteLength(overlay);
     totalBytes += size ?? 0;
     if (stat && !stat.isFile() || size === void 0 || size > 1024 * 1024 || totalBytes > 32 * 1024 * 1024 || names.size > 512) {
@@ -2322,7 +2401,7 @@ function readResearchInputs(root, roots, identity, overlays = /* @__PURE__ */ ne
     visit(relative);
   }
   for (const relative of overlays.keys()) {
-    if (roots.some((name) => relative === name || relative.startsWith(`${name}/`)) && !names.has(relative.normalize("NFC").toLowerCase())) {
+    if (roots.some((name2) => relative === name2 || relative.startsWith(`${name2}/`)) && !names.has(relative.normalize("NFC").toLowerCase())) {
       visit(relative);
     }
   }
@@ -2364,11 +2443,11 @@ var FIELDS = [
 var FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
 var HEADER_BYTES = 7;
 var CHECKSUM_BYTES = 4;
-var encodePackedRuntimePayload = (record) => {
-  if (Object.keys(record.state).some((key3) => !FIELD_NAMES.has(key3))) {
+var encodePackedRuntimePayload = (record2) => {
+  if (Object.keys(record2.state).some((key3) => !FIELD_NAMES.has(key3))) {
     return void 0;
   }
-  const bytes = record.bytes;
+  const bytes = record2.bytes;
   if (bytes !== void 0) {
     if (bytes.length < 1 || bytes.length > 4) {
       return void 0;
@@ -2382,10 +2461,10 @@ var encodePackedRuntimePayload = (record) => {
   let mask = 0;
   let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
   for (const [index, [key3, width]] of FIELDS.entries()) {
-    if (!Object.hasOwn(record.state, key3)) {
+    if (!Object.hasOwn(record2.state, key3)) {
       continue;
     }
-    const value = record.state[key3];
+    const value = record2.state[key3];
     const max = key3 === "e" ? 1 : 2 ** (width * 8) - 1;
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
       return void 0;
@@ -2403,7 +2482,7 @@ var encodePackedRuntimePayload = (record) => {
   }
   for (const [index, [key3, width]] of FIELDS.entries()) {
     if (mask & 1 << index) {
-      const field = record.state[key3];
+      const field = record2.state[key3];
       if (typeof field !== "number") {
         return void 0;
       }
@@ -2555,12 +2634,12 @@ var compareRuntimeRecordIds = (left, right) => {
   }
   return 0;
 };
-var runtimeColumns = (record) => {
-  switch (record.kind) {
+var runtimeColumns = (record2) => {
+  switch (record2.kind) {
     case "runtime-execution":
       return {
-        addressSpace: record.addressSpace,
-        address: record.address,
+        addressSpace: record2.addressSpace,
+        address: record2.address,
         start: null,
         end: null,
         fromAddressSpace: null,
@@ -2573,15 +2652,15 @@ var runtimeColumns = (record) => {
         accessedAddress: null,
         coverage: null,
         payload: canonicalJson({
-          ...record.fileOffset === void 0 ? {} : { fileOffset: record.fileOffset },
-          ...record.size === void 0 ? {} : { size: record.size },
-          ...record.opcode === void 0 ? {} : { opcode: record.opcode }
+          ...record2.fileOffset === void 0 ? {} : { fileOffset: record2.fileOffset },
+          ...record2.size === void 0 ? {} : { size: record2.size },
+          ...record2.opcode === void 0 ? {} : { opcode: record2.opcode }
         })
       };
     case "runtime-instruction":
       return {
-        addressSpace: record.addressSpace,
-        address: record.address,
+        addressSpace: record2.addressSpace,
+        address: record2.address,
         start: null,
         end: null,
         fromAddressSpace: null,
@@ -2593,7 +2672,32 @@ var runtimeColumns = (record) => {
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: canonicalJson({ bytes: record.bytes, state: record.state })
+        payload: canonicalJson({ bytes: record2.bytes, state: record2.state })
+      };
+    case "runtime-graphics-access":
+      return {
+        addressSpace: null,
+        address: null,
+        start: null,
+        end: null,
+        fromAddressSpace: null,
+        fromAddress: null,
+        toAddressSpace: null,
+        toAddress: null,
+        instructionAddressSpace: record2.context === "instruction" ? record2.addressSpace : null,
+        instructionAddress: record2.context === "instruction" ? record2.pc : null,
+        accessedAddressSpace: record2.addressSpace,
+        accessedAddress: record2.address,
+        coverage: null,
+        payload: canonicalJson({
+          pc: record2.pc,
+          actor: record2.actor,
+          context: record2.context,
+          direction: record2.direction,
+          value: record2.value,
+          cpuMapping: record2.cpuMapping,
+          effect: record2.effect
+        })
       };
     case "runtime-bus-access":
       return {
@@ -2606,20 +2710,20 @@ var runtimeColumns = (record) => {
         toAddressSpace: null,
         toAddress: null,
         // Unowned accesses must never become instruction observations through a coordinate query.
-        instructionAddressSpace: record.context === "instruction" ? record.addressSpace : null,
-        instructionAddress: record.context === "instruction" ? record.pc : null,
-        accessedAddressSpace: record.addressSpace,
-        accessedAddress: record.address,
+        instructionAddressSpace: record2.context === "instruction" ? record2.addressSpace : null,
+        instructionAddress: record2.context === "instruction" ? record2.pc : null,
+        accessedAddressSpace: record2.addressSpace,
+        accessedAddress: record2.address,
         coverage: null,
         payload: canonicalJson({
-          ...record.ppu ? { ppu: record.ppu } : {},
-          pc: record.pc,
-          value: record.value,
-          direction: record.direction,
-          actor: record.actor,
-          channel: record.channel,
-          phase: record.phase,
-          context: record.context
+          ...record2.ppu ? { ppu: record2.ppu } : {},
+          pc: record2.pc,
+          value: record2.value,
+          direction: record2.direction,
+          actor: record2.actor,
+          channel: record2.channel,
+          phase: record2.phase,
+          context: record2.context
         })
       };
     case "runtime-memory-access":
@@ -2632,23 +2736,23 @@ var runtimeColumns = (record) => {
         fromAddress: null,
         toAddressSpace: null,
         toAddress: null,
-        instructionAddressSpace: record.instructionAddressSpace,
-        instructionAddress: record.instructionAddress,
-        accessedAddressSpace: record.accessedAddressSpace,
-        accessedAddress: record.accessedAddress,
+        instructionAddressSpace: record2.instructionAddressSpace,
+        instructionAddress: record2.instructionAddress,
+        accessedAddressSpace: record2.accessedAddressSpace,
+        accessedAddress: record2.accessedAddress,
         coverage: null,
         payload: canonicalJson({
-          access: record.access,
-          width: record.width,
-          ...record.actor === void 0 ? {} : { actor: record.actor },
-          ...record.channel === void 0 ? {} : { channel: record.channel },
-          ...record.value === void 0 ? {} : { value: record.value }
+          access: record2.access,
+          width: record2.width,
+          ...record2.actor === void 0 ? {} : { actor: record2.actor },
+          ...record2.channel === void 0 ? {} : { channel: record2.channel },
+          ...record2.value === void 0 ? {} : { value: record2.value }
         })
       };
     case "runtime-cpu-state":
       return {
-        addressSpace: record.addressSpace,
-        address: record.address,
+        addressSpace: record2.addressSpace,
+        address: record2.address,
         start: null,
         end: null,
         fromAddressSpace: null,
@@ -2660,14 +2764,14 @@ var runtimeColumns = (record) => {
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: canonicalJson({ state: record.state })
+        payload: canonicalJson({ state: record2.state })
       };
     case "runtime-coverage":
       return {
-        addressSpace: record.addressSpace,
+        addressSpace: record2.addressSpace,
         address: null,
-        start: record.start,
-        end: record.end,
+        start: record2.start,
+        end: record2.end,
         fromAddressSpace: null,
         fromAddress: null,
         toAddressSpace: null,
@@ -2676,7 +2780,7 @@ var runtimeColumns = (record) => {
         instructionAddress: null,
         accessedAddressSpace: null,
         accessedAddress: null,
-        coverage: record.coverage,
+        coverage: record2.coverage,
         payload: null
       };
     case "runtime-control-target":
@@ -2685,16 +2789,16 @@ var runtimeColumns = (record) => {
         address: null,
         start: null,
         end: null,
-        fromAddressSpace: record.fromAddressSpace,
-        fromAddress: record.fromAddress,
-        toAddressSpace: record.toAddressSpace,
-        toAddress: record.toAddress,
+        fromAddressSpace: record2.fromAddressSpace,
+        fromAddress: record2.fromAddress,
+        toAddressSpace: record2.toAddressSpace,
+        toAddress: record2.toAddress,
         instructionAddressSpace: null,
         instructionAddress: null,
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: canonicalJson({ flowKind: record.flowKind, indirect: record.indirect })
+        payload: canonicalJson({ flowKind: record2.flowKind, indirect: record2.indirect })
       };
   }
   throw new Error("Unsupported runtime evidence kind.");
@@ -2714,11 +2818,11 @@ function requireFinite(value, label) {
   }
   return value;
 }
-function optionalFinite(record, key3) {
-  if (!Object.hasOwn(record, key3)) {
+function optionalFinite(record2, key3) {
+  if (!Object.hasOwn(record2, key3)) {
     return void 0;
   }
-  return requireFinite(record[key3], key3);
+  return requireFinite(record2[key3], key3);
 }
 function requirePayload(value) {
   if (!value) {
@@ -2740,7 +2844,7 @@ function requireBytes(value) {
   return bytes;
 }
 function isRuntimeState(value) {
-  return isRecord3(value) && Object.values(value).every(
+  return isRecord4(value) && Object.values(value).every(
     (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
   );
 }
@@ -2799,10 +2903,10 @@ function requireCoverage(value) {
   throw new Error("Invalid runtime coverage.");
 }
 function isPpuByte(value) {
-  return isRecord3(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
+  return isRecord4(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
 }
 function requirePpu(value) {
-  if (!isRecord3(value) || value.target !== "vram" && value.target !== "cgram" && value.target !== "oam" || value.outcome !== "written" && value.outcome !== "blocked" && value.outcome !== "latched" || typeof value.forcedBlank !== "boolean" || typeof value.renderingRestricted !== "boolean" || value.implementation !== "accurate" && value.implementation !== "performance" || value.vramBytes !== null && value.vramBytes !== 65536 && value.vramBytes !== 131072 || !Array.isArray(value.bytes)) {
+  if (!isRecord4(value) || value.target !== "vram" && value.target !== "cgram" && value.target !== "oam" || value.outcome !== "written" && value.outcome !== "blocked" && value.outcome !== "latched" || typeof value.forcedBlank !== "boolean" || typeof value.renderingRestricted !== "boolean" || value.implementation !== "accurate" && value.implementation !== "performance" || value.vramBytes !== null && value.vramBytes !== 65536 && value.vramBytes !== 131072 || !Array.isArray(value.bytes)) {
     throw new Error("Invalid runtime ppu effect.");
   }
   const bytes = [];
@@ -2827,7 +2931,7 @@ function readPayload(value) {
     return {};
   }
   const parsed = parseSqlitePayload(value);
-  return isRecord3(parsed) ? parsed : void 0;
+  return isRecord4(parsed) ? parsed : void 0;
 }
 var runtimeFromRow = (row) => {
   if (!isRowRecord2(row)) {
@@ -2874,6 +2978,24 @@ var runtimeFromRow = (row) => {
       address: Number(row.address),
       bytes: requireBytes(body.bytes),
       state: requireState(body.state)
+    };
+  }
+  if (kind === "runtime-graphics-access") {
+    const fact = {
+      ...requirePayload(extra),
+      addressSpace: row.accessed_address_space,
+      address: row.accessed_address
+    };
+    if (!isRuntimeGraphicsFact(fact)) {
+      throw new Error("Invalid stored graphics fact.");
+    }
+    return {
+      ...fact,
+      id,
+      kind,
+      architecture: requireString(row.architecture, "architecture"),
+      count,
+      evidence: parsedEvidence
     };
   }
   if (kind === "runtime-bus-access") {
@@ -2962,20 +3084,22 @@ var runtimeFromRow = (row) => {
   }
   throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
 };
-function optionalBusActor(record) {
-  if (!Object.hasOwn(record, "actor")) {
+function optionalBusActor(record2) {
+  if (!Object.hasOwn(record2, "actor")) {
     return {};
   }
-  return { actor: requireBusActor(record.actor) };
+  return { actor: requireBusActor(record2.actor) };
 }
 function allowsFinite2(value) {
   return value === void 0 || isFiniteNumber(value);
 }
 function isRuntimeEvidenceRecord(value) {
-  if (!isRecord3(value) || typeof value.id !== "string" || typeof value.architecture !== "string" || !isFiniteNumber(value.count) || !isStringArray(value.evidence)) {
+  if (!isRecord4(value) || typeof value.id !== "string" || typeof value.architecture !== "string" || !isFiniteNumber(value.count) || !isStringArray(value.evidence)) {
     return false;
   }
   switch (value.kind) {
+    case "runtime-graphics-access":
+      return isRuntimeGraphicsFact(value);
     case "runtime-execution":
       return typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite2(value.fileOffset) && allowsFinite2(value.size) && allowsFinite2(value.opcode);
     case "runtime-instruction":
@@ -2995,14 +3119,14 @@ function isRuntimeEvidenceRecord(value) {
   }
 }
 function isBusPpu(value) {
-  return isRecord3(value) && (value.target === "vram" || value.target === "cgram" || value.target === "oam") && (value.outcome === "written" || value.outcome === "blocked" || value.outcome === "latched") && typeof value.forcedBlank === "boolean" && typeof value.renderingRestricted === "boolean" && (value.implementation === "accurate" || value.implementation === "performance") && (value.vramBytes === null || value.vramBytes === 65536 || value.vramBytes === 131072) && Array.isArray(value.bytes) && value.bytes.every(isPpuByte);
+  return isRecord4(value) && (value.target === "vram" || value.target === "cgram" || value.target === "oam") && (value.outcome === "written" || value.outcome === "blocked" || value.outcome === "latched") && typeof value.forcedBlank === "boolean" && typeof value.renderingRestricted === "boolean" && (value.implementation === "accurate" || value.implementation === "performance") && (value.vramBytes === null || value.vramBytes === 65536 || value.vramBytes === 131072) && Array.isArray(value.bytes) && value.bytes.every(isPpuByte);
 }
-var analysisAddress = (record) => {
-  if ("addressSpace" in record && "address" in record) {
-    return { addressSpace: record.addressSpace, address: record.address };
+var analysisAddress = (record2) => {
+  if ("addressSpace" in record2 && "address" in record2) {
+    return { addressSpace: record2.addressSpace, address: record2.address };
   }
-  if ("addressSpace" in record && "fromAddress" in record) {
-    return { addressSpace: record.addressSpace, address: record.fromAddress };
+  if ("addressSpace" in record2 && "fromAddress" in record2) {
+    return { addressSpace: record2.addressSpace, address: record2.fromAddress };
   }
   return { addressSpace: null, address: null };
 };
@@ -3010,7 +3134,7 @@ var analysisAddress = (record) => {
 // packages/disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 function isPartialInstruction(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     return false;
   }
   if (value.kind !== void 0 && value.kind !== "cfg-node") {
@@ -3030,7 +3154,7 @@ function isPartialInstruction(value) {
       return false;
     }
   }
-  if (value.incomingState !== void 0 && !isRecord3(value.incomingState)) {
+  if (value.incomingState !== void 0 && !isRecord4(value.incomingState)) {
     return false;
   }
   return value.evidence === void 0 || isStringArray(value.evidence);
@@ -3069,24 +3193,24 @@ var ensureAnnotationQueryIndexes = (database2) => {
     database2.exec(`DROP TRIGGER IF EXISTS query_instruction_insert; DROP TRIGGER IF EXISTS query_instruction_delete;
       DROP TRIGGER IF EXISTS query_instruction_update; DROP TRIGGER IF EXISTS query_execution_insert;
       DROP TRIGGER IF EXISTS query_execution_delete; DROP TRIGGER IF EXISTS query_execution_update;`);
-    for (const name of ["query_instruction_nodes", "query_execution_offsets"]) {
-      const row = database2.prepare("SELECT type FROM sqlite_schema WHERE name=?").get(name);
+    for (const name2 of ["query_instruction_nodes", "query_execution_offsets"]) {
+      const row = database2.prepare("SELECT type FROM sqlite_schema WHERE name=?").get(name2);
       if (row) {
-        database2.exec(`DROP ${row.type === "view" ? "VIEW" : "TABLE"} ${name}`);
+        database2.exec(`DROP ${row.type === "view" ? "VIEW" : "TABLE"} ${name2}`);
       }
     }
     for (const table of ["analysis", "runtime_observations"]) {
       const columns2 = new Set(
         database2.prepare(`PRAGMA table_info(${table})`).all().map((row) => String(row.name))
       );
-      for (const [name, type] of [
+      for (const [name2, type] of [
         ["query_file_offset", "INTEGER"],
         ["query_size", "INTEGER"],
         ["query_data", "TEXT"],
         ["query_ready", "INTEGER NOT NULL DEFAULT 0"]
       ]) {
-        if (!columns2.has(name)) {
-          database2.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+        if (!columns2.has(name2)) {
+          database2.exec(`ALTER TABLE ${table} ADD COLUMN ${name2} ${type}`);
         }
       }
     }
@@ -3116,12 +3240,12 @@ var ensureAnnotationQueryIndexes = (database2) => {
     const exportData = table === "analysis" ? database2.prepare("UPDATE analysis SET query_data=? WHERE rowid=?") : void 0;
     for (let rows = pending.all(); rows.length; rows = pending.all()) {
       for (const row of rows) {
-        const record = row.payload === null ? {} : requirePartialInstruction(row.payload);
-        const offset = record.fileOffset;
+        const record2 = row.payload === null ? {} : requirePartialInstruction(row.payload);
+        const offset = record2.fileOffset;
         if (offset !== void 0 && (!Number.isSafeInteger(offset) || offset < 0)) {
           throw new Error("Invalid persisted instruction output offset.");
         }
-        update.run(offset ?? null, record.size ?? null, row.row_id);
+        update.run(offset ?? null, record2.size ?? null, row.row_id);
         if (exportData) {
           const {
             id,
@@ -3134,7 +3258,7 @@ var ensureAnnotationQueryIndexes = (database2) => {
             specificationId,
             incomingState,
             evidence
-          } = record;
+          } = record2;
           exportData.run(
             encodeSqlitePayload(
               JSON.stringify({
@@ -3193,12 +3317,12 @@ var readSqliteAnnotationView = (database2, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record = requireAnalysisRecord(parseSqlitePayload(row.payload));
-      analysis.set(record.id, record);
-      if (record.kind === "cfg-node") {
-        locate(record.addressSpace, record.address);
-        if (record.fileOffset !== void 0) {
-          offsets.add(record.fileOffset);
+      const record2 = requireAnalysisRecord(parseSqlitePayload(row.payload));
+      analysis.set(record2.id, record2);
+      if (record2.kind === "cfg-node") {
+        locate(record2.addressSpace, record2.address);
+        if (record2.fileOffset !== void 0) {
+          offsets.add(record2.fileOffset);
         }
       }
     }
@@ -3262,8 +3386,8 @@ var readSqliteAnnotationView = (database2, manifest, ranges) => {
     }
   }
   for (const row of database2.prepare("SELECT payload FROM analysis WHERE kind='summary'").iterate()) {
-    const record = requireAnalysisRecord(parseSqlitePayload(row.payload));
-    analysis.set(record.id, record);
+    const record2 = requireAnalysisRecord(parseSqlitePayload(row.payload));
+    analysis.set(record2.id, record2);
   }
   const runtime = /* @__PURE__ */ new Map();
   const executionCounts = /* @__PURE__ */ new Map();
@@ -3297,10 +3421,10 @@ var readSqliteAnnotationView = (database2, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record = runtimeFromRow(row);
-      runtime.set(record.id, record);
-      if (record.kind === "runtime-execution" && record.fileOffset !== void 0) {
-        offsets.add(record.fileOffset);
+      const record2 = runtimeFromRow(row);
+      runtime.set(record2.id, record2);
+      if (record2.kind === "runtime-execution" && record2.fileOffset !== void 0) {
+        offsets.add(record2.fileOffset);
       }
     }
   };
@@ -3339,8 +3463,8 @@ var readSqliteAnnotationView = (database2, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record = requireIntervalAnnotation(parseSqlitePayload(row.payload));
-      annotations.set(record.id, record);
+      const record2 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
+      annotations.set(record2.id, record2);
     }
     let commentCount = 0;
     for (const row of comment.iterate(space, address)) {
@@ -3348,8 +3472,8 @@ var readSqliteAnnotationView = (database2, manifest, ranges) => {
         limited = true;
         break;
       }
-      const record = requireProjectComment(parseSqlitePayload(row.payload));
-      comments.set(record.id, record);
+      const record2 = requireProjectComment(parseSqlitePayload(row.payload));
+      comments.set(record2.id, record2);
     }
     addRuntime(
       coverage.iterate(space, address, address),
@@ -3481,7 +3605,7 @@ var installQueryCache = (db, key3, dependencies) => {
   }
   db.exec(QUERY_CACHE_SCHEMA);
   for (const table of dependencies.flatMap(
-    (name) => name === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name]
+    (name2) => name2 === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name2]
   )) {
     for (const event of ["INSERT", "UPDATE", "DELETE"]) {
       const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
@@ -3514,25 +3638,25 @@ var writeQueryCache = (db, key3, signature, value) => {
 var COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"];
 var COVERAGE_RUNTIME = ["executed", "operand", "read", "written"];
 function isCoverageCounts(value, keys) {
-  return isRecord3(value) && keys.every((key3) => isFiniteNumber(value[key3])) && Object.keys(value).every((key3) => keys.includes(key3));
+  return isRecord4(value) && keys.every((key3) => isFiniteNumber(value[key3])) && Object.keys(value).every((key3) => keys.includes(key3));
 }
 function isSqliteCoverageSummary(value) {
-  if (!isRecord3(value) || !isFiniteNumber(value.contentSize) || !isStringArray(value.fileAddressSpaces) || !Array.isArray(value.segments) || value.segments.length !== 0 || !Array.isArray(value.unprojected) || value.unprojected.length !== 0 || !Array.isArray(value.diagnostics) || value.diagnostics.length !== 0 || !isFiniteNumber(value.detailCount) || !isRecord3(value.summary)) {
+  if (!isRecord4(value) || !isFiniteNumber(value.contentSize) || !isStringArray(value.fileAddressSpaces) || !Array.isArray(value.segments) || value.segments.length !== 0 || !Array.isArray(value.unprojected) || value.unprojected.length !== 0 || !Array.isArray(value.diagnostics) || value.diagnostics.length !== 0 || !isFiniteNumber(value.detailCount) || !isRecord4(value.summary)) {
     return false;
   }
   const summary = value.summary;
   return isFiniteNumber(summary.totalBytes) && isFiniteNumber(summary.classifiedBytes) && isFiniteNumber(summary.unknownBytes) && isFiniteNumber(summary.conflictBytes) && isFiniteNumber(summary.segmentCount) && isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) && isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME);
 }
 function requireConflict(value) {
-  const record = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record.kind !== "conflict") {
+  const record2 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record2.kind !== "conflict") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record;
+  return record2;
 }
 function requireAccessWidth(value) {
   const parsed = parseSqlitePayload(value);
-  if (!isRecord3(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
+  if (!isRecord4(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
     throw new Error("Invalid runtime memory coverage payload.");
   }
   return { access: parsed.access, width: parsed.width };
@@ -3607,21 +3731,21 @@ var prepareCoverage = (db, manifest) => {
   };
   try {
     for (const row of db.prepare("SELECT * FROM annotations WHERE classification != 'unreached'").iterate()) {
-      const record = requireIntervalAnnotation(parseSqlitePayload(row.payload));
-      if (!files.has(record.addressSpace)) {
-        unprojected("annotation", record.id, "non-file-address-space");
+      const record2 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
+      if (!files.has(record2.addressSpace)) {
+        unprojected("annotation", record2.id, "non-file-address-space");
         continue;
       }
       let classification = "data";
-      if (["opcode", "operand"].includes(record.classification)) {
-        classification = record.classification;
+      if (["opcode", "operand"].includes(record2.classification)) {
+        classification = record2.classification;
       }
-      if (["graphics", "music", "compressed", "asset"].includes(record.classification)) {
+      if (["graphics", "music", "compressed", "asset"].includes(record2.classification)) {
         classification = "asset";
       }
-      add("annotation", record.id, record.start, record.end, [
+      add("annotation", record2.id, record2.start, record2.end, [
         ["classification", classification],
-        ["annotationIds", record.id]
+        ["annotationIds", record2.id]
       ]);
     }
     for (const row of db.prepare("SELECT id,address_space,start,end FROM regions").iterate()) {
@@ -3656,32 +3780,32 @@ var prepareCoverage = (db, manifest) => {
       "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'"
     );
     for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-      const record = requireConflict(row.payload);
-      if (files.has(record.addressSpace)) {
-        add("analysis", record.id, record.address, record.end ?? record.address + 1, [
-          ["conflictIds", record.id]
+      const record2 = requireConflict(row.payload);
+      if (files.has(record2.addressSpace)) {
+        add("analysis", record2.id, record2.address, record2.end ?? record2.address + 1, [
+          ["conflictIds", record2.id]
         ]);
         continue;
       }
       let projected = false;
-      for (const id of record.nodes) {
+      for (const id of record2.nodes) {
         const target = node.get(id);
         if (!target || target.file_offset === null) {
           continue;
         }
         projected = add(
           "analysis",
-          record.id,
+          record2.id,
           Number(target.file_offset),
           Number(target.file_offset) + Number(target.size),
           [
-            ["conflictIds", record.id],
+            ["conflictIds", record2.id],
             ["analysisIds", id]
           ]
         ) || projected;
       }
       if (!projected) {
-        unprojected("analysis", record.id, "missing-file-offset");
+        unprojected("analysis", record2.id, "missing-file-offset");
       }
     }
     const identity = "p.value || CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END";
@@ -3895,52 +4019,52 @@ var coverageConflictPage = (db, offset) => {
 
 // packages/disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
-  const record = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record.kind !== "cfg-node") {
+  const record2 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record2.kind !== "cfg-node") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record;
+  return record2;
 }
 function requireEdge(value) {
-  const record = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record.kind !== "cfg-edge") {
+  const record2 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record2.kind !== "cfg-edge") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record;
+  return record2;
 }
 function requireUnresolved(value) {
-  const record = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record.kind !== "unresolved") {
+  const record2 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record2.kind !== "unresolved") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record;
+  return record2;
 }
 function requireFunctionRecord(value) {
-  const record = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record.kind !== "function") {
+  const record2 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record2.kind !== "function") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record;
+  return record2;
 }
 function isLabelRefList(value) {
   return Array.isArray(value) && value.every(
-    (entry) => isRecord3(entry) && typeof entry.id === "string" && typeof entry.name === "string"
+    (entry) => isRecord4(entry) && typeof entry.id === "string" && typeof entry.name === "string"
   );
 }
 function isNumberList(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
 function isCallGraphFunction(value) {
-  return isRecord3(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isLabelRefList(value.labels) && isStringArray(value.nodeIds) && isNumberList(value.outputOffsets) && isStringArray(value.incomingCallIds) && isStringArray(value.outgoingCallIds) && isStringArray(value.unresolvedIds) && isStringArray(value.evidence);
+  return isRecord4(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isLabelRefList(value.labels) && isStringArray(value.nodeIds) && isNumberList(value.outputOffsets) && isStringArray(value.incomingCallIds) && isStringArray(value.outgoingCallIds) && isStringArray(value.unresolvedIds) && isStringArray(value.evidence);
 }
 function isCallGraphEdge(value) {
-  return isRecord3(value) && typeof value.id === "string" && (value.edgeKind === "call" || value.edgeKind === "interrupt") && typeof value.addressSpace === "string" && isFiniteNumber(value.fromAddress) && isFiniteNumber(value.toAddress) && typeof value.fromNodeId === "string" && (value.toNodeId === void 0 || typeof value.toNodeId === "string") && isStringArray(value.callerFunctionIds) && isStringArray(value.calleeFunctionIds) && isNumberList(value.fromOutputOffsets) && isNumberList(value.toOutputOffsets) && typeof value.indirect === "boolean" && (value.override === void 0 || typeof value.override === "string") && (value.explanation === void 0 || typeof value.explanation === "string") && isStringArray(value.evidence);
+  return isRecord4(value) && typeof value.id === "string" && (value.edgeKind === "call" || value.edgeKind === "interrupt") && typeof value.addressSpace === "string" && isFiniteNumber(value.fromAddress) && isFiniteNumber(value.toAddress) && typeof value.fromNodeId === "string" && (value.toNodeId === void 0 || typeof value.toNodeId === "string") && isStringArray(value.callerFunctionIds) && isStringArray(value.calleeFunctionIds) && isNumberList(value.fromOutputOffsets) && isNumberList(value.toOutputOffsets) && typeof value.indirect === "boolean" && (value.override === void 0 || typeof value.override === "string") && (value.explanation === void 0 || typeof value.explanation === "string") && isStringArray(value.evidence);
 }
 function isCallGraphUnresolved(value) {
-  return isRecord3(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string" && isStringArray(value.nodeIds) && isStringArray(value.ownerFunctionIds) && isNumberList(value.outputOffsets) && isStringArray(value.evidence);
+  return isRecord4(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string" && isStringArray(value.nodeIds) && isStringArray(value.ownerFunctionIds) && isNumberList(value.outputOffsets) && isStringArray(value.evidence);
 }
 function isCallGraph(value) {
-  return isRecord3(value) && Array.isArray(value.functions) && value.functions.every(isCallGraphFunction) && Array.isArray(value.calls) && value.calls.every(isCallGraphEdge) && Array.isArray(value.unresolved) && value.unresolved.every(isCallGraphUnresolved) && isStringArray(value.orphanCallIds) && isStringArray(value.orphanUnresolvedIds);
+  return isRecord4(value) && Array.isArray(value.functions) && value.functions.every(isCallGraphFunction) && Array.isArray(value.calls) && value.calls.every(isCallGraphEdge) && Array.isArray(value.unresolved) && value.unresolved.every(isCallGraphUnresolved) && isStringArray(value.orphanCallIds) && isStringArray(value.orphanUnresolvedIds);
 }
 function requireCallKind(value) {
   if (value === "call" || value === "interrupt") {
@@ -4039,21 +4163,21 @@ var prepareGraph = (db) => {
     "SELECT from_id FROM query_graph_edges WHERE kind='unresolved' AND address_space=? AND from_address=?"
   );
   for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='unresolved'").iterate()) {
-    const record = requireUnresolved(row.payload);
+    const record2 = requireUnresolved(row.payload);
     const nodeIds = unique(
-      unresolvedNodes.all(record.addressSpace, record.address).map((nodeRow) => String(nodeRow.from_id))
+      unresolvedNodes.all(record2.addressSpace, record2.address).map((nodeRow) => String(nodeRow.from_id))
     );
     unresolved.push({
-      id: record.id,
-      addressSpace: record.addressSpace,
-      address: record.address,
-      flowKind: record.flowKind,
-      indirect: record.indirect,
-      reason: record.reason,
+      id: record2.id,
+      addressSpace: record2.addressSpace,
+      address: record2.address,
+      flowKind: record2.flowKind,
+      indirect: record2.indirect,
+      reason: record2.reason,
       nodeIds,
       ownerFunctionIds: unique(nodeIds.flatMap(owners)),
       outputOffsets: offsets(nodeIds),
-      evidence: record.evidence
+      evidence: record2.evidence
     });
   }
   const incoming = /* @__PURE__ */ new Map(), outgoing = /* @__PURE__ */ new Map(), unresolvedByOwner = /* @__PURE__ */ new Map();
@@ -4065,9 +4189,9 @@ var prepareGraph = (db) => {
       append(incoming, id, call.id);
     }
   }
-  for (const record of unresolved) {
-    for (const id of record.ownerFunctionIds) {
-      append(unresolvedByOwner, id, record.id);
+  for (const record2 of unresolved) {
+    for (const id of record2.ownerFunctionIds) {
+      append(unresolvedByOwner, id, record2.id);
     }
   }
   const owned = db.prepare(
@@ -4084,8 +4208,8 @@ var prepareGraph = (db) => {
       address: fn.address,
       source: fn.source,
       labels: labels.all(fn.addressSpace, fn.address).map((labelRow) => {
-        const { id, name } = requireProjectLabel(parseSqlitePayload(labelRow.payload));
-        return { id, name };
+        const { id, name: name2 } = requireProjectLabel(parseSqlitePayload(labelRow.payload));
+        return { id, name: name2 };
       }).toSorted((a, b) => a.id.localeCompare(b.id)),
       nodeIds: unique(nodes.map((nodeRow) => String(nodeRow.id))),
       outputOffsets: numbers(
@@ -4129,13 +4253,78 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
+// packages/disassembler/src/storage/sqlite-graphics-query.ts
+function queryGraphicsEvidence(db, query) {
+  const limit = query.limit ?? 500;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 2e3 || [query.pc, query.physicalOffset].some(
+    (value) => value !== void 0 && (!Number.isSafeInteger(value) || value < 0)
+  ) || query.captureSha256 !== void 0 && !/^[\da-f]{64}$/.test(query.captureSha256)) {
+    throw new Error("Invalid graphics evidence query.");
+  }
+  const cpu = db.prepare(`SELECT COUNT(DISTINCT f.fid) AS variants,COALESCE(SUM(o.count),0) AS observations
+    FROM runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=? AND f.address=?
+    AND json_extract(CASE WHEN json_valid(f.payload,8) THEN f.payload ELSE analysis_json(f.payload) END,?)=?`);
+  const rows = db.prepare(`SELECT f.*,o.count,p.value AS id_prefix,i.value AS id,e.value AS evidence,
+    CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
+    FROM runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid
+    JOIN runtime_prefixes p ON p.id=o.prefix_id JOIN runtime_identities i ON i.iid=o.identity_id
+    JOIN runtime_evidence e ON e.id=o.evidence_id
+    WHERE f.kind='runtime-graphics-access' AND f.architecture=? AND f.accessed_address_space=?
+    AND (? IS NULL OR json_extract(CASE WHEN json_valid(f.payload,8) THEN f.payload ELSE analysis_json(f.payload) END,'$.pc')=?)
+    AND (? IS NULL OR json_extract(CASE WHEN json_valid(f.payload,8) THEN f.payload ELSE analysis_json(f.payload) END,'$.cpuMapping.physicalOffset')=?)
+    AND (? IS NULL OR p.value=?) ORDER BY o.oid LIMIT ?`);
+  const joins = /* @__PURE__ */ new Map();
+  const result = [];
+  for (const row of rows.iterate(
+    query.architecture,
+    query.addressSpace,
+    query.pc ?? null,
+    query.pc ?? null,
+    query.physicalOffset ?? null,
+    query.physicalOffset ?? null,
+    query.captureSha256 ?? null,
+    query.captureSha256 ? `runtime:graphics:${query.captureSha256}:` : null,
+    limit
+  )) {
+    const graphics = runtimeFromRow(row);
+    if (graphics.kind !== "runtime-graphics-access") {
+      throw new Error("Invalid graphics query row.");
+    }
+    let match = { variants: 0, observations: 0 };
+    if (graphics.context === "instruction" && graphics.cpuMapping) {
+      const key3 = JSON.stringify([graphics.pc, graphics.cpuMapping]);
+      const cached = joins.get(key3);
+      if (cached) {
+        match = cached;
+      } else {
+        const matched = cpu.get(
+          query.architecture,
+          query.addressSpace,
+          graphics.pc,
+          `$.state."${graphics.cpuMapping.offsetStateField}"`,
+          graphics.cpuMapping.physicalOffset
+        );
+        match = { variants: Number(matched.variants), observations: Number(matched.observations) };
+        joins.set(key3, match);
+      }
+    }
+    result.push({
+      graphics,
+      instructionVariants: match.variants,
+      instructionObservations: match.observations
+    });
+  }
+  return result;
+}
+
 // packages/disassembler/src/storage/sqlite-research-inputs.ts
 init_canonical_json();
 var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
-function isRecord6(value) {
+function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isResearchCollection2(value) {
@@ -4152,25 +4341,25 @@ function analysisInput(collection, value) {
   if (value === null || collection === "comments") {
     return null;
   }
-  if (!isRecord6(value)) {
+  if (!isRecord7(value)) {
     throw new Error("Invalid research record.");
   }
-  const record = value;
+  const record2 = value;
   if (collection === "labels") {
-    if (record.analysisEntryPoint === false) {
+    if (record2.analysisEntryPoint === false) {
       return null;
     }
     return {
-      id: record.id,
-      addressSpace: record.addressSpace,
-      address: record.address,
-      evidence: record.evidence
+      id: record2.id,
+      addressSpace: record2.addressSpace,
+      address: record2.address,
+      evidence: record2.evidence
     };
   }
-  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record.kind))) {
+  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record2.kind))) {
     return null;
   }
-  return record;
+  return record2;
 }
 function changesAnalysisInputs(database2, snapshot) {
   database2.exec(SCHEMA);
@@ -4229,7 +4418,7 @@ function projectResearchInputs(database2, snapshot, insert) {
     const before = database2.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(decision.id);
     if (collection === "evidence" && before) {
       const observation = recordValue(before.payload);
-      if (!isRecord6(observation) || observation.source !== "manual") {
+      if (!isRecord7(observation) || observation.source !== "manual") {
         throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
       }
     }
@@ -4378,16 +4567,16 @@ var encodeRuntimeHistory = (values) => {
     return Buffer.concat([Buffer.from([typeof value === "string" ? 1 : 2]), bytes]);
   });
   const directoryBytes = (values.length + 1) * 4;
-  const size = directoryBytes + records.reduce((n, record) => n + record.length, 0);
+  const size = directoryBytes + records.reduce((n, record2) => n + record2.length, 0);
   if (size > MAX_BYTES) {
     throw new Error("Runtime history block exceeds its decoded byte limit.");
   }
   const body = Buffer.allocUnsafe(size);
   let offset = directoryBytes;
-  for (const [index, record] of records.entries()) {
+  for (const [index, record2] of records.entries()) {
     body.writeUInt32LE(offset, index * 4);
-    record.copy(body, offset);
-    offset += record.length;
+    record2.copy(body, offset);
+    offset += record2.length;
   }
   body.writeUInt32LE(offset, values.length * 4);
   const header = Buffer.allocUnsafe(16);
@@ -4525,21 +4714,21 @@ var collectRuntimeHistory = (db) => {
 };
 
 // packages/disassembler/src/storage/sqlite-runtime-storage.ts
-var runtimeFactFingerprint = (record, columns2) => (0, import_node_crypto2.createHash)("sha256").update(
+var runtimeFactFingerprint = (record2, columns2) => (0, import_node_crypto2.createHash)("sha256").update(
   JSON.stringify(
     {
       accessedAddress: columns2.accessedAddress,
       accessedAddressSpace: columns2.accessedAddressSpace,
       address: columns2.address,
       addressSpace: columns2.addressSpace,
-      architecture: record.architecture,
+      architecture: record2.architecture,
       coverage: columns2.coverage,
       end: columns2.end,
       fromAddress: columns2.fromAddress,
       fromAddressSpace: columns2.fromAddressSpace,
       instructionAddress: columns2.instructionAddress,
       instructionAddressSpace: columns2.instructionAddressSpace,
-      kind: record.kind,
+      kind: record2.kind,
       payload: columns2.payload,
       start: columns2.start,
       toAddress: columns2.toAddress,
@@ -4549,12 +4738,12 @@ var runtimeFactFingerprint = (record, columns2) => (0, import_node_crypto2.creat
     2
   ) + "\n"
 ).digest();
-var encodeRuntimeFactPayload = (record, payload) => {
+var encodeRuntimeFactPayload = (record2, payload) => {
   if (payload === null) {
     return null;
   }
-  if (record.architecture === "snes.65816" && (record.kind === "runtime-instruction" || record.kind === "runtime-cpu-state")) {
-    const snapshot = record.kind === "runtime-instruction" ? { bytes: record.bytes, state: record.state } : { state: record.state };
+  if (record2.architecture === "snes.65816" && (record2.kind === "runtime-instruction" || record2.kind === "runtime-cpu-state")) {
+    const snapshot = record2.kind === "runtime-instruction" ? { bytes: record2.bytes, state: record2.state } : { state: record2.state };
     return encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
   }
   return encodeSqlitePayload(payload);
@@ -4655,7 +4844,7 @@ END;
 `;
 function pairedState(payload) {
   const parsed = parseSqlitePayload(payload);
-  if (!isRecord3(parsed)) {
+  if (!isRecord4(parsed)) {
     throw new Error("Invalid paired runtime payload.");
   }
   return parsed.state;
@@ -4694,24 +4883,24 @@ var SqliteRuntimeWriter = class {
    * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
    * @param {Function} intern Transaction-owned prefix/evidence dictionary allocator.
    */
-  insert(record, intern) {
-    const identity = sqliteRuntimeIdentity(record.id);
+  insert(record2, intern) {
+    const identity = sqliteRuntimeIdentity(record2.id);
     const prefix = intern("runtime_prefixes", identity.prefix);
-    const evidence = intern("runtime_evidence", JSON.stringify(record.evidence));
-    const columns2 = runtimeColumns(record);
+    const evidence = intern("runtime_evidence", JSON.stringify(record2.evidence));
+    const columns2 = runtimeColumns(record2);
     let statePrefix = null;
     const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
-      record.id
+      record2.id
     );
-    if (match && (record.kind === "runtime-instruction" || record.kind === "runtime-cpu-state")) {
+    if (match && (record2.kind === "runtime-instruction" || record2.kind === "runtime-cpu-state")) {
       const counterpart = match[2] === "code" ? "state" : "code";
       const otherIdentity = sqliteRuntimeIdentity(
         `runtime:instruction-trace:${match[1]}:${counterpart}:${match[3]}`
       );
       const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
-      const expectedKind = record.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record.count && other.evidence_id === evidence && other.architecture === record.architecture && other.address_space === record.addressSpace && other.address === record.address && canonicalEquals(pairedState(other.payload), record.state)) {
-        if (record.kind === "runtime-cpu-state") {
+      const expectedKind = record2.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
+      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record2.count && other.evidence_id === evidence && other.architecture === record2.architecture && other.address_space === record2.addressSpace && other.address === record2.address && canonicalEquals(pairedState(other.payload), record2.state)) {
+        if (record2.kind === "runtime-cpu-state") {
           this.#pair.run(prefix, other.oid);
           return;
         }
@@ -4720,15 +4909,15 @@ var SqliteRuntimeWriter = class {
       }
     }
     const payload = columns2.payload;
-    const fingerprint = runtimeFactFingerprint(record, columns2);
+    const fingerprint = runtimeFactFingerprint(record2, columns2);
     const found = this.#findFact.get(fingerprint);
     let fid = found?.fid;
     if (fid === void 0) {
-      const encoded = encodeRuntimeFactPayload(record, payload);
+      const encoded = encodeRuntimeFactPayload(record2, payload);
       this.#insertFact.run(
         fingerprint,
-        record.kind,
-        record.architecture,
+        record2.kind,
+        record2.architecture,
         columns2.addressSpace,
         columns2.address,
         columns2.start,
@@ -4755,9 +4944,9 @@ var SqliteRuntimeWriter = class {
       prefix,
       identityId,
       evidence,
-      record.count,
+      record2.count,
       statePrefix,
-      record.kind === "runtime-execution" ? 0 : 1
+      record2.kind === "runtime-execution" ? 0 : 1
     );
   }
 };
@@ -4772,24 +4961,25 @@ var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
       ON (${runtimeIdentityKey("i.value")})=(${runtimeIdentityKey("b.identity_value")}) AND i.value=b.identity_value
     ORDER BY b.position
 `;
-function assertTraceRecordNamespace(record, sourceSha256) {
+function assertTraceRecordNamespace(record2, sourceSha256) {
   const root = `runtime:instruction-trace:${sourceSha256}:`;
   let prefix = root;
-  if (record.kind === "runtime-instruction") {
+  if (record2.kind === "runtime-instruction") {
     prefix += "code:";
-  } else if (record.kind === "runtime-cpu-state") {
+  } else if (record2.kind === "runtime-cpu-state") {
     prefix += "state:";
-  } else if (record.kind === "runtime-memory-access") {
+  } else if (record2.kind === "runtime-memory-access") {
     prefix += "memory:";
-  } else if (record.kind !== "runtime-execution") {
+  } else if (record2.kind !== "runtime-execution") {
     throw new Error("Unsupported instruction trace batch record.");
   }
-  const suffix = record.id.slice(prefix.length);
+  const suffix = record2.id.slice(prefix.length);
   let validSuffix = /^[\da-f]{64}$/.test(suffix);
-  if (record.kind === "runtime-execution") {
-    validSuffix = suffix === record.address.toString(16).toUpperCase().padStart(6, "0");
+  if (record2.kind === "runtime-execution") {
+    const pc = record2.address.toString(16).toUpperCase().padStart(6, "0");
+    validSuffix = suffix === pc || record2.architecture === "65xx.2a03" && suffix.startsWith(`${pc}:mapping:`) && /^[\da-f]{64}$/.test(suffix.slice(pc.length + 9));
   }
-  if (!record.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record.evidence, [root.slice(0, -1)])) {
+  if (!record2.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record2.evidence, [root.slice(0, -1)])) {
     throw new Error("Runtime record escaped its trace batch namespace or provenance.");
   }
 }
@@ -4816,39 +5006,39 @@ var SqliteRuntimeTraceBatch = class {
     );
   }
   /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
-  add(record) {
+  add(record2) {
     if (this.#finished || !this.#db.isTransaction) {
       throw new Error("Runtime trace batch is no longer active.");
     }
-    assertTraceRecordNamespace(record, this.#source);
+    assertTraceRecordNamespace(record2, this.#source);
     if (this.#pending) {
       const instruction = this.#pending;
-      if (record.kind !== "runtime-cpu-state" || record.id !== instruction.id.replace(":code:", ":state:") || record.architecture !== instruction.architecture || record.addressSpace !== instruction.addressSpace || record.address !== instruction.address || record.count !== instruction.count || !canonicalEquals(record.state, instruction.state)) {
+      if (record2.kind !== "runtime-cpu-state" || record2.id !== instruction.id.replace(":code:", ":state:") || record2.architecture !== instruction.architecture || record2.addressSpace !== instruction.addressSpace || record2.address !== instruction.address || record2.count !== instruction.count || !canonicalEquals(record2.state, instruction.state)) {
         throw new Error("Instruction trace batch has an inconsistent code/state pair.");
       }
       this.#pending = void 0;
       this.#append(
         instruction,
-        this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record.id).prefix)
+        this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record2.id).prefix)
       );
-    } else if (record.kind === "runtime-instruction") {
-      this.#pending = record;
-    } else if (record.kind === "runtime-cpu-state") {
+    } else if (record2.kind === "runtime-instruction") {
+      this.#pending = record2;
+    } else if (record2.kind === "runtime-cpu-state") {
       throw new Error("Instruction trace batch state has no preceding instruction.");
     } else {
-      this.#append(record, null);
+      this.#append(record2, null);
     }
     return true;
   }
   /** Encode once per physical observation; repeated shared facts are resolved together in SQL. */
-  #append(record, statePrefix) {
-    const columns2 = runtimeColumns(record);
-    const identity = sqliteRuntimeIdentity(record.id);
+  #append(record2, statePrefix) {
+    const columns2 = runtimeColumns(record2);
+    const identity = sqliteRuntimeIdentity(record2.id);
     this.#stage.run(
       ++this.#rows,
-      runtimeFactFingerprint(record, columns2),
-      record.kind,
-      record.architecture,
+      runtimeFactFingerprint(record2, columns2),
+      record2.kind,
+      record2.architecture,
       columns2.addressSpace,
       columns2.address,
       columns2.start,
@@ -4862,13 +5052,13 @@ var SqliteRuntimeTraceBatch = class {
       columns2.accessedAddressSpace,
       columns2.accessedAddress,
       columns2.coverage,
-      encodeRuntimeFactPayload(record, columns2.payload),
+      encodeRuntimeFactPayload(record2, columns2.payload),
       this.#intern("runtime_prefixes", identity.prefix),
       identity.suffix,
-      this.#intern("runtime_evidence", JSON.stringify(record.evidence)),
-      record.count,
+      this.#intern("runtime_evidence", JSON.stringify(record2.evidence)),
+      record2.count,
       statePrefix,
-      record.kind === "runtime-execution" ? 0 : 1
+      record2.kind === "runtime-execution" ? 0 : 1
     );
     if (this.#rows >= 1024) {
       this.#flush();
@@ -4996,13 +5186,13 @@ var runtimeSummaryInputSql = (incremental) => {
 };
 var registerVariantKey = (db, fields, masks) => {
   db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
-    const record = parseSqlitePayload(payload);
-    if (!isRecord3(record) || !isByteList(record.bytes) || !isRecord3(record.state)) {
+    const record2 = parseSqlitePayload(payload);
+    if (!isRecord4(record2) || !isByteList(record2.bytes) || !isRecord4(record2.state)) {
       throw new Error("Invalid instruction variant payload.");
     }
     const state = {};
     for (const key3 of fields) {
-      const value = record.state[key3];
+      const value = record2.state[key3];
       const mask = masks[key3];
       if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
         state[key3] = value & mask.mask;
@@ -5010,7 +5200,7 @@ var registerVariantKey = (db, fields, masks) => {
         state[key3] = value;
       }
     }
-    return JSON.stringify([record.bytes, state]);
+    return JSON.stringify([record2.bytes, state]);
   });
 };
 function isByteList(value) {
@@ -5111,14 +5301,14 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
     }
     const rows = db.prepare(RUNTIME_SUMMARY_ROWS_SQL);
     for (const row of rows.iterate()) {
-      const record = runtimeFromRow(row);
-      if (record.kind !== "runtime-instruction") {
+      const record2 = runtimeFromRow(row);
+      if (record2.kind !== "runtime-instruction") {
         throw new Error("Invalid instruction summary representative.");
       }
       yield {
-        ...record,
+        ...record2,
         state: Object.fromEntries(
-          Object.entries(record.state).filter(([key3]) => fields.includes(key3))
+          Object.entries(record2.state).filter(([key3]) => fields.includes(key3))
         )
       };
     }
@@ -5126,27 +5316,27 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
 };
 
 // packages/disassembler/src/storage/sqlite-source-query.ts
-function isRecord7(value) {
+function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringArray2(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
-function optionalString(record, key3) {
-  if (!Object.hasOwn(record, key3)) {
+function optionalString(record2, key3) {
+  if (!Object.hasOwn(record2, key3)) {
     return void 0;
   }
-  const value = record[key3];
+  const value = record2[key3];
   if (typeof value !== "string") {
     throw new Error("Invalid source metadata record.");
   }
   return value;
 }
-function optionalNumber(record, key3) {
-  if (!Object.hasOwn(record, key3)) {
+function optionalNumber(record2, key3) {
+  if (!Object.hasOwn(record2, key3)) {
     return void 0;
   }
-  const value = record[key3];
+  const value = record2[key3];
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new Error("Invalid source metadata record.");
   }
@@ -5194,7 +5384,7 @@ var prepareSourceQueries = (db) => {
     for (let rows = pending.all(table); rows.length; rows = pending.all(table)) {
       for (const row of rows) {
         const parsed = JSON.parse(decodeSqlitePayload(row.payload));
-        if (!isRecord7(parsed) || !isStringArray2(parsed.evidence)) {
+        if (!isRecord8(parsed) || !isStringArray2(parsed.evidence)) {
           throw new Error("Invalid source metadata evidence membership.");
         }
         remove.run(table, row.id);
@@ -5255,21 +5445,21 @@ var readSourcePage = (db, source, group, offset = 0) => {
     return db.prepare(`${sourceEvidence} SELECT r.*,p.value AS id_prefix,e.value AS evidence
       FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id
       WHERE ${sourceRuntime} AND r.kind='runtime-memory-access' ORDER BY r.evidence_id,r.kind,r.rowid LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
-      const record = runtimeFromRow(row);
-      if (record.kind !== "runtime-memory-access") {
+      const record2 = runtimeFromRow(row);
+      if (record2.kind !== "runtime-memory-access") {
         throw new Error("Invalid memory observation.");
       }
-      const detail = `${record.access} ${record.accessedAddressSpace}:${hex(record.accessedAddress)} \xB7 ${record.width} byte(s) \xB7 ${record.count} observations`;
+      const detail = `${record2.access} ${record2.accessedAddressSpace}:${hex(record2.accessedAddress)} \xB7 ${record2.width} byte(s) \xB7 ${record2.count} observations`;
       return {
-        id: record.id,
-        label: hex(record.instructionAddress),
+        id: record2.id,
+        label: hex(record2.instructionAddress),
         description: detail,
         detail,
-        architecture: record.architecture,
-        addressSpace: record.instructionAddressSpace,
-        address: record.instructionAddress,
+        architecture: record2.architecture,
+        addressSpace: record2.instructionAddressSpace,
+        address: record2.instructionAddress,
         outputOffsets: [],
-        recordIds: [record.id]
+        recordIds: [record2.id]
       };
     });
   }
@@ -5279,7 +5469,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   return db.prepare(`WITH matched AS (SELECT DISTINCT collection,id FROM query_source_links WHERE evidence_id IN (SELECT value FROM json_each(?)))
     ${select} ORDER BY collection,id LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
     const parsed = JSON.parse(decodeSqlitePayload(row.payload));
-    if (!isRecord7(parsed) || typeof parsed.id !== "string") {
+    if (!isRecord8(parsed) || typeof parsed.id !== "string") {
       throw new Error("Invalid source metadata record.");
     }
     const addressSpace = optionalString(parsed, "addressSpace");
@@ -5421,11 +5611,11 @@ var retireStorageCaches = (db) => {
     let found = Boolean(db.prepare("SELECT 1 FROM query_cache WHERE name=?").get(cache.key));
     for (const table of dependencies) {
       for (const event of ["INSERT", "UPDATE", "DELETE"]) {
-        const name = `cache_${cache.key}_${table}_${event}`;
+        const name2 = `cache_${cache.key}_${table}_${event}`;
         found ||= Boolean(
-          db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' AND name=?").get(name)
+          db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' AND name=?").get(name2)
         );
-        db.exec(`DROP TRIGGER IF EXISTS ${name}`);
+        db.exec(`DROP TRIGGER IF EXISTS ${name2}`);
       }
     }
     for (const table of cache.tables) {
@@ -5588,16 +5778,23 @@ function isByteList2(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
 function isRuntimeState2(value) {
-  return isRecord3(value) && Object.values(value).every(
+  return isRecord4(value) && Object.values(value).every(
     (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
   );
 }
 function requireTraceFact(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     throw new Error("Invalid indexed trace fact.");
   }
   if (value.kind === "execution" && isFiniteNumber(value.address)) {
-    return { kind: "execution", address: value.address };
+    if (value.identity !== void 0 && (typeof value.identity !== "string" || !/^[\da-f]{64}$/.test(value.identity))) {
+      throw new Error("Invalid indexed execution mapping identity.");
+    }
+    return {
+      kind: "execution",
+      address: value.address,
+      ...value.identity === void 0 ? {} : { identity: value.identity }
+    };
   }
   if (value.kind === "instruction" && typeof value.identity === "string" && isFiniteNumber(value.address) && isByteList2(value.bytes) && isRuntimeState2(value.state)) {
     return {
@@ -5787,70 +5984,70 @@ var SqliteAnalysisStore = class {
   }
   #insertRecord(kind, value) {
     if (kind === "evidence") {
-      const record = requireMetadataRecord(kind, value);
-      this.#insertEvidence.run(record.id, encodeSqlitePayload(JSON.stringify(record)));
+      const record2 = requireMetadataRecord(kind, value);
+      this.#insertEvidence.run(record2.id, encodeSqlitePayload(JSON.stringify(record2)));
       return;
     }
     if (kind === "labels") {
-      const record = requireMetadataRecord(kind, value);
+      const record2 = requireMetadataRecord(kind, value);
       this.#insertLabel.run(
-        record.id,
-        record.addressSpace,
-        record.address,
-        record.name,
-        encodeSqlitePayload(JSON.stringify(record))
+        record2.id,
+        record2.addressSpace,
+        record2.address,
+        record2.name,
+        encodeSqlitePayload(JSON.stringify(record2))
       );
       return;
     }
     if (kind === "comments") {
-      const record = requireMetadataRecord(kind, value);
+      const record2 = requireMetadataRecord(kind, value);
       this.#insertComment.run(
-        record.id,
-        record.addressSpace,
-        record.address,
-        encodeSqlitePayload(JSON.stringify(record))
+        record2.id,
+        record2.addressSpace,
+        record2.address,
+        encodeSqlitePayload(JSON.stringify(record2))
       );
       return;
     }
     if (kind === "regions") {
-      const record = requireMetadataRecord(kind, value);
+      const record2 = requireMetadataRecord(kind, value);
       this.#insertRegion.run(
-        record.id,
-        record.addressSpace,
-        record.start,
-        record.end,
-        encodeSqlitePayload(JSON.stringify(record))
+        record2.id,
+        record2.addressSpace,
+        record2.start,
+        record2.end,
+        encodeSqlitePayload(JSON.stringify(record2))
       );
       return;
     }
     if (kind === "annotations") {
-      const record = requireMetadataRecord(kind, value);
+      const record2 = requireMetadataRecord(kind, value);
       this.#insertAnnotation.run(
-        record.id,
-        record.addressSpace,
-        record.start,
-        record.end,
-        record.classification,
-        encodeSqlitePayload(JSON.stringify(record))
+        record2.id,
+        record2.addressSpace,
+        record2.start,
+        record2.end,
+        record2.classification,
+        encodeSqlitePayload(JSON.stringify(record2))
       );
       return;
     }
     if (kind === "analysis") {
-      const record = requireMetadataRecord(kind, value);
-      const located = analysisAddress(record);
+      const record2 = requireMetadataRecord(kind, value);
+      const located = analysisAddress(record2);
       this.#insertAnalysis.run(
-        record.id,
-        record.kind,
+        record2.id,
+        record2.kind,
         located.addressSpace,
         located.address,
-        encodeSqlitePayload(JSON.stringify(record))
+        encodeSqlitePayload(JSON.stringify(record2))
       );
       return;
     }
     if (kind === "imports") {
-      const record = requireMetadataRecord(kind, value);
-      this.#insertImport.run(record.id, encodeSqlitePayload(JSON.stringify(record)));
-      this.recordCaptureReceipt(record);
+      const record2 = requireMetadataRecord(kind, value);
+      this.#insertImport.run(record2.id, encodeSqlitePayload(JSON.stringify(record2)));
+      this.recordCaptureReceipt(record2);
       return;
     }
     if (!isRuntimeEvidenceRecord(value)) {
@@ -6012,13 +6209,13 @@ var SqliteAnalysisStore = class {
       "evidence",
       "imports"
     ]) {
-      const previous = new Map(before[kind].map((record) => [record.id, record]));
-      const next = new Map(after[kind].map((record) => [record.id, record]));
+      const previous = new Map(before[kind].map((record2) => [record2.id, record2]));
+      const next = new Map(after[kind].map((record2) => [record2.id, record2]));
       const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
       const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
       for (const id of /* @__PURE__ */ new Set([...previous.keys(), ...next.keys()])) {
-        const prior = previous.get(id), record = next.get(id);
-        if (canonicalEquals(prior, record)) {
+        const prior = previous.get(id), record2 = next.get(id);
+        if (canonicalEquals(prior, record2)) {
           continue;
         }
         const stored = find.get(id);
@@ -6026,13 +6223,13 @@ var SqliteAnalysisStore = class {
           throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
         }
         remove.run(id);
-        if (record) {
-          this.#insertRecord(kind, record);
+        if (record2) {
+          this.#insertRecord(kind, record2);
         }
       }
     }
-    const retained = new Set(after.evidence.map((record) => record.id));
-    const removed = before.evidence.filter((record) => !retained.has(record.id)).map((record) => record.id);
+    const retained = new Set(after.evidence.map((record2) => record2.id));
+    const removed = before.evidence.filter((record2) => !retained.has(record2.id)).map((record2) => record2.id);
     if (removed.length) {
       const ids = JSON.stringify(removed);
       for (const table of ["analysis", "annotations", "labels", "comments", "regions"]) {
@@ -6065,7 +6262,7 @@ var SqliteAnalysisStore = class {
     projectResearchInputs(
       this.#database,
       snapshot,
-      (kind, record) => this.#insertRecord(kind, record)
+      (kind, record2) => this.#insertRecord(kind, record2)
     );
     this.validateView({
       labels: this.loadTable("labels"),
@@ -6111,7 +6308,7 @@ var SqliteAnalysisStore = class {
   suspendResearchInputs() {
     this.#requireTransaction();
     this.#researchSuspended = true;
-    clearResearchProjection(this.#database, (kind, record) => this.#insertRecord(kind, record));
+    clearResearchProjection(this.#database, (kind, record2) => this.#insertRecord(kind, record2));
   }
   /**
    * Publish analyzer output computed from the projected view without adopting Git decisions as
@@ -6134,7 +6331,7 @@ var SqliteAnalysisStore = class {
       const protectedIds = new Set(
         snapshot.decisions.filter((decision) => decision.collection === collection).map((decision) => decision.id)
       );
-      const records = (updates[collection] ?? []).filter((record) => !protectedIds.has(record.id));
+      const records = (updates[collection] ?? []).filter((record2) => !protectedIds.has(record2.id));
       const current = [...records];
       for (const decision of snapshot.decisions) {
         if (decision.collection === collection && decision.value !== null) {
@@ -6203,29 +6400,29 @@ var SqliteAnalysisStore = class {
         continue;
       }
       if (!this.#database.prepare(`SELECT 1 FROM ${kind} LIMIT 1`).get()) {
-        for (const record of shards[kind] ?? []) {
-          this.#insertRecord(kind, record);
+        for (const record2 of shards[kind] ?? []) {
+          this.#insertRecord(kind, record2);
         }
         continue;
       }
       this.#database.exec("DELETE FROM temp.replacement_ids");
       const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
       const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
-      for (const record of shards[kind] ?? []) {
-        remember.run(record.id);
-        const prior = find.get(record.id);
+      for (const record2 of shards[kind] ?? []) {
+        remember.run(record2.id);
+        const prior = find.get(record2.id);
         if (prior) {
           const json = decodeSqlitePayload(prior.payload);
-          if (json === JSON.stringify(record)) {
+          if (json === JSON.stringify(record2)) {
             continue;
           }
           const before = JSON.parse(json);
-          if (canonicalEquals(before, record)) {
+          if (canonicalEquals(before, record2)) {
             continue;
           }
-          remove.run(record.id);
+          remove.run(record2.id);
         }
-        this.#insertRecord(kind, record);
+        this.#insertRecord(kind, record2);
       }
       this.#database.exec(
         `DELETE FROM ${kind} WHERE id NOT IN (SELECT id FROM temp.replacement_ids)`
@@ -6244,19 +6441,19 @@ var SqliteAnalysisStore = class {
       "INSERT OR IGNORE INTO temp.replacement_runtime_ids VALUES (?,?)"
     );
     const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
-    for (const record of records) {
-      const identity = sqliteRuntimeIdentity(record.id);
+    for (const record2 of records) {
+      const identity = sqliteRuntimeIdentity(record2.id);
       if (!remember.run(identity.prefix, identity.suffix).changes) {
-        throw new Error(`Duplicate runtime record ID '${record.id}'.`);
+        throw new Error(`Duplicate runtime record ID '${record2.id}'.`);
       }
       const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-      if (prior && canonicalEquals(runtimeFromRow(prior), record)) {
+      if (prior && canonicalEquals(runtimeFromRow(prior), record2)) {
         continue;
       }
       if (prior) {
         remove.run(prior.storage_rowid);
       }
-      this.#insertRecord("runtime", record);
+      this.#insertRecord("runtime", record2);
     }
     this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
       SELECT 1 FROM temp.replacement_runtime_ids keep JOIN runtime_prefixes p ON p.value=keep.prefix
@@ -6268,19 +6465,19 @@ var SqliteAnalysisStore = class {
    * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
    * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
    */
-  insertRuntime(record) {
+  insertRuntime(record2) {
     this.#requireTransaction();
-    const identity = sqliteRuntimeIdentity(record.id);
+    const identity = sqliteRuntimeIdentity(record2.id);
     const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
     if (prior) {
-      if (!canonicalEquals(runtimeFromRow(prior), record)) {
+      if (!canonicalEquals(runtimeFromRow(prior), record2)) {
         throw new Error(
-          `Runtime record '${record.id}' has changed content for a stable imported ID.`
+          `Runtime record '${record2.id}' has changed content for a stable imported ID.`
         );
       }
       return false;
     }
-    this.#insertRecord("runtime", record);
+    this.#insertRecord("runtime", record2);
     return true;
   }
   /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
@@ -6298,15 +6495,15 @@ var SqliteAnalysisStore = class {
     const existing = this.#database.prepare(
       "SELECT 1 FROM runtime WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) LIMIT 1"
     ).get(prefix);
-    return (record) => {
+    return (record2) => {
       this.#requireTransaction();
-      if (!record.id.startsWith(prefix) || record.id.lastIndexOf(":") !== prefix.length - 1) {
+      if (!record2.id.startsWith(prefix) || record2.id.lastIndexOf(":") !== prefix.length - 1) {
         throw new Error("Runtime record escaped its batch prefix.");
       }
       if (existing) {
-        return this.insertRuntime(record);
+        return this.insertRuntime(record2);
       }
-      this.#insertRecord("runtime", record);
+      this.#insertRecord("runtime", record2);
       return true;
     };
   }
@@ -6336,9 +6533,9 @@ var SqliteAnalysisStore = class {
         (table, value) => this.#intern(table, value)
       );
       return {
-        add: (record) => {
+        add: (record2) => {
           this.#requireTransaction();
-          return batch.add(record);
+          return batch.add(record2);
         },
         finish: () => {
           this.#requireTransaction();
@@ -6348,13 +6545,13 @@ var SqliteAnalysisStore = class {
     }
     let finished = false;
     return {
-      add: (record) => {
+      add: (record2) => {
         this.#requireTransaction();
         if (finished) {
           throw new Error("Runtime trace batch is no longer active.");
         }
-        assertTraceRecordNamespace(record, sourceSha256);
-        return this.insertRuntime(record);
+        assertTraceRecordNamespace(record2, sourceSha256);
+        return this.insertRuntime(record2);
       },
       finish: () => {
         this.#requireTransaction();
@@ -6418,7 +6615,7 @@ var SqliteAnalysisStore = class {
       throw new Error("Sqlite analysis project is missing its stored manifest.");
     }
     const parsed = parseRecord(row.v);
-    if (!isRecord3(parsed)) {
+    if (!isRecord4(parsed)) {
       throw new Error("Sqlite analysis project is missing its stored manifest.");
     }
     validateAnalysisProjectManifest(parsed);
@@ -6496,15 +6693,15 @@ var SqliteAnalysisStore = class {
       imports: this.loadTable("imports"),
       runtime: []
     };
-    const ids = JSON.stringify((batch.analysis ?? []).map((record) => record.id));
+    const ids = JSON.stringify((batch.analysis ?? []).map((record2) => record2.id));
     const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
     const before = { ...base, analysis };
     const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
     this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
     this.patchMetadata(before, merged.shards);
     let runtime = 0;
-    for (const record of batch.runtime ?? []) {
-      if (this.insertRuntime(record)) {
+    for (const record2 of batch.runtime ?? []) {
+      if (this.insertRuntime(record2)) {
         runtime++;
       }
     }
@@ -6656,12 +6853,12 @@ var SqliteAnalysisStore = class {
         analysis: [
           ...shards.analysis,
           ...this.analysisByKinds(["conflict"]).filter(
-            (record) => !shards.analysis.some((other) => other.id === record.id)
+            (record2) => !shards.analysis.some((other) => other.id === record2.id)
           )
         ]
       };
       const base = explainProjectEvidence(view, kind, id);
-      const evidenceIds = JSON.stringify(base.evidence.map((record) => record.id));
+      const evidenceIds = JSON.stringify(base.evidence.map((record2) => record2.id));
       const metadata = "SELECT collection||':'||id AS reference FROM query_evidence_links WHERE evidence IN (SELECT value FROM json_each(?)) GROUP BY collection,id";
       const runtime = "SELECT 'runtime:'||p.value||CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END AS reference FROM runtime_evidence e JOIN runtime r ON r.evidence_id=e.id JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?)))";
       const metadataRows = this.#database.prepare(`${metadata} ORDER BY reference LIMIT 200`).all(evidenceIds);
@@ -6763,7 +6960,7 @@ var SqliteAnalysisStore = class {
         (fn) => Object.assign({}, fn, {
           labels: labels.filter(
             (label) => label.addressSpace === fn.addressSpace && label.address === fn.address
-          ).map(({ id, name }) => ({ id, name })).toSorted((a, b) => a.id.localeCompare(b.id))
+          ).map(({ id, name: name2 }) => ({ id, name: name2 })).toSorted((a, b) => a.id.localeCompare(b.id))
         })
       )
     };
@@ -7021,11 +7218,11 @@ var SqliteAnalysisStore = class {
         yield group;
         group = [];
       }
-      const record = parseSqlitePayload(row.data);
-      if (!isIndexedExportInstruction(record, spaces, evidence)) {
+      const record2 = parseSqlitePayload(row.data);
+      if (!isIndexedExportInstruction(record2, spaces, evidence)) {
         throw new Error("Invalid indexed export instruction or missing provenance.");
       }
-      group.push(record);
+      group.push(record2);
       previous = offset;
     }
     if (group.length) {
@@ -7220,9 +7417,11 @@ var SqliteAnalysisStore = class {
   captureReceipt(sha256) {
     return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha256);
   }
-  /** Catalog rows contain small import provenance metadata, never capture contents.
-   * @returns {object[]} Small capture metadata rows in import order.
-   */
+  /** Bounded physical-code joins; graphics never imply that a CPU instruction executed. */
+  graphicsEvidence(query) {
+    return this.transaction(() => queryGraphicsEvidence(this.#database, query), false);
+  }
+  /** Small durable import receipts in import order. */
   captureCatalog() {
     return this.#database.prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256").all();
   }
@@ -7231,7 +7430,9 @@ var SqliteAnalysisStore = class {
    */
   recordCaptureReceipt(report) {
     this.#requireTransaction();
-    if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format)) {
+    if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace", "uttori-nes-ppu-evidence"].includes(
+      report.format
+    )) {
       return;
     }
     const now = Date.now();
@@ -7242,7 +7443,7 @@ var SqliteAnalysisStore = class {
       report.sourceName,
       now,
       now,
-      observedImportCount(report.imported, "busEvents") ?? observedImportCount(report.imported, "executionEvents") ?? 0,
+      observedImportCount(report.imported, "graphicsEvents") ?? observedImportCount(report.imported, "busEvents") ?? observedImportCount(report.imported, "executionEvents") ?? 0,
       report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0
     );
   }
@@ -7319,21 +7520,21 @@ function notesPath(directory, sha256) {
   }
   return import_node_path6.default.join(directory, "capture-notes", `${sha256}.json`);
 }
-function isRecord8(value) {
+function isRecord9(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStrings(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 function isAddedCode(value) {
-  return isRecord8(value) && typeof value.start === "number" && Number.isSafeInteger(value.start) && value.start >= 0 && typeof value.end === "number" && Number.isSafeInteger(value.end) && value.end > value.start && typeof value.addressSpace === "string" && typeof value.address === "number" && Number.isSafeInteger(value.address) && value.address >= 0 && isStrings(value.recordIds);
+  return isRecord9(value) && typeof value.start === "number" && Number.isSafeInteger(value.start) && value.start >= 0 && typeof value.end === "number" && Number.isSafeInteger(value.end) && value.end > value.start && typeof value.addressSpace === "string" && typeof value.address === "number" && Number.isSafeInteger(value.address) && value.address >= 0 && isStrings(value.recordIds);
 }
 function isCaptureImportNotes(value) {
-  if (!isRecord8(value) || value.format !== "uttori-capture-notes" || value.version !== 1 || typeof value.sourceSha256 !== "string" || typeof value.sourceName !== "string" || typeof value.importedAt !== "number" || !Number.isFinite(value.importedAt) || !isStrings(value.notes)) {
+  if (!isRecord9(value) || value.format !== "uttori-capture-notes" || value.version !== 1 || typeof value.sourceSha256 !== "string" || typeof value.sourceName !== "string" || typeof value.importedAt !== "number" || !Number.isFinite(value.importedAt) || !isStrings(value.notes)) {
     return false;
   }
   const analysis = value.analysis;
-  return analysis === void 0 || isRecord8(analysis) && (analysis.status === "complete" || analysis.status === "incomplete") && isStrings(analysis.sources) && Array.isArray(analysis.addedCode) && analysis.addedCode.every(isAddedCode);
+  return analysis === void 0 || isRecord9(analysis) && (analysis.status === "complete" || analysis.status === "incomplete") && isStrings(analysis.sources) && Array.isArray(analysis.addedCode) && analysis.addedCode.every(isAddedCode);
 }
 function readCaptureImportNotes(directory, sha256) {
   const file = notesPath(directory, sha256);
@@ -7357,14 +7558,14 @@ var import_node_path7 = __toESM(require("node:path"), 1);
 function isUnknownArray3(value) {
   return Array.isArray(value);
 }
-function isRecord9(value) {
+function isRecord10(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSafeInteger7(value) {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 function assertSourceProjectConfiguration(value) {
-  if (!isRecord9(value)) {
+  if (!isRecord10(value)) {
     throw new Error("Invalid Git source project configuration.");
   }
   const id = value.id;
@@ -7375,26 +7576,26 @@ function assertSourceProjectConfiguration(value) {
   if (value.format !== "uttori-source-project" || value.version !== 1 || typeof id !== "string" || !/^[\w.-]+$/.test(id) || typeof target !== "string" || target === "" || typeof romSha256 !== "string" || !/^[\da-f]{64}$/.test(romSha256) || !isUnknownArray3(sourceRoots) || sourceRoots.length === 0 || !isUnknownArray3(researchRoots) || researchRoots.length === 0) {
     throw new Error("Invalid Git source project configuration.");
   }
-  for (const name of [
+  for (const name2 of [
     ...sourceRoots,
     ...researchRoots,
     value.buildConfig,
     value.layout,
     value.captures
   ]) {
-    if (typeof name !== "string") {
+    if (typeof name2 !== "string") {
       throw new Error("Source project paths must be strings.");
     }
-    assertSourcePath(name);
+    assertSourcePath(name2);
   }
   if (value.limits !== void 0) {
-    if (!isRecord9(value.limits)) {
+    if (!isRecord10(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
-    for (const [name, limit] of Object.entries(value.limits)) {
-      if (name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth" || !(isSafeInteger7(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))) {
+    for (const [name2, limit] of Object.entries(value.limits)) {
+      if (name2 !== "captureBytes" && name2 !== "analysisWorkItems" && name2 !== "analysisCallDepth" || !(isSafeInteger7(limit) && limit >= (name2 === "analysisCallDepth" ? 0 : 1))) {
         throw new Error(
-          `Invalid source work limit: ${name}. Use an integer within the supported range.`
+          `Invalid source work limit: ${name2}. Use an integer within the supported range.`
         );
       }
     }
@@ -7405,7 +7606,7 @@ function parseSourceProject(value) {
   return value;
 }
 function assertSourceProjectLocalInputs(value) {
-  if (!isRecord9(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
+  if (!isRecord10(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
     throw new Error(
       "Configure the local ROM and evidence paths before running this source project."
     );
@@ -7430,7 +7631,7 @@ var informationHex = (value, digits = 4) => {
   return `${sign}$${Math.abs(value).toString(16).toUpperCase().padStart(digits, "0")}`;
 };
 var clip = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
-function isRecord10(value) {
+function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function jsonText(value) {
@@ -7443,7 +7644,7 @@ var stateValue = (value, present = true, includeStructures = false) => {
   if (!present) {
     return "\u2205";
   }
-  if (isRecord10(value)) {
+  if (isRecord11(value)) {
     if (value.kind === "known" && "value" in value) {
       return stateValue(value.value, true, includeStructures);
     }
@@ -7474,7 +7675,7 @@ var effectiveAddressText = (address) => {
 };
 var transitionText = (transition) => `\u0394${transition.field} ${stateValue(transition.before, "before" in transition, true)}\u2192${stateValue(transition.after, "after" in transition, true)}`;
 var stateText = (observation) => {
-  const fields = Object.entries(observation.state).toSorted(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${stateValue(value, true, true)}`).join(",");
+  const fields = Object.entries(observation.state).toSorted(([left], [right]) => left.localeCompare(right)).map(([name2, value]) => `${name2}=${stateValue(value, true, true)}`).join(",");
   return `${observation.source} state ${fields || "\u2205"}${observation.count === void 0 ? "" : ` \xD7${observation.count}`}`;
 };
 var accessText = (access) => {
@@ -7601,7 +7802,7 @@ var projectAnalysisNavigation = (project, target, executionCounts) => {
     (architecture) => specification === architecture || specification.startsWith(`${architecture}.`)
   );
   const nodes = project.shards.analysis.filter(
-    (record) => record.kind === "cfg-node" && record.addressSpace === target.addressSpace && matchesArchitecture(record.specificationId)
+    (record2) => record2.kind === "cfg-node" && record2.addressSpace === target.addressSpace && matchesArchitecture(record2.specificationId)
   ).toSorted((a, b) => a.address - b.address || a.id.localeCompare(b.id));
   let index = nodes.findIndex(({ address }) => address >= target.address);
   if (index < 0) {
@@ -7623,39 +7824,39 @@ var projectAnalysisNavigation = (project, target, executionCounts) => {
     }
     return fileSpaces.has(space) ? offsetList : [];
   };
-  const runtime = project.shards.runtime.filter((record) => {
-    if (!matchesArchitecture(record.architecture)) {
+  const runtime = project.shards.runtime.filter((record2) => {
+    if (!matchesArchitecture(record2.architecture)) {
       return false;
     }
-    if (record.kind === "runtime-memory-access") {
-      return record.instructionAddressSpace === target.addressSpace && addresses.has(record.instructionAddress);
+    if (record2.kind === "runtime-memory-access") {
+      return record2.instructionAddressSpace === target.addressSpace && addresses.has(record2.instructionAddress);
     }
-    if (record.kind === "runtime-control-target") {
-      return record.fromAddressSpace === target.addressSpace && addresses.has(record.fromAddress);
+    if (record2.kind === "runtime-control-target") {
+      return record2.fromAddressSpace === target.addressSpace && addresses.has(record2.fromAddress);
     }
-    if (record.kind === "runtime-coverage") {
-      return locations(record.addressSpace).some(
-        (address) => record.start <= address && address < record.end
+    if (record2.kind === "runtime-coverage") {
+      return locations(record2.addressSpace).some(
+        (address) => record2.start <= address && address < record2.end
       );
     }
-    return record.addressSpace === target.addressSpace && addresses.has(record.address);
+    return record2.addressSpace === target.addressSpace && addresses.has(record2.address);
   });
   const projection = buildInstructionAnalysisAnnotations(project.manifest, {
     ...project.shards,
     analysis: visible,
     runtime,
     annotations: project.shards.annotations.filter(
-      (record) => locations(record.addressSpace).some(
-        (address) => record.start <= address && address < record.end
+      (record2) => locations(record2.addressSpace).some(
+        (address) => record2.start <= address && address < record2.end
       )
     )
   });
   const summaries = new Map(
-    projection.instructions.filter((record) => record.addressSpace === target.addressSpace).map((record) => [
-      record.address,
+    projection.instructions.filter((record2) => record2.addressSpace === target.addressSpace).map((record2) => [
+      record2.address,
       formatInstructionAnnotationSummary({
-        ...record,
-        executionCount: executionCounts?.get(`${record.addressSpace}:${record.address}`) ?? record.executionCount
+        ...record2,
+        executionCount: executionCounts?.get(`${record2.addressSpace}:${record2.address}`) ?? record2.executionCount
       })
     ])
   );
@@ -7669,13 +7870,13 @@ var projectAnalysisNavigation = (project, target, executionCounts) => {
     return `${node.addressSpace}|0x${node.address.toString(16)}  ${bytes.padEnd(16)}  ${node.mnemonic} <${node.mode}> ; ${node.id}${context}${summary ? ` ; ${summary}` : ""}`;
   });
   const captured = runtime.filter(
-    (record) => record.kind === "runtime-instruction" && record.address === target.address
+    (record2) => record2.kind === "runtime-instruction" && record2.address === target.address
   ).slice(0, 32);
   if (captured.length) {
     lines.push(
       "; Saved execution-time instruction variants at the selected address:",
       ...captured.map(
-        (record) => `${record.addressSpace}|0x${record.address.toString(16)}  ${record.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")} ; ${record.architecture} \xB7 recorded ${record.count} time(s)`
+        (record2) => `${record2.addressSpace}|0x${record2.address.toString(16)}  ${record2.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")} ; ${record2.architecture} \xB7 recorded ${record2.count} time(s)`
       )
     );
   }
@@ -7744,11 +7945,11 @@ var readAnalysisSourceCatalog = (directory) => {
 };
 
 // packages/vscode-extension/src/analysis/worker.ts
-function isRecord11(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isDebugMapRange(value) {
-  return isRecord11(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.start === "number" && typeof value.end === "number" && typeof value.sourceId === "number" && typeof value.line === "number" && (value.outputStart === void 0 || typeof value.outputStart === "number") && (value.outputEnd === void 0 || typeof value.outputEnd === "number");
+  return isRecord12(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.start === "number" && typeof value.end === "number" && typeof value.sourceId === "number" && typeof value.line === "number" && (value.outputStart === void 0 || typeof value.outputStart === "number") && (value.outputEnd === void 0 || typeof value.outputEnd === "number");
 }
 function debugMapRanges(values) {
   if (!values.every(isDebugMapRange)) {
@@ -7879,16 +8080,16 @@ var projectRequest = (message) => {
         target.address,
         target.architectureHints
       );
-      const ranges = analysis.flatMap((record) => {
-        if (record.kind !== "cfg-node") {
+      const ranges = analysis.flatMap((record2) => {
+        if (record2.kind !== "cfg-node") {
           return [];
         }
-        const outputRange = record.fileOffset === void 0 ? {} : { outputStart: record.fileOffset, outputEnd: record.fileOffset + record.size };
+        const outputRange = record2.fileOffset === void 0 ? {} : { outputStart: record2.fileOffset, outputEnd: record2.fileOffset + record2.size };
         return [
           {
-            addressSpace: record.addressSpace,
-            start: record.address,
-            end: record.address + record.size,
+            addressSpace: record2.addressSpace,
+            start: record2.address,
+            end: record2.address + record2.size,
             ...outputRange
           }
         ];

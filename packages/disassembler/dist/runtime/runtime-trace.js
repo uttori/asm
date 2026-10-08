@@ -58,6 +58,9 @@ export const validateRuntimeInstructionTraceMetadata = (value) => {
         architecture: string(artifact.architecture, "Instruction trace architecture"),
         addressSpace: string(artifact.addressSpace, "Instruction trace address space"),
         romContentSha256: sha256Identity(artifact.romContentSha256, "Instruction trace ROM content identity"),
+        ...(artifact.romFileSha256 === undefined
+            ? {}
+            : { romFileSha256: sha256Identity(artifact.romFileSha256, "Trace full-file identity") }),
         producer: {
             id: string(producer.id, "Instruction trace producer id"),
             revision: string(producer.revision, "Instruction trace producer revision"),
@@ -255,10 +258,29 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         droppedEvents = chunk.droppedEvents;
         complete = !chunk.active;
         unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
-        for (const address of chunk.addresses) {
+        for (const [eventIndex, address] of chunk.addresses.entries()) {
+            const detail = chunk.details?.[eventIndex];
+            const physical = detail?.state.prg0;
+            let mapping;
+            if (artifact.architecture === "65xx.2a03") {
+                if (!detail || typeof physical !== "number")
+                    throw new Error("NES execution evidence requires captured bytes and physical mapper identity.");
+                // The fetch coordinate is authoritative; unknown/RAM code has no ROM offset.
+                mapping = sha256(canonicalJson({
+                    physical,
+                    mapper: detail.state.mapper,
+                    prgMode: detail.state.prgMode,
+                    r6: detail.state.r6,
+                    r7: detail.state.r7,
+                }));
+            }
             // The temporary key only needs equality. Format stable hexadecimal IDs once per distinct
             // address in finish(), rather than for every repeated execution in a long capture.
-            if (index.add(`pc:${address}`, () => ({ kind: "execution", address }))) {
+            if (index.add(`pc:${address}:${mapping ?? ""}`, () => ({
+                kind: "execution",
+                address,
+                ...(mapping ? { identity: mapping } : {}),
+            }))) {
                 reserve(1);
                 executionRecords++;
             }
@@ -375,7 +397,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             for (const { fact, count } of index.values()) {
                 if (fact.kind === "execution") {
                     emit({
-                        id: `${evidenceId}:${hex(fact.address)}`,
+                        id: `${evidenceId}:${hex(fact.address)}${fact.identity ? `:mapping:${fact.identity}` : ""}`,
                         kind: "runtime-execution",
                         architecture: artifact.architecture,
                         addressSpace,
