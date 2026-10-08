@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import { invariant as assert } from "../validation.js";
 
 /** Mode, reserved byte and big-endian decoded-size word precede every stream. */
 export const LZ_HEADER_BYTES = 4;

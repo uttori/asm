@@ -14,7 +14,7 @@ Earlier Node/editor releases and earlier development project formats are outside
 See the [release gates](TESTING.md#release-candidate-evidence-checklist) and the ares sidecar runtime
 setup for validation requirements and platform limits.
 
-## Quick start
+## Quick Start
 
 ```sh
 npm install --save-dev @uttori/asm-cli
@@ -72,7 +72,7 @@ Analysis projects store metadata in SQLite and keep the source ROM external. Ana
 Unknown bytes remain raw assets. Asar/ca65 compatibility is partial. Emulator binaries and ROMs are
 not included. See the relevant package guide for exact limits.
 
-## Development and support
+## Development & Support
 
 ```sh
 npm ci
@@ -80,6 +80,9 @@ npm run verify
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for source development and checks.
-[Report an issue](https://github.com/uttori/asm/issues). Follow [SECURITY.md](SECURITY.md) for
-vulnerability reports. Licensed under [MIT](LICENSE), with
-[65xx third-party notices](packages/plugin-65xx/THIRD_PARTY_NOTICES.md).
+
+[Report an issue](https://github.com/uttori/asm/issues).
+
+Follow [SECURITY.md](SECURITY.md) for vulnerability reports.
+
+Licensed under [MIT](LICENSE), with [65xx third-party notices](packages/plugin-65xx/THIRD_PARTY_NOTICES.md).

@@ -2,7 +2,7 @@ import { rewriteIndexedPng } from "@uttori/asm-assets/image";
 
 import { readAssetPng } from "../png.js";
 import type { AssetInput } from "../registry.js";
-import { convertBossImage } from "./som-asset-plugin.js";
+import { convertBossImage } from "./som-boss-image.js";
 import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atlas.js";
 import {
   spritePaletteBytes,

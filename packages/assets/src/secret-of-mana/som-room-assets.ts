@@ -1,7 +1,6 @@
-/** Editable room records with fixed ROM ownership and a native-data background preview. */
-import assert from "node:assert/strict";
-
 import type { AssetInput } from "../registry.js";
+/** Editable room records with fixed ROM ownership and a native-data background preview. */
+import { invariant as assert, equal, fail } from "../validation.js";
 import { composeSomRoom, renderSomRoomComposition } from "./som-room-composition.js";
 
 interface RoomCondition {
@@ -108,7 +107,7 @@ function isRoomAsset(value: unknown): value is RoomAsset {
  */
 function integer(value: unknown, maximum: number, name: string): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
-    assert.fail(`${name} must be 0..${maximum}.`);
+    fail(`${name} must be 0..${maximum}.`);
   }
   return value;
 }
@@ -118,13 +117,13 @@ function integer(value: unknown, maximum: number, name: string): number {
  * @returns {RoomAsset} Validated room.
  */
 export function parseRoomAsset(source: AssetInput): RoomAsset {
-  assert.equal(source.mediaType, "application/json", "Room source must be JSON.");
+  equal(source.mediaType, "application/json", "Room source must be JSON.");
   const parsed: unknown = JSON.parse(new TextDecoder().decode(source.bytes));
   if (!isRecord(parsed)) {
-    assert.fail("Room source must be a JSON object.");
+    fail("Room source must be a JSON object.");
   }
-  assert.equal(parsed.format, "som.room");
-  assert.equal(parsed.version, 1);
+  equal(parsed.format, "som.room");
+  equal(parsed.version, 1);
   integer(parsed.id, 510, "room id");
   assert(
     Array.isArray(parsed.header) && parsed.header.length === 8,
@@ -137,7 +136,7 @@ export function parseRoomAsset(source: AssetInput): RoomAsset {
     assert(Array.isArray(parsed[key]), `Missing room ${key}.`);
   }
   if (!isRoomAsset(parsed)) {
-    assert.fail("Room entities, pieces, and triggers must match the room record.");
+    fail("Room entities, pieces, and triggers must match the room record.");
   }
   return parsed;
 }
@@ -149,12 +148,12 @@ export function parseRoomAsset(source: AssetInput): RoomAsset {
 export function parseRoomPreview(bytes: Uint8Array): RoomPreview {
   const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
   if (!isRecord(parsed)) {
-    assert.fail("Room preview resource must be a JSON object.");
+    fail("Room preview resource must be a JSON object.");
   }
-  assert.equal(parsed.format, "som.room.preview");
-  assert.equal(parsed.version, 1);
+  equal(parsed.format, "som.room.preview");
+  equal(parsed.version, 1);
   if (!isRoomPreview(parsed)) {
-    assert.fail("Room preview resource must include tileset and layout records.");
+    fail("Room preview resource must include tileset and layout records.");
   }
   return parsed;
 }
@@ -188,7 +187,7 @@ export function encodeRoomSection(room: RoomAsset, section: string) {
     bytes.push(...room.header);
     for (const entity of room.entities) {
       const flags = integer(entity.flags, 255, "entity flags");
-      assert.equal(flags & 0x3f, 0, "Only packed entity flags 40/80 are defined.");
+      equal(flags & 0x3f, 0, "Only packed entity flags 40/80 are defined.");
       const event = integer(entity.event, 4095, "entity event");
       bytes.push(
         ...condition(entity),
@@ -208,7 +207,7 @@ export function encodeRoomSection(room: RoomAsset, section: string) {
         bytes.push(piece.marker);
         layer = piece.marker - 0xfd;
       }
-      assert.equal(piece.layer, layer, "A layer change requires an explicit marker.");
+      equal(piece.layer, layer, "A layer change requires an explicit marker.");
       const predicate = condition(piece);
       assert(predicate[0] < 0xfe, "FE/FF are layer markers, not piece story indexes.");
       const layout = integer(piece.layout, 1023, "layout id");
@@ -231,7 +230,7 @@ export function encodeRoomSection(room: RoomAsset, section: string) {
     owner && Number.isInteger(owner.address) && Number.isInteger(owner.bytes),
     "Missing fixed section ownership.",
   );
-  assert.equal(
+  equal(
     bytes.length,
     owner.bytes,
     "Room edit changes its fixed ROM extent; relocation is required.",

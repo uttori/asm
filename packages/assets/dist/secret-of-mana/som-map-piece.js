@@ -2,19 +2,24 @@
 import assert from "node:assert/strict";
 /**
  * Decode a complete pointer-bounded map piece. C0CD93..C0D032
- * emits into 128-byte WRAM rows, but its history wraps at the logical piece width. This returns
+ * emits into 128-byte WRAM rows and advances pattern history with an eight-bit column. This returns
  * compact row-major tile IDs, not SNES graphics or a reconstructed capture RAM image.
  * Motif commands reserve one unwritten base cell; C0CD4D applies their rectangles afterward.
- * History references to those still-unwritten cells, recursive motifs and truncated input fail closed.
+ * Motifs decode in queue order against the completed parent and earlier insertions. Narrow motifs
+ * can read outside their own rectangle through the native eight-bit history cursor. Optional
+ * physical history supplies such cells when they also lie outside the parent; missing cells fail.
+ * The input history is copied and never mutated. Recursive motifs and truncated input fail closed.
  * @param {Uint8Array} bytes Pointer-bounded map piece.
  * @returns {object} Compact row-major tile IDs and the consumed extent.
  */
-export function decodeMapPiece(bytes) {
+export function decodeMapPiece(bytes, { history, origin = 0 } = {}) {
     assert(bytes.length >= 3, "Missing map header/data.");
+    assert(Number.isInteger(origin) && origin >= 0 && origin <= 65535, "Invalid map origin.");
     const width = (bytes[0] >>> 1) + 1;
     const height = (bytes[1] >>> 1) + 1;
     let dataOffset = 2;
     const motifs = [];
+    const memory = new Map(history);
     if ((bytes[0] | bytes[1]) & 1) {
         // The native header scanner stops at any byte >= F8. Only FE/FF separators
         // are accepted here, and each motif must decode exactly to that boundary.
@@ -28,30 +33,51 @@ export function decodeMapPiece(bytes) {
             assert(dataOffset < bytes.length, "Unterminated motif definition.");
             marker = bytes[dataOffset++];
             assert(marker === 0xfe || marker === 0xff, "Unsupported motif separator.");
-            const decoded = decodeMapStream(bytes.slice(start, dataOffset - 1), (dimensions & 15) + 1, (dimensions >>> 4) + 1, []);
-            motifs.push({ offset: start, dimensions, ...decoded });
+            // Definitions are recipes, not independently decoded images: a motif can consume
+            // parent cells which do not exist until the base pass has finished.
+            const motif = {
+                offset: start,
+                dimensions,
+                width: (dimensions & 15) + 1,
+                height: (dimensions >>> 4) + 1,
+                bytes: bytes.slice(start, dataOffset - 1),
+            };
+            // Recipes are decoder workspace; keeping them non-enumerable preserves the
+            // existing serialized geometry contract used by retained research proofs.
+            Object.defineProperty(motif, "bytes", { enumerable: false });
+            motifs.push(motif);
             assert(motifs.length <= 8, "Motif definitions exceed the native eight-record workspace.");
         } while (marker !== 0xff);
     }
-    const decoded = decodeMapStream(bytes.slice(dataOffset), width, height, motifs);
+    const decoded = decodeMapStream(bytes.slice(dataOffset), width, height, motifs, memory, origin);
     const consumed = dataOffset + decoded.consumed;
     const commands = decoded.commands.map((c) => ({ ...c, offset: c.offset + dataOffset }));
     if (!motifs.length) {
         return { width, height, consumed, tiles: decoded.tiles, commands };
     }
-    return { ...decoded, consumed, commands, dataOffset, motifs };
+    const result = {
+        ...decoded,
+        consumed,
+        commands,
+        dataOffset,
+        motifs,
+        motifInstances: decoded.motifInstances,
+    };
+    Object.defineProperty(result, "motifInstances", { enumerable: false });
+    return result;
 }
 /** Decode one bounded stream; motif overlays cannot supply history to the earlier base pass.
  * @param {Uint8Array} bytes Command bytes for one piece or motif.
  * @param {number} width Logical tile width.
  * @param {number} height Logical tile height.
- * @param {readonly object[]} motifs Motifs already decoded for this piece.
+ * @param {readonly object[]} motifs Deferred recipes belonging to this piece.
  * @returns {object} Tiles, commands, and motif insertions.
  */
-function decodeMapStream(bytes, width, height, motifs) {
+function decodeMapStream(bytes, width, height, motifs, memory, origin) {
     const output = [];
     const commands = [];
     const insertions = [];
+    const motifInstances = [];
     let offset = 0;
     const take = () => {
         assert(offset < bytes.length, "Truncated map command.");
@@ -93,9 +119,26 @@ function decodeMapStream(bytes, width, height, motifs) {
         else if (opcode < 0xf0) {
             const parameter = take();
             const distance = (opcode & 7) * 2 + (parameter >>> 7) + 1;
-            assert(distance <= (output.length % width) + width, "Pattern exceeds the native previous-row window.");
             count = (parameter & 127) + 1;
-            emit = () => previous(distance);
+            let sourceColumn = (output.length % width) - distance;
+            let sourceRow = Math.floor(output.length / width) * 128;
+            if (sourceColumn < 0) {
+                // The CPU adds width only once after eight-bit underflow. Repeated logical
+                // wrapping would select different cells for a narrow motif.
+                sourceColumn = (sourceColumn + width) & 255;
+                sourceRow -= 128;
+            }
+            emit = () => {
+                const address = (origin + sourceRow + sourceColumn) & 65535;
+                assert(memory.has(address), `Map pattern history needs physical tile ${address.toString(16)}.`);
+                const value = memory.get(address);
+                sourceColumn = (sourceColumn + 1) & 255;
+                if (sourceColumn >= width) {
+                    sourceColumn -= width;
+                    sourceRow += 128;
+                }
+                return value;
+            };
         }
         else if (opcode < 0xf8) {
             let step = 1;
@@ -118,7 +161,12 @@ function decodeMapStream(bytes, width, height, motifs) {
         // The native decoder returns immediately on its last row, even if a run has tiles left.
         const emitted = Math.min(count, width * height - output.length);
         for (let i = 0; i < emitted; i++) {
-            output.push(emit());
+            const value = emit();
+            if (value !== null) {
+                const address = (origin + Math.floor(output.length / width) * 128 + (output.length % width)) & 65535;
+                memory.set(address, value);
+            }
+            output.push(value);
         }
         commands.push({ offset: start, opcode, destination, count, emitted });
     }
@@ -128,13 +176,32 @@ function decodeMapStream(bytes, width, height, motifs) {
         const motif = motifs[insertion.index], x = insertion.destination % width;
         const y = Math.floor(insertion.destination / width);
         assert(x + motif.width <= width && y + motif.height <= height, "Motif exceeds parent layout.");
+        const motifOrigin = (origin + y * 128 + x) & 65535;
+        const decoded = decodeMapStream(motif.bytes, motif.width, motif.height, [], memory, motifOrigin);
+        motifInstances.push(decoded);
+        // Keep first-insertion compatibility while retaining each contextual variant separately.
+        if (!motif.tiles)
+            Object.assign(motif, decoded);
         for (let dy = 0; dy < motif.height; dy++) {
             for (let dx = 0; dx < motif.width; dx++) {
-                tiles[(y + dy) * width + x + dx] = motif.tiles[dy * motif.width + dx];
+                tiles[(y + dy) * width + x + dx] = decoded.tiles[dy * motif.width + dx];
             }
         }
     }
     assert(tiles.every((value) => value !== null), "Unfilled motif placeholder.");
-    return { width, height, consumed: offset, tiles, commands, baseTiles: output, insertions };
+    const result = {
+        width,
+        height,
+        consumed: offset,
+        tiles,
+        commands,
+        baseTiles: output,
+        insertions,
+        motifInstances,
+    };
+    // These per-placement variants are execution workspace. The composed tiles remain
+    // the serialized geometry so historical proof snapshots keep their contract.
+    Object.defineProperty(result, "motifInstances", { enumerable: false });
+    return result;
 }
 //# sourceMappingURL=som-map-piece.js.map

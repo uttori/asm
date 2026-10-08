@@ -5,11 +5,14 @@ import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { decodePlanarTiles, encodePlanarTiles, snesNativeEncoders } from "@uttori/asm-assets/snes";
 import { definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
 import { readPcmAudio } from "../audio.js";
-import { readAssetPng } from "../png.js";
-import { encodeBossGraphics, expandBossGraphics } from "./som-boss-graphics.js";
+import { convertBossImage as encodeNativeBossImage } from "./som-boss-image.js";
+export { readBossNativeReference } from "./som-boss-image.js";
+import { indexedSourceCodecs } from "../source-codecs.js";
 import { encodeFrameAtlas, readFrameAtlasSelection, readFrameLayout } from "./som-frame-atlas.js";
 import { compressSomLz, decompressSomLz } from "./som-lz.js";
 import { convertRoomAsset } from "./som-room-assets.js";
+import { convertSomDialogueScript } from "./som-dialogue.js";
+import { effectiveSomSourcePalette, normalizeSomSource, somSourceDependencies, } from "./som-source.js";
 import { parseSpritePaletteCatalog, readSpritePaletteCatalog, spritePaletteBytes, } from "./som-sprite-palettes.js";
 import { decodeWorldRow, encodeWorldRow } from "./som-world-rle.js";
 const registry = new AssetRegistry().registerImporter(pngImporter);
@@ -20,143 +23,13 @@ const audioRegistry = new AssetRegistry().registerImporter(waveImporter);
 for (const encoder of withAudioEncoder(snesNativeEncoders)) {
     audioRegistry.registerEncoder(encoder);
 }
-/** Read a private PNG chunk holding the exact native boss stream for one segment.
- * @param {Uint8Array} png PNG bytes.
- * @param {string} [wanted] Four-character chunk type.
- * @returns {Uint8Array | undefined} Chunk payload, excluding its CRC.
- */
-function nativeBossChunk(png, wanted = "soMz") {
-    const image = readAssetPng(png);
-    let native;
-    for (const { type, data } of image.chunks) {
-        if (type === wanted) {
-            if (native) {
-                throw new Error("Duplicate native boss graphics PNG chunk.");
-            }
-            // The parsed payload borrows PNG storage; native outputs need independent ownership.
-            native = Uint8Array.from(data);
-        }
+/** Normalize authoring representations before the independent native boss codec. Builds never write source data. */
+export function convertBossImage(source, options, resources = {}, sourceCodecs = indexedSourceCodecs()) {
+    if (options.layout && (options.sourceBinding || options.paletteSources)) {
+        const normalized = normalizeSomSource(source, options, resources, readSpritePaletteCatalog(options, resources), sourceCodecs);
+        return encodeNativeBossImage(normalized.source, options, resources, normalized);
     }
-    return native;
-}
-/** Decode the two graphics stages and reject any unused bytes in a preserved native stream.
- * @param {Uint8Array} native Preserved native chunk.
- * @param {string} storage `lz-rle` or `rle`.
- * @param {number} size Expected expanded size.
- * @returns {{bytes: Uint8Array, mode: number | undefined, unusedHeaderByte: number | undefined}} Expanded tiles and any LZ header fields.
- */
-function decodeBossStream(native, storage, size) {
-    let intermediate = native;
-    let mode;
-    let unusedHeaderByte;
-    if (storage === "lz-rle") {
-        const decoded = decompressSomLz(native);
-        if (decoded.compressedBytes !== native.length) {
-            throw new Error("Boss LZ stream has trailing bytes.");
-        }
-        intermediate = decoded.data;
-        mode = decoded.mode;
-        unusedHeaderByte = decoded.unusedHeaderByte;
-    }
-    const expanded = expandBossGraphics(intermediate, size);
-    if (expanded.consumed !== intermediate.length) {
-        throw new Error("Boss mask stream has trailing bytes.");
-    }
-    return { bytes: expanded.data, mode, unusedHeaderByte };
-}
-/**
- * Rebuild native graphics from previewable pixels. An unchanged PNG retains its exact
- * token choices. Fixed sizing pads after the complete stream; encoded sizing exposes
- * growth to the source layout/relocation service instead of truncating or allocating here.
- * @param {AssetInput} source Indexed PNG, optionally carrying a native chunk.
- * @param {Readonly<Record<string, unknown>>} options Storage, original byteLength, optional native resource, sizePolicy (fixed by default or encoded), and atlas resources.
- * @param {Readonly<Record<string, AssetInput>>} [resources] Layout and palette sidecars.
- * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Independently decoded native bytes.
- */
-export function convertBossImage(source, options, resources = {}) {
-    const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
-    if (storage !== "lz-rle" && storage !== "rle") {
-        throw new Error("Boss storage must be lz-rle or rle.");
-    }
-    if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
-        throw new Error("Boss byteLength must be a positive integer.");
-    }
-    if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
-        throw new Error("Boss sizePolicy must be fixed or encoded.");
-    }
-    // Frame atlases invert their recorded tile placements before the boss codecs.
-    // Older native-order sheets remain supported for existing callers.
-    const layout = options.layout ? readFrameLayout(options, resources) : undefined;
-    let pixels;
-    let segmentName;
-    if (layout) {
-        if (typeof options.segment !== "string") {
-            throw new Error("Frame atlas segment is required.");
-        }
-        segmentName = options.segment;
-        pixels = encodeFrameAtlas(source, layout, segmentName, readSpritePaletteCatalog(options, resources));
-    }
-    else {
-        pixels = convertAsset(registry, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
-    }
-    const segmentIndex = segmentName ? Object.keys(layout?.segments ?? {}).indexOf(segmentName) : -1;
-    if (segmentIndex > 25) {
-        throw new Error("Boss atlas supports at most 26 native segments.");
-    }
-    const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
-    let original;
-    if (options.native !== undefined) {
-        if (typeof options.native !== "string" || !options.native) {
-            throw new Error("Boss native data requires an explicit original compressed resource.");
-        }
-        const nativeResource = Object.hasOwn(resources, options.native)
-            ? resources[options.native]
-            : undefined;
-        if (!nativeResource) {
-            throw new Error("Boss native data requires an explicit original compressed resource.");
-        }
-        // A Git-tracked original stream survives ordinary PNG tools dropping private
-        // chunks. It remains a compression reference, never a replacement for edited pixels.
-        original = nativeResource.bytes;
-    }
-    else {
-        original = nativeBossChunk(source.bytes, chunkName);
-    }
-    if (original) {
-        if (original.length !== byteLength) {
-            throw new Error("Boss native data has the wrong byte length.");
-        }
-        const decoded = decodeBossStream(original, storage, pixels.length);
-        if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
-            return { primaryOutput: "graphics", outputs: { graphics: { bytes: original } } };
-        }
-    }
-    const intermediate = encodeBossGraphics(pixels);
-    let encoded = intermediate;
-    if (storage === "lz-rle") {
-        const selectedMode = original ? original[0] : mode;
-        const selectedHeaderByte = original ? original[1] : unusedHeaderByte;
-        encoded = compressSomLz(intermediate, {
-            mode: selectedMode,
-            unusedHeaderByte: selectedHeaderByte,
-        });
-    }
-    if (sizePolicy === "fixed" && encoded.length > byteLength) {
-        throw new Error("Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object.");
-    }
-    const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
-    if (verified.some((byte, index) => byte !== pixels[index])) {
-        throw new Error("Boss graphics inverse failed.");
-    }
-    if (sizePolicy === "encoded") {
-        return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
-    }
-    const padded = new Uint8Array(byteLength);
-    padded.set(encoded);
-    if (original) {
-        padded.set(original.subarray(encoded.length), encoded.length);
-    }
-    return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
+    return encodeNativeBossImage(source, options, resources);
 }
 /**
  * Read the native BRR chunk from a playable PCM WAVE and verify every decoded sample.
@@ -381,165 +254,186 @@ const imageOptions = (options) => {
     }
     return rest;
 };
-const plugin = definePlugin({
-    manifest: {
-        id: "som.assets",
-        name: "Secret of Mana assets",
-        version: "1.0.0",
-        apiVersion: PLUGIN_API_VERSION,
-        requires: [{ pluginId: "uttori.asm-plugin-snes", version: "1.0.0" }],
-    },
-    activate(context) {
-        context.registerAssetFormat({
-            id: "som.room",
+/** Install native SoM policy with independently registered source representations, including future editor codecs. */
+export function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
+    return definePlugin({
+        manifest: {
+            id: "som.assets",
+            name: "Secret of Mana assets",
             version: "1.0.0",
-            targets: ["snes.sfc"],
-            resourcePaths: (options) => (typeof options.preview === "string" ? [options.preview] : []),
-            convert: convertRoomAsset,
-        });
-        context.registerAssetFormat({
-            id: "som.palette.bgr555",
-            version: "1.0.0",
-            targets: ["snes.sfc"],
-            convert(source, options) {
-                if (source.mediaType !== "application/json" || typeof options.palette !== "string") {
-                    throw new Error("SoM palette asset requires a JSON catalogue and palette address.");
-                }
-                // Palette views can share trailing ROM words. Emit one bounded owner for each
-                // physical span while retaining both complete display palettes in the catalogue.
-                for (const name of ["wordOffset", "wordCount"]) {
-                    if (options[name] !== undefined && typeof options[name] !== "number") {
-                        throw new Error(`SoM palette ${name} must be a number.`);
+            apiVersion: PLUGIN_API_VERSION,
+            requires: [{ pluginId: "uttori.asm-plugin-snes", version: "1.0.0" }],
+        },
+        activate(context) {
+            context.registerAssetFormat({
+                id: "som.dialogue.script",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                resourcePaths: (options) => typeof options.layout === "string" ? [options.layout] : [],
+                convert: convertSomDialogueScript,
+            });
+            context.registerAssetFormat({
+                id: "som.room",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                resourcePaths: (options) => (typeof options.preview === "string" ? [options.preview] : []),
+                convert: convertRoomAsset,
+            });
+            context.registerAssetFormat({
+                id: "som.palette.bgr555",
+                version: "1.1.0",
+                resourceDependencies: (source, options, resources) => somSourceDependencies(source, options, resources, sourceCodecs),
+                targets: ["snes.sfc"],
+                convert(source, options, resources) {
+                    if (source.mediaType !== "application/json" || typeof options.palette !== "string") {
+                        throw new Error("SoM palette asset requires a JSON catalogue and palette address.");
                     }
-                }
-                const bytes = spritePaletteBytes(parseSpritePaletteCatalog(source.bytes), options.palette, {
-                    wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : undefined,
-                    wordCount: typeof options.wordCount === "number" ? options.wordCount : undefined,
-                });
-                return { primaryOutput: "palette", outputs: { palette: { bytes } } };
-            },
-        });
-        context.registerAssetFormat({
-            id: "som.boss.graphics",
-            version: "1.1.0",
-            targets: ["snes.sfc"],
-            resourcePaths: (options) => [options.layout, options.palettes, options.native].filter((path) => typeof path === "string"),
-            convert: convertBossImage,
-        });
-        context.registerAssetFormat({
-            id: "som.sprite.frames",
-            version: "1.1.0",
-            targets: ["snes.sfc"],
-            resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
-            convert(source, options, resources) {
-                // An omitted selector owns the whole contiguous atlas; gaps require an explicit selection.
-                const tiles = encodeFrameAtlas(source, readFrameLayout(options, resources), readFrameAtlasSelection(options), readSpritePaletteCatalog(options, resources));
-                return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
-            },
-        });
-        context.registerAssetFormat({
-            id: "som.tile.actor3bpp",
-            version: "1.0.0",
-            targets: ["snes.sfc"],
-            resourcePaths: (options) => {
-                const palette = options.palette;
-                return typeof palette === "string" && palette !== "embedded" && palette !== "auto"
-                    ? [palette]
-                    : [];
-            },
-            convert(source, options, resources) {
-                const converted = convertAsset(registry, {
-                    source,
-                    format: "snes.tile.4bpp",
-                    options: imageOptions(options),
-                    resources,
-                });
-                const native = converted.outputs.tiles.bytes;
-                const group = options.group;
-                if (typeof group !== "number") {
-                    throw new Error("actor group must be 0..2.");
-                }
-                const packed = encodeActor3bpp(native, group);
-                const decoded = decodeActor3bpp(packed, group);
-                if (decoded.length !== native.length ||
-                    decoded.some((byte, index) => byte !== native[index])) {
-                    throw new Error("Actor conversion failed exact inverse verification.");
-                }
-                return {
-                    primaryOutput: "tiles",
-                    outputs: {
-                        tiles: { bytes: packed },
-                        tilemap: { bytes: converted.outputs.tilemap.bytes },
-                        palette: { bytes: converted.outputs.palette.bytes },
-                    },
-                };
-            },
-        });
-        context.registerAssetFormat({
-            id: "som.brr.pcm",
-            version: "1.0.0",
-            targets: ["snes.sfc"],
-            convert: convertBrrWave,
-        });
-        context.registerAssetFormat({
-            id: "som.brr.segment",
-            version: "1.0.0",
-            targets: ["snes.sfc"],
-            convert(source, options) {
-                const brr = convertBrrWave(source, options).outputs.brr;
-                // The violin stream crosses a ROM bank inside one nine-byte BRR block.
-                // Slice only after native encoding so both banks share one editable source.
-                return {
-                    primaryOutput: "brr",
-                    outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } },
-                };
-            },
-        });
-        context.registerAssetTransform({
-            id: "som.world.rle",
-            version: "1.0.0",
-            targets: ["snes.sfc"],
-            optionSchema: { size: { type: "integer", minimum: 1, maximum: 65536 } },
-            encode: (bytes, options) => {
-                const size = typeof options.size === "number" ? options.size : 512;
-                if (bytes.length !== size) {
-                    throw new Error("World row size mismatch.");
-                }
-                return encodeWorldRow(bytes);
-            },
-            decode: (bytes, options, maxOutputBytes) => {
-                const size = typeof options.size === "number" ? options.size : 512;
-                if (size > maxOutputBytes) {
-                    throw new Error("World row exceeds output limit.");
-                }
-                const result = decodeWorldRow(bytes, size);
-                if (result.consumed !== bytes.length) {
-                    throw new Error("Trailing bytes after world row.");
-                }
-                return result.data;
-            },
-        });
-        context.registerAssetTransform({
-            id: "som.lz",
-            version: "1.0.0",
-            targets: ["snes.sfc"],
-            optionSchema: {
-                mode: { type: "enum", enum: ["auto", 0, 1, 2, 3, 4, 5] },
-                unusedHeaderByte: { type: "integer", minimum: 0, maximum: 255 },
-            },
-            validateOptions: (options) => {
-                compressSomLz(new Uint8Array(), options);
-            },
-            encode: (bytes, options) => compressSomLz(bytes, options),
-            decode: (bytes, _options, maxOutputBytes) => {
-                const result = decompressSomLz(bytes, 0, maxOutputBytes);
-                if (result.compressedBytes !== bytes.length) {
-                    throw new Error("Trailing bytes after SoM LZ stream.");
-                }
-                return result.data;
-            },
-        });
-    },
-});
-export default plugin;
+                    // Palette views can share trailing ROM words. Emit one bounded owner for each
+                    // physical span while retaining both complete display palettes in the catalogue.
+                    for (const name of ["wordOffset", "wordCount"]) {
+                        if (options[name] !== undefined && typeof options[name] !== "number") {
+                            throw new Error(`SoM palette ${name} must be a number.`);
+                        }
+                    }
+                    const bytes = spritePaletteBytes(effectiveSomSourcePalette(parseSpritePaletteCatalog(source.bytes), options, resources, undefined, sourceCodecs), options.palette, {
+                        wordOffset: typeof options.wordOffset === "number" ? options.wordOffset : undefined,
+                        wordCount: typeof options.wordCount === "number" ? options.wordCount : undefined,
+                    });
+                    return { primaryOutput: "palette", outputs: { palette: { bytes } } };
+                },
+            });
+            context.registerAssetFormat({
+                id: "som.boss.graphics",
+                version: "1.2.0",
+                sourceRepresentations: sourceCodecs.representations(),
+                resourceDependencies: (source, options, resources) => somSourceDependencies(source, options, resources, sourceCodecs),
+                targets: ["snes.sfc"],
+                resourcePaths: (options) => [options.layout, options.palettes, options.native].filter((path) => typeof path === "string"),
+                convert: (source, options, resources) => convertBossImage(source, options, resources, sourceCodecs),
+            });
+            context.registerAssetFormat({
+                id: "som.sprite.frames",
+                version: "1.2.0",
+                sourceRepresentations: sourceCodecs.representations(),
+                resourceDependencies: (source, options, resources) => somSourceDependencies(source, options, resources, sourceCodecs),
+                targets: ["snes.sfc"],
+                resourcePaths: (options) => [options.layout, options.palettes].filter((path) => typeof path === "string"),
+                convert(source, options, resources) {
+                    // An omitted selector owns the whole contiguous atlas; gaps require an explicit selection.
+                    const catalog = readSpritePaletteCatalog(options, resources);
+                    // Existing PNG declarations keep their selection-scoped validation. Authoring bindings require
+                    // complete inventory reconciliation so an unsupported edit cannot hide in an unselected owner.
+                    const normalized = options.sourceBinding !== undefined || options.paletteSources !== undefined
+                        ? normalizeSomSource(source, options, resources, catalog, sourceCodecs)
+                        : { source, layout: readFrameLayout(options, resources), catalog };
+                    const tiles = encodeFrameAtlas(normalized.source, normalized.layout, readFrameAtlasSelection(options), normalized.catalog);
+                    return { primaryOutput: "tiles", outputs: { tiles: { bytes: tiles } } };
+                },
+            });
+            context.registerAssetFormat({
+                id: "som.tile.actor3bpp",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                resourcePaths: (options) => {
+                    const palette = options.palette;
+                    return typeof palette === "string" && palette !== "embedded" && palette !== "auto"
+                        ? [palette]
+                        : [];
+                },
+                convert(source, options, resources) {
+                    const converted = convertAsset(registry, {
+                        source,
+                        format: "snes.tile.4bpp",
+                        options: imageOptions(options),
+                        resources,
+                    });
+                    const native = converted.outputs.tiles.bytes;
+                    const group = options.group;
+                    if (typeof group !== "number") {
+                        throw new Error("actor group must be 0..2.");
+                    }
+                    const packed = encodeActor3bpp(native, group);
+                    const decoded = decodeActor3bpp(packed, group);
+                    if (decoded.length !== native.length ||
+                        decoded.some((byte, index) => byte !== native[index])) {
+                        throw new Error("Actor conversion failed exact inverse verification.");
+                    }
+                    return {
+                        primaryOutput: "tiles",
+                        outputs: {
+                            tiles: { bytes: packed },
+                            tilemap: { bytes: converted.outputs.tilemap.bytes },
+                            palette: { bytes: converted.outputs.palette.bytes },
+                        },
+                    };
+                },
+            });
+            context.registerAssetFormat({
+                id: "som.brr.pcm",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                convert: convertBrrWave,
+            });
+            context.registerAssetFormat({
+                id: "som.brr.segment",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                convert(source, options) {
+                    const brr = convertBrrWave(source, options).outputs.brr;
+                    // The violin stream crosses a ROM bank inside one nine-byte BRR block.
+                    // Slice only after native encoding so both banks share one editable source.
+                    return {
+                        primaryOutput: "brr",
+                        outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } },
+                    };
+                },
+            });
+            context.registerAssetTransform({
+                id: "som.world.rle",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                optionSchema: { size: { type: "integer", minimum: 1, maximum: 65536 } },
+                encode: (bytes, options) => {
+                    const size = typeof options.size === "number" ? options.size : 512;
+                    if (bytes.length !== size) {
+                        throw new Error("World row size mismatch.");
+                    }
+                    return encodeWorldRow(bytes);
+                },
+                decode: (bytes, options, maxOutputBytes) => {
+                    const size = typeof options.size === "number" ? options.size : 512;
+                    if (size > maxOutputBytes) {
+                        throw new Error("World row exceeds output limit.");
+                    }
+                    const result = decodeWorldRow(bytes, size);
+                    if (result.consumed !== bytes.length) {
+                        throw new Error("Trailing bytes after world row.");
+                    }
+                    return result.data;
+                },
+            });
+            context.registerAssetTransform({
+                id: "som.lz",
+                version: "1.0.0",
+                targets: ["snes.sfc"],
+                optionSchema: {
+                    mode: { type: "enum", enum: ["auto", 0, 1, 2, 3, 4, 5] },
+                    unusedHeaderByte: { type: "integer", minimum: 0, maximum: 255 },
+                },
+                validateOptions: (options) => {
+                    compressSomLz(new Uint8Array(), options);
+                },
+                encode: (bytes, options) => compressSomLz(bytes, options),
+                decode: (bytes, _options, maxOutputBytes) => {
+                    const result = decompressSomLz(bytes, 0, maxOutputBytes);
+                    if (result.compressedBytes !== bytes.length) {
+                        throw new Error("Trailing bytes after SoM LZ stream.");
+                    }
+                    return result.data;
+                },
+            });
+        },
+    });
+}
+export default createSomAssetPlugin();
 //# sourceMappingURL=som-asset-plugin.js.map

@@ -1,14 +1,7 @@
+export { readBossNativeReference } from "./som-boss-image.js";
 import type { AssetInput, AssetOutput } from "../registry.js";
-/**
- * Rebuild native graphics from previewable pixels. An unchanged PNG retains its exact
- * token choices. Fixed sizing pads after the complete stream; encoded sizing exposes
- * growth to the source layout/relocation service instead of truncating or allocating here.
- * @param {AssetInput} source Indexed PNG, optionally carrying a native chunk.
- * @param {Readonly<Record<string, unknown>>} options Storage, original byteLength, optional native resource, sizePolicy (fixed by default or encoded), and atlas resources.
- * @param {Readonly<Record<string, AssetInput>>} [resources] Layout and palette sidecars.
- * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Independently decoded native bytes.
- */
-export declare function convertBossImage(source: AssetInput, options: Readonly<Record<string, unknown>>, resources?: Readonly<Record<string, AssetInput>>): {
+/** Normalize authoring representations before the independent native boss codec. Builds never write source data. */
+export declare function convertBossImage(source: AssetInput, options: Readonly<Record<string, unknown>>, resources?: Readonly<Record<string, AssetInput>>, sourceCodecs?: import("../source-codecs.js").AssetSourceCodecRegistry<import("../indexed-document.ts").IndexedDocument>): {
     primaryOutput: string;
     outputs: {
         graphics: {
@@ -73,6 +66,8 @@ export declare const somTitleLayout: Readonly<{
     blockRows: "bottom-to-top";
     withinBlock: "tl-bl-br-tr";
 }>;
-declare const plugin: import("@uttori/asm-core/plugin").AssemblerPlugin<unknown>;
-export default plugin;
+/** Install native SoM policy with independently registered source representations, including future editor codecs. */
+export declare function createSomAssetPlugin(sourceCodecs?: import("../source-codecs.js").AssetSourceCodecRegistry<import("../indexed-document.ts").IndexedDocument>): import("@uttori/asm-core/plugin").AssemblerPlugin<unknown>;
+declare const _default: import("@uttori/asm-core/plugin").AssemblerPlugin<unknown>;
+export default _default;
 //# sourceMappingURL=som-asset-plugin.d.ts.map

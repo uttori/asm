@@ -1,6 +1,6 @@
 import { rewriteIndexedPng } from "@uttori/asm-assets/image";
 import { readAssetPng } from "../png.js";
-import { convertBossImage } from "./som-asset-plugin.js";
+import { convertBossImage } from "./som-boss-image.js";
 import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atlas.js";
 import { spritePaletteBytes, spritePaletteColors, validateSpritePaletteAliases, } from "./som-sprite-palettes.js";
 /** A use is an identity tuple, not a display name or an ordering-dependent user entry.
