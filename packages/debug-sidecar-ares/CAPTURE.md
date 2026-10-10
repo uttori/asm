@@ -84,8 +84,11 @@ also export JSON for the CLI's `evidence-import --instruction-trace` workflow. U
 **Assembly: Import Capture into Source Project** (`asm.source.importCapture`) for instruction
 or bus captures, or choose **Stop Capture and Import Evidence** during the active recording.
 
-Keep original captures: project storage retains facts, counts, and provenance, while ordered
-history and replay context remain in the original archive and companion files. `asm.trace.maxImportSizeMiB` defaults to 2048.
+Original ACT2 captures and complete context directories are temporary import inputs. Project
+storage persists facts, counts, bounded reports and provenance independently of them. Remove
+the originals yourself after successful import; later project operations do not require them.
+Ordered history and capture replay are not part of the imported projection. Replay or restore
+requires an explicitly selected temporary input while it is available. `asm.trace.maxImportSizeMiB` defaults to 2048.
 Raise it deliberately for larger files. `asm.trace.indexMode` supports full instruction indexing only.
 See the [CLI evidence reference](https://github.com/uttori/asm/blob/master/packages/cli/GUIDE.md#offline-runtime-evidence).
 Import validates ROM identity and the entire stream before publication. A failed, cancelled,
@@ -103,7 +106,7 @@ snapshots do not identify the CPU instructions that configured a channel.
 Bus-only graphics reconstruction reports register-derived VRAM/CGRAM/OAM destination candidates.
 Unknown setup and latch state remain unknown. Actual internal writes, suppression, and latch-only
 outcomes require the separately negotiated PPU scope. Reports retain bounded detail and aggregate
-totals. The original archive is required to reconstruct ordered transfer history.
+totals. Ordered transfer history is outside the imported projection.
 
 ## Native file sink
 

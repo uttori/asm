@@ -10,7 +10,10 @@ import {
   type CaptureFileHeader,
   type CaptureNesBusAccessV2,
 } from "@uttori/asm-debug-adapter";
-import { verifyRuntimeCaptureCompanion } from "@uttori/asm-disassembler";
+import {
+  DEFAULT_RUNTIME_TRACE_MAX_BYTES,
+  verifyRuntimeCaptureCompanion,
+} from "@uttori/asm-disassembler";
 
 /** NPP1 is a halted graphics view, not a save state or a rendered frame. */
 export const NES_PPU_SNAPSHOT_BYTES = 13056;
@@ -243,11 +246,13 @@ export async function summarizeNesPPUCapture(
     readonly onBusEvent?: (event: CaptureNesBusAccessV2) => void;
     readonly romFileSha256: string;
     readonly romContentSha256: string;
+    /** Per-archive byte limit; defaults to the shared 32 GiB capture budget. */
     readonly maxBytes?: number;
     readonly signal?: AbortSignal;
   },
 ): Promise<NesPPUCaptureSummary> {
-  const header = await readCaptureFileHeader(file, options);
+  const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
+  const header = await readCaptureFileHeader(file, limits);
   if (
     header.scope !== "nes.cpu-bus-ppu" ||
     header.romFileSha256 !== options.romFileSha256 ||
@@ -345,7 +350,7 @@ export async function summarizeNesPPUCapture(
         }
       }
     },
-    options,
+    limits,
   );
   if (
     !result.complete ||

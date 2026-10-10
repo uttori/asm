@@ -5,7 +5,8 @@ import { createRuntimeTraceFileSource, DEFAULT_RUNTIME_TRACE_MAX_BYTES, } from "
 import { validateRuntimeInstructionTraceMetadata, } from "./runtime-trace.js";
 /**
  * Select JSON or ACT2 by its magic bytes. ACT2 instructions pass straight from the decoder to the
- * consumer, retaining only one bounded chunk. The durable archive remains the replayable source.
+ * consumer, retaining only one bounded chunk. The file is needed until this reader finishes;
+ * imported project facts and provenance must remain usable after the input is removed.
  * @param {string} file Selected capture, including older .json.act2 archives.
  * @param {RuntimeTraceFileOptions} options Input byte budget, cancellation and progress.
  * @returns {Promise<RuntimeTraceSource>} Identity plus a reader that rejects incomplete archives.

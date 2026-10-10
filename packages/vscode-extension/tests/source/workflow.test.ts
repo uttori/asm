@@ -1,5 +1,33 @@
 import { test } from "../../../../tests/ava-helper.js";
-import { sourceWorkflow, type SourceWorkflowState } from "../../src/source/workflow.js";
+import {
+  shouldClearSourceCandidate,
+  sourceWorkflow,
+  type SourceWorkflowState,
+} from "../../src/source/workflow.js";
+
+test("stale generation selections return to Prepare while active merges retain recovery actions", (t) => {
+  for (const phase of ["idle", "verified", "checkpoint"] as const) {
+    const stale = { phase, candidateStale: true, candidateAccepted: false };
+    t.true(shouldClearSourceCandidate(stale));
+    const steps = sourceWorkflow({
+      phase,
+      candidate: !shouldClearSourceCandidate(stale),
+      analysisReady: true,
+    });
+    t.is(steps.find((step) => step.current)?.command, "asm.source.prepare");
+    t.false(shouldClearSourceCandidate({ ...stale, candidateStale: false }));
+  }
+  for (const phase of ["merging", "committed", "diverged"] as const) {
+    t.false(shouldClearSourceCandidate({ phase, candidateStale: true, candidateAccepted: true }));
+  }
+  t.true(
+    shouldClearSourceCandidate({
+      phase: "verified",
+      candidateStale: false,
+      candidateAccepted: true,
+    }),
+  );
+});
 
 test("regeneration offers only the next valid transition across evidence, checkpoint, merge and recovery", (t) => {
   const cases: [SourceWorkflowState, string | undefined][] = [

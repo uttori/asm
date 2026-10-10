@@ -767,6 +767,8 @@ export class PluginManager implements PluginDisposable {
             ))) ||
         !isArray(record.value.expressionSets) ||
         !isArray(record.value.lifecycle) ||
+        (record.value.createSyntaxProfile !== undefined &&
+          typeof record.value.createSyntaxProfile !== "function") ||
         (record.value.syntaxProfile !== undefined &&
           (typeof record.value.syntaxProfile.id !== "string" ||
             typeof record.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" ||

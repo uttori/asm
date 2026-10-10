@@ -132,7 +132,7 @@ export declare function handleAlign(session: Assembler, words: readonly string[]
  */
 export declare function handleCa65Incbin(session: Assembler, words: readonly string[]): void;
 /**
- * Implements the flat-image subset of ca65 `.assert`.
+ * Implements the flat-image subset of ca65 `.assert`, deferring provisional asset layouts in tooling.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  */

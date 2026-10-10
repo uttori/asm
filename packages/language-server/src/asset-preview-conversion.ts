@@ -8,7 +8,7 @@ import {
   writePcmWave,
 } from "@uttori/asm-assets/audio";
 import { rawEncoder, rawImporter, jsonImporter } from "@uttori/asm-assets/data";
-import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
+import { pngImporter, readAssetPng, withImageEncoders } from "@uttori/asm-assets/image";
 import { rgbaNativePng, rgbaPreviewPng, waveformPreviewPng } from "@uttori/asm-assets/preview";
 import {
   convertBossImage,
@@ -42,6 +42,7 @@ import {
 } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
 import { asepriteRasterImporter } from "@uttori/asm-assets/source-codecs";
+import { NES_CHR_CODEC, nesAssetFormats } from "@uttori/asm-plugin-65xx";
 
 /** Inputs are already resolved and size checked in the language server. */
 export interface AssetPreviewInput {
@@ -326,6 +327,9 @@ function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
  * @returns {AssetPreviewResult} Display metadata and bounded PNG/WAVE media.
  */
 export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResult {
+  if (input.format === NES_CHR_CODEC) {
+    return convertNesChrPreview(input);
+  }
   if (input.format === "som.room") {
     return convertSomRoomPreview(input);
   }
@@ -392,4 +396,41 @@ export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResul
     };
   }
   return { ...common, kind: "binary" };
+}
+
+/** Validate with the assembly codec, then display native indexed pixels without inferring a game palette. */
+function convertNesChrPreview(input: AssetPreviewInput): AssetPreviewResult {
+  const codec = nesAssetFormats.find((format) => format.id === NES_CHR_CODEC)!;
+  const result = codec.convert(input.source, input.options, input.resources);
+  const output = input.output ?? result.primaryOutput;
+  if (output !== result.primaryOutput) {
+    throw new Error(`Asset format '${input.format}' has no output '${output}'.`);
+  }
+  const image = readAssetPng(input.source.bytes).toIndexed({ copy: false });
+  const rgba = new Uint8Array(image.indexes.length * 4);
+  for (let pixel = 0; pixel < image.indexes.length; pixel++) {
+    rgba.set(image.palette[image.indexes[pixel]], pixel * 4);
+  }
+  const composed = Buffer.from(rgbaNativePng(rgba, image.width, image.height)).toString("base64");
+  return {
+    kind: "image",
+    sourceBytes: input.source.bytes.length,
+    encodedBytes: result.outputs[output].bytes.length,
+    format: input.format,
+    output,
+    metadata: {
+      width: image.width,
+      height: image.height,
+      tiles: image.indexes.length / 64,
+      bitDepth: 2,
+      tileOrder: "row-major",
+      palette: "source PNG indexes; gameplay colors are not inferred",
+    },
+    thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, image.width, image.height, 192)).toString(
+      "base64",
+    ),
+    // NES source atlases already follow native storage order; both views must show the same pixels.
+    composedPngBase64: composed,
+    storagePngBase64: composed,
+  };
 }

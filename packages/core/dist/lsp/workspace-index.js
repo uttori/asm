@@ -99,9 +99,11 @@ export class WorkspaceIndex {
             options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
         this.targetOptions = Object.freeze({ ...options.targetOptions });
         this.directiveCatalog = this.toolingCatalog.getDirectives();
+        const target = this.environment.getTarget(this.target);
+        const normalizedOptions = target?.createOptions?.(this.targetOptions) ?? this.targetOptions;
         this.directivePrefixes =
-            this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ??
-                ASAR_SYNTAX_PROFILE.directivePrefixes;
+            (target?.createSyntaxProfile?.(normalizedOptions) ?? target?.syntaxProfile)
+                ?.directivePrefixes ?? ASAR_SYNTAX_PROFILE.directivePrefixes;
         this.logger = options.logger;
         this.cache = options.cacheDir ? new RootAnalysisCache(options.cacheDir) : undefined;
     }

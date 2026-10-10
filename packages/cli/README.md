@@ -53,8 +53,18 @@ checkpoint. `source finish` validates the resolved build before committing the m
 Tracked research under `.uttori/research/` retains original identities and preferred names.
 SQLite indexes those choices alongside capture evidence. Private ROM/evidence bindings live in
 ignored `.uttori-local/`; a clone needs its own local binding and retained evidence before generation.
+ACT2 files and their complete `.context` directories are temporary import inputs. Successful
+imports persist the required facts, bounded reports and provenance; analysis, generation, graphics
+queries and builds do not reopen the originals. Delete the recordings yourself after successful
+import. Catalog filenames and hashes describe verified past inputs, not files that must still exist.
 Working source may intentionally differ from the ROM; only pure generations require original-ROM
 equality. ROMs and emulator binaries are not distributed.
+
+Imports default to 32 GiB per archive, including each NES graphics companion. Source projects
+can override this with `limits.captureBytes` in `.uttori/project.json` (bytes); ordinary
+`evidence-import` uses `--trace-max-mib` (default 32768). Archives stream incrementally, so the
+file budget is independent of heap and analysis work limits. If a companion import fails after
+CPU evidence commits, retry the same capture after adjusting the limit; CPU facts are not duplicated.
 
 Pristine assets in `.uttori/generation-inputs.json` normally come from the accepted pure generation.
 New original assets may instead declare a bounded `romRange` or an `originalBlob` containing an

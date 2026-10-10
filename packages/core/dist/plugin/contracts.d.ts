@@ -191,7 +191,8 @@ export interface DirectiveContribution {
     keywords: readonly string[];
     /** Preprocess handles source before lowering. Lowered handles executable commands in each stage. */
     phase: "preprocess" | "lowered";
-    createHandler(context: DirectiveFactoryContext): DirectiveHandler;
+    /** Returning undefined preserves the core directive when this session's grammar does not need an override. */
+    createHandler(context: DirectiveFactoryContext): DirectiveHandler | undefined;
     tooling: readonly DirectiveDescriptor[];
 }
 /** Named group selected by a target. Unselected groups do not install handlers. */
@@ -386,6 +387,8 @@ export interface TargetContribution {
     lifecycle: readonly string[];
     /** Source grammar policy. Omitted targets retain the legacy Asar-compatible profile. */
     syntaxProfile?: SyntaxProfile;
+    /** Select grammar from normalized per-session options; does not mutate the registered default profile. */
+    createSyntaxProfile?(options: Readonly<Record<string, unknown>>): SyntaxProfile;
     /** Suggested output suffix, including its leading dot. Core does not write files. */
     defaultOutputExtension: string;
     /** Validate/default Assembler targetOptions. Output is shallow-copied and frozen per session. */

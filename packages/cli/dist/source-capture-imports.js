@@ -31,6 +31,7 @@ function summarize(capture, result) {
  * Import unique absolute paths in selection order, reopening project state for each capture.
  * Stop on the first failure/cancellation; completed files remain committed and retries are idempotent.
  * The callback owns each file's transaction and catalog update. No captures run concurrently.
+ * Input files remain user-owned; successful imports must not require them for later project work.
  */
 export async function importSourceCaptures(captures, run, options = {}) {
     if (!Array.isArray(captures) ||

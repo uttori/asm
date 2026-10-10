@@ -987,7 +987,7 @@ var init_capture_file = __esm({
       }
       if (size > limit) {
         throw new Error(
-          "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
+          `Capture is ${(size / 1024 ** 3).toFixed(2)} GiB and exceeds the import byte limit of ${(limit / 1024 ** 3).toFixed(2)} GiB (${limit} bytes). Increase limits.captureBytes in .uttori/project.json for a Git source project, or asm.trace.maxImportSizeMiB for other trace imports.`
         );
       }
     };
@@ -2815,6 +2815,8 @@ ${JSON.stringify(meta)}
           unownedEvents: observed - contexts.instruction
         },
         unsupported: [],
+        // Diagnostic text participates in immutable import identity. Preserve its historical
+        // payload; views describe these limits as omitted projections, never required retention.
         warnings: [
           "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
           transfers ? "Transfer totals use explicit native boundaries. Partial windows stay explicit. Full configuration and ordered history require the capture archive." : "Activity counts describe observed bus accesses. Transfer boundaries, register setup and source instructions are not inferred."

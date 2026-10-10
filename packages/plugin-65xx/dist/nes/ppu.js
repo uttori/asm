@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { decodeNesPPUState, validateNesMapper, readCaptureFileHeader, recoverCaptureFile, } from "@uttori/asm-debug-adapter";
-import { verifyRuntimeCaptureCompanion } from "@uttori/asm-disassembler";
+import { DEFAULT_RUNTIME_TRACE_MAX_BYTES, verifyRuntimeCaptureCompanion, } from "@uttori/asm-disassembler";
 /** NPP1 is a halted graphics view, not a save state or a rendered frame. */
 export const NES_PPU_SNAPSHOT_BYTES = 13056;
 /** Validate and copy an NPP1 buffer so later caller mutations cannot alter the view. */
@@ -139,7 +139,8 @@ export function renderNesPPUViews(snapshot) {
 }
 /** Reject wrong cartridges, incomplete files and excessive distinct destinations before publishing a report. */
 export async function summarizeNesPPUCapture(file, options) {
-    const header = await readCaptureFileHeader(file, options);
+    const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
+    const header = await readCaptureFileHeader(file, limits);
     if (header.scope !== "nes.cpu-bus-ppu" ||
         header.romFileSha256 !== options.romFileSha256 ||
         header.romContentSha256 !== options.romContentSha256) {
@@ -224,7 +225,7 @@ export async function summarizeNesPPUCapture(file, options) {
                 });
             }
         }
-    }, options);
+    }, limits);
     if (!result.complete ||
         JSON.stringify(result.header) !== JSON.stringify(header) ||
         (await hash()) !== archiveSha256) {

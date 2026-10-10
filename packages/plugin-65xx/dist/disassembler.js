@@ -8,4 +8,5 @@ export * from "./nes/ppu.js";
 export * from "./nes/ppu-project.js";
 export * from "./nes/research.js";
 export * from "./nes/hardware.js";
+export * from "./nes/assets.js";
 //# sourceMappingURL=disassembler.js.map

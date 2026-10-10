@@ -357,8 +357,17 @@ export const loadSnesStructMap = (directory: string): LoadedSnesStructMap | unde
   if (!fs.existsSync(filename)) {
     return undefined;
   }
-  const sourceBytes = fs.readFileSync(filename);
-  return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
+  try {
+    const sourceBytes = fs.readFileSync(filename);
+    return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
+  } catch (error) {
+    // Worker hosts forward only the message, so preserve the input filename alongside record locations.
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Invalid SNES struct map ${filename}: ${detail} Correct this input before regenerating.`,
+      { cause: error },
+    );
+  }
 };
 
 const completeFields = (structure: SnesStructLayout): SnesStructField[] => {
@@ -390,7 +399,6 @@ const completeFields = (structure: SnesStructLayout): SnesStructField[] => {
  */
 export const renderSnesStructDefines = (map: LoadedSnesStructMap): string => {
   const lines = [
-    "; Generated from struct-map.json. Edit that input and export again.",
     "; Layouts have base zero. Bindings use CPU addresses. Indexed fields use sizeof(struct).",
     "",
   ];

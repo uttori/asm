@@ -185,6 +185,66 @@ test("headless analysis research composes over unsaved documents and rejects sta
   t.is(sourceContentHash(fs.readFileSync(path.join(directory, file.path))), file.sha256);
 });
 
+test("prepare reports invalid struct recipes at the editable project path", async (t) => {
+  const { directory } = await fixture(t.teardown);
+  const file = path.join(directory, "source/struct-map.json");
+  const recipeFile = path.join(directory, ".uttori/generation-inputs.json");
+  const recipe = JSON.parse(fs.readFileSync(recipeFile, "utf8"));
+  fs.writeFileSync(
+    recipeFile,
+    JSON.stringify({ ...recipe, recipes: [...recipe.recipes, "struct-map.json"] }),
+  );
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      format: "uttori-asm-snes-struct-map",
+      schemaVersion: 1,
+      structures: [],
+      bindings: [],
+      instructionUses: [
+        { address: 0x808000, expectedBytes: [0xea], reason: "Missing operand declaration." },
+      ],
+    }),
+  );
+  const error = await t.throwsAsync(executeSourceOperation({ action: "prepare", directory }));
+  t.true(error!.message.includes(file));
+  t.regex(
+    error!.message,
+    /instructionUses\[0\] at CPU \$808000:.*Set operand, memoryOperand, stackOperand/,
+  );
+  t.false(error!.message.includes("scratch"));
+});
+
+test("source operations and unsaved research share project resource ceilings", async (t) => {
+  const { directory } = await fixture(t.teardown);
+  const configurationFile = path.join(directory, ".uttori/project.json");
+  const configuration = JSON.parse(fs.readFileSync(configurationFile, "utf8"));
+  const documentFile = path.join(directory, ".uttori/research/names.json");
+  const document = fs.readFileSync(documentFile, "utf8");
+  fs.writeFileSync(
+    configurationFile,
+    JSON.stringify({
+      ...configuration,
+      limits: { researchDocumentBytes: Buffer.byteLength(document) },
+    }),
+  );
+  const project = await openSourceProject(directory);
+  t.throws(
+    () =>
+      prepareSourceResearch(project, {}, [
+        {
+          path: ".uttori/research/names.json",
+          bytes: Buffer.from(document + " "),
+        },
+      ]),
+    { message: /names\.json:.*limits\.researchDocumentBytes.*\.uttori\/project\.json/ },
+  );
+  fs.writeFileSync(documentFile, document + " ");
+  await t.throwsAsync(executeSourceOperation({ action: "status", directory }), {
+    message: /names\.json:.*limits\.researchDocumentBytes.*\.uttori\/project\.json/,
+  });
+});
+
 /** A real standalone project proves the commands use neither extension internals nor legacy manifests. */
 async function fixture(teardown: (cleanup: () => void) => void) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-cli-"));
@@ -339,6 +399,7 @@ test("headless source commands preserve an edited raw byte through verified rege
     .trim();
   // Valid old proposals model a worktree opened after interrupted or superseded preparations.
   // A fresh verified preparation must migrate the backlog without manual CLI cleanup.
+  let supersededCandidate = "";
   for (let index = 0; index < 17; index++) {
     const proposal = (
       await sourceGit(directory, ["commit-tree", tree, "-p", baseline], {
@@ -347,6 +408,7 @@ test("headless source commands preserve an edited raw byte through verified rege
     ).stdout
       .toString()
       .trim();
+    supersededCandidate = proposal;
     await pinSourceCandidate(repository, proposal);
   }
   const rawFile = path.join(directory, "source/assets/raw/000000.bin");
@@ -362,6 +424,8 @@ test("headless source commands preserve an edited raw byte through verified rege
   );
   t.is(generation.verification.outputSha256, rom.identity.contentSha256);
   const candidate = generation.generation.commit;
+  const pendingStatus = await executeSourceOperation({ directory, action: "status", candidate });
+  t.true(isRecord(pendingStatus) && pendingStatus.candidateStale === false);
   t.is(
     (
       await sourceGit(directory, ["for-each-ref", "--format=%(refname)", "refs/uttori/candidates/"])
@@ -407,6 +471,14 @@ test("headless source commands preserve an edited raw byte through verified rege
   await executeSourceOperation({ directory, action: "apply", candidate });
   const completedStatus = await executeSourceOperation({ directory, action: "status", candidate });
   t.true(isRecord(completedStatus) && completedStatus.candidateAccepted === true);
+  t.true(isRecord(completedStatus) && completedStatus.candidateStale === false);
+  const staleStatus = await executeSourceOperation({
+    directory,
+    action: "status",
+    candidate: supersededCandidate,
+  });
+  t.true(isRecord(staleStatus) && staleStatus.candidateAccepted === false);
+  t.true(isRecord(staleStatus) && staleStatus.candidateStale === true);
   // Later staged and unstaged edits, including generation inputs, are independent of a finished
   // merge. A stale editor command must preserve both and must not recreate the released preview.
   const recipeFile = path.join(directory, "source/ram-map.json");
@@ -594,6 +666,11 @@ test("capture import records portable archive identity and survives idempotent r
   );
   const readyStatus = await executeSourceOperation({ directory, action: "status" });
   t.true(isRecord(readyStatus) && readyStatus.catalogReady === true);
+  // Even a verified archive binding describes a past input, not a retained reconstruction source.
+  t.deepEqual(await executeSourceOperation({ directory, action: "catalog" }), {
+    captures: 1,
+    retainedEvidenceRequired: 1,
+  });
   // A branch can retain an older catalog while its local SQLite store contains newer imports.
   // Status must expose the repair without mutating the tracked catalog during a tree refresh.
   const staleCatalog = JSON.stringify({ ...saved.catalog, captures: [] });
@@ -603,7 +680,7 @@ test("capture import records portable archive identity and survives idempotent r
   t.is(fs.readFileSync(path.join(directory, ".uttori/captures.json"), "utf8"), staleCatalog);
   t.deepEqual(await executeSourceOperation({ directory, action: "catalog" }), {
     captures: 1,
-    // Reconciliation can restore the evidence identity, but cannot invent the deleted archive path.
+    // Reconciliation restores provenance from the database without discovering original files.
     retainedEvidenceRequired: 1,
   });
   const evidence = sourceProjectLocalInputs(await openSourceProject(directory)).evidence;
@@ -880,6 +957,10 @@ r 32768 U
           isInitResult,
         );
         const project = await openSourceProject(directory);
+        t.is(
+          (await sourceGit(directory, ["branch", "--show-current"])).stdout.toString().trim(),
+          "main",
+        );
         if (dizRawFile) {
           t.true(
             project.research.decisions.some(

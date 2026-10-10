@@ -25625,6 +25625,15 @@ var init_runtime_trace = __esm({
   }
 });
 
+// packages/disassembler/src/internal/capture-limits.ts
+var DEFAULT_RUNTIME_TRACE_MAX_BYTES;
+var init_capture_limits = __esm({
+  "packages/disassembler/src/internal/capture-limits.ts"() {
+    "use strict";
+    DEFAULT_RUNTIME_TRACE_MAX_BYTES = 32 * 1024 ** 3;
+  }
+});
+
 // packages/disassembler/src/runtime/runtime-trace-file.ts
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
@@ -25839,7 +25848,7 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
     yield validateChunk(chunk);
   }
 }
-var import_node_fs, import_promises2, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
+var import_node_fs, import_promises2, import_node_string_decoder, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
   "packages/disassembler/src/runtime/runtime-trace-file.ts"() {
     "use strict";
@@ -25847,8 +25856,9 @@ var init_runtime_trace_file = __esm({
     import_promises2 = require("node:fs/promises");
     import_node_string_decoder = require("node:string_decoder");
     init_canonical_json();
+    init_capture_limits();
     init_runtime_trace();
-    DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+    init_capture_limits();
     MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
     readRuntimeTraceFileMetadata = async (file, options = {}) => {
       const metadata = {};
@@ -26849,6 +26859,8 @@ ${JSON.stringify(meta)}
               unownedEvents: observed - contexts.instruction
             },
             unsupported: [],
+            // Diagnostic text participates in immutable import identity. Preserve its historical
+            // payload; views describe these limits as omitted projections, never required retention.
             warnings: [
               "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
               transfers ? "Transfer totals use explicit native boundaries. Partial windows stay explicit. Full configuration and ordered history require the capture archive." : "Activity counts describe observed bus accesses. Transfer boundaries, register setup and source instructions are not inferred."
@@ -28209,8 +28221,13 @@ function parseResearchDocument(value) {
   }
   const parsed = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const decision of decisions) {
-    validateResearchDecision(decision);
+  for (const [index, decision] of decisions.entries()) {
+    try {
+      validateResearchDecision(decision);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`decisions[${index}]: ${detail}`, { cause: error });
+    }
     const key3 = `${decision.collection}:${decision.id}`;
     if (seen.has(key3)) {
       throw new Error(`Duplicate research decision: ${key3}`);
@@ -28231,45 +28248,80 @@ function researchPath(root, relative3) {
   }
   return current;
 }
-function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ new Map()) {
+function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ new Map(), limits = {}) {
+  for (const name2 of RESEARCH_INPUT_LIMIT_NAMES) {
+    const limit = limits[name2];
+    if (limit !== void 0 && (!Number.isSafeInteger(limit) || limit < 1)) {
+      throw new Error(
+        `Invalid limits.${name2}: use a positive safe integer in .uttori/project.json.`
+      );
+    }
+  }
   const names = /* @__PURE__ */ new Set();
   const files = [];
   let totalBytes = 0;
-  let visited = 0;
-  const visit2 = (relative3) => {
-    if (++visited > 4096 || relative3.split("/").length > 32) {
-      throw new Error("Research input traversal exceeds its bounded directory budget.");
-    }
-    const file = researchPath(root, relative3);
-    const overlay = overlays.get(relative3);
-    const stat3 = import_node_fs4.default.existsSync(file) ? import_node_fs4.default.lstatSync(file) : void 0;
-    if (stat3?.isDirectory()) {
-      for (const entry of import_node_fs4.default.readdirSync(file).toSorted()) {
-        visit2(`${relative3}/${entry}`);
-      }
-      return;
-    }
-    if (!relative3.endsWith(".json")) {
-      return;
-    }
-    const name2 = relative3.normalize("NFC").toLowerCase();
-    if (names.has(name2)) {
-      throw new Error(`Repeated or ambiguous research input: ${relative3}`);
-    }
-    names.add(name2);
-    const size = overlay === void 0 ? stat3?.size : Buffer.byteLength(overlay);
-    totalBytes += size ?? 0;
-    if (stat3 && !stat3.isFile() || size === void 0 || size > 1024 * 1024 || totalBytes > 32 * 1024 * 1024 || names.size > 512) {
+  const checkLimit = (name2, actual, file, unit) => {
+    const limit = limits[name2];
+    if (limit !== void 0 && actual > limit) {
       throw new Error(
-        "Research inputs exceed the bounded document budget. Split decisions by subject or bank."
+        `Research input ${file}: ${actual.toLocaleString("en-US")} ${unit} exceeds limits.${name2} (${limit.toLocaleString("en-US")} ${unit}). Increase or remove limits.${name2} in .uttori/project.json, or reduce the selected research inputs.`
       );
     }
-    const bytes = overlay === void 0 ? import_node_fs4.default.readFileSync(file) : Buffer.from(overlay);
-    const document = parseResearchDocument(JSON.parse(bytes.toString("utf8")));
-    if (document.project !== identity2.project || document.romSha256 !== identity2.romSha256) {
-      throw new Error(`Research input belongs to another project or ROM: ${relative3}`);
+  };
+  const visit2 = (initial) => {
+    const pending = [initial];
+    while (pending.length) {
+      const relative3 = pending.pop();
+      const file = researchPath(root, relative3);
+      const overlay = overlays.get(relative3);
+      const stat3 = import_node_fs4.default.existsSync(file) ? import_node_fs4.default.lstatSync(file) : void 0;
+      if (!stat3 && overlay === void 0) {
+        throw new Error(
+          `Research input does not exist: ${file}. Restore the selected path or correct researchRoots in .uttori/project.json.`
+        );
+      }
+      if (stat3?.isDirectory()) {
+        for (const entry of import_node_fs4.default.readdirSync(file).toSorted().toReversed()) {
+          pending.push(`${relative3}/${entry}`);
+        }
+        continue;
+      }
+      if (stat3 && !stat3.isFile()) {
+        throw new Error(
+          `Research input is not a regular file: ${file}. Select JSON files or directories in researchRoots.`
+        );
+      }
+      if (!relative3.endsWith(".json")) {
+        continue;
+      }
+      const name2 = relative3.normalize("NFC").toLowerCase();
+      if (names.has(name2)) {
+        throw new Error(
+          `Repeated or ambiguous research input: ${file}. Remove overlapping researchRoots or conflicting filenames.`
+        );
+      }
+      names.add(name2);
+      const size = overlay === void 0 ? stat3.size : Buffer.byteLength(overlay);
+      totalBytes += size;
+      checkLimit("researchDocumentBytes", size, file, "bytes in this document");
+      checkLimit("researchBytes", totalBytes, file, "bytes across selected documents");
+      checkLimit("researchFiles", names.size, file, "selected JSON files");
+      let bytes;
+      let document;
+      try {
+        bytes = overlay === void 0 ? import_node_fs4.default.readFileSync(file) : Buffer.from(overlay);
+        document = parseResearchDocument(JSON.parse(bytes.toString("utf8")));
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`Invalid research input ${file}: ${detail}`, { cause: error });
+      }
+      if (document.project !== identity2.project || document.romSha256 !== identity2.romSha256) {
+        throw new Error(
+          `Research input belongs to another project or ROM: ${file}. Expected project ${identity2.project} and ROM ${identity2.romSha256}; found project ${document.project} and ROM ${document.romSha256}.`
+        );
+      }
+      files.push({ path: relative3, sha256: sourceContentHash(bytes), document });
     }
-    files.push({ path: relative3, sha256: sourceContentHash(bytes), document });
   };
   for (const relative3 of roots) {
     visit2(relative3);
@@ -28281,13 +28333,18 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
   }
   files.sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
   const decisions = files.flatMap((file) => file.document.decisions);
-  const ids = /* @__PURE__ */ new Set();
-  for (const decision of decisions) {
-    const key3 = `${decision.collection}:${decision.id}`;
-    if (ids.has(key3)) {
-      throw new Error(`Research decision has more than one authoring location: ${key3}`);
+  const ids = /* @__PURE__ */ new Map();
+  for (const file of files) {
+    for (const decision of file.document.decisions) {
+      const key3 = `${decision.collection}:${decision.id}`;
+      const previous = ids.get(key3);
+      if (previous !== void 0) {
+        throw new Error(
+          `Research decision has more than one authoring location: ${key3} in ${previous} and ${file.path}. Keep the decision in one document.`
+        );
+      }
+      ids.set(key3, file.path);
     }
-    ids.add(key3);
   }
   decisions.sort(compareDecisions);
   const selected = { project: identity2.project, romSha256: identity2.romSha256 };
@@ -28312,7 +28369,7 @@ function writeResearchDocument(root, relative3, document, expectedSha256) {
     lease.release();
   }
 }
-var import_node_fs4, import_node_path6, isArray, RESEARCH_COLLECTIONS, compareDecisions;
+var import_node_fs4, import_node_path6, isArray, RESEARCH_COLLECTIONS, RESEARCH_INPUT_LIMIT_NAMES, compareDecisions;
 var init_inputs = __esm({
   "packages/disassembler/src/research-inputs/inputs.ts"() {
     "use strict";
@@ -28332,6 +28389,11 @@ var init_inputs = __esm({
       "regions",
       "analysis",
       "evidence"
+    ];
+    RESEARCH_INPUT_LIMIT_NAMES = [
+      "researchDocumentBytes",
+      "researchBytes",
+      "researchFiles"
     ];
     compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
   }
@@ -39551,7 +39613,7 @@ var init_capture_file = __esm({
       }
       if (size > limit) {
         throw new Error(
-          "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
+          `Capture is ${(size / 1024 ** 3).toFixed(2)} GiB and exceeds the import byte limit of ${(limit / 1024 ** 3).toFixed(2)} GiB (${limit} bytes). Increase limits.captureBytes in .uttori/project.json for a Git source project, or asm.trace.maxImportSizeMiB for other trace imports.`
         );
       }
     };
@@ -42411,9 +42473,9 @@ function assertSourceProjectConfiguration(value) {
       throw new Error("Source work limits must be an object.");
     }
     for (const [name2, limit] of Object.entries(value.limits)) {
-      if (name2 !== "captureBytes" && name2 !== "analysisWorkItems" && name2 !== "analysisCallDepth" || !(isSafeInteger7(limit) && limit >= (name2 === "analysisCallDepth" ? 0 : 1))) {
+      if (name2 !== "captureBytes" && name2 !== "analysisWorkItems" && name2 !== "analysisCallDepth" && !RESEARCH_INPUT_LIMIT_NAMES.some((field) => field === name2) || !(isSafeInteger7(limit) && limit >= (name2 === "analysisCallDepth" ? 0 : 1))) {
         throw new Error(
-          `Invalid source work limit: ${name2}. Use an integer within the supported range.`
+          `Invalid source work limit limits.${name2} in .uttori/project.json. Use a positive safe integer; analysisCallDepth also accepts zero. Supported fields: captureBytes, analysisWorkItems, analysisCallDepth, ${RESEARCH_INPUT_LIMIT_NAMES.join(", ")}.`
         );
       }
     }
@@ -42429,10 +42491,13 @@ async function openSourceProject(directory) {
   const configuration = parseSourceProject(
     JSON.parse(import_node_fs16.default.readFileSync(import_node_path20.default.join(repository.root, ".uttori/project.json"), "utf8"))
   );
-  const research = readResearchInputs(repository.root, configuration.researchRoots, {
-    project: configuration.id,
-    romSha256: configuration.romSha256
-  });
+  const research = readResearchInputs(
+    repository.root,
+    configuration.researchRoots,
+    { project: configuration.id, romSha256: configuration.romSha256 },
+    void 0,
+    configuration.limits
+  );
   return {
     repository,
     configuration,
@@ -42672,7 +42737,7 @@ function writeSourceCaptureCatalog(root, name2, catalog, expectedSha256) {
     lease.release();
   }
 }
-async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) {
+async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_RUNTIME_TRACE_MAX_BYTES) {
   signal?.throwIfAborted();
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
     throw new Error("Capture byte budget must be a positive safe integer.");
@@ -42682,7 +42747,9 @@ async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) 
     throw new Error("Capture archive must be a nonempty regular file.");
   }
   if (before.size > BigInt(maxBytes)) {
-    throw new Error("Capture archive exceeds the project's byte budget.");
+    throw new Error(
+      `Capture archive '${file}' is ${(Number(before.size) / 1024 ** 3).toFixed(2)} GiB and exceeds the project's byte budget of ${(maxBytes / 1024 ** 3).toFixed(2)} GiB (${maxBytes} bytes). Increase limits.captureBytes in .uttori/project.json to import this archive.`
+    );
   }
   const hash4 = (0, import_node_crypto19.createHash)("sha256");
   let bytes = 0;
@@ -42728,6 +42795,7 @@ var init_captures = __esm({
     import_node_fs17 = __toESM(require("node:fs"), 1);
     import_node_path21 = __toESM(require("node:path"), 1);
     init_canonical_json();
+    init_capture_limits();
     init_durable_files();
     init_generation();
     init_git();
@@ -43323,6 +43391,7 @@ __export(src_exports2, {
   DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS: () => DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS,
   HalfOpenIntervalIndex: () => HalfOpenIntervalIndex,
   RESEARCH_COLLECTIONS: () => RESEARCH_COLLECTIONS,
+  RESEARCH_INPUT_LIMIT_NAMES: () => RESEARCH_INPUT_LIMIT_NAMES,
   RUNTIME_BUS_INDEX_PROFILE: () => RUNTIME_BUS_INDEX_PROFILE,
   RUNTIME_BUS_TRACE_FORMAT: () => RUNTIME_BUS_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_FORMAT: () => RUNTIME_INSTRUCTION_TRACE_FORMAT,
@@ -49466,6 +49535,7 @@ var parseAresRuntimeManifest = (value) => {
 };
 
 // packages/vscode-extension/src/debug/session.ts
+init_src2();
 var import_vscode16 = require("vscode");
 
 // packages/vscode-extension/src/runtime/binding.ts
@@ -51320,7 +51390,10 @@ var startRuntimeTraceWithLease = async () => {
             projectDirectory: liveProject,
             position: recorder2.position,
             maxLagBytes: settings.get("debug.liveBusMaxLagMiB", 256) * 1024 * 1024,
-            maxBytes: analysisSettings.get("trace.maxImportSizeMiB", 2048) * 1048576,
+            maxBytes: analysisSettings.get(
+              "trace.maxImportSizeMiB",
+              DEFAULT_RUNTIME_TRACE_MAX_BYTES / 1024 ** 2
+            ) * 1024 ** 2,
             maxIndexRecords: 2e6
           },
           (progress) => {
@@ -54924,6 +54997,12 @@ ${stderr}` : ""}`
 };
 
 // packages/vscode-extension/src/source/workflow.ts
+function shouldClearSourceCandidate(status) {
+  if (!["idle", "verified", "checkpoint"].includes(status.phase)) {
+    return false;
+  }
+  return status.candidateStale || status.candidateAccepted && status.phase !== "checkpoint";
+}
 function sourceWorkflow(state) {
   if (state.busy) {
     return [
@@ -55764,7 +55843,7 @@ var SourceController = class {
     }
     this.#status = status;
     this.#configuration = configuration;
-    if (status.candidateAccepted && ["idle", "verified"].includes(status.phase)) {
+    if (shouldClearSourceCandidate(status)) {
       await this.clearCandidate(root);
     }
     this.#branch = (await sourceGit(root, ["branch", "--show-current"])).stdout.toString().trim() || "detached HEAD";

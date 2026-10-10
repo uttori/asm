@@ -98,7 +98,7 @@ export async function initializeSnesSourceProject(options: InitializeSourceOptio
   };
   const json = (name: string, value: unknown) => write(name, canonicalJson(value));
   try {
-    await sourceGit(staging, ["init", "-b", "codex/source"]);
+    await sourceGit(staging, ["init", "-b", "main"]);
     // Git's configured author and signing/hooks are honored. Do not fabricate a user identity.
     await sourceGit(staging, ["var", "GIT_AUTHOR_IDENT"]);
     write(".gitignore", "/.uttori-local/\n/node_modules/\n");
@@ -336,8 +336,9 @@ export async function initializeSnesSourceProject(options: InitializeSourceOptio
         }),
       },
     });
-    // The initial source branch descends directly from the verified pure root; later updates are merges.
-    await sourceGit(staging, ["update-ref", "refs/heads/codex/source", generation.commit]);
+    // Attach the verified pure root to the initialized branch without creating another branch;
+    // later source commits must retain this generation in their ancestry.
+    await sourceGit(staging, ["update-ref", "HEAD", generation.commit]);
     await sourceGit(staging, ["read-tree", generation.commit]);
     json(SOURCE_GENERATION_FILE, generation.descriptor);
     write(

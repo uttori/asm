@@ -48,7 +48,7 @@ The **Source Project** tree shows a **Next** action and an ordered **Update Sour
 5. Resolve conflicts with the native Merge Editor and stage the intended changes in Source Control.
 6. **Validate and Finish Regeneration** builds the staged result, validates it and creates the merge commit.
 
-If retained captures are missing from the tracked catalog, **Next** first offers **Refresh Capture Catalog**.
+If imported evidence identities are missing from the tracked catalog, **Next** first offers **Refresh Capture Catalog**.
 This records their identities without reimporting captures or regenerating source.
 
 **Build Current Source** is separate: save your edits and build whenever you want to run or debug.
@@ -80,6 +80,17 @@ operations show the worker PID, elapsed time and age of the last progress update
 this indicates a pending worker, while record counts show measurable progress. Output also records
 completion, failure, archive hashes and import totals. Failure or cancellation stops the queue and
 preserves completed imports; retrying the queue is safe.
+
+The default import budget is 32 GiB per archive. Git source imports apply
+`limits.captureBytes` in `.uttori/project.json` to both the primary recording and each graphics
+companion; other trace imports use `asm.trace.maxImportSizeMiB` (default 32768). Streaming reads
+keep the file-size limit separate from heap and static-analysis work budgets.
+
+ACT2 archives and their complete context directories are temporary inputs, with deletion under
+your control. After successful import, project operations use persisted facts, bounded graphics
+reports and provenance hashes, so you can remove the originals. The catalog does not promise that
+an archive still exists. Capture replay and state restore operate only on temporary files you
+explicitly select while they are available; they are independent of the imported project evidence.
 
 Indexed PNG and palette custom editors share VS Code's save/undo/recovery lifecycle. Preview can include unsaved supported text and binary edits. Apply requires a clean checkout; the existing commit suffices, and generated changes are reviewed and staged before Finish commits them.
 Apply appears after preview when the checkout is clean, and is retired when the merge starts. Finish becomes available once conflicts are resolved and changes staged. Finish clears the completed candidate, including stale selections restored from editor state. After reloading with a pending candidate, preview again before applying; a missing private preview produces a recovery instruction instead of a filesystem error.

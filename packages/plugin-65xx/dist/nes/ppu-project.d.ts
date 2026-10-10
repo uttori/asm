@@ -1,7 +1,8 @@
-import type { ResearchSnapshot } from "@uttori/asm-disassembler";
+import { type ResearchSnapshot } from "@uttori/asm-disassembler";
 /** Import a complete PPU archive into a separate, immutable graphics report.
  * Returns null for other formats/scopes. Graphics observations never seed CPU disassembly.
- * The original archive remains in place; its hash binds the report to all ordered events.
+ * Input deletion belongs to the caller. Reports and SQLite facts remain usable after removal;
+ * the archive hash identifies the verified input without requiring its ordered stream to survive.
  */
 export declare function importNesPPUCapture(options: {
     readonly file: string;
@@ -13,6 +14,7 @@ export declare function importNesPPUCapture(options: {
     readonly romFileSha256: string;
     readonly romContentSha256: string;
     readonly signal?: AbortSignal;
+    /** Per-archive byte limit; defaults to the shared 32 GiB capture budget. */
     readonly maxBytes?: number;
 }): Promise<{
     sourceSha256: string;

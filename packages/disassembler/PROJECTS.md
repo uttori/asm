@@ -88,9 +88,20 @@ when analysis changes. Preview accepts uncommitted edits; applying requires the 
 Use native conflict resolution and then `source finish` to validate. Pure generations are immutable.
 VS Code's source commands, F2 and research actions produce ordinary files and native Undo operations.
 
-A Git clone retains source, research and accepted generation ancestry. Back up the private original ROM,
-captures and evidence separately, outside the working disk. Rebind `.uttori-local/project.json` after
-cloning. Missing capture archives mean their retained SQLite evidence cannot yet be rebuilt from archives.
+Research documents have no implicit size, count or directory-depth budget. To impose resource ceilings,
+set positive safe integers under `limits` in `.uttori/project.json`: `researchDocumentBytes` limits each
+JSON document's UTF-8 bytes, `researchBytes` limits their combined bytes, and `researchFiles` limits
+the selected JSON file count. Omit a field to leave it unrestricted. CLI commands, editor queries and
+unsaved research buffers use the same policy. A limit error identifies the input path, actual amount,
+configured ceiling and configuration field to adjust. Missing inputs and malformed documents report
+separate errors. Grouping research by subject or bank remains an organizational choice.
+
+A Git clone retains source, research and accepted generation ancestry. Back up the private original ROM
+and imported evidence separately, outside the working disk. Rebind `.uttori-local/project.json` after
+cloning. ACT2 archives and complete context directories are temporary import inputs; remove them
+at your discretion after successful import. Analysis, generation and queries use the imported
+evidence. Catalog hashes do not promise an archive is available, so preserve the evidence store
+instead of assuming it can be reconstructed from original recordings.
 Do not replace an open database or delete its WAL. [SQLite WAL handling](https://www.sqlite.org/wal.html#the_wal_file).
 
 Cancellation is cooperative; interrupted generation leaves source and staging intact. `source clean`

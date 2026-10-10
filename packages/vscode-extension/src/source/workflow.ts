@@ -1,5 +1,18 @@
 import type { SourceMergeStatus } from "@uttori/asm-disassembler";
 
+/** Retire obsolete editor selections without hiding an active or unvalidated Git merge. */
+export function shouldClearSourceCandidate(status: {
+  readonly phase: SourceMergeStatus["phase"];
+  readonly candidateAccepted: boolean;
+  /** True when the candidate's parent differs from the checkout's accepted generation. */
+  readonly candidateStale: boolean;
+}): boolean {
+  if (!["idle", "verified", "checkpoint"].includes(status.phase)) {
+    return false;
+  }
+  return status.candidateStale || (status.candidateAccepted && status.phase !== "checkpoint");
+}
+
 /** Cached service/editor state used to render the next action without performing work in the tree. */
 export interface SourceWorkflowState {
   readonly phase?: SourceMergeStatus["phase"];

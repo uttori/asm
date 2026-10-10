@@ -87,7 +87,8 @@ const formatPrintArgs = (parts: readonly string[]): string => {
  * calls (`select(1, 1, 0)`), so the split is paren/quote-aware.
  * Failed asserts match asar's `Eassertion_failed`: `"Assertion failed."` or
  * `"Assertion failed: " + message`.
- * @param {DiagnosticDirectiveContext} ctx Session with `evaluateExpression`.
+ * State-dependent checks wait for a build when editor analysis has skipped asset bytes.
+ * @param {DiagnosticDirectiveContext} ctx Session with `evaluateAssertion`.
  * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the condition is missing or evaluates to zero.
@@ -103,7 +104,7 @@ export const handleAssert = (
   if (condition === "") {
     throw new Error("Broken conditional: assert");
   }
-  if (session.evaluateExpression(condition)) {
+  if (session.evaluateAssertion(condition) !== false) {
     return;
   }
   const messageParts = parts.slice(1);

@@ -1,11 +1,13 @@
 import { open, mkdir, writeFile, readFile, mkdtemp, link, rm } from "node:fs/promises";
 import path from "node:path";
 import { readCaptureFileHeader } from "@uttori/asm-debug-adapter";
+import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "@uttori/asm-disassembler";
 import { createNesGraphicsProjection, publishNesGraphicsEvidence } from "./ppu-evidence.js";
 import { summarizeNesPPUCapture } from "./ppu.js";
 /** Import a complete PPU archive into a separate, immutable graphics report.
  * Returns null for other formats/scopes. Graphics observations never seed CPU disassembly.
- * The original archive remains in place; its hash binds the report to all ordered events.
+ * Input deletion belongs to the caller. Reports and SQLite facts remain usable after removal;
+ * the archive hash identifies the verified input without requiring its ordered stream to survive.
  */
 export async function importNesPPUCapture(options) {
     const handle = await open(options.file, "r");
@@ -19,13 +21,14 @@ export async function importNesPPUCapture(options) {
     if (magic.toString("ascii") !== "ACS2") {
         return null;
     }
-    const header = await readCaptureFileHeader(options.file, options);
+    const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
+    const header = await readCaptureFileHeader(options.file, limits);
     if (header.scope !== "nes.cpu-bus-ppu") {
         return null;
     }
     const projection = options.evidenceDirectory ? createNesGraphicsProjection() : undefined;
     const summary = await summarizeNesPPUCapture(options.file, {
-        ...options,
+        ...limits,
         onBusEvent: projection?.push,
     });
     const directory = path.resolve(options.directory);

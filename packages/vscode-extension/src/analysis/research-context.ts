@@ -44,10 +44,13 @@ export function analysisResearchContext(
     }
     return {
       root,
-      snapshot: readResearchInputs(root, configuration.researchRoots, {
-        project: configuration.id,
-        romSha256: configuration.romSha256,
-      }),
+      snapshot: readResearchInputs(
+        root,
+        configuration.researchRoots,
+        { project: configuration.id, romSha256: configuration.romSha256 },
+        undefined,
+        configuration.limits,
+      ),
     };
   };
   if (preferredRoot) {

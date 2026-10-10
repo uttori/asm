@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, NodeAssemblyFileProvider, PluginError, createDebugMap } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { ANALYSIS_PROJECT_MANIFEST, RomImage, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, RomImage, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_RUNTIME_TRACE_MAX_BYTES, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, } from "@uttori/asm-plugin-snes";
 import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
@@ -69,7 +69,7 @@ ROM identity (analyze, evidence-import):
 
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
-  --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
+  --trace-max-mib <count>      Native trace import size limit in MiB (default 32768)
   --trace-index <mode>         full (default; retains all registers)
 
 Analysis options (analyze):
@@ -480,7 +480,7 @@ const importProjectEvidence = async (parsed, cwd) => {
             sourceName: path.basename(filename),
             indexMode: parsed.traceIndex,
         }, {
-            maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024,
+            maxBytes: (parsed.traceMaxMiB ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES / 1024 ** 2) * 1024 ** 2,
             onStage: (stage) => console.log(stage),
             storagePolicy: parsed.storagePolicy,
         });

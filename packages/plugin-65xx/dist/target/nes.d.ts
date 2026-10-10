@@ -11,6 +11,8 @@ export declare const NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
  * These fields are per-session `targetOptions`.
  */
 export interface Nes65xxTargetOptions extends Readonly<Record<string, unknown>> {
+    /** Asar uses headerless physical org offsets and logical CPU/PPU base addresses; ca65 retains MEMORY segments. */
+    readonly sourceStyle: "asar" | "ca65";
     readonly header: readonly number[];
     readonly linkerConfig: string;
     readonly fillByte: number;
@@ -33,12 +35,12 @@ export declare function createInitialNesState(context: {
     targetOptions: Readonly<Record<string, unknown>>;
 }): Nes65xxSessionState;
 /**
- * Maps CPU addresses through the current load MEMORY region into the iNES image.
- * Overlay run addresses are never written. `base` keeps the load cursor for stores.
+ * Maps load addresses into the iNES image using physical Asar offsets or ca65 MEMORY regions.
+ * Logical CPU/PPU addresses stay independent of the load cursor through core `base` support.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */
-export declare function createNesAddressSpace({ state }: TargetFactoryContext): TargetAddressSpace;
+export declare function createNesAddressSpace({ state, options, }: TargetFactoryContext): TargetAddressSpace;
 /**
  * Header plus filled PRG image. Checksum is not an iNES concept.
  * @returns {TargetOutputFormat} The NES output format.

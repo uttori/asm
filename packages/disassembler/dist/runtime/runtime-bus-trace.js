@@ -8,7 +8,7 @@ function isRowRecord(value) {
     return !Array.isArray(value);
 }
 export const RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
-/** Aggregates byte-access variants. Ordered timing and raster history require the capture archive. */
+/** Aggregates byte-access variants; ordered timing and raster history are outside this projection. */
 export const RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 /** Parse a canonical unsigned wire integer without rounding through JavaScript numbers.
  * @param {unknown} value Decimal string, with no sign or leading zeroes.
@@ -448,6 +448,8 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
                     unownedEvents: observed - contexts.instruction,
                 },
                 unsupported: [],
+                // Diagnostic text participates in immutable import identity. Preserve its historical
+                // payload; views describe these limits as omitted projections, never required retention.
                 warnings: [
                     "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
                     transfers

@@ -27,7 +27,7 @@ export interface CliArguments {
     readonly dizraw?: string;
     readonly rom?: string;
     readonly instructionTrace?: string;
-    /** Positive integer MiB limit. Undefined delegates to the import default of 2048. */
+    /** Positive integer MiB limit. Undefined delegates to the shared 32 GiB import default. */
     readonly traceMaxMiB?: number;
     readonly traceIndex?: "full";
     readonly storagePolicy?: Partial<AnalysisStoragePolicy>;

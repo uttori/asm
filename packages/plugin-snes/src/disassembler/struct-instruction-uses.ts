@@ -22,7 +22,7 @@ export interface SnesStructAccessObservation {
   readonly access: "read" | "write" | "read-write";
   /** A bus observation and an inference from instruction/register traces are different evidence. */
   readonly provenance: "observed" | "trace-derived";
-  /** Capture path or stable identifier. Export may summarize it and never opens it. */
+  /** Capture path or stable identifier, retained for verification and never opened by export. */
   readonly source: string;
   /** Capture location and reasoning, such as instruction sequence and pointer reconstruction. */
   readonly detail: string;
@@ -35,13 +35,16 @@ export interface SnesStructInstructionUse {
   readonly address: number;
   /** Complete instruction encoding, including opcode. Stale metadata aborts export before writes. */
   readonly expectedBytes: readonly number[];
+  /** Research justification retained in metadata; never emitted as an assembly comment. */
   readonly reason: string;
-  /** Optional display explanation; empty suppresses redundant prose without deleting its research reason. */
+  /** Explicit instruction-specific behavior or constraint; omitted/empty emits no comment. Field descriptions belong on their declarations. */
   readonly comment?: string;
-  /** Immediate value expression. Mutually exclusive with memoryOperand and access observations. */
+  /** Immediate value expression. Mutually exclusive with other operand forms and access observations. */
   readonly operand?: { readonly expression: string; readonly value: number };
   /** Encoded direct memory address, before indexing/DB/D. Never a resolved runtime effective address. */
   readonly memoryOperand?: { readonly expression: string; readonly value: number };
+  /** Encoded unsigned stack displacement (0–255), before adding S. Never a WRAM address or access observation. */
+  readonly stackOperand?: { readonly expression: string; readonly value: number };
   readonly observations: readonly SnesStructAccessObservation[];
 }
 
@@ -105,99 +108,133 @@ export const validateSnesStructInstructionUses = (
   const resolver = new SnesStructExpressionResolver(structures, bindings, constants);
   const addresses = new Set<number>();
   return value
-    .map((input): SnesStructInstructionUse => {
-      const entry = record(input);
-      const address = integer(entry.address, 0, 0xffffff);
-      if (addresses.has(address)) {
-        throw new Error(`Duplicate struct instruction use at ${hex(address)}.`);
-      }
-      addresses.add(address);
-      if (
-        !Array.isArray(entry.expectedBytes) ||
-        entry.expectedBytes.length < 1 ||
-        entry.expectedBytes.length > 4
-      ) {
-        throw new Error("Struct instruction uses require 1–4 complete expectedBytes.");
-      }
-      const expectedBytes = entry.expectedBytes.map((byte) => integer(byte, 0, 0xff));
-      if (entry.comment !== undefined && typeof entry.comment !== "string") {
-        throw new Error("Struct instruction-use comment must be a string, or omitted.");
-      }
-      let operand: SnesStructInstructionUse["operand"];
-      if (entry.operand !== undefined) {
-        const resolved = resolver.resolve(entry.operand);
-        operand = { expression: resolved.expression, value: integer(resolved.value, 0, 0xffff) };
-      }
-      let memoryOperand: SnesStructInstructionUse["memoryOperand"];
-      if (entry.memoryOperand !== undefined) {
-        const resolved = resolver.resolve(entry.memoryOperand);
-        memoryOperand = {
-          expression: resolved.expression,
-          value: integer(resolved.value, 0, 0xffffff),
-        };
-      }
-      if (entry.observations !== undefined && !Array.isArray(entry.observations)) {
-        throw new Error("Struct observations must be an array.");
-      }
-      const observations = ((entry.observations ?? []) as unknown[]).map(
-        (inputObservation): SnesStructAccessObservation => {
-          const observation = record(inputObservation);
-          const width = integer(observation.width, 1, 2);
-          const target = resolver.resolve(observation.target);
-          // Ownership must come from the expression, not a coincidental address match in another binding.
-          if (target.bindings.length !== 1) {
-            throw new Error("Struct observation target must reference exactly one binding.");
-          }
-          const binding = target.bindings[0];
-          const parts = describeSnesStructAccess(binding, target.value, width);
-          const { access, provenance } = observation;
-          if (access !== "read" && access !== "write" && access !== "read-write") {
-            throw new Error("Struct observation access must be read, write or read-write.");
-          }
-          if (provenance !== "observed" && provenance !== "trace-derived") {
-            throw new Error("Struct observation provenance must be observed or trace-derived.");
-          }
-          if (
-            typeof observation.romSha256 !== "string" ||
-            !/^[\da-f]{64}$/.test(observation.romSha256)
-          ) {
-            throw new Error("Struct observations require the capture ROM SHA-256.");
-          }
-          return {
-            expression: target.expression,
-            address: target.value,
-            binding: binding.name,
-            parts,
-            width,
-            access,
-            provenance,
-            source: text(observation.source),
-            detail: text(observation.detail),
-            romSha256: observation.romSha256,
+    .map((input, index): SnesStructInstructionUse => {
+      try {
+        const entry = record(input);
+        const address = integer(entry.address, 0, 0xffffff);
+        if (addresses.has(address)) {
+          throw new Error(`Duplicate struct instruction use at ${hex(address)}.`);
+        }
+        addresses.add(address);
+        if (
+          !Array.isArray(entry.expectedBytes) ||
+          entry.expectedBytes.length < 1 ||
+          entry.expectedBytes.length > 4
+        ) {
+          throw new Error("Struct instruction uses require 1–4 complete expectedBytes.");
+        }
+        const expectedBytes = entry.expectedBytes.map((byte) => integer(byte, 0, 0xff));
+        if (entry.comment !== undefined && typeof entry.comment !== "string") {
+          throw new Error("Struct instruction-use comment must be a string, or omitted.");
+        }
+        let operand: SnesStructInstructionUse["operand"];
+        if (entry.operand !== undefined) {
+          const resolved = resolver.resolve(entry.operand);
+          operand = { expression: resolved.expression, value: integer(resolved.value, 0, 0xffff) };
+        }
+        let memoryOperand: SnesStructInstructionUse["memoryOperand"];
+        if (entry.memoryOperand !== undefined) {
+          const resolved = resolver.resolve(entry.memoryOperand);
+          memoryOperand = {
+            expression: resolved.expression,
+            value: integer(resolved.value, 0, 0xffffff),
           };
-        },
-      );
-      if (!operand && !memoryOperand && observations.length === 0) {
-        throw new Error("A struct instruction use requires an operand or observations.");
-      }
-      // An immediate denotes a value, while a captured access denotes a memory operand.
-      // Combining them at one instruction would assign incompatible meanings to that operand.
-      if (operand && (memoryOperand || observations.length)) {
-        throw new Error(
-          "A struct instruction use cannot combine an immediate and memory observations.",
+        }
+        let stackOperand: SnesStructInstructionUse["stackOperand"];
+        if (entry.stackOperand !== undefined) {
+          const resolved = resolver.resolve(entry.stackOperand);
+          stackOperand = {
+            expression: resolved.expression,
+            value: integer(resolved.value, 0, 0xff),
+          };
+        }
+        if (entry.observations !== undefined && !Array.isArray(entry.observations)) {
+          throw new Error("Struct observations must be an array.");
+        }
+        const observations = ((entry.observations ?? []) as unknown[]).map(
+          (inputObservation, observationIndex): SnesStructAccessObservation => {
+            try {
+              const observation = record(inputObservation);
+              const width = integer(observation.width, 1, 2);
+              const target = resolver.resolve(observation.target);
+              // Ownership must come from the expression, not a coincidental address match in another binding.
+              if (target.bindings.length !== 1) {
+                throw new Error("Struct observation target must reference exactly one binding.");
+              }
+              const binding = target.bindings[0];
+              const parts = describeSnesStructAccess(binding, target.value, width);
+              const { access, provenance } = observation;
+              if (access !== "read" && access !== "write" && access !== "read-write") {
+                throw new Error("Struct observation access must be read, write or read-write.");
+              }
+              if (provenance !== "observed" && provenance !== "trace-derived") {
+                throw new Error("Struct observation provenance must be observed or trace-derived.");
+              }
+              if (
+                typeof observation.romSha256 !== "string" ||
+                !/^[\da-f]{64}$/.test(observation.romSha256)
+              ) {
+                throw new Error("Struct observations require the capture ROM SHA-256.");
+              }
+              return {
+                expression: target.expression,
+                address: target.value,
+                binding: binding.name,
+                parts,
+                width,
+                access,
+                provenance,
+                source: text(observation.source),
+                detail: text(observation.detail),
+                romSha256: observation.romSha256,
+              };
+            } catch (error) {
+              const detail = error instanceof Error ? error.message : String(error);
+              throw new Error(`observations[${observationIndex}]: ${detail}`, { cause: error });
+            }
+          },
         );
+        if (!operand && !memoryOperand && !stackOperand && observations.length === 0) {
+          throw new Error(
+            "A struct instruction use requires an operand or observations. Set operand, memoryOperand, stackOperand, or a non-empty observations array.",
+          );
+        }
+        // An immediate denotes a value, while a captured access denotes a memory operand.
+        // Combining them at one instruction would assign incompatible meanings to that operand.
+        if (operand && (memoryOperand || observations.length)) {
+          throw new Error(
+            "A struct instruction use cannot combine an immediate and memory observations.",
+          );
+        }
+        // Stack offsets belong to a call's stack layout. Mixing them with another
+        // operand form or a bound-memory observation would claim incompatible ownership.
+        if (stackOperand && (operand || memoryOperand || observations.length)) {
+          throw new Error(
+            "A struct instruction use cannot combine a stack operand with other operand forms or observations.",
+          );
+        }
+        return {
+          address,
+          expectedBytes,
+          reason: text(entry.reason),
+          ...(entry.comment === undefined
+            ? {}
+            : { comment: entry.comment.replaceAll(/\s+/g, " ").trim() }),
+          ...(operand ? { operand } : {}),
+          ...(memoryOperand ? { memoryOperand } : {}),
+          ...(stackOperand ? { stackOperand } : {}),
+          observations,
+        };
+      } catch (error) {
+        // Keep the original array index even though successful uses are sorted by CPU address afterward.
+        const address = isRecord(input) ? input.address : undefined;
+        const location =
+          typeof address === "number" && Number.isSafeInteger(address)
+            ? ` at CPU ${hex(address)}`
+            : "";
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`instructionUses[${index}]${location}: ${detail}`, { cause: error });
       }
-      return {
-        address,
-        expectedBytes,
-        reason: text(entry.reason),
-        ...(entry.comment === undefined
-          ? {}
-          : { comment: entry.comment.replaceAll(/\s+/g, " ").trim() }),
-        ...(operand ? { operand } : {}),
-        ...(memoryOperand ? { memoryOperand } : {}),
-        observations,
-      };
     })
     .toSorted((a, b) => a.address - b.address);
 };
@@ -244,7 +281,7 @@ export const indexSnesStructInstructionUses = (
 };
 
 /**
- * Replace a proven immediate, direct address or direct-page data pointer without changing its mode.
+ * Replace a proven immediate, memory address, data pointer or stack displacement without changing its mode.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
  * @param {DecodedInstruction} instruction One accepted decode context.
  * @param {string} source Existing formatted source, including any conservative numeric fallback.
@@ -271,6 +308,27 @@ export const applySnesStructInstructionOperand = (
     !instruction.references.some(({ kind }) => kind === "data" || kind === "pointer")
   ) {
     throw new Error(`Struct observations at ${hex(use.address)} require a memory operand.`);
+  }
+  if (use.stackOperand) {
+    const operand = instruction.operands[0];
+    const indirect = instruction.mode === "stackRelativeIndirectIndexedY";
+    if (
+      (instruction.mode !== "stackRelative" && !indirect) ||
+      instruction.operands.length !== 1 ||
+      operand.kind !== "address" ||
+      operand.width !== 1 ||
+      operand.value !== use.stackOperand.value
+    ) {
+      throw new Error(
+        `Struct stackOperand '${use.stackOperand.expression}' does not match the encoded stack displacement at ${hex(use.address)}.`,
+      );
+    }
+    // Keep the stack selector and optional pointer/index syntax explicit. The
+    // expression replaces only the encoded byte, never S or the resulting pointer.
+    if (indirect) {
+      return `${instruction.mnemonic}.b (${use.stackOperand.expression},s),y`;
+    }
+    return `${instruction.mnemonic}.b ${use.stackOperand.expression},s`;
   }
   if (use.memoryOperand) {
     // The expression names encoded operand bytes, never the dereferenced or indexed address.
@@ -333,77 +391,14 @@ export const applySnesStructInstructionOperand = (
   return `${instruction.mnemonic}.${operand.width === 1 ? "b" : "w"} #${use.operand.expression}`;
 };
 
-/** Maximum comment-body length; reserve space for a complete metadata locator before clipping. */
-const structUseCommentLimit = 240;
-
 /**
- * Keep generated notes on one bounded line, including an optional unabridged evidence locator.
- * @param {string} value Comment body to abbreviate if needed.
- * @param {string} [suffix] Internal metadata locator, shorter than the limit; never abbreviated.
- * @returns {string} Whitespace-normalized body plus suffix, at most 240 characters.
- */
-const compactStructUseComment = (value: string, suffix = ""): string => {
-  const line = value.replaceAll(/\s+/g, " ").trim();
-  const available = structUseCommentLimit - suffix.length;
-  if (line.length <= available) {
-    return line + suffix;
-  }
-  return line.slice(0, available - 3).trimEnd() + "..." + suffix;
-};
-
-/**
- * Describe one complete access, including cross-field/opaque coverage rather than just its start.
- * @param {SnesStructAccessObservation} observation Validated access with non-empty span coverage.
- * @returns {string} Target and width followed by cross-part coverage when needed.
- */
-const describeObservation = (observation: SnesStructAccessObservation): string => {
-  let coverage = "";
-  if (observation.parts.length > 1 || !observation.parts[0].field) {
-    coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
-  }
-  return `${observation.expression} (${hex(observation.address)}, ${observation.width} byte(s))${coverage}`;
-};
-
-/**
- * Render at most two bounded comments per instruction: its reason and a directly observed
- * evidence summary. Trace-derived observations remain in struct-map.json for verification,
- * but their reconstruction details are too noisy for generated assembly.
- * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
- * @returns {readonly string[]} Comment bodies, each at most 240 characters, without semicolons.
+ * Emit only explicitly curated instruction context. Justifications, field descriptions
+ * and capture observations remain in metadata instead of becoming repetitive source notes.
+ * Preserve the entire explanation; the assembly layout pass wraps it without clipping.
+ * @param {SnesStructInstructionUse} use Validated instruction metadata.
+ * @returns {readonly string[]} Zero or one complete comment body, without a semicolon.
  */
 export const renderSnesStructUseComments = (use: SnesStructInstructionUse): readonly string[] => {
-  // Include the decimal address used in JSON so the complete evidence is directly searchable.
-  const locator = ` Details: struct-map.json instructionUses address=${use.address} (${hex(use.address)}).`;
-  const reason = omitResearchReferences(use.comment ?? use.reason);
-  const observations = use.observations.filter(
-    (observation) => observation.provenance === "observed",
-  );
-  const reasonLocator =
-    observations.length === 0 && reason.length > structUseCommentLimit ? locator : "";
-  const explanation = reason ? [compactStructUseComment(reason, reasonLocator)] : [];
-  if (observations.length === 0) {
-    return explanation;
-  }
-  const first = observations[0];
-  let summary: string;
-  if (observations.length === 1) {
-    summary = `[${first.provenance} ${first.access}] ${describeObservation(first)}. ${first.source}: ${first.detail}`;
-  } else {
-    const kinds = new Map<string, number>();
-    const bindings = new Set<string>();
-    const sources = new Set<string>();
-    for (const observation of observations) {
-      const kind = `${observation.provenance} ${observation.access}`;
-      kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
-      bindings.add(observation.binding);
-      sources.add(observation.source);
-    }
-    // Do not present the first capture's provenance/access as applying to every alternative.
-    let heading = `[${first.provenance} ${first.access}] ${observations.length} observations`;
-    if (kinds.size > 1) {
-      heading = `[struct observations] ${[...kinds].map(([kind, count]) => `${kind}: ${count}`).join(", ")}`;
-    }
-    summary = `${heading}; ${bindings.size} binding(s), ${sources.size} capture(s). Example: ${describeObservation(first)}.`;
-  }
-  return [...explanation, compactStructUseComment(omitResearchReferences(summary), locator)];
+  const comment = omitResearchReferences(use.comment ?? "");
+  return comment ? [comment] : [];
 };

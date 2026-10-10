@@ -208,7 +208,7 @@ export type ProgramAnalysisOptions = {
   stages?: readonly AssemblyStageName[];
   /** When false, include directives record an edge without parsing the target. Defaults to true. */
   followIncludes?: boolean;
-  /** Resolve asset paths without converting bytes; labels after assets remain provisional. */
+  /** Resolve asset paths without converting bytes; state-dependent assertions after assets wait for a build. */
   deferAssetConversion?: boolean;
 };
 
@@ -349,6 +349,8 @@ export class Assembler {
   readonly assetAssembly = new AssetAssemblyService(this);
   /** Tooling-only path discovery avoids conversion on edit bursts. */
   deferAssetConversion = false;
+  /** Once an active asset is skipped, subsequent layout values cannot validate assertions in this pass. */
+  #hasDeferredAssetLayout = false;
   readonly frontEndService: AssemblyFrontEndService;
   readonly programModelBuilder: ProgramModelBuilder;
   readonly commandLoweringService: CommandLoweringService;
@@ -439,7 +441,8 @@ export class Assembler {
     }
     const mapping = this.addressToLineMapping;
     mapping.registerDependencySnapshot(file, bytes);
-    const outputOffset = this.outputWriter.toOutputOffset(this.currentAddress);
+    // base changes label addresses without moving the physical load cursor used by source maps.
+    const outputOffset = this.outputWriter.toOutputOffset(this.currentTargetBaseAddress);
     mapping.assets.push({
       fileIdx: mapping.getFileIndex(this.currentFile),
       assetFileIdx: mapping.getFileIndex(file),
@@ -1157,11 +1160,13 @@ export class Assembler {
         // Editor analysis discovers dependencies while exact byte counts wait for an explicit build.
         // This keeps PNG/WAVE codecs out of the synchronous edit path.
         active.assetAssembly.discoverDependencies(call);
+        active.#hasDeferredAssetLayout = true;
         return;
       }
       const bytes = active.assetAssembly.materialize(call);
       const startAddress = active.currentAddress;
-      const startOutput = active.outputWriter.toOutputOffset(startAddress);
+      // Preserve the logical asset address, but locate its bytes through the physical load cursor.
+      const startOutput = active.outputWriter.toOutputOffset(active.currentTargetBaseAddress);
       // Validate the complete range before the first write; a failed conversion
       // or invalid target address must never leave a partial asset in output.
       active.outputWriter.validateWrite(bytes.length);
@@ -1208,6 +1213,10 @@ export class Assembler {
             targetId: session.targetId,
             cause,
           });
+        }
+        // A dialect-specific contribution can leave the built-in handler active in another source mode.
+        if (!handler) {
+          continue;
         }
         registry.register(
           [...directive.keywords],
@@ -1368,7 +1377,6 @@ export class Assembler {
       });
     }
     this.targetId = targetId;
-    this.syntaxProfile = target.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
     this.coreDirectiveGroups = target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS;
     const configuredTargetOptions = options.targetOptions;
     if (!target.createOptions && configuredTargetOptions !== undefined) {
@@ -1388,6 +1396,11 @@ export class Assembler {
     }
     const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
     this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
+    // Grammar and symbol scopes must be selected before any source is parsed, using the same validated options as output.
+    this.syntaxProfile =
+      target.createSyntaxProfile?.(this.targetOptions) ??
+      target.syntaxProfile ??
+      ASAR_SYNTAX_PROFILE;
     this.pluginState = measureInternalPhase(
       "pluginStateCreate",
       () =>
@@ -2241,7 +2254,10 @@ export class Assembler {
     const capture = this.collectSourceMetadata && this.canEmitBytes;
     const address = this.currentTargetAddress;
     const beforeBytes = this.bytes;
-    const outputOffset = capture ? this.outputWriter.toOutputOffset(address) : -1;
+    // Banked logical PCs can repeat; the load cursor identifies the instruction's actual ROM bytes.
+    const outputOffset = capture
+      ? this.outputWriter.toOutputOffset(this.currentTargetBaseAddress)
+      : -1;
     const operands: ResolvedInstructionOperand[] | undefined = capture ? [] : undefined;
     this.#encodingOperands = operands;
     let encoded: boolean;
@@ -2863,6 +2879,25 @@ export class Assembler {
     }
     // In our assembler, a condition is true if the result is nonzero.
     return result !== 0;
+  }
+
+  /**
+   * Evaluate an assertion, or defer it when skipped asset bytes make its inputs provisional.
+   * Literal arithmetic and expanded numeric defines remain checkable during editor analysis.
+   * @param {string | ExpressionNode} expression Assertion condition.
+   * @returns {boolean | undefined} The condition result, or undefined until a build resolves the layout.
+   */
+  evaluateAssertion(expression: string | ExpressionNode): boolean | undefined {
+    if (this.#hasDeferredAssetLayout) {
+      const resolved = this.resolveExpressionInput(expression);
+      // Symbols and calls can depend on skipped bytes, including through defines or user functions.
+      // Keep them out of diagnostics until conversion supplies real addresses; never guess a zero size.
+      if (!this.mathCore.isPureExpressionNode(resolved)) {
+        return undefined;
+      }
+      return this.evaluateExpression(resolved);
+    }
+    return this.evaluateExpression(expression);
   }
 
   /**
@@ -3552,6 +3587,7 @@ export class Assembler {
   runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState {
     return measureInternalPhase(stage, () => {
       if (stage === "collectDefinitions") {
+        this.#hasDeferredAssetLayout = false;
         this.assetAssembly.beginBuild();
         this.includeSource.beginAssemblySnapshot();
         this.mathCore.beginAssemblySnapshot();

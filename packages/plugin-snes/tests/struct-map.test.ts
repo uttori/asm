@@ -591,6 +591,7 @@ test("explicit field types distinguish arrays from scalars and validate their by
   };
   const map = { ...validateSnesStructMap(typed), sourceBytes: new Uint8Array() };
   const defines = renderSnesStructDefines(map);
+  t.false(defines.includes("struct-map.json"));
   t.regex(defines, /\.word: db\[2]/);
   t.regex(defines, /endstruct count 2 firstindex 0/);
   const fields = planSnesStructRomFields(map, 0x8000, (offset) => 0x808000 + offset);

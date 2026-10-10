@@ -309,12 +309,20 @@ export const canonicalSnesWramAddress = (address) => {
 export const indexSnesRamMap = (variables) => new Map(variables.flatMap((variable) => Array.from({ length: variable.size }, (_, offset) => [variable.address + offset, variable])));
 /**
  * Recognizes standalone file citations used by older maps before the sources field existed.
- * Embedded references in explanatory prose stay visible; new citations belong in sources.
+ * A legacy note can combine a file citation and a named layout reference. These remain
+ * provenance even when joined with a semicolon; explanatory sentences stay visible.
  * @param {string} note A normalized, single-line note.
  * @returns {boolean} Whether the entire note has a supported file or file/line citation form.
  */
 const isLegacySourceNote = (note) => {
+    const parts = note.split(/;\s*/);
+    if (parts.length > 1) {
+        return parts.every(isLegacySourceNote);
+    }
     const citation = note.endsWith(".") ? note.slice(0, -1) : note;
+    if (/^[A-Z_a-z]\w* in [\w./-]+\.(?:txt|md|asm|json)$/i.test(citation)) {
+        return true;
+    }
     const separator = citation.lastIndexOf(":");
     if (separator >= 0) {
         const file = citation.slice(0, separator);
@@ -332,9 +340,7 @@ const isLegacySourceNote = (note) => {
  */
 export const renderSnesRamDefines = (variables, options = {}) => {
     const lines = [
-        `; Generated from ${SNES_RAM_MAP_SOURCE} by Uttori ASM.`,
-        `; Edit ${SNES_RAM_MAP_SOURCE}, then run Assembly: Analyze and Regenerate Disassembly.`,
-        "; Every variable has a trailing description so symbol hover remains useful.",
+        "; RAM and SRAM addresses identify bytes; multi-byte values occupy consecutive addresses.",
         "",
         ...variables.flatMap((variable, index) => {
             const details = [

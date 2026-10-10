@@ -15,7 +15,7 @@ export interface SnesStructAccessObservation {
     readonly access: "read" | "write" | "read-write";
     /** A bus observation and an inference from instruction/register traces are different evidence. */
     readonly provenance: "observed" | "trace-derived";
-    /** Capture path or stable identifier. Export may summarize it and never opens it. */
+    /** Capture path or stable identifier, retained for verification and never opened by export. */
     readonly source: string;
     /** Capture location and reasoning, such as instruction sequence and pointer reconstruction. */
     readonly detail: string;
@@ -27,16 +27,22 @@ export interface SnesStructInstructionUse {
     readonly address: number;
     /** Complete instruction encoding, including opcode. Stale metadata aborts export before writes. */
     readonly expectedBytes: readonly number[];
+    /** Research justification retained in metadata; never emitted as an assembly comment. */
     readonly reason: string;
-    /** Optional display explanation; empty suppresses redundant prose without deleting its research reason. */
+    /** Explicit instruction-specific behavior or constraint; omitted/empty emits no comment. Field descriptions belong on their declarations. */
     readonly comment?: string;
-    /** Immediate value expression. Mutually exclusive with memoryOperand and access observations. */
+    /** Immediate value expression. Mutually exclusive with other operand forms and access observations. */
     readonly operand?: {
         readonly expression: string;
         readonly value: number;
     };
     /** Encoded direct memory address, before indexing/DB/D. Never a resolved runtime effective address. */
     readonly memoryOperand?: {
+        readonly expression: string;
+        readonly value: number;
+    };
+    /** Encoded unsigned stack displacement (0–255), before adding S. Never a WRAM address or access observation. */
+    readonly stackOperand?: {
         readonly expression: string;
         readonly value: number;
     };
@@ -63,7 +69,7 @@ export declare const validateSnesStructInstructionUses: (value: unknown, structu
  */
 export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructInstructionUse[] | undefined, rom: RomImage, toFileOffset: (address: number) => number | undefined) => ReadonlyMap<number, SnesStructInstructionUse> | undefined;
 /**
- * Replace a proven immediate, direct address or direct-page data pointer without changing its mode.
+ * Replace a proven immediate, memory address, data pointer or stack displacement without changing its mode.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
  * @param {DecodedInstruction} instruction One accepted decode context.
  * @param {string} source Existing formatted source, including any conservative numeric fallback.
@@ -72,11 +78,11 @@ export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructI
  */
 export declare const applySnesStructInstructionOperand: (instruction: DecodedInstruction, source: string, use: SnesStructInstructionUse) => string;
 /**
- * Render at most two bounded comments per instruction: its reason and a directly observed
- * evidence summary. Trace-derived observations remain in struct-map.json for verification,
- * but their reconstruction details are too noisy for generated assembly.
- * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
- * @returns {readonly string[]} Comment bodies, each at most 240 characters, without semicolons.
+ * Emit only explicitly curated instruction context. Justifications, field descriptions
+ * and capture observations remain in metadata instead of becoming repetitive source notes.
+ * Preserve the entire explanation; the assembly layout pass wraps it without clipping.
+ * @param {SnesStructInstructionUse} use Validated instruction metadata.
+ * @returns {readonly string[]} Zero or one complete comment body, without a semicolon.
  */
 export declare const renderSnesStructUseComments: (use: SnesStructInstructionUse) => readonly string[];
 //# sourceMappingURL=struct-instruction-uses.d.ts.map

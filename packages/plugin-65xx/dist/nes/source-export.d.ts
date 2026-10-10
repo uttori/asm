@@ -1,4 +1,4 @@
-import { type ProjectLabel, type ProjectComment, type AnalysisControlFlowNodeRecord, type SourceGenerationFile } from "@uttori/asm-disassembler";
+import { type ProjectLabel, type ProjectComment, type IntervalAnnotation, type AnalysisControlFlowNodeRecord, type SourceGenerationFile } from "@uttori/asm-disassembler";
 import type { NesCartridge } from "./cartridge.js";
 /** One physical output segment, independent of the runtime mapper selection. */
 export interface NesSourceSegment {
@@ -13,6 +13,8 @@ export declare function nesSourceSegments(rom: NesCartridge, _nodes?: readonly A
 export declare function exportNesSource(rom: NesCartridge, nodes: readonly AnalysisControlFlowNodeRecord[], romSha256: string, research?: {
     readonly labels?: readonly ProjectLabel[];
     readonly comments?: readonly ProjectComment[];
+    /** Explicit data classifications and versioned text/graphics layouts, qualified to original bytes. */
+    readonly annotations?: readonly IntervalAnnotation[];
 }): {
     files: SourceGenerationFile[];
     segments: readonly NesSourceSegment[];

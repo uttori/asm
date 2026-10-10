@@ -25,6 +25,7 @@ const MAX_CACHE_ENTRIES = 16;
 export function supportsPortableAssetPreview(id: string): boolean {
   return (
     id.startsWith("snes.") ||
+    id === "nes.chr.2bpp" ||
     id === "uttori.data.raw" ||
     id === "som.sprite.frames" ||
     id === "som.boss.graphics" ||

@@ -45,6 +45,7 @@ export declare function create65xxAssemblerEnvironment(options?: unknown): Promi
 export default plugin;
 export { Cpu6502Decoder, cpu6502Specifications, formatCpu6502Instruction } from "./decoder.js";
 export * from "./nes/cartridge.js";
+export * from "./nes/assets.js";
 export * from "./nes/mapper.js";
 export { ricoh2a03Cpu } from "./instructions/opcodes.js";
 export { Arch65xx, materializeOpcodeForm } from "./architecture.js";

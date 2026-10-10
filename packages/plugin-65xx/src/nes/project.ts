@@ -14,12 +14,13 @@ import {
   type ResearchSnapshot,
   lostCodeRanges,
   type StaticAnalysisSeed,
+  type AnalysisControlFlowNodeRecord,
 } from "@uttori/asm-disassembler";
 
-import { analyzeNes, type NesAnalysisState } from "./analysis.js";
+import { analyzeNes, decodeNesInstruction, type NesAnalysisState } from "./analysis.js";
 import { NesCartridge } from "./cartridge.js";
 import { validateNesMapper } from "./mapper.js";
-import { nesResearchInputs } from "./research.js";
+import { matchesNesResearch, nesResearchInputs } from "./research.js";
 
 /** Explicit iNES ingestion preserves the full-file identity and the ares-compatible payload identity. */
 export function loadNesRom(file: string): { cartridge: NesCartridge; rom: RomImage } {
@@ -80,6 +81,8 @@ export function analyzeNesProject(options: {
   const loaded = loadAnalysisProjectViewSnapshot(options.projectDirectory);
   validateProjectRom(loaded.manifest, rom);
   const seeds: StaticAnalysisSeed<NesAnalysisState>[] = [...(options.seeds ?? [])];
+  const research = nesResearchInputs(cartridge, loaded.view);
+  const observed: AnalysisControlFlowNodeRecord[] = [];
   const runtime = openAnalysisProjectStore(options.projectDirectory);
   try {
     const fields = [
@@ -124,33 +127,86 @@ export function analyzeNesProject(options: {
         typeof captured[key] === "number" ? captured[key] : null;
       const flag = (key: string): boolean | null =>
         numeric(key) === null ? null : numeric(key) === 1;
+      const state: NesAnalysisState = {
+        a: null,
+        x: null,
+        y: null,
+        mapper: {
+          select: numeric("select"),
+          prgMode: numeric("prgMode"),
+          chrMode: numeric("chrMode"),
+          banks: Array.from({ length: 8 }, (_, i) => numeric(`r${i}`)),
+          ramEnabled: flag("ramEnabled"),
+          ramWritable: flag("ramWritable"),
+          mirroring: numeric("mirroring"),
+          irqLatch: numeric("irqLatch"),
+          irqEnabled: flag("irqEnabled"),
+        },
+      };
+      // Older captures can contain only an opcode prefix. They still seed conservative ROM
+      // analysis, but cannot claim a complete observed extent over conflicting static paths.
       seeds.push({
         id: record.id,
         kind: "observation",
         address: record.address,
-        state: {
-          a: null,
-          x: null,
-          y: null,
-          mapper: {
-            select: numeric("select"),
-            prgMode: numeric("prgMode"),
-            chrMode: numeric("chrMode"),
-            banks: Array.from({ length: 8 }, (_, i) => numeric(`r${i}`)),
-            ramEnabled: flag("ramEnabled"),
-            ramWritable: flag("ramWritable"),
-            mirroring: numeric("mirroring"),
-            irqLatch: numeric("irqLatch"),
-            irqEnabled: flag("irqEnabled"),
-          },
-        },
+        state,
         evidence: record.evidence,
       });
+      const { result: decoded, offsets } = decodeNesInstruction(
+        cartridge,
+        record.address,
+        state.mapper,
+      );
+      // Captured physical offsets must agree with the live mapper and a complete opcode. A
+      // matching byte sequence elsewhere in ROM cannot establish this instruction's ownership.
+      if (
+        decoded.kind !== "instruction" ||
+        decoded.instruction.size !== record.bytes.length ||
+        offsets.slice(0, record.bytes.length).some((offset, index) => offset !== physical + index)
+      ) {
+        continue;
+      }
+      // Explicit data research still governs source emission, including captured operand bytes.
+      const blocked = research.annotations.some(
+        (annotation) =>
+          !["opcode", "operand", "unreached"].includes(annotation.classification) &&
+          record.bytes.some((_, index) =>
+            matchesNesResearch(
+              cartridge,
+              annotation,
+              (record.address + index) & 0xffff,
+              state.mapper,
+            ),
+          ),
+      );
+      if (!blocked) {
+        const id = `nes:runtime:${record.id}`;
+        observed.push({
+          id,
+          kind: "cfg-node",
+          addressSpace: "nes.cpu",
+          address: record.address,
+          fileOffset: cartridge.prg.offset - 16 + physical,
+          bytes: [...record.bytes],
+          size: decoded.instruction.size,
+          opcode: decoded.instruction.opcode,
+          specificationId: decoded.instruction.specificationId,
+          mnemonic: decoded.instruction.mnemonic,
+          mode: decoded.instruction.mode,
+          context: [],
+          incomingState: { ...state },
+          // This observation proves the fetch, not the state of a subsequent instruction.
+          outgoingState: {},
+          effectiveAddresses: [],
+          entryPoint: id,
+          evidencePath: [id],
+          evidence: record.evidence,
+        });
+      }
     }
   } finally {
     runtime.close();
   }
-  const research = nesResearchInputs(cartridge, loaded.view);
   seeds.push(...research.seeds);
   const result = analyzeNes(cartridge, {
     ...options,
@@ -183,6 +239,9 @@ export function analyzeNesProject(options: {
     evidence: [...new Set([evidence.id, ...node.evidence])],
     evidencePath: node.evidencePath.map((id) => `nes:${id}`),
   }));
+  // Keep direct observations separate from propagated CFG nodes so export can distinguish
+  // executed boundaries from speculative paths even when their evidence IDs are shared.
+  records.push(...observed);
   records.push(
     ...result.edges
       .filter((edge) => result.nodes.some((node) => node.id === edge.from))

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "../internal/capture-limits.js";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath } from "./git.js";
@@ -220,8 +221,8 @@ export function writeSourceCaptureCatalog(root, name, catalog, expectedSha256) {
         lease.release();
     }
 }
-/** Stream archive identity with cancellation. Companion artifacts are separately verified by the importer. */
-export async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024 ** 3) {
+/** Stream archive identity with cancellation and the shared 32 GiB default. Companion artifacts are separately verified by the importer. */
+export async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_RUNTIME_TRACE_MAX_BYTES) {
     signal?.throwIfAborted();
     if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
         throw new Error("Capture byte budget must be a positive safe integer.");
@@ -231,7 +232,7 @@ export async function fingerprintSourceCapture(file, signal, maxBytes = 2 * 1024
         throw new Error("Capture archive must be a nonempty regular file.");
     }
     if (before.size > BigInt(maxBytes)) {
-        throw new Error("Capture archive exceeds the project's byte budget.");
+        throw new Error(`Capture archive '${file}' is ${(Number(before.size) / 1024 ** 3).toFixed(2)} GiB and exceeds the project's byte budget of ${(maxBytes / 1024 ** 3).toFixed(2)} GiB (${maxBytes} bytes). Increase limits.captureBytes in .uttori/project.json to import this archive.`);
     }
     const hash = createHash("sha256");
     let bytes = 0;

@@ -14,12 +14,13 @@ import { runAssetInterchangeSmoke } from "./asset-interchange.js";
 import { runAssetRecoverySmoke } from "./asset-recovery.js";
 import { runAssetSourceConversionSmoke } from "./asset-source-conversion.js";
 import { runBinaryPreviewSmoke } from "./binary-preview.js";
+import { runColdDebugActivationSmoke } from "./cold-debug.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
+import { runNesSourceSmoke } from "./nes-source.js";
 import { runPaletteEditorSmoke } from "./palette-editor.js";
 import { runPngEditorSmoke } from "./png-editor.js";
 import { runReleaseAcceptance } from "./release-acceptance.js";
 import { runSourceGitUiSmoke } from "./source-git-ui.js";
-import { runNesSourceSmoke } from "./nes-source.js";
 import { runSourceLaunchSmoke } from "./source-launch.js";
 import { runSourceLifecycleSmoke } from "./source-lifecycle.js";
 import { runSourceWorkflowSmoke } from "./source-workflow.js";
@@ -491,9 +492,15 @@ export async function run(): Promise<void> {
     });
     assert.match(help, /usage/i);
   }
+  // Exercise F5 before any language, view or command can mask a missing debugger activation event.
+  if (process.env.UTTORI_VSCODE_COLD_DEBUG === "1") {
+    return runColdDebugActivationSmoke(extension, folder);
+  }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
-  if (process.env.UTTORI_VSCODE_NES_SOURCE === "1") return runNesSourceSmoke(folder);
+  if (process.env.UTTORI_VSCODE_NES_SOURCE === "1") {
+    return runNesSourceSmoke(folder);
+  }
   if (process.env.UTTORI_VSCODE_GIT_SOURCE === "1") {
     if (process.env.UTTORI_VSCODE_ASSET_SOURCE_CONVERSION === "1") {
       return runAssetSourceConversionSmoke(folder);

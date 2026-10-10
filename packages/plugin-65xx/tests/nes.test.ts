@@ -20,8 +20,9 @@ function cartridge(flags = 0x40): Uint8Array {
   const trainer = flags & 4 ? 512 : 0;
   const bytes = new Uint8Array(16 + trainer + 0x20000 + 0x2000);
   bytes.set([0x4e, 0x45, 0x53, 0x1a, 8, 1, flags, 0]);
-  for (let bank = 0; bank < 16; bank++)
+  for (let bank = 0; bank < 16; bank++) {
     bytes.fill(bank, 16 + trainer + bank * 8192, 16 + trainer + (bank + 1) * 8192);
+  }
   return bytes;
 }
 
@@ -69,7 +70,9 @@ test("all 256 Ricoh opcode encodings survive decode and exact rendering", (t) =>
       offset: 0,
       logicalAddress: 0x8000,
     });
-    if (result.kind !== "instruction") throw new Error(`Decode failed: ${opcode}`);
+    if (result.kind !== "instruction") {
+      throw new Error(`Decode failed: ${opcode}`);
+    }
     const assembler = new Assembler({
       environment,
       target: "65xx.ca65-raw",
@@ -77,7 +80,11 @@ test("all 256 Ricoh opcode encodings survive decode and exact rendering", (t) =>
       targetOptions: { origin: 0x8000 },
     });
     try {
-      assembler.assembleSource(formatCpu6502Instruction(result.instruction), "decode.asm");
+      const text = formatCpu6502Instruction(result.instruction);
+      if (!text.startsWith(".byte")) {
+        t.regex(text, /^[A-Z]{3}(?:\.| |$)/);
+      }
+      assembler.assembleSource(text, "decode.asm");
       t.deepEqual(
         assembler.getBinaryOutput(),
         result.instruction.bytes,
@@ -97,13 +104,17 @@ test("6502 branches wrap the CPU address and indirect JMP remains unresolved", (
     logicalAddress: 0,
   });
   t.is(branch.kind, "instruction");
-  if (branch.kind === "instruction") t.is(branch.instruction.references[0].address, 0xffff);
+  if (branch.kind === "instruction") {
+    t.is(branch.instruction.references[0].address, 0xffff);
+  }
   const jump = decoder.decode({
     source: new Uint8ArrayDecoderSource([0x6c, 0xff, 0x12]),
     offset: 0,
     logicalAddress: 0x8000,
   });
-  if (jump.kind !== "instruction") throw new Error("JMP decode failed");
+  if (jump.kind !== "instruction") {
+    throw new Error("JMP decode failed");
+  }
   t.true(jump.instruction.flow.indirect);
   t.is(jump.instruction.references[0].address, 0x12ff);
   t.is(

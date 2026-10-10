@@ -31,6 +31,26 @@ const report: ImportReport = {
   warnings: [],
 };
 
+test("archive fingerprints allow inputs beyond 2 GiB by default and explain explicit project limits", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "source-catalog-budget-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const file = path.join(root, "large.act2");
+  fs.writeFileSync(file, "sparse archive");
+  // A sparse file exercises the real size check without allocating or hashing gigabytes.
+  fs.truncateSync(file, 3 * 1024 ** 3);
+  const canceled = new AbortController();
+  const hashing = fingerprintSourceCapture(file, canceled.signal);
+  canceled.abort();
+  await t.throwsAsync(hashing, { name: "AbortError" });
+  await t.throwsAsync(fingerprintSourceCapture(file, undefined, 2 * 1024 ** 3), {
+    message: /3\.00 GiB.*byte budget of 2\.00 GiB.*limits\.captureBytes in \.uttori\/project\.json/,
+  });
+  fs.truncateSync(file, 33 * 1024 ** 3);
+  await t.throwsAsync(fingerprintSourceCapture(file), {
+    message: /33\.00 GiB.*byte budget of 32\.00 GiB/,
+  });
+});
+
 test("catalog keeps unavailable evidence identities and binds byte hashes only after a verified import", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "source-catalog-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));

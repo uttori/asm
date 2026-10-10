@@ -131,6 +131,7 @@ export function prepareSourceResearch(
       romSha256: project.configuration.romSha256,
     },
     overlays,
+    project.configuration.limits,
   );
   if (request.kind === "analysis") {
     // Read only the compact manifest. This picker must never materialize the captured graph or update its projection.

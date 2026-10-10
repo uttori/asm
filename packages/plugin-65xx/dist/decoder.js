@@ -140,7 +140,7 @@ export class Cpu6502Decoder {
         };
     }
 }
-/** Reassemblable ca65 text. Duplicate unofficial encodings remain explicit bytes rather than canonicalizing. */
+/** Uppercase, reassemblable ca65 text. Duplicate unofficial encodings remain explicit bytes rather than canonicalizing. */
 export function formatCpu6502Instruction(instruction, 
 /** Trusted address expression with the same numeric value; encoded operand width remains forced. */
 addressExpression) {
@@ -156,7 +156,7 @@ addressExpression) {
         case "implied":
             break;
         case "accumulator":
-            text = "a";
+            text = "A";
             break;
         case "immediate":
             text = `#${hex(value)}`;
@@ -165,35 +165,49 @@ addressExpression) {
             text = hex(operand.targetAddress, 4);
             break;
         case "zeroPage":
-            text = hex(value);
+            text = addressExpression ?? hex(value);
+            if (addressExpression) {
+                // Exported symbols can be unresolved during layout; force the captured zero-page encoding.
+                suffix = ".b";
+            }
             break;
         case "zeroPageIndexedX":
-            text = `${hex(value)},x`;
+            text = `${addressExpression ?? hex(value)},X`;
+            if (addressExpression) {
+                suffix = ".b";
+            }
             break;
         case "zeroPageIndexedY":
-            text = `${hex(value)},y`;
+            text = `${addressExpression ?? hex(value)},Y`;
+            if (addressExpression) {
+                suffix = ".b";
+            }
             break;
         case "absolute":
             text = addressExpression ?? hex(value, 4);
             suffix = ".w";
             break;
         case "absoluteIndexedX":
-            text = `${hex(value, 4)},x`;
+            text = `${addressExpression ?? hex(value, 4)},X`;
             suffix = ".w";
             break;
         case "absoluteIndexedY":
-            text = `${hex(value, 4)},y`;
+            text = `${addressExpression ?? hex(value, 4)},Y`;
             suffix = ".w";
             break;
         case "indirect":
-            text = `(${hex(value, 4)})`;
+            text = `(${addressExpression ?? hex(value, 4)})`;
             suffix = ".w";
             break;
         case "indexedIndirectX":
-            text = `(${hex(value)},x)`;
+            text = `(${addressExpression ?? hex(value)},X)`;
+            if (addressExpression) {
+                // An unresolved pointer must retain the 2A03 zero-page form during layout.
+                suffix = ".b";
+            }
             break;
         case "indirectIndexedY":
-            text = `(${hex(value)}),y`;
+            text = `(${addressExpression ?? hex(value)}),Y`;
             break;
         // Other 65xx dialect modes cannot occur in an NMOS opcode table.
         case "absoluteIndexedIndirect":
@@ -217,6 +231,6 @@ addressExpression) {
         case "zeroPageRelative":
             throw new Error(`Unsupported NMOS mode ${form.mode}.`);
     }
-    return `${form.mnemonic.toLowerCase()}${suffix}${text ? ` ${text}` : ""}`;
+    return `${form.mnemonic}${suffix}${text ? ` ${text}` : ""}`;
 }
 //# sourceMappingURL=decoder.js.map

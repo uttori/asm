@@ -23,6 +23,10 @@ function isRecord(value) {
  */
 export function createNes65xxTargetOptions(configured) {
     const value = isRecord(configured) ? configured : {};
+    const sourceStyle = value.sourceStyle ?? "ca65";
+    if (sourceStyle !== "asar" && sourceStyle !== "ca65") {
+        throw new Error("NES sourceStyle must be 'asar' or 'ca65'.");
+    }
     const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim()
         ? value.linkerConfig
         : defaultLd65ConfigText();
@@ -31,7 +35,7 @@ export function createNes65xxTargetOptions(configured) {
         ? value.fillByte & 0xff
         : 0xff;
     const header = normalizeHeader(value.header, linker.imageSize);
-    return { header, linkerConfig, fillByte, linker };
+    return { header, linkerConfig, fillByte, linker, sourceStyle };
 }
 /**
  * Builds the initial NES session state from target options.
@@ -66,12 +70,41 @@ function validate(address) {
     return address;
 }
 /**
- * Maps CPU addresses through the current load MEMORY region into the iNES image.
- * Overlay run addresses are never written. `base` keeps the load cursor for stores.
+ * Maps load addresses into the iNES image using physical Asar offsets or ca65 MEMORY regions.
+ * Logical CPU/PPU addresses stay independent of the load cursor through core `base` support.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */
-export function createNesAddressSpace({ state }) {
+export function createNesAddressSpace({ state, options, }) {
+    if (options.sourceStyle === "asar") {
+        const nes = state.get(nes65xxSessionStateKey);
+        // Banked CPU addresses are not unique ROM locations. org selects physical payload bytes;
+        // core base supplies the independent logical address used by labels and instruction encoding.
+        const physical = (address) => {
+            if (!Number.isSafeInteger(address) || address < 0 || address >= nes.linker.imageSize) {
+                throw new Error(`NES physical write offset ${address} is outside the fixed cartridge layout.`);
+            }
+            return address;
+        };
+        return {
+            addressWidth: 32,
+            defaultOrigin: 0,
+            normalizeForWrite: physical,
+            advance: (address, amount) => address + amount,
+            toOutputOffset(address) {
+                // End-of-bank source ranges may point one byte past the payload; actual writes remain strict.
+                if (!Number.isSafeInteger(address) || address < 0 || address > nes.linker.imageSize) {
+                    return -1;
+                }
+                return nes.header.length + address;
+            },
+            fromOutputOffset(offset) {
+                const address = offset - nes.header.length;
+                return address >= 0 && address < nes.linker.imageSize ? address : -1;
+            },
+            validateWrite: physical,
+        };
+    }
     return {
         addressWidth: 16,
         defaultOrigin: 0,

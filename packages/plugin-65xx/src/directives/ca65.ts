@@ -484,7 +484,7 @@ export function handleCa65Incbin(session: Assembler, words: readonly string[]): 
 }
 
 /**
- * Implements the flat-image subset of ca65 `.assert`.
+ * Implements the flat-image subset of ca65 `.assert`, deferring provisional asset layouts in tooling.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  */
@@ -493,7 +493,7 @@ export function handleCa65Assert(session: Assembler, words: readonly string[]): 
   if (params.length === 0) {
     throw new Error(".assert requires an expression.");
   }
-  if (session.operandResolver.getnum(params[0] ?? "") !== 0) {
+  if (session.evaluateAssertion(params[0] ?? "") !== false) {
     return;
   }
   const message = params.find((part) => /^["']/.test(part));

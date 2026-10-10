@@ -138,7 +138,7 @@ export type ProgramAnalysisOptions = {
     stages?: readonly AssemblyStageName[];
     /** When false, include directives record an edge without parsing the target. Defaults to true. */
     followIncludes?: boolean;
-    /** Resolve asset paths without converting bytes; labels after assets remain provisional. */
+    /** Resolve asset paths without converting bytes; state-dependent assertions after assets wait for a build. */
     deferAssetConversion?: boolean;
 };
 type ActiveLifecycle = {
@@ -708,6 +708,13 @@ export declare class Assembler {
      * @returns {boolean} True if the expression is true, false otherwise.
      */
     evaluateExpression(expression: string | ExpressionNode): boolean;
+    /**
+     * Evaluate an assertion, or defer it when skipped asset bytes make its inputs provisional.
+     * Literal arithmetic and expanded numeric defines remain checkable during editor analysis.
+     * @param {string | ExpressionNode} expression Assertion condition.
+     * @returns {boolean | undefined} The condition result, or undefined until a build resolves the layout.
+     */
+    evaluateAssertion(expression: string | ExpressionNode): boolean | undefined;
     /**
      * Parses string input into an expression node and resolves nested references/defines.
      * @param {string | ExpressionNode} expression The expression source or parsed node.

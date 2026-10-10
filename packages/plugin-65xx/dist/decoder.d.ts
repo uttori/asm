@@ -9,7 +9,7 @@ export declare class Cpu6502Decoder implements ArchitectureDecoder {
     constructor(cpu?: CpuDefinition);
     decode(context: ArchitectureDecodeContext): ArchitectureDecodeResult;
 }
-/** Reassemblable ca65 text. Duplicate unofficial encodings remain explicit bytes rather than canonicalizing. */
+/** Uppercase, reassemblable ca65 text. Duplicate unofficial encodings remain explicit bytes rather than canonicalizing. */
 export declare function formatCpu6502Instruction(instruction: DecodedInstruction, 
 /** Trusted address expression with the same numeric value; encoded operand width remains forced. */
 addressExpression?: string): string;

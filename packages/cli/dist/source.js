@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { sourceFilePublicationEpoch, RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, prepareSourceGeneration, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, } from "@uttori/asm-disassembler";
+import { sourceFilePublicationEpoch, RomImage, openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch, openAnalysisProjectStore, sourceContentHash, pinSourceCandidate, prepareSourceGeneration, acceptedSourceGeneration, verifySourceGeneration, sourceGit, sourceStatus, sourceMergeStatus, previewSourceGeneration, applySourceGeneration, finishSourceGeneration, abortSourceGeneration, discardSourceGeneration, pruneSourceScratch, pruneSourcePins, assertSourcePath, assertSourceObjectId, readResearchInputs, openRuntimeCaptureSource, importRuntimeTraceSourceIntoProject, importRuntimeBusTraceSourceIntoProject, readSourceCaptureCatalog, reconcileSourceCaptureCatalog, writeSourceCaptureCatalog, fingerprintSourceCapture, pendingCaptureImportNotes, completeCaptureImportNotes, writeCaptureImportNotes, DEFAULT_RUNTIME_TRACE_MAX_BYTES, } from "@uttori/asm-disassembler";
 import plugin65xx from "@uttori/asm-plugin-65xx";
 import { loadNesRom, buildNesSource, inspectNesSource, prepareNesGeneration, analyzeNesProject, importNesPPUCapture, } from "@uttori/asm-plugin-65xx/disassembler";
 import { loadProjectEnvironment, fingerprintNodeToolchain } from "@uttori/asm-plugin-loader-node";
@@ -541,10 +541,18 @@ export async function executeSourceOperation(operation) {
     if (operation.action === "status") {
         const status = await sourceMergeStatus(repository);
         let candidateAccepted = false;
+        let candidateStale = false;
         if (operation.candidate) {
             assertSourceObjectId(operation.candidate);
-            candidateAccepted =
-                (await acceptedSourceGeneration(repository, status.head)) === operation.candidate;
+            const accepted = await acceptedSourceGeneration(repository, status.head);
+            candidateAccepted = accepted === operation.candidate;
+            if (!candidateAccepted) {
+                // Editor selections survive external merges and branch switches. Compare the immutable
+                // candidate parent with this checkout's accepted generation before offering Preview.
+                const ancestry = await sourceGit(repository.root, ["rev-list", "--parents", "-n", "1", operation.candidate], { acceptedCodes: [0, 128] });
+                const parents = ancestry.stdout.toString("utf8").trim().split(" ");
+                candidateStale = ancestry.code !== 0 || parents.length !== 2 || parents[1] !== accepted;
+            }
         }
         let analysisReady = false;
         let analysisReason;
@@ -590,6 +598,7 @@ export async function executeSourceOperation(operation) {
                     .split("\0")
                     .some((entry) => entry.startsWith("?? ")),
             candidateAccepted,
+            candidateStale,
             analysisReady,
             analysisReason,
             catalogReady,
@@ -769,8 +778,9 @@ export async function executeSourceOperation(operation) {
             writeSourceCaptureCatalog(repository.root, project.configuration.captures, catalog, snapshot.fileSha256);
             return {
                 captures: catalog.captures.length,
-                retainedEvidenceRequired: catalog.captures.filter((capture) => !capture.archives.length)
-                    .length,
+                // Archive hashes record the verified import input, not an available reconstruction source.
+                // Every capture relies on its imported evidence after users remove temporary recordings.
+                retainedEvidenceRequired: catalog.captures.length,
             };
         }
         finally {
@@ -781,10 +791,7 @@ export async function executeSourceOperation(operation) {
     const researchOptions = {
         research: project.research,
         assertResearchCurrent: () => {
-            const current = readResearchInputs(repository.root, project.configuration.researchRoots, {
-                project: project.configuration.id,
-                romSha256: project.configuration.romSha256,
-            });
+            const current = readResearchInputs(repository.root, project.configuration.researchRoots, { project: project.configuration.id, romSha256: project.configuration.romSha256 }, undefined, project.configuration.limits);
             if (current.hash !== project.research.hash) {
                 throw new Error("Research changed during the operation. Retry with the current branch inputs.");
             }
@@ -816,8 +823,11 @@ export async function executeSourceOperation(operation) {
         try {
             onProgress("Starting capture import.");
             const local = sourceProjectLocalInputs(project);
+            // One resolved budget covers the primary archive and each companion, including provenance hashing.
+            // Otherwise a successful evidence scan can fail later at an independent fingerprinting default.
+            const maxCaptureBytes = project.configuration.limits?.captureBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
             const catalogSnapshot = readSourceCaptureCatalog(repository.root, project.configuration.captures, project.configuration.romSha256);
-            const archive = await fingerprintSourceCapture(capture, operation.signal, project.configuration.limits?.captureBytes);
+            const archive = await fingerprintSourceCapture(capture, operation.signal, maxCaptureBytes);
             let graphicsResult;
             const graphicsBindings = [];
             if (project.configuration.target === "65xx.nes") {
@@ -842,7 +852,7 @@ export async function executeSourceOperation(operation) {
                     romFileSha256: rom.identity.sha256,
                     romContentSha256: rom.identity.contentSha256,
                     signal: operation.signal,
-                    maxBytes: project.configuration.limits?.captureBytes,
+                    maxBytes: maxCaptureBytes,
                 });
                 if (graphics) {
                     onProgress(`Verified PPU evidence saved to ${graphics.report}`);
@@ -854,7 +864,7 @@ export async function executeSourceOperation(operation) {
                 ? undefined
                 : await openRuntimeCaptureSource(capture, {
                     signal: operation.signal,
-                    maxBytes: project.configuration.limits?.captureBytes,
+                    maxBytes: maxCaptureBytes,
                 });
             onProgress(`Selected ${selected?.kind ?? "NES graphics"} importer.`);
             const context = {
@@ -892,16 +902,25 @@ export async function executeSourceOperation(operation) {
                         romFileSha256: rom.identity.sha256,
                         romContentSha256: rom.identity.contentSha256,
                         signal: operation.signal,
-                        maxBytes: project.configuration.limits?.captureBytes,
+                        maxBytes: maxCaptureBytes,
                     });
                     if (!graphics) {
                         throw new Error("NES instruction context requires NES graphics evidence.");
                     }
-                    const graphicsArchive = await fingerprintSourceCapture(path.join(`${capture}.context`, "graphics.act2"), operation.signal, project.configuration.limits?.captureBytes);
+                    const graphicsArchive = await fingerprintSourceCapture(path.join(`${capture}.context`, "graphics.act2"), operation.signal, maxCaptureBytes);
                     if (graphicsArchive.sha256 !== graphics.sourceSha256) {
                         throw new Error("Graphics companion changed during import.");
                     }
                     graphicsBindings.push({ sourceSha256: graphics.sourceSha256, archive: graphicsArchive });
+                    // The CPU capture can be an exact retry while its newly supported graphics projection is new.
+                    result = {
+                        ...result,
+                        changed: result.changed || graphics.changed,
+                        added: {
+                            runtime: result.added.runtime + graphics.added.runtime,
+                            evidence: result.added.evidence + graphics.added.evidence,
+                        },
+                    };
                     onProgress(`Verified companion PPU evidence saved to ${graphics.report}`);
                 }
                 catch (error) {
@@ -912,7 +931,7 @@ export async function executeSourceOperation(operation) {
             // retrying the import is idempotent and can complete the missing portable archive binding.
             try {
                 onProgress("Recording verified archive identity in the Git capture catalog.");
-                if (canonicalJson(await fingerprintSourceCapture(capture, operation.signal, project.configuration.limits?.captureBytes)) !== canonicalJson(archive)) {
+                if (canonicalJson(await fingerprintSourceCapture(capture, operation.signal, maxCaptureBytes)) !== canonicalJson(archive)) {
                     throw new Error("Capture archive or companion changed during import.");
                 }
                 const store = openAnalysisProjectStore(local.evidence);

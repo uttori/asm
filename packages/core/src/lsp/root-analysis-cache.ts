@@ -32,8 +32,8 @@ export type RootAnalysisCacheIdentity = {
   targetOptionsIdentity: string;
 };
 
-// Older entries flattened multiline records and cannot safely supply rename ranges.
-const CACHE_VERSION = 4;
+// Older entries can contain assertion failures calculated with skipped assets contributing zero bytes.
+const CACHE_VERSION = 5;
 
 type CachePayload = {
   version: number;

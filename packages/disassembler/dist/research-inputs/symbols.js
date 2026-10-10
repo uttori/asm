@@ -102,7 +102,8 @@ export function renameResearchSymbol(snapshot, identity, newName, newDocumentPat
     if (previous &&
         (previous.addressSpace !== identity.addressSpace ||
             previous.address !== identity.address ||
-            canonicalJson(previous.mapping ?? null) !== canonicalJson(identity.mapping ?? null))) {
+            (identity.mapping !== undefined &&
+                canonicalJson(previous.mapping ?? null) !== canonicalJson(identity.mapping)))) {
         throw new Error("The symbol's original identity changed. Refresh before renaming.");
     }
     if (previous?.sourceName && previous.sourceName !== identity.currentName) {

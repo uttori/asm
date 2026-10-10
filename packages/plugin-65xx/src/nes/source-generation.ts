@@ -194,7 +194,11 @@ export async function prepareNesGeneration(
         loadedCartridge,
         store.analysisByKinds(["cfg-node"]).filter((node) => node.kind === "cfg-node"),
         loadedRom.identity.contentSha256,
-        { labels: project.shards.labels, comments: project.shards.comments },
+        {
+          labels: project.shards.labels,
+          comments: project.shards.comments,
+          annotations: project.shards.annotations,
+        },
       );
       for (const file of exported.files) {
         if (file.path !== "uttori-asm.config.json") {

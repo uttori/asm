@@ -5478,7 +5478,7 @@ function formatCpu6502Instruction(instruction, addressExpression) {
     case "implied":
       break;
     case "accumulator":
-      text = "a";
+      text = "A";
       break;
     case "immediate":
       text = `#${hex(value)}`;
@@ -5490,21 +5490,21 @@ function formatCpu6502Instruction(instruction, addressExpression) {
       text = hex(value);
       break;
     case "zeroPageIndexedX":
-      text = `${hex(value)},x`;
+      text = `${hex(value)},X`;
       break;
     case "zeroPageIndexedY":
-      text = `${hex(value)},y`;
+      text = `${hex(value)},Y`;
       break;
     case "absolute":
       text = addressExpression ?? hex(value, 4);
       suffix = ".w";
       break;
     case "absoluteIndexedX":
-      text = `${hex(value, 4)},x`;
+      text = `${hex(value, 4)},X`;
       suffix = ".w";
       break;
     case "absoluteIndexedY":
-      text = `${hex(value, 4)},y`;
+      text = `${hex(value, 4)},Y`;
       suffix = ".w";
       break;
     case "indirect":
@@ -5512,10 +5512,10 @@ function formatCpu6502Instruction(instruction, addressExpression) {
       suffix = ".w";
       break;
     case "indexedIndirectX":
-      text = `(${hex(value)},x)`;
+      text = `(${hex(value)},X)`;
       break;
     case "indirectIndexedY":
-      text = `(${hex(value)}),y`;
+      text = `(${hex(value)}),Y`;
       break;
     // Other 65xx dialect modes cannot occur in an NMOS opcode table.
     case "absoluteIndexedIndirect":
@@ -5539,7 +5539,7 @@ function formatCpu6502Instruction(instruction, addressExpression) {
     case "zeroPageRelative":
       throw new Error(`Unsupported NMOS mode ${form.mode}.`);
   }
-  return `${form.mnemonic.toLowerCase()}${suffix}${text ? ` ${text}` : ""}`;
+  return `${form.mnemonic}${suffix}${text ? ` ${text}` : ""}`;
 }
 
 // packages/plugin-65xx/src/directives/ca65.ts

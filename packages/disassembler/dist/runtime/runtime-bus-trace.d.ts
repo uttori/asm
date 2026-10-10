@@ -7,7 +7,7 @@ import { type RuntimePPUSummary } from "./runtime-ppu.js";
 import type { RuntimeTraceImporterStorage } from "./runtime-trace.js";
 import { type RuntimeTransferSummary } from "./runtime-transfer.js";
 export declare const RUNTIME_BUS_TRACE_FORMAT: "uttori-asm-bus-trace";
-/** Aggregates byte-access variants. Ordered timing and raster history require the capture archive. */
+/** Aggregates byte-access variants; ordered timing and raster history are outside this projection. */
 export declare const RUNTIME_BUS_INDEX_PROFILE: "bus-access-v1";
 /** Identity of a complete lossless SNES bus stream, independent of its file or transport framing. */
 export interface RuntimeBusTraceMetadata {

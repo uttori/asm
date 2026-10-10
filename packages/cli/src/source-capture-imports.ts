@@ -2,7 +2,7 @@ import path from "node:path";
 
 /** Compact per-file outcome; instruction/execution records remain in the project's SQLite store. */
 export interface SourceCaptureImportSummary {
-  /** Absolute input path; archives remain untouched after importing. */
+  /** Historical absolute input path; callers must not rely on its existence after successful import. */
   readonly capture: string;
   readonly sourceSha256: string;
   readonly changed: boolean;
@@ -50,6 +50,7 @@ function summarize(capture: string, result: unknown): SourceCaptureImportSummary
  * Import unique absolute paths in selection order, reopening project state for each capture.
  * Stop on the first failure/cancellation; completed files remain committed and retries are idempotent.
  * The callback owns each file's transaction and catalog update. No captures run concurrently.
+ * Input files remain user-owned; successful imports must not require them for later project work.
  */
 export async function importSourceCaptures(
   captures: readonly string[],

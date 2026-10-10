@@ -2,11 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { waveImporter, writePcmWave, type PcmAudio } from "@uttori/asm-assets/audio";
+import { createIndexedPng, readAssetPng } from "@uttori/asm-assets/image";
 import { rgbaNativePng } from "@uttori/asm-assets/preview";
 import { normalizeSomSource } from "@uttori/asm-assets/secret-of-mana/som-source";
 import { createSomSpriteInterchange } from "@uttori/asm-assets/secret-of-mana/som-sprite-interchange";
 import { bindingResourceKey } from "@uttori/asm-assets/source-binding";
 import { indexedSourceCodecs } from "@uttori/asm-assets/source-codecs";
+import { nesChrPng } from "@uttori/asm-plugin-65xx";
 
 import { test } from "../../../tests/ava-helper.js";
 import { spriteFixture } from "../../../tests/fixtures/sprite-source.js";
@@ -32,6 +34,49 @@ const fixture = (name: string): Uint8Array =>
 const json = (value: unknown) => ({
   bytes: new TextEncoder().encode(JSON.stringify(value)),
   mediaType: "application/json",
+});
+
+test("NES CHR preview validates native bitplanes and displays authored palette indexes in storage order", (t) => {
+  const native = Uint8Array.from({ length: 32 }, (_, index) => index * 7);
+  const image = readAssetPng(nesChrPng(native, 2)).toIndexed({ copy: false });
+  const palette: [number, number, number, number][] = [
+    [12, 34, 56, 255],
+    [12, 34, 56, 255],
+    [90, 100, 110, 255],
+    [250, 240, 230, 255],
+  ];
+  const bytes = createIndexedPng({ ...image, palette });
+  const input = {
+    source: { bytes, mediaType: "image/png" },
+    resources: {},
+    format: "nes.chr.2bpp",
+    options: {},
+  };
+  t.true(supportsPortableAssetPreview(input.format));
+  const preview = convertAssetPreview(input);
+  t.is(preview.kind, "image");
+  t.is(preview.output, "chr");
+  t.is(preview.encodedBytes, 32);
+  t.is(preview.metadata?.tiles, 2);
+  t.is(preview.composedPngBase64, preview.storagePngBase64);
+  const rendered = readAssetPng(Buffer.from(preview.composedPngBase64!, "base64")).toRGBA();
+  const expected = new Uint8Array(image.indexes.length * 4);
+  for (let pixel = 0; pixel < image.indexes.length; pixel++) {
+    expected.set(palette[image.indexes[pixel]], pixel * 4);
+  }
+  t.deepEqual(rendered.rgba, expected);
+  t.throws(() => convertAssetPreview({ ...input, output: "tiles" }), { message: /no output/ });
+  t.throws(() => convertAssetPreview({ ...input, options: { bitDepth: 4 } }), {
+    message: /without options/,
+  });
+  const invalid = createIndexedPng({
+    ...image,
+    indexes: new Uint8Array(image.indexes.length).fill(4),
+    palette: [...palette, [1, 2, 3, 255]],
+  });
+  t.throws(() => convertAssetPreview({ ...input, source: { ...input.source, bytes: invalid } }), {
+    message: /indexes 0\.\.3/,
+  });
 });
 
 test("explicit preview resolves multiline calls through assembly normalization", (t) => {

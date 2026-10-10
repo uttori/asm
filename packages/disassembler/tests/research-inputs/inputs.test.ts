@@ -21,6 +21,7 @@ import {
 } from "../../src/research-inputs/inputs.js";
 import { changeResearchSymbol, renameResearchSymbol } from "../../src/research-inputs/symbols.js";
 import { sourceGit } from "../../src/source-project/git.js";
+import { parseSourceProject } from "../../src/source-project/project.js";
 
 function isAnnotation(value: unknown): value is IntervalAnnotation {
   return (
@@ -348,6 +349,108 @@ test("research documents reject competing locations, symlinks, and stale saves",
     path.join(root, ".uttori/research/link.json"),
   );
   t.throws(read, { message: /symlinks/ });
+});
+
+test("research growth is unrestricted unless the project explicitly selects resource ceilings", (t) => {
+  const { root, store, document, read } = fixture();
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const empty = JSON.stringify({ ...document, decisions: [] });
+  const padded = empty + " ".repeat(1024 * 1024);
+  const nested = `.uttori/research/${"group/".repeat(40)}`;
+  fs.mkdirSync(path.join(root, nested), { recursive: true });
+  // Exercise large documents, aggregate volume, many files and deeply grouped research together.
+  for (let index = 0; index < 513; index++) {
+    fs.writeFileSync(path.join(root, nested, `${index}.json`), index < 33 ? padded : empty);
+  }
+  const snapshot = read();
+  t.is(snapshot.files.length, 514);
+  t.deepEqual(snapshot.decisions, document.decisions);
+  t.is(snapshot.hash, readResearchInputs(root, [".uttori/research/names.json"], document).hash);
+});
+
+test("explicit research ceilings identify the path, actual amount, policy and configuration remedy", (t) => {
+  const { root, store, document } = fixture();
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const relative = ".uttori/research/names.json";
+  const size = fs.statSync(path.join(root, relative)).size;
+  const read = (limits: Parameters<typeof readResearchInputs>[4], overlays?: Map<string, string>) =>
+    readResearchInputs(root, [".uttori/research"], document, overlays, limits);
+  t.notThrows(() => read({ researchDocumentBytes: size, researchBytes: size, researchFiles: 1 }));
+  for (const field of ["researchDocumentBytes", "researchBytes"] as const) {
+    const error = t.throws(() => read({ [field]: size - 1 }));
+    t.true(error!.message.includes(path.join(root, relative)));
+    t.true(error!.message.includes(size.toLocaleString("en-US")));
+    t.true(error!.message.includes(`limits.${field}`));
+    t.regex(error!.message, /Increase or remove.*\.uttori\/project\.json/);
+  }
+  const text = JSON.stringify({ ...document, decisions: [] });
+  const overlays = new Map([[".uttori/research/unsaved.json", text]]);
+  t.throws(() => read({ researchFiles: 1 }, overlays), {
+    message: /unsaved\.json: 2 selected JSON files exceeds limits\.researchFiles \(1/,
+  });
+  t.throws(
+    () => read({ researchDocumentBytes: size }, new Map([[relative, " ".repeat(size) + text]])),
+    {
+      message: /names\.json:.*limits\.researchDocumentBytes/,
+    },
+  );
+  t.throws(() => read({ researchBytes: size }, overlays), {
+    message: /unsaved\.json:.*bytes across selected documents.*limits\.researchBytes/,
+  });
+  for (const invalid of [0, -1, 0.5, Infinity, NaN]) {
+    t.throws(() => read({ researchFiles: invalid }), { message: /positive safe integer/ });
+  }
+});
+
+test("research file errors distinguish missing inputs, malformed JSON and invalid decisions", (t) => {
+  const { root, store, document } = fixture();
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const relative = ".uttori/research/broken.json";
+  t.throws(() => readResearchInputs(root, [relative], document), {
+    message: /does not exist:.*broken\.json.*researchRoots/,
+  });
+  t.throws(() => readResearchInputs(root, ["missing-directory"], document), {
+    message: /does not exist:.*missing-directory.*researchRoots/,
+  });
+  fs.writeFileSync(path.join(root, relative), "{broken");
+  t.throws(() => readResearchInputs(root, [relative], document), {
+    message: /Invalid research input.*broken\.json:/,
+  });
+  fs.writeFileSync(path.join(root, relative), JSON.stringify({ ...document, decisions: [null] }));
+  t.throws(() => readResearchInputs(root, [relative], document), {
+    message: /broken\.json: decisions\[0\]:.*known collection and stable ID/,
+  });
+});
+
+test("project manifests accept only valid explicit research ceilings", (t) => {
+  const configuration = {
+    format: "uttori-source-project",
+    version: 1,
+    id: "fixture",
+    target: "snes.sfc",
+    romSha256: "a".repeat(64),
+    sourceRoots: ["source"],
+    researchRoots: [".uttori/research"],
+    buildConfig: "source/uttori-asm.config.json",
+    layout: ".uttori/layout.json",
+    captures: ".uttori/captures.json",
+  };
+  const limits = { researchDocumentBytes: 2048, researchBytes: 4096, researchFiles: 2 };
+  t.deepEqual(parseSourceProject({ ...configuration, limits }).limits, limits);
+  for (const field of Object.keys(limits)) {
+    t.throws(() => parseSourceProject({ ...configuration, limits: { [field]: 0 } }), {
+      message: new RegExp(`limits\\.${field}.*positive safe integer`),
+    });
+  }
 });
 
 test("database authoring outside the research lifecycle is detected rather than silently lost", (t) => {

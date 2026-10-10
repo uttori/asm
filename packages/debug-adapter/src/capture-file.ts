@@ -559,7 +559,7 @@ const checkCaptureSize = (size: number, options: CaptureFileReadOptions): void =
   }
   if (size > limit) {
     throw new Error(
-      "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it.",
+      `Capture is ${(size / 1024 ** 3).toFixed(2)} GiB and exceeds the import byte limit of ${(limit / 1024 ** 3).toFixed(2)} GiB (${limit} bytes). Increase limits.captureBytes in .uttori/project.json for a Git source project, or asm.trace.maxImportSizeMiB for other trace imports.`,
     );
   }
 };

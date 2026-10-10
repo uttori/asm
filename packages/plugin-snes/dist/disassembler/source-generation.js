@@ -5,6 +5,7 @@ import { RomImage, openAnalysisProjectStore, validateProjectRom, assertSourcePat
 import { lostCodeRanges } from "./code-preservation.js";
 import { buildSnesSource } from "./source-build.js";
 import { exportSnes65816Source } from "./source-export.js";
+import { validateSnesStructMap } from "./struct-map.js";
 /** Exact render options include recipe contents and the pristine-asset selection, not host paths. */
 export function snesGenerationOptionsHash(options) {
     return sourceContentHash(canonicalJson({
@@ -55,6 +56,19 @@ export async function prepareSnesGeneration(options) {
     options.signal?.throwIfAborted();
     if (snesGenerationOptionsHash(options) !== options.inputs.optionsSha256) {
         throw new Error("Generation recipe identity changed.");
+    }
+    // Validate captured bytes before staging them in disposable scratch. A worker forwards only the
+    // message, so failures must identify the editable recipe rather than a folder removed on failure.
+    const structRecipe = options.recipes.find((recipe) => recipe.path === "struct-map.json");
+    if (structRecipe) {
+        try {
+            validateSnesStructMap(JSON.parse(Buffer.from(structRecipe.bytes).toString("utf8")));
+        }
+        catch (error) {
+            const file = path.join(options.repository.root, options.sourceRoot, structRecipe.path);
+            const detail = error instanceof Error ? error.message : String(error);
+            throw new Error(`Invalid SNES struct map ${file}: ${detail} Correct this input before regenerating.`, { cause: error });
+        }
     }
     const prior = await verifySourceGeneration(options.repository, options.parent);
     if (prior.descriptor.inputs.project !== options.inputs.project ||

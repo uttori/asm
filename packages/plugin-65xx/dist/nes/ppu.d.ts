@@ -80,6 +80,7 @@ export declare function summarizeNesPPUCapture(file: string, options: {
     readonly onBusEvent?: (event: CaptureNesBusAccessV2) => void;
     readonly romFileSha256: string;
     readonly romContentSha256: string;
+    /** Per-archive byte limit; defaults to the shared 32 GiB capture budget. */
     readonly maxBytes?: number;
     readonly signal?: AbortSignal;
 }): Promise<NesPPUCaptureSummary>;

@@ -1,7 +1,7 @@
 import { test } from "../../../tests/ava-helper.js";
 import { encodeSomDialogueCommand } from "../src/secret-of-mana/som-dialogue-command.js";
 import { convertSomDialogueScript, decodeSomDialogue, encodeSomDialogue, expandSomDialogue,
-  exportSomDialogueScript, previewSomDialogue, readSomDialogueDictionary, readSomDialogueScriptLayout,
+  exportSomDialogueScript, packSomDialogueScript, previewSomDialogue, readSomDialogueDictionary, readSomDialogueScriptLayout,
   type SomDialogueScriptLayout } from "../src/secret-of-mana/som-dialogue.js";
 
 /** Distinct synthetic pairs expose both code ranges and their shared dictionary indices. */
@@ -29,6 +29,119 @@ test("SoM DTE expands every valid code and retains overlapping original aliases"
   const distinct = fixture().bytes;
   distinct.set([0x80, 0xa3], 29 * 2);
   t.deepEqual(encodeSomDialogue(" I", readSomDialogueDictionary(distinct)), Uint8Array.of(0xe0));
+});
+
+test("variable script packing records moved commands while fixed includes retain their byte budgets", (t) => {
+  const { bytes } = fixture();
+  const layout: SomDialogueScriptLayout = {
+    format: "som-dialogue-script",
+    version: 1,
+    dictionaryHex: Buffer.from(bytes).toString("hex"),
+    segments: [
+      { kind: "raw", nativeHex: "50", commands: [{ offset: 0, token: "${openDialogue}" }] },
+      { kind: "text", nativeHex: "81" },
+      { kind: "raw", nativeHex: "280000", commands: [{ offset: 0, token: "${wait}" }] },
+    ],
+  };
+  const source = new TextEncoder().encode("${openDialogue}bbbb${wait:6}{raw:1:0}\n");
+  t.throws(() => packSomDialogueScript(source, layout), { message: /cannot fit/ });
+  const packed = packSomDialogueScript(source, layout, "variable");
+  t.deepEqual(packed.bytes, Uint8Array.of(0x50, 0x82, 0x82, 0x82, 0x82, 0x28, 6, 0));
+  t.deepEqual(
+    packed.segments.map((s) => [s.originalOffset, s.offset, s.length, s.preserved]),
+    [
+      [0, 0, 1, true],
+      [1, 1, 4, false],
+      [2, 5, 3, false],
+    ],
+  );
+  t.false(packed.fixedFieldOffsets);
+  t.false(packed.nativePreserved);
+  const resources = {
+    layout: {
+      mediaType: "application/json",
+      bytes: new TextEncoder().encode(JSON.stringify(layout)),
+    },
+  };
+  t.throws(
+    () =>
+      convertSomDialogueScript(
+        { mediaType: "text/plain", bytes: source },
+        { layout: "layout", sizing: "variable" },
+        resources,
+      ),
+    { message: /cannot fit/ },
+  );
+});
+
+test("variable packing preserves unchanged native aliases and enforces command ownership", (t) => {
+  const { bytes } = fixture();
+  const layout: SomDialogueScriptLayout = {
+    format: "som-dialogue-script",
+    version: 1,
+    dictionaryHex: Buffer.from(bytes).toString("hex"),
+    segments: [
+      { kind: "text", nativeHex: "d3" },
+      {
+        kind: "raw",
+        nativeHex: "5700",
+        commands: [{ offset: 0, token: "${boy}", editable: false }],
+      },
+    ],
+  };
+  const source = new TextEncoder().encode(exportSomDialogueScript(layout));
+  const packed = packSomDialogueScript(source, layout, "variable");
+  t.deepEqual(packed.bytes, Uint8Array.of(0xd3, 0x57, 0));
+  t.true(packed.nativePreserved);
+  t.true(packed.segments.every((segment) => segment.preserved));
+  t.throws(
+    () => packSomDialogueScript(new TextEncoder().encode("aq ${girl}\n"), layout, "variable"),
+    { message: /read-only/ },
+  );
+  t.throws(
+    () => packSomDialogueScript(new TextEncoder().encode("aq ${wait}\n"), layout, "variable"),
+    { message: /family or width/ },
+  );
+});
+
+test("variable packing retains empty text boundaries and rejects a packed bank overflow", (t) => {
+  const { bytes } = fixture();
+  const dictionaryHex = Buffer.from(bytes).toString("hex");
+  const layout: SomDialogueScriptLayout = {
+    format: "som-dialogue-script",
+    version: 1,
+    dictionaryHex,
+    segments: [
+      { kind: "raw", nativeHex: "50" },
+      { kind: "text", nativeHex: "81" },
+      { kind: "raw", nativeHex: "00" },
+    ],
+  };
+  const empty = packSomDialogueScript(
+    new TextEncoder().encode("{raw:0}{raw:1}\n"),
+    layout,
+    "variable",
+  );
+  t.deepEqual(empty.bytes, Uint8Array.of(0x50, 0));
+  t.deepEqual(
+    empty.segments.map((s) => [s.offset, s.length]),
+    [
+      [0, 1],
+      [1, 0],
+      [1, 1],
+    ],
+  );
+  const segments: SomDialogueScriptLayout["segments"][number][] = [];
+  let source = "";
+  for (let index = 0; index < 17; index++) {
+    segments.push({ kind: "raw", nativeHex: "50" }, { kind: "text", nativeHex: "81" });
+    source += `{raw:${index}}` + "b".repeat(4096);
+  }
+  t.throws(
+    () =>
+      packSomDialogueScript(new TextEncoder().encode(source), { ...layout, segments }, "variable"),
+    { message: /exceeds one ROM bank/ },
+  );
 });
 
 test("SoM packing protects the second glyph when a DTE pair would straddle native capacity", t => {

@@ -967,8 +967,8 @@
           "type": "integer",
           "scope": "resource",
           "minimum": 1,
-          "default": 2048,
-          "description": "Maximum native runtime trace file size in MiB (2048 = 2 GiB). Set in the project workspace settings for unusually large captures. Trace chunks are read incrementally. Memory use also depends on the number of distinct execution observations. This is separate from the static-analysis work budget."
+          "default": 32768,
+          "description": "Maximum native runtime trace file size in MiB (32768 = 32 GiB). Trace chunks are read incrementally. Memory use also depends on distinct execution observations. Git source projects use limits.captureBytes in .uttori/project.json for each primary and graphics companion archive, with the same 32 GiB default. This is separate from the heap and static-analysis work budgets."
         },
         "uttoriAsmLanguageServer.trace.server": {
           "scope": "window",
@@ -1181,7 +1181,9 @@
       }
     ]
   },
-  "activationEvents": [],
+  "activationEvents": [
+    "onDebugResolve:uttori-asm"
+  ],
   "engines": {
     "node": ">=26",
     "vscode": "^1.140.0"

@@ -1,4 +1,4 @@
-import { definePlugin, NATIVE_SYNTAX_PROFILE, PLUGIN_API_VERSION, PluginManager, } from "@uttori/asm-core";
+import { definePlugin, ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, PLUGIN_API_VERSION, PluginManager, } from "@uttori/asm-core";
 import { Arch65xx } from "./architecture.js";
 import { CA65_65XX_SESSION_STATE_ID, CA65_65XX_SYNTAX_PROFILE, ca65CpuPredicateByArchitecture, ca65CpuShorthands, ca65SessionStateKey, cloneCa65SessionState, createCa65SessionState, resetCa65StageState, } from "./ca65-profile.js";
 import { Cpu6502Decoder, cpu6502Specifications } from "./decoder.js";
@@ -6,6 +6,7 @@ import { handleAlign, handleAddr, handleByte, handleCa65Assert, handleCa65Incbin
 import { buildInstructionCatalog } from "./instructions/catalog.js";
 import { nmos6502Cpu, nmos6502Forms, nmos6502xCpu, nmos6502xForms, ricoh2a03Cpu, } from "./instructions/opcodes.js";
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
+import { nesAssetFormats } from "./nes/assets.js";
 import { classify65xxOperand } from "./operands/classifier.js";
 import { NES_65XX_SESSION_STATE_ID, cloneNes65xxSessionState, nes65xxSessionStateKey, resetNes65xxStageState, } from "./session-state.js";
 import { NES_65XX_ADDRESS_SPACE_ID, NES_65XX_LIFECYCLE_ID, NES_65XX_OUTPUT_FORMAT_ID, NES_65XX_TARGET_ID, createInitialNesState, createNes65xxTargetOptions, createNesAddressSpace, createNesLifecycle, createNesOutputFormat, } from "./target/nes.js";
@@ -165,6 +166,9 @@ function updatePredicates(session, architecture) {
  * @param {PluginActivationContext} context Plugin activation context.
  */
 export function register65xxContributions(context) {
+    for (const format of nesAssetFormats) {
+        context.registerAssetFormat(format);
+    }
     for (const [cpu, forms] of [
         [nmos6502Cpu, nmos6502Forms],
         [nmos6502xCpu, nmos6502xForms],
@@ -342,8 +346,18 @@ export function register65xxContributions(context) {
             directive("65xx.directive.faraddr", ["faraddr"], ({ session }) => (_ctx, words) => handleDword(session, words, 3)),
             directive("65xx.directive.res", ["res"], ({ session }) => (_ctx, words) => handleRes(session, words)),
             directive("65xx.directive.align", ["align"], ({ session }) => (_ctx, words) => handleAlign(session, words)),
-            directive("65xx.directive.incbin", ["incbin"], ({ session }) => (_ctx, words) => handleCa65Incbin(session, words)),
-            directive("65xx.directive.assert", ["assert"], ({ session }) => (_ctx, words) => handleCa65Assert(session, words)),
+            directive("65xx.directive.incbin", ["incbin"], ({ session }) => {
+                if (session.targetOptions.sourceStyle === "asar") {
+                    return undefined;
+                }
+                return (_ctx, words) => handleCa65Incbin(session, words);
+            }),
+            directive("65xx.directive.assert", ["assert"], ({ session }) => {
+                if (session.targetOptions.sourceStyle === "asar") {
+                    return undefined;
+                }
+                return (_ctx, words) => handleCa65Assert(session, words);
+            }),
             directive("65xx.directive.scope", ["scope", "proc"], ({ session, state }) => (_ctx, words) => handleScope(session, state.get(ca65SessionStateKey), words, (words[0] ?? "").replace(/^\./, "").toLowerCase() === "proc")),
             directive("65xx.directive.endscope", ["endscope", "endproc"], ({ session, state }) => () => handleEndScope(session, state.get(ca65SessionStateKey))),
             directive("65xx.directive.pushseg", ["pushseg"], ({ state }) => () => handlePushseg(state.get(ca65SessionStateKey))),
@@ -369,7 +383,7 @@ export function register65xxContributions(context) {
     context.registerTarget({
         id: NES_65XX_TARGET_ID,
         aliases: ["nes", "ines", "6502-nes"],
-        displayName: "NES iNES (ca65 / ld65 layout)",
+        displayName: "NES iNES (Asar source or ca65 layout)",
         defaultArchitecture: nmos6502Cpu.id,
         architectures: [
             nmos6502Cpu.id,
@@ -383,6 +397,7 @@ export function register65xxContributions(context) {
         expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
         lifecycle: [NES_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
         syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+        createSyntaxProfile: (options) => options.sourceStyle === "asar" ? ASAR_SYNTAX_PROFILE : CA65_65XX_SYNTAX_PROFILE,
         defaultOutputExtension: ".nes",
         createOptions: createNes65xxTargetOptions,
     });
@@ -392,10 +407,14 @@ function validate65xxPluginOptions(configured) {
     if (configured &&
         typeof configured === "object" &&
         !Array.isArray(configured) &&
-        ("header" in configured || "linkerConfig" in configured || "fillByte" in configured)) {
-        const unknown = Object.keys(configured).filter((key) => !["header", "linkerConfig", "fillByte"].includes(key));
-        if (unknown.length)
+        ("header" in configured ||
+            "linkerConfig" in configured ||
+            "fillByte" in configured ||
+            "sourceStyle" in configured)) {
+        const unknown = Object.keys(configured).filter((key) => !["header", "linkerConfig", "fillByte", "sourceStyle"].includes(key));
+        if (unknown.length) {
             throw new Error(`Unknown NES target option(s): ${unknown.join(", ")}.`);
+        }
         createNes65xxTargetOptions(configured);
         return { ...configured };
     }
@@ -426,6 +445,7 @@ export async function create65xxAssemblerEnvironment(options = {}) {
 export default plugin;
 export { Cpu6502Decoder, cpu6502Specifications, formatCpu6502Instruction } from "./decoder.js";
 export * from "./nes/cartridge.js";
+export * from "./nes/assets.js";
 export * from "./nes/mapper.js";
 export { ricoh2a03Cpu } from "./instructions/opcodes.js";
 export { Arch65xx, materializeOpcodeForm } from "./architecture.js";

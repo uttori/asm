@@ -321,68 +321,150 @@ export function exportSomDialogueScript(layout: SomDialogueScriptLayout): string
   return text;
 }
 
+/** Byte offsets connect original owners to explicitly planned relocation references. */
+export interface SomDialoguePackedSegment {
+  readonly kind: "raw" | "text";
+  readonly originalOffset: number;
+  readonly originalLength: number;
+  readonly offset: number;
+  readonly length: number;
+  /** Exact unchanged bytes permit interior references to retain their displacement. */
+  readonly preserved: boolean;
+}
+
 /**
- * Build ASCII text and its layout into one fixed-address native script. CRLF is normalized, but
- * extra commands, missing markers and unsupported characters fail. Named edits must keep
- * the admitted command family and width; opaque commands remain sidecar-owned.
+ * Pack a script without selecting ROM storage. Variable text sizes are opt-in for a separate
+ * relocation planner; the asset converter always keeps fixed budgets. Commands retain their
+ * admitted family, width and order. The returned map does not imply that an edited text's
+ * interior references can be relocated safely.
  */
-export function convertSomDialogueScript(source: AssetInput, options: Readonly<Record<string, unknown>>,
-  resources: Readonly<Record<string, AssetInput>>) {
-  if (source.bytes.some(byte => byte > 127)) throw new Error("SoM dialogue source must be ASCII.");
-  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout)) throw new Error("Dialogue layout resource is required.");
-  const layout = readSomDialogueScriptLayout(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes)));
+export function packSomDialogueScript(
+  source: Uint8Array,
+  layout: SomDialogueScriptLayout,
+  sizing: "fixed" | "variable" = "fixed",
+) {
+  if (!["fixed", "variable"].includes(sizing))
+    throw new Error("Invalid dialogue field sizing policy.");
+  if (source.some((byte) => byte > 127)) throw new Error("SoM dialogue source must be ASCII.");
+  readSomDialogueScriptLayout(layout);
   const dictionary = readSomDialogueDictionary(hexBytes(layout.dictionaryHex));
-  let text = new TextDecoder().decode(source.bytes).replaceAll("\r\n", "\n");
+  let text = new TextDecoder().decode(source).replaceAll("\r\n", "\n");
   if (text.includes("\r")) throw new Error("Bare carriage returns are not dialogue line breaks.");
   if (layout.segments.at(-1)?.kind === "raw" && text.endsWith("\n")) text = text.slice(0, -1);
-  const chunks: Uint8Array[] = [];
-  let cursor = 0, raw = 0, nativePreserved = true;
+  const chunks: Uint8Array[] = [],
+    segments: SomDialoguePackedSegment[] = [];
+  let cursor = 0,
+    raw = 0,
+    nativePreserved = true,
+    originalOffset = 0,
+    outputOffset = 0;
   for (const segment of layout.segments) {
     const original = hexBytes(segment.nativeHex);
+    const firstChunk = chunks.length;
     if (segment.kind === "raw") {
-      const index = raw++, legacy = `{raw:${index}}`;
+      const index = raw++,
+        legacy = `{raw:${index}}`;
       // Existing sources remain valid after adding command names to their layouts.
       // A legacy whole-block marker deliberately requests the unchanged native bytes.
       if (text.startsWith(legacy, cursor)) {
         cursor += legacy.length;
         chunks.push(original);
-        continue;
-      }
-      for (const part of rawParts(segment, index)) {
-        if (!part.slot) {
-          if (!text.startsWith(part.marker, cursor)) throw new Error(`Missing or reordered command marker ${part.marker}.`);
-          cursor += part.marker.length;
-          chunks.push(part.bytes);
-          continue;
+      } else {
+        for (const part of rawParts(segment, index)) {
+          if (!part.slot) {
+            if (!text.startsWith(part.marker, cursor))
+              throw new Error(`Missing or reordered command marker ${part.marker}.`);
+            cursor += part.marker.length;
+            chunks.push(part.bytes);
+            continue;
+          }
+          const match = /^\$\{[^{}]+\}/.exec(text.slice(cursor));
+          if (!match) throw new Error(`Missing dialogue command ${part.slot.token}.`);
+          const command = encodeSomDialogueCommand(match[0]),
+            expected = encodeSomDialogueCommand(part.slot.token);
+          if (command.family !== expected.family || command.bytes.length !== part.bytes.length) {
+            throw new Error("Dialogue command edit changed its admitted family or width.");
+          }
+          const preserved = command.bytes.every((byte, i) => byte === part.bytes[i]);
+          if (part.slot.editable === false && !preserved)
+            throw new Error("Dialogue command slot is read-only.");
+          nativePreserved &&= preserved;
+          chunks.push(command.bytes);
+          cursor += match[0].length;
         }
-        const match = /^\$\{[^{}]+\}/.exec(text.slice(cursor));
-        if (!match) throw new Error(`Missing dialogue command ${part.slot.token}.`);
-        const command = encodeSomDialogueCommand(match[0]), expected = encodeSomDialogueCommand(part.slot.token);
-        if (command.family !== expected.family || command.bytes.length !== part.bytes.length) {
-          throw new Error("Dialogue command edit changed its admitted family or width.");
-        }
-        const preserved = command.bytes.every((byte, i) => byte === part.bytes[i]);
-        if (part.slot.editable === false && !preserved) throw new Error("Dialogue command slot is read-only.");
-        nativePreserved &&= preserved;
-        chunks.push(command.bytes);
-        cursor += match[0].length;
       }
     } else {
       // A named token is a boundary, never a glyph substitution performed by this
       // offline packer. The next raw slot validates its exact family and parameters.
-      const boundaries = [text.indexOf("{raw:", cursor), text.indexOf("${", cursor)].filter(index => index >= 0);
+      const boundaries = [text.indexOf("{raw:", cursor), text.indexOf("${", cursor)].filter(
+        (index) => index >= 0,
+      );
       const end = boundaries.length ? Math.min(...boundaries) : text.length;
-      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, { original, byteLength: original.length,
-        lineColumns: segment.lineColumns, initialColumn: segment.initialColumn });
-      nativePreserved &&= encoded.every((byte, index) => byte === original[index]);
+      let byteLength: number | undefined;
+      if (sizing === "fixed") byteLength = original.length;
+      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, {
+        original,
+        byteLength,
+        lineColumns: segment.lineColumns,
+        initialColumn: segment.initialColumn,
+      });
+      nativePreserved &&=
+        encoded.length === original.length &&
+        encoded.every((byte, index) => byte === original[index]);
       chunks.push(encoded);
       cursor = end;
     }
+    const emitted = chunks.slice(firstChunk);
+    const length = emitted.reduce((sum, chunk) => sum + chunk.length, 0);
+    let position = 0;
+    const preserved =
+      length === original.length &&
+      emitted.every((chunk) => {
+        const matches = chunk.every((byte, index) => byte === original[position + index]);
+        position += chunk.length;
+        return matches;
+      });
+    segments.push({
+      kind: segment.kind,
+      originalOffset,
+      originalLength: original.length,
+      offset: outputOffset,
+      length,
+      preserved,
+    });
+    originalOffset += original.length;
+    outputOffset += length;
   }
   if (cursor !== text.length) throw new Error("Unexpected text after the final command marker.");
   const bytes = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
+  if (bytes.length > 65536) throw new Error("Packed dialogue script exceeds one ROM bank.");
   let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-  const output: AssetOutput = { bytes, mediaType: "application/octet-stream", metadata: { nativePreserved, fixedFieldOffsets: true } };
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return { bytes, segments, nativePreserved, fixedFieldOffsets: sizing === "fixed" };
+}
+
+/** Build a fixed-address include; variable sizing is available only through explicit relocation planning. */
+export function convertSomDialogueScript(
+  source: AssetInput,
+  options: Readonly<Record<string, unknown>>,
+  resources: Readonly<Record<string, AssetInput>>,
+) {
+  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout))
+    throw new Error("Dialogue layout resource is required.");
+  const layout = readSomDialogueScriptLayout(
+    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes)),
+  );
+  const result = packSomDialogueScript(source.bytes, layout);
+  const output: AssetOutput = {
+    bytes: result.bytes,
+    mediaType: "application/octet-stream",
+    metadata: {
+      nativePreserved: result.nativePreserved,
+      fixedFieldOffsets: result.fixedFieldOffsets,
+    },
+  };
   return { primaryOutput: "script", outputs: { script: output } };
 }

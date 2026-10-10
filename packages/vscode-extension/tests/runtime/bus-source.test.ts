@@ -154,7 +154,10 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   t.regex(report, /HDMA \| 1 \| hdma-indirect \| 1 \| 0/);
   t.regex(report, /interrupt: 1/);
   t.regex(report, /not transfer counts/);
-  t.regex(report, /require the capture archive/);
+  t.regex(
+    report,
+    /Ordered timing, raster and instruction-ordinal history are outside the imported projection/,
+  );
   const duplicate = await importCapture(file);
   t.false(duplicate.changed);
   t.is(duplicate.added.runtime, 0);
@@ -202,8 +205,9 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   t.regex(graphicsReport, /before the physical 64\/128 KiB mask/);
   t.regex(
     graphicsReport,
-    /The project retains bus facts and transfer totals, not this graphics view/,
+    /The project retains bus facts and transfer totals; full ordered graphics history is outside that projection/,
   );
+  t.notRegex(graphicsReport, /requires the source capture|history requires the archive/);
   const renamed = path.join(root, "renamed-graphics.act2");
   fs.copyFileSync(graphicsFile, renamed);
   const graphicsAgain = await importCapture(renamed);

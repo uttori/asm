@@ -65,7 +65,7 @@ import { SourceGitFiles } from "./git-files.js";
 import { SourceProcessClient } from "./process-client.js";
 import { findEvidenceSourceRoot, findSourceRoot } from "./project-path.js";
 import { editSourceResearch } from "./research-editor.js";
-import { sourceWorkflow } from "./workflow.js";
+import { shouldClearSourceCandidate, sourceWorkflow } from "./workflow.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -954,6 +954,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       SourceMergeStatus & {
         dirty: boolean;
         candidateAccepted: boolean;
+        candidateStale: boolean;
         unstaged?: boolean;
         analysisReady?: boolean;
         analysisReason?: string;
@@ -967,8 +968,9 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     this.#status = status;
     this.#configuration = configuration;
     // Persisted editor state can outlive Finish or an integration completed in a terminal.
-    // Keep an unvalidated committed merge available for Finish, but retire completed candidates.
-    if (status.candidateAccepted && ["idle", "verified"].includes(status.phase)) {
+    // A candidate from the old accepted generation cannot be previewed after another integration.
+    // Keep an unvalidated committed merge available for Finish; otherwise offer a fresh Prepare.
+    if (shouldClearSourceCandidate(status)) {
       await this.clearCandidate(root);
     }
     this.#branch =

@@ -13,6 +13,7 @@ import {
   compactAnalysisProject,
   DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH,
   DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS,
+  DEFAULT_RUNTIME_TRACE_MAX_BYTES,
   type AnalysisStoragePolicy,
   validateProjectRom,
 } from "@uttori/asm-disassembler";
@@ -70,7 +71,7 @@ export interface CliArguments {
   readonly dizraw?: string;
   readonly rom?: string;
   readonly instructionTrace?: string;
-  /** Positive integer MiB limit. Undefined delegates to the import default of 2048. */
+  /** Positive integer MiB limit. Undefined delegates to the shared 32 GiB import default. */
   readonly traceMaxMiB?: number;
   readonly traceIndex?: "full";
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
@@ -147,7 +148,7 @@ ROM identity (analyze, evidence-import):
 
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
-  --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
+  --trace-max-mib <count>      Native trace import size limit in MiB (default 32768)
   --trace-index <mode>         full (default; retains all registers)
 
 Analysis options (analyze):
@@ -581,7 +582,7 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
         indexMode: parsed.traceIndex,
       },
       {
-        maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024,
+        maxBytes: (parsed.traceMaxMiB ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES / 1024 ** 2) * 1024 ** 2,
         onStage: (stage) => console.log(stage),
         storagePolicy: parsed.storagePolicy,
       },

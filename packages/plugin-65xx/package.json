@@ -51,6 +51,7 @@
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace plugin-65xx && npm run make-types"
   },
   "dependencies": {
+    "@uttori/asm-assets": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0"

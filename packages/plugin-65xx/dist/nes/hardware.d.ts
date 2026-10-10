@@ -14,6 +14,6 @@ export declare const NES_HARDWARE_SYMBOLS: readonly NesHardwareSymbol[];
  * Reading PRG ROM must never acquire a write-only mapper-register name.
  */
 export declare function nesHardwareOperand(instruction: DecodedInstruction, mapper: number): string | undefined;
-/** Definitions are ordinary editable source, with descriptions available to assembly hover/navigation. */
+/** Shared Asar equates remain visible through incsrc; descriptions support hover/navigation. */
 export declare function nesHardwareSource(mapper: number): string;
 //# sourceMappingURL=hardware.d.ts.map

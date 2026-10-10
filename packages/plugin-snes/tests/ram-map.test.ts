@@ -99,7 +99,10 @@ test("RAM definition source citations are opt-in without discarding descriptive 
         address: "$7ECFF7",
         category: "Party",
         description: "Snow amount",
-        notes: ["Secret of Mana information.txt:L401."],
+        notes: [
+          "Secret of Mana information.txt:L401.",
+          "information.txt:L415-L425; RoomCharacter in disassembly/struct-map.json.",
+        ],
       },
       {
         name: "RAM_SNOW_MODE",
@@ -117,6 +120,8 @@ test("RAM definition source citations are opt-in without discarding descriptive 
     ]),
   );
   const source = renderSnesRamDefines(variables);
+  t.false(source.includes("struct-map.json"));
+  t.false(source.includes("ram-map.json"));
   t.regex(source, /^RAM_SNOW_AMOUNT = \$7ECFF7 ; Party — Snow amount\.$/m);
   t.regex(
     source,
@@ -126,13 +131,16 @@ test("RAM definition source citations are opt-in without discarding descriptive 
   const withSources = renderSnesRamDefines(variables, { includeSourceInformation: true });
   t.regex(
     withSources,
-    /^RAM_SNOW_AMOUNT = \$7ECFF7 ; Party — Snow amount Secret of Mana information\.txt:L401\.$/m,
+    /^RAM_SNOW_AMOUNT = \$7ECFF7 ; Party — Snow amount Secret of Mana information\.txt:L401\. information\.txt:L415-L425; RoomCharacter in disassembly\/struct-map\.json\.$/m,
   );
   t.true(
     withSources.includes("research/weather.md weather.asm:L20-L30. Weather capture frame 42."),
   );
   // Presentation must never delete citations from the validated metadata.
-  t.deepEqual(variables[0].notes, ["Secret of Mana information.txt:L401."]);
+  t.deepEqual(variables[0].notes, [
+    "Secret of Mana information.txt:L401.",
+    "information.txt:L415-L425; RoomCharacter in disassembly/struct-map.json.",
+  ]);
   t.deepEqual(variables[1].sources, ["Weather capture frame 42."]);
 });
 

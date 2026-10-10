@@ -8,7 +8,9 @@ export function isRuntimeGraphicsFact(value) {
         !unsigned(value.address) ||
         !unsigned(value.pc) ||
         !name(value.actor) ||
-        (value.context !== "instruction" && value.context !== "interrupt" && value.context !== "unattributed") ||
+        (value.context !== "instruction" &&
+            value.context !== "interrupt" &&
+            value.context !== "unattributed") ||
         (value.direction !== "read" && value.direction !== "write") ||
         !unsigned(value.value) ||
         value.value > 255) {

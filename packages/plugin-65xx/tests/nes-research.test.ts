@@ -133,8 +133,8 @@ test("NES direction-sensitive hardware operands preserve every tested encoded ad
     [0xad, 0x2002, "PPUSTATUS"],
     [0xad, 0x4017, "JOY2"],
     [0x8d, 0x4017, "APU_FRAME"],
-    [0x8d, 0x3ff8, "PPUCTRL + $1ff8"],
-    [0x8d, 0x9fff, "MMC3_DATA + $1ffe"],
+    [0x8d, 0x3ff8, "PPUCTRL + $1FF8"],
+    [0x8d, 0x9fff, "MMC3_DATA + $1FFE"],
     [0xad, 0x8000, undefined],
     [0x4c, 0x8000, undefined],
     [0xbd, 0x2000, undefined],
@@ -163,6 +163,50 @@ test("NES direction-sensitive hardware operands preserve every tested encoded ad
         "hardware.asm",
       );
       t.deepEqual(assembler.getBinaryOutput(), bytes);
+    } finally {
+      assembler.dispose();
+    }
+  }
+});
+
+test("research operand names preserve forward symbols, indexed bases and encoded widths", async (t) => {
+  const environment = await create65xxAssemblerEnvironment();
+  const decoder = new Cpu6502Decoder(ricoh2a03Cpu);
+  for (const bytes of [
+    [0x85, 0xb8],
+    [0x95, 0xb8],
+    [0x96, 0xb8],
+    [0x9d, 0xb8, 0],
+    [0xb9, 0x40, 0x05],
+    [0x3e, 0x40, 0x05],
+    [0x6c, 0x40, 0x05],
+    [0xa1, 0xb8],
+    [0xb1, 0xb8],
+  ]) {
+    const result = decoder.decode({
+      source: new Uint8ArrayDecoderSource(Uint8Array.from(bytes)),
+      offset: 0,
+      logicalAddress: 0x8000,
+    });
+    if (result.kind !== "instruction") {
+      throw new Error("Fixture decode failed");
+    }
+    const text = formatCpu6502Instruction(result.instruction, "ResearchOperand");
+    t.true(text.includes("ResearchOperand"));
+    const value = bytes[1] | ((bytes[2] ?? 0) << 8);
+    const assembler = new Assembler({
+      environment,
+      target: "65xx.ca65-raw",
+      architecture: "65xx.2a03",
+      targetOptions: { origin: 0x8000 },
+    });
+    try {
+      // Forward equates exercise layout before resolution; a zero-page name must not widen to absolute.
+      assembler.assembleSource(
+        `${text}\n.export ResearchOperand\nResearchOperand = $${value.toString(16)}\n`,
+        "research.asm",
+      );
+      t.deepEqual(assembler.getBinaryOutput(), Uint8Array.from(bytes));
     } finally {
       assembler.dispose();
     }

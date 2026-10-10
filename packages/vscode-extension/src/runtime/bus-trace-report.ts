@@ -7,6 +7,19 @@ import type {
 
 import { informationHex } from "../editor-info/format.js";
 
+/** Explain historical receipt diagnostics without treating disposable inputs as project dependencies. */
+function projectionWarning(warning: string): string {
+  return warning
+    .replace(
+      "Ordered timing, raster and instruction-ordinal history require the capture archive.",
+      "Ordered timing, raster and instruction-ordinal history are outside the imported projection.",
+    )
+    .replace(
+      "Full configuration and ordered history require the capture archive.",
+      "Full configuration and ordered history are outside the imported transfer projection.",
+    );
+}
+
 /** Show register-derived byte candidates separately from captured bus facts and native boundaries.
  * @param {RuntimeGraphicsSummary} summary Bounded interpretation of ordered PPU port accesses.
  * @returns {string[]} Markdown with explicit unknown/latch states and physical-memory limitations.
@@ -44,7 +57,7 @@ const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
     "",
     `${summary.omittedWrites} additional port writes omitted. All contribute to the totals. Data events identify the writes supplying each byte, which may precede the completing write or belong to another actor. They do not identify an A-bus source or setup instruction.`,
     "",
-    `Interpretation: ${summary.model}. This view is recomputed from ordered accesses and requires the source capture to reproduce. The project retains bus facts and transfer totals, not this graphics view.`,
+    `Interpretation: ${summary.model}. This bounded view is computed during import. The project retains bus facts and transfer totals; full ordered graphics history is outside that projection.`,
     "",
   ];
 };
@@ -88,7 +101,7 @@ const transferReport = (summary: RuntimeTransferSummary): string[] => {
       return `| ${window.actor.toUpperCase()}/${window.channel} | ${window.status} | ${window.begin?.sequence ?? "?"}/${window.end?.sequence ?? "?"} | ${window.begin?.cycle ?? "?"}/${window.end?.cycle ?? "?"} | ${config.join(" | ")} | ${window.begin && window.end ? window.end.transferred : "?"} | ${window.reads}/${window.writes} |`;
     }),
     "",
-    `${summary.omittedWindows} additional windows omitted from this bounded view. All contribute to the totals. Full marker/configuration history requires the archive.`,
+    `${summary.omittedWindows} additional windows omitted from this bounded view. All contribute to the totals. Full marker/configuration history is outside the imported projection.`,
     "",
   ];
 };
@@ -107,7 +120,9 @@ export const renderBusTraceReport = (result: RuntimeBusProjectImportResult): str
     (group) =>
       `| ${group.actor.toUpperCase()} | ${group.channel ?? "—"} | ${group.phase} | ${group.reads} | ${group.writes} | ${group.unowned} | ${group.firstSequence}–${group.lastSequence} | ${group.firstCycle}–${group.lastCycle} |`,
   );
-  const warnings = [...result.report.warnings, ...result.warnings].map((warning) => `- ${warning}`);
+  const warnings = [...result.report.warnings, ...result.warnings].map(
+    (warning) => `- ${projectionWarning(warning)}`,
+  );
   return [
     "# CPU / DMA / HDMA bus activity",
     "",

@@ -68,11 +68,29 @@ export interface SomDialogueScriptLayout {
 export declare function readSomDialogueScriptLayout(value: unknown): SomDialogueScriptLayout;
 /** Export printable text with reviewed command tokens and opaque markers; only a final marker's LF is cosmetic. */
 export declare function exportSomDialogueScript(layout: SomDialogueScriptLayout): string;
+/** Byte offsets connect original owners to explicitly planned relocation references. */
+export interface SomDialoguePackedSegment {
+    readonly kind: "raw" | "text";
+    readonly originalOffset: number;
+    readonly originalLength: number;
+    readonly offset: number;
+    readonly length: number;
+    /** Exact unchanged bytes permit interior references to retain their displacement. */
+    readonly preserved: boolean;
+}
 /**
- * Build ASCII text and its layout into one fixed-address native script. CRLF is normalized, but
- * extra commands, missing markers and unsupported characters fail. Named edits must keep
- * the admitted command family and width; opaque commands remain sidecar-owned.
+ * Pack a script without selecting ROM storage. Variable text sizes are opt-in for a separate
+ * relocation planner; the asset converter always keeps fixed budgets. Commands retain their
+ * admitted family, width and order. The returned map does not imply that an edited text's
+ * interior references can be relocated safely.
  */
+export declare function packSomDialogueScript(source: Uint8Array, layout: SomDialogueScriptLayout, sizing?: "fixed" | "variable"): {
+    bytes: Uint8Array<ArrayBuffer>;
+    segments: SomDialoguePackedSegment[];
+    nativePreserved: boolean;
+    fixedFieldOffsets: boolean;
+};
+/** Build a fixed-address include; variable sizing is available only through explicit relocation planning. */
 export declare function convertSomDialogueScript(source: AssetInput, options: Readonly<Record<string, unknown>>, resources: Readonly<Record<string, AssetInput>>): {
     primaryOutput: string;
     outputs: {

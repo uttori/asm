@@ -1,4 +1,4 @@
-import { type ResearchSnapshot } from "../research-inputs/inputs.js";
+import { type ResearchInputLimits, type ResearchSnapshot } from "../research-inputs/inputs.js";
 import { type SourceRepository } from "./git.js";
 /** Portable project contract. Machine-specific input locations belong to ignored local settings. */
 export interface SourceProjectConfiguration {
@@ -13,8 +13,9 @@ export interface SourceProjectConfiguration {
     readonly buildConfig: string;
     readonly layout: string;
     readonly captures: string;
-    /** Explicit work budgets shared by headless commands and editor workers; omitted values use target defaults. */
-    readonly limits?: {
+    /** Shared resource policy. Capture/analysis values use target defaults; research ceilings are opt-in. */
+    readonly limits?: ResearchInputLimits & {
+        /** Per input archive, including each graphics companion; defaults to 32 GiB and does not allocate that much memory. */
         readonly captureBytes?: number;
         readonly analysisWorkItems?: number;
         readonly analysisCallDepth?: number;

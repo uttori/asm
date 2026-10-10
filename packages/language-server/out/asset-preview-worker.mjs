@@ -17124,6 +17124,29 @@ function renderRoomAsset(room, preview, { layer, story } = {}) {
   };
 }
 
+// packages/assets/src/secret-of-mana/som-dialogue-command.ts
+function encodeSomDialogueCommand(token) {
+  const names = ["${boy}", "${girl}", "${sprite}"];
+  const index = names.indexOf(token);
+  if (index >= 0) return { family: "party-name", bytes: Uint8Array.of(87, index) };
+  if (token === "${wait}") return { family: "wait", bytes: Uint8Array.of(40, 0) };
+  const wait = /^\$\{wait:(0|[1-9][0-9]*)\}$/.exec(token);
+  if (wait) {
+    const count = Number(wait[1]);
+    if (!Number.isSafeInteger(count) || count > 255)
+      throw new Error("Dialogue wait must fit one unsigned byte.");
+    return { family: "wait", bytes: Uint8Array.of(40, count) };
+  }
+  const windows = /* @__PURE__ */ new Map([
+    ["${openDialogue}", 80],
+    ["${closeDialogue}", 81],
+    ["${clearDialogue}", 82]
+  ]);
+  const opcode = windows.get(token);
+  if (opcode !== void 0) return { family: "text-window", bytes: Uint8Array.of(opcode) };
+  throw new Error(`Unsupported dialogue command token ${token}.`);
+}
+
 // packages/assets/src/secret-of-mana/som-dialogue.ts
 var SOM_DIALOGUE_PAIR_COUNT = 61;
 var MAX_GLYPHS = 4096;
@@ -17193,8 +17216,22 @@ function parseGlyphs(text) {
   if (bytes.length > MAX_GLYPHS) throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
   return bytes;
 }
+function validateLineGeometry(options) {
+  const { lineColumns, initialColumn } = options;
+  if (lineColumns === void 0) {
+    if (initialColumn !== void 0) throw new Error("Initial dialogue column requires a line capacity.");
+    return;
+  }
+  if (!Number.isSafeInteger(lineColumns) || lineColumns < 1 || lineColumns > 32) {
+    throw new Error("Dialogue line capacity must be an integer from 1 to 32 glyphs.");
+  }
+  if (initialColumn !== void 0 && (!Number.isSafeInteger(initialColumn) || initialColumn < 0 || initialColumn >= lineColumns)) {
+    throw new Error("Initial dialogue column must be within the supplied line capacity.");
+  }
+}
 function encodeSomDialogue(text, dictionary, options = {}) {
   const glyphs = parseGlyphs(text);
+  validateLineGeometry(options);
   const pairs = /* @__PURE__ */ new Map();
   for (let code = 96; code <= 255; code++) {
     if (code === 125) continue;
@@ -17215,7 +17252,20 @@ function encodeSomDialogue(text, dictionary, options = {}) {
     if (target !== void 0 && target !== options.original.length) throw new Error("Original dialogue disagrees with byte budget.");
     return options.original.slice();
   }
-  const pairAt = (i) => i + 1 < glyphs.length ? pairs.get(glyphs[i] | glyphs[i + 1] << 8) : void 0;
+  const columns = new Uint8Array(glyphs.length);
+  if (options.lineColumns !== void 0) {
+    let column = options.initialColumn ?? 0;
+    for (const [index, glyph] of glyphs.entries()) {
+      columns[index] = column;
+      if (glyph === 127) column = 0;
+      else column = (column + 1) % options.lineColumns;
+    }
+  }
+  const pairAt = (i) => {
+    if (i + 1 >= glyphs.length) return void 0;
+    if (options.lineColumns !== void 0 && columns[i] === options.lineColumns - 1) return void 0;
+    return pairs.get(glyphs[i] | glyphs[i + 1] << 8);
+  };
   if (target === void 0) {
     const minimum = new Uint16Array(glyphs.length + 1);
     for (let i = glyphs.length - 1; i >= 0; i--) {
@@ -17260,46 +17310,152 @@ function readSomDialogueScriptLayout(value) {
     if (!segment || !["raw", "text"].includes(segment.kind) || index > 0 && segment.kind === value.segments[index - 1].kind) throw new Error("Dialogue segments must alternate raw/text.");
     const bytes = hexBytes(segment.nativeHex);
     if (!bytes.length || bytes.length > MAX_GLYPHS) throw new Error("Invalid dialogue segment size.");
-    if (segment.kind === "text") parseGlyphs(decodeSomDialogue(bytes, dictionary));
+    if (segment.kind === "text") {
+      parseGlyphs(decodeSomDialogue(bytes, dictionary));
+      validateLineGeometry(segment);
+    } else if (segment.lineColumns !== void 0 || segment.initialColumn !== void 0) {
+      throw new Error("Raw dialogue commands cannot carry text geometry.");
+    }
+    if (segment.commands !== void 0) {
+      if (segment.kind !== "raw" || !Array.isArray(segment.commands) || segment.commands.length > bytes.length) {
+        throw new Error("Named dialogue commands require a bounded raw segment.");
+      }
+      let end = 0;
+      for (const slot of segment.commands) {
+        if (!slot || !Number.isSafeInteger(slot.offset) || slot.offset < end || typeof slot.token !== "string" || slot.editable !== void 0 && typeof slot.editable !== "boolean") {
+          throw new Error("Invalid or overlapping dialogue command slot.");
+        }
+        const command = encodeSomDialogueCommand(slot.token);
+        end = slot.offset + command.bytes.length;
+        if (end > bytes.length || !command.bytes.every((byte, i) => byte === bytes[slot.offset + i])) {
+          throw new Error("Named dialogue command disagrees with its native bytes.");
+        }
+      }
+    }
     total += bytes.length;
   }
   if (total > 65536) throw new Error("Dialogue script exceeds one ROM bank.");
   return value;
 }
-function convertSomDialogueScript(source, options, resources) {
-  if (source.bytes.some((byte) => byte > 127)) throw new Error("SoM dialogue source must be ASCII.");
-  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout)) throw new Error("Dialogue layout resource is required.");
-  const layout2 = readSomDialogueScriptLayout(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes)));
+function rawParts(segment, index) {
+  const native = hexBytes(segment.nativeHex), parts = [];
+  let cursor = 0, opaque = 0;
+  for (const slot of segment.commands ?? []) {
+    if (slot.offset > cursor) parts.push({ marker: `{raw:${index}:${opaque++}}`, bytes: native.slice(cursor, slot.offset) });
+    const bytes = encodeSomDialogueCommand(slot.token).bytes;
+    parts.push({ marker: slot.token, bytes, slot });
+    cursor = slot.offset + bytes.length;
+  }
+  if (cursor < native.length) {
+    let marker = `{raw:${index}}`;
+    if (segment.commands?.length) marker = `{raw:${index}:${opaque}}`;
+    parts.push({ marker, bytes: native.slice(cursor) });
+  }
+  return parts;
+}
+function packSomDialogueScript(source, layout2, sizing = "fixed") {
+  if (!["fixed", "variable"].includes(sizing))
+    throw new Error("Invalid dialogue field sizing policy.");
+  if (source.some((byte) => byte > 127)) throw new Error("SoM dialogue source must be ASCII.");
+  readSomDialogueScriptLayout(layout2);
   const dictionary = readSomDialogueDictionary(hexBytes(layout2.dictionaryHex));
-  let text = new TextDecoder().decode(source.bytes).replaceAll("\r\n", "\n");
+  let text = new TextDecoder().decode(source).replaceAll("\r\n", "\n");
   if (text.includes("\r")) throw new Error("Bare carriage returns are not dialogue line breaks.");
   if (layout2.segments.at(-1)?.kind === "raw" && text.endsWith("\n")) text = text.slice(0, -1);
-  const chunks = [];
-  let cursor = 0, raw = 0, nativePreserved = true;
+  const chunks = [], segments = [];
+  let cursor = 0, raw = 0, nativePreserved = true, originalOffset = 0, outputOffset = 0;
   for (const segment of layout2.segments) {
     const original = hexBytes(segment.nativeHex);
+    const firstChunk = chunks.length;
     if (segment.kind === "raw") {
-      const marker = `{raw:${raw++}}`;
-      if (!text.startsWith(marker, cursor)) throw new Error(`Missing or reordered command marker ${marker}.`);
-      cursor += marker.length;
-      chunks.push(original);
+      const index = raw++, legacy = `{raw:${index}}`;
+      if (text.startsWith(legacy, cursor)) {
+        cursor += legacy.length;
+        chunks.push(original);
+      } else {
+        for (const part of rawParts(segment, index)) {
+          if (!part.slot) {
+            if (!text.startsWith(part.marker, cursor))
+              throw new Error(`Missing or reordered command marker ${part.marker}.`);
+            cursor += part.marker.length;
+            chunks.push(part.bytes);
+            continue;
+          }
+          const match = /^\$\{[^{}]+\}/.exec(text.slice(cursor));
+          if (!match) throw new Error(`Missing dialogue command ${part.slot.token}.`);
+          const command = encodeSomDialogueCommand(match[0]), expected = encodeSomDialogueCommand(part.slot.token);
+          if (command.family !== expected.family || command.bytes.length !== part.bytes.length) {
+            throw new Error("Dialogue command edit changed its admitted family or width.");
+          }
+          const preserved2 = command.bytes.every((byte, i) => byte === part.bytes[i]);
+          if (part.slot.editable === false && !preserved2)
+            throw new Error("Dialogue command slot is read-only.");
+          nativePreserved &&= preserved2;
+          chunks.push(command.bytes);
+          cursor += match[0].length;
+        }
+      }
     } else {
-      const next = text.indexOf(`{raw:${raw}}`, cursor);
-      const end = next < 0 ? text.length : next;
-      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, { original, byteLength: original.length });
-      nativePreserved &&= encoded.every((byte, index) => byte === original[index]);
+      const boundaries = [text.indexOf("{raw:", cursor), text.indexOf("${", cursor)].filter(
+        (index) => index >= 0
+      );
+      const end = boundaries.length ? Math.min(...boundaries) : text.length;
+      let byteLength;
+      if (sizing === "fixed") byteLength = original.length;
+      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, {
+        original,
+        byteLength,
+        lineColumns: segment.lineColumns,
+        initialColumn: segment.initialColumn
+      });
+      nativePreserved &&= encoded.length === original.length && encoded.every((byte, index) => byte === original[index]);
       chunks.push(encoded);
       cursor = end;
     }
+    const emitted = chunks.slice(firstChunk);
+    const length = emitted.reduce((sum, chunk2) => sum + chunk2.length, 0);
+    let position = 0;
+    const preserved = length === original.length && emitted.every((chunk2) => {
+      const matches = chunk2.every((byte, index) => byte === original[position + index]);
+      position += chunk2.length;
+      return matches;
+    });
+    segments.push({
+      kind: segment.kind,
+      originalOffset,
+      originalLength: original.length,
+      offset: outputOffset,
+      length,
+      preserved
+    });
+    originalOffset += original.length;
+    outputOffset += length;
   }
   if (cursor !== text.length) throw new Error("Unexpected text after the final command marker.");
   const bytes = new Uint8Array(chunks.reduce((sum, chunk2) => sum + chunk2.length, 0));
+  if (bytes.length > 65536) throw new Error("Packed dialogue script exceeds one ROM bank.");
   let offset = 0;
   for (const chunk2 of chunks) {
     bytes.set(chunk2, offset);
     offset += chunk2.length;
   }
-  const output = { bytes, mediaType: "application/octet-stream", metadata: { nativePreserved, fixedFieldOffsets: true } };
+  return { bytes, segments, nativePreserved, fixedFieldOffsets: sizing === "fixed" };
+}
+function convertSomDialogueScript(source, options, resources) {
+  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout))
+    throw new Error("Dialogue layout resource is required.");
+  const layout2 = readSomDialogueScriptLayout(
+    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes))
+  );
+  const result = packSomDialogueScript(source.bytes, layout2);
+  const output = {
+    bytes: result.bytes,
+    mediaType: "application/octet-stream",
+    metadata: {
+      nativePreserved: result.nativePreserved,
+      fixedFieldOffsets: result.fixedFieldOffsets
+    }
+  };
   return { primaryOutput: "script", outputs: { script: output } };
 }
 
@@ -18872,6 +19028,97 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
 }
 var som_asset_plugin_default = createSomAssetPlugin();
 
+// packages/plugin-65xx/src/nes/assets.ts
+var NES_CHR_CODEC = "nes.chr.2bpp";
+var NES_TEXT_CODEC = "nes.text.tiles";
+function encodeNesChrPng(bytes) {
+  const png = readAssetPng(bytes);
+  if (png.colorType !== 3) {
+    throw new Error("NES CHR assets require an indexed PNG.");
+  }
+  const image = png.toIndexed({ copy: false });
+  if (!image.width || !image.height || image.width % 8 || image.height % 8 || image.indexes.some((value) => value > 3)) {
+    throw new Error("NES CHR assets require 8-pixel tile dimensions and indexes 0..3.");
+  }
+  const columns = image.width / 8;
+  const count = columns * image.height / 8;
+  const output = new Uint8Array(count * 16);
+  for (let tile = 0; tile < count; tile++) {
+    const left = tile % columns * 8;
+    const top = Math.floor(tile / columns) * 8;
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const value = image.indexes[(top + y) * image.width + left + x];
+        output[tile * 16 + y] |= (value & 1) << 7 - x;
+        output[tile * 16 + y + 8] |= value >> 1 << 7 - x;
+      }
+    }
+  }
+  return output;
+}
+function nesTextMap(options) {
+  if (typeof options !== "object" || options === null || Array.isArray(options) || Object.keys(options).some((key) => key !== "characters") || !("characters" in options) || typeof options.characters !== "object" || options.characters === null || Array.isArray(options.characters)) {
+    throw new Error("NES tile text requires an explicit characters object.");
+  }
+  const result = /* @__PURE__ */ new Map();
+  const bytes = /* @__PURE__ */ new Set();
+  for (const [character, value] of Object.entries(options.characters)) {
+    if (character.length !== 1 || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 255 || bytes.has(value)) {
+      throw new Error("NES tile text mappings require unique characters and byte values.");
+    }
+    result.set(character, value);
+    bytes.add(value);
+  }
+  if (!result.size) {
+    throw new Error("NES tile text mappings must not be empty.");
+  }
+  return result;
+}
+var nesAssetFormats = [
+  {
+    id: NES_CHR_CODEC,
+    version: "1.0.0",
+    targets: ["65xx.nes"],
+    sourceRepresentations: [{ id: "indexed-png", mediaType: "image/png", extensions: [".png"] }],
+    convert(source, options) {
+      if (source.mediaType !== "image/png" || Object.keys(options).length) {
+        throw new Error("NES CHR conversion accepts an indexed PNG without options.");
+      }
+      return { primaryOutput: "chr", outputs: { chr: { bytes: encodeNesChrPng(source.bytes) } } };
+    }
+  },
+  {
+    id: NES_TEXT_CODEC,
+    version: "1.0.0",
+    targets: ["65xx.nes"],
+    optionSchema: {
+      characters: {
+        summary: "Explicit character-to-tile byte mapping",
+        valueSyntax: '{ A: $0A, " ": $FC }'
+      }
+    },
+    sourceRepresentations: [{ id: "utf8-text", mediaType: "text/plain", extensions: [".txt"] }],
+    convert(source, options) {
+      if (source.mediaType !== "text/plain") {
+        throw new Error("NES tile text requires UTF-8 text.");
+      }
+      const map = nesTextMap(options);
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(source.bytes);
+      const bytes = Uint8Array.from(
+        // Mapping keys are single UTF-16 units; splitting uses the same contract and rejects unknown units.
+        text.split("").map((character) => {
+          const value = map.get(character);
+          if (value === void 0) {
+            throw new Error(`Unmapped NES text character ${JSON.stringify(character)}.`);
+          }
+          return value;
+        })
+      );
+      return { primaryOutput: "text", outputs: { text: { bytes } } };
+    }
+  }
+];
+
 // packages/language-server/src/asset-preview-conversion.ts
 var registry3 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
 for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
@@ -19074,6 +19321,9 @@ function convertSomBrrPreview(input2) {
   };
 }
 function convertAssetPreview(input2) {
+  if (input2.format === NES_CHR_CODEC) {
+    return convertNesChrPreview(input2);
+  }
   if (input2.format === "som.room") {
     return convertSomRoomPreview(input2);
   }
@@ -19134,6 +19384,41 @@ function convertAssetPreview(input2) {
     };
   }
   return { ...common, kind: "binary" };
+}
+function convertNesChrPreview(input2) {
+  const codec = nesAssetFormats.find((format) => format.id === NES_CHR_CODEC);
+  const result = codec.convert(input2.source, input2.options, input2.resources);
+  const output = input2.output ?? result.primaryOutput;
+  if (output !== result.primaryOutput) {
+    throw new Error(`Asset format '${input2.format}' has no output '${output}'.`);
+  }
+  const image = readAssetPng(input2.source.bytes).toIndexed({ copy: false });
+  const rgba = new Uint8Array(image.indexes.length * 4);
+  for (let pixel = 0; pixel < image.indexes.length; pixel++) {
+    rgba.set(image.palette[image.indexes[pixel]], pixel * 4);
+  }
+  const composed = Buffer.from(rgbaNativePng(rgba, image.width, image.height)).toString("base64");
+  return {
+    kind: "image",
+    sourceBytes: input2.source.bytes.length,
+    encodedBytes: result.outputs[output].bytes.length,
+    format: input2.format,
+    output,
+    metadata: {
+      width: image.width,
+      height: image.height,
+      tiles: image.indexes.length / 64,
+      bitDepth: 2,
+      tileOrder: "row-major",
+      palette: "source PNG indexes; gameplay colors are not inferred"
+    },
+    thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, image.width, image.height, 192)).toString(
+      "base64"
+    ),
+    // NES source atlases already follow native storage order; both views must show the same pixels.
+    composedPngBase64: composed,
+    storagePngBase64: composed
+  };
 }
 
 // packages/language-server/src/asset-preview-worker.ts

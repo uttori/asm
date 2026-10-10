@@ -1,9 +1,8 @@
 import { type RuntimeInstructionTraceChunk, type RuntimeInstructionTraceImportContext, type RuntimeInstructionTraceImportResult, type RuntimeInstructionTraceMetadata, type RuntimeTraceSource } from "./runtime-trace.js";
-/** Default file-size budget, independent of static-analysis work. */
-export declare const DEFAULT_RUNTIME_TRACE_MAX_BYTES: number;
+export { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "../internal/capture-limits.js";
 /** File import limits, cancellation and incremental progress. */
 export interface RuntimeTraceFileOptions {
-    /** Positive safe integer byte limit for the whole input file. Defaults to 2 GiB. */
+    /** Positive safe integer byte limit for the whole input file. Defaults to 32 GiB, independently of heap/work budgets. */
     readonly maxBytes?: number;
     /** Checked between reads and after the final progress callback. Aborting rejects with signal.reason. */
     readonly signal?: AbortSignal;

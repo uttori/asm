@@ -27,7 +27,7 @@ const createDiagnosticContext = (
   currentTargetAddress = 0,
 ): DiagnosticDirectiveContext => ({
   session: {
-    evaluateExpression,
+    evaluateAssertion: evaluateExpression,
     resolvedefines: (input) => input,
     currentTargetAddress,
     operandResolver: { getnum: parseStubNumber },
@@ -325,7 +325,7 @@ test("misc registry dispatches assert, error, warn, and warnpc", (t) => {
     },
     diagnostic: {
       session: {
-        evaluateExpression: (expression) => {
+        evaluateAssertion: (expression) => {
           if (typeof expression !== "string") {
             t.fail();
             return false;

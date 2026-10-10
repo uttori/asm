@@ -23,6 +23,7 @@ import {
 } from "@uttori/asm-debug-adapter";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
 import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
+import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "@uttori/asm-disassembler";
 import type { SnesSourceBuild } from "@uttori/asm-plugin-snes";
 import {
   DebugAdapterInlineImplementation,
@@ -741,7 +742,12 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
             projectDirectory: liveProject,
             position: recorder.position,
             maxLagBytes: settings.get<number>("debug.liveBusMaxLagMiB", 256) * 1024 * 1024,
-            maxBytes: analysisSettings.get<number>("trace.maxImportSizeMiB", 2048) * 1048576,
+            maxBytes:
+              analysisSettings.get<number>(
+                "trace.maxImportSizeMiB",
+                DEFAULT_RUNTIME_TRACE_MAX_BYTES / 1024 ** 2,
+              ) *
+              1024 ** 2,
             maxIndexRecords: 2_000_000,
           },
           (progress) => {

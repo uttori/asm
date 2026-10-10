@@ -1,5 +1,5 @@
 import type { ImportReport } from "../model/project-types.js";
-/** Portable archive identity. The filename is a discovery hint, never a machine-specific location. */
+/** Historical input identity. Its filename and hashes do not imply the archive is still available. */
 export interface SourceCaptureArchive {
     readonly name: string;
     readonly sha256: string;
@@ -14,10 +14,10 @@ export interface SourceCaptureIdentity {
     readonly profile: string;
     readonly observedEvents: number;
     readonly droppedEvents: number;
-    /** Empty means retained evidence is required: this catalog cannot reconstruct that capture. */
+    /** Verified input fingerprints only. Imported evidence must remain available independently of these files. */
     readonly archives: readonly SourceCaptureArchive[];
 }
-/** Git-tracked private-input inventory contains identities only, never capture contents or host paths. */
+/** Git-tracked import provenance contains identities only, never capture contents or required host paths. */
 export interface SourceCaptureCatalog {
     readonly format: "uttori-capture-catalog";
     readonly version: 1;
@@ -38,6 +38,6 @@ export declare function reconcileSourceCaptureCatalog(catalog: SourceCaptureCata
 }): SourceCaptureCatalog;
 /** Save only against the read snapshot; evidence imports and Git-file writes are separate durable operations. */
 export declare function writeSourceCaptureCatalog(root: string, name: string, catalog: SourceCaptureCatalog, expectedSha256?: string): void;
-/** Stream archive identity with cancellation. Companion artifacts are separately verified by the importer. */
+/** Stream archive identity with cancellation and the shared 32 GiB default. Companion artifacts are separately verified by the importer. */
 export declare function fingerprintSourceCapture(file: string, signal?: AbortSignal, maxBytes?: number): Promise<SourceCaptureArchive>;
 //# sourceMappingURL=captures.d.ts.map

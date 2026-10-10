@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
+import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "../internal/capture-limits.js";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import type { ImportReport } from "../model/project-types.js";
 import { sourceContentHash } from "./generation.js";
@@ -21,7 +22,7 @@ function errorCode(error: unknown): string | undefined {
   return undefined;
 }
 
-/** Portable archive identity. The filename is a discovery hint, never a machine-specific location. */
+/** Historical input identity. Its filename and hashes do not imply the archive is still available. */
 export interface SourceCaptureArchive {
   readonly name: string;
   readonly sha256: string;
@@ -37,11 +38,11 @@ export interface SourceCaptureIdentity {
   readonly profile: string;
   readonly observedEvents: number;
   readonly droppedEvents: number;
-  /** Empty means retained evidence is required: this catalog cannot reconstruct that capture. */
+  /** Verified input fingerprints only. Imported evidence must remain available independently of these files. */
   readonly archives: readonly SourceCaptureArchive[];
 }
 
-/** Git-tracked private-input inventory contains identities only, never capture contents or host paths. */
+/** Git-tracked import provenance contains identities only, never capture contents or required host paths. */
 export interface SourceCaptureCatalog {
   readonly format: "uttori-capture-catalog";
   readonly version: 1;
@@ -308,11 +309,11 @@ export function writeSourceCaptureCatalog(
   }
 }
 
-/** Stream archive identity with cancellation. Companion artifacts are separately verified by the importer. */
+/** Stream archive identity with cancellation and the shared 32 GiB default. Companion artifacts are separately verified by the importer. */
 export async function fingerprintSourceCapture(
   file: string,
   signal?: AbortSignal,
-  maxBytes = 2 * 1024 ** 3,
+  maxBytes = DEFAULT_RUNTIME_TRACE_MAX_BYTES,
 ): Promise<SourceCaptureArchive> {
   signal?.throwIfAborted();
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
@@ -323,7 +324,9 @@ export async function fingerprintSourceCapture(
     throw new Error("Capture archive must be a nonempty regular file.");
   }
   if (before.size > BigInt(maxBytes)) {
-    throw new Error("Capture archive exceeds the project's byte budget.");
+    throw new Error(
+      `Capture archive '${file}' is ${(Number(before.size) / 1024 ** 3).toFixed(2)} GiB and exceeds the project's byte budget of ${(maxBytes / 1024 ** 3).toFixed(2)} GiB (${maxBytes} bytes). Increase limits.captureBytes in .uttori/project.json to import this archive.`,
+    );
   }
   const hash = createHash("sha256");
   let bytes = 0;

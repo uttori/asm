@@ -2,9 +2,9 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "../internal/capture-limits.js";
 import { createRuntimeInstructionTraceImporter, createRuntimeTraceChunkValidator, validateRuntimeInstructionTraceMetadata, } from "./runtime-trace.js";
-/** Default file-size budget, independent of static-analysis work. */
-export const DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+export { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "../internal/capture-limits.js";
 const MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
 /**
  * Parse the trace envelope and its chunks without materializing the chunks array.

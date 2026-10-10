@@ -504,7 +504,8 @@ export const validateLoadedShards = (shards, project, analysisScope = "complete"
             if ("mapping" in record && record.mapping !== undefined) {
                 if (!isResearchMapping(record.mapping) ||
                     (record.mapping.fileOffset !== undefined &&
-                        record.mapping.fileOffset + ("start" in record ? record.end - record.start : 1) > project.rom.contentSize)) {
+                        record.mapping.fileOffset + ("start" in record ? record.end - record.start : 1) >
+                            project.rom.contentSize)) {
                     throw new Error(`Invalid research mapping for '${record.id}'.`);
                 }
             }

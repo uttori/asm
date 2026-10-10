@@ -26,6 +26,8 @@ export interface DirectiveAddressCapability {
 export interface DirectiveExpressionCapability {
     evaluateRangeExpression(expression: string | ExpressionNode): number;
     evaluateExpression(expression: string | ExpressionNode): boolean;
+    /** Undefined postpones checks that depend on asset bytes omitted by tooling analysis. */
+    evaluateAssertion(expression: string | ExpressionNode): boolean | undefined;
     resolvedefines(input: string): string;
     operandResolver: OperandResolver;
     structEngine: StructEngine;
@@ -87,7 +89,7 @@ export type NarrowDirectiveHandler<Context> = (ctx: Context, words: readonly str
 export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability & {
     includeSource: Pick<IncludeSourceService, "readFile">;
 }>;
-export type DiagnosticDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateExpression" | "resolvedefines"> & Pick<DirectiveAddressCapability, "currentTargetAddress"> & {
+export type DiagnosticDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateAssertion" | "resolvedefines"> & Pick<DirectiveAddressCapability, "currentTargetAddress"> & {
     operandResolver: Pick<OperandResolver, "getnum">;
 }>;
 export type NamespaceDirectiveContext = SessionDirectiveContext<DirectiveNamespaceCapability>;

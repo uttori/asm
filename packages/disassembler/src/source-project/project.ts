@@ -4,7 +4,12 @@ import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 import { openAnalysisProjectStore } from "../project/project-store.js";
-import { readResearchInputs, type ResearchSnapshot } from "../research-inputs/inputs.js";
+import {
+  readResearchInputs,
+  RESEARCH_INPUT_LIMIT_NAMES,
+  type ResearchInputLimits,
+  type ResearchSnapshot,
+} from "../research-inputs/inputs.js";
 import { sourceFilePublicationEpoch } from "./file-transaction.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath, sourceRepository, type SourceRepository } from "./git.js";
@@ -35,8 +40,9 @@ export interface SourceProjectConfiguration {
   readonly buildConfig: string;
   readonly layout: string;
   readonly captures: string;
-  /** Explicit work budgets shared by headless commands and editor workers; omitted values use target defaults. */
-  readonly limits?: {
+  /** Shared resource policy. Capture/analysis values use target defaults; research ceilings are opt-in. */
+  readonly limits?: ResearchInputLimits & {
+    /** Per input archive, including each graphics companion; defaults to 32 GiB and does not allocate that much memory. */
     readonly captureBytes?: number;
     readonly analysisWorkItems?: number;
     readonly analysisCallDepth?: number;
@@ -104,11 +110,14 @@ function assertSourceProjectConfiguration(
     }
     for (const [name, limit] of Object.entries(value.limits)) {
       if (
-        (name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth") ||
+        (name !== "captureBytes" &&
+          name !== "analysisWorkItems" &&
+          name !== "analysisCallDepth" &&
+          !RESEARCH_INPUT_LIMIT_NAMES.some((field) => field === name)) ||
         !(isSafeInteger(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))
       ) {
         throw new Error(
-          `Invalid source work limit: ${name}. Use an integer within the supported range.`,
+          `Invalid source work limit limits.${name} in .uttori/project.json. Use a positive safe integer; analysisCallDepth also accepts zero. Supported fields: captureBytes, analysisWorkItems, analysisCallDepth, ${RESEARCH_INPUT_LIMIT_NAMES.join(", ")}.`,
         );
       }
     }
@@ -128,10 +137,13 @@ export async function openSourceProject(directory: string): Promise<SourceProjec
   const configuration = parseSourceProject(
     JSON.parse(fs.readFileSync(path.join(repository.root, ".uttori/project.json"), "utf8")),
   );
-  const research = readResearchInputs(repository.root, configuration.researchRoots, {
-    project: configuration.id,
-    romSha256: configuration.romSha256,
-  });
+  const research = readResearchInputs(
+    repository.root,
+    configuration.researchRoots,
+    { project: configuration.id, romSha256: configuration.romSha256 },
+    undefined,
+    configuration.limits,
+  );
   return {
     repository,
     configuration,

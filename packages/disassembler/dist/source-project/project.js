@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore } from "../project/project-store.js";
-import { readResearchInputs } from "../research-inputs/inputs.js";
+import { readResearchInputs, RESEARCH_INPUT_LIMIT_NAMES, } from "../research-inputs/inputs.js";
 import { sourceFilePublicationEpoch } from "./file-transaction.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath, sourceRepository } from "./git.js";
@@ -56,9 +56,12 @@ function assertSourceProjectConfiguration(value) {
             throw new Error("Source work limits must be an object.");
         }
         for (const [name, limit] of Object.entries(value.limits)) {
-            if ((name !== "captureBytes" && name !== "analysisWorkItems" && name !== "analysisCallDepth") ||
+            if ((name !== "captureBytes" &&
+                name !== "analysisWorkItems" &&
+                name !== "analysisCallDepth" &&
+                !RESEARCH_INPUT_LIMIT_NAMES.some((field) => field === name)) ||
                 !(isSafeInteger(limit) && limit >= (name === "analysisCallDepth" ? 0 : 1))) {
-                throw new Error(`Invalid source work limit: ${name}. Use an integer within the supported range.`);
+                throw new Error(`Invalid source work limit limits.${name} in .uttori/project.json. Use a positive safe integer; analysisCallDepth also accepts zero. Supported fields: captureBytes, analysisWorkItems, analysisCallDepth, ${RESEARCH_INPUT_LIMIT_NAMES.join(", ")}.`);
             }
         }
     }
@@ -73,10 +76,7 @@ export async function openSourceProject(directory) {
     const repository = await sourceRepository(directory);
     sourceFilePublicationEpoch(repository);
     const configuration = parseSourceProject(JSON.parse(fs.readFileSync(path.join(repository.root, ".uttori/project.json"), "utf8")));
-    const research = readResearchInputs(repository.root, configuration.researchRoots, {
-        project: configuration.id,
-        romSha256: configuration.romSha256,
-    });
+    const research = readResearchInputs(repository.root, configuration.researchRoots, { project: configuration.id, romSha256: configuration.romSha256 }, undefined, configuration.limits);
     return {
         repository,
         configuration,

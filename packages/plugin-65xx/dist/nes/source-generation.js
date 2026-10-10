@@ -96,7 +96,11 @@ export async function prepareNesGeneration(options) {
             if (loadedRom.identity.contentSha256 !== options.inputs.romSha256) {
                 throw new Error("Generation ROM content identity changed.");
             }
-            const exported = exportNesSource(loadedCartridge, store.analysisByKinds(["cfg-node"]).filter((node) => node.kind === "cfg-node"), loadedRom.identity.contentSha256, { labels: project.shards.labels, comments: project.shards.comments });
+            const exported = exportNesSource(loadedCartridge, store.analysisByKinds(["cfg-node"]).filter((node) => node.kind === "cfg-node"), loadedRom.identity.contentSha256, {
+                labels: project.shards.labels,
+                comments: project.shards.comments,
+                annotations: project.shards.annotations,
+            });
             for (const file of exported.files) {
                 if (file.path !== "uttori-asm.config.json") {
                     write({ path: `${options.sourceRoot}/${file.path}`, bytes: file.bytes });

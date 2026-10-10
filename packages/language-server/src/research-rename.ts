@@ -315,6 +315,7 @@ export async function researchRenameEditsFor(
     project.configuration.researchRoots,
     { project: project.configuration.id, romSha256: project.configuration.romSha256 },
     overlays,
+    project.configuration.limits,
   );
   const labels = new Map<string, ProjectLabel | null>();
   for (const item of snapshot.decisions) {
