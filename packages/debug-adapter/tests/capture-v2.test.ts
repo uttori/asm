@@ -5,6 +5,7 @@ import path from "node:path";
 
 import test from "ava";
 
+import { compressCaptureChunk } from "../src/capture-compression.js";
 import {
   LosslessCaptureFileRecorder,
   NativeCaptureFileRecorder,
@@ -336,7 +337,10 @@ test("opt-in capture profiling accounts bounded stage totals without changing ar
     await fixture(path.join(directory, "timed.act2"), false, "act2", true)
   ).recorder.stop();
   t.is(plain.timings, undefined);
-  t.is(timed.timings?.bytes, 264);
+  t.is(
+    timed.timings?.bytes,
+    compressCaptureChunk(chunk()).length + compressCaptureChunk(chunk(2n, 2n)).length,
+  );
   t.is(timed.timings?.stages.dataSync.calls, 2);
   t.is(timed.timings?.stages.checkpointSync.calls, 2);
   t.is(timed.timings?.stages.ack.calls, 2);
@@ -438,7 +442,9 @@ function nesChunk(): Buffer {
   b.writeUInt16LE(4, 125);
   b[127] = 6;
   b[136] = 5;
-  for (let i = 0; i < 3; i++) b.writeUInt32LE(0xa000 + i, 143 + i * 4);
+  for (let i = 0; i < 3; i++) {
+    b.writeUInt32LE(0xa000 + i, 143 + i * 4);
+  }
   b.writeUInt32LE(captureCrc32c(b, true), 56);
   return b;
 }
@@ -461,6 +467,6 @@ test("ACT2 Ricoh scope preserves mapper and per-fetch provenance without accepti
   b[123] = 1;
   b.writeUInt32LE(captureCrc32c(b, true), 56);
   t.throws(() => decodeCaptureChunk(b, session, "nes.2a03.instructions"), {
-    message: /PC|address/i,
+    message: /pc|address/i,
   });
 });

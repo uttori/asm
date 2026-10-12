@@ -1,4 +1,5 @@
 import { crc32cBytes } from "@uttori/data-tools/data-hash-crc32";
+import { decodeCaptureChunkBytes } from "./capture-compression.js";
 import { decodeNesBusRecords } from "./capture-nes-ppu.js";
 const maxU64 = (1n << 64n) - 1n;
 /**
@@ -348,25 +349,9 @@ export const captureChunkRecords = (chunk) => {
 export function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
     captureSession(session);
     captureScope(scope);
-    if (bytes.length < 64 || bytes.length > 262144) {
-        throw new Error("Capture chunk length exceeds bounds.");
-    }
-    const b = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    if (b.toString("ascii", 0, 4) !== "ACT2" ||
-        b.readUInt16LE(4) !== 2 ||
-        b.readUInt16LE(6) !== 0 ||
-        b.readUInt32LE(44) !== 64 ||
-        b.readUInt32LE(60) !== 0) {
-        throw new Error("Unsupported capture envelope.");
-    }
+    const b = decodeCaptureChunkBytes(bytes);
     if (b.toString("hex", 8, 24) !== session) {
         throw new Error("Capture chunk belongs to another session.");
-    }
-    if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64) {
-        throw new Error("Capture payload lengths disagree.");
-    }
-    if (captureCrc32c(bytes, true) !== b.readUInt32LE(56)) {
-        throw new Error("Capture checksum mismatch.");
     }
     const sequence = b.readBigUInt64LE(24), first = b.readBigUInt64LE(32), count = b.readUInt32LE(40);
     const through = first + BigInt(count) - 1n;

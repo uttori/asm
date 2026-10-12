@@ -60,8 +60,8 @@ import. Catalog filenames and hashes describe verified past inputs, not files th
 Working source may intentionally differ from the ROM; only pure generations require original-ROM
 equality. ROMs and emulator binaries are not distributed.
 
-Imports default to 32 GiB per archive, including each NES graphics companion. Source projects
-can override this with `limits.captureBytes` in `.uttori/project.json` (bytes); ordinary
+Source projects stream primary and graphics companion archives without a default size ceiling.
+Set `limits.captureBytes` in `.uttori/project.json` (bytes) for an explicit per-archive ceiling. Ordinary
 `evidence-import` uses `--trace-max-mib` (default 32768). Archives stream incrementally, so the
 file budget is independent of heap and analysis work limits. If a companion import fails after
 CPU evidence commits, retry the same capture after adjusting the limit; CPU facts are not duplicated.

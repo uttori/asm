@@ -145,14 +145,18 @@ test("named NES source, RAM definitions, typed pointers, readable text and PNG a
     t.is(otherTables.length, 2);
     t.regex(text("main.asm"), /incsrc "defines.asm"\nincsrc "ram-defines.asm"/);
     t.false(fs.existsSync(path.join(source, "research.asm")));
-    t.regex(text("ram-defines.asm"), /RAM_SCREEN_STATE = \$00B8 ; Selects the active screen\./);
+    t.regex(
+      text("ram-defines.asm"),
+      /; Selects the active screen\.\nRAM_SCREEN_STATE = \$00B8\n\n/,
+    );
+    t.regex(text("defines.asm"), /; [^\n]+\nPPUCTRL = \$2000\n\n/);
     t.regex(text("banks/prg_00.asm"), /^MenuHandler:$/m);
     t.regex(text("banks/prg_00.asm"), /^  JSR\.w MenuHandler$/m);
     t.regex(text("banks/prg_00.asm"), /^  dw MenuHandler$/m);
-    t.regex(text("banks/prg_00.asm"), /\n\nMenuHandler:\n  ; Runs the selected menu\.\n  RTS/);
+    t.regex(text("banks/prg_00.asm"), /\n\n; Runs the selected menu\.\nMenuHandler:\n  RTS/);
     t.regex(
       text("banks/prg_00.asm"),
-      /\n\nText_Menu:\n  ; Menu title tile codes\.\n  pushtable\n  table .*\n  db "MENU"\n  pulltable\n\nincbin "\.\.\/assets\/raw\/000000.bin":\$0114\.\.\$1000/,
+      /\n\n; Menu title tile codes\.\nText_Menu:\n  pushtable\n  table .*\n  db "MENU"\n  pulltable\n\nincbin "\.\.\/assets\/raw\/000000.bin":\$0114\.\.\$1000/,
     );
     t.regex(
       text("banks/chr_00.asm"),
@@ -161,6 +165,7 @@ test("named NES source, RAM definitions, typed pointers, readable text and PNG a
     for (const file of exported.files.filter((entry) => entry.path.endsWith(".asm"))) {
       t.notRegex(Buffer.from(file.bytes).toString(), /\$[\dA-F]*[a-f]/);
       t.notRegex(Buffer.from(file.bytes).toString(), /^[\t ]+incbin\b/m);
+      t.notRegex(Buffer.from(file.bytes).toString(), /^incbin [^\n]+\n[^\n]/m);
       t.notRegex(
         Buffer.from(file.bytes).toString(),
         /^\s*\.(?:segment|export|incbin|byte|word|assert)\b/m,

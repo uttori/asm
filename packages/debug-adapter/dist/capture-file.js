@@ -1,5 +1,6 @@
 import { open, link, unlink, lstat } from "node:fs/promises";
 import { setImmediate as yieldToMessages } from "node:timers/promises";
+import { compressCaptureChunk } from "./capture-compression.js";
 import { CaptureContextRecorder } from "./capture-context.js";
 import { CaptureFrameReader } from "./capture-file-reader.js";
 import { captureCrc32c, captureU64, captureSession, captureScope, captureChunkRecords, decodeCaptureChunk, validateCaptureCapabilities, validateCapturePosition, } from "./capture-v2.js";
@@ -171,7 +172,7 @@ export class LosslessCaptureFileRecorder {
                 session: position.session,
                 scope,
                 ownership: "durable-prefix",
-                compression: "none",
+                compression: "zstd",
                 checksum: "crc32c",
                 maxChunkBytes: 262144,
                 allocatedBytes: position.allocatedBytes,
@@ -267,10 +268,13 @@ export class LosslessCaptureFileRecorder {
                         throw new Error("Capture chunk is not contiguous.");
                     }
                     boundary = this.#mark("decode", boundary);
+                    // Compress only after validation; the unchanged event identity is acknowledged
+                    // after the encoded chunk and its checkpoint have both reached durable storage.
+                    const stored = compressCaptureChunk(bytes);
                     if (this.#timings) {
-                        this.#timings.bytes += bytes.length;
+                        this.#timings.bytes += stored.length;
                     }
-                    await this.#handle.writeFile(bytes);
+                    await this.#handle.writeFile(stored);
                     boundary = this.#mark("dataWrite", boundary);
                     await this.#handle.sync();
                     boundary = this.#mark("dataSync", boundary);
@@ -398,8 +402,9 @@ function assertCaptureFileHeader(value) {
     captureSession(value.session);
     captureScope(value.scope);
     if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !==
-        (value.architecture === "65xx.2a03"))
+        (value.architecture === "65xx.2a03")) {
         throw new Error("Capture scope and architecture disagree.");
+    }
     const clock = value.clock;
     if (!isRecord(clock) ||
         clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") ||
@@ -410,7 +415,7 @@ function assertCaptureFileHeader(value) {
     if (value.format !== "uttori-ares-capture" ||
         value.version !== 2 ||
         value.ownership !== "durable-prefix" ||
-        value.compression !== "none" ||
+        (value.compression !== "none" && value.compression !== "zstd") ||
         value.checksum !== "crc32c" ||
         value.maxChunkBytes !== 262144 ||
         !headerAllocationAccepted(value.allocatedBytes)) {
@@ -539,6 +544,9 @@ export const recoverCaptureFile = async (file, accept, options = {}) => {
                     throw new Error("Uncommitted capture chunk before another chunk.");
                 }
                 const envelope = Buffer.concat([prefix, await read(52)]);
+                if (envelope.readUInt16LE(6) !== 0 && header.compression === "none") {
+                    throw new Error("Compressed chunk in an uncompressed capture session.");
+                }
                 const length = envelope.readUInt32LE(48);
                 if (length > 262144 - 64) {
                     throw new Error("Capture chunk exceeds negotiated bound.");
@@ -860,6 +868,9 @@ export class NativeCaptureFileCursor {
                     throw new Error("Native capture expected an ACT2 chunk.");
                 }
                 const envelope = Buffer.concat([prefix, await read(52)]);
+                if (envelope.readUInt16LE(6) !== 0 && this.header.compression === "none") {
+                    throw new Error("Compressed chunk in an uncompressed capture session.");
+                }
                 const length = envelope.readUInt32LE(48);
                 if (length > 262144 - 64) {
                     throw new Error("Capture chunk exceeds its bound.");

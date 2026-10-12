@@ -183,9 +183,9 @@ export function nesHardwareSource(mapper: number): string {
     selected
       .map(
         (entry) =>
-          `${entry.name} = $${entry.address.toString(16).toUpperCase().padStart(4, "0")} ; ${entry.description}`,
+          `; ${entry.description}\n${entry.name} = $${entry.address.toString(16).toUpperCase().padStart(4, "0")}`,
       )
-      .join("\n") +
+      .join("\n\n") +
     "\n"
   );
 }

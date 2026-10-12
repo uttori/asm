@@ -337,6 +337,23 @@ test.serial(
       runtimeDirectory: "/project/runtime",
       fastBoot: false,
     });
+    const configuredLaunch = host.launchConfigurations[0];
+    if (!configuredLaunch || typeof configuredLaunch !== "object") {
+      throw new Error("Missing launch fixture");
+    }
+    host.launchConfigurations = [
+      {
+        ...configuredLaunch,
+        saveDirectory: "${workspaceFolder}/.uttori-local/saves",
+      },
+    ];
+    t.deepEqual(
+      configuredEmulatorRuntime(context({ [folder.uri.toString()]: saved }), folder.uri),
+      {
+        ...saved,
+        saveDirectory: "/project/.uttori-local/saves",
+      },
+    );
   },
 );
 
@@ -351,6 +368,7 @@ test.serial("liveDebugConfiguration names backends and resolves sourceRoot", (t)
       runtimeDirectory: "/runtime",
       aresSystem: "Super Famicom",
       fastBoot: true,
+      saveDirectory: "/workspace/.uttori-local/saves",
     },
     artifacts,
     workspaceFolder("/workspace"),
@@ -360,6 +378,7 @@ test.serial("liveDebugConfiguration names backends and resolves sourceRoot", (t)
   t.is(ares.sourceRoot, "/workspace");
   t.is(ares.aresSystem, "Super Famicom");
   t.true(ares.fastBoot);
+  t.is(ares.saveDirectory, "/workspace/.uttori-local/saves");
   const plain = liveDebugConfiguration(
     {
       backend: "ares",
@@ -447,6 +466,17 @@ test.serial(
       message: /local filesystem/,
     });
     const saved = context();
+    host.launchConfigurations = [
+      {
+        type: "uttori-asm",
+        request: "launch",
+        backend: "ares",
+        runtimeManifest: "/old/manifest.json",
+        emulator: "/old/ares",
+        runtimeDirectory: "/old",
+        saveDirectory: "${workspaceFolder}/.uttori-local/saves",
+      },
+    ];
     host.dialogs = [
       [{ scheme: "file", fsPath: manifestFile }],
       [{ scheme: "file", fsPath: path.join(directory, "ares") }],
@@ -458,6 +488,7 @@ test.serial(
       runtimeManifest: manifestFile,
       emulator: path.join(directory, "ares"),
       runtimeDirectory: path.join(directory, "runtime"),
+      saveDirectory: path.join(directory, ".uttori-local/saves"),
       aresSystem: "Super Famicom",
       fastBoot: true,
     });

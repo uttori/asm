@@ -36,7 +36,12 @@ export const runtimeBindingFromLaunch = (
     const runtimeManifest = resolve(config.runtimeManifest);
     const emulator = resolve(config.emulator);
     const runtimeDirectory = resolve(config.runtimeDirectory);
+    const saveDirectory = resolve(config.saveDirectory);
     if (!runtimeManifest || !emulator || !runtimeDirectory) {
+      continue;
+    }
+    // An unresolved save pin must not silently fall back to runtime-local saves.
+    if (config.saveDirectory !== undefined && !saveDirectory) {
       continue;
     }
     const binding: EmulatorRuntimeBinding = {
@@ -44,6 +49,7 @@ export const runtimeBindingFromLaunch = (
       runtimeManifest,
       emulator,
       runtimeDirectory,
+      ...(saveDirectory ? { saveDirectory } : {}),
       ...(typeof config.aresSystem === "string" ? { aresSystem: config.aresSystem } : {}),
       ...(typeof config.fastBoot === "boolean" ? { fastBoot: config.fastBoot } : {}),
     };

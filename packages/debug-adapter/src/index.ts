@@ -17,3 +17,5 @@ export * from "./capture-context.js";
 export * from "./capture-nes-ppu.js";
 
 export type { CaptureNesTimelineV2, NesMapperIRQ } from "./capture-nes-timeline.js";
+
+export { compressCaptureChunk, decodeCaptureChunkBytes } from "./capture-compression.js";

@@ -14,4 +14,5 @@ export * from "./capture-v2.js";
 export * from "./capture-file.js";
 export * from "./capture-context.js";
 export * from "./capture-nes-ppu.js";
+export { compressCaptureChunk, decodeCaptureChunkBytes } from "./capture-compression.js";
 //# sourceMappingURL=index.js.map

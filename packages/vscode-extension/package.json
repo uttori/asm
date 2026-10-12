@@ -52,7 +52,7 @@
     "vscode-languageserver-types": "^3.18.4"
   },
   "devDependencies": {
-    "@types/vscode": "1.125.0",
+    "@types/vscode": "1.140.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2"
   },
@@ -658,6 +658,10 @@
               "runtimeDirectory": {
                 "type": "string",
                 "description": "Portable emulator runtime root required by live backends."
+              },
+              "saveDirectory": {
+                "type": "string",
+                "description": "Persistent ares SRAM and save-state directory. Set outside the runtime directory to keep saves across emulator updates; existing saves must be migrated explicitly."
               },
               "sidecar": {
                 "type": "string",

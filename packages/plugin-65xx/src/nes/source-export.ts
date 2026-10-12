@@ -277,11 +277,25 @@ export function exportNesSource(
     let offset = start;
     let markerIndex = 0;
     while (offset < end) {
-      for (const name of labelsAt.get(offset) ?? []) {
-        lines.push("", `${name}:`);
+      // A raw slice must not visually own the decoded instructions or data that follow it.
+      if (lines.at(-1)?.startsWith("incbin ")) {
+        lines.push("");
       }
-      // Behavior comments belong to the following label body, with the same indent as its instructions.
-      lines.push(...(notes.get(offset) ?? []).map((line) => `  ${line}`));
+      const offsetLabels = labelsAt.get(offset) ?? [];
+      const offsetNotes = notes.get(offset) ?? [];
+      for (const name of offsetLabels) {
+        if (lines.at(-1) !== "") {
+          lines.push("");
+        }
+        // Hover documentation binds to the preceding comment block. Repeat shared notes for aliases
+        // at the same bytes so every emitted label retains its behavior contract.
+        lines.push(...offsetNotes);
+        lines.push(`${name}:`);
+      }
+      // Instruction-site notes without a label remain inside the current routine's body.
+      if (offsetLabels.length === 0) {
+        lines.push(...offsetNotes.map((line) => `  ${line}`));
+      }
       const data = dataRanges.find((range) => range.start <= offset && offset < range.end);
       // These native codecs do not implement recompression; ignoring it would emit a different representation.
       if (data?.annotation.asset?.compression) {
@@ -435,8 +449,10 @@ export function exportNesSource(
         next++;
       }
       // Opaque bytes stand apart from the preceding decoded label body or scoped text table.
+      if (lines.at(-1) !== "") {
+        lines.push("");
+      }
       lines.push(
-        "",
         `incbin "../assets/raw/${block.toString(16).padStart(6, "0")}.bin":${nesSourceHex(offset - block)}..${nesSourceHex(next - block)}`,
       );
       offset = next;

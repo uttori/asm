@@ -16,6 +16,8 @@ test("ares sidecar arguments are strict, path-resolved, and shell-independent", 
     "game.sfc",
     "--runtime-dir",
     "runtime",
+    "--save-dir",
+    "project saves",
     "--system",
     "Super Famicom",
     "--no-fast-boot",
@@ -25,6 +27,7 @@ test("ares sidecar arguments are strict, path-resolved, and shell-independent", 
     executable: path.resolve("bin/ares-headless"),
     rom: path.resolve("game.sfc"),
     runtimeDirectory: path.resolve("runtime"),
+    saveDirectory: path.resolve("project saves"),
     system: "Super Famicom",
     fastBoot: false,
   });
@@ -147,10 +150,23 @@ testSidecarLifecycle({
   entryPoint: "packages/debug-sidecar-ares/src/sidecar.ts",
 });
 
-
 test("selected build ROM hash is explicit, normalized and validated", (t) => {
-  const args = ["--manifest", "manifest.json", "--ares", "emulator", "--rom", "modified.sfc", "--runtime-dir", "runtime"];
-  t.is(parseAresSidecarArguments([...args, "--rom-sha256", "A".repeat(64)]).romSha256, "a".repeat(64));
-  t.throws(() => parseAresSidecarArguments([...args, "--rom-sha256", "not-a-hash"]), { message: /64-digit SHA-256/ });
+  const args = [
+    "--manifest",
+    "manifest.json",
+    "--ares",
+    "emulator",
+    "--rom",
+    "modified.sfc",
+    "--runtime-dir",
+    "runtime",
+  ];
+  t.is(
+    parseAresSidecarArguments([...args, "--rom-sha256", "A".repeat(64)]).romSha256,
+    "a".repeat(64),
+  );
+  t.throws(() => parseAresSidecarArguments([...args, "--rom-sha256", "not-a-hash"]), {
+    message: /64-digit SHA-256/,
+  });
   t.is(parseAresSidecarArguments(args).romSha256, undefined);
 });

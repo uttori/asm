@@ -18,7 +18,8 @@ export interface CaptureFileHeader extends CaptureFileMetadata {
     readonly session: string;
     readonly scope: CaptureScopeV2;
     readonly ownership: "durable-prefix";
-    readonly compression: "none";
+    /** Zstandard sessions permit independently compressed chunks and raw fallback. */
+    readonly compression: "none" | "zstd";
     readonly checksum: "crc32c";
     readonly maxChunkBytes: 262144;
     readonly allocatedBytes: number;

@@ -9,6 +9,7 @@ const launch = {
   runtimeManifest: "${workspaceFolder}/runtime/manifest.json",
   emulator: "runtime/bin/ares",
   runtimeDirectory: "runtime",
+  saveDirectory: "${workspaceFolder}/.uttori-local/saves",
   fastBoot: false,
 };
 test("run commands reuse one explicit workspace live runtime", (t) => {
@@ -22,6 +23,7 @@ test("run commands reuse one explicit workspace live runtime", (t) => {
       runtimeManifest: "/project/runtime/manifest.json",
       emulator: "/project/runtime/bin/ares",
       runtimeDirectory: "/project/runtime",
+      saveDirectory: "/project/.uttori-local/saves",
       fastBoot: false,
     },
   );
@@ -36,4 +38,8 @@ test("run commands do not guess between runtimes or unresolved launch inputs", (
     undefined,
   );
   t.is(runtimeBindingFromLaunch([{ ...launch, emulator: "" }], "/project"), undefined);
+  t.is(
+    runtimeBindingFromLaunch([{ ...launch, saveDirectory: "${env:SAVES}" }], "/project"),
+    undefined,
+  );
 });

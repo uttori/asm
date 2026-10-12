@@ -105,6 +105,8 @@ export interface EmulatorRuntimeBinding {
   readonly runtimeManifest: string;
   readonly emulator: string;
   readonly runtimeDirectory: string;
+  /** Persistent SRAM/state root, retained when the selected runtime changes. */
+  readonly saveDirectory?: string;
   readonly aresSystem?: string;
   readonly fastBoot?: boolean;
 }
@@ -157,13 +159,16 @@ export const configuredEmulatorRuntime = (
   const saved = context.globalState.get<EmulatorRuntimeBindings>(EMULATOR_RUNTIME_BINDINGS_KEY, {})[
     runtimeWorkspaceKey(folder)
   ];
-  return (
-    saved ??
-    runtimeBindingFromLaunch(
-      workspace.getConfiguration("launch", folder.uri).get<unknown[]>("configurations", []),
-      folder.uri.fsPath,
-    )
+  const launch = runtimeBindingFromLaunch(
+    workspace.getConfiguration("launch", folder.uri).get<unknown[]>("configurations", []),
+    folder.uri.fsPath,
   );
+  // Older machine-local bindings have no save pin. Keep their runtime selection
+  // while adopting an explicit, unambiguous workspace save location.
+  if (saved && !saved.saveDirectory && launch?.saveDirectory) {
+    return { ...saved, saveDirectory: launch.saveDirectory };
+  }
+  return saved ?? launch;
 };
 
 /**
@@ -257,11 +262,13 @@ export const configureEmulatorRuntime = async (
 
   const manifest: unknown = JSON.parse(fs.readFileSync(runtimeManifest, "utf8"));
   parseAresRuntimeManifest(manifest);
+  const saveDirectory = configuredEmulatorRuntime(context, folder.uri)?.saveDirectory;
   const binding: EmulatorRuntimeBinding = {
     backend: "ares",
     runtimeManifest,
     emulator,
     runtimeDirectory,
+    ...(saveDirectory ? { saveDirectory } : {}),
     aresSystem: "Super Famicom",
     fastBoot: true,
   };
@@ -303,6 +310,7 @@ export const liveDebugConfiguration = (
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
+  ...(binding.saveDirectory ? { saveDirectory: binding.saveDirectory } : {}),
   ...(binding.aresSystem ? { aresSystem: binding.aresSystem } : {}),
   ...(binding.fastBoot === undefined ? {} : { fastBoot: binding.fastBoot }),
 });
@@ -320,6 +328,8 @@ interface UttoriDebugConfiguration extends DebugConfiguration {
   readonly runtimeManifest?: string;
   readonly emulator?: string;
   readonly runtimeDirectory?: string;
+  /** Explicit save root independent of disposable executable/resources directories. */
+  readonly saveDirectory?: string;
   readonly sidecar?: string;
   readonly aresSystem?: string;
   readonly fastBoot?: boolean;
@@ -441,6 +451,7 @@ function isUttoriDebugConfiguration(value: DebugConfiguration): value is UttoriD
     optionalString(value.runtimeManifest) &&
     optionalString(value.emulator) &&
     optionalString(value.runtimeDirectory) &&
+    optionalString(value.saveDirectory) &&
     optionalString(value.sidecar) &&
     optionalString(value.aresSystem) &&
     (value.fastBoot === undefined || typeof value.fastBoot === "boolean")
@@ -1135,6 +1146,12 @@ const createLiveBackend = (
         "--runtime-dir",
         runtimeDirectory,
       ];
+      if (configuration.saveDirectory !== undefined) {
+        args.push(
+          "--save-dir",
+          requiredLivePath(configuration.saveDirectory, "saveDirectory", folder),
+        );
+      }
       // The paired debug map owns target selection, independent of a saved SNES runtime binding.
       args.push(
         "--system",

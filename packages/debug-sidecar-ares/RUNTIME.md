@@ -9,10 +9,18 @@ been performed on macOS. Linux and Windows native-runtime validation remains ope
 In VS Code, run **Assembly: Configure Emulator Runtime** and select the matching executable,
 runtime directory, and `ares-runtime-manifest.json`. Restart debugging after changing the runtime.
 
-Desktop launches honor `Paths/Saves` in the selected runtime's `settings.bml`; when unset,
-ares stores SRAM and numbered save states beside the ROM. When staging a replacement
-runtime, retain that setting so the same saves remain visible. The launcher does not
-override the desktop save path or relocate existing files.
+Pin SRAM and numbered save states outside the runtime with launch setting
+`"saveDirectory": "${workspaceFolder}/.uttori-local/saves"`, or sidecar option
+`--save-dir /absolute/project/saves`. That explicit path survives replacement of the
+executable, runtime directory and settings file; the runtime picker retains an existing pin.
+ares stores each system beneath this root and keys files by ROM basename, so keep that
+basename stable across source builds. Copy existing states into the matching system folder
+before switching; the launcher never overwrites or silently migrates saved progress.
+
+Without an explicit pin, desktop launches honor `Paths/Saves` in the selected runtime's
+`settings.bml`; when unset, ares saves beside the ROM. Legacy headless defaults are unchanged.
+Persistent storage prevents files disappearing during updates; an upstream change to the
+emulator's state format can still make an older state incompatible.
 See the [editor guide](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md#live-debugging)
 for launch settings and the [sidecar README](README.md#runtime-setup) for standalone invocation.
 

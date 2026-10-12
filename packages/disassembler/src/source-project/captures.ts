@@ -4,7 +4,6 @@ import path from "node:path";
 
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
-import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "../internal/capture-limits.js";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import type { ImportReport } from "../model/project-types.js";
 import { sourceContentHash } from "./generation.js";
@@ -309,11 +308,14 @@ export function writeSourceCaptureCatalog(
   }
 }
 
-/** Stream archive identity with cancellation and the shared 32 GiB default. Companion artifacts are separately verified by the importer. */
+/** Streamed source archives have no default policy ceiling beyond exact JavaScript byte accounting. */
+export const DEFAULT_SOURCE_CAPTURE_MAX_BYTES = Number.MAX_SAFE_INTEGER;
+
+/** Stream archive identity with cancellation and an optional per-archive ceiling. Companion artifacts are separately verified by the importer. */
 export async function fingerprintSourceCapture(
   file: string,
   signal?: AbortSignal,
-  maxBytes = DEFAULT_RUNTIME_TRACE_MAX_BYTES,
+  maxBytes = DEFAULT_SOURCE_CAPTURE_MAX_BYTES,
 ): Promise<SourceCaptureArchive> {
   signal?.throwIfAborted();
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {

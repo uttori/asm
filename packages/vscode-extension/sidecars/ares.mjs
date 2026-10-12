@@ -2705,6 +2705,7 @@ var AresProcessHost = class {
   #executable;
   #rom;
   #runtimeDirectory;
+  #saveDirectory;
   #manifest;
   #system;
   #fastBoot;
@@ -2729,6 +2730,7 @@ var AresProcessHost = class {
       "Ares runtime directory"
     );
     this.#manifest = parseAresRuntimeManifest(options.manifest);
+    this.#saveDirectory = options.saveDirectory === void 0 ? void 0 : checkedAbsolutePath(options.saveDirectory, "Ares save directory");
     const executableRelative = path2.relative(this.#runtimeDirectory, this.#executable);
     if (executableRelative === "" || executableRelative === ".." || executableRelative.startsWith(`..${path2.sep}`) || path2.isAbsolute(executableRelative)) {
       throw new Error("Ares executable must be contained within its portable runtime directory.");
@@ -2802,7 +2804,9 @@ var AresProcessHost = class {
   async #launch() {
     await this.#verifyIdentity();
     const desktop = this.#manifest.frontend === "desktop";
-    if (!desktop) {
+    if (this.#saveDirectory) {
+      await mkdir(this.#saveDirectory, { recursive: true });
+    } else if (!desktop) {
       await mkdir(path2.join(this.#runtimeDirectory, "saves"), { recursive: true });
     }
     const port = await this.#runtime.reserveLoopbackPort();
@@ -2824,8 +2828,7 @@ var AresProcessHost = class {
         "General/RunAhead=false",
         "General/Rewind=false"
       ].flatMap((setting) => ["--setting", setting]) : [
-        "--setting",
-        `Paths/Saves=${path2.join(this.#runtimeDirectory, "saves")}`,
+        ...!this.#saveDirectory ? ["--setting", `Paths/Saves=${path2.join(this.#runtimeDirectory, "saves")}`] : [],
         "--gdb-port",
         String(port),
         "--gdb-ipv4",
@@ -2833,6 +2836,9 @@ var AresProcessHost = class {
         "--quiet",
         ...this.#fastBoot ? ["--fast-boot"] : []
       ],
+      // ares concatenates the system name onto this root instead of joining paths.
+      // Include its separator explicitly to avoid siblings such as savesSuper Famicom.
+      ...this.#saveDirectory ? ["--setting", `Paths/Saves=${path2.join(this.#saveDirectory, path2.sep)}`] : [],
       this.#rom
     ];
     this.#output = Buffer.alloc(0);
@@ -16937,6 +16943,7 @@ Required:
   --runtime-dir path    Portable root containing bin, resources, settings, and saves
 
 Optional:
+  --save-dir path       Persistent SRAM/state root, independent of runtime updates
   --rom-sha256 hash     Expected ROM SHA-256 from a verified build (64 hex digits)
   --system name         Ares system name (default: Super Famicom)
   --no-fast-boot        Disable the ares fast-boot setting
@@ -16948,6 +16955,7 @@ var optionNames = /* @__PURE__ */ new Set([
   "--rom",
   "--rom-sha256",
   "--runtime-dir",
+  "--save-dir",
   "--system"
 ]);
 var parseAresSidecarArguments = (arguments_) => {
@@ -16992,6 +17000,7 @@ var parseAresSidecarArguments = (arguments_) => {
     executable: required("--ares"),
     rom: required("--rom"),
     runtimeDirectory: required("--runtime-dir"),
+    ...values.has("--save-dir") ? { saveDirectory: required("--save-dir") } : {},
     ...system ? { system } : {},
     fastBoot
   };
@@ -17020,6 +17029,7 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
     executable: options.executable,
     rom: options.rom,
     runtimeDirectory: options.runtimeDirectory,
+    saveDirectory: options.saveDirectory,
     manifest,
     system: options.system,
     fastBoot: options.fastBoot
@@ -17028,8 +17038,9 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   let nesPrgFileOffset;
   if (/^(Famicom|NES|FC)$/i.test(options.system ?? "")) {
     const romBytes = await readFile2(options.rom);
-    if (!romBytes.subarray(0, 4).equals(Buffer.from([78, 69, 83, 26])))
+    if (!romBytes.subarray(0, 4).equals(Buffer.from([78, 69, 83, 26]))) {
       throw new Error("Famicom launch requires an iNES cartridge.");
+    }
     nesPrgFileOffset = 16 + (romBytes[6] & 4 ? 512 : 0);
     contentSha256 = createHash3("sha256").update(romBytes.subarray(16)).digest("hex");
   }

@@ -5,6 +5,8 @@ export interface AresSidecarArguments {
     /** Explicit verified build identity; omitted retains the runtime manifest's original ROM pin. */
     readonly romSha256?: string;
     readonly runtimeDirectory: string;
+    /** Optional persistent SRAM/state root, resolved independently of the runtime. */
+    readonly saveDirectory?: string;
     readonly system?: string;
     readonly fastBoot: boolean;
 }

@@ -190,6 +190,102 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
+// packages/debug-adapter/src/capture-compression.ts
+function validateFrame(frame, decodedBytes) {
+  if (frame.length < 6 || frame.readUInt32LE(0) !== 4247762216) {
+    throw new Error("Invalid capture Zstandard frame.");
+  }
+  const descriptor = frame[4];
+  if (!(descriptor & 32) || descriptor & 27) {
+    throw new Error(
+      "Capture Zstandard frame must use a bounded single segment without a dictionary."
+    );
+  }
+  const sizeBytes = [1, 2, 4, 8][descriptor >>> 6];
+  if (5 + sizeBytes > frame.length) {
+    throw new Error("Truncated capture Zstandard size.");
+  }
+  let contentSize;
+  if (sizeBytes === 8) {
+    contentSize = frame.readBigUInt64LE(5);
+  } else {
+    contentSize = BigInt(frame.readUIntLE(5, sizeBytes));
+    if (sizeBytes === 2) {
+      contentSize += 256n;
+    }
+  }
+  if (contentSize !== BigInt(decodedBytes)) {
+    throw new Error("Capture Zstandard content size disagrees with the envelope.");
+  }
+  let offset = 5 + sizeBytes;
+  let last = false;
+  while (!last) {
+    if (offset + 3 > frame.length) {
+      throw new Error("Truncated capture Zstandard block.");
+    }
+    const block = frame.readUIntLE(offset, 3);
+    const kind = block >>> 1 & 3;
+    const length = block >>> 3;
+    if (kind === 3 || length > Math.min(decodedBytes, 131072)) {
+      throw new Error("Invalid capture Zstandard block bound.");
+    }
+    last = Boolean(block & 1);
+    offset += 3 + (kind === 1 ? 1 : length);
+    if (offset > frame.length) {
+      throw new Error("Truncated capture Zstandard payload.");
+    }
+  }
+  if (descriptor & 4) {
+    offset += 4;
+  }
+  if (offset !== frame.length) {
+    throw new Error("Capture Zstandard frame has trailing or missing bytes.");
+  }
+}
+function decodeCaptureChunkBytes(bytes) {
+  if (bytes.length < 64 || bytes.length > chunkBytes) {
+    throw new Error("Capture chunk length exceeds bounds.");
+  }
+  const stored = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const codec = stored.readUInt16LE(6);
+  if (stored.toString("ascii", 0, 4) !== "ACT2" || stored.readUInt16LE(4) !== 2 || codec > 1 || stored.readUInt32LE(44) !== 64 || stored.readUInt32LE(60) !== 0) {
+    throw new Error("Unsupported capture envelope.");
+  }
+  const decodedLength = stored.readUInt32LE(52);
+  if (stored.readUInt32LE(48) !== stored.length - 64 || decodedLength > chunkBytes - 64 || codec === 0 && decodedLength !== stored.length - 64) {
+    throw new Error("Capture payload lengths disagree.");
+  }
+  if (crc32cBytes(stored, true) !== stored.readUInt32LE(56)) {
+    throw new Error("Capture checksum mismatch.");
+  }
+  if (codec === 0) {
+    return stored;
+  }
+  if (!decodedLength) {
+    throw new Error("Compressed capture payload is empty.");
+  }
+  const frame = stored.subarray(64);
+  validateFrame(frame, decodedLength);
+  const payload = (0, import_node_zlib.zstdDecompressSync)(frame, { maxOutputLength: decodedLength });
+  if (payload.length !== decodedLength) {
+    throw new Error("Capture decoded payload length disagrees.");
+  }
+  const raw = Buffer.concat([stored.subarray(0, 64), payload]);
+  raw.writeUInt16LE(0, 6);
+  raw.writeUInt32LE(decodedLength, 48);
+  raw.writeUInt32LE(crc32cBytes(raw, true), 56);
+  return raw;
+}
+var import_node_zlib, chunkBytes;
+var init_capture_compression = __esm({
+  "packages/debug-adapter/src/capture-compression.ts"() {
+    "use strict";
+    import_node_zlib = require("node:zlib");
+    init_data_hash_crc32();
+    chunkBytes = 262144;
+  }
+});
+
 // packages/debug-adapter/src/capture-nes-mapper.ts
 function validateNesMapper(mapper) {
   if (mapper.length !== 18 || ![0, 4].includes(mapper[0]) || mapper[1] !== 0 || mapper[2] > 7 || mapper[3] > 1 || mapper[4] > 1 || mapper[13] > 1 || mapper[14] > 1 || mapper[15] > 1 || mapper[17] > 1) {
@@ -423,21 +519,9 @@ function assertCapturePosition(value, session, scope) {
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
-  if (bytes.length < 64 || bytes.length > 262144) {
-    throw new Error("Capture chunk length exceeds bounds.");
-  }
-  const b = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0) {
-    throw new Error("Unsupported capture envelope.");
-  }
+  const b = decodeCaptureChunkBytes(bytes);
   if (b.toString("hex", 8, 24) !== session) {
     throw new Error("Capture chunk belongs to another session.");
-  }
-  if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64) {
-    throw new Error("Capture payload lengths disagree.");
-  }
-  if (captureCrc32c(bytes, true) !== b.readUInt32LE(56)) {
-    throw new Error("Capture checksum mismatch.");
   }
   const sequence = b.readBigUInt64LE(24), first = b.readBigUInt64LE(32), count = b.readUInt32LE(40);
   const through = first + BigInt(count) - 1n;
@@ -566,6 +650,7 @@ var init_capture_v2 = __esm({
   "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
+    init_capture_compression();
     init_capture_nes_ppu();
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
@@ -962,13 +1047,14 @@ function assertCaptureFileHeader(value) {
   metadataValid(value);
   captureSession(value.session);
   captureScope(value.scope);
-  if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !== (value.architecture === "65xx.2a03"))
+  if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !== (value.architecture === "65xx.2a03")) {
     throw new Error("Capture scope and architecture disagree.");
+  }
   const clock = value.clock;
   if (!isRecord2(clock) || clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
     throw new Error("Invalid session clock domain.");
   }
-  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
+  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" && value.compression !== "zstd" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
     throw new Error("Unsupported capture session contract.");
   }
 }
@@ -1158,6 +1244,9 @@ var init_capture_file = __esm({
               throw new Error("Native capture expected an ACT2 chunk.");
             }
             const envelope = Buffer.concat([prefix, await read(52)]);
+            if (envelope.readUInt16LE(6) !== 0 && this.header.compression === "none") {
+              throw new Error("Compressed chunk in an uncompressed capture session.");
+            }
             const length = envelope.readUInt32LE(48);
             if (length > 262144 - 64) {
               throw new Error("Capture chunk exceeds its bound.");
@@ -4015,10 +4104,10 @@ function validateResearchDecision(decision) {
 
 // packages/disassembler/src/storage/sqlite-payload.ts
 var import_node_util = require("node:util");
-var import_node_zlib2 = require("node:zlib");
+var import_node_zlib3 = require("node:zlib");
 
 // packages/disassembler/src/storage/sqlite-runtime-payload.ts
-var import_node_zlib = require("node:zlib");
+var import_node_zlib2 = require("node:zlib");
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
   ["a", 2],
@@ -4082,7 +4171,7 @@ var encodePackedRuntimePayload = (record2) => {
       offset += width;
     }
   }
-  encoded.writeUInt32LE((0, import_node_zlib.crc32)(encoded.subarray(0, offset)), offset);
+  encoded.writeUInt32LE((0, import_node_zlib2.crc32)(encoded.subarray(0, offset)), offset);
   return encoded;
 };
 var isPackedRuntimePayload = (bytes) => bytes[0] === MAGIC[0] && bytes[1] === MAGIC[1] && bytes[2] === MAGIC[2];
@@ -4103,7 +4192,7 @@ var decodePackedRuntimePayload = (bytes) => {
     throw new Error("Invalid packed runtime payload layout.");
   }
   const end = expected - CHECKSUM_BYTES;
-  if ((0, import_node_zlib.crc32)(encoded.subarray(0, end)) !== encoded.readUInt32LE(end)) {
+  if ((0, import_node_zlib2.crc32)(encoded.subarray(0, end)) !== encoded.readUInt32LE(end)) {
     throw new Error("Corrupt packed runtime payload checksum.");
   }
   const state = {};
@@ -4138,7 +4227,7 @@ var encodeSqlitePayload = (json) => {
     return json;
   }
   const small = bytes < 16 * 1024;
-  const compressed = (0, import_node_zlib2.deflateSync)(json, {
+  const compressed = (0, import_node_zlib3.deflateSync)(json, {
     level: 1,
     windowBits: small ? 12 : 15,
     memLevel: small ? 3 : 8,
@@ -4175,7 +4264,7 @@ var decodeSqlitePayload = (value) => {
     throw new Error("SQLite compressed payload exceeds the decoded size limit.");
   }
   try {
-    const decoded = (0, import_node_zlib2.inflateSync)(encoded.subarray(HEADER_BYTES2), {
+    const decoded = (0, import_node_zlib3.inflateSync)(encoded.subarray(HEADER_BYTES2), {
       maxOutputLength: bytes,
       chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
     });
@@ -6127,7 +6216,7 @@ init_canonical_json();
 
 // packages/disassembler/src/storage/sqlite-runtime-history.ts
 var import_node_util2 = require("node:util");
-var import_node_zlib3 = require("node:zlib");
+var import_node_zlib4 = require("node:zlib");
 function historyPayload(value) {
   if (value === null || typeof value === "string" || import_node_util2.types.isUint8Array(value)) {
     return value;
@@ -6175,8 +6264,8 @@ var encodeRuntimeHistory = (values) => {
   MAGIC2.copy(header);
   header.writeUInt32LE(values.length, 4);
   header.writeUInt32LE(size, 8);
-  header.writeUInt32LE((0, import_node_zlib3.crc32)(body), 12);
-  return Buffer.concat([header, (0, import_node_zlib3.deflateSync)(body, { level: 6 })]);
+  header.writeUInt32LE((0, import_node_zlib4.crc32)(body), 12);
+  return Buffer.concat([header, (0, import_node_zlib4.deflateSync)(body, { level: 6 })]);
 };
 var decodeHistoryBlock = (encoded) => {
   const bytes = Buffer.from(encoded.buffer, encoded.byteOffset, encoded.byteLength);
@@ -6188,8 +6277,8 @@ var decodeHistoryBlock = (encoded) => {
   if (!count || count > MAX_ROWS || size < (count + 1) * 4 + count || size > MAX_BYTES) {
     throw new Error("Invalid runtime history block bounds.");
   }
-  const body = (0, import_node_zlib3.inflateSync)(bytes.subarray(16), { maxOutputLength: size });
-  if (body.length !== size || (0, import_node_zlib3.crc32)(body) !== bytes.readUInt32LE(12)) {
+  const body = (0, import_node_zlib4.inflateSync)(bytes.subarray(16), { maxOutputLength: size });
+  if (body.length !== size || (0, import_node_zlib4.crc32)(body) !== bytes.readUInt32LE(12)) {
     throw new Error("Corrupt runtime history block.");
   }
   let start = body.readUInt32LE(0);

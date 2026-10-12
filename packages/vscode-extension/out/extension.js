@@ -34526,6 +34526,117 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
+// packages/debug-adapter/src/capture-compression.ts
+function validateFrame(frame, decodedBytes) {
+  if (frame.length < 6 || frame.readUInt32LE(0) !== 4247762216) {
+    throw new Error("Invalid capture Zstandard frame.");
+  }
+  const descriptor = frame[4];
+  if (!(descriptor & 32) || descriptor & 27) {
+    throw new Error(
+      "Capture Zstandard frame must use a bounded single segment without a dictionary."
+    );
+  }
+  const sizeBytes2 = [1, 2, 4, 8][descriptor >>> 6];
+  if (5 + sizeBytes2 > frame.length) {
+    throw new Error("Truncated capture Zstandard size.");
+  }
+  let contentSize;
+  if (sizeBytes2 === 8) {
+    contentSize = frame.readBigUInt64LE(5);
+  } else {
+    contentSize = BigInt(frame.readUIntLE(5, sizeBytes2));
+    if (sizeBytes2 === 2) {
+      contentSize += 256n;
+    }
+  }
+  if (contentSize !== BigInt(decodedBytes)) {
+    throw new Error("Capture Zstandard content size disagrees with the envelope.");
+  }
+  let offset = 5 + sizeBytes2;
+  let last = false;
+  while (!last) {
+    if (offset + 3 > frame.length) {
+      throw new Error("Truncated capture Zstandard block.");
+    }
+    const block = frame.readUIntLE(offset, 3);
+    const kind = block >>> 1 & 3;
+    const length = block >>> 3;
+    if (kind === 3 || length > Math.min(decodedBytes, 131072)) {
+      throw new Error("Invalid capture Zstandard block bound.");
+    }
+    last = Boolean(block & 1);
+    offset += 3 + (kind === 1 ? 1 : length);
+    if (offset > frame.length) {
+      throw new Error("Truncated capture Zstandard payload.");
+    }
+  }
+  if (descriptor & 4) {
+    offset += 4;
+  }
+  if (offset !== frame.length) {
+    throw new Error("Capture Zstandard frame has trailing or missing bytes.");
+  }
+}
+function decodeCaptureChunkBytes(bytes) {
+  if (bytes.length < 64 || bytes.length > chunkBytes) {
+    throw new Error("Capture chunk length exceeds bounds.");
+  }
+  const stored = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const codec = stored.readUInt16LE(6);
+  if (stored.toString("ascii", 0, 4) !== "ACT2" || stored.readUInt16LE(4) !== 2 || codec > 1 || stored.readUInt32LE(44) !== 64 || stored.readUInt32LE(60) !== 0) {
+    throw new Error("Unsupported capture envelope.");
+  }
+  const decodedLength = stored.readUInt32LE(52);
+  if (stored.readUInt32LE(48) !== stored.length - 64 || decodedLength > chunkBytes - 64 || codec === 0 && decodedLength !== stored.length - 64) {
+    throw new Error("Capture payload lengths disagree.");
+  }
+  if (crc32cBytes(stored, true) !== stored.readUInt32LE(56)) {
+    throw new Error("Capture checksum mismatch.");
+  }
+  if (codec === 0) {
+    return stored;
+  }
+  if (!decodedLength) {
+    throw new Error("Compressed capture payload is empty.");
+  }
+  const frame = stored.subarray(64);
+  validateFrame(frame, decodedLength);
+  const payload = (0, import_node_zlib4.zstdDecompressSync)(frame, { maxOutputLength: decodedLength });
+  if (payload.length !== decodedLength) {
+    throw new Error("Capture decoded payload length disagrees.");
+  }
+  const raw = Buffer.concat([stored.subarray(0, 64), payload]);
+  raw.writeUInt16LE(0, 6);
+  raw.writeUInt32LE(decodedLength, 48);
+  raw.writeUInt32LE(crc32cBytes(raw, true), 56);
+  return raw;
+}
+function compressCaptureChunk(bytes) {
+  const raw = decodeCaptureChunkBytes(bytes);
+  const frame = (0, import_node_zlib4.zstdCompressSync)(raw.subarray(64), {
+    params: { [import_node_zlib4.constants.ZSTD_c_compressionLevel]: 3 }
+  });
+  if (frame.length >= raw.length - 64) {
+    return raw;
+  }
+  validateFrame(frame, raw.length - 64);
+  const stored = Buffer.concat([raw.subarray(0, 64), frame]);
+  stored.writeUInt16LE(1, 6);
+  stored.writeUInt32LE(frame.length, 48);
+  stored.writeUInt32LE(crc32cBytes(stored, true), 56);
+  return stored;
+}
+var import_node_zlib4, chunkBytes;
+var init_capture_compression = __esm({
+  "packages/debug-adapter/src/capture-compression.ts"() {
+    "use strict";
+    import_node_zlib4 = require("node:zlib");
+    init_data_hash_crc32();
+    chunkBytes = 262144;
+  }
+});
+
 // packages/debug-adapter/src/capture-nes-mapper.ts
 function validateNesMapper(mapper) {
   if (mapper.length !== 18 || ![0, 4].includes(mapper[0]) || mapper[1] !== 0 || mapper[2] > 7 || mapper[3] > 1 || mapper[4] > 1 || mapper[13] > 1 || mapper[14] > 1 || mapper[15] > 1 || mapper[17] > 1) {
@@ -34897,21 +35008,9 @@ function validateCaptureResult(value) {
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
-  if (bytes.length < 64 || bytes.length > 262144) {
-    throw new Error("Capture chunk length exceeds bounds.");
-  }
-  const b = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0) {
-    throw new Error("Unsupported capture envelope.");
-  }
+  const b = decodeCaptureChunkBytes(bytes);
   if (b.toString("hex", 8, 24) !== session) {
     throw new Error("Capture chunk belongs to another session.");
-  }
-  if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64) {
-    throw new Error("Capture payload lengths disagree.");
-  }
-  if (captureCrc32c(bytes, true) !== b.readUInt32LE(56)) {
-    throw new Error("Capture checksum mismatch.");
   }
   const sequence = b.readBigUInt64LE(24), first = b.readBigUInt64LE(32), count3 = b.readUInt32LE(40);
   const through = first + BigInt(count3) - 1n;
@@ -35040,6 +35139,7 @@ var init_capture_v2 = __esm({
   "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
+    init_capture_compression();
     init_capture_nes_ppu();
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
@@ -39259,13 +39359,14 @@ function assertCaptureFileHeader(value) {
   metadataValid(value);
   captureSession(value.session);
   captureScope(value.scope);
-  if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !== (value.architecture === "65xx.2a03"))
+  if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !== (value.architecture === "65xx.2a03")) {
     throw new Error("Capture scope and architecture disagree.");
+  }
   const clock = value.clock;
   if (!isRecord20(clock) || clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
     throw new Error("Invalid session clock domain.");
   }
-  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
+  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" && value.compression !== "zstd" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
     throw new Error("Unsupported capture session contract.");
   }
 }
@@ -39275,6 +39376,7 @@ var init_capture_file = __esm({
     "use strict";
     import_promises4 = require("node:fs/promises");
     import_promises5 = require("node:timers/promises");
+    init_capture_compression();
     init_capture_context();
     init_capture_file_reader();
     init_capture_v2();
@@ -39405,7 +39507,7 @@ var init_capture_file = __esm({
             session: position.session,
             scope,
             ownership: "durable-prefix",
-            compression: "none",
+            compression: "zstd",
             checksum: "crc32c",
             maxChunkBytes: 262144,
             allocatedBytes: position.allocatedBytes,
@@ -39506,10 +39608,11 @@ var init_capture_file = __esm({
                 throw new Error("Capture chunk is not contiguous.");
               }
               boundary = this.#mark("decode", boundary);
+              const stored = compressCaptureChunk(bytes);
               if (this.#timings) {
-                this.#timings.bytes += bytes.length;
+                this.#timings.bytes += stored.length;
               }
-              await this.#handle.writeFile(bytes);
+              await this.#handle.writeFile(stored);
               boundary = this.#mark("dataWrite", boundary);
               await this.#handle.sync();
               boundary = this.#mark("dataSync", boundary);
@@ -39716,6 +39819,9 @@ var init_capture_file = __esm({
               throw new Error("Uncommitted capture chunk before another chunk.");
             }
             const envelope = Buffer.concat([prefix, await read2(52)]);
+            if (envelope.readUInt16LE(6) !== 0 && header.compression === "none") {
+              throw new Error("Compressed chunk in an uncompressed capture session.");
+            }
             const length = envelope.readUInt32LE(48);
             if (length > 262144 - 64) {
               throw new Error("Capture chunk exceeds negotiated bound.");
@@ -39996,6 +40102,9 @@ var init_capture_file = __esm({
               throw new Error("Native capture expected an ACT2 chunk.");
             }
             const envelope = Buffer.concat([prefix, await read2(52)]);
+            if (envelope.readUInt16LE(6) !== 0 && this.header.compression === "none") {
+              throw new Error("Compressed chunk in an uncompressed capture session.");
+            }
             const length = envelope.readUInt32LE(48);
             if (length > 262144 - 64) {
               throw new Error("Capture chunk exceeds its bound.");
@@ -40271,9 +40380,11 @@ __export(src_exports, {
   captureScope: () => captureScope,
   captureSession: () => captureSession,
   captureU64: () => captureU64,
+  compressCaptureChunk: () => compressCaptureChunk,
   createDebugMapReplayScript: () => createDebugMapReplayScript,
   createDebugSidecarSessionToken: () => createDebugSidecarSessionToken,
   decodeCaptureChunk: () => decodeCaptureChunk,
+  decodeCaptureChunkBytes: () => decodeCaptureChunkBytes,
   decodeNesBusRecords: () => decodeNesBusRecords,
   decodeNesPPUState: () => decodeNesPPUState,
   encodeDapMessage: () => encodeDapMessage,
@@ -40312,6 +40423,7 @@ var init_src = __esm({
     init_capture_file();
     init_capture_context();
     init_capture_nes_ppu();
+    init_capture_compression();
   }
 });
 
@@ -42737,7 +42849,7 @@ function writeSourceCaptureCatalog(root, name2, catalog, expectedSha256) {
     lease.release();
   }
 }
-async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_RUNTIME_TRACE_MAX_BYTES) {
+async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_SOURCE_CAPTURE_MAX_BYTES) {
   signal?.throwIfAborted();
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
     throw new Error("Capture byte budget must be a positive safe integer.");
@@ -42787,7 +42899,7 @@ async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_RUNTIME
     ...companionSha256 ? { companionSha256 } : {}
   };
 }
-var import_node_crypto19, import_node_fs17, import_node_path21, hashPattern, validHash, validCount;
+var import_node_crypto19, import_node_fs17, import_node_path21, hashPattern, validHash, validCount, DEFAULT_SOURCE_CAPTURE_MAX_BYTES;
 var init_captures = __esm({
   "packages/disassembler/src/source-project/captures.ts"() {
     "use strict";
@@ -42795,13 +42907,13 @@ var init_captures = __esm({
     import_node_fs17 = __toESM(require("node:fs"), 1);
     import_node_path21 = __toESM(require("node:path"), 1);
     init_canonical_json();
-    init_capture_limits();
     init_durable_files();
     init_generation();
     init_git();
     hashPattern = /^[\da-f]{64}$/;
     validHash = (value) => typeof value === "string" && hashPattern.test(value);
     validCount = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
+    DEFAULT_SOURCE_CAPTURE_MAX_BYTES = Number.MAX_SAFE_INTEGER;
   }
 });
 
@@ -43387,6 +43499,7 @@ __export(src_exports2, {
   DEFAULT_ANALYSIS_STORAGE_POLICY: () => DEFAULT_ANALYSIS_STORAGE_POLICY,
   DEFAULT_RUNTIME_TRACE_MAX_BYTES: () => DEFAULT_RUNTIME_TRACE_MAX_BYTES,
   DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS: () => DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS,
+  DEFAULT_SOURCE_CAPTURE_MAX_BYTES: () => DEFAULT_SOURCE_CAPTURE_MAX_BYTES,
   DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH: () => DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH,
   DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS: () => DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS,
   HalfOpenIntervalIndex: () => HalfOpenIntervalIndex,
@@ -49563,7 +49676,11 @@ var runtimeBindingFromLaunch = (configurations, root) => {
     const runtimeManifest = resolve9(config.runtimeManifest);
     const emulator = resolve9(config.emulator);
     const runtimeDirectory = resolve9(config.runtimeDirectory);
+    const saveDirectory = resolve9(config.saveDirectory);
     if (!runtimeManifest || !emulator || !runtimeDirectory) {
+      continue;
+    }
+    if (config.saveDirectory !== void 0 && !saveDirectory) {
       continue;
     }
     const binding = {
@@ -49571,6 +49688,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
       runtimeManifest,
       emulator,
       runtimeDirectory,
+      ...saveDirectory ? { saveDirectory } : {},
       ...typeof config.aresSystem === "string" ? { aresSystem: config.aresSystem } : {},
       ...typeof config.fastBoot === "boolean" ? { fastBoot: config.fastBoot } : {}
     };
@@ -51074,10 +51192,14 @@ var configuredEmulatorRuntime = (context, resource) => {
     return void 0;
   }
   const saved = context.globalState.get(EMULATOR_RUNTIME_BINDINGS_KEY, {})[runtimeWorkspaceKey(folder)];
-  return saved ?? runtimeBindingFromLaunch(
+  const launch = runtimeBindingFromLaunch(
     import_vscode16.workspace.getConfiguration("launch", folder.uri).get("configurations", []),
     folder.uri.fsPath
   );
+  if (saved && !saved.saveDirectory && launch?.saveDirectory) {
+    return { ...saved, saveDirectory: launch.saveDirectory };
+  }
+  return saved ?? launch;
 };
 var chooseLocalPath = async (title, options) => {
   const selected = await import_vscode16.window.showOpenDialog({
@@ -51141,11 +51263,13 @@ var configureEmulatorRuntime = async (context, resource) => {
   }
   const manifest = JSON.parse(fs24.readFileSync(runtimeManifest, "utf8"));
   parseAresRuntimeManifest(manifest);
+  const saveDirectory = configuredEmulatorRuntime(context, folder.uri)?.saveDirectory;
   const binding = {
     backend: "ares",
     runtimeManifest,
     emulator,
     runtimeDirectory,
+    ...saveDirectory ? { saveDirectory } : {},
     aresSystem: "Super Famicom",
     fastBoot: true
   };
@@ -51175,6 +51299,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
+  ...binding.saveDirectory ? { saveDirectory: binding.saveDirectory } : {},
   ...binding.aresSystem ? { aresSystem: binding.aresSystem } : {},
   ...binding.fastBoot === void 0 ? {} : { fastBoot: binding.fastBoot }
 });
@@ -51202,7 +51327,7 @@ function optionalString2(value) {
   return value === void 0 || typeof value === "string";
 }
 function isUttoriDebugConfiguration(value) {
-  return typeof value.program === "string" && value.program.length > 0 && typeof value.debugMap === "string" && value.debugMap.length > 0 && (value.backend === void 0 || value.backend === "replay" || value.backend === "ares") && optionalString2(value.sourceRoot) && optionalString2(value.replay) && optionalString2(value.runtimeManifest) && optionalString2(value.emulator) && optionalString2(value.runtimeDirectory) && optionalString2(value.sidecar) && optionalString2(value.aresSystem) && (value.fastBoot === void 0 || typeof value.fastBoot === "boolean");
+  return typeof value.program === "string" && value.program.length > 0 && typeof value.debugMap === "string" && value.debugMap.length > 0 && (value.backend === void 0 || value.backend === "replay" || value.backend === "ares") && optionalString2(value.sourceRoot) && optionalString2(value.replay) && optionalString2(value.runtimeManifest) && optionalString2(value.emulator) && optionalString2(value.runtimeDirectory) && optionalString2(value.saveDirectory) && optionalString2(value.sidecar) && optionalString2(value.aresSystem) && (value.fastBoot === void 0 || typeof value.fastBoot === "boolean");
 }
 function debugConfiguration(session) {
   const configuration = session.configuration;
@@ -51692,6 +51817,12 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
         "--runtime-dir",
         runtimeDirectory
       ];
+      if (configuration.saveDirectory !== void 0) {
+        args.push(
+          "--save-dir",
+          requiredLivePath(configuration.saveDirectory, "saveDirectory", folder)
+        );
+      }
       args.push(
         "--system",
         target === "65xx.nes" ? "Famicom" : configuration.aresSystem ?? "Super Famicom"

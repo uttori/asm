@@ -62,8 +62,9 @@ export interface AresProcessHostOptions {
     /** Absolute ROM file path. The manifest hashes the entire file, including any copier header. */
     readonly rom: string;
     /** Absolute working directory containing the declared runtime resources. */
-    /** Platform operations override, primarily for process-host tests. */
     readonly runtimeDirectory: string;
+    /** Absolute persistent SRAM/state root, independent of runtime builds. Omitted preserves existing frontend defaults. */
+    readonly saveDirectory?: string;
     /** Validated identity for this executable, ROM, platform, and native protocol. */
     readonly manifest: AresRuntimeManifest;
     /** Emulator system name. Defaults to Super Famicom. */

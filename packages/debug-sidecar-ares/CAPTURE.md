@@ -84,6 +84,35 @@ also export JSON for the CLI's `evidence-import --instruction-trace` workflow. U
 **Assembly: Import Capture into Source Project** (`asm.source.importCapture`) for instruction
 or bus captures, or choose **Stop Capture and Import Evidence** during the active recording.
 
+New NES and SNES archives compress each chunk independently with Zstandard level 3,
+including instruction streams and graphics companions. Every event byte, ID, clock and
+checkpoint is retained. Incompressible chunks remain raw. Existing raw archives require no
+migration; current readers accept raw, compressed and mixed chunks. Older readers cannot open
+new compressed archives, so update the native runtime and editor/CLI together.
+
+Compression runs in the native file worker after copying raw producer chunks. The writer
+acknowledges them only after disk sync succeeds. Each chunk has a bounded decoded size and
+an independent frame, so recovery needs no earlier compression history. Corruption or a torn
+chunk stops recovery at the last validated checkpoint. Compression reduces storage but adds CPU
+work; backpressure still preserves evidence when recording cannot keep up with emulation.
+
+ACT2 version 2 keeps its 64-byte envelope. All integers below are little endian:
+
+| Field offset | Storage contract                                                        |
+| ------------ | ----------------------------------------------------------------------- |
+| 6, `u16`     | `0` = raw payload; `1` = one Zstandard frame; other values rejected     |
+| 48, `u32`    | Stored payload length, excluding the envelope                           |
+| 52, `u32`    | Decoded payload length, excluding the envelope                          |
+| 56, `u32`    | CRC32C of the entire stored chunk with these four bytes treated as zero |
+
+Both stored and decoded payloads are limited to 262,080 bytes. Compressed payloads must be
+nonempty, dictionary-free, single-segment frames with an explicit matching content size;
+concatenated, skippable and trailing frames are rejected before decompression. The session
+header declares `compression: "zstd"` and permits raw fallback; `"none"` permits raw chunks
+only. Session identity, event records, ordering, ACK2 and END2 are unchanged. RSP transport
+and producer queues remain raw; only archive storage changes. Native development requests
+may append `:none` or `:zstd` before optional `:profile` to compare the two storage modes.
+
 Original ACT2 captures and complete context directories are temporary import inputs. Project
 storage persists facts, counts, bounded reports and provenance independently of them. Remove
 the originals yourself after successful import; later project operations do not require them.

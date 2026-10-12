@@ -42,7 +42,7 @@ import {
   pendingCaptureImportNotes,
   completeCaptureImportNotes,
   writeCaptureImportNotes,
-  DEFAULT_RUNTIME_TRACE_MAX_BYTES,
+  DEFAULT_SOURCE_CAPTURE_MAX_BYTES,
 } from "@uttori/asm-disassembler";
 import plugin65xx from "@uttori/asm-plugin-65xx";
 import {
@@ -1177,7 +1177,7 @@ export async function executeSourceOperation(operation: SourceOperation): Promis
       // One resolved budget covers the primary archive and each companion, including provenance hashing.
       // Otherwise a successful evidence scan can fail later at an independent fingerprinting default.
       const maxCaptureBytes =
-        project.configuration.limits?.captureBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
+        project.configuration.limits?.captureBytes ?? DEFAULT_SOURCE_CAPTURE_MAX_BYTES;
       const catalogSnapshot = readSourceCaptureCatalog(
         repository.root,
         project.configuration.captures,

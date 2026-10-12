@@ -18,6 +18,8 @@ export interface AresSidecarArguments {
   /** Explicit verified build identity; omitted retains the runtime manifest's original ROM pin. */
   readonly romSha256?: string;
   readonly runtimeDirectory: string;
+  /** Optional persistent SRAM/state root, resolved independently of the runtime. */
+  readonly saveDirectory?: string;
   readonly system?: string;
   readonly fastBoot: boolean;
 }
@@ -31,6 +33,7 @@ Required:
   --runtime-dir path    Portable root containing bin, resources, settings, and saves
 
 Optional:
+  --save-dir path       Persistent SRAM/state root, independent of runtime updates
   --rom-sha256 hash     Expected ROM SHA-256 from a verified build (64 hex digits)
   --system name         Ares system name (default: Super Famicom)
   --no-fast-boot        Disable the ares fast-boot setting
@@ -43,6 +46,7 @@ const optionNames = new Set([
   "--rom",
   "--rom-sha256",
   "--runtime-dir",
+  "--save-dir",
   "--system",
 ]);
 
@@ -96,6 +100,7 @@ export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSi
     executable: required("--ares"),
     rom: required("--rom"),
     runtimeDirectory: required("--runtime-dir"),
+    ...(values.has("--save-dir") ? { saveDirectory: required("--save-dir") } : {}),
     ...(system ? { system } : {}),
     fastBoot,
   };
@@ -138,6 +143,7 @@ export const runAresSidecar = async (
     executable: options.executable,
     rom: options.rom,
     runtimeDirectory: options.runtimeDirectory,
+    saveDirectory: options.saveDirectory,
     manifest,
     system: options.system,
     fastBoot: options.fastBoot,
@@ -147,8 +153,9 @@ export const runAresSidecar = async (
   let nesPrgFileOffset: number | undefined;
   if (/^(Famicom|NES|FC)$/i.test(options.system ?? "")) {
     const romBytes = await readFile(options.rom);
-    if (!romBytes.subarray(0, 4).equals(Buffer.from([0x4e, 0x45, 0x53, 0x1a])))
+    if (!romBytes.subarray(0, 4).equals(Buffer.from([0x4e, 0x45, 0x53, 0x1a]))) {
       throw new Error("Famicom launch requires an iNES cartridge.");
+    }
     nesPrgFileOffset = 16 + (romBytes[6] & 4 ? 512 : 0);
     contentSha256 = createHash("sha256").update(romBytes.subarray(16)).digest("hex");
   }

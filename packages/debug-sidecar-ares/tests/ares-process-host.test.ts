@@ -230,6 +230,38 @@ test("ares process host verifies identity, isolates launch arguments, and reconn
   t.is(host.pid, undefined);
 });
 
+test("persistent save roots survive runtime replacement for desktop and headless without overwriting slots", async (t) => {
+  const saveDirectory = await mkdtemp(path.join(os.tmpdir(), "uttori-pinned-saves-"));
+  t.teardown(() => rm(saveDirectory, { recursive: true, force: true }));
+  const sentinel = path.join(saveDirectory, "preserved.bs1");
+  const bytes = Buffer.from("existing state evidence");
+  await writeFile(sentinel, bytes);
+  for (const frontend of ["desktop", "headless"] as const) {
+    // Different executable/resource roots must resolve the same explicitly pinned saves.
+    for (let update = 0; update < 2; update++) {
+      const fixture = await setup(t);
+      const host = new AresProcessHost({
+        ...fixture,
+        saveDirectory,
+        manifest: { ...manifest(), frontend },
+      });
+      const client = await host.createClient({ reset: true });
+      const saveSettings = fixture.runtime.launches[0]!.args.filter((arg) =>
+        arg.startsWith("Paths/Saves="),
+      );
+      t.deepEqual(saveSettings, [`Paths/Saves=${saveDirectory}${path.sep}`]);
+      t.deepEqual(await readFile(sentinel), bytes);
+      await t.throwsAsync(stat(path.join(fixture.runtimeDirectory, "saves")), { code: "ENOENT" });
+      t.throws(
+        () => new AresProcessHost({ ...fixture, saveDirectory: "relative", manifest: manifest() }),
+        { message: /absolute path/ },
+      );
+      await client.close();
+      await host.terminate();
+    }
+  }
+});
+
 test("desktop ares uses GUI settings, awaits entry, and keeps execution running when VS Code has focus", async (t) => {
   const fixture = await setup(t);
   const settingsFile = path.join(fixture.runtimeDirectory, "settings.bml");

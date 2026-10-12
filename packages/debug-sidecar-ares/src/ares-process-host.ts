@@ -82,8 +82,9 @@ export interface AresProcessHostOptions {
   /** Absolute ROM file path. The manifest hashes the entire file, including any copier header. */
   readonly rom: string;
   /** Absolute working directory containing the declared runtime resources. */
-  /** Platform operations override, primarily for process-host tests. */
   readonly runtimeDirectory: string;
+  /** Absolute persistent SRAM/state root, independent of runtime builds. Omitted preserves existing frontend defaults. */
+  readonly saveDirectory?: string;
   /** Validated identity for this executable, ROM, platform, and native protocol. */
   readonly manifest: AresRuntimeManifest;
   /** Emulator system name. Defaults to Super Famicom. */
@@ -386,6 +387,7 @@ export class AresProcessHost {
   readonly #executable: string;
   readonly #rom: string;
   readonly #runtimeDirectory: string;
+  readonly #saveDirectory: string | undefined;
   readonly #manifest: AresRuntimeManifest;
   readonly #system: string;
   readonly #fastBoot: boolean;
@@ -411,6 +413,10 @@ export class AresProcessHost {
       "Ares runtime directory",
     );
     this.#manifest = parseAresRuntimeManifest(options.manifest);
+    this.#saveDirectory =
+      options.saveDirectory === undefined
+        ? undefined
+        : checkedAbsolutePath(options.saveDirectory, "Ares save directory");
     const executableRelative = path.relative(this.#runtimeDirectory, this.#executable);
     if (
       executableRelative === "" ||
@@ -495,9 +501,11 @@ export class AresProcessHost {
   async #launch(): Promise<void> {
     await this.#verifyIdentity();
     const desktop = this.#manifest.frontend === "desktop";
-    // Desktop settings own save locations, including an empty path for saves
-    // beside the ROM. Overriding it hides existing SRAM/slots after a runtime switch.
-    if (!desktop) {
+    // An explicit project pin survives settings/runtime replacement. Without one,
+    // desktop settings still own the location so legacy SRAM/slots remain visible.
+    if (this.#saveDirectory) {
+      await mkdir(this.#saveDirectory, { recursive: true });
+    } else if (!desktop) {
       await mkdir(path.join(this.#runtimeDirectory, "saves"), { recursive: true });
     }
     const port = await this.#runtime.reserveLoopbackPort();
@@ -521,8 +529,9 @@ export class AresProcessHost {
             "General/Rewind=false",
           ].flatMap((setting) => ["--setting", setting])
         : [
-            "--setting",
-            `Paths/Saves=${path.join(this.#runtimeDirectory, "saves")}`,
+            ...(!this.#saveDirectory
+              ? ["--setting", `Paths/Saves=${path.join(this.#runtimeDirectory, "saves")}`]
+              : []),
             "--gdb-port",
             String(port),
             "--gdb-ipv4",
@@ -530,6 +539,11 @@ export class AresProcessHost {
             "--quiet",
             ...(this.#fastBoot ? ["--fast-boot"] : []),
           ]),
+      // ares concatenates the system name onto this root instead of joining paths.
+      // Include its separator explicitly to avoid siblings such as savesSuper Famicom.
+      ...(this.#saveDirectory
+        ? ["--setting", `Paths/Saves=${path.join(this.#saveDirectory, path.sep)}`]
+        : []),
       this.#rom,
     ];
     this.#output = Buffer.alloc(0);

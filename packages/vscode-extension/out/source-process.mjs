@@ -939,6 +939,117 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
+// packages/debug-adapter/src/capture-compression.ts
+import { constants, zstdCompressSync, zstdDecompressSync } from "node:zlib";
+function validateFrame(frame, decodedBytes) {
+  if (frame.length < 6 || frame.readUInt32LE(0) !== 4247762216) {
+    throw new Error("Invalid capture Zstandard frame.");
+  }
+  const descriptor3 = frame[4];
+  if (!(descriptor3 & 32) || descriptor3 & 27) {
+    throw new Error(
+      "Capture Zstandard frame must use a bounded single segment without a dictionary."
+    );
+  }
+  const sizeBytes2 = [1, 2, 4, 8][descriptor3 >>> 6];
+  if (5 + sizeBytes2 > frame.length) {
+    throw new Error("Truncated capture Zstandard size.");
+  }
+  let contentSize;
+  if (sizeBytes2 === 8) {
+    contentSize = frame.readBigUInt64LE(5);
+  } else {
+    contentSize = BigInt(frame.readUIntLE(5, sizeBytes2));
+    if (sizeBytes2 === 2) {
+      contentSize += 256n;
+    }
+  }
+  if (contentSize !== BigInt(decodedBytes)) {
+    throw new Error("Capture Zstandard content size disagrees with the envelope.");
+  }
+  let offset = 5 + sizeBytes2;
+  let last = false;
+  while (!last) {
+    if (offset + 3 > frame.length) {
+      throw new Error("Truncated capture Zstandard block.");
+    }
+    const block = frame.readUIntLE(offset, 3);
+    const kind = block >>> 1 & 3;
+    const length = block >>> 3;
+    if (kind === 3 || length > Math.min(decodedBytes, 131072)) {
+      throw new Error("Invalid capture Zstandard block bound.");
+    }
+    last = Boolean(block & 1);
+    offset += 3 + (kind === 1 ? 1 : length);
+    if (offset > frame.length) {
+      throw new Error("Truncated capture Zstandard payload.");
+    }
+  }
+  if (descriptor3 & 4) {
+    offset += 4;
+  }
+  if (offset !== frame.length) {
+    throw new Error("Capture Zstandard frame has trailing or missing bytes.");
+  }
+}
+function decodeCaptureChunkBytes(bytes3) {
+  if (bytes3.length < 64 || bytes3.length > chunkBytes) {
+    throw new Error("Capture chunk length exceeds bounds.");
+  }
+  const stored = Buffer.from(bytes3.buffer, bytes3.byteOffset, bytes3.byteLength);
+  const codec = stored.readUInt16LE(6);
+  if (stored.toString("ascii", 0, 4) !== "ACT2" || stored.readUInt16LE(4) !== 2 || codec > 1 || stored.readUInt32LE(44) !== 64 || stored.readUInt32LE(60) !== 0) {
+    throw new Error("Unsupported capture envelope.");
+  }
+  const decodedLength = stored.readUInt32LE(52);
+  if (stored.readUInt32LE(48) !== stored.length - 64 || decodedLength > chunkBytes - 64 || codec === 0 && decodedLength !== stored.length - 64) {
+    throw new Error("Capture payload lengths disagree.");
+  }
+  if (crc32cBytes(stored, true) !== stored.readUInt32LE(56)) {
+    throw new Error("Capture checksum mismatch.");
+  }
+  if (codec === 0) {
+    return stored;
+  }
+  if (!decodedLength) {
+    throw new Error("Compressed capture payload is empty.");
+  }
+  const frame = stored.subarray(64);
+  validateFrame(frame, decodedLength);
+  const payload = zstdDecompressSync(frame, { maxOutputLength: decodedLength });
+  if (payload.length !== decodedLength) {
+    throw new Error("Capture decoded payload length disagrees.");
+  }
+  const raw = Buffer.concat([stored.subarray(0, 64), payload]);
+  raw.writeUInt16LE(0, 6);
+  raw.writeUInt32LE(decodedLength, 48);
+  raw.writeUInt32LE(crc32cBytes(raw, true), 56);
+  return raw;
+}
+function compressCaptureChunk(bytes3) {
+  const raw = decodeCaptureChunkBytes(bytes3);
+  const frame = zstdCompressSync(raw.subarray(64), {
+    params: { [constants.ZSTD_c_compressionLevel]: 3 }
+  });
+  if (frame.length >= raw.length - 64) {
+    return raw;
+  }
+  validateFrame(frame, raw.length - 64);
+  const stored = Buffer.concat([raw.subarray(0, 64), frame]);
+  stored.writeUInt16LE(1, 6);
+  stored.writeUInt32LE(frame.length, 48);
+  stored.writeUInt32LE(crc32cBytes(stored, true), 56);
+  return stored;
+}
+var chunkBytes;
+var init_capture_compression = __esm({
+  "packages/debug-adapter/src/capture-compression.ts"() {
+    "use strict";
+    init_data_hash_crc32();
+    chunkBytes = 262144;
+  }
+});
+
 // packages/debug-adapter/src/capture-nes-mapper.ts
 function validateNesMapper(mapper) {
   if (mapper.length !== 18 || ![0, 4].includes(mapper[0]) || mapper[1] !== 0 || mapper[2] > 7 || mapper[3] > 1 || mapper[4] > 1 || mapper[13] > 1 || mapper[14] > 1 || mapper[15] > 1 || mapper[17] > 1) {
@@ -1310,21 +1421,9 @@ function validateCaptureResult(value) {
 function decodeCaptureChunk(bytes3, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
-  if (bytes3.length < 64 || bytes3.length > 262144) {
-    throw new Error("Capture chunk length exceeds bounds.");
-  }
-  const b = Buffer.from(bytes3.buffer, bytes3.byteOffset, bytes3.byteLength);
-  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0) {
-    throw new Error("Unsupported capture envelope.");
-  }
+  const b = decodeCaptureChunkBytes(bytes3);
   if (b.toString("hex", 8, 24) !== session) {
     throw new Error("Capture chunk belongs to another session.");
-  }
-  if (b.readUInt32LE(48) !== bytes3.length - 64 || b.readUInt32LE(52) !== bytes3.length - 64) {
-    throw new Error("Capture payload lengths disagree.");
-  }
-  if (captureCrc32c(bytes3, true) !== b.readUInt32LE(56)) {
-    throw new Error("Capture checksum mismatch.");
   }
   const sequence = b.readBigUInt64LE(24), first = b.readBigUInt64LE(32), count2 = b.readUInt32LE(40);
   const through = first + BigInt(count2) - 1n;
@@ -1453,6 +1552,7 @@ var init_capture_v2 = __esm({
   "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
+    init_capture_compression();
     init_capture_nes_ppu();
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
@@ -5674,13 +5774,14 @@ function assertCaptureFileHeader(value) {
   metadataValid(value);
   captureSession(value.session);
   captureScope(value.scope);
-  if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !== (value.architecture === "65xx.2a03"))
+  if ((value.scope === "nes.2a03.instructions" || value.scope === "nes.cpu-bus-ppu") !== (value.architecture === "65xx.2a03")) {
     throw new Error("Capture scope and architecture disagree.");
+  }
   const clock = value.clock;
   if (!isRecord17(clock) || clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
     throw new Error("Invalid session clock domain.");
   }
-  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
+  if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" && value.compression !== "zstd" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
     throw new Error("Unsupported capture session contract.");
   }
 }
@@ -5688,6 +5789,7 @@ var pause, jsonFrame, emptyStageTiming, LosslessCaptureFileRecorder, checkCaptur
 var init_capture_file = __esm({
   "packages/debug-adapter/src/capture-file.ts"() {
     "use strict";
+    init_capture_compression();
     init_capture_context();
     init_capture_file_reader();
     init_capture_v2();
@@ -5818,7 +5920,7 @@ var init_capture_file = __esm({
             session: position.session,
             scope,
             ownership: "durable-prefix",
-            compression: "none",
+            compression: "zstd",
             checksum: "crc32c",
             maxChunkBytes: 262144,
             allocatedBytes: position.allocatedBytes,
@@ -5919,10 +6021,11 @@ var init_capture_file = __esm({
                 throw new Error("Capture chunk is not contiguous.");
               }
               boundary2 = this.#mark("decode", boundary2);
+              const stored = compressCaptureChunk(bytes3);
               if (this.#timings) {
-                this.#timings.bytes += bytes3.length;
+                this.#timings.bytes += stored.length;
               }
-              await this.#handle.writeFile(bytes3);
+              await this.#handle.writeFile(stored);
               boundary2 = this.#mark("dataWrite", boundary2);
               await this.#handle.sync();
               boundary2 = this.#mark("dataSync", boundary2);
@@ -6129,6 +6232,9 @@ var init_capture_file = __esm({
               throw new Error("Uncommitted capture chunk before another chunk.");
             }
             const envelope = Buffer.concat([prefix, await read(52)]);
+            if (envelope.readUInt16LE(6) !== 0 && header.compression === "none") {
+              throw new Error("Compressed chunk in an uncompressed capture session.");
+            }
             const length = envelope.readUInt32LE(48);
             if (length > 262144 - 64) {
               throw new Error("Capture chunk exceeds negotiated bound.");
@@ -6409,6 +6515,9 @@ var init_capture_file = __esm({
               throw new Error("Native capture expected an ACT2 chunk.");
             }
             const envelope = Buffer.concat([prefix, await read(52)]);
+            if (envelope.readUInt16LE(6) !== 0 && this.header.compression === "none") {
+              throw new Error("Compressed chunk in an uncompressed capture session.");
+            }
             const length = envelope.readUInt32LE(48);
             if (length > 262144 - 64) {
               throw new Error("Capture chunk exceeds its bound.");
@@ -6684,9 +6793,11 @@ __export(src_exports, {
   captureScope: () => captureScope,
   captureSession: () => captureSession,
   captureU64: () => captureU64,
+  compressCaptureChunk: () => compressCaptureChunk,
   createDebugMapReplayScript: () => createDebugMapReplayScript,
   createDebugSidecarSessionToken: () => createDebugSidecarSessionToken,
   decodeCaptureChunk: () => decodeCaptureChunk,
+  decodeCaptureChunkBytes: () => decodeCaptureChunkBytes,
   decodeNesBusRecords: () => decodeNesBusRecords,
   decodeNesPPUState: () => decodeNesPPUState,
   encodeDapMessage: () => encodeDapMessage,
@@ -6725,6 +6836,7 @@ var init_src = __esm({
     init_capture_file();
     init_capture_context();
     init_capture_nes_ppu();
+    init_capture_compression();
   }
 });
 
@@ -7578,10 +7690,10 @@ var require_truncate = __commonJS({
   "node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
-    var constants = require_constants();
+    var constants2 = require_constants();
     var SemVer = require_semver();
     var truncate = (version, truncation, options) => {
-      if (!constants.RELEASE_TYPES.includes(truncation)) {
+      if (!constants2.RELEASE_TYPES.includes(truncation)) {
         return null;
       }
       const clonedVersion = cloneInputVersion(version, options);
@@ -8630,7 +8742,7 @@ var require_semver2 = __commonJS({
   "node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
-    var constants = require_constants();
+    var constants2 = require_constants();
     var SemVer = require_semver();
     var identifiers = require_identifiers();
     var parse = require_parse();
@@ -8714,8 +8826,8 @@ var require_semver2 = __commonJS({
       re: internalRe.re,
       src: internalRe.src,
       tokens: internalRe.t,
-      SEMVER_SPEC_VERSION: constants.SEMVER_SPEC_VERSION,
-      RELEASE_TYPES: constants.RELEASE_TYPES,
+      SEMVER_SPEC_VERSION: constants2.SEMVER_SPEC_VERSION,
+      RELEASE_TYPES: constants2.RELEASE_TYPES,
       compareIdentifiers: identifiers.compareIdentifiers,
       rcompareIdentifiers: identifiers.rcompareIdentifiers
     };
@@ -20537,7 +20649,8 @@ function writeSourceCaptureCatalog(root, name4, catalog, expectedSha256) {
     lease.release();
   }
 }
-async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_RUNTIME_TRACE_MAX_BYTES) {
+var DEFAULT_SOURCE_CAPTURE_MAX_BYTES = Number.MAX_SAFE_INTEGER;
+async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_SOURCE_CAPTURE_MAX_BYTES) {
   signal?.throwIfAborted();
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
     throw new Error("Capture byte budget must be a positive safe integer.");
@@ -54576,8 +54689,9 @@ function nesHardwareSource(mapper) {
     (entry) => entry.mapper === void 0 || entry.mapper === mapper
   );
   return "; Built-in NES hardware vocabulary generated by Uttori ASM.\n; Explicit .b/.w instruction suffixes preserve encoded operand widths.\n\n" + selected.map(
-    (entry) => `${entry.name} = $${entry.address.toString(16).toUpperCase().padStart(4, "0")} ; ${entry.description}`
-  ).join("\n") + "\n";
+    (entry) => `; ${entry.description}
+${entry.name} = $${entry.address.toString(16).toUpperCase().padStart(4, "0")}`
+  ).join("\n\n") + "\n";
 }
 
 // packages/plugin-65xx/src/nes/source-data.ts
@@ -54614,10 +54728,7 @@ function nesSourceHex(value, digits = 4) {
 }
 function nesSourceDefinition(name4, address5, description) {
   const lines = description.split(/\r?\n/);
-  if (lines.length === 1 && lines[0].length <= 100) {
-    return [`${name4} = ${nesSourceHex(address5)} ; ${lines[0]}`];
-  }
-  return [...lines.map((line) => `; ${line}`), `${name4} = ${nesSourceHex(address5)}`];
+  return [...lines.map((line) => `; ${line}`), `${name4} = ${nesSourceHex(address5)}`, ""];
 }
 
 // packages/plugin-65xx/src/nes/source-export.ts
@@ -54821,10 +54932,21 @@ ${layout2}
     let offset = start;
     let markerIndex = 0;
     while (offset < end) {
-      for (const name4 of labelsAt.get(offset) ?? []) {
-        lines.push("", `${name4}:`);
+      if (lines.at(-1)?.startsWith("incbin ")) {
+        lines.push("");
       }
-      lines.push(...(notes2.get(offset) ?? []).map((line) => `  ${line}`));
+      const offsetLabels = labelsAt.get(offset) ?? [];
+      const offsetNotes = notes2.get(offset) ?? [];
+      for (const name4 of offsetLabels) {
+        if (lines.at(-1) !== "") {
+          lines.push("");
+        }
+        lines.push(...offsetNotes);
+        lines.push(`${name4}:`);
+      }
+      if (offsetLabels.length === 0) {
+        lines.push(...offsetNotes.map((line) => `  ${line}`));
+      }
       const data = dataRanges.find((range2) => range2.start <= offset && offset < range2.end);
       if (data?.annotation.asset?.compression) {
         throw new Error(`Compressed NES source asset '${data.annotation.id}' is unsupported.`);
@@ -54941,8 +55063,10 @@ ${layout2}
       while (next < Math.min(end, block + 4096, nextMarker) && !byOffset.has(next)) {
         next++;
       }
+      if (lines.at(-1) !== "") {
+        lines.push("");
+      }
       lines.push(
-        "",
         `incbin "../assets/raw/${block.toString(16).padStart(6, "0")}.bin":${nesSourceHex(offset - block)}..${nesSourceHex(next - block)}`
       );
       offset = next;
@@ -67991,7 +68115,7 @@ var INTERRUPT_STATUS_MASKS = [
     description: "Automatic joypad read is in progress."
   }
 ];
-var renderConstants = (constants, width) => constants.map(
+var renderConstants = (constants2, width) => constants2.map(
   ({ symbol, value, description }) => `${symbol} = ${hex5(value, width)} ; ${description}`
 );
 var renderSnesHardwareDefines = () => {
@@ -69866,8 +69990,8 @@ var SnesStructExpressionResolver = class {
   cache = /* @__PURE__ */ new Map();
   constants;
   /** Keep resolution local to one validated map; omitted constants preserve older map behavior. */
-  constructor(layouts, bindings, constants = []) {
-    this.constants = new Map(constants.map((constant) => [constant.name, constant.value]));
+  constructor(layouts, bindings, constants2 = []) {
+    this.constants = new Map(constants2.map((constant) => [constant.name, constant.value]));
     this.layouts = new Map(layouts.map((layout2) => [layout2.id, layout2]));
     this.bindings = new Map(bindings.map((binding) => [binding.name, binding]));
     this.fields = new Map(
@@ -70152,7 +70276,7 @@ var text = (value) => {
   return value.replaceAll(/\s+/g, " ").trim();
 };
 var hex8 = (value) => `$${value.toString(16).toUpperCase()}`;
-var validateSnesStructInstructionUses = (value, structures, bindings, constants = []) => {
+var validateSnesStructInstructionUses = (value, structures, bindings, constants2 = []) => {
   if (value === void 0) {
     return [];
   }
@@ -70162,7 +70286,7 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
   if (value.length === 0) {
     return [];
   }
-  const resolver = new SnesStructExpressionResolver(structures, bindings, constants);
+  const resolver = new SnesStructExpressionResolver(structures, bindings, constants2);
   const addresses2 = /* @__PURE__ */ new Set();
   return value.map((input2, index) => {
     try {
@@ -70548,7 +70672,7 @@ var validateSnesStructMap = (value) => {
   if (file.constants !== void 0 && !Array.isArray(file.constants)) {
     throw new Error("Struct-map constants must be an array.");
   }
-  const constants = (file.constants ?? []).map((input2) => {
+  const constants2 = (file.constants ?? []).map((input2) => {
     const entry = object2(input2);
     if (typeof entry.description !== "string" || !entry.description.trim()) {
       throw new Error("Struct-map constants require a description.");
@@ -70563,12 +70687,12 @@ var validateSnesStructMap = (value) => {
     file.instructionUses,
     structures,
     bindings,
-    constants
+    constants2
   );
   return {
     structures,
     bindings,
-    ...constants.length ? { constants } : {},
+    ...constants2.length ? { constants: constants2 } : {},
     ...instructionUses.length ? { instructionUses } : {}
   };
 };
@@ -76605,7 +76729,7 @@ async function executeSourceOperation(operation) {
     try {
       onProgress("Starting capture import.");
       const local = sourceProjectLocalInputs(project);
-      const maxCaptureBytes = project.configuration.limits?.captureBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
+      const maxCaptureBytes = project.configuration.limits?.captureBytes ?? DEFAULT_SOURCE_CAPTURE_MAX_BYTES;
       const catalogSnapshot = readSourceCaptureCatalog(
         repository.root,
         project.configuration.captures,
