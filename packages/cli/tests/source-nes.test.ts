@@ -21,7 +21,7 @@ function fixture(): Buffer {
   rom.set([0x4e, 0x45, 0x53, 0x1a, 1, 1, 4]);
   rom.fill(0xaa, 16, 528);
   rom.set([0xa9, 1, 0x8d, 0, 0x20, 0x60], 528);
-  for (const vector of [0x3ffa, 0x3ffc, 0x3ffe]) rom.writeUInt16LE(0x8000, 528 + vector);
+  for (const vector of [0x3ffa, 0x3ffc, 0x3ffe]) {rom.writeUInt16LE(0x8000, 528 + vector);}
   rom.set([3, 2, 1], rom.length - 3);
   return rom;
 }

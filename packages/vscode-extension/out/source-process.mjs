@@ -79107,7 +79107,10 @@ function readSomDialogueDictionary(bytes3) {
   if (bytes3.length !== SOM_DIALOGUE_PAIR_COUNT * 2 || bytes3.some((byte2) => byte2 < 128 || byte2 > 210)) {
     throw new Error("SoM dialogue requires 61 pairs of ordinary font codes.");
   }
-  return Array.from({ length: SOM_DIALOGUE_PAIR_COUNT }, (_, i) => [bytes3[i * 2], bytes3[i * 2 + 1]]);
+  return Array.from(
+    { length: SOM_DIALOGUE_PAIR_COUNT },
+    (_, i) => [bytes3[i * 2], bytes3[i * 2 + 1]]
+  );
 }
 function glyphText(byte2) {
   if (byte2 === 127) return "\n";
@@ -79128,7 +79131,8 @@ function expandSomDialogue(bytes3, dictionary) {
       if (!pair) throw new Error(`Missing SoM dialogue pair ${index}.`);
       output.push(...pair);
     } else {
-      if (byte2 < 127) throw new Error(`Event/control byte ${byte2.toString(16)} is outside a text span.`);
+      if (byte2 < 127)
+        throw new Error(`Event/control byte ${byte2.toString(16)} is outside a text span.`);
       output.push(byte2);
     }
   }
@@ -79138,30 +79142,38 @@ function decodeSomDialogue(bytes3, dictionary) {
   return [...expandSomDialogue(bytes3, dictionary)].map(glyphText).join("");
 }
 function parseGlyphs(text4) {
-  const inverse = new Map([...Array.from({ length: 84 }, (_, i) => i + 127)].filter((byte2) => !glyphText(byte2).startsWith("\\")).map((byte2) => [glyphText(byte2), byte2]));
+  const inverse = new Map(
+    [...Array.from({ length: 84 }, (_, i) => i + 127)].filter((byte2) => !glyphText(byte2).startsWith("\\")).map((byte2) => [glyphText(byte2), byte2])
+  );
   const bytes3 = [];
   for (let offset = 0; offset < text4.length; ) {
     if (text4[offset] === "\\") {
       const match = /^\\x([0-9a-f]{2})/i.exec(text4.slice(offset));
       if (!match) throw new Error(`Invalid dialogue escape at character ${offset}.`);
       const byte2 = Number.parseInt(match[1], 16);
-      if (byte2 < 127 || byte2 > 210) throw new Error("Dialogue escapes must select an ordinary glyph or line break.");
+      if (byte2 < 127 || byte2 > 210)
+        throw new Error("Dialogue escapes must select an ordinary glyph or line break.");
       bytes3.push(byte2);
       offset += 4;
     } else {
       const byte2 = inverse.get(text4[offset]);
-      if (byte2 === void 0) throw new Error(`Unsupported dialogue character at ${offset}; use a verified glyph escape.`);
+      if (byte2 === void 0)
+        throw new Error(
+          `Unsupported dialogue character at ${offset}; use a verified glyph escape.`
+        );
       bytes3.push(byte2);
       offset++;
     }
   }
-  if (bytes3.length > MAX_GLYPHS) throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
+  if (bytes3.length > MAX_GLYPHS)
+    throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
   return bytes3;
 }
 function validateLineGeometry(options) {
   const { lineColumns, initialColumn } = options;
   if (lineColumns === void 0) {
-    if (initialColumn !== void 0) throw new Error("Initial dialogue column requires a line capacity.");
+    if (initialColumn !== void 0)
+      throw new Error("Initial dialogue column requires a line capacity.");
     return;
   }
   if (!Number.isSafeInteger(lineColumns) || lineColumns < 1 || lineColumns > 32) {
@@ -79174,6 +79186,23 @@ function validateLineGeometry(options) {
 function encodeSomDialogue(text4, dictionary, options = {}) {
   const glyphs = parseGlyphs(text4);
   validateLineGeometry(options);
+  if (options.literal !== void 0 && typeof options.literal !== "boolean") {
+    throw new Error("Dialogue literal policy must be boolean.");
+  }
+  if (options.literal === true) {
+    if (options.original?.some((byte2) => byte2 < 127 || byte2 > 210)) {
+      throw new Error("Literal dialogue requires uncompressed native glyphs.");
+    }
+    if (options.byteLength !== void 0 && (!Number.isSafeInteger(options.byteLength) || options.byteLength < 0 || options.byteLength > MAX_GLYPHS)) {
+      throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
+    }
+    if (options.byteLength !== void 0 && glyphs.length !== options.byteLength) {
+      throw new Error(
+        `Literal dialogue cannot fit its exact ${options.byteLength}-byte glyph cells.`
+      );
+    }
+    return Uint8Array.from(glyphs);
+  }
   const pairs = /* @__PURE__ */ new Map();
   for (let code = 96; code <= 255; code++) {
     if (code === 125) continue;
@@ -79191,7 +79220,8 @@ function encodeSomDialogue(text4, dictionary, options = {}) {
     throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
   }
   if (options.original && decodeSomDialogue(options.original, dictionary) === text4) {
-    if (target !== void 0 && target !== options.original.length) throw new Error("Original dialogue disagrees with byte budget.");
+    if (target !== void 0 && target !== options.original.length)
+      throw new Error("Original dialogue disagrees with byte budget.");
     return options.original.slice();
   }
   const columns2 = new Uint8Array(glyphs.length);
@@ -79205,7 +79235,8 @@ function encodeSomDialogue(text4, dictionary, options = {}) {
   }
   const pairAt = (i) => {
     if (i + 1 >= glyphs.length) return void 0;
-    if (options.lineColumns !== void 0 && columns2[i] === options.lineColumns - 1) return void 0;
+    if (options.lineColumns !== void 0 && columns2[i] === options.lineColumns - 1)
+      return void 0;
     return pairs.get(glyphs[i] | glyphs[i + 1] << 8);
   };
   if (target === void 0) {
@@ -79220,10 +79251,14 @@ function encodeSomDialogue(text4, dictionary, options = {}) {
   possible[glyphs.length * width] = 1;
   for (let i = glyphs.length - 1; i >= 0; i--) {
     for (let count2 = 1; count2 <= target; count2++) {
-      if (possible[(i + 1) * width + count2 - 1] || pairAt(i) !== void 0 && possible[(i + 2) * width + count2 - 1]) possible[i * width + count2] = 1;
+      if (possible[(i + 1) * width + count2 - 1] || pairAt(i) !== void 0 && possible[(i + 2) * width + count2 - 1])
+        possible[i * width + count2] = 1;
     }
   }
-  if (!possible[target]) throw new Error(`Dialogue cannot fit its exact ${target}-byte ROM span; relocation or a different edit is required.`);
+  if (!possible[target])
+    throw new Error(
+      `Dialogue cannot fit its exact ${target}-byte ROM span; relocation or a different edit is required.`
+    );
   const encoded = [];
   for (let i = 0, remaining = target; i < glyphs.length; remaining--) {
     const pair = pairAt(i);
@@ -79249,9 +79284,17 @@ function readSomDialogueScriptLayout(value) {
   const dictionary = readSomDialogueDictionary(hexBytes(value.dictionaryHex));
   let total = 0;
   for (const [index, segment] of value.segments.entries()) {
-    if (!segment || !["raw", "text"].includes(segment.kind) || index > 0 && segment.kind === value.segments[index - 1].kind) throw new Error("Dialogue segments must alternate raw/text.");
+    if (!segment || !["raw", "text"].includes(segment.kind) || index > 0 && segment.kind === value.segments[index - 1].kind)
+      throw new Error("Dialogue segments must alternate raw/text.");
     const bytes3 = hexBytes(segment.nativeHex);
-    if (!bytes3.length || bytes3.length > MAX_GLYPHS) throw new Error("Invalid dialogue segment size.");
+    if (!bytes3.length || bytes3.length > MAX_GLYPHS)
+      throw new Error("Invalid dialogue segment size.");
+    if (segment.literal !== void 0 && (segment.kind !== "text" || typeof segment.literal !== "boolean")) {
+      throw new Error("Literal dialogue policy requires a text segment and boolean value.");
+    }
+    if (segment.literal === true && bytes3.some((byte2) => byte2 < 127 || byte2 > 210)) {
+      throw new Error("Literal dialogue requires uncompressed native glyphs.");
+    }
     if (segment.kind === "text") {
       parseGlyphs(decodeSomDialogue(bytes3, dictionary));
       validateLineGeometry(segment);
@@ -79283,7 +79326,11 @@ function rawParts(segment, index) {
   const native = hexBytes(segment.nativeHex), parts = [];
   let cursor = 0, opaque = 0;
   for (const slot of segment.commands ?? []) {
-    if (slot.offset > cursor) parts.push({ marker: `{raw:${index}:${opaque++}}`, bytes: native.slice(cursor, slot.offset) });
+    if (slot.offset > cursor)
+      parts.push({
+        marker: `{raw:${index}:${opaque++}}`,
+        bytes: native.slice(cursor, slot.offset)
+      });
     const bytes3 = encodeSomDialogueCommand(slot.token).bytes;
     parts.push({ marker: slot.token, bytes: bytes3, slot });
     cursor = slot.offset + bytes3.length;
@@ -79343,12 +79390,13 @@ function packSomDialogueScript(source, layout2, sizing = "fixed") {
       );
       const end = boundaries.length ? Math.min(...boundaries) : text4.length;
       let byteLength;
-      if (sizing === "fixed") byteLength = original.length;
+      if (sizing === "fixed" || segment.literal === true) byteLength = original.length;
       const encoded = encodeSomDialogue(text4.slice(cursor, end), dictionary, {
         original,
         byteLength,
         lineColumns: segment.lineColumns,
-        initialColumn: segment.initialColumn
+        initialColumn: segment.initialColumn,
+        literal: segment.literal
       });
       nativePreserved &&= encoded.length === original.length && encoded.every((byte2, index) => byte2 === original[index]);
       chunks.push(encoded);

@@ -23,6 +23,8 @@ export interface SomDialogueEncodeOptions extends SomDialogueLineGeometry {
     readonly original?: Uint8Array;
     /** Exact native span size; omitted selects the shortest deterministic encoding. */
     readonly byteLength?: number;
+    /** One byte per glyph for directly indexed font cells; DTE packing is forbidden. */
+    readonly literal?: boolean;
 }
 /**
  * Encode with a deterministic mix of literal and dual-tile bytes. An exact budget can deliberately
@@ -60,6 +62,8 @@ export interface SomDialogueScriptLayout {
     readonly segments: readonly ({
         readonly kind: "raw" | "text";
         readonly nativeHex: string;
+        /** Preserve directly indexed glyph cells instead of compressing their visible text. */
+        readonly literal?: boolean;
         /** Only independently reviewed raw boundaries admit named, optionally editable commands. */
         readonly commands?: readonly SomDialogueCommandSlot[];
     } & SomDialogueLineGeometry)[];
